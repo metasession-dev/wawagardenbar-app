@@ -538,6 +538,18 @@ export class TabService {
 
     await tab.save();
 
+    // Update all orders in the tab to paid status
+    await OrderModel.updateMany(
+      { _id: { $in: tab.orders } },
+      {
+        $set: {
+          paymentStatus: 'paid',
+          paidAt: new Date(),
+          status: 'confirmed',
+        },
+      }
+    );
+
     // Create audit log for manual payment
     const AuditLogService = (await import('./audit-log-service')).AuditLogService;
     await AuditLogService.createLog({

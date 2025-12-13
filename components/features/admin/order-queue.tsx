@@ -119,7 +119,7 @@ export function OrderQueue({ initialOrders }: OrderQueueProps) {
   }, []);
 
   return (
-    <Card>
+    <Card data-testid="order-queue">
       <CardHeader>
         <div className="flex items-center justify-between mb-4">
           <CardTitle>Order Queue</CardTitle>

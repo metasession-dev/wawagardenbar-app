@@ -9,9 +9,32 @@ This directory contains scripts for seeding and managing the database.
 1. Ensure your `.env.local` file has the `MONGODB_URI` variable set
 2. Install dependencies: `npm install`
 
-### Usage
+### Drinks Menu Seeding (Complete Bar Menu)
 
-To seed the menu with test items:
+Seeds 46 drink items with full inventory tracking from the actual drinks menu.
+
+```bash
+npx tsx scripts/seed-drinks-menu.ts
+```
+
+**What it includes:**
+- **46 drink items** across multiple categories
+- **Full inventory tracking** for all items
+- **Categories**: Beer (local/imported), Wine, Whisky, Tequila, Bitters, Liqueur, Energy Drinks, Soft Drinks, Juice, Yoghurt, Malt, Water, Cider, Pre-Mixed Spirits
+- **Price range**: ₦300 - ₦35,000
+- **Stock levels**: Automatically set based on item type
+- **Cost per unit**: Included for profit tracking
+
+**Features:**
+- Creates menu items with descriptions and tags
+- Sets up inventory records with min/max stock levels
+- Configures cost per unit for each item
+- Enables "prevent orders when out of stock"
+- Shows category breakdown after seeding
+
+### Test Menu Seeding (Sample Items)
+
+Seeds a smaller set of test items for development:
 
 ```bash
 npm run seed:menu
@@ -135,4 +158,119 @@ The script will:
 📊 Summary for adekunle@gmail.com:
    - Orders: 5 (registered) + 3 (guest)
    - Tabs: 2 (registered) + 1 (guest)
+```
+
+## Database Cleanup Scripts
+
+### 1. Full Cleanup (With Confirmation)
+
+Deletes ALL menu items, inventory, tabs, and orders with safety confirmation.
+
+```bash
+npx tsx scripts/cleanup-database.ts
+```
+
+**Features:**
+- Shows current database counts before deletion
+- Requires typing "DELETE" to confirm
+- Displays summary of deleted items
+- Verifies cleanup was successful
+
+**Use when:** You want to completely reset the database with safety checks.
+
+---
+
+### 2. Selective Cleanup (Interactive)
+
+Choose which collections to delete with interactive prompts.
+
+```bash
+npx tsx scripts/selective-cleanup.ts
+```
+
+**Features:**
+- Shows counts for each collection
+- Lets you choose what to delete (Menu Items, Inventory, Tabs, Orders)
+- Requires confirmation before deletion
+- Only deletes selected collections
+
+**Use when:** You want to clean specific collections but keep others.
+
+---
+
+### 3. Quick Cleanup (No Confirmation)
+
+⚠️ **WARNING:** Immediately deletes ALL data without confirmation!
+
+```bash
+npx tsx scripts/quick-cleanup.ts
+```
+
+**Features:**
+- No confirmation required
+- Fast execution
+- Shows before/after counts
+- Verifies cleanup
+
+**Use when:** 
+- Running automated tests
+- You're absolutely sure you want to delete everything
+- Development environment only
+
+---
+
+### Cleanup Script Comparison
+
+| Script | Confirmation | Collections | Speed | Use Case |
+|--------|-------------|-------------|-------|----------|
+| `cleanup-database.ts` | ✅ Yes (type "DELETE") | All | Normal | Safe manual cleanup |
+| `selective-cleanup.ts` | ✅ Yes (interactive) | Choose | Normal | Partial cleanup |
+| `quick-cleanup.ts` | ❌ No | All | Fast | Automated testing |
+
+---
+
+### What Gets Deleted
+
+All cleanup scripts can delete:
+- **Menu Items** - All dishes, drinks, and food items
+- **Inventory** - All inventory tracking records
+- **Tabs** - All open and closed tabs
+- **Orders** - All orders (dine-in, pickup, delivery)
+
+**Note:** User accounts, rewards, and settings are NOT deleted by these scripts.
+
+---
+
+### Safety Tips
+
+1. **Always backup** before running cleanup scripts in production
+2. **Use confirmation scripts** (`cleanup-database.ts` or `selective-cleanup.ts`) for manual cleanup
+3. **Reserve quick-cleanup** for test environments only
+4. **Check counts** before confirming deletion
+5. **Verify** the cleanup completed successfully
+
+---
+
+### Example Usage
+
+**Reset entire database:**
+```bash
+npx tsx scripts/cleanup-database.ts
+# Type "DELETE" when prompted
+```
+
+**Delete only orders and tabs:**
+```bash
+npx tsx scripts/selective-cleanup.ts
+# Answer 'n' for Menu Items
+# Answer 'n' for Inventory  
+# Answer 'y' for Tabs
+# Answer 'y' for Orders
+# Type "DELETE" to confirm
+```
+
+**Quick cleanup for testing:**
+```bash
+npx tsx scripts/quick-cleanup.ts
+# No confirmation needed - deletes immediately
 ```

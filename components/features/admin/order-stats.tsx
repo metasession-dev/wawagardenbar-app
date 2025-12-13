@@ -1,7 +1,7 @@
 import { connectDB } from '@/lib/mongodb';
 import OrderModel from '@/models/order-model';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShoppingCart, Clock, DollarSign, TrendingUp, AlertCircle } from 'lucide-react';
+import { ShoppingCart, Clock, TrendingUp, AlertCircle } from 'lucide-react';
 
 /**
  * Get today's order statistics
@@ -13,42 +13,27 @@ async function getTodayStats() {
   const last24Hours = new Date();
   last24Hours.setHours(last24Hours.getHours() - 24);
 
+  // Get all orders (not just last 24 hours) for accurate counts
   const [
     totalOrders,
     pendingOrders,
     preparingOrders,
     completedOrders,
-    totalRevenue,
   ] = await Promise.all([
-    OrderModel.countDocuments({
-      createdAt: { $gte: last24Hours },
-    }),
+    // All orders (not just last 24h)
+    OrderModel.countDocuments(),
+    // Pending orders (current state, regardless of creation time)
     OrderModel.countDocuments({
       status: { $in: ['pending', 'confirmed'] },
-      createdAt: { $gte: last24Hours },
     }),
+    // Preparing orders (current state)
     OrderModel.countDocuments({
       status: 'preparing',
-      createdAt: { $gte: last24Hours },
     }),
+    // Completed orders (current state)
     OrderModel.countDocuments({
       status: 'completed',
-      createdAt: { $gte: last24Hours },
     }),
-    OrderModel.aggregate([
-      {
-        $match: {
-          status: 'completed',
-          createdAt: { $gte: last24Hours },
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: '$total' },
-        },
-      },
-    ]),
   ]);
 
   return {
@@ -56,7 +41,6 @@ async function getTodayStats() {
     pendingOrders,
     preparingOrders,
     completedOrders,
-    totalRevenue: totalRevenue[0]?.total || 0,
   };
 }
 
@@ -97,21 +81,18 @@ export async function OrderStats() {
       icon: TrendingUp,
       color: 'text-green-600',
     },
-    {
-      title: 'Revenue',
-      value: `₦${stats.totalRevenue.toLocaleString()}`,
-      description: 'Last 24 hours',
-      icon: DollarSign,
-      color: 'text-green-600',
-    },
   ];
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       {cards.map((card) => {
         const Icon = card.icon;
         return (
-          <Card key={card.title} className={card.alert ? 'border-yellow-500' : ''}>
+          <Card
+            key={card.title}
+            className={card.alert ? 'border-yellow-500' : ''}
+            data-testid="order-stats-card"
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
               <div className="flex items-center gap-2">

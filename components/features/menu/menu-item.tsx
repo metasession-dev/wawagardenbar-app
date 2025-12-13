@@ -33,6 +33,7 @@ export function MenuItem({ item }: MenuItemProps) {
         className={`group cursor-pointer transition-all hover:shadow-lg ${
           isOutOfStock ? 'opacity-60' : ''
         }`}
+        data-testid={`menu-item-${item.slug ?? item._id}`}
         onClick={() => !isOutOfStock && setShowDetail(true)}
       >
         {/* Image */}

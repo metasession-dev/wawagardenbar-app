@@ -6,7 +6,19 @@ export type MenuCategory =
   | 'soft-drinks'
   | 'starters'
   | 'main-courses'
-  | 'desserts';
+  | 'desserts'
+  | 'cider'
+  | 'pre-mixed-spirit'
+  | 'bitters'
+  | 'liqueur'
+  | 'whisky'
+  | 'tequila'
+  | 'energy-drink'
+  | 'juice'
+  | 'yoghurt'
+  | 'malt'
+  | 'water'
+  | 'healthy-soft-drink';
 
 export type MenuMainCategory = 'drinks' | 'food';
 

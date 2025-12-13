@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { requireAdmin } from '@/lib/auth-middleware';
 import { DashboardNav } from '@/components/features/admin/dashboard-nav';
+import { Breadcrumb } from '@/components/shared/breadcrumb';
 
 export const metadata = {
   title: 'Admin Dashboard | Wawa Garden Bar',
@@ -41,8 +42,15 @@ export default async function DashboardLayout({
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto bg-background p-6">
-          {children}
+        <main className="flex-1 overflow-y-auto bg-background">
+          <div className="p-6">
+            {/* Breadcrumb Navigation */}
+            <div className="mb-6">
+              <Breadcrumb />
+            </div>
+            
+            {children}
+          </div>
         </main>
       </div>
     </div>

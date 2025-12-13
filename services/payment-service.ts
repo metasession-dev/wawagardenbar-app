@@ -17,6 +17,15 @@ interface PaymentInitializeResponse {
  * PaymentService Facade
  * Routes requests to the active payment provider (Monnify or Paystack)
  */
+function isTestPaymentsEnabled(): boolean {
+  return process.env.ENABLE_TEST_PAYMENTS === 'true';
+}
+
+function getTestCheckoutUrl(reference: string): string {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  return `${baseUrl.replace(/\/$/, '')}/payments/mock?reference=${encodeURIComponent(reference)}`;
+}
+
 export class PaymentService {
   
   /**
@@ -35,6 +44,14 @@ export class PaymentService {
       paymentMethods?: PaymentMethod[];
     }
   ): Promise<PaymentInitializeResponse> {
+    if (isTestPaymentsEnabled()) {
+      return {
+        checkoutUrl: getTestCheckoutUrl(params.paymentReference),
+        reference: params.paymentReference,
+        provider: 'monnify',
+      };
+    }
+
     const settings = await SystemSettingsService.getPaymentSettings();
 
     if (settings.activeProvider === 'paystack') {

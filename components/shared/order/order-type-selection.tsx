@@ -61,6 +61,7 @@ export function OrderTypeSelection() {
               <Card
                 key={type}
                 className="cursor-pointer transition-all hover:border-primary hover:shadow-lg"
+                data-testid={`order-type-${type}`}
                 onClick={() => handleSelectType(type)}
               >
                 <CardHeader>

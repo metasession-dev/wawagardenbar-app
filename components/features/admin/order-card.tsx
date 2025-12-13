@@ -147,7 +147,11 @@ export function OrderCard({ order, isSelected, onSelect, showCheckbox }: OrderCa
   };
 
   return (
-    <Card className={`relative ${isSelected ? 'ring-2 ring-primary' : ''}`}>
+    <Card
+      className={`relative ${isSelected ? 'ring-2 ring-primary' : ''}`}
+      data-testid="order-card"
+      data-order-number={order.orderNumber}
+    >
       {showCheckbox && (
         <div className="absolute top-4 left-4 z-10">
           <Checkbox
@@ -159,7 +163,7 @@ export function OrderCard({ order, isSelected, onSelect, showCheckbox }: OrderCa
 
       <CardHeader className={showCheckbox ? 'pl-12' : ''}>
         <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <div className={`w-3 h-3 rounded-full ${getStatusColor(order.status)}`} />
             <div>
               <Link 
@@ -203,7 +207,11 @@ export function OrderCard({ order, isSelected, onSelect, showCheckbox }: OrderCa
           </div>
 
           <div className="flex items-center gap-2">
-            <Badge variant={getStatusBadgeVariant(order.status)} className="capitalize">
+            <Badge
+              variant={getStatusBadgeVariant(order.status)}
+              className="capitalize"
+              data-testid="order-status-badge"
+            >
               {order.status}
             </Badge>
             <DropdownMenu>

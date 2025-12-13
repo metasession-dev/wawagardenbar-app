@@ -13,7 +13,14 @@
     "seed:inventory": "tsx scripts/seed-inventory.ts",
     "delete:user-data": "tsx scripts/delete-user-data.ts",
     "setup:admin": "tsx scripts/create-super-admin.ts",
-    "update:admin": "tsx scripts/update-admin-credentials.ts"
+    "update:admin": "tsx scripts/update-admin-credentials.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:report": "playwright show-report",
+    "test:seed": "tsx tests/setup/seed-test-data.ts",
+    "test:db:clean": "tsx tests/setup/db-cleanup.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -41,7 +48,6 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
-    "dotenv": "^16.4.5",
     "iron-session": "^8.0.3",
     "jspdf": "^3.0.4",
     "jspdf-autotable": "^5.0.2",
@@ -50,7 +56,7 @@
     "next": "16.0.7",
     "nodemailer": "^6.9.15",
     "nuqs": "^2.2.0",
-    "react": "19.2.1",
+    "react": "^19.0.0",
     "react-day-picker": "^9.11.1",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.66.0",
@@ -66,6 +72,7 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "@types/bcrypt": "^6.0.0",
     "@types/node": "^22.7.5",
     "@types/nodemailer": "^6.4.16",
@@ -74,6 +81,7 @@
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
     "autoprefixer": "^10.4.22",
+    "dotenv": "^17.2.3",
     "eslint": "^8.57.1",
     "eslint-config-airbnb": "^19.0.4",
     "eslint-config-airbnb-typescript": "^18.0.0",
@@ -85,6 +93,7 @@
     "postcss": "^8.5.6",
     "prettier": "^3.3.3",
     "tailwindcss": "^3.4.18",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.6.3"
   }
 }

@@ -5,7 +5,7 @@ import { DateRange } from 'react-day-picker';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Receipt, Eye, CreditCard, Loader2, CheckCircle2 } from 'lucide-react';
+import { Receipt, Eye, CreditCard, Loader2, CheckCircle2, FolderOpen, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { DashboardTabsFilter } from './dashboard-tabs-filter';
 import { AdminPayTabDialog } from './admin-pay-tab-dialog';
@@ -109,7 +109,7 @@ export function DashboardTabsListClient({ initialTabs }: DashboardTabsListClient
     };
 
     return (
-      <Badge variant={variants[status] || 'default'}>
+      <Badge variant={variants[status] || 'default'} data-testid="tab-status-badge">
         {status}
       </Badge>
     );
@@ -117,11 +117,12 @@ export function DashboardTabsListClient({ initialTabs }: DashboardTabsListClient
 
   const totalTabsAmount = tabs.reduce((sum, tab) => sum + tab.total, 0);
   const totalOrders = tabs.reduce((sum, tab) => sum + tab.orders.length, 0);
+  const totalOpenTabs = tabs.filter(tab => tab.status === 'open').length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="tabs-dashboard">
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Tabs</CardTitle>
@@ -139,6 +140,17 @@ export function DashboardTabsListClient({ initialTabs }: DashboardTabsListClient
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalOrders}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Open Tabs</CardTitle>
+            <FolderOpen className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalOpenTabs}</div>
+            <p className="text-xs text-muted-foreground mt-1">Currently active</p>
           </CardContent>
         </Card>
 
@@ -185,6 +197,8 @@ export function DashboardTabsListClient({ initialTabs }: DashboardTabsListClient
                 <div
                   key={tab._id}
                   className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  data-testid="tab-card"
+                  data-tab-number={tab.tabNumber}
                 >
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-3">
@@ -197,7 +211,7 @@ export function DashboardTabsListClient({ initialTabs }: DashboardTabsListClient
                       <span>•</span>
                       <span>Opened {new Date(tab.openedAt).toLocaleString()}</span>
                       <span>•</span>
-                      <span className="font-semibold text-foreground">
+                      <span className="font-semibold text-foreground" data-testid="tab-total">
                         ₦{tab.total.toLocaleString()}
                       </span>
                     </div>
@@ -205,23 +219,35 @@ export function DashboardTabsListClient({ initialTabs }: DashboardTabsListClient
 
                   <div className="flex items-center gap-2">
                     {tab.status === 'open' ? (
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedTab(tab);
-                          setShowPayDialog(true);
-                        }}
-                      >
-                        <CreditCard className="mr-2 h-4 w-4" />
-                        Customer Wants to Pay
-                      </Button>
+                      <>
+                        <Link href={`/menu?tableNumber=${tab.tableNumber}&tabId=${tab._id}`}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                          >
+                            <Plus className="mr-2 h-4 w-4" />
+                            Add to Tab
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedTab(tab);
+                            setShowPayDialog(true);
+                          }}
+                        >
+                          <CreditCard className="mr-2 h-4 w-4" />
+                          Customer Wants to Pay
+                        </Button>
+                      </>
                     ) : tab.status === 'closed' || tab.paymentStatus === 'paid' ? (
                       <Button
                         variant="secondary"
                         size="sm"
                         disabled
                         className="cursor-not-allowed opacity-80"
+                        data-testid="tab-payment-status"
                       >
                         <CheckCircle2 className="mr-2 h-4 w-4 text-green-600" />
                         Tab Paid

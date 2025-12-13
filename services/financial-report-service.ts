@@ -59,11 +59,40 @@ export class FinancialReportService {
     const startDate = startOfDay(date);
     const endDate = endOfDay(date);
 
-    // Fetch all paid orders for the date
+    console.log('📊 Generating report for date range:', {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+    });
+
+    // Debug: Check all paid orders in database
+    const allPaidOrders = await OrderModel.find({ paymentStatus: 'paid' })
+      .select('_id total paidAt createdAt paymentStatus')
+      .lean();
+    console.log(`📊 Total paid orders in database: ${allPaidOrders.length}`);
+    if (allPaidOrders.length > 0) {
+      console.log('Sample paid orders:', allPaidOrders.slice(0, 3).map(o => ({
+        id: o._id,
+        total: o.total,
+        paidAt: o.paidAt,
+        createdAt: o.createdAt,
+      })));
+    }
+
+    // Fetch all paid orders for the date (based on payment date, not creation date)
     const orders = await OrderModel.find({
-      createdAt: { $gte: startDate, $lte: endDate },
       paymentStatus: 'paid',
+      paidAt: { $gte: startDate, $lte: endDate },
     }).lean();
+
+    console.log(`📊 Found ${orders.length} paid orders for this date range`);
+    if (orders.length > 0) {
+      console.log('First order sample:', {
+        id: orders[0]._id,
+        total: orders[0].total,
+        paidAt: orders[0].paidAt,
+        paymentStatus: orders[0].paymentStatus,
+      });
+    }
 
     // Initialize report structure
     const report: DailySummaryReport = {
@@ -239,10 +268,10 @@ export class FinancialReportService {
     const start = startOfDay(startDate);
     const end = endOfDay(endDate);
 
-    // Fetch all paid orders for the date range
+    // Fetch all paid orders for the date range (based on payment date, not creation date)
     const orders = await OrderModel.find({
-      createdAt: { $gte: start, $lte: end },
       paymentStatus: 'paid',
+      paidAt: { $gte: start, $lte: end },
     }).lean();
 
     // Similar logic to generateDailySummary but for date range

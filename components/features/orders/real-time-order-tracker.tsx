@@ -72,9 +72,11 @@ export function RealTimeOrderTracker({ order, className }: RealTimeOrderTrackerP
 
       {/* Order info */}
       <div className="rounded-lg border bg-card p-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between" data-testid="order-summary">
           <div>
-            <h3 className="font-semibold">Order #{order.orderNumber}</h3>
+            <h3 className="font-semibold" data-testid="order-number">
+              Order #{order.orderNumber}
+            </h3>
             <p className="text-sm text-muted-foreground">
               {order.items.length} item{order.items.length !== 1 ? 's' : ''}
             </p>

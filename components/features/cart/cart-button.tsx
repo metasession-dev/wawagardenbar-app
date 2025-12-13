@@ -21,6 +21,7 @@ export function CartButton() {
       variant="ghost"
       size="icon"
       className="relative"
+      data-testid="cart-button"
       onClick={openCart}
       aria-label={mounted ? `Shopping cart with ${totalItems} items` : 'Shopping cart'}
     >
@@ -29,6 +30,7 @@ export function CartButton() {
         <Badge
           variant="destructive"
           className="absolute -right-1 -top-1 h-5 min-w-5 rounded-full px-1 text-xs"
+          data-testid="cart-count"
         >
           {totalItems > 99 ? '99+' : totalItems}
         </Badge>

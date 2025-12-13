@@ -64,6 +64,12 @@ COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/server.ts ./server.ts
 COPY --from=builder /app/lib ./lib
 
+# Copy scripts directory for database management
+COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/models ./models
+COPY --from=builder /app/interfaces ./interfaces
+COPY --from=builder /app/services ./services
+
 # Create uploads directory with proper permissions
 RUN mkdir -p /app/public/uploads/menu-items && \
     chown -R nextjs:nodejs /app/public/uploads

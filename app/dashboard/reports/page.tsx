@@ -85,15 +85,18 @@ export default async function ReportsPage() {
         </div>
 
         {/* Inventory Reports Card */}
-        <div className="rounded-lg border bg-card p-6 shadow-sm hover:shadow-md transition-shadow">
+        <a 
+          href="/dashboard/reports/inventory"
+          className="rounded-lg border bg-card p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer hover:border-primary"
+        >
           <h3 className="text-lg font-semibold mb-2">Inventory Report</h3>
           <p className="text-sm text-muted-foreground mb-4">
             Stock levels, usage, and reorder recommendations
           </p>
-          <div className="text-xs text-muted-foreground">
-            Coming soon...
+          <div className="text-xs text-primary font-semibold">
+            View Report →
           </div>
-        </div>
+        </a>
 
         {/* Sales Reports Card */}
         <div className="rounded-lg border bg-card p-6 shadow-sm hover:shadow-md transition-shadow">

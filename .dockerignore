@@ -63,9 +63,6 @@ docker-compose.yml
 DOCKER.md
 .docker-quick-ref.md
 
-# Scripts (not needed in production)
-scripts
-
 # Uploads (should be volume-mounted)
 public/uploads
 

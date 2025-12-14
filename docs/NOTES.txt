@@ -1,0 +1,27 @@
+npm run build
+# Always pull latest, then restart
+docker-compose pull && docker-compose up -d --force-recreate
+
+📋 Login Credentials:
+   Email: william@ostendo.io
+   Username: superadmin
+   Password: Admin@123!
+
+🔐 Login URL: http://localhost:3000/admin/login
+
+# Running .tsx files in Production Docker
+
+# 1. Check running containers
+docker ps
+
+# 2. Clean database (interactive - requires typing "DELETE")
+docker exec -it food_app npx tsx scripts/cleanup-database.ts
+
+# 3. Quick cleanup (no confirmation needed)
+docker exec -it food_app npx tsx scripts/quick-cleanup.ts
+
+# 4. Seed drinks menu
+docker exec -it food_app npx tsx scripts/seed-drinks-menu.ts
+
+# Note: Scripts are now included in Docker image (removed from .dockerignore)
+docker exec -it wawagardenbar-app npx tsx scripts/seed-drinks-menu.ts

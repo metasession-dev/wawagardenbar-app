@@ -43,8 +43,8 @@ async function getInventoryStats() {
 
   const [totalItems, lowStockItems, outOfStockItems] = await Promise.all([
     InventoryModel.countDocuments(),
-    InventoryModel.countDocuments({ currentStock: { $lte: 10 } }),
-    InventoryModel.countDocuments({ currentStock: 0 }),
+    InventoryModel.countDocuments({ status: 'low-stock' }),
+    InventoryModel.countDocuments({ status: 'out-of-stock' }),
   ]);
 
   return {
@@ -69,7 +69,7 @@ async function InventoryStats() {
     {
       title: 'Low Stock',
       value: stats.lowStockItems,
-      description: '≤10 units remaining',
+      description: 'Below minimum threshold',
       alert: stats.lowStockItems > 0,
     },
     {

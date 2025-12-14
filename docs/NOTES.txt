@@ -1,5 +1,7 @@
+# Build and Deploy Workflow
 npm run build
-# Always pull latest, then restart
+
+# On production server: Pull latest and restart
 docker-compose pull && docker-compose up -d --force-recreate
 
 📋 Login Credentials:

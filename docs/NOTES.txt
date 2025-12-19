@@ -4,7 +4,14 @@ npm run build
 # On production server: Pull latest and restart
 docker-compose pull && docker-compose up -d --force-recreate
 
-📋 Login Credentials:
+# Admin Login Credentials: localhost
+   Email: william@ostendo.io
+   Username: superadmin
+   Password: Admin@123!
+
+
+
+📋 Login Credentials: Prod
    Email: ade@wawagardenbar.com
    Username: superadmin
    Password: 7XvuvpUi8d4UR90U
@@ -15,10 +22,16 @@ docker-compose pull && docker-compose up -d --force-recreate
 # PRODUCTION DEPLOYMENT - FRESH DATABASE SETUP
 # ========================================
 
+# IMPORTANT: Environment variables must be set in docker-compose.yml or passed at runtime
+# Required: MONGODB_WAWAGARDENBAR_APP_URI, MONGODB_DB_NAME, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD
+
 # Step 1: Check running containers
 docker ps
 
-# Step 2: Delete existing data (CAUTION: This removes all data!)
+# Step 2: Verify environment variables are set in container
+docker exec -it food_app printenv | grep MONGODB
+
+# Step 3: Delete existing data (CAUTION: This removes all data!)
 # Delete all users (super admin will be recreated in next step)
 docker exec -it food_app npx tsx scripts/delete-all-users.ts
 
@@ -31,13 +44,13 @@ docker exec -it food_app npx tsx scripts/delete-all-inventory.ts
 # Delete all orders
 docker exec -it food_app npx tsx scripts/delete-all-orders.ts
 
-# Step 3: Create Super Admin
+# Step 4: Create Super Admin
 docker exec -it food_app npx tsx scripts/create-super-admin.ts
 
-# Step 4: Seed Drinks Menu (46 items with inventory tracking)
+# Step 5: Seed Drinks Menu (46 items with inventory tracking)
 docker exec -it food_app npx tsx scripts/seed-drinks-menu.ts
 
-# Step 5: Seed Food Menu (16 items with inventory tracking)
+# Step 6: Seed Food Menu (16 items with inventory tracking)
 docker exec -it food_app npx tsx scripts/seed-food-menu.ts
 
 # Step 6: Verify deployment

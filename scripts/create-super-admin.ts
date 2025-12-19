@@ -54,7 +54,7 @@ async function createSuperAdmin() {
     console.log('\n📝 Creating initial super-admin user...\n');
 
     const username = process.env.SUPER_ADMIN_USERNAME || 'superadmin';
-    const password = process.env.SUPER_ADMIN_PASSWORD || '7XvuvpUi8d4UR90U';
+    const password = process.env.SUPER_ADMIN_PASSWORD || '7XvuvpUi8d4UR90U!';
     const email = process.env.SUPER_ADMIN_EMAIL || 'ade@wawagardenbar.com';
     const firstName = process.env.SUPER_ADMIN_FIRST_NAME || 'Super';
     const lastName = process.env.SUPER_ADMIN_LAST_NAME || 'Admin';

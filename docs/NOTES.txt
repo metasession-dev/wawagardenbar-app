@@ -14,7 +14,7 @@ docker-compose pull && docker-compose up -d --force-recreate
 📋 Login Credentials: Prod
    Email: ade@wawagardenbar.com
    Username: superadmin
-   Password: 7XvuvpUi8d4UR90U
+   Password: 7XvuvpUi8d4UR90U!
 
 🔐 Login URL: http://localhost:3000/admin/login
 

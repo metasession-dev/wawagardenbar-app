@@ -48,6 +48,8 @@ export async function createTabAction(params: {
     const tab = await TabService.createTab({
       tableNumber: params.tableNumber,
       userId,
+      createdBy: userId,
+      createdByRole: session.role || 'customer',
       customerName: params.customerName,
       customerEmail: params.customerEmail,
       customerPhone: params.customerPhone,

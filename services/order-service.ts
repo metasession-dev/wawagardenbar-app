@@ -1,7 +1,8 @@
 import { Types } from 'mongoose';
-import Order from '@/models/order-model';
-import { IOrder, OrderStatus, OrderType } from '@/interfaces';
 import { connectDB } from '@/lib/mongodb';
+import Order from '@/models/order-model';
+import { IOrder, OrderType, OrderStatus } from '@/interfaces';
+import { PriceHistoryService } from './price-history-service';
 
 /**
  * Service for order CRUD operations
@@ -60,10 +61,77 @@ export class OrderService {
   }
 
   /**
+   * Enrich order items with cost snapshots and profitability calculations
+   */
+  private static async enrichOrderItemsWithCosts(
+    items: IOrder['items']
+  ): Promise<IOrder['items']> {
+    const enrichedItems = await Promise.all(
+      items.map(async (item) => {
+        // Get current pricing for this menu item
+        const pricing = await PriceHistoryService.getCurrentPricing(
+          item.menuItemId.toString()
+        );
+
+        const costPerUnit = pricing?.costPerUnit || 0;
+        const totalCost = costPerUnit * item.quantity;
+        const grossProfit = item.subtotal - totalCost;
+        const profitMargin =
+          item.subtotal > 0 ? (grossProfit / item.subtotal) * 100 : 0;
+
+        return {
+          ...item,
+          costPerUnit,
+          totalCost,
+          grossProfit,
+          profitMargin,
+        };
+      })
+    );
+
+    return enrichedItems;
+  }
+
+  /**
+   * Calculate operational costs based on order type
+   */
+  private static calculateOperationalCosts(
+    orderType: OrderType,
+    deliveryFee: number,
+    total: number
+  ): { delivery: number; packaging: number; processing: number } {
+    const operationalCosts = {
+      delivery: 0,
+      packaging: 0,
+      processing: 0,
+    };
+
+    // Delivery cost (driver payment - typically 60% of delivery fee)
+    if (orderType === 'delivery' && deliveryFee > 0) {
+      operationalCosts.delivery = deliveryFee * 0.6;
+    }
+
+    // Packaging cost (estimated based on order type)
+    if (orderType === 'delivery') {
+      operationalCosts.packaging = 100; // ₦100 for delivery packaging
+    } else if (orderType === 'pickup') {
+      operationalCosts.packaging = 50; // ₦50 for pickup packaging
+    }
+
+    // Payment processing fee (3% for card/gateway payments)
+    // This will be updated when actual payment method is known
+    operationalCosts.processing = total * 0.03;
+
+    return operationalCosts;
+  }
+
+  /**
    * Create a new order
    */
   static async createOrder(orderData: {
     userId?: string;
+    createdBy?: string;
+    createdByRole?: 'admin' | 'super-admin' | 'customer';
     guestEmail?: string;
     guestName?: string;
     guestPhone?: string;
@@ -87,13 +155,39 @@ export class OrderService {
       orderData.items.length
     );
 
+    // Enrich items with cost snapshots and profitability data
+    const enrichedItems = await this.enrichOrderItemsWithCosts(orderData.items);
+
+    // Calculate total cost from items
+    const totalCost = enrichedItems.reduce((sum, item) => sum + item.totalCost, 0);
+
+    // Calculate operational costs
+    const operationalCosts = this.calculateOperationalCosts(
+      orderData.orderType,
+      orderData.deliveryFee,
+      orderData.total
+    );
+
+    // Calculate order-level profitability
+    const totalOperationalCosts =
+      operationalCosts.delivery + operationalCosts.packaging + operationalCosts.processing;
+    const grossProfit = orderData.total - totalCost - totalOperationalCosts;
+    const profitMargin = orderData.total > 0 ? (grossProfit / orderData.total) * 100 : 0;
+
     const order = await Order.create({
       ...orderData,
+      items: enrichedItems,
       userId: orderData.userId ? new Types.ObjectId(orderData.userId) : undefined,
+      createdBy: orderData.createdBy ? new Types.ObjectId(orderData.createdBy) : undefined,
+      createdByRole: orderData.createdByRole || 'customer',
       orderNumber,
       estimatedWaitTime,
       status: 'pending',
       paymentStatus: 'pending',
+      totalCost,
+      grossProfit,
+      profitMargin,
+      operationalCosts,
     });
 
     // Deduct inventory immediately upon order creation
@@ -478,5 +572,122 @@ export class OrderService {
       ordersByStatus,
       ordersByType,
     };
+  }
+
+  /**
+   * Complete order payment manually (admin)
+   * For cash, transfer, or POS card payments
+   */
+  static async completeOrderPaymentManually(params: {
+    orderId: string;
+    paymentType: 'cash' | 'transfer' | 'card';
+    paymentReference: string;
+    comments?: string;
+    processedByAdminId: string;
+  }): Promise<IOrder> {
+    await connectDB();
+
+    if (!Types.ObjectId.isValid(params.orderId)) {
+      throw new Error('Invalid order ID');
+    }
+
+    const order = await Order.findById(params.orderId);
+    if (!order) {
+      throw new Error('Order not found');
+    }
+
+    if (order.paymentStatus === 'paid') {
+      throw new Error('This order has already been paid');
+    }
+
+    if (order.status === 'cancelled') {
+      throw new Error('Cannot process payment for cancelled orders');
+    }
+
+    // Check if order belongs to a settling tab
+    if (order.tabId) {
+      const TabModel = (await import('@/models/tab-model')).default;
+      const tab = await TabModel.findById(order.tabId);
+      if (tab && tab.status === 'settling') {
+        throw new Error('Cannot process payment for orders in settling tabs. Please process payment through the tab.');
+      }
+    }
+
+    // Validate payment reference
+    if (!params.paymentReference || params.paymentReference.trim().length < 3) {
+      throw new Error('Payment reference must be at least 3 characters');
+    }
+
+    // Update order payment status
+    order.paymentStatus = 'paid';
+    order.paymentMethod = params.paymentType;
+    order.paymentReference = params.paymentReference;
+    order.paidAt = new Date();
+
+    // Update order status to confirmed if still pending
+    if (order.status === 'pending') {
+      order.status = 'confirmed';
+      order.statusHistory.push({
+        status: 'confirmed',
+        timestamp: new Date(),
+        note: `Payment confirmed manually by admin (${params.paymentType})`,
+      });
+    }
+
+    await order.save();
+
+    // Deduct inventory if not already deducted
+    if (!order.inventoryDeducted) {
+      try {
+        const InventoryService = (await import('./inventory-service')).default;
+        await InventoryService.deductStockForOrder(params.orderId);
+        order.inventoryDeducted = true;
+        order.inventoryDeductedAt = new Date();
+        await order.save();
+      } catch (error) {
+        console.error('Error deducting inventory:', error);
+      }
+    }
+
+    // Calculate and issue rewards if user is logged in
+    if (order.userId) {
+      try {
+        const { RewardsService } = await import('./rewards-service');
+        await RewardsService.calculateReward(
+          order.userId.toString(),
+          params.orderId,
+          order.total
+        );
+      } catch (error) {
+        console.error('Error calculating rewards:', error);
+      }
+    }
+
+    // Create audit log
+    try {
+      const { AuditLogService } = await import('./audit-log-service');
+      const UserModel = (await import('@/models/user-model')).default;
+      const admin = await UserModel.findById(params.processedByAdminId);
+      
+      await AuditLogService.createLog({
+        userId: params.processedByAdminId,
+        userEmail: admin?.email || 'unknown',
+        userRole: admin?.role || 'admin',
+        action: 'order.manual_payment',
+        resource: 'order',
+        resourceId: params.orderId,
+        details: {
+          orderNumber: order.orderNumber,
+          paymentType: params.paymentType,
+          paymentReference: params.paymentReference,
+          comments: params.comments,
+          totalAmount: order.total,
+        },
+      });
+    } catch (error) {
+      console.error('Error creating audit log:', error);
+    }
+
+    return order.toObject();
   }
 }

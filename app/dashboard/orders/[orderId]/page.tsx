@@ -1,7 +1,6 @@
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { requireAdmin } from '@/lib/auth-middleware';
 import { OrderService } from '@/services';
 import { OrderDetailsHeader } from '@/components/features/admin/order-details-header';
 import { OrderCustomerInfo } from '@/components/features/admin/order-customer-info';
@@ -25,9 +24,6 @@ interface OrderDetailsPageProps {
  * Displays comprehensive order information with real-time updates
  */
 export default async function OrderDetailsPage({ params }: OrderDetailsPageProps) {
-  // Require admin authentication
-  await requireAdmin();
-
   const { orderId } = await params;
 
   // Fetch order data

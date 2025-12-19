@@ -4,7 +4,6 @@ import { Plus, BarChart3, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { requireSuperAdmin } from '@/lib/auth-middleware';
 import { RewardStatsCards, RewardCharts } from '@/components/features/admin/rewards';
 import { PointsConversionSettings } from '@/components/features/admin/rewards/points-conversion-settings';
 import {
@@ -92,9 +91,6 @@ function StatsLoading() {
  * Rewards dashboard page
  */
 export default async function RewardsDashboardPage() {
-  // Verify super-admin access
-  await requireSuperAdmin();
-
   return (
     <div className="space-y-6">
       {/* Header */}

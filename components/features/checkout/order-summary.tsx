@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { RewardsSection } from './rewards-section';
 
 interface OrderSummaryProps {
-  orderType: 'dine-in' | 'pickup' | 'delivery';
+  orderType: 'dine-in' | 'pickup' | 'delivery' | 'pay-now';
   onRewardApplied?: (rewardId: string, discount: number) => void;
   onPointsApplied?: (points: number, discount: number) => void;
 }

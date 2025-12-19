@@ -136,6 +136,10 @@ const userSchema = new Schema<IUser>(
     accountLockedUntil: {
       type: Date,
     },
+    permissions: {
+      type: Schema.Types.Mixed,
+      default: null,
+    },
     
     // Addresses & Payment
     addresses: { type: [addressSchema], default: [] },

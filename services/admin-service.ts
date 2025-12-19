@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import { UserModel } from '@/models';
 import { AuditLogService } from './audit-log-service';
+import { IAdminPermissions, DEFAULT_ADMIN_PERMISSIONS } from '@/interfaces';
 
 export class AdminService {
   private static readonly BCRYPT_ROUNDS = 12;
@@ -105,6 +106,7 @@ export class AdminService {
     lastName?: string;
     role: 'admin' | 'super-admin';
     createdBy: string;
+    permissions?: IAdminPermissions;
   }) {
     // Validate username uniqueness
     const existingUser = await UserModel.findOne({
@@ -124,6 +126,11 @@ export class AdminService {
     // Hash password
     const hashedPassword = await this.hashPassword(data.password);
 
+    // Determine permissions based on role
+    const adminPermissions = data.role === 'admin' 
+      ? (data.permissions || DEFAULT_ADMIN_PERMISSIONS)
+      : null; // Super-admin has no restrictions
+
     // Create user
     const admin = await UserModel.create({
       username: data.username.toLowerCase(),
@@ -137,6 +144,7 @@ export class AdminService {
       emailVerified: true, // Admin emails don't need verification
       phoneVerified: false,
       phone: `admin_${Date.now()}`, // Dummy phone to satisfy required field
+      permissions: adminPermissions,
     });
 
     // Create audit log
@@ -400,6 +408,50 @@ export class AdminService {
       details: {
         username: admin.username,
         role: admin.role,
+      },
+    });
+
+    return admin;
+  }
+
+  /**
+   * Update admin permissions
+   */
+  static async updateAdminPermissions(data: {
+    adminId: string;
+    permissions: IAdminPermissions;
+    updatedBy: string;
+  }) {
+    const admin = await UserModel.findById(data.adminId);
+
+    if (!admin) {
+      throw new Error('Admin not found');
+    }
+
+    if (!admin.isAdmin) {
+      throw new Error('User is not an admin');
+    }
+
+    if (admin.role === 'super-admin') {
+      throw new Error('Cannot modify super-admin permissions');
+    }
+
+    const oldPermissions = admin.permissions;
+    admin.permissions = data.permissions;
+    await admin.save();
+
+    const auditUser = await this.getUserForAudit(data.updatedBy);
+    await AuditLogService.createLog({
+      userId: data.updatedBy,
+      userEmail: auditUser.userEmail,
+      userRole: auditUser.userRole,
+      action: 'admin.permissions-updated',
+      resource: 'admin',
+      resourceId: data.adminId,
+      details: {
+        username: admin.username,
+        oldPermissions,
+        newPermissions: data.permissions,
       },
     });
 

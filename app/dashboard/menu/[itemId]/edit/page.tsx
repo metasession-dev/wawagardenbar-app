@@ -1,7 +1,6 @@
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { requireSuperAdmin } from '@/lib/auth-middleware';
 import { connectDB } from '@/lib/mongodb';
 import MenuItemModel from '@/models/menu-item-model';
 import InventoryModel from '@/models/inventory-model';
@@ -10,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronRight, ArrowLeft } from 'lucide-react';
 import { MenuItemEditForm } from '@/components/features/admin/menu-item-edit-form';
+import { PriceManagementSection } from '@/components/features/admin/price-management-section';
 
 interface EditMenuItemPageProps {
   params: Promise<{
@@ -43,6 +43,7 @@ async function getMenuItem(itemId: string) {
     mainCategory: menuItem.mainCategory,
     category: menuItem.category,
     price: menuItem.price,
+    costPerUnit: menuItem.costPerUnit || 0,
     preparationTime: menuItem.preparationTime,
     servingSize: menuItem.servingSize || '',
     isAvailable: menuItem.isAvailable,
@@ -89,8 +90,6 @@ function EditFormSkeleton() {
  * Edit menu item page
  */
 export default async function EditMenuItemPage({ params }: EditMenuItemPageProps) {
-  await requireSuperAdmin();
-
   const { itemId } = await params;
   const menuItem = await getMenuItem(itemId);
 
@@ -133,6 +132,14 @@ export default async function EditMenuItemPage({ params }: EditMenuItemPageProps
       <Suspense fallback={<EditFormSkeleton />}>
         <MenuItemEditForm menuItem={menuItem} />
       </Suspense>
+
+      {/* Price Management Section */}
+      <PriceManagementSection
+        menuItemId={menuItem._id}
+        currentPrice={menuItem.price}
+        currentCostPerUnit={menuItem.costPerUnit}
+        menuItemName={menuItem.name}
+      />
 
       {/* Audit Trail */}
       {menuItem.createdAt && (

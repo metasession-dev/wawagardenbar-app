@@ -41,6 +41,7 @@ function generateBreadcrumbs(pathname: string): BreadcrumbItem[] {
     issued: 'Issued Rewards',
     issue: 'Issue Reward',
     admins: 'Admin Users',
+    permissions: 'Permissions',
     'data-requests': 'Data Deletion Requests',
     history: 'Order History',
     checkout: 'Checkout',

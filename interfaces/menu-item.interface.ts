@@ -18,7 +18,14 @@ export type MenuCategory =
   | 'yoghurt'
   | 'malt'
   | 'water'
-  | 'healthy-soft-drink';
+  | 'healthy-soft-drink'
+  | 'soups'
+  | 'swallow'
+  | 'sauce'
+  | 'rice-dishes'
+  | 'noodles'
+  | 'small-chops'
+  | 'pepper-soup';
 
 export type MenuMainCategory = 'drinks' | 'food';
 
@@ -41,6 +48,7 @@ export interface IMenuItem {
   mainCategory: MenuMainCategory;
   category: MenuCategory;
   price: number;
+  costPerUnit: number;
   images: string[];
   customizations: ICustomization[];
   isAvailable: boolean;

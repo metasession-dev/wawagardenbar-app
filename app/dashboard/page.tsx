@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
-import { requireAdmin } from '@/lib/auth-middleware';
+import { getCurrentSession } from '@/lib/auth-middleware';
 import { OrderService } from '@/services';
 import { IOrder } from '@/interfaces';
 import OrderModel from '@/models/order-model';
@@ -16,6 +16,8 @@ import {
   Package,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+
+export const dynamic = 'force-dynamic';
 
 /**
  * Get dashboard metrics
@@ -235,10 +237,10 @@ function MetricsSkeleton() {
  * Admin dashboard home page
  */
 export default async function DashboardPage() {
-  const session = await requireAdmin();
+  const session = await getCurrentSession();
 
   // Redirect regular admins to orders page since they don't have access to overview
-  if (session.role === 'admin') {
+  if (session?.role === 'admin') {
     redirect('/dashboard/orders');
   }
 

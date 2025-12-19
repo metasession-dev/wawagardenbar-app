@@ -9,6 +9,7 @@ import { useOrderSocket } from '@/hooks/use-order-socket';
 import { updateOrderStatusAction } from '@/app/actions/admin/order-management-actions';
 import { AddOrderNoteDialog } from './add-order-note-dialog';
 import { CancelOrderDialog } from './cancel-order-dialog';
+import { AdminPayOrderDialog } from './orders/admin-pay-order-dialog';
 import {
   Settings,
   Loader2,
@@ -19,6 +20,7 @@ import {
   Phone,
   MessageSquare,
   XCircle,
+  CreditCard,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -40,6 +42,7 @@ export function OrderActionsSidebar({ order: initialOrder }: OrderActionsSidebar
   const [isUpdating, setIsUpdating] = useState(false);
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -113,6 +116,18 @@ export function OrderActionsSidebar({ order: initialOrder }: OrderActionsSidebar
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
+          {/* Process Payment Button - Only for unpaid orders */}
+          {order.paymentStatus !== 'paid' && order.status !== 'cancelled' && (
+            <Button
+              className="w-full"
+              onClick={() => setShowPaymentDialog(true)}
+              disabled={isUpdating}
+            >
+              <CreditCard className="mr-2 h-4 w-4" />
+              Process Payment
+            </Button>
+          )}
+
           {/* Status Transition Buttons */}
           {canTransitionTo(order.status, 'preparing') && (
             <Button
@@ -253,6 +268,15 @@ export function OrderActionsSidebar({ order: initialOrder }: OrderActionsSidebar
         orderId={order._id}
         open={showCancelDialog}
         onOpenChange={setShowCancelDialog}
+      />
+
+      <AdminPayOrderDialog
+        orderId={order._id}
+        orderNumber={order.orderNumber}
+        totalAmount={order.total}
+        open={showPaymentDialog}
+        onOpenChange={setShowPaymentDialog}
+        onSuccess={() => router.refresh()}
       />
     </>
   );

@@ -3,6 +3,7 @@
 import { requireSuperAdmin, getCurrentSession } from '@/lib/auth-middleware';
 import { AdminService } from '@/services/admin-service';
 import { connectDB } from '@/lib/mongodb';
+import { IAdminPermissions } from '@/interfaces';
 
 /**
  * Create new admin user
@@ -14,6 +15,7 @@ export async function createAdminAction(data: {
   firstName?: string;
   lastName?: string;
   role: 'admin' | 'super-admin';
+  permissions?: IAdminPermissions;
 }) {
   try {
     const session = await requireSuperAdmin();
@@ -162,6 +164,36 @@ export async function updateAdminStatusAction(data: {
     return {
       success: false,
       message: error.message || 'Failed to update admin status',
+    };
+  }
+}
+
+/**
+ * Update admin permissions
+ */
+export async function updateAdminPermissionsAction(
+  adminId: string,
+  permissions: IAdminPermissions
+) {
+  try {
+    const session = await requireSuperAdmin();
+    await connectDB();
+
+    await AdminService.updateAdminPermissions({
+      adminId,
+      permissions,
+      updatedBy: session.userId!,
+    });
+
+    return {
+      success: true,
+      message: 'Permissions updated successfully',
+    };
+  } catch (error: any) {
+    console.error('Update permissions error:', error);
+    return {
+      success: false,
+      message: error.message || 'Failed to update permissions',
     };
   }
 }

@@ -26,6 +26,8 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { PermissionsEditor } from './permissions-editor';
+import { IAdminPermissions, DEFAULT_ADMIN_PERMISSIONS } from '@/interfaces';
 
 const createAdminSchema = z
   .object({
@@ -68,6 +70,7 @@ export function CreateAdminDialog({ children }: CreateAdminDialogProps) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [permissions, setPermissions] = useState<IAdminPermissions>(DEFAULT_ADMIN_PERMISSIONS);
 
   const {
     register,
@@ -97,6 +100,7 @@ export function CreateAdminDialog({ children }: CreateAdminDialogProps) {
         firstName: data.firstName || undefined,
         lastName: data.lastName || undefined,
         role: data.role,
+        permissions: data.role === 'admin' ? permissions : undefined,
       });
 
       if (!result.success) {
@@ -120,7 +124,7 @@ export function CreateAdminDialog({ children }: CreateAdminDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create Admin User</DialogTitle>
           <DialogDescription>
@@ -258,10 +262,25 @@ export function CreateAdminDialog({ children }: CreateAdminDialogProps) {
             </Select>
             <p className="text-xs text-muted-foreground">
               {role === 'admin'
-                ? 'Can manage orders and basic operations'
+                ? 'Customizable permissions for specific features'
                 : 'Full access to all dashboard features'}
             </p>
           </div>
+
+          {/* Permissions - Only for Admin role */}
+          {role === 'admin' && (
+            <div className="space-y-2">
+              <Label>Permissions</Label>
+              <p className="text-xs text-muted-foreground mb-4">
+                Configure what features this admin can access
+              </p>
+              <PermissionsEditor
+                permissions={permissions}
+                onChange={setPermissions}
+                disabled={isLoading}
+              />
+            </div>
+          )}
 
           {/* Actions */}
           <div className="flex justify-end gap-2 pt-4">

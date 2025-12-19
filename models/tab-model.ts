@@ -16,6 +16,15 @@ const tabSchema = new Schema<ITab>(
       type: Schema.Types.ObjectId,
       ref: 'User',
     },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    createdByRole: {
+      type: String,
+      enum: ['admin', 'super-admin', 'customer'],
+      default: 'customer',
+    },
     openedByStaffId: {
       type: Schema.Types.ObjectId,
       ref: 'User',

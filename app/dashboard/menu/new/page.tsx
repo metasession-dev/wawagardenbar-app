@@ -1,4 +1,3 @@
-import { requireSuperAdmin } from '@/lib/auth-middleware';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MenuItemForm } from '@/components/features/admin/menu-item-form';
 
@@ -11,8 +10,6 @@ export const metadata = {
  * Add new menu item page
  */
 export default async function NewMenuItemPage() {
-  await requireSuperAdmin();
-
   return (
     <div className="space-y-6">
       <div>

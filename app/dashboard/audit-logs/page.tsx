@@ -1,5 +1,4 @@
 import { Suspense } from 'react';
-import { requireSuperAdmin } from '@/lib/auth-middleware';
 import { AuditLogService } from '@/services';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -135,8 +134,6 @@ function TableSkeleton() {
  * Audit logs page
  */
 export default async function AuditLogsPage() {
-  await requireSuperAdmin();
-
   return (
     <div className="space-y-6">
       <div>

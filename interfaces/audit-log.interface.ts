@@ -15,6 +15,7 @@ export type AuditAction =
   | 'inventory.update'
   | 'order.update'
   | 'order.cancel'
+  | 'order.manual_payment'
   | 'reward.create'
   | 'reward.update'
   | 'reward.delete'
@@ -25,6 +26,7 @@ export type AuditAction =
   | 'admin.logout'
   | 'admin.login-failed'
   | 'admin.account-locked'
+  | 'admin.permissions-updated'
   | 'expense.create'
   | 'expense.update'
   | 'expense.delete';

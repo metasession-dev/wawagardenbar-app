@@ -1,6 +1,5 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { requireAdmin } from '@/lib/auth-middleware';
 import { getInventoryDetailsAction } from '@/app/actions/admin/inventory-actions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,8 +20,6 @@ interface Props {
  * View and manage individual inventory item
  */
 export default async function InventoryDetailPage({ params }: Props) {
-  await requireAdmin();
-
   const { id } = await params;
   const result = await getInventoryDetailsAction(id);
 

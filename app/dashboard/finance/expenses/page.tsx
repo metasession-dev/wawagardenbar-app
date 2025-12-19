@@ -1,31 +1,15 @@
 import { Suspense } from 'react';
-import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
-import { getIronSession } from 'iron-session';
-import { sessionOptions, SessionData } from '@/lib/session';
 import { ExpensesPageClient } from '@/app/dashboard/finance/expenses/expenses-client';
+import { getCurrentSession } from '@/lib/auth-middleware';
 
 export const metadata = {
   title: 'Expenses | Wawa Garden Bar',
   description: 'Manage business expenses',
 };
 
-async function getSession() {
-  return await getIronSession<SessionData>(await cookies(), sessionOptions);
-}
-
 export default async function ExpensesPage() {
-  const session = await getSession();
-
-  // Check authentication
-  if (!session.isLoggedIn) {
-    redirect('/login');
-  }
-
-  // Check authorization - only super-admin and admin can access
-  if (session.role !== 'super-admin' && session.role !== 'admin') {
-    redirect('/dashboard');
-  }
+  const session = await getCurrentSession();
+  const userRole = session?.role || 'admin';
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -39,7 +23,7 @@ export default async function ExpensesPage() {
       </div>
 
       <Suspense fallback={<div>Loading...</div>}>
-        <ExpensesPageClient userRole={session.role} />
+        <ExpensesPageClient userRole={userRole} />
       </Suspense>
     </div>
   );

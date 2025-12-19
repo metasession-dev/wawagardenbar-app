@@ -1,18 +1,7 @@
-import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
-import { getIronSession } from 'iron-session';
-import { sessionOptions, SessionData } from '@/lib/session';
 import { TabService } from '@/services';
 import { DashboardTabsListClient } from '@/components/features/admin/tabs/dashboard-tabs-list-client';
 
 async function getOpenTabs() {
-  const cookieStore = await cookies();
-  const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
-
-  if (!session.userId || (session.role !== 'admin' && session.role !== 'super-admin')) {
-    redirect('/dashboard');
-  }
-
   // Get tabs with default filter (open tabs)
   const tabs = await TabService.listAllTabsWithFilters({
     statuses: ['open'],

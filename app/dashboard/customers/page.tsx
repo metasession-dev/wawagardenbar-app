@@ -1,5 +1,4 @@
 import { Suspense } from 'react';
-import { requireSuperAdmin } from '@/lib/auth-middleware';
 import UserModel from '@/models/user-model';
 import { connectDB } from '@/lib/mongodb';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -123,8 +122,6 @@ function TableSkeleton() {
  * Customer management page
  */
 export default async function CustomersPage() {
-  await requireSuperAdmin();
-
   return (
     <div className="space-y-6">
       <div>

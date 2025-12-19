@@ -115,7 +115,7 @@ class SettingsService {
    */
   static async calculateOrderTotals(
     subtotal: number,
-    orderType: 'dine-in' | 'pickup' | 'delivery'
+    orderType: 'dine-in' | 'pickup' | 'delivery' | 'pay-now'
   ): Promise<{
     subtotal: number;
     serviceFee: number;

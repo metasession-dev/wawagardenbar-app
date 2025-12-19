@@ -3,6 +3,8 @@ import { requireAdmin } from '@/lib/auth-middleware';
 import { DashboardNav } from '@/components/features/admin/dashboard-nav';
 import { Breadcrumb } from '@/components/shared/breadcrumb';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Admin Dashboard | Wawa Garden Bar',
   description: 'Manage your restaurant operations',
@@ -24,10 +26,21 @@ export default async function DashboardLayout({
     redirect('/login');
   }
 
+  // Debug logging
+  console.log(`[DashboardLayout] Access granted to user: ${session.email}`);
+  console.log(`[DashboardLayout] User Role: ${session.role}`);
+  if (session.permissions) {
+    console.log(`[DashboardLayout] Permissions:`, JSON.stringify(session.permissions, null, 2));
+  }
+
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar */}
-      <DashboardNav userEmail={session.email} userRole={session.role} />
+      <DashboardNav 
+        userEmail={session.email} 
+        userRole={session.role}
+        permissions={session.permissions}
+      />
 
       {/* Main Content */}
       <div className="flex flex-1 flex-col overflow-hidden">

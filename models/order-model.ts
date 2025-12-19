@@ -28,6 +28,10 @@ const orderItemSchema = new Schema<IOrderItem>(
     ],
     specialInstructions: { type: String },
     subtotal: { type: Number, required: true, min: 0 },
+    costPerUnit: { type: Number, required: true, min: 0, default: 0 },
+    totalCost: { type: Number, required: true, min: 0, default: 0 },
+    grossProfit: { type: Number, required: true, default: 0 },
+    profitMargin: { type: Number, required: true, default: 0 },
   },
   { _id: false }
 );
@@ -78,13 +82,19 @@ const orderSchema = new Schema<IOrder>(
       unique: true,
     },
     userId: { type: Schema.Types.ObjectId, ref: 'User' },
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    createdByRole: {
+      type: String,
+      enum: ['admin', 'super-admin', 'customer'],
+      default: 'customer',
+    },
     guestEmail: { type: String, lowercase: true, trim: true },
     guestName: { type: String, trim: true },
     guestPhone: { type: String, trim: true },
     tabId: { type: Schema.Types.ObjectId, ref: 'Tab' },
     orderType: {
       type: String,
-      enum: ['dine-in', 'pickup', 'delivery'] as OrderType[],
+      enum: ['dine-in', 'pickup', 'delivery', 'pay-now'] as OrderType[],
       required: true,
     },
     status: {
@@ -109,9 +119,21 @@ const orderSchema = new Schema<IOrder>(
     discount: { type: Number, default: 0, min: 0 },
     tipAmount: { type: Number, default: 0, min: 0 },
     total: { type: Number, required: true, min: 0 },
+    totalCost: { type: Number, default: 0, min: 0 },
+    grossProfit: { type: Number, default: 0 },
+    profitMargin: { type: Number, default: 0 },
+    operationalCosts: {
+      delivery: { type: Number, default: 0, min: 0 },
+      packaging: { type: Number, default: 0, min: 0 },
+      processing: { type: Number, default: 0, min: 0 },
+    },
     paymentId: { type: Schema.Types.ObjectId, ref: 'Payment' },
     paymentReference: { type: String },
     transactionReference: { type: String },
+    paymentMethod: {
+      type: String,
+      enum: ['card', 'transfer', 'ussd', 'phone', 'cash'],
+    },
     paymentStatus: {
       type: String,
       enum: ['pending', 'paid', 'failed', 'cancelled', 'refunded'],

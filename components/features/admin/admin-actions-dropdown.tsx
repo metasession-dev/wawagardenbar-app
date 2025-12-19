@@ -25,8 +25,9 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, Key, UserX, UserCheck, Trash2, Copy } from 'lucide-react';
+import { MoreHorizontal, Key, UserX, UserCheck, Trash2, Copy, Shield } from 'lucide-react';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 interface AdminActionsDropdownProps {
   admin: any;
@@ -37,6 +38,7 @@ export function AdminActionsDropdown({
   admin,
   onUpdate,
 }: AdminActionsDropdownProps) {
+  const router = useRouter();
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [tempPassword, setTempPassword] = useState<string | null>(null);
@@ -122,6 +124,15 @@ export function AdminActionsDropdown({
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
           <DropdownMenuSeparator />
+
+          {admin.role === 'admin' && (
+            <DropdownMenuItem
+              onClick={() => router.push(`/dashboard/settings/admins/${admin._id}/permissions`)}
+            >
+              <Shield className="mr-2 h-4 w-4" />
+              Manage Permissions
+            </DropdownMenuItem>
+          )}
 
           <DropdownMenuItem onClick={() => setShowResetDialog(true)}>
             <Key className="mr-2 h-4 w-4" />

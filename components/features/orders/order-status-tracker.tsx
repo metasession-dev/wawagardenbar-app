@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 
 interface OrderStatusTrackerProps {
   currentStatus: OrderStatus;
-  orderType: 'dine-in' | 'pickup' | 'delivery';
+  orderType: 'dine-in' | 'pickup' | 'delivery' | 'pay-now';
   className?: string;
 }
 
@@ -126,7 +126,7 @@ export function OrderStatusTracker({
   const steps =
     orderType === 'dine-in'
       ? STATUS_STEPS_DINE_IN
-      : orderType === 'pickup'
+      : orderType === 'pickup' || orderType === 'pay-now'
         ? STATUS_STEPS_PICKUP
         : STATUS_STEPS_DELIVERY;
 

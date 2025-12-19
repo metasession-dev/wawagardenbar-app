@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { UserRole } from '@/interfaces/user.interface';
+import { IAdminPermissions } from '@/interfaces';
 import { RoleBadge } from './role-badge';
 import { logoutAction } from '@/app/actions/auth/logout';
 
@@ -27,6 +28,7 @@ interface NavItem {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   roles: UserRole[];
+  permission?: keyof IAdminPermissions;
   badge?: string;
 }
 
@@ -42,12 +44,14 @@ const navItems: NavItem[] = [
     href: '/dashboard/orders',
     icon: ShoppingCart,
     roles: ['admin', 'super-admin'],
+    permission: 'orderManagement',
   },
   {
     title: 'Menu',
     href: '/dashboard/menu',
     icon: UtensilsCrossed,
-    roles: ['super-admin'],
+    roles: ['admin', 'super-admin'],
+    permission: 'menuManagement',
   },
   {
     title: 'Customers',
@@ -59,33 +63,30 @@ const navItems: NavItem[] = [
     title: 'Inventory',
     href: '/dashboard/inventory',
     icon: Package,
-    roles: ['super-admin'],
+    roles: ['admin', 'super-admin'],
+    permission: 'inventoryManagement',
   },
   {
     title: 'Rewards',
     href: '/dashboard/rewards',
     icon: Gift,
-    roles: ['super-admin'],
+    roles: ['admin', 'super-admin'],
+    permission: 'rewardsAndLoyalty',
   },
   {
     title: 'Expenses',
     href: '/dashboard/finance/expenses',
     icon: DollarSign,
     roles: ['admin', 'super-admin'],
+    permission: 'expensesManagement',
   },
   {
     title: 'Reports',
     href: '/dashboard/reports',
     icon: BarChart3,
     roles: ['admin', 'super-admin'],
+    permission: 'reportsAndAnalytics',
   },
-  // TODO: Create analytics page at /dashboard/analytics
-  // {
-  //   title: 'Analytics',
-  //   href: '/dashboard/analytics',
-  //   icon: BarChart3,
-  //   roles: ['super-admin'],
-  // },
   {
     title: 'Audit Logs',
     href: '/dashboard/audit-logs',
@@ -96,26 +97,42 @@ const navItems: NavItem[] = [
     title: 'Settings',
     href: '/dashboard/settings',
     icon: Settings,
-    roles: ['super-admin'],
+    roles: ['admin', 'super-admin'],
+    permission: 'settingsAndConfiguration',
   },
 ];
 
 interface DashboardNavProps {
   userEmail?: string;
   userRole?: UserRole;
+  permissions?: IAdminPermissions;
 }
 
 /**
- * Dashboard sidebar navigation with role-based filtering
+ * Dashboard sidebar navigation with role-based and permission-based filtering
  * Only shows navigation items that the user has permission to access
  */
-export function DashboardNav({ userEmail, userRole }: DashboardNavProps) {
+export function DashboardNav({ userEmail, userRole, permissions }: DashboardNavProps) {
   const pathname = usePathname();
 
-  // Filter navigation items based on user role
+  // Filter navigation items based on user role and permissions
   const filteredNavItems = navItems.filter((item) => {
     if (!userRole) return false;
-    return item.roles.includes(userRole);
+    
+    // Check role access
+    if (!item.roles.includes(userRole)) return false;
+    
+    // Super-admin has access to everything
+    if (userRole === 'super-admin') return true;
+    
+    // For admin role, check permissions if specified
+    if (item.permission) {
+      if (!permissions) return false;
+      return permissions[item.permission] === true;
+    }
+    
+    // If no permission specified, allow access (for items like Overview)
+    return true;
   });
 
   return (

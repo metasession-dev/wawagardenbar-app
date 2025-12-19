@@ -1,4 +1,5 @@
 import { Types } from 'mongoose';
+import { IAdminPermissions } from './admin-permissions.interface';
 
 export interface IAddress {
   _id?: Types.ObjectId;
@@ -79,6 +80,7 @@ export interface IUser {
   passwordChangedAt?: Date;       // Track password change history
   failedLoginAttempts?: number;   // Track failed login attempts
   accountLockedUntil?: Date;      // Account lockout timestamp
+  permissions?: IAdminPermissions; // Granular permissions for admin users
   
   // Addresses & Payment
   addresses: IAddress[];

@@ -16,7 +16,7 @@ import {
 import { CartItem } from '@/stores/cart-store';
 
 export interface CreateOrderInput {
-  orderType: 'dine-in' | 'pickup' | 'delivery';
+  orderType: 'dine-in' | 'pickup' | 'delivery' | 'pay-now';
   items: CartItem[];
   customerInfo: {
     name: string;
@@ -123,6 +123,9 @@ export async function createOrder(input: CreateOrderInput): Promise<{
         guestEmail: input.customerInfo.email,
         guestPhone: input.customerInfo.phone,
       }),
+      // Track who created the order
+      createdBy: userId,
+      createdByRole: session.role || 'customer',
       subtotal,
       serviceFee,
       tax,

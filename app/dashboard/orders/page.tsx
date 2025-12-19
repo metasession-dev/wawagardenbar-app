@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
-import { requireAdmin } from '@/lib/auth-middleware';
+import { getCurrentSession } from '@/lib/auth-middleware';
 import { getOrdersAction } from '@/app/actions/admin/order-management-actions';
 import { OrderQueue } from '@/components/features/admin/order-queue';
 import { OrderStats } from '@/components/features/admin/order-stats';
@@ -60,8 +60,8 @@ function QueueSkeleton() {
  * Main order management interface
  */
 export default async function OrdersPage() {
-  const session = await requireAdmin();
-  const isSuperAdmin = session.role === 'super-admin';
+  const session = await getCurrentSession();
+  const isSuperAdmin = session?.role === 'super-admin';
 
   const result = await getOrdersAction({}, 1, 50);
 

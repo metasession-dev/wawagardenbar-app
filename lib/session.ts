@@ -1,5 +1,6 @@
 import { SessionOptions } from 'iron-session';
 import { UserRole } from '@/interfaces/user.interface';
+import { IAdminPermissions } from '@/interfaces';
 
 export interface SessionData {
   userId?: string;
@@ -7,6 +8,7 @@ export interface SessionData {
   phone?: string;
   name?: string;
   role?: UserRole;
+  permissions?: IAdminPermissions;
   isGuest?: boolean;
   guestId?: string;
   isLoggedIn: boolean;

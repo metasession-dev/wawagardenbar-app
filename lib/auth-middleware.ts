@@ -3,6 +3,7 @@ import { getIronSession } from 'iron-session';
 import { redirect } from 'next/navigation';
 import { sessionOptions, SessionData } from './session';
 import { UserRole } from '@/interfaces/user.interface';
+import { IAdminPermissions } from '@/interfaces';
 
 /**
  * Check if user is authenticated
@@ -77,4 +78,32 @@ export function hasPermission(
   requiredRoles: UserRole[]
 ): boolean {
   return requiredRoles.includes(userRole);
+}
+
+/**
+ * Check if admin has specific permission
+ * Super-admins always have access
+ */
+export async function requirePermission(
+  permission: keyof IAdminPermissions
+): Promise<SessionData> {
+  const session = await requireAdmin();
+
+  // Super-admin has all permissions
+  if (session.role === 'super-admin') {
+    return session;
+  }
+
+  // Debug logging
+  console.log(`[Auth] Checking permission: ${permission}`);
+  console.log(`[Auth] User Role: ${session.role}`);
+  console.log(`[Auth] Permissions:`, JSON.stringify(session.permissions, null, 2));
+
+  // Check if admin has the required permission
+  if (!session.permissions || !session.permissions[permission]) {
+    console.log(`[Auth] Access denied: Missing permission ${permission}`);
+    redirect('/dashboard/forbidden');
+  }
+
+  return session;
 }

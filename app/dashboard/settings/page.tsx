@@ -1,4 +1,3 @@
-import { requireSuperAdmin } from '@/lib/auth-middleware';
 import { SettingsService } from '@/services';
 import { SystemSettingsService } from '@/services/system-settings-service';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,8 +17,6 @@ export const metadata = {
  * Super-admin only
  */
 export default async function SettingsPage() {
-  await requireSuperAdmin();
-
   // Get current settings
   const [settings, notificationSettings, paymentSettings] = await Promise.all([
     SettingsService.getSettings(),

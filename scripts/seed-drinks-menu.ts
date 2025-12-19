@@ -936,19 +936,20 @@ async function seedDrinksMenu() {
     let inventoryCreated = 0;
 
     for (const drink of drinksMenu) {
-      // Create menu item
+      // Create menu item first (without inventory link)
       const menuItem = await MenuItemModel.create({
         name: drink.name,
         description: drink.description,
         mainCategory: drink.mainCategory,
         category: drink.category,
         price: drink.price,
+        costPerUnit: drink.inventoryTracking.costPerUnit,
         preparationTime: drink.preparationTime,
         servingSize: '1 bottle',
         tags: drink.tags,
-        available: drink.availableForOrdering,
-        outOfStock: false,
+        isAvailable: drink.availableForOrdering,
         displayPriority: 0,
+        trackInventory: drink.inventoryTracking.enabled,
       });
 
       menuCreated++;
@@ -956,7 +957,7 @@ async function seedDrinksMenu() {
 
       // Create inventory if tracking is enabled
       if (drink.inventoryTracking.enabled) {
-        await InventoryModel.create({
+        const inventory = await InventoryModel.create({
           menuItemId: menuItem._id,
           menuItemName: drink.name,
           currentStock: drink.inventoryTracking.initialStock,
@@ -968,8 +969,13 @@ async function seedDrinksMenu() {
           preventOrdersWhenOutOfStock: drink.inventoryTracking.preventOrdersWhenOutOfStock,
         });
 
+        // Link inventory back to menu item
+        menuItem.inventoryId = inventory._id.toString();
+        await menuItem.save();
+
         inventoryCreated++;
-        console.log(`   📊 Created inventory: ${drink.inventoryTracking.initialStock} ${drink.inventoryTracking.unit}\n`);
+        console.log(`   📊 Created inventory: ${drink.inventoryTracking.initialStock} ${drink.inventoryTracking.unit}`);
+        console.log(`   🔗 Linked inventory to menu item\n`);
       }
     }
 

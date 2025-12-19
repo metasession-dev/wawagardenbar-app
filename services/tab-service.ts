@@ -24,6 +24,8 @@ export class TabService {
   static async createTab(params: {
     tableNumber: string;
     userId?: string;
+    createdBy?: string;
+    createdByRole?: 'admin' | 'super-admin' | 'customer';
     openedByStaffId?: string;
     customerName?: string;
     customerEmail?: string;
@@ -38,6 +40,8 @@ export class TabService {
       tabNumber,
       tableNumber: params.tableNumber,
       userId: params.userId ? new Types.ObjectId(params.userId) : undefined,
+      createdBy: params.createdBy ? new Types.ObjectId(params.createdBy) : undefined,
+      createdByRole: params.createdByRole || 'customer',
       openedByStaffId: params.openedByStaffId
         ? new Types.ObjectId(params.openedByStaffId)
         : undefined,
@@ -101,6 +105,23 @@ export class TabService {
 
     const tab = await TabModel.findOne({
       tableNumber,
+      status: 'open',
+    })
+      .populate('orders')
+      .lean();
+
+    return tab ? JSON.parse(JSON.stringify(tab)) : null;
+  }
+
+  /**
+   * Get open tab for a specific customer
+   * Used by admins to check if customer has open tab
+   */
+  static async getOpenTabForCustomer(customerId: string): Promise<ITab | null> {
+    await connectDB();
+
+    const tab = await TabModel.findOne({
+      userId: new Types.ObjectId(customerId),
       status: 'open',
     })
       .populate('orders')
@@ -302,6 +323,24 @@ export class TabService {
         },
       }
     );
+
+    // Deduct inventory for all orders in the tab
+    const InventoryService = (await import('./inventory-service')).default;
+    for (const orderId of tab.orders) {
+      try {
+        const order = await OrderModel.findById(orderId);
+        if (order && !order.inventoryDeducted) {
+          await InventoryService.deductStockForOrder(orderId.toString());
+          order.inventoryDeducted = true;
+          order.inventoryDeductedAt = new Date();
+          await order.save();
+          console.log('Inventory deducted for tab order:', orderId);
+        }
+      } catch (error) {
+        console.error('Error deducting inventory for tab order:', orderId, error);
+        // Continue processing other orders even if one fails
+      }
+    }
 
     return JSON.parse(JSON.stringify(tab.toObject()));
   }
@@ -549,6 +588,24 @@ export class TabService {
         },
       }
     );
+
+    // Deduct inventory for all orders in the tab
+    const InventoryService = (await import('./inventory-service')).default;
+    for (const orderId of tab.orders) {
+      try {
+        const order = await OrderModel.findById(orderId);
+        if (order && !order.inventoryDeducted) {
+          await InventoryService.deductStockForOrder(orderId.toString());
+          order.inventoryDeducted = true;
+          order.inventoryDeductedAt = new Date();
+          await order.save();
+          console.log('Inventory deducted for order:', orderId);
+        }
+      } catch (error) {
+        console.error('Error deducting inventory for order:', orderId, error);
+        // Continue processing other orders even if one fails
+      }
+    }
 
     // Create audit log for manual payment
     const AuditLogService = (await import('./audit-log-service')).AuditLogService;

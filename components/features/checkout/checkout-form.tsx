@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,8 +17,11 @@ import { TabOptionsStep } from './tab-options-step';
 import { TipInputStep } from './tip-input-step';
 import { OrderSummary } from './order-summary';
 import { OrderStatusDialog } from './order-status-dialog';
+import { AdminCheckoutIndicator } from './admin-checkout-indicator';
 import { createOrder, initializePayment } from '@/app/actions/payment/payment-actions';
-import { createTabAction, getOpenTabForUserAction, getOpenTabForTableAction } from '@/app/actions/tabs/tab-actions';
+import { completeOrderPaymentManuallyAction } from '@/app/actions/admin/order-payment-actions';
+import { createTabAction, getOpenTabForTableAction } from '@/app/actions/tabs/tab-actions';
+import { checkUserTabRestrictionsAction } from '@/app/actions/tabs/tab-restriction-actions';
 import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
 import { ITab } from '@/interfaces';
 import { useAuth } from '@/hooks/use-auth';
@@ -31,7 +34,7 @@ const checkoutSchema = z.object({
   customerPhone: z.string().min(10, 'Phone number must be at least 10 digits'),
   
   // Order Details (conditional based on order type)
-  orderType: z.enum(['dine-in', 'pickup', 'delivery']),
+  orderType: z.enum(['dine-in', 'pickup', 'delivery', 'pay-now']),
   tableNumber: z.string().optional(),
   pickupTime: z.string().optional(),
   deliveryStreet: z.string().optional(),
@@ -147,6 +150,21 @@ export function CheckoutForm() {
     redirectUrl?: string;
     redirectLabel?: string;
   } | null>(null);
+  const [adminPaymentData, setAdminPaymentData] = useState<{
+    paymentType: 'cash' | 'transfer' | 'card';
+    paymentReference: string;
+    comments?: string;
+  } | null>(null);
+  const [useAdminFullCheckout, setUseAdminFullCheckout] = useState(false);
+  
+  // Use ref to avoid race condition with state updates
+  const adminPaymentDataRef = useRef<{
+    paymentType: 'cash' | 'transfer' | 'card';
+    paymentReference: string;
+    comments?: string;
+  } | null>(null);
+
+  const isAdmin = role === 'admin' || role === 'super-admin';
 
   const form = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
@@ -204,34 +222,40 @@ export function CheckoutForm() {
   useEffect(() => {
     async function fetchExistingTab() {
       if (orderType === 'dine-in') {
-        // Priority: Check if we have a specific table number from store
-        if (storeTableNumber) {
-          const result = await getOpenTabForTableAction(storeTableNumber);
-          if (result.success && result.data?.tab) {
-            setExistingTab(result.data.tab);
-            form.setValue('tableNumber', storeTableNumber);
-            form.setValue('useTab', 'existing-tab');
-            // Don't lock for storeTableNumber (admin use case)
-            setIsTableLocked(false); 
-            return;
+        // Admins are never restricted
+        if (isAdmin) {
+          setIsTableLocked(false);
+          setExistingTab(null);
+          
+          // If admin has a table number from store, check for existing tab at that table
+          if (storeTableNumber) {
+            const result = await getOpenTabForTableAction(storeTableNumber);
+            if (result.success && result.data?.tab) {
+              setExistingTab(result.data.tab);
+              form.setValue('tableNumber', storeTableNumber);
+              form.setValue('useTab', 'existing-tab');
+            }
           }
+          return;
         }
 
-        // Fallback: Check for user's own open tab (Customer use case)
-        const result = await getOpenTabForUserAction();
-        if (result.success && result.data?.tab) {
-          setExistingTab(result.data.tab);
-          // Pre-populate table number from existing tab
-          form.setValue('tableNumber', result.data.tab.tableNumber);
+        // Customers: Check restrictions using server action
+        const restrictions = await checkUserTabRestrictionsAction();
+        
+        if (restrictions.isRestricted && restrictions.existingTab) {
+          setExistingTab(restrictions.existingTab);
+          form.setValue('tableNumber', restrictions.existingTab.tableNumber);
           form.setValue('useTab', 'existing-tab');
-          // Lock table number for customer who already has a tab
           setIsTableLocked(true);
+        } else {
+          setIsTableLocked(false);
+          setExistingTab(null);
         }
       }
     }
     fetchExistingTab();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orderType, storeTableNumber]); // Removed form dependency to avoid loop, added specific deps
+  }, [orderType, storeTableNumber, isAdmin]);
 
   // Watch table number input and check for existing tabs (Debounced)
   useEffect(() => {
@@ -450,8 +474,44 @@ export function CheckoutForm() {
         return;
       }
 
-      // Step 2: Initialize payment (only if not using tab)
-      if (!data.paymentMethod) {
+      // Step 2: Handle admin manual payment if selected
+      const paymentData = adminPaymentDataRef.current || adminPaymentData;
+      if (isAdmin && paymentData && !useAdminFullCheckout) {
+        const paymentResult = await completeOrderPaymentManuallyAction({
+          orderId,
+          paymentType: paymentData.paymentType,
+          paymentReference: paymentData.paymentReference,
+          comments: paymentData.comments,
+        });
+
+        if (!paymentResult.success) {
+          setOrderStatus({
+            status: 'error',
+            title: 'Payment Failed',
+            message: paymentResult.message || 'Failed to process manual payment. Please try again.',
+          });
+          setShowStatusDialog(true);
+          setIsSubmitting(false);
+          setHasSubmitted(false);
+          return;
+        }
+
+        // Success - redirect to order details
+        setOrderStatus({
+          status: 'success',
+          title: 'Order Paid Successfully!',
+          message: 'The order has been created and marked as paid.',
+          redirectUrl: `/dashboard/orders/${orderId}`,
+          redirectLabel: 'View Order',
+        });
+        setShowStatusDialog(true);
+        setIsSubmitting(false);
+        setHasSubmitted(false);
+        return;
+      }
+
+      // Step 3: Initialize payment gateway (for customers or admin full checkout)
+      if (!data.paymentMethod && !adminPaymentData) {
         setOrderStatus({
           status: 'error',
           title: 'Payment Method Required',
@@ -468,7 +528,7 @@ export function CheckoutForm() {
         amount: getTotalPrice() + (data.tipAmount || 0),
         customerName: data.customerName,
         customerEmail: data.customerEmail,
-        paymentMethods: [data.paymentMethod],
+        paymentMethods: data.paymentMethod ? [data.paymentMethod] : ['CARD'],
       });
 
       if (!paymentResult.success || !paymentResult.data) {
@@ -591,6 +651,9 @@ export function CheckoutForm() {
 
   return (
     <div className="mx-auto max-w-6xl">
+      {/* Admin Indicator */}
+      {isAdmin && <AdminCheckoutIndicator currentStep={steps[currentStep - 1]?.name} />}
+      
       {/* Progress Steps */}
       <div className="mb-8">
         <div className="flex items-center justify-between overflow-x-auto pb-2">
@@ -685,9 +748,47 @@ export function CheckoutForm() {
                     />
                   )}
                   {currentStep === 4 && orderType === 'dine-in' && <TipInputStep form={form} subtotal={getTotalPrice()} />}
-                  {currentStep === 5 && orderType === 'dine-in' && useTab === 'pay-now' && <PaymentMethodStep form={form} />}
+                  {currentStep === 5 && orderType === 'dine-in' && useTab === 'pay-now' && (
+                    <PaymentMethodStep 
+                      form={form} 
+                      isAdmin={isAdmin}
+                      onAdminManualPayment={(data) => {
+                        // Set both ref and state - ref is used immediately, state for UI
+                        adminPaymentDataRef.current = data;
+                        setAdminPaymentData(data);
+                        setUseAdminFullCheckout(false);
+                        form.handleSubmit(onSubmit)();
+                      }}
+                      onAdminFullCheckout={() => {
+                        adminPaymentDataRef.current = null;
+                        setUseAdminFullCheckout(true);
+                        setAdminPaymentData(null);
+                        handleNext();
+                      }}
+                      isProcessing={isSubmitting}
+                    />
+                  )}
                   {currentStep === 3 && orderType !== 'dine-in' && <TipInputStep form={form} subtotal={getTotalPrice()} />}
-                  {currentStep === 4 && orderType !== 'dine-in' && <PaymentMethodStep form={form} />}
+                  {currentStep === 4 && orderType !== 'dine-in' && (
+                    <PaymentMethodStep 
+                      form={form} 
+                      isAdmin={isAdmin}
+                      onAdminManualPayment={(data) => {
+                        // Set both ref and state - ref is used immediately, state for UI
+                        adminPaymentDataRef.current = data;
+                        setAdminPaymentData(data);
+                        setUseAdminFullCheckout(false);
+                        form.handleSubmit(onSubmit)();
+                      }}
+                      onAdminFullCheckout={() => {
+                        adminPaymentDataRef.current = null;
+                        setUseAdminFullCheckout(true);
+                        setAdminPaymentData(null);
+                        handleNext();
+                      }}
+                      isProcessing={isSubmitting}
+                    />
+                  )}
 
                   {/* Navigation Buttons */}
                   <div className="flex justify-between pt-4">

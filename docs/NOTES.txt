@@ -11,19 +11,114 @@ docker-compose pull && docker-compose up -d --force-recreate
 
 🔐 Login URL: http://localhost:3000/admin/login
 
-# Running .tsx files in Production Docker
+# ========================================
+# PRODUCTION DEPLOYMENT - FRESH DATABASE SETUP
+# ========================================
 
-# 1. Check running containers
+# Step 1: Check running containers
 docker ps
 
-# 2. Clean database (interactive - requires typing "DELETE")
-docker exec -it food_app npx tsx scripts/cleanup-database.ts
+# Step 2: Delete existing data (CAUTION: This removes all data!)
+# Delete all users (except super admin will be recreated)
+docker exec -it food_app npx tsx -e "
+import { connectDB } from './lib/mongodb';
+import { UserModel } from './models';
+await connectDB();
+await UserModel.deleteMany({});
+console.log('✅ All users deleted');
+process.exit(0);
+"
 
-# 3. Quick cleanup (no confirmation needed)
-docker exec -it food_app npx tsx scripts/quick-cleanup.ts
+# Delete all menu items
+docker exec -it food_app npx tsx -e "
+import { connectDB } from './lib/mongodb';
+import MenuItemModel from './models/menu-item-model';
+await connectDB();
+await MenuItemModel.deleteMany({});
+console.log('✅ All menu items deleted');
+process.exit(0);
+"
 
-# 4. Seed drinks menu
+# Delete all inventory records
+docker exec -it food_app npx tsx -e "
+import { connectDB } from './lib/mongodb';
+import InventoryModel from './models/inventory-model';
+await connectDB();
+await InventoryModel.deleteMany({});
+console.log('✅ All inventory deleted');
+process.exit(0);
+"
+
+# Delete all orders
+docker exec -it food_app npx tsx -e "
+import { connectDB } from './lib/mongodb';
+import OrderModel from './models/order-model';
+await connectDB();
+await OrderModel.deleteMany({});
+console.log('✅ All orders deleted');
+process.exit(0);
+"
+
+# Step 3: Create Super Admin
+docker exec -it food_app npx tsx scripts/create-super-admin.ts
+
+# Step 4: Seed Drinks Menu (46 items with inventory tracking)
 docker exec -it food_app npx tsx scripts/seed-drinks-menu.ts
 
-# Note: Scripts are now included in Docker image (removed from .dockerignore)
-docker exec -it wawagardenbar-app npx tsx scripts/seed-drinks-menu.ts
+# Step 5: Seed Food Menu (16 items with inventory tracking)
+docker exec -it food_app npx tsx scripts/seed-food-menu.ts
+
+# Step 6: Verify deployment
+docker exec -it food_app npx tsx -e "
+import { connectDB } from './lib/mongodb';
+import { UserModel } from './models';
+import MenuItemModel from './models/menu-item-model';
+import InventoryModel from './models/inventory-model';
+await connectDB();
+const userCount = await UserModel.countDocuments();
+const menuCount = await MenuItemModel.countDocuments();
+const inventoryCount = await InventoryModel.countDocuments();
+console.log('📊 Database Status:');
+console.log('Users:', userCount);
+console.log('Menu Items:', menuCount, '(Expected: 62 - 46 drinks + 16 food)');
+console.log('Inventory Records:', inventoryCount, '(Expected: 62)');
+process.exit(0);
+"
+
+# ========================================
+# PRODUCTION DEPLOYMENT - QUICK REFERENCE
+# ========================================
+
+# Complete fresh setup (all steps in one block):
+docker exec -it food_app npx tsx scripts/create-super-admin.ts && \
+docker exec -it food_app npx tsx scripts/seed-drinks-menu.ts && \
+docker exec -it food_app npx tsx scripts/seed-food-menu.ts
+
+# ========================================
+# UTILITY COMMANDS
+# ========================================
+
+# Clean orphaned inventory records
+docker exec -it food_app npx tsx scripts/clean-orphaned-inventory.ts
+
+# Delete food menu only
+docker exec -it food_app npx tsx scripts/delete-food-menu.ts
+
+# Re-seed food menu only
+docker exec -it food_app npx tsx scripts/seed-food-menu.ts
+
+# Check container logs
+docker logs food_app --tail 100 -f
+
+# Access container shell
+docker exec -it food_app sh
+
+# ========================================
+# EXPECTED RESULTS AFTER DEPLOYMENT
+# ========================================
+# ✅ 1 Super Admin User (william@ostendo.io / superadmin)
+# ✅ 46 Drink Items (all with inventory tracking)
+# ✅ 16 Food Items (all with inventory tracking)
+# ✅ 62 Total Inventory Records
+# ✅ All items available for ordering
+# ✅ Inventory tracking enabled on all items

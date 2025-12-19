@@ -1,30 +1,9 @@
-import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
-import { getIronSession } from 'iron-session';
-import { sessionOptions, SessionData } from '@/lib/session';
-
 export const metadata = {
   title: 'Reports | Wawa Garden Bar',
   description: 'Financial and operational reports',
 };
 
-async function getSession() {
-  return await getIronSession<SessionData>(await cookies(), sessionOptions);
-}
-
 export default async function ReportsPage() {
-  const session = await getSession();
-
-  // Check authentication
-  if (!session.isLoggedIn) {
-    redirect('/login');
-  }
-
-  // Check authorization - only super-admin and admin can access
-  if (session.role !== 'super-admin' && session.role !== 'admin') {
-    redirect('/dashboard');
-  }
-
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <div className="flex items-center justify-between">
@@ -108,6 +87,20 @@ export default async function ReportsPage() {
             Coming soon...
           </div>
         </div>
+
+        {/* Profitability Report Card */}
+        <a 
+          href="/dashboard/reports/profitability"
+          className="rounded-lg border bg-card p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer hover:border-primary"
+        >
+          <h3 className="text-lg font-semibold mb-2">Profitability Report</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Track revenue, costs, profit margins, and item performance
+          </p>
+          <div className="text-xs text-primary font-semibold">
+            View Report →
+          </div>
+        </a>
       </div>
 
       <div className="rounded-lg border bg-muted/50 p-6 mt-6">

@@ -13,9 +13,18 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { CreditCard, Building2, Hash, Smartphone, CheckCircle2 } from 'lucide-react';
+import { AdminPaymentOption } from './admin-payment-option';
 
 interface PaymentMethodStepProps {
   form: UseFormReturn<any>;
+  isAdmin?: boolean;
+  onAdminManualPayment?: (data: {
+    paymentType: 'cash' | 'transfer' | 'card';
+    paymentReference: string;
+    comments?: string;
+  }) => void;
+  onAdminFullCheckout?: () => void;
+  isProcessing?: boolean;
 }
 
 const paymentMethods = [
@@ -65,7 +74,25 @@ const paymentMethods = [
   },
 ];
 
-export function PaymentMethodStep({ form }: PaymentMethodStepProps) {
+export function PaymentMethodStep({ 
+  form, 
+  isAdmin = false, 
+  onAdminManualPayment, 
+  onAdminFullCheckout,
+  isProcessing = false 
+}: PaymentMethodStepProps) {
+  // Show admin payment option for admins
+  if (isAdmin && onAdminManualPayment && onAdminFullCheckout) {
+    return (
+      <AdminPaymentOption
+        onManualPayment={onAdminManualPayment}
+        onFullCheckout={onAdminFullCheckout}
+        isProcessing={isProcessing}
+      />
+    );
+  }
+
+  // Show standard payment gateway options for customers
   return (
     <div className="space-y-6">
       <FormField

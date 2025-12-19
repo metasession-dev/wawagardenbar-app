@@ -7,6 +7,8 @@ export interface ITab {
   tabNumber: string;
   tableNumber: string;
   userId?: Types.ObjectId;
+  createdBy?: Types.ObjectId;
+  createdByRole?: 'admin' | 'super-admin' | 'customer';
   openedByStaffId?: Types.ObjectId;
   customerName?: string;
   customerEmail?: string;

@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { UtensilsCrossed, Package, Truck, MapPin, Clock } from 'lucide-react';
+import { UtensilsCrossed, Package, Truck, MapPin, Clock, Zap } from 'lucide-react';
 
 import { ITab } from '@/interfaces';
 
@@ -47,7 +47,7 @@ export function OrderDetailsStep({ form, hasExistingTab, isTableLocked, existing
               <RadioGroup
                 onValueChange={field.onChange}
                 defaultValue={field.value}
-                className="grid gap-4 sm:grid-cols-3"
+                className="grid gap-4 sm:grid-cols-2 md:grid-cols-4"
               >
                 <Label
                   htmlFor="dine-in"
@@ -98,6 +98,24 @@ export function OrderDetailsStep({ form, hasExistingTab, isTableLocked, existing
                   <span className="font-medium">Delivery</span>
                   <span className="text-xs text-muted-foreground text-center">
                     {(tabFound || locked) ? 'Close tab first' : 'Delivered to you'}
+                  </span>
+                </Label>
+
+                <Label
+                  htmlFor="pay-now"
+                  className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
+                    field.value === 'pay-now'
+                      ? 'border-primary bg-primary/5'
+                      : tabFound || locked
+                        ? 'border-muted opacity-50 cursor-not-allowed bg-muted/10'
+                        : 'border-muted hover:border-primary/50'
+                  }`}
+                >
+                  <RadioGroupItem value="pay-now" id="pay-now" className="sr-only" disabled={tabFound || locked} />
+                  <Zap className="h-6 w-6" />
+                  <span className="font-medium">Pay Now</span>
+                  <span className="text-xs text-muted-foreground text-center">
+                    {(tabFound || locked) ? 'Close tab first' : 'Quick order & pay'}
                   </span>
                 </Label>
               </RadioGroup>

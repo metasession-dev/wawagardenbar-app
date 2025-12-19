@@ -1,6 +1,6 @@
 import { Types } from 'mongoose';
 
-export type OrderType = 'dine-in' | 'pickup' | 'delivery';
+export type OrderType = 'dine-in' | 'pickup' | 'delivery' | 'pay-now';
 
 export type OrderStatus =
   | 'pending'
@@ -24,6 +24,10 @@ export interface IOrderItem {
   }[];
   specialInstructions?: string;
   subtotal: number;
+  costPerUnit: number;
+  totalCost: number;
+  grossProfit: number;
+  profitMargin: number;
 }
 
 export interface IDeliveryDetails {
@@ -55,6 +59,8 @@ export interface IOrder {
   orderNumber: string;
   idempotencyKey: string;
   userId?: Types.ObjectId;
+  createdBy?: Types.ObjectId;
+  createdByRole?: 'admin' | 'super-admin' | 'customer';
   guestEmail?: string;
   guestName?: string;
   guestPhone?: string;
@@ -69,9 +75,18 @@ export interface IOrder {
   discount: number;
   tipAmount: number;
   total: number;
+  totalCost: number;
+  grossProfit: number;
+  profitMargin: number;
+  operationalCosts: {
+    delivery?: number;
+    packaging?: number;
+    processing?: number;
+  };
   paymentId?: Types.ObjectId;
   paymentReference?: string;
   transactionReference?: string;
+  paymentMethod?: 'card' | 'transfer' | 'ussd' | 'phone' | 'cash';
   paymentStatus?: 'pending' | 'paid' | 'failed' | 'cancelled' | 'refunded';
   paidAt?: Date;
   deliveryDetails?: IDeliveryDetails;

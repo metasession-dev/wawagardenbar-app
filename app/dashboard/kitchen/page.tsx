@@ -1,4 +1,3 @@
-import { requireAdmin } from '@/lib/auth-middleware';
 import { getOrdersAction } from '@/app/actions/admin/order-management-actions';
 import { KitchenOrderGrid } from '@/components/features/kitchen/kitchen-order-grid';
 import { Button } from '@/components/ui/button';
@@ -10,8 +9,6 @@ import { ArrowLeft } from 'lucide-react';
  * Full-screen view for kitchen staff
  */
 export default async function KitchenPage() {
-  await requireAdmin();
-
   // Get active orders (pending, confirmed, preparing, ready)
   const result = await getOrdersAction(
     {

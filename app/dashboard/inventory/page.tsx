@@ -1,5 +1,4 @@
 import { Suspense } from 'react';
-import { requireSuperAdmin } from '@/lib/auth-middleware';
 import { connectDB } from '@/lib/mongodb';
 import InventoryModel from '@/models/inventory-model';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -149,8 +148,6 @@ function TableSkeleton() {
  * Inventory management page
  */
 export default async function InventoryPage() {
-  await requireSuperAdmin();
-
   return (
     <div className="space-y-6">
       {/* Header */}

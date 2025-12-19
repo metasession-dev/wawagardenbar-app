@@ -1,5 +1,5 @@
 import mongoose, { Schema, Model } from 'mongoose';
-import { ITab, TabStatus } from '@/interfaces';
+import { ITab, TabStatus } from '../interfaces';
 
 const tabSchema = new Schema<ITab>(
   {

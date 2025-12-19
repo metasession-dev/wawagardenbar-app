@@ -5,7 +5,7 @@ import {
   ICustomizationOption,
   MenuCategory,
   MenuMainCategory,
-} from '@/interfaces';
+} from '../interfaces';
 
 const customizationOptionSchema = new Schema<ICustomizationOption>(
   {

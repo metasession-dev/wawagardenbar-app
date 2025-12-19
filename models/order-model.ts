@@ -7,7 +7,7 @@ import {
   IDineInDetails,
   OrderType,
   OrderStatus,
-} from '@/interfaces';
+} from '../interfaces';
 
 const orderItemSchema = new Schema<IOrderItem>(
   {

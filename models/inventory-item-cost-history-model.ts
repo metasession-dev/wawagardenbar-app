@@ -1,5 +1,5 @@
 import { Schema, model, models } from 'mongoose';
-import { IInventoryItemCostHistory } from '@/interfaces/inventory-item-cost-history.interface';
+import { IInventoryItemCostHistory } from '../interfaces/inventory-item-cost-history.interface';
 
 const inventoryItemCostHistorySchema = new Schema<IInventoryItemCostHistory>(
   {

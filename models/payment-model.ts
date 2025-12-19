@@ -1,5 +1,5 @@
 import mongoose, { Schema, Model } from 'mongoose';
-import { IPayment, IMonnifyResponse, PaymentMethod, PaymentStatus } from '@/interfaces';
+import { IPayment, IMonnifyResponse, PaymentMethod, PaymentStatus } from '../interfaces';
 
 const monnifyResponseSchema = new Schema<IMonnifyResponse>(
   {

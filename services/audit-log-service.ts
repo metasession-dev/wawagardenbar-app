@@ -1,6 +1,6 @@
-import { connectDB } from '@/lib/mongodb';
-import AuditLogModel from '@/models/audit-log-model';
-import { IAuditLog, AuditAction } from '@/interfaces/audit-log.interface';
+import { connectDB } from '../lib/mongodb';
+import AuditLogModel from '../models/audit-log-model';
+import { IAuditLog, AuditAction } from '../interfaces/audit-log.interface';
 import { Types } from 'mongoose';
 
 export interface CreateAuditLogInput {

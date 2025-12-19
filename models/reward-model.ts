@@ -1,5 +1,5 @@
 import mongoose, { Schema, Model } from 'mongoose';
-import { IReward, RewardType, RewardStatus } from '@/interfaces';
+import { IReward, RewardType, RewardStatus } from '../interfaces';
 
 const rewardSchema = new Schema<IReward>(
   {

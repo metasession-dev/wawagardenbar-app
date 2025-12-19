@@ -1,5 +1,5 @@
 import mongoose, { Schema, Model } from 'mongoose';
-import { IUser, IAddress, IPaymentMethod, IPreferences, ISocialProfiles } from '@/interfaces';
+import { IUser, IAddress, IPaymentMethod, IPreferences, ISocialProfiles } from '../interfaces';
 
 const addressSchema = new Schema<IAddress>(
   {

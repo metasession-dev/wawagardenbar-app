@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
-import { UserModel } from '@/models';
+import { UserModel } from '../models';
 import { AuditLogService } from './audit-log-service';
-import { IAdminPermissions, DEFAULT_ADMIN_PERMISSIONS } from '@/interfaces';
+import { IAdminPermissions, DEFAULT_ADMIN_PERMISSIONS } from '../interfaces';
 
 export class AdminService {
   private static readonly BCRYPT_ROUNDS = 12;

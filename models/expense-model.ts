@@ -1,5 +1,5 @@
 import mongoose, { Schema, Model } from 'mongoose';
-import { IExpense } from '@/interfaces/expense.interface';
+import { IExpense } from '../interfaces/expense.interface';
 
 const ExpenseSchema = new Schema<IExpense>(
   {

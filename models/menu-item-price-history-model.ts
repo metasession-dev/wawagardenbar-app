@@ -1,5 +1,5 @@
 import { Schema, model, models } from 'mongoose';
-import { IMenuItemPriceHistory } from '@/interfaces/menu-item-price-history.interface';
+import { IMenuItemPriceHistory } from '../interfaces/menu-item-price-history.interface';
 
 const menuItemPriceHistorySchema = new Schema<IMenuItemPriceHistory>(
   {

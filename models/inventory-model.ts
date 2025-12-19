@@ -4,7 +4,7 @@ import {
   IStockHistory,
   StockStatus,
   StockHistoryCategory,
-} from '@/interfaces';
+} from '../interfaces';
 
 const stockHistorySchema = new Schema<IStockHistory>(
   {

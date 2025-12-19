@@ -107,3 +107,13 @@ docker exec -it food_app sh
 # ✅ 62 Total Inventory Records
 # ✅ All items available for ordering
 # ✅ Inventory tracking enabled on all items
+
+
+# Run these commands ONLY on first deployment or when resetting database
+docker exec -it food_app npx tsx scripts/delete-all-users.ts
+docker exec -it food_app npx tsx scripts/delete-all-menu-items.ts
+docker exec -it food_app npx tsx scripts/delete-all-inventory.ts
+docker exec -it food_app npx tsx scripts/delete-all-orders.ts
+docker exec -it food_app npx tsx scripts/create-super-admin.ts
+docker exec -it food_app npx tsx scripts/seed-drinks-menu.ts
+docker exec -it food_app npx tsx scripts/seed-food-menu.ts

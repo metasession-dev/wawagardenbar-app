@@ -8,7 +8,11 @@
  */
 
 import { config } from 'dotenv';
-config({ path: '.env.local' });
+const result = config({ path: '.env.local' });
+if (result.error && !process.env.MONGODB_WAWAGARDENBAR_APP_URI) {
+  console.error('⚠️  Environment variables not set');
+  process.exit(1);
+}
 
 import { connectDB } from '../lib/mongodb';
 import { UserModel } from '../models';

@@ -5,20 +5,23 @@ import { resolve } from 'path';
 const envPath = resolve(process.cwd(), '.env.local');
 const result = config({ path: envPath });
 
-if (result.error) {
-  console.error('⚠️  Warning: Could not load .env.local file');
+// Only error if .env.local is missing AND environment variables aren't set
+if (result.error && !process.env.MONGODB_WAWAGARDENBAR_APP_URI) {
+  console.error('⚠️  Warning: Could not load .env.local file and environment variables not set');
   console.error('   Path:', envPath);
   console.error('   Error:', result.error.message);
-  console.log('\n💡 Make sure .env.local exists in the project root with:');
-  console.log('   MONGODB_WAWAGARDENBAR_APP_URI=mongodb://localhost:27017');
-  console.log('   MONGODB_DB_NAME=wawagardenbar\n');
+  console.log('\n💡 Either:');
+  console.log('   1. Create .env.local with MONGODB_WAWAGARDENBAR_APP_URI and MONGODB_DB_NAME');
+  console.log('   2. Or set environment variables in docker-compose.yml (for production)\n');
   process.exit(1);
+} else if (result.error) {
+  console.log('ℹ️  Using environment variables from container (production mode)');
 }
 
 // Now import modules that depend on environment variables
-import { connectDB } from '@/lib/mongodb';
-import { AdminService } from '@/services/admin-service';
-import { UserModel } from '@/models';
+import { connectDB } from '../lib/mongodb';
+import { AdminService } from '../services/admin-service';
+import { UserModel } from '../models';
 
 async function createSuperAdmin() {
   try {

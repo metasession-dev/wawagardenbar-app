@@ -5,9 +5,9 @@ npm run build
 docker-compose pull && docker-compose up -d --force-recreate
 
 📋 Login Credentials:
-   Email: william@ostendo.io
+   Email: ade@wawagardenbar.com
    Username: superadmin
-   Password: Admin@123!
+   Password: 7XvuvpUi8d4UR90U
 
 🔐 Login URL: http://localhost:3000/admin/login
 
@@ -19,45 +19,17 @@ docker-compose pull && docker-compose up -d --force-recreate
 docker ps
 
 # Step 2: Delete existing data (CAUTION: This removes all data!)
-# Delete all users (except super admin will be recreated)
-docker exec -it food_app npx tsx -e "
-import { connectDB } from './lib/mongodb';
-import { UserModel } from './models';
-await connectDB();
-await UserModel.deleteMany({});
-console.log('✅ All users deleted');
-process.exit(0);
-"
+# Delete all users (super admin will be recreated in next step)
+docker exec -it food_app npx tsx scripts/delete-all-users.ts
 
 # Delete all menu items
-docker exec -it food_app npx tsx -e "
-import { connectDB } from './lib/mongodb';
-import MenuItemModel from './models/menu-item-model';
-await connectDB();
-await MenuItemModel.deleteMany({});
-console.log('✅ All menu items deleted');
-process.exit(0);
-"
+docker exec -it food_app npx tsx scripts/delete-all-menu-items.ts
 
 # Delete all inventory records
-docker exec -it food_app npx tsx -e "
-import { connectDB } from './lib/mongodb';
-import InventoryModel from './models/inventory-model';
-await connectDB();
-await InventoryModel.deleteMany({});
-console.log('✅ All inventory deleted');
-process.exit(0);
-"
+docker exec -it food_app npx tsx scripts/delete-all-inventory.ts
 
 # Delete all orders
-docker exec -it food_app npx tsx -e "
-import { connectDB } from './lib/mongodb';
-import OrderModel from './models/order-model';
-await connectDB();
-await OrderModel.deleteMany({});
-console.log('✅ All orders deleted');
-process.exit(0);
-"
+docker exec -it food_app npx tsx scripts/delete-all-orders.ts
 
 # Step 3: Create Super Admin
 docker exec -it food_app npx tsx scripts/create-super-admin.ts

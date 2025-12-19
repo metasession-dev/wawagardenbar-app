@@ -57,8 +57,9 @@ export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetail
   }
 
   async function handleAddToCart() {
-    // Check if user is logged in
-    if (!session?.isLoggedIn) {
+    // Check if user is logged in (customers, admins, and super-admins can all add to cart)
+    // Admin users who logged in via /admin/login should have session.isLoggedIn = true
+    if (!session?.isLoggedIn && !session?.userId) {
       toast({
         title: 'Login Required',
         description: 'Please register to continue',

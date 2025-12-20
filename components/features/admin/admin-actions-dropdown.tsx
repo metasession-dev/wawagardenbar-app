@@ -49,14 +49,23 @@ export function AdminActionsDropdown({
       setIsLoading(true);
       const result = await resetAdminPasswordAction(admin._id);
 
+      console.log('Reset password result:', result);
+
       if (!result.success) {
         toast.error(result.message);
         return;
       }
 
-      setTempPassword(result.tempPassword!);
+      if (!result.tempPassword) {
+        console.error('No temp password in result:', result);
+        toast.error('Password reset succeeded but temporary password was not returned');
+        return;
+      }
+
+      setTempPassword(result.tempPassword);
       toast.success('Password reset successfully');
     } catch (error) {
+      console.error('Reset password error:', error);
       toast.error('Failed to reset password');
     } finally {
       setIsLoading(false);
@@ -170,10 +179,10 @@ export function AdminActionsDropdown({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Reset Admin Password</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogDescription asChild>
               {tempPassword ? (
-                <div className="space-y-4">
-                  <p>
+                <div className="space-y-4 pt-2">
+                  <p className="text-sm text-muted-foreground">
                     Password has been reset successfully. Please share this
                     temporary password with the admin:
                   </p>
@@ -195,7 +204,9 @@ export function AdminActionsDropdown({
                   </p>
                 </div>
               ) : (
-                'This will generate a new temporary password for the admin. They will be required to change it on their next login.'
+                <span>
+                  This will generate a new temporary password for the admin. They will be required to change it on their next login.
+                </span>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -212,12 +223,15 @@ export function AdminActionsDropdown({
             ) : (
               <>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleResetPassword}
+                <Button
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    await handleResetPassword();
+                  }}
                   disabled={isLoading}
                 >
                   {isLoading ? 'Resetting...' : 'Reset Password'}
-                </AlertDialogAction>
+                </Button>
               </>
             )}
           </AlertDialogFooter>

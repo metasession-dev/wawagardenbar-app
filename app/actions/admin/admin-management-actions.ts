@@ -76,7 +76,9 @@ export async function listAdminsAction(filters?: {
 /**
  * Reset admin password
  */
-export async function resetAdminPasswordAction(adminId: string) {
+export async function resetAdminPasswordAction(
+  adminId: string
+): Promise<{ success: true; message: string; tempPassword: string } | { success: false; message: string; tempPassword?: never }> {
   try {
     const session = await requireSuperAdmin();
     await connectDB();
@@ -86,15 +88,25 @@ export async function resetAdminPasswordAction(adminId: string) {
       resetBy: session.userId!,
     });
 
-    return {
-      success: true,
+    console.log('AdminService.resetPassword result:', {
+      hasTempPassword: !!result.tempPassword,
+      tempPasswordLength: result.tempPassword?.length,
+      tempPassword: result.tempPassword,
+    });
+
+    const response = {
+      success: true as const,
       message: 'Password reset successfully',
       tempPassword: result.tempPassword,
     };
+
+    console.log('Returning from action:', response);
+
+    return response;
   } catch (error: any) {
     console.error('Reset password error:', error);
     return {
-      success: false,
+      success: false as const,
       message: error.message || 'Failed to reset password',
     };
   }

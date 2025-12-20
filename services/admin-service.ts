@@ -233,7 +233,7 @@ export class AdminService {
    * Reset admin password
    */
   static async resetPassword(data: { adminId: string; resetBy: string }) {
-    const admin = await UserModel.findById(data.adminId);
+    const admin = await UserModel.findById(data.adminId).select('+password');
 
     if (!admin || !admin.isAdmin) {
       throw new Error('Admin user not found');

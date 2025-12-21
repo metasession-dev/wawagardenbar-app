@@ -8,6 +8,18 @@ export interface CartActionResult {
   data?: unknown;
 }
 
+export interface CartTotalsResult {
+  success: boolean;
+  message?: string;
+  data?: {
+    subtotal: number;
+    serviceFee: number;
+    deliveryFee: number;
+    tax: number;
+    total: number;
+  };
+}
+
 /**
  * Validate item availability before adding to cart
  */
@@ -89,7 +101,7 @@ export async function validateCart(items: Array<{ id: string; quantity: number }
 export async function calculateCartTotals(
   subtotal: number,
   orderType: 'dine-in' | 'pickup' | 'delivery'
-): Promise<CartActionResult> {
+): Promise<CartTotalsResult> {
   try {
     const { SettingsService } = await import('@/services');
     

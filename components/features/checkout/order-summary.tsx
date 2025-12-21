@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCartStore } from '@/stores/cart-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { RewardsSection } from './rewards-section';
+import { calculateCartTotals } from '@/app/actions/cart/cart-actions';
 
 interface OrderSummaryProps {
   orderType: 'dine-in' | 'pickup' | 'delivery' | 'pay-now';
@@ -18,20 +19,40 @@ export function OrderSummary({ orderType, onRewardApplied, onPointsApplied }: Or
   const { items, getTotalPrice, getTotalItems } = useCartStore();
   const [appliedReward, setAppliedReward] = useState<{ id: string; discount: number } | undefined>();
   const [appliedPoints, setAppliedPoints] = useState<{ points: number; discount: number } | undefined>();
+  const [fees, setFees] = useState<{ serviceFee: number; deliveryFee: number; tax: number }>({
+    serviceFee: 0,
+    deliveryFee: 0,
+    tax: 0,
+  });
+  const [serviceFeePercentage, setServiceFeePercentage] = useState(0);
 
   const subtotal = getTotalPrice();
   const totalItems = getTotalItems();
 
-  // Calculate fees
-  // Note: This component uses hardcoded fees for immediate display
-  // For accurate fees, the checkout process uses SettingsService
-  let deliveryFee = 0;
-  if (orderType === 'delivery') {
-    deliveryFee = subtotal >= 2000 ? 500 : 1000;
-  }
+  // Fetch accurate fees from settings
+  useEffect(() => {
+    async function fetchFees() {
+      // Map 'pay-now' to 'dine-in' for fee calculation
+      const feeOrderType = orderType === 'pay-now' ? 'dine-in' : orderType;
+      const result = await calculateCartTotals(subtotal, feeOrderType);
+      if (result.success && result.data) {
+        setFees({
+          serviceFee: result.data.serviceFee,
+          deliveryFee: result.data.deliveryFee,
+          tax: result.data.tax,
+        });
+        // Calculate percentage for display
+        if (subtotal > 0 && result.data.serviceFee > 0) {
+          setServiceFeePercentage((result.data.serviceFee / subtotal) * 100);
+        }
+      }
+    }
+    if (subtotal > 0) {
+      fetchFees();
+    }
+  }, [subtotal, orderType]);
 
-  const serviceFee = Math.round(subtotal * 0.02);
-  const tax = 0; // Tax calculation from settings if enabled
+  const { serviceFee, deliveryFee, tax } = fees;
   
   // Apply discounts
   const rewardDiscount = appliedReward?.discount || 0;
@@ -116,10 +137,14 @@ export function OrderSummary({ orderType, onRewardApplied, onPointsApplied }: Or
             </div>
           )}
 
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Service Fee (2%)</span>
-            <span>{formatPrice(serviceFee)}</span>
-          </div>
+          {serviceFee > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">
+                Service Fee {serviceFeePercentage > 0 && `(${serviceFeePercentage.toFixed(1)}%)`}
+              </span>
+              <span>{formatPrice(serviceFee)}</span>
+            </div>
+          )}
 
           {/* Discounts */}
           {rewardDiscount > 0 && (

@@ -10,6 +10,7 @@ import { updateOrderStatusAction } from '@/app/actions/admin/order-management-ac
 import { AddOrderNoteDialog } from './add-order-note-dialog';
 import { CancelOrderDialog } from './cancel-order-dialog';
 import { AdminPayOrderDialog } from './orders/admin-pay-order-dialog';
+import { EditOrderDialog } from './edit-order-dialog';
 import {
   Settings,
   Loader2,
@@ -21,6 +22,7 @@ import {
   MessageSquare,
   XCircle,
   CreditCard,
+  Edit,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -43,6 +45,7 @@ export function OrderActionsSidebar({ order: initialOrder }: OrderActionsSidebar
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -116,6 +119,19 @@ export function OrderActionsSidebar({ order: initialOrder }: OrderActionsSidebar
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
+          {/* Edit Order Button - Only for unpaid orders */}
+          {order.paymentStatus !== 'paid' && order.status !== 'cancelled' && order.status !== 'completed' && (
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => setShowEditDialog(true)}
+              disabled={isUpdating}
+            >
+              <Edit className="mr-2 h-4 w-4" />
+              Edit Order Items
+            </Button>
+          )}
+
           {/* Process Payment Button - Only for unpaid orders */}
           {order.paymentStatus !== 'paid' && order.status !== 'cancelled' && (
             <Button
@@ -258,6 +274,13 @@ export function OrderActionsSidebar({ order: initialOrder }: OrderActionsSidebar
       </Card>
 
       {/* Dialogs */}
+      <EditOrderDialog
+        orderId={order._id}
+        currentItems={order.items}
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+      />
+
       <AddOrderNoteDialog
         orderId={order._id}
         open={showNoteDialog}

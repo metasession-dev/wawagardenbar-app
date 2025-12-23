@@ -55,7 +55,7 @@ export async function createMenuItemAction(formData: FormData): Promise<ActionRe
     const preventOrdersWhenOutOfStock = formData.get('preventOrdersWhenOutOfStock') === 'true';
 
     // Validate required fields
-    if (!name || !mainCategory || !category || !price) {
+    if (!name || !mainCategory || !category || price === undefined || price === null || isNaN(price)) {
       return { success: false, error: 'Missing required fields' };
     }
 

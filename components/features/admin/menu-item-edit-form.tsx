@@ -32,7 +32,7 @@ const menuItemSchema = z.object({
   description: z.string().optional(),
   mainCategory: z.enum(['food', 'drinks']),
   category: z.string().min(1, 'Category is required'),
-  price: z.number().min(0, 'Price must be positive'),
+  price: z.number().min(0, 'Price must be 0 or greater'),
   preparationTime: z.number().min(1, 'Preparation time must be at least 1 minute'),
   servingSize: z.string().optional(),
   isAvailable: z.boolean(),

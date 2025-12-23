@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -104,8 +104,19 @@ export function ExpenseForm({ open, onOpenChange, onSuccess, expense }: ExpenseF
 
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseFormSchema),
-    defaultValues: expense
-      ? {
+    defaultValues: {
+      date: new Date(),
+      expenseType: 'direct-cost',
+      category: '',
+      description: '',
+    },
+  });
+
+  // Reset form when expense prop changes (for editing) or dialog opens
+  useEffect(() => {
+    if (open) {
+      if (expense) {
+        form.reset({
           date: new Date(expense.date),
           expenseType: expense.expenseType,
           category: expense.category,
@@ -116,15 +127,23 @@ export function ExpenseForm({ open, onOpenChange, onSuccess, expense }: ExpenseF
           supplier: expense.supplier,
           receiptReference: expense.receiptReference,
           notes: expense.notes,
-        }
-      : {
+        });
+      } else {
+        form.reset({
           date: new Date(),
           expenseType: 'direct-cost',
           category: '',
           description: '',
-          amount: 0,
-        },
-  });
+          quantity: undefined,
+          unit: undefined,
+          amount: undefined,
+          supplier: undefined,
+          receiptReference: undefined,
+          notes: undefined,
+        });
+      }
+    }
+  }, [expense, open, form]);
 
   const expenseType = form.watch('expenseType');
 
@@ -156,7 +175,6 @@ export function ExpenseForm({ open, onOpenChange, onSuccess, expense }: ExpenseF
             expenseType: data.expenseType,
             category: '',
             description: '',
-            amount: 0,
           });
           setSaveAndAddAnother(false);
         } else {
@@ -374,8 +392,9 @@ export function ExpenseForm({ open, onOpenChange, onSuccess, expense }: ExpenseF
                       placeholder="0.00"
                       {...field}
                       onChange={(e) =>
-                        field.onChange(parseFloat(e.target.value) || 0)
+                        field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)
                       }
+                      value={field.value ?? ''}
                     />
                   </FormControl>
                   <FormMessage />

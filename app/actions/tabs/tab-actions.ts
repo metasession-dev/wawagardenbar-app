@@ -488,3 +488,50 @@ export async function createAdminTabAction(params: {
     };
   }
 }
+
+/**
+ * Delete a tab
+ * Requirements:
+ * - Tab must not be closed/paid
+ * - All orders on the tab must be cancelled first
+ */
+export async function deleteTabAction(tabId: string): Promise<ActionResult> {
+  try {
+    const cookieStore = await cookies();
+    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+
+    if (!session.isLoggedIn || !session.userId) {
+      return {
+        success: false,
+        error: 'Unauthorized',
+      };
+    }
+
+    // Only admin and super-admin can delete tabs
+    if (session.role !== 'admin' && session.role !== 'super-admin') {
+      return {
+        success: false,
+        error: 'Insufficient permissions',
+      };
+    }
+
+    console.log('Attempting to delete tab:', tabId, 'by user:', session.userId);
+    await TabService.deleteTab(tabId, session.userId);
+    console.log('Tab deleted successfully:', tabId);
+
+    revalidatePath('/dashboard/orders/tabs');
+    revalidatePath(`/dashboard/orders/tabs/${tabId}`);
+
+    return {
+      success: true,
+      message: 'Tab deleted successfully',
+    };
+  } catch (error) {
+    console.error('Error deleting tab:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to delete tab',
+    };
+  }
+}

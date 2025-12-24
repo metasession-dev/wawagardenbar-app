@@ -306,6 +306,73 @@ export class SystemSettingsService {
   }
 
   /**
+   * Get expense categories
+   */
+  static async getExpenseCategories(): Promise<{
+    directCostCategories: string[];
+    operatingExpenseCategories: string[];
+  }> {
+    await connectDB();
+    
+    const setting = await SystemSettingsModel.findOne({
+      key: 'expense-categories',
+    });
+    
+    const { DIRECT_COST_CATEGORIES, OPERATING_EXPENSE_CATEGORIES } = await import('@/interfaces/expense.interface');
+    
+    const defaults = {
+      directCostCategories: [...DIRECT_COST_CATEGORIES],
+      operatingExpenseCategories: [...OPERATING_EXPENSE_CATEGORIES],
+    };
+    
+    return { ...defaults, ...(setting?.value || {}) };
+  }
+
+  /**
+   * Update expense categories
+   */
+  static async updateExpenseCategories(
+    categories: {
+      directCostCategories: string[];
+      operatingExpenseCategories: string[];
+    },
+    adminUserId: string
+  ): Promise<boolean> {
+    await connectDB();
+    
+    // Validate that arrays are not empty
+    if (categories.directCostCategories.length === 0) {
+      throw new Error('Direct cost categories cannot be empty');
+    }
+    
+    if (categories.operatingExpenseCategories.length === 0) {
+      throw new Error('Operating expense categories cannot be empty');
+    }
+    
+    await SystemSettingsModel.findOneAndUpdate(
+      { key: 'expense-categories' },
+      {
+        $set: {
+          value: categories,
+          updatedBy: new Types.ObjectId(adminUserId),
+          updatedAt: new Date(),
+        },
+        $push: {
+          changeHistory: {
+            value: categories,
+            changedBy: new Types.ObjectId(adminUserId),
+            changedAt: new Date(),
+            reason: 'Expense categories updated',
+          },
+        },
+      },
+      { upsert: true, new: true }
+    );
+    
+    return true;
+  }
+
+  /**
    * Initialize default settings
    */
   static async initializeDefaults(): Promise<void> {

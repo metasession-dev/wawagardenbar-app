@@ -117,3 +117,5 @@ docker exec -it food_app npx tsx scripts/delete-all-orders.ts
 docker exec -it food_app npx tsx scripts/create-super-admin.ts
 docker exec -it food_app npx tsx scripts/seed-drinks-menu.ts
 docker exec -it food_app npx tsx scripts/seed-food-menu.ts
+
+

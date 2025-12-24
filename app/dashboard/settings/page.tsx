@@ -3,6 +3,7 @@ import { SystemSettingsService } from '@/services/system-settings-service';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { SettingsForm } from '@/components/features/admin/settings-form';
 import { PaymentSettingsForm } from '@/components/features/admin/payment-settings-form';
+import { ExpenseCategoriesForm } from '@/components/features/admin/expense-categories-form';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { UserX, Users } from 'lucide-react';
@@ -18,10 +19,11 @@ export const metadata = {
  */
 export default async function SettingsPage() {
   // Get current settings
-  const [settings, notificationSettings, paymentSettings] = await Promise.all([
+  const [settings, notificationSettings, paymentSettings, expenseCategories] = await Promise.all([
     SettingsService.getSettings(),
     SystemSettingsService.getNotificationSettings(),
     SystemSettingsService.getPaymentSettings(),
+    SystemSettingsService.getExpenseCategories(),
   ]);
 
   // Serialize for client - use JSON.parse(JSON.stringify()) to remove Mongoose metadata
@@ -100,6 +102,9 @@ export default async function SettingsPage() {
 
       {/* Payment Settings */}
       <PaymentSettingsForm initialSettings={paymentSettings} />
+
+      {/* Expense Categories */}
+      <ExpenseCategoriesForm initialCategories={expenseCategories} />
 
       {/* Settings Form */}
       <Card>

@@ -41,6 +41,7 @@ import {
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { createExpenseAction, updateExpenseAction } from '@/app/actions/finance/expense-actions';
+import { getExpenseCategoriesAction } from '@/app/actions/finance/expense-categories-actions';
 import { toast } from '@/hooks/use-toast';
 import {
   DIRECT_COST_CATEGORIES,
@@ -101,6 +102,8 @@ interface ExpenseFormProps {
 export function ExpenseForm({ open, onOpenChange, onSuccess, expense }: ExpenseFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saveAndAddAnother, setSaveAndAddAnother] = useState(false);
+  const [directCostCategories, setDirectCostCategories] = useState<string[]>([...DIRECT_COST_CATEGORIES]);
+  const [operatingExpenseCategories, setOperatingExpenseCategories] = useState<string[]>([...OPERATING_EXPENSE_CATEGORIES]);
 
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseFormSchema),
@@ -111,6 +114,25 @@ export function ExpenseForm({ open, onOpenChange, onSuccess, expense }: ExpenseF
       description: '',
     },
   });
+
+  // Fetch dynamic categories when dialog opens
+  useEffect(() => {
+    if (open) {
+      fetchCategories();
+    }
+  }, [open]);
+
+  async function fetchCategories() {
+    try {
+      const result = await getExpenseCategoriesAction();
+      if (result.success && result.categories) {
+        setDirectCostCategories(result.categories.directCostCategories);
+        setOperatingExpenseCategories(result.categories.operatingExpenseCategories);
+      }
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
+    }
+  }
 
   // Reset form when expense prop changes (for editing) or dialog opens
   useEffect(() => {
@@ -149,8 +171,8 @@ export function ExpenseForm({ open, onOpenChange, onSuccess, expense }: ExpenseF
 
   const categories =
     expenseType === 'direct-cost'
-      ? DIRECT_COST_CATEGORIES
-      : OPERATING_EXPENSE_CATEGORIES;
+      ? directCostCategories
+      : operatingExpenseCategories;
 
   async function onSubmit(data: ExpenseFormValues) {
     setIsSubmitting(true);

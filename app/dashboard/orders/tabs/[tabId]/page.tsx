@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Receipt, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { DashboardTabActions } from '@/components/features/admin/tabs/dashboard-tab-actions';
+import { DeleteTabDialog } from '@/components/features/admin/tabs/delete-tab-dialog';
 
 interface DashboardTabDetailsPageProps {
   params: Promise<{
@@ -88,6 +89,9 @@ export default async function DashboardTabDetailsPage({ params }: DashboardTabDe
   const { tabId } = await params;
   const { tab, orders } = await getTabDetails(tabId);
 
+  // Count non-cancelled orders
+  const nonCancelledOrderCount = orders.filter(order => order.status !== 'cancelled').length;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -105,9 +109,19 @@ export default async function DashboardTabDetailsPage({ params }: DashboardTabDe
               Table {tab.tableNumber} • Opened {new Date(tab.openedAt).toLocaleDateString()}
             </p>
           </div>
-          <Badge variant={tab.status === 'open' ? 'default' : 'secondary'} className="text-sm">
-            {tab.status}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant={tab.status === 'open' ? 'default' : 'secondary'} className="text-sm">
+              {tab.status}
+            </Badge>
+            <DeleteTabDialog
+              tabId={tab._id}
+              tabNumber={tab.tabNumber}
+              status={tab.status}
+              paymentStatus={tab.paymentStatus}
+              orderCount={orders.length}
+              nonCancelledOrderCount={nonCancelledOrderCount}
+            />
+          </div>
         </div>
       </div>
 

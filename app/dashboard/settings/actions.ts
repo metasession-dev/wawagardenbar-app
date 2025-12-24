@@ -20,3 +20,24 @@ export async function updatePaymentSettingsAction(settings: {
   revalidatePath('/dashboard/settings');
   return { success: true };
 }
+
+export async function updateExpenseCategoriesAction(categories: {
+  directCostCategories: string[];
+  operatingExpenseCategories: string[];
+}) {
+  try {
+    const session = await requireSuperAdmin();
+    
+    await SystemSettingsService.updateExpenseCategories(categories, session.userId!);
+    
+    revalidatePath('/dashboard/settings');
+    revalidatePath('/dashboard/finance/expenses');
+    
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update expense categories',
+    };
+  }
+}

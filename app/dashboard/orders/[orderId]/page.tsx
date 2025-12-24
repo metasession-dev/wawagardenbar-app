@@ -11,7 +11,7 @@ import { OrderActionsSidebar } from '@/components/features/admin/order-actions-s
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 interface OrderDetailsPageProps {
   params: Promise<{
@@ -49,19 +49,6 @@ export default async function OrderDetailsPage({ params }: OrderDetailsPageProps
 
   return (
     <div className="space-y-6">
-      {/* Breadcrumb Navigation */}
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Link href="/dashboard" className="hover:text-foreground">
-          Dashboard
-        </Link>
-        <ChevronRight className="h-4 w-4" />
-        <Link href="/dashboard/orders" className="hover:text-foreground">
-          Orders
-        </Link>
-        <ChevronRight className="h-4 w-4" />
-        <span className="text-foreground">Order #{order.orderNumber}</span>
-      </div>
-
       {/* Back Button */}
       <div>
         <Link href="/dashboard/orders">

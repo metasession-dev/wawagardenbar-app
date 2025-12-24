@@ -646,4 +646,75 @@ export class TabService {
 
     return JSON.parse(JSON.stringify(tab.toObject()));
   }
+
+  /**
+   * Delete a tab
+   * Requirements:
+   * - Tab must not be closed/paid (status must be 'open' or 'settling')
+   * - All orders on the tab must be cancelled first
+   */
+  static async deleteTab(tabId: string, deletedBy: string): Promise<void> {
+    await connectDB();
+
+    console.log('deleteTab called with:', { tabId, deletedBy });
+
+    const tab = await TabModel.findById(tabId);
+    if (!tab) {
+      throw new Error('Tab not found');
+    }
+
+    console.log('Tab found:', { status: tab.status, paymentStatus: tab.paymentStatus, orderCount: tab.orders.length });
+
+    // Check if tab is already closed/paid
+    if (tab.status === 'closed' && tab.paymentStatus === 'paid') {
+      throw new Error('Cannot delete a closed/paid tab. Only open or unpaid tabs can be deleted.');
+    }
+
+    // Get all orders on this tab
+    const orders = await OrderModel.find({
+      _id: { $in: tab.orders },
+    });
+
+    console.log('Orders found:', orders.map(o => ({ id: o._id, status: o.status })));
+
+    // Check if any orders are not cancelled
+    const nonCancelledOrders = orders.filter(order => order.status !== 'cancelled');
+    if (nonCancelledOrders.length > 0) {
+      console.log('Non-cancelled orders found:', nonCancelledOrders.map(o => ({ id: o._id, status: o.status })));
+      throw new Error(
+        `Cannot delete tab. Please cancel all ${nonCancelledOrders.length} order(s) on this tab first.`
+      );
+    }
+
+    console.log('All orders are cancelled, proceeding with deletion');
+
+    // Create audit log before deletion
+    try {
+      const AuditLogService = (await import('./audit-log-service')).AuditLogService;
+      console.log('Creating audit log with userId:', deletedBy);
+      await AuditLogService.createLog({
+        userId: deletedBy,
+        userEmail: tab.customerEmail || 'unknown',
+        userRole: 'admin',
+        action: 'tab.delete',
+        resource: 'tab',
+        resourceId: tabId,
+        details: {
+          tabNumber: tab.tabNumber,
+          tableNumber: tab.tableNumber,
+          orderCount: orders.length,
+          deletedBy,
+        },
+      });
+      console.log('Audit log created successfully');
+    } catch (auditError) {
+      console.error('Error creating audit log:', auditError);
+      throw new Error(`Failed to create audit log: ${auditError instanceof Error ? auditError.message : 'Unknown error'}`);
+    }
+
+    // Delete the tab
+    console.log('Deleting tab from database');
+    await TabModel.findByIdAndDelete(tabId);
+    console.log('Tab deleted successfully from database');
+  }
 }

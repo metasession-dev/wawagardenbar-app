@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState } from 'react';
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -14,6 +15,8 @@ import {
   Gift,
   DollarSign,
   BarChart3,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -114,6 +117,7 @@ interface DashboardNavProps {
  */
 export function DashboardNav({ userEmail, userRole, permissions }: DashboardNavProps) {
   const pathname = usePathname();
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Filter navigation items based on user role and permissions
   const filteredNavItems = navItems.filter((item) => {
@@ -136,20 +140,52 @@ export function DashboardNav({ userEmail, userRole, permissions }: DashboardNavP
   });
 
   return (
-    <div className="flex h-full w-64 flex-col border-r bg-card">
+    <div className={cn(
+      "flex h-full flex-col border-r bg-card transition-all duration-300 ease-in-out",
+      isCollapsed ? "w-16" : "w-64"
+    )}>
       {/* Logo/Brand */}
-      <div className="flex h-16 items-center border-b px-6">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-primary" />
-          <div>
-            <h1 className="text-lg font-bold">Wawa Garden Bar</h1>
-            <p className="text-xs text-muted-foreground">Admin Dashboard</p>
-          </div>
-        </Link>
+      <div className="flex h-16 items-center justify-between border-b px-3">
+        {!isCollapsed && (
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-primary flex-shrink-0" />
+            <div className="overflow-hidden">
+              <h1 className="text-lg font-bold whitespace-nowrap">Wawa Garden Bar</h1>
+              <p className="text-xs text-muted-foreground whitespace-nowrap">Admin Dashboard</p>
+            </div>
+          </Link>
+        )}
+        {isCollapsed && (
+          <Link href="/dashboard" className="flex items-center justify-center w-full">
+            <div className="h-8 w-8 rounded-lg bg-primary flex-shrink-0" />
+          </Link>
+        )}
+      </div>
+
+      {/* Toggle Button */}
+      <div className="border-b px-2 py-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className={cn(
+            "w-full transition-all",
+            isCollapsed ? "justify-center px-2" : "justify-start"
+          )}
+        >
+          {isCollapsed ? (
+            <ChevronRight className="h-4 w-4" />
+          ) : (
+            <>
+              <ChevronLeft className="mr-2 h-4 w-4" />
+              <span>Collapse</span>
+            </>
+          )}
+        </Button>
       </div>
 
       {/* Navigation */}
-      <ScrollArea className="flex-1 px-3 py-4">
+      <ScrollArea className="flex-1 px-2 py-4">
         <nav className="space-y-1">
           {filteredNavItems.map((item) => {
             const Icon = item.icon;
@@ -160,19 +196,25 @@ export function DashboardNav({ userEmail, userRole, permissions }: DashboardNavP
               <Link
                 key={item.href}
                 href={item.href}
+                title={isCollapsed ? item.title : undefined}
                 className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  'flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  isCollapsed ? 'justify-center' : 'gap-3',
                   isActive
                     ? 'bg-primary text-primary-foreground'
                     : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                 )}
               >
-                <Icon className="h-5 w-5" />
-                <span>{item.title}</span>
-                {item.badge && (
-                  <span className="ml-auto rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
-                    {item.badge}
-                  </span>
+                <Icon className="h-5 w-5 flex-shrink-0" />
+                {!isCollapsed && (
+                  <>
+                    <span className="whitespace-nowrap">{item.title}</span>
+                    {item.badge && (
+                      <span className="ml-auto rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
+                        {item.badge}
+                      </span>
+                    )}
+                  </>
                 )}
               </Link>
             );
@@ -181,21 +223,31 @@ export function DashboardNav({ userEmail, userRole, permissions }: DashboardNavP
       </ScrollArea>
 
       {/* User Info & Logout */}
-      <div className="border-t p-4">
-        <div className="mb-3 rounded-lg bg-muted p-3">
-          <p className="text-sm font-medium truncate">
-            {userEmail || 'Admin User'}
-          </p>
-          {userRole && (
-            <div className="mt-2">
-              <RoleBadge role={userRole} showIcon={true} />
-            </div>
-          )}
-        </div>
+      <div className="border-t p-3">
+        {!isCollapsed && (
+          <div className="mb-3 rounded-lg bg-muted p-3">
+            <p className="text-sm font-medium truncate">
+              {userEmail || 'Admin User'}
+            </p>
+            {userRole && (
+              <div className="mt-2">
+                <RoleBadge role={userRole} showIcon={true} />
+              </div>
+            )}
+          </div>
+        )}
         <form action={logoutAction}>
-          <Button variant="outline" className="w-full justify-start" type="submit">
-            <LogOut className="mr-2 h-4 w-4" />
-            Logout
+          <Button 
+            variant="outline" 
+            className={cn(
+              "w-full",
+              isCollapsed ? "justify-center px-2" : "justify-start"
+            )} 
+            type="submit"
+            title={isCollapsed ? "Logout" : undefined}
+          >
+            <LogOut className={cn("h-4 w-4", !isCollapsed && "mr-2")} />
+            {!isCollapsed && "Logout"}
           </Button>
         </form>
       </div>

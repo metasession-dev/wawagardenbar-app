@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { useCartStore, CartItem as CartItemType } from '@/stores/cart-store';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Minus, Plus, Trash2, MessageSquare } from 'lucide-react';
@@ -67,7 +68,12 @@ export function CartItem({ item }: CartItemProps) {
         {/* Item Details */}
         <div className="flex flex-1 flex-col justify-between">
           <div>
-            <h4 className="font-medium leading-tight">{item.name}</h4>
+            <div className="flex items-center gap-2">
+              <h4 className="font-medium leading-tight">{item.name}</h4>
+              {item.portionSize === 'half' && (
+                <Badge variant="secondary" className="text-xs">Half Portion</Badge>
+              )}
+            </div>
             <p className="text-sm text-muted-foreground">{item.category}</p>
           </div>
 

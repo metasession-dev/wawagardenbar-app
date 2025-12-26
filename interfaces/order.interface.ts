@@ -2,6 +2,8 @@ import { Types } from 'mongoose';
 
 export type OrderType = 'dine-in' | 'pickup' | 'delivery' | 'pay-now';
 
+export type PortionSize = 'full' | 'half';
+
 export type OrderStatus =
   | 'pending'
   | 'confirmed'
@@ -17,6 +19,8 @@ export interface IOrderItem {
   name: string;
   price: number;
   quantity: number;
+  portionSize: PortionSize;
+  portionMultiplier: number;
   customizations: {
     name: string;
     option: string;

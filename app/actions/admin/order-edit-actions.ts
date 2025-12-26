@@ -102,6 +102,8 @@ export async function updateOrderItemsAction(input: UpdateOrderItemsInput) {
         name: menuItem.name,
         price: menuItem.price,
         quantity: inputItem.quantity,
+        portionSize: 'full' as const,
+        portionMultiplier: 1.0,
         customizations: customizations.map((custom) => ({
           name: custom.name,
           option: custom.option,

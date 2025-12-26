@@ -19,6 +19,17 @@ const orderItemSchema = new Schema<IOrderItem>(
     name: { type: String, required: true },
     price: { type: Number, required: true, min: 0 },
     quantity: { type: Number, required: true, min: 1 },
+    portionSize: {
+      type: String,
+      enum: ['full', 'half'],
+      default: 'full',
+    },
+    portionMultiplier: {
+      type: Number,
+      default: 1.0,
+      min: 0.5,
+      max: 1.0,
+    },
     customizations: [
       {
         name: { type: String, required: true },

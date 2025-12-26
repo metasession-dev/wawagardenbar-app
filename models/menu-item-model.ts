@@ -97,6 +97,7 @@ const menuItemSchema = new Schema<IMenuItem>(
     },
     pointsValue: { type: Number, required: false, min: 0 },
     pointsRedeemable: { type: Boolean, default: false },
+    halfPortionEnabled: { type: Boolean, default: false },
   },
   {
     timestamps: true,
@@ -104,6 +105,11 @@ const menuItemSchema = new Schema<IMenuItem>(
     toObject: { virtuals: true },
   }
 );
+
+// Virtual field for half portion price
+menuItemSchema.virtual('halfPortionPrice').get(function() {
+  return Math.round(this.price * 0.5);
+});
 
 menuItemSchema.index({ name: 'text', description: 'text', tags: 'text' });
 menuItemSchema.index({ mainCategory: 1, category: 1 });

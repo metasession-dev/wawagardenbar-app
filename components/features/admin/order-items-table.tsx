@@ -1,6 +1,7 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ShoppingCart } from 'lucide-react';
 
@@ -36,7 +37,12 @@ export function OrderItemsTable({ order }: OrderItemsTableProps) {
                   <div className="flex-1">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <p className="font-medium">{item.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{item.name}</p>
+                          {item.portionSize === 'half' && (
+                            <Badge variant="secondary" className="text-xs">Half Portion</Badge>
+                          )}
+                        </div>
                         <p className="text-sm text-muted-foreground">
                           ₦{item.price.toLocaleString()} × {item.quantity}
                         </p>

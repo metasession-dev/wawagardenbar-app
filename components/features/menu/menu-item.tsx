@@ -73,7 +73,9 @@ export function MenuItem({ item }: MenuItemProps) {
           <div className="flex items-start justify-between gap-2">
             <CardTitle className="line-clamp-1 text-lg">{item.name}</CardTitle>
             <Badge variant="outline" className="shrink-0">
-              {formatPrice(item.price)}
+              {item.mainCategory === 'food' && item.halfPortionEnabled
+                ? `from ${formatPrice(Math.round(item.price * 0.5))}`
+                : formatPrice(item.price)}
             </Badge>
           </div>
           <CardDescription className="line-clamp-2">{item.description}</CardDescription>

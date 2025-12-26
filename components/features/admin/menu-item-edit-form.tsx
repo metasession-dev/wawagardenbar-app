@@ -36,6 +36,7 @@ const menuItemSchema = z.object({
   preparationTime: z.number().min(1, 'Preparation time must be at least 1 minute'),
   servingSize: z.string().optional(),
   isAvailable: z.boolean(),
+  halfPortionEnabled: z.boolean(),
   tags: z.string().optional(),
   allergens: z.array(z.string()).optional(),
   spiceLevel: z.enum(['none', 'mild', 'medium', 'hot', 'extra-hot']).optional(),
@@ -103,6 +104,7 @@ export function MenuItemEditForm({ menuItem }: MenuItemEditFormProps) {
       preparationTime: menuItem.preparationTime,
       servingSize: menuItem.servingSize || '',
       isAvailable: menuItem.isAvailable,
+      halfPortionEnabled: menuItem.halfPortionEnabled || false,
       tags: menuItem.tags?.join(', ') || '',
       allergens: menuItem.allergens || [],
       spiceLevel: menuItem.nutritionalInfo?.spiceLevel || 'none',
@@ -124,6 +126,7 @@ export function MenuItemEditForm({ menuItem }: MenuItemEditFormProps) {
 
   const mainCategory = watch('mainCategory');
   const isAvailable = watch('isAvailable');
+  const halfPortionEnabled = watch('halfPortionEnabled');
   const name = watch('name');
   const trackInventory = watch('trackInventory');
   const price = watch('price');
@@ -172,6 +175,7 @@ export function MenuItemEditForm({ menuItem }: MenuItemEditFormProps) {
       formData.append('preparationTime', data.preparationTime.toString());
       formData.append('servingSize', data.servingSize || '');
       formData.append('isAvailable', data.isAvailable.toString());
+      formData.append('halfPortionEnabled', data.halfPortionEnabled.toString());
       formData.append('tags', data.tags || '');
       formData.append('allergens', JSON.stringify(data.allergens || []));
       formData.append('spiceLevel', data.spiceLevel || 'none');
@@ -443,6 +447,47 @@ export function MenuItemEditForm({ menuItem }: MenuItemEditFormProps) {
             </div>
           </CardContent>
         </Card>
+
+        {/* Portion Options - Only for Food Items */}
+        {mainCategory === 'food' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Portion Options</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="halfPortionEnabled">Enable Half Portion</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Allow customers to order half portions at 50% price
+                  </p>
+                </div>
+                <Switch
+                  id="halfPortionEnabled"
+                  checked={halfPortionEnabled}
+                  onCheckedChange={(checked) => setValue('halfPortionEnabled', checked)}
+                  disabled={isLoading}
+                />
+              </div>
+
+              {halfPortionEnabled && price > 0 && (
+                <div className="rounded-md bg-muted p-3">
+                  <p className="text-sm">
+                    <span className="font-medium">Half Portion Price:</span>{' '}
+                    {new Intl.NumberFormat('en-NG', {
+                      style: 'currency',
+                      currency: 'NGN',
+                      minimumFractionDigits: 0,
+                    }).format(Math.round(price * 0.5))}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Automatically calculated as 50% of full price
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Customization Options */}
         <CustomizationOptionsBuilder

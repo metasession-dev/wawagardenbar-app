@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { MenuItemWithStock } from '@/services/category-service';
 import {
@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Minus, Plus, AlertCircle, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useCartStore } from '@/stores/cart-store';
@@ -31,12 +32,23 @@ interface MenuItemDetailModalProps {
 
 export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetailModalProps) {
   const [quantity, setQuantity] = useState(1);
+  const [portionSize, setPortionSize] = useState<'full' | 'half'>('full');
+  const [adjustedPrice, setAdjustedPrice] = useState(item.price);
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const { toast } = useToast();
   const { addItem, openCart } = useCartStore();
   const { session } = useAuth();
   const router = useRouter();
+
+  // Update price when portion changes
+  useEffect(() => {
+    if (item.halfPortionEnabled && portionSize === 'half') {
+      setAdjustedPrice(Math.round(item.price * 0.5));
+    } else {
+      setAdjustedPrice(item.price);
+    }
+  }, [portionSize, item.price, item.halfPortionEnabled]);
 
   const isOutOfStock = item.stockStatus === 'out-of-stock';
   const isLowStock = item.stockStatus === 'low-stock';
@@ -71,8 +83,8 @@ export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetail
     setIsAdding(true);
     
     try {
-      // Validate item availability
-      const validation = await validateCartItem(item._id, quantity);
+      // Validate item availability with portion size
+      const validation = await validateCartItem(item._id, quantity, portionSize);
       
       if (!validation.success) {
         toast({
@@ -84,22 +96,25 @@ export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetail
         return;
       }
 
-      // Add to cart
+      // Add to cart with portion size
       addItem({
         id: item._id,
         name: item.name,
-        price: item.price,
+        price: adjustedPrice,
         quantity,
+        portionSize,
+        portionMultiplier: portionSize === 'half' ? 0.5 : 1.0,
         image: item.images?.[0],
         category: item.category,
         specialInstructions: specialInstructions || undefined,
         preparationTime: item.preparationTime,
       });
 
+      const portionText = portionSize === 'half' ? ' (Half Portion)' : '';
       toast({
         title: 'Added to Cart',
-        description: `${quantity}x ${item.name} added to your cart`,
-        duration: 2000, // Auto-dismiss after 2 seconds
+        description: `${quantity}x ${item.name}${portionText} added to your cart`,
+        duration: 2000,
       });
 
       // Open cart sidebar
@@ -123,10 +138,11 @@ export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetail
   function handleClose() {
     onOpenChange(false);
     setQuantity(1);
+    setPortionSize('full');
     setSpecialInstructions('');
   }
 
-  const totalPrice = item.price * quantity;
+  const totalPrice = adjustedPrice * quantity;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -233,6 +249,33 @@ export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetail
           </div>
 
           <Separator />
+
+          {/* Portion Size Selector - Only for food items with half-portion enabled */}
+          {item.mainCategory === 'food' && item.halfPortionEnabled && (
+            <div>
+              <Label className="mb-3 block font-semibold">Portion Size</Label>
+              <RadioGroup value={portionSize} onValueChange={(value) => setPortionSize(value as 'full' | 'half')}>
+                <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-accent">
+                  <RadioGroupItem value="full" id="full" />
+                  <Label htmlFor="full" className="flex-1 cursor-pointer font-normal">
+                    <div className="flex items-center justify-between">
+                      <span>Full Portion</span>
+                      <span className="font-semibold">{formatPrice(item.price)}</span>
+                    </div>
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-accent">
+                  <RadioGroupItem value="half" id="half" />
+                  <Label htmlFor="half" className="flex-1 cursor-pointer font-normal">
+                    <div className="flex items-center justify-between">
+                      <span>Half Portion</span>
+                      <span className="font-semibold">{formatPrice(Math.round(item.price * 0.5))}</span>
+                    </div>
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+          )}
 
           {/* Quantity Selector */}
           <div>

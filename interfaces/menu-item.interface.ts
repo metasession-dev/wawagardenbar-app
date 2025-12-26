@@ -69,6 +69,7 @@ export interface IMenuItem {
   inventoryId?: string;
   pointsValue?: number;
   pointsRedeemable: boolean;
+  halfPortionEnabled: boolean;
   createdAt: string;
   updatedAt: string;
 }

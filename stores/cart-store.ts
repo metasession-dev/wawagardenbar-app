@@ -6,6 +6,8 @@ export interface CartItem {
   name: string;
   price: number;
   quantity: number;
+  portionSize?: 'full' | 'half';
+  portionMultiplier?: number;
   image?: string;
   category: string;
   specialInstructions?: string;
@@ -22,6 +24,7 @@ interface CartStore {
   removeItem: (itemId: string) => void;
   updateQuantity: (itemId: string, quantity: number) => void;
   updateInstructions: (itemId: string, instructions: string) => void;
+  updatePortionSize: (itemId: string, portionSize: 'full' | 'half', adjustedPrice: number) => void;
   clearCart: () => void;
   toggleCart: () => void;
   openCart: () => void;
@@ -42,13 +45,19 @@ export const useCartStore = create<CartStore>()(
       tableNumber: undefined,
 
       addItem: (item) => {
-        const existingItem = get().items.find((i) => i.id === item.id);
+        const existingItem = get().items.find(
+          (i) => i.id === item.id && 
+                 i.portionSize === (item.portionSize || 'full') &&
+                 i.specialInstructions === item.specialInstructions
+        );
         
         if (existingItem) {
-          // Update quantity if item already exists
+          // Update quantity if item already exists with same portion and instructions
           set((state) => ({
             items: state.items.map((i) =>
-              i.id === item.id
+              i.id === item.id && 
+              i.portionSize === (item.portionSize || 'full') &&
+              i.specialInstructions === item.specialInstructions
                 ? { ...i, quantity: i.quantity + (item.quantity || 1) }
                 : i
             ),
@@ -61,6 +70,8 @@ export const useCartStore = create<CartStore>()(
               {
                 ...item,
                 quantity: item.quantity || 1,
+                portionSize: item.portionSize || 'full',
+                portionMultiplier: item.portionSize === 'half' ? 0.5 : 1.0,
               },
             ],
           }));
@@ -91,6 +102,21 @@ export const useCartStore = create<CartStore>()(
           items: state.items.map((item) =>
             item.id === itemId
               ? { ...item, specialInstructions: instructions }
+              : item
+          ),
+        }));
+      },
+
+      updatePortionSize: (itemId, portionSize, adjustedPrice) => {
+        set((state) => ({
+          items: state.items.map((item) =>
+            item.id === itemId
+              ? {
+                  ...item,
+                  portionSize,
+                  portionMultiplier: portionSize === 'half' ? 0.5 : 1.0,
+                  price: adjustedPrice,
+                }
               : item
           ),
         }));

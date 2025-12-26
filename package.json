@@ -15,6 +15,7 @@
     "setup:admin": "tsx scripts/create-super-admin.ts",
     "update:admin": "tsx scripts/update-admin-credentials.ts",
     "migrate:profitability": "tsx scripts/migrate-profitability-data.ts",
+    "migrate:half-portion": "tsx scripts/add-half-portion-field.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",

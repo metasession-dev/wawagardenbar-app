@@ -1,7 +1,5 @@
 'use server';
 
-import { CategoryService } from '@/services/category-service';
-
 export interface CartActionResult {
   success: boolean;
   message?: string;
@@ -23,24 +21,25 @@ export interface CartTotalsResult {
 /**
  * Validate item availability before adding to cart
  */
-export async function validateCartItem(itemId: string, quantity: number): Promise<CartActionResult> {
+export async function validateCartItem(
+  itemId: string,
+  quantity: number,
+  portionSize: 'full' | 'half' = 'full'
+): Promise<CartActionResult> {
   try {
-    const availability = await CategoryService.checkAvailability(itemId);
+    const { InventoryService } = await import('@/services');
+    const { connectDB } = await import('@/lib/mongodb');
+    
+    await connectDB();
+    
+    // Use InventoryService.checkAvailability with portion size support
+    const availability = await InventoryService.checkAvailability(itemId, quantity, portionSize);
 
     if (!availability.available) {
       return {
         success: false,
-        message: 'This item is currently out of stock',
+        message: availability.message || 'This item is currently unavailable',
       };
-    }
-
-    if (availability.stockStatus === 'low-stock' && availability.currentStock) {
-      if (quantity > availability.currentStock) {
-        return {
-          success: false,
-          message: `Only ${availability.currentStock} items available`,
-        };
-      }
     }
 
     return {

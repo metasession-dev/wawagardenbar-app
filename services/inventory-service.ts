@@ -37,19 +37,25 @@ class InventoryService {
         continue;
       }
 
-      // Deduct stock manually
-      inventory.currentStock = Math.max(0, inventory.currentStock - item.quantity);
+      // Calculate actual quantity to deduct based on portion multiplier
+      const actualQuantity = item.quantity * (item.portionMultiplier || 1.0);
 
-      // Add stock history entry
+      // Deduct stock with fractional support
+      inventory.currentStock = Math.max(0, inventory.currentStock - actualQuantity);
+
+      // Add stock history entry with portion info
       inventory.stockHistory.push({
-        quantity: -item.quantity,
+        quantity: -actualQuantity,
         type: 'deduction',
-        reason: 'Sale',
+        reason: item.portionSize === 'half' ? 'Sale (Half Portion)' : 'Sale',
         performedBy: new mongoose.Types.ObjectId('000000000000000000000000'),
         timestamp: new Date(),
         category: 'sale',
         orderId: order._id,
         performedByName: 'System',
+        notes: item.portionSize === 'half' 
+          ? `${item.quantity}x half portions (${actualQuantity} units deducted)` 
+          : undefined,
       } as any);
 
       // Update status based on stock level
@@ -61,8 +67,8 @@ class InventoryService {
         inventory.status = 'in-stock';
       }
 
-      // Update sales tracking
-      inventory.totalSales += item.quantity;
+      // Update sales tracking with actual quantity
+      inventory.totalSales += actualQuantity;
       inventory.lastSaleDate = new Date();
 
       await inventory.save();
@@ -109,19 +115,25 @@ class InventoryService {
         continue;
       }
 
+      // Calculate actual quantity to restore based on portion multiplier
+      const actualQuantity = item.quantity * (item.portionMultiplier || 1.0);
+
       // Restore stock
-      inventory.currentStock += item.quantity;
+      inventory.currentStock += actualQuantity;
 
       // Add stock history entry
       inventory.stockHistory.push({
-        quantity: item.quantity,
+        quantity: actualQuantity,
         type: 'addition',
-        reason: 'Order Cancelled',
+        reason: 'Order Cancelled - Stock Restored',
         performedBy: new mongoose.Types.ObjectId('000000000000000000000000'),
         timestamp: new Date(),
         category: 'adjustment',
         orderId: order._id,
         performedByName: 'System',
+        notes: item.portionSize === 'half' 
+          ? `${item.quantity}x half portions (${actualQuantity} units restored)` 
+          : undefined,
       } as any);
 
       // Update status based on stock level
@@ -134,7 +146,7 @@ class InventoryService {
       }
 
       // Update sales tracking (reduce total sales)
-      inventory.totalSales = Math.max(0, inventory.totalSales - item.quantity);
+      inventory.totalSales = Math.max(0, inventory.totalSales - actualQuantity);
 
       await inventory.save();
     }
@@ -173,6 +185,54 @@ class InventoryService {
     }
 
     return true;
+  }
+
+  /**
+   * Check availability with portion size support
+   * Returns availability status and message
+   */
+  static async checkAvailability(
+    menuItemId: string,
+    quantity: number,
+    portionSize: 'full' | 'half' = 'full'
+  ): Promise<{ available: boolean; message?: string }> {
+    const menuItem = await MenuItemModel.findById(menuItemId);
+
+    if (!menuItem) {
+      return { available: false, message: 'Menu item not found' };
+    }
+
+    if (!menuItem.isAvailable) {
+      return { available: false, message: 'This item is currently unavailable' };
+    }
+
+    // Validate half-portion is enabled if requested
+    if (portionSize === 'half' && !menuItem.halfPortionEnabled) {
+      return { available: false, message: 'Half portion is not available for this item' };
+    }
+
+    if (!menuItem.trackInventory || !menuItem.inventoryId) {
+      return { available: true };
+    }
+
+    const inventory = await InventoryModel.findById(menuItem.inventoryId);
+
+    if (!inventory) {
+      return { available: true };
+    }
+
+    // Calculate actual quantity needed based on portion
+    const portionMultiplier = portionSize === 'half' ? 0.5 : 1.0;
+    const actualQuantityNeeded = quantity * portionMultiplier;
+
+    if (inventory.preventOrdersWhenOutOfStock && inventory.currentStock < actualQuantityNeeded) {
+      return {
+        available: false,
+        message: `Only ${inventory.currentStock} ${inventory.unit} available. You need ${actualQuantityNeeded} ${inventory.unit}.`,
+      };
+    }
+
+    return { available: true };
   }
 
   /**

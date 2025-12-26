@@ -29,6 +29,7 @@ const menuItemSchema = z.object({
   price: z.number().min(0, 'Price must be 0 or greater'),
   preparationTime: z.number().min(1, 'Preparation time must be at least 1 minute'),
   isAvailable: z.boolean(),
+  halfPortionEnabled: z.boolean(),
   tags: z.string().optional(),
   trackInventory: z.boolean(),
   currentStock: z.number().min(0).optional(),
@@ -66,6 +67,7 @@ export function MenuItemForm() {
       price: 0,
       preparationTime: 15,
       isAvailable: true,
+      halfPortionEnabled: false,
       tags: '',
       trackInventory: false,
       currentStock: 0,
@@ -80,7 +82,9 @@ export function MenuItemForm() {
 
   const mainCategory = watch('mainCategory');
   const isAvailable = watch('isAvailable');
+  const halfPortionEnabled = watch('halfPortionEnabled');
   const trackInventory = watch('trackInventory');
+  const price = watch('price');
 
   async function onSubmit(data: MenuItemFormData) {
     setIsLoading(true);
@@ -93,6 +97,7 @@ export function MenuItemForm() {
       formData.append('price', data.price.toString());
       formData.append('preparationTime', data.preparationTime.toString());
       formData.append('isAvailable', data.isAvailable.toString());
+      formData.append('halfPortionEnabled', data.halfPortionEnabled.toString());
       formData.append('tags', data.tags || '');
 
       // Add inventory fields
@@ -288,6 +293,42 @@ export function MenuItemForm() {
         />
         <Label htmlFor="isAvailable">Available for ordering</Label>
       </div>
+
+      {/* Half Portion Section - Only for Food Items */}
+      {mainCategory === 'food' && (
+        <div className="space-y-4 rounded-lg border p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold">Portion Options</h3>
+              <p className="text-sm text-muted-foreground">
+                Allow customers to order half portions at 50% price
+              </p>
+            </div>
+            <Switch
+              id="halfPortionEnabled"
+              checked={halfPortionEnabled}
+              onCheckedChange={(checked) => setValue('halfPortionEnabled', checked)}
+              disabled={isLoading}
+            />
+          </div>
+
+          {halfPortionEnabled && price > 0 && (
+            <div className="rounded-md bg-muted p-3">
+              <p className="text-sm">
+                <span className="font-medium">Half Portion Price:</span>{' '}
+                {new Intl.NumberFormat('en-NG', {
+                  style: 'currency',
+                  currency: 'NGN',
+                  minimumFractionDigits: 0,
+                }).format(Math.round(price * 0.5))}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Automatically calculated as 50% of full price
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Inventory Tracking Section */}
       <div className="space-y-4 rounded-lg border p-4">

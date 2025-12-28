@@ -6,15 +6,14 @@ const envPath = resolve(process.cwd(), '.env.local');
 const result = config({ path: envPath });
 
 if (result.error) {
-  console.error('⚠️  Warning: Could not load .env.local file');
-  console.error('   Path:', envPath);
-  console.error('   Error:', result.error.message);
-  process.exit(1);
+  // In production, env vars might be injected directly, so we don't strict fail on missing .env file
+  // We only log a warning and let the connection check fail later if vars are truly missing
+  console.log('ℹ️  Note: Could not load .env.local file (using system environment variables)');
 }
 
 // Now import modules that depend on environment variables
-import { connectDB } from '@/lib/mongodb';
-import MenuItemModel from '@/models/menu-item-model';
+import { connectDB } from '../lib/mongodb';
+import MenuItemModel from '../models/menu-item-model';
 
 /**
  * Migration script to add halfPortionEnabled field to existing menu items

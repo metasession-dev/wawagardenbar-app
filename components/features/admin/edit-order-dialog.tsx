@@ -20,6 +20,7 @@ import {
 import { Loader2, Plus, Trash2, Minus, ShoppingCart } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -35,6 +36,7 @@ interface EditOrderDialogProps {
     name: string;
     price: number;
     quantity: number;
+    portionSize?: 'full' | 'half';
     customizations?: Array<{
       name: string;
       option: string;
@@ -59,6 +61,7 @@ interface OrderItem {
   name: string;
   price: number;
   quantity: number;
+  portionSize?: 'full' | 'half';
   customizations?: Array<{
     name: string;
     option: string;
@@ -89,6 +92,7 @@ export function EditOrderDialog({
           name: item.name,
           price: item.price,
           quantity: item.quantity,
+          portionSize: item.portionSize || 'full',
           customizations: item.customizations || [],
           specialInstructions: item.specialInstructions || '',
         }))
@@ -172,6 +176,7 @@ export function EditOrderDialog({
         items: items.map((item) => ({
           menuItemId: item.menuItemId,
           quantity: item.quantity,
+          portionSize: item.portionSize,
           customizations: item.customizations,
           specialInstructions: item.specialInstructions,
         })),
@@ -254,7 +259,12 @@ export function EditOrderDialog({
                       className="flex items-center gap-3 p-3 border rounded-md"
                     >
                       <div className="flex-1">
-                        <p className="font-medium">{item.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{item.name}</p>
+                          {item.portionSize === 'half' && (
+                            <Badge variant="secondary" className="text-xs">Half</Badge>
+                          )}
+                        </div>
                         <p className="text-sm text-muted-foreground">
                           ₦{item.price.toLocaleString()} each
                         </p>

@@ -12,6 +12,7 @@ interface UpdateOrderItemsInput {
   items: Array<{
     menuItemId: string;
     quantity: number;
+    portionSize?: 'full' | 'half';
     customizations?: Array<{
       name: string;
       option: string;
@@ -55,11 +56,12 @@ export async function updateOrderItemsAction(input: UpdateOrderItemsInput) {
 
     // Validate and fetch menu items
     const menuItemIds = input.items.map((item) => item.menuItemId);
+    const uniqueMenuItemIds = [...new Set(menuItemIds)];
     const menuItems = await MenuItemModel.find({
-      _id: { $in: menuItemIds },
+      _id: { $in: uniqueMenuItemIds },
     });
 
-    if (menuItems.length !== menuItemIds.length) {
+    if (menuItems.length !== uniqueMenuItemIds.length) {
       return {
         success: false,
         error: 'One or more menu items not found',
@@ -102,8 +104,8 @@ export async function updateOrderItemsAction(input: UpdateOrderItemsInput) {
         name: menuItem.name,
         price: menuItem.price,
         quantity: inputItem.quantity,
-        portionSize: 'full' as const,
-        portionMultiplier: 1.0,
+        portionSize: inputItem.portionSize || 'full',
+        portionMultiplier: inputItem.portionSize === 'half' ? 0.5 : 1.0,
         customizations: customizations.map((custom) => ({
           name: custom.name,
           option: custom.option,

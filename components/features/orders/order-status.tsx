@@ -241,7 +241,12 @@ export function OrderStatus({ order }: OrderStatusProps) {
               {currentOrder.items.map((item: any, index: number) => (
                 <div key={index} className="flex justify-between">
                   <div>
-                    <p className="font-medium">{item.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">{item.name}</p>
+                      {item.portionSize === 'half' && (
+                        <Badge variant="secondary" className="text-xs">Half</Badge>
+                      )}
+                    </div>
                     <p className="text-sm text-muted-foreground">
                       {item.quantity}x {formatPrice(item.price)}
                     </p>

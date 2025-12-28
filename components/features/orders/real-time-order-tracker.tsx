@@ -109,9 +109,14 @@ export function RealTimeOrderTracker({ order, className }: RealTimeOrderTrackerP
           {order.items.map((item, index) => (
             <div key={index} className="flex items-start justify-between text-sm">
               <div className="flex-1">
-                <p className="font-medium">
-                  {item.quantity}x {item.name}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="font-medium">
+                    {item.quantity}x {item.name}
+                  </p>
+                  {item.portionSize === 'half' && (
+                    <Badge variant="secondary" className="text-xs">Half</Badge>
+                  )}
+                </div>
                 {item.specialInstructions && (
                   <p className="text-xs text-muted-foreground">
                     Note: {item.specialInstructions}

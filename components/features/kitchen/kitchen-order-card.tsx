@@ -163,6 +163,9 @@ export function KitchenOrderCard({ order }: KitchenOrderCardProps) {
                 <div className="flex items-center gap-3">
                   <span className="text-2xl font-bold text-white">{item.quantity}x</span>
                   <span className="text-xl text-white">{item.name}</span>
+                  {item.portionSize === 'half' && (
+                    <Badge variant="secondary" className="text-sm">Half Portion</Badge>
+                  )}
                 </div>
                 {item.customizations && item.customizations.length > 0 && (
                   <div className="mt-1 ml-12 text-gray-400">

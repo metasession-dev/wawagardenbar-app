@@ -137,12 +137,20 @@ export function emitNewOrder({
   orderType,
   itemCount,
   total,
+  items,
+  customer,
+  status,
+  createdAt,
 }: {
   orderId: string;
   orderNumber: string;
   orderType: string;
   itemCount: number;
   total: number;
+  items: any[];
+  customer: { name: string; email?: string; phone?: string };
+  status: string;
+  createdAt: string;
 }): void {
   const socketServer = getSocketServer();
   if (!socketServer) {
@@ -150,12 +158,17 @@ export function emitNewOrder({
     return;
   }
 
-  socketServer.to('kitchen').emit('new-order', {
+  socketServer.to('kitchen-display').emit('kitchen:new-order', {
+    _id: orderId, // KitchenOrderGrid expects _id
     orderId,
     orderNumber,
     orderType,
     itemCount,
     total,
+    items,
+    customer,
+    status,
+    createdAt,
     timestamp: new Date().toISOString(),
   });
 
@@ -180,7 +193,8 @@ export function emitOrderChange({
     return;
   }
 
-  socketServer.to('kitchen').emit('order-change', {
+  // KitchenOrderGrid listens for 'order:updated' on 'kitchen-display' room
+  socketServer.to('kitchen-display').emit('order:updated', {
     orderId,
     status,
     action,

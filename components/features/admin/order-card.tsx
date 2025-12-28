@@ -269,8 +269,13 @@ export function OrderCard({ order, isSelected, onSelect, showCheckbox }: OrderCa
         {/* Order Items */}
         <div className="space-y-1 mb-4">
           {order.items.slice(0, 3).map((item: any, index: number) => (
-            <div key={index} className="text-sm">
-              <span className="font-medium">{item.quantity}x</span> {item.name}
+            <div key={index} className="text-sm flex items-center gap-2">
+              <span>
+                <span className="font-medium">{item.quantity}x</span> {item.name}
+              </span>
+              {item.portionSize === 'half' && (
+                <Badge variant="secondary" className="text-xs">Half</Badge>
+              )}
             </div>
           ))}
           {order.items.length > 3 && (

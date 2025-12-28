@@ -93,7 +93,10 @@ export async function createOrderAction(
       guestName: input.guestName,
       guestPhone: input.guestPhone,
       orderType: input.orderType,
-      items: input.items,
+      items: input.items.map(item => ({
+        ...item,
+        portionSize: item.portionSize || 'full', // Ensure portionSize is set
+      })),
       subtotal: input.subtotal,
       tax: input.tax,
       deliveryFee: input.deliveryFee,
@@ -112,6 +115,22 @@ export async function createOrderAction(
       orderType: order.orderType,
       itemCount: order.items.length,
       total: order.total,
+      items: order.items.map((item: any) => ({
+        menuItemId: item.menuItemId?.toString(),
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        portionSize: item.portionSize,
+        subtotal: item.subtotal,
+        customizations: item.customizations || [],
+      })),
+      customer: {
+        name: input.guestName || 'Guest',
+        email: input.guestEmail,
+        phone: input.guestPhone,
+      },
+      status: order.status,
+      createdAt: order.createdAt.toISOString(),
     });
 
     // Revalidate relevant paths

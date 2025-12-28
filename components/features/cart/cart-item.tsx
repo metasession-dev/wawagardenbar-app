@@ -26,13 +26,13 @@ export function CartItem({ item }: CartItemProps) {
   function handleQuantityChange(delta: number) {
     const newQuantity = item.quantity + delta;
     if (newQuantity >= 1) {
-      updateQuantity(item.id, newQuantity);
+      updateQuantity(item.cartItemId, newQuantity);
     }
   }
 
   function handleInstructionsChange(value: string) {
     setInstructions(value);
-    updateInstructions(item.id, value);
+    updateInstructions(item.cartItemId, value);
   }
 
   function formatPrice(price: number): string {
@@ -112,7 +112,7 @@ export function CartItem({ item }: CartItemProps) {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => removeItem(item.id)}
+          onClick={() => removeItem(item.cartItemId)}
           className="text-destructive hover:text-destructive"
         >
           <Trash2 className="mr-1 h-4 w-4" />

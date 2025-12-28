@@ -21,6 +21,7 @@ interface SerializedOrderItem {
   name: string;
   quantity: number;
   subtotal: number;
+  portionSize?: 'full' | 'half';
 }
 
 interface SerializedOrder {
@@ -100,6 +101,7 @@ async function getTabDetails(tabId: string) {
         name: item.name,
         quantity: item.quantity,
         subtotal: item.subtotal,
+        portionSize: item.portionSize,
       })),
       specialInstructions: order.specialInstructions,
       total: order.total,
@@ -176,9 +178,14 @@ export default async function TabDetailsPage({ params }: TabDetailsPageProps) {
                         <div className="space-y-2">
                           {order.items.map((item, itemIndex) => (
                             <div key={itemIndex} className="flex justify-between text-sm">
-                              <span>
-                                {item.quantity}x {item.name}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span>
+                                  {item.quantity}x {item.name}
+                                </span>
+                                {item.portionSize === 'half' && (
+                                  <Badge variant="secondary" className="text-xs">Half</Badge>
+                                )}
+                              </div>
                               <span className="font-medium">
                                 ₦{item.subtotal.toLocaleString()}
                               </span>

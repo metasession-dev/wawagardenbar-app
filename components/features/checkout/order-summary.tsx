@@ -101,9 +101,14 @@ export function OrderSummary({ orderType, onRewardApplied, onPointsApplied }: Or
         <ScrollArea className="max-h-64">
           <div className="space-y-3">
             {items.map((item) => (
-              <div key={item.id} className="flex justify-between gap-2 text-sm">
+              <div key={item.cartItemId} className="flex justify-between gap-2 text-sm">
                 <div className="flex-1">
-                  <p className="font-medium">{item.name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium">{item.name}</p>
+                    {item.portionSize === 'half' && (
+                      <Badge variant="secondary" className="text-xs">Half</Badge>
+                    )}
+                  </div>
                   <p className="text-muted-foreground">
                     {item.quantity}x {formatPrice(item.price)}
                   </p>

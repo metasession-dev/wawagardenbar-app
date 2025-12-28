@@ -87,6 +87,8 @@ export function MenuItemForm() {
   const price = watch('price');
 
   async function onSubmit(data: MenuItemFormData) {
+    if (isLoading) return;
+    
     setIsLoading(true);
     try {
       const formData = new FormData();
@@ -127,6 +129,7 @@ export function MenuItemForm() {
           description: result.error || 'Failed to create menu item',
           variant: 'destructive',
         });
+        setIsLoading(false);
       }
     } catch (error) {
       console.error('Error creating menu item:', error);
@@ -135,7 +138,6 @@ export function MenuItemForm() {
         description: 'An unexpected error occurred',
         variant: 'destructive',
       });
-    } finally {
       setIsLoading(false);
     }
   }
@@ -461,8 +463,14 @@ export function MenuItemForm() {
       {/* Actions */}
       <div className="flex gap-4">
         <Button type="submit" disabled={isLoading}>
-          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Create Menu Item
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Creating...
+            </>
+          ) : (
+            'Create Menu Item'
+          )}
         </Button>
         <Button
           type="button"

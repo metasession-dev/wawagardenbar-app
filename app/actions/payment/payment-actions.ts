@@ -14,6 +14,8 @@ import {
   PaymentMethod,
 } from '@/interfaces/payment';
 import { CartItem } from '@/stores/cart-store';
+import { emitNewOrder } from '@/lib/socket-server';
+import { revalidatePath } from 'next/cache';
 
 export interface CreateOrderInput {
   orderType: 'dine-in' | 'pickup' | 'delivery' | 'pay-now';
@@ -114,6 +116,8 @@ export async function createOrder(input: CreateOrderInput): Promise<{
         name: item.name,
         price: item.price,
         quantity: item.quantity,
+        portionSize: item.portionSize || 'full',
+        portionMultiplier: item.portionMultiplier || 1.0,
         specialInstructions: item.specialInstructions,
         subtotal: item.price * item.quantity,
       })),
@@ -170,9 +174,42 @@ export async function createOrder(input: CreateOrderInput): Promise<{
     console.log('✅ Order created successfully:', {
       orderNumber: order.orderNumber,
       orderId: order._id.toString(),
-      items: order.items.map(i => `${i.quantity}x ${i.name}`),
+      items: order.items.map(i => `${i.quantity}x ${i.name} (${i.portionSize})`),
       total: order.total,
     });
+
+    // Emit new order to kitchen via WebSocket
+    try {
+      emitNewOrder({
+        orderId: order._id.toString(),
+        orderNumber: order.orderNumber,
+        orderType: order.orderType,
+        itemCount: order.items.length,
+        total: order.total,
+        items: order.items.map((item: any) => ({
+          menuItemId: item.menuItemId?.toString(),
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          portionSize: item.portionSize,
+          subtotal: item.subtotal,
+          customizations: item.customizations || [],
+        })),
+        customer: {
+          name: input.customerInfo.name,
+          email: input.customerInfo.email,
+          phone: input.customerInfo.phone,
+        },
+        status: order.status,
+        createdAt: order.createdAt.toISOString(),
+      });
+    } catch (socketError) {
+      console.error('Error emitting new order socket event:', socketError);
+      // Don't fail the order creation if socket emission fails
+    }
+
+    // Revalidate kitchen dashboard
+    revalidatePath('/dashboard/kitchen');
 
     // If tabId provided, add order to tab
     if (input.tabId) {

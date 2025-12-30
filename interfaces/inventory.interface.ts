@@ -2,7 +2,7 @@ import { Types } from 'mongoose';
 
 export type StockStatus = 'in-stock' | 'low-stock' | 'out-of-stock';
 
-export type StockHistoryCategory = 'sale' | 'restock' | 'waste' | 'damage' | 'adjustment';
+export type StockHistoryCategory = 'sale' | 'restock' | 'waste' | 'damage' | 'adjustment' | 'other';
 
 export interface IStockHistory {
   quantity: number;

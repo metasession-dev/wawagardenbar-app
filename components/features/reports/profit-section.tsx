@@ -80,23 +80,19 @@ export function ProfitSection({ report }: ProfitSectionProps) {
               </div>
             </div>
 
-            {/* Less: Operating Expenses */}
+            {/* Less: Operating Overhead */}
             <div className="border-t pt-2">
               <div className="flex justify-between items-center py-2">
-                <span className="font-semibold">Less: Operating Expenses</span>
+                <span className="font-semibold">Less: Operating Overhead</span>
                 <span className="text-lg font-bold text-red-600">
-                  ({formatCurrency(report.operatingExpenses.totalExpenses)})
+                  ({formatCurrency(report.operatingExpenses.totalOperatingExpenses)})
                 </span>
               </div>
-              <div className="pl-4 space-y-1 text-sm">
-                <div className="flex justify-between text-muted-foreground">
-                  <span>• Direct Costs</span>
-                  <span>({formatCurrency(report.operatingExpenses.totalDirectCosts)})</span>
-                </div>
-                <div className="flex justify-between text-muted-foreground">
-                  <span>• Operating Costs</span>
-                  <span>({formatCurrency(report.operatingExpenses.totalOperatingExpenses)})</span>
-                </div>
+              <div className="pl-4 space-y-1 text-sm text-muted-foreground">
+                <p>Includes Rent, Salaries, Utilities, Maintenance, etc.</p>
+                <p className="text-xs italic mt-1">
+                  * Ingredient purchases (Direct Costs) are excluded here as they are captured in COGS.
+                </p>
               </div>
             </div>
 

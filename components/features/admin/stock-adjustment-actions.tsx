@@ -261,8 +261,9 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
               <Label>Quantity *</Label>
               <Input
                 type="number"
+                step="0.01"
                 value={addData.quantity || ''}
-                onChange={(e) => setAddData({ ...addData, quantity: parseInt(e.target.value) || 0 })}
+                onChange={(e) => setAddData({ ...addData, quantity: parseFloat(e.target.value) || 0 })}
                 placeholder="50"
               />
             </div>
@@ -338,8 +339,9 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
               <Label>Quantity *</Label>
               <Input
                 type="number"
+                step="0.01"
                 value={deductData.quantity || ''}
-                onChange={(e) => setDeductData({ ...deductData, quantity: parseInt(e.target.value) || 0 })}
+                onChange={(e) => setDeductData({ ...deductData, quantity: parseFloat(e.target.value) || 0 })}
                 placeholder="5"
               />
             </div>
@@ -408,13 +410,14 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
               <Label>New Stock Level *</Label>
               <Input
                 type="number"
+                step="0.01"
                 value={adjustData.newStock || ''}
-                onChange={(e) => setAdjustData({ ...adjustData, newStock: parseInt(e.target.value) || 0 })}
+                onChange={(e) => setAdjustData({ ...adjustData, newStock: parseFloat(e.target.value) || 0 })}
                 placeholder="45"
               />
               <p className="text-sm text-muted-foreground">
                 Difference: {adjustData.newStock - inventory.currentStock > 0 ? '+' : ''}
-                {adjustData.newStock - inventory.currentStock}
+                {(adjustData.newStock - inventory.currentStock).toFixed(2)}
               </p>
             </div>
             <div className="space-y-2">

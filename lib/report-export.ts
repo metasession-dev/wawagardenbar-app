@@ -50,7 +50,7 @@ export function exportReportAsPDF(report: DailySummaryReport, reportType: 'singl
     ['Cost of Goods Sold', formatCurrency(report.costs.totalDirectCosts)],
     ['Gross Profit', formatCurrency(report.grossProfit.total)],
     ['Gross Profit Margin', `${report.metrics.grossProfitMargin.toFixed(1)}%`],
-    ['Operating Expenses', formatCurrency(report.operatingExpenses.totalExpenses)],
+    ['Operating Overhead', formatCurrency(report.operatingExpenses.totalOperatingExpenses)],
     ['Net Profit/Loss', formatCurrency(report.netProfit)],
     ['Net Profit Margin', `${report.metrics.netProfitMargin.toFixed(1)}%`],
     ['Orders Processed', report.metrics.orderCount.toString()],
@@ -149,23 +149,23 @@ export function exportReportAsPDF(report: DailySummaryReport, reportType: 'singl
     yPos = 20;
   }
 
-  // Operating Expenses
+  // Operating Expenses (Cash Flow)
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text('Operating Expenses', 14, yPos);
+  doc.text('Expenses Breakdown (Cash Flow)', 14, yPos);
   yPos += 10;
 
   const expenseData = [
     ...report.operatingExpenses.directCosts.map(exp => [
       exp.category.replace('-', ' '),
       exp.description,
-      'Direct Cost',
+      'Direct Cost (Inventory)',
       formatCurrency(exp.amount),
     ]),
     ...report.operatingExpenses.operatingCosts.map(exp => [
       exp.category.replace('-', ' '),
       exp.description,
-      'Operating',
+      'Operating Overhead',
       formatCurrency(exp.amount),
     ]),
   ];
@@ -226,7 +226,7 @@ export function exportReportAsExcel(report: DailySummaryReport, reportType: 'sin
     ['Cost of Goods Sold', report.costs.totalDirectCosts],
     ['Gross Profit', report.grossProfit.total],
     ['Gross Profit Margin', `${report.metrics.grossProfitMargin.toFixed(1)}%`],
-    ['Operating Expenses', report.operatingExpenses.totalExpenses],
+    ['Operating Overhead', report.operatingExpenses.totalOperatingExpenses],
     ['Net Profit/Loss', report.netProfit],
     ['Net Profit Margin', `${report.metrics.netProfitMargin.toFixed(1)}%`],
     ['Orders Processed', report.metrics.orderCount],
@@ -292,22 +292,22 @@ export function exportReportAsExcel(report: DailySummaryReport, reportType: 'sin
 
   // Expenses Sheet
   const expensesData = [
-    ['Operating Expenses'],
+    ['Expenses Breakdown (Cash Flow)'],
     ['Category', 'Description', 'Type', 'Amount'],
     ...report.operatingExpenses.directCosts.map(exp => [
       exp.category.replace('-', ' '),
       exp.description,
-      'Direct Cost',
+      'Direct Cost (Inventory)',
       exp.amount,
     ]),
     ...report.operatingExpenses.operatingCosts.map(exp => [
       exp.category.replace('-', ' '),
       exp.description,
-      'Operating',
+      'Operating Overhead',
       exp.amount,
     ]),
     [],
-    ['Total Expenses', '', '', report.operatingExpenses.totalExpenses],
+    ['Total Cash Outflow', '', '', report.operatingExpenses.totalExpenses],
   ];
 
   const expensesSheet = XLSX.utils.aoa_to_sheet(expensesData);
@@ -339,7 +339,7 @@ export function exportReportAsCSV(report: DailySummaryReport, reportType: 'singl
   csvRows.push(`Cost of Goods Sold,${report.costs.totalDirectCosts}`);
   csvRows.push(`Gross Profit,${report.grossProfit.total}`);
   csvRows.push(`Gross Profit Margin,${report.metrics.grossProfitMargin.toFixed(1)}%`);
-  csvRows.push(`Operating Expenses,${report.operatingExpenses.totalExpenses}`);
+  csvRows.push(`Operating Overhead,${report.operatingExpenses.totalOperatingExpenses}`);
   csvRows.push(`Net Profit/Loss,${report.netProfit}`);
   csvRows.push(`Net Profit Margin,${report.metrics.netProfitMargin.toFixed(1)}%`);
   csvRows.push(`Orders Processed,${report.metrics.orderCount}`);
@@ -370,15 +370,15 @@ export function exportReportAsCSV(report: DailySummaryReport, reportType: 'singl
   csvRows.push('');
 
   // Expenses
-  csvRows.push('Operating Expenses');
+  csvRows.push('Expenses Breakdown (Cash Flow)');
   csvRows.push('Category,Description,Type,Amount');
   report.operatingExpenses.directCosts.forEach(exp => {
-    csvRows.push(`"${exp.category.replace('-', ' ')}","${exp.description}",Direct Cost,${exp.amount}`);
+    csvRows.push(`"${exp.category.replace('-', ' ')}","${exp.description}",Direct Cost (Inventory),${exp.amount}`);
   });
   report.operatingExpenses.operatingCosts.forEach(exp => {
-    csvRows.push(`"${exp.category.replace('-', ' ')}","${exp.description}",Operating,${exp.amount}`);
+    csvRows.push(`"${exp.category.replace('-', ' ')}","${exp.description}",Operating Overhead,${exp.amount}`);
   });
-  csvRows.push(`Total Expenses,,,${report.operatingExpenses.totalExpenses}`);
+  csvRows.push(`Total Cash Outflow,,,${report.operatingExpenses.totalExpenses}`);
 
   // Create and download CSV
   const csvContent = csvRows.join('\n');

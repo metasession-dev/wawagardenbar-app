@@ -47,9 +47,9 @@ export async function createMenuItemAction(formData: FormData): Promise<ActionRe
 
     // Extract inventory tracking data
     const trackInventory = formData.get('trackInventory') === 'true';
-    const currentStock = formData.get('currentStock') ? parseInt(formData.get('currentStock') as string) : undefined;
-    const minimumStock = formData.get('minimumStock') ? parseInt(formData.get('minimumStock') as string) : 10;
-    const maximumStock = formData.get('maximumStock') ? parseInt(formData.get('maximumStock') as string) : 100;
+    const currentStock = formData.get('currentStock') ? parseFloat(formData.get('currentStock') as string) : undefined;
+    const minimumStock = formData.get('minimumStock') ? parseFloat(formData.get('minimumStock') as string) : 10;
+    const maximumStock = formData.get('maximumStock') ? parseFloat(formData.get('maximumStock') as string) : 100;
     const unit = (formData.get('unit') as string) || 'units';
     const costPerUnit = formData.get('costPerUnit') ? parseFloat(formData.get('costPerUnit') as string) : 0;
     const supplier = formData.get('supplier') as string;

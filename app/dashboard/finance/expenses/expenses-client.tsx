@@ -41,9 +41,13 @@ export function ExpensesPageClient({ userRole }: ExpensesPageClientProps) {
 
     setIsLoading(true);
     try {
+      // Ensure end date includes the full day (23:59:59.999)
+      const endOfDay = new Date(dateRange.to);
+      endOfDay.setHours(23, 59, 59, 999);
+
       const [expensesResult, summaryResult] = await Promise.all([
-        getExpensesAction(dateRange.from, dateRange.to),
-        getExpenseSummaryAction(dateRange.from, dateRange.to),
+        getExpensesAction(dateRange.from, endOfDay),
+        getExpenseSummaryAction(dateRange.from, endOfDay),
       ]);
 
       if (expensesResult.success && expensesResult.expenses) {

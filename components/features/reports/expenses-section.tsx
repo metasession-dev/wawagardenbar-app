@@ -41,7 +41,12 @@ export function ExpensesSection({ report }: ExpensesSectionProps) {
       {/* Direct Costs */}
       <Card>
         <CardHeader>
-          <CardTitle>Direct Costs</CardTitle>
+          <div className="flex flex-col space-y-1.5">
+            <CardTitle>Direct Costs (Inventory Purchases)</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Cash spent on ingredients and stock. Not deducted from Net Profit (COGS is used instead).
+            </p>
+          </div>
           <div className="text-2xl font-bold text-blue-600">
             {formatCurrency(report.operatingExpenses.totalDirectCosts)}
           </div>
@@ -141,7 +146,12 @@ export function ExpensesSection({ report }: ExpensesSectionProps) {
       {/* Total Expenses Summary */}
       <Card className="border-2 border-red-500">
         <CardHeader>
-          <CardTitle>Total Expenses Summary</CardTitle>
+          <div className="flex flex-col space-y-1.5">
+            <CardTitle>Total Cash Outflow</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Total money spent today (Purchases + Overhead).
+            </p>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">

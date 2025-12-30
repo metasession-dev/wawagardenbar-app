@@ -64,7 +64,7 @@ interface Expense {
     firstName: string;
     lastName: string;
     email: string;
-  };
+  } | null;
 }
 
 interface ExpenseListProps {
@@ -270,7 +270,9 @@ export function ExpenseList({ expenses, onEdit, onRefresh, userRole }: ExpenseLi
                     })}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {expense.createdBy.firstName} {expense.createdBy.lastName}
+                    {expense.createdBy
+                      ? `${expense.createdBy.firstName} ${expense.createdBy.lastName}`
+                      : 'Unknown User'}
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>

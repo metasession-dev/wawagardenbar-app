@@ -105,7 +105,11 @@ export class ExpenseService {
     }
 
     const expenses = await ExpenseModel.find(query)
-      .populate('createdBy', 'firstName lastName email')
+      .populate({
+        path: 'createdBy',
+        select: 'firstName lastName email',
+        options: { strictPopulate: false },
+      })
       .sort({ date: -1, createdAt: -1 })
       .lean();
 
@@ -153,7 +157,11 @@ export class ExpenseService {
    */
   static async getExpenseById(id: string): Promise<IExpense | null> {
     const expense = await ExpenseModel.findById(id)
-      .populate('createdBy', 'firstName lastName email')
+      .populate({
+        path: 'createdBy',
+        select: 'firstName lastName email',
+        options: { strictPopulate: false },
+      })
       .lean();
 
     return expense as IExpense | null;
@@ -190,7 +198,11 @@ export class ExpenseService {
       { $set: data },
       { new: true, runValidators: true }
     )
-      .populate('createdBy', 'firstName lastName email')
+      .populate({
+        path: 'createdBy',
+        select: 'firstName lastName email',
+        options: { strictPopulate: false },
+      })
       .lean();
 
     if (!expense) {

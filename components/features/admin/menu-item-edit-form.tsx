@@ -528,6 +528,7 @@ export function MenuItemEditForm({ menuItem }: MenuItemEditFormProps) {
                     <Input
                       id="currentStock"
                       type="number"
+                      step="0.01"
                       {...register('currentStock', { valueAsNumber: true })}
                       placeholder="0"
                       disabled={isLoading}
@@ -554,6 +555,7 @@ export function MenuItemEditForm({ menuItem }: MenuItemEditFormProps) {
                     <Input
                       id="minimumStock"
                       type="number"
+                      step="0.01"
                       {...register('minimumStock', { valueAsNumber: true })}
                       placeholder="10"
                       disabled={isLoading}
@@ -565,6 +567,7 @@ export function MenuItemEditForm({ menuItem }: MenuItemEditFormProps) {
                     <Input
                       id="maximumStock"
                       type="number"
+                      step="0.01"
                       {...register('maximumStock', { valueAsNumber: true })}
                       placeholder="100"
                       disabled={isLoading}

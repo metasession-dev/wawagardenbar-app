@@ -23,7 +23,7 @@ const stockHistorySchema = new Schema<IStockHistory>(
     timestamp: { type: Date, default: Date.now },
     category: {
       type: String,
-      enum: ['sale', 'restock', 'waste', 'damage', 'adjustment'] as StockHistoryCategory[],
+      enum: ['sale', 'restock', 'waste', 'damage', 'adjustment', 'other'] as StockHistoryCategory[],
     },
     orderId: { type: Schema.Types.ObjectId, ref: 'Order' },
     invoiceNumber: { type: String },

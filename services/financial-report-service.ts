@@ -133,6 +133,7 @@ export class FinancialReportService {
       {
         name: string;
         category: string;
+        mainCategory: string;
         quantity: number;
         price: number;
         costPerUnit: number;
@@ -160,6 +161,7 @@ export class FinancialReportService {
           itemMap.set(itemId, {
             name: item.name,
             category: menuItem.category,
+            mainCategory: menuItem.mainCategory,
             quantity: item.quantity,
             price: item.price,
             costPerUnit: inventory?.costPerUnit || 0,
@@ -187,8 +189,8 @@ export class FinancialReportService {
         total: costTotal,
       };
 
-      // Categorize by food or drink
-      if (item.category.toLowerCase() === 'drinks' || item.category.toLowerCase() === 'drink') {
+      // Categorize by food or drink using mainCategory
+      if (item.mainCategory === 'drinks') {
         report.revenue.drink.items.push(revenueItem);
         report.revenue.drink.totalRevenue += total;
         report.costs.drink.items.push(costItem);
@@ -243,7 +245,9 @@ export class FinancialReportService {
       report.operatingExpenses.totalOperatingExpenses;
 
     // Calculate net profit
-    report.netProfit = report.grossProfit.total - report.operatingExpenses.totalExpenses;
+    // Net Profit = Gross Profit - Operating Expenses (Overhead)
+    // We exclude Direct Costs (Purchases) because COGS is already subtracted from Revenue to get Gross Profit
+    report.netProfit = report.grossProfit.total - report.operatingExpenses.totalOperatingExpenses;
 
     // Calculate metrics
     if (report.revenue.totalRevenue > 0) {
@@ -313,6 +317,7 @@ export class FinancialReportService {
       {
         name: string;
         category: string;
+        mainCategory: string;
         quantity: number;
         price: number;
         costPerUnit: number;
@@ -339,6 +344,7 @@ export class FinancialReportService {
           itemMap.set(itemId, {
             name: item.name,
             category: menuItem.category,
+            mainCategory: menuItem.mainCategory,
             quantity: item.quantity,
             price: item.price,
             costPerUnit: inventory?.costPerUnit || 0,
@@ -366,7 +372,7 @@ export class FinancialReportService {
         total: costTotal,
       };
 
-      if (item.category.toLowerCase() === 'drinks' || item.category.toLowerCase() === 'drink') {
+      if (item.mainCategory === 'drinks') {
         report.revenue.drink.items.push(revenueItem);
         report.revenue.drink.totalRevenue += total;
         report.costs.drink.items.push(costItem);
@@ -415,7 +421,7 @@ export class FinancialReportService {
       report.operatingExpenses.totalDirectCosts +
       report.operatingExpenses.totalOperatingExpenses;
 
-    report.netProfit = report.grossProfit.total - report.operatingExpenses.totalExpenses;
+    report.netProfit = report.grossProfit.total - report.operatingExpenses.totalOperatingExpenses;
 
     if (report.revenue.totalRevenue > 0) {
       report.metrics.grossProfitMargin =

@@ -2,6 +2,7 @@ import { connectDB } from '@/lib/mongodb';
 import MenuItem from '@/models/menu-item-model';
 import Inventory from '@/models/inventory-model';
 import { IMenuItem } from '@/interfaces/menu-item.interface';
+import { SystemSettingsService } from './system-settings-service';
 
 export interface MenuItemWithStock extends IMenuItem {
   stockStatus: 'in-stock' | 'low-stock' | 'out-of-stock';
@@ -129,14 +130,43 @@ export class CategoryService {
   }> {
     await connectDB();
 
-    const [drinkCategories, foodCategories] = await Promise.all([
+    // Get categories from settings
+    const menuSettings = await SystemSettingsService.getMenuCategories();
+    
+    // Get enabled categories only, sorted by order
+    const foodCategories = menuSettings.food
+      .filter(c => c.isEnabled)
+      .sort((a, b) => a.order - b.order)
+      .map(c => c.value);
+      
+    const drinkCategories = menuSettings.drinks
+      .filter(c => c.isEnabled)
+      .sort((a, b) => a.order - b.order)
+      .map(c => c.value);
+
+    // Also get distinct categories from DB to ensure we don't miss any that are in use
+    // but might not be in settings (legacy support)
+    const [dbDrinkCategories, dbFoodCategories] = await Promise.all([
       MenuItem.distinct('category', { mainCategory: 'drinks', isAvailable: true }),
       MenuItem.distinct('category', { mainCategory: 'food', isAvailable: true }),
     ]);
+    
+    // Merge DB categories if they don't exist in settings
+    for (const cat of dbFoodCategories) {
+      if (!foodCategories.includes(cat)) {
+        foodCategories.push(cat);
+      }
+    }
+    
+    for (const cat of dbDrinkCategories) {
+      if (!drinkCategories.includes(cat)) {
+        drinkCategories.push(cat);
+      }
+    }
 
     return {
-      drinks: drinkCategories.sort(),
-      food: foodCategories.sort(),
+      drinks: drinkCategories,
+      food: foodCategories,
     };
   }
 

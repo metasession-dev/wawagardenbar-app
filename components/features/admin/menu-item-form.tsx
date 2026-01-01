@@ -20,6 +20,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { createMenuItemAction } from '@/app/actions/admin/menu-actions';
+import { IMenuSettings } from '@/interfaces/menu-settings.interface';
 
 const menuItemSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -43,10 +44,14 @@ const menuItemSchema = z.object({
 
 type MenuItemFormData = z.infer<typeof menuItemSchema>;
 
+interface MenuItemFormProps {
+  availableCategories?: IMenuSettings;
+}
+
 /**
  * Menu item form component
  */
-export function MenuItemForm() {
+export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -142,14 +147,18 @@ export function MenuItemForm() {
     }
   }
 
-  const foodCategories = [
+  const foodCategories = availableCategories?.food
+    .filter(c => c.isEnabled)
+    .sort((a, b) => a.order - b.order) || [
     { value: 'main-courses', label: 'Main Courses' },
     { value: 'starters', label: 'Starters' },
     { value: 'desserts', label: 'Desserts' },
     { value: 'sides', label: 'Sides' },
   ];
 
-  const drinkCategories = [
+  const drinkCategories = availableCategories?.drinks
+    .filter(c => c.isEnabled)
+    .sort((a, b) => a.order - b.order) || [
     { value: 'beer-local', label: 'Beer (Local)' },
     { value: 'beer-imported', label: 'Beer (Imported)' },
     { value: 'beer-craft', label: 'Beer (Craft)' },

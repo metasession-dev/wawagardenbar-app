@@ -10,12 +10,14 @@ interface MenuContentProps {
   };
   selectedCategory?: string;
   searchQuery?: string;
+  categoryLabels?: Record<string, string>;
 }
 
 export async function MenuContent({
   initialCategories,
   selectedCategory,
   searchQuery,
+  categoryLabels,
 }: MenuContentProps) {
   // Fetch menu items based on filters
   let items;
@@ -38,6 +40,7 @@ export async function MenuContent({
       <CategoryNavigation
         categories={initialCategories}
         selectedCategory={selectedCategory}
+        categoryLabels={categoryLabels}
       />
 
       <MenuGrid items={items} searchQuery={searchQuery} />

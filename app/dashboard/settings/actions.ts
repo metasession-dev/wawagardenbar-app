@@ -41,3 +41,22 @@ export async function updateExpenseCategoriesAction(categories: {
     };
   }
 }
+
+export async function updateMenuCategoriesAction(settings: import('@/interfaces/menu-settings.interface').IMenuSettings) {
+  try {
+    const session = await requireSuperAdmin();
+    
+    await SystemSettingsService.updateMenuCategories(settings, session.userId!);
+    
+    revalidatePath('/dashboard/settings');
+    revalidatePath('/dashboard/menu');
+    revalidatePath('/menu'); // Revalidate public menu page
+    
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update menu categories',
+    };
+  }
+}

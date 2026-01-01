@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronRight, ArrowLeft } from 'lucide-react';
 import { MenuItemEditForm } from '@/components/features/admin/menu-item-edit-form';
 import { PriceManagementSection } from '@/components/features/admin/price-management-section';
+import { SystemSettingsService } from '@/services/system-settings-service';
 
 interface EditMenuItemPageProps {
   params: Promise<{
@@ -92,7 +93,10 @@ function EditFormSkeleton() {
  */
 export default async function EditMenuItemPage({ params }: EditMenuItemPageProps) {
   const { itemId } = await params;
-  const menuItem = await getMenuItem(itemId);
+  const [menuItem, menuSettings] = await Promise.all([
+    getMenuItem(itemId),
+    SystemSettingsService.getMenuCategories(),
+  ]);
 
   if (!menuItem) {
     notFound();
@@ -131,7 +135,7 @@ export default async function EditMenuItemPage({ params }: EditMenuItemPageProps
 
       {/* Edit Form */}
       <Suspense fallback={<EditFormSkeleton />}>
-        <MenuItemEditForm menuItem={menuItem} />
+        <MenuItemEditForm menuItem={menuItem} availableCategories={menuSettings} />
       </Suspense>
 
       {/* Price Management Section */}

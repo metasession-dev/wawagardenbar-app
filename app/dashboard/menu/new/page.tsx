@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MenuItemForm } from '@/components/features/admin/menu-item-form';
+import { SystemSettingsService } from '@/services/system-settings-service';
 
 export const metadata = {
   title: 'Add Menu Item | Admin Dashboard',
@@ -10,6 +11,8 @@ export const metadata = {
  * Add new menu item page
  */
 export default async function NewMenuItemPage() {
+  const menuSettings = await SystemSettingsService.getMenuCategories();
+
   return (
     <div className="space-y-6">
       <div>
@@ -22,7 +25,7 @@ export default async function NewMenuItemPage() {
           <CardTitle>Item Details</CardTitle>
         </CardHeader>
         <CardContent>
-          <MenuItemForm />
+          <MenuItemForm availableCategories={menuSettings} />
         </CardContent>
       </Card>
     </div>

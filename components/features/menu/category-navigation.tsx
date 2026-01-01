@@ -11,19 +11,10 @@ interface CategoryNavigationProps {
     food: string[];
   };
   selectedCategory?: string;
+  categoryLabels?: Record<string, string>;
 }
 
-const categoryLabels: Record<string, string> = {
-  beer: 'Beer',
-  wine: 'Wine',
-  'soft-drinks': 'Soft Drinks',
-  cocktails: 'Cocktails',
-  starters: 'Starters',
-  mains: 'Main Dishes',
-  desserts: 'Desserts',
-};
-
-export function CategoryNavigation({ categories, selectedCategory }: CategoryNavigationProps) {
+export function CategoryNavigation({ categories, selectedCategory, categoryLabels = {} }: CategoryNavigationProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -90,7 +81,7 @@ export function CategoryNavigation({ categories, selectedCategory }: CategoryNav
               size="sm"
               onClick={() => handleCategoryChange(category)}
             >
-              {categoryLabels[category] || category}
+              {categoryLabels[category] || category.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
             </Button>
           ))}
 
@@ -102,7 +93,7 @@ export function CategoryNavigation({ categories, selectedCategory }: CategoryNav
               size="sm"
               onClick={() => handleCategoryChange(category)}
             >
-              {categoryLabels[category] || category}
+              {categoryLabels[category] || category.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
             </Button>
           ))}
       </div>
@@ -111,7 +102,7 @@ export function CategoryNavigation({ categories, selectedCategory }: CategoryNav
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Filtered by:</span>
           <Badge variant="secondary">
-            {categoryLabels[selectedCategory] || selectedCategory}
+            {categoryLabels[selectedCategory] || selectedCategory.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
           </Badge>
         </div>
       )}

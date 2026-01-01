@@ -329,6 +329,53 @@ export class SystemSettingsService {
   }
 
   /**
+   * Get menu categories settings
+   */
+  static async getMenuCategories(): Promise<import('@/interfaces/menu-settings.interface').IMenuSettings> {
+    await connectDB();
+    
+    const setting = await SystemSettingsModel.findOne({
+      key: 'menu-categories',
+    });
+    
+    const { DEFAULT_MENU_SETTINGS } = await import('@/interfaces/menu-settings.interface');
+    
+    return (setting?.value as import('@/interfaces/menu-settings.interface').IMenuSettings) || DEFAULT_MENU_SETTINGS;
+  }
+
+  /**
+   * Update menu categories
+   */
+  static async updateMenuCategories(
+    settings: import('@/interfaces/menu-settings.interface').IMenuSettings,
+    adminUserId: string
+  ): Promise<boolean> {
+    await connectDB();
+    
+    await SystemSettingsModel.findOneAndUpdate(
+      { key: 'menu-categories' },
+      {
+        $set: {
+          value: settings,
+          updatedBy: new Types.ObjectId(adminUserId),
+          updatedAt: new Date(),
+        },
+        $push: {
+          changeHistory: {
+            value: settings,
+            changedBy: new Types.ObjectId(adminUserId),
+            changedAt: new Date(),
+            reason: 'Menu categories updated',
+          },
+        },
+      },
+      { upsert: true, new: true }
+    );
+    
+    return true;
+  }
+
+  /**
    * Update expense categories
    */
   static async updateExpenseCategories(

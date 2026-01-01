@@ -26,6 +26,7 @@ import { MenuImageUpload } from './menu-image-upload';
 import { CustomizationOptionsBuilder } from './customization-options-builder';
 import { DietaryTagsSelector } from './dietary-tags-selector';
 import { DeleteMenuItemDialog } from './delete-menu-item-dialog';
+import { IMenuSettings } from '@/interfaces/menu-settings.interface';
 
 const menuItemSchema = z.object({
   name: z.string().min(3, 'Name must be at least 3 characters').max(100, 'Name must be less than 100 characters'),
@@ -59,12 +60,13 @@ type MenuItemFormData = z.infer<typeof menuItemSchema>;
 
 interface MenuItemEditFormProps {
   menuItem: any;
+  availableCategories?: IMenuSettings;
 }
 
 /**
  * Menu item edit form component
  */
-export function MenuItemEditForm({ menuItem }: MenuItemEditFormProps) {
+export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEditFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -275,13 +277,17 @@ export function MenuItemEditForm({ menuItem }: MenuItemEditFormProps) {
     }
   }
 
-  const foodCategories = [
+  const foodCategories = availableCategories?.food
+    .filter(c => c.isEnabled)
+    .sort((a, b) => a.order - b.order) || [
     { value: 'main-courses', label: 'Main Courses' },
     { value: 'starters', label: 'Starters' },
     { value: 'desserts', label: 'Desserts' },
   ];
 
-  const drinkCategories = [
+  const drinkCategories = availableCategories?.drinks
+    .filter(c => c.isEnabled)
+    .sort((a, b) => a.order - b.order) || [
     { value: 'beer-local', label: 'Beer (Local)' },
     { value: 'beer-imported', label: 'Beer (Imported)' },
     { value: 'beer-craft', label: 'Beer (Craft)' },

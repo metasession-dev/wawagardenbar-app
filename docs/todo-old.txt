@@ -1,0 +1,10 @@
+Itinerary count should be reduced when items are added to order. Count should be increased if the order is cancelled
+
+admin users should be redirected to the /dashboard/orders/tabs/tabid screen of that tab after creating it
+admin users should be redirected to the /dashboard/orders/orderid screen after an order has been made
+
+
+
+add search on the menu page so its easier for staff and guests to find menu ites by searching. as they enter letters the search should already be producing results if the items are available without the need to click on the search butoon
+
+undo tab closure/payment script 695162c4ca9bd841cd0ad461 Debit bill for Elizabeth old staff-380978

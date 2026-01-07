@@ -339,3 +339,101 @@ You are an expert in TypeScript, Node.js, Next.js App Router, React, Shadcn UI, 
   * Implement JSON-LD structured data
 
   * Use proper OpenGraph tags
+
+# Documentation Standards
+
+  * **Follow the Documentation Standard** - All changes must be documented according to `/docs/DOCUMENTATION-STANDARD.md`
+  * **Document as you build** - Create documentation during implementation, not after
+  * **Always document:**
+      * New features (any user-facing functionality)
+      * API changes (new endpoints, modified responses)
+      * Database schema changes (new models, field additions/removals)
+      * Breaking changes (anything affecting existing functionality)
+      * Architecture decisions (service patterns, state management changes)
+      * Security implementations (authentication, authorization, data protection)
+      * Integration additions (third-party services, payment processors)
+      * Configuration changes (environment variables, system settings)
+  * **Conditionally document:**
+      * Complex bug fixes (non-obvious solutions, architectural root causes)
+      * Significant refactoring (pattern changes, multi-file changes)
+      * UI/UX changes (workflow modifications, navigation changes)
+  * **No documentation needed for:**
+      * Typo fixes, code formatting, simple renames
+      * Minor CSS tweaks, log message updates, comment additions
+
+## Documentation Structure
+
+  * **Feature docs:** `/docs/features/[feature-name].md`
+  * **Changelog:** `/docs/CHANGELOG.md` (chronological entries with date and category)
+  * **API docs:** `/docs/api/[domain].md`
+  * **Database schema:** `/docs/database/schema.md`
+  * **Operational scripts:** `/docs/operations/OPERATIONAL-SCRIPTS.md`
+  * **Architecture decisions:** `/docs/architecture/adr-[number]-[title].md`
+
+## Code Documentation
+
+  * **JSDoc required for:**
+      * All exported functions
+      * All service methods
+      * All complex utility functions
+      * All custom hooks
+  * **JSDoc format:**
+      ```typescript
+      /**
+       * Brief description of what the function does
+       * 
+       * @param paramName - Description of parameter
+       * @returns Description of return value
+       * @throws {ErrorType} When error occurs
+       * 
+       * @example
+       * ```typescript
+       * const result = functionName('value');
+       * ```
+       */
+      ```
+  * **Inline comments for:**
+      * Complex algorithms
+      * Non-obvious business logic
+      * Workarounds or hacks (with HACK: prefix)
+      * TODO items with context (TODO: [task] - [name] - [date])
+
+## Documentation Workflow
+
+  * **For new features:**
+      1. Create feature doc before coding
+      2. Update doc during implementation
+      3. Add changelog entry after completion
+      4. Review all documentation before PR
+  * **For bug fixes:**
+      1. Document root cause if complex
+      2. Add inline comments explaining fix
+      3. Update changelog under "Fixed" section
+  * **For refactoring:**
+      1. Document motivation
+      2. Create ADR if changing patterns
+      3. Update affected documentation
+      4. Add changelog entry under "Changed"
+
+## Changelog Format
+
+  * **Structure:**
+      ```markdown
+      ## [YYYY-MM-DD] - [Category]
+      
+      ### Added
+      - New features
+      
+      ### Changed
+      - Modifications to existing functionality
+      
+      ### Fixed
+      - Bug fixes
+      
+      ### Removed
+      - Deprecated features
+      
+      ### Security
+      - Security-related changes
+      ```
+  * **Categories:** Feature, Bug Fix, Refactor, Security, Performance, Documentation

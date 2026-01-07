@@ -1,7 +1,0 @@
-Itinerary count should be reduced when items are added to order. Count should be increased if the order is cancelled
-
-admin users should be redirected to the /dashboard/orders/tabs/tabid screen of that tab after creating it
-admin users should be redirected to the /dashboard/orders/orderid screen after an order has been made
-
-
-

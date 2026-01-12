@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -22,6 +22,7 @@ import {
 import { Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { updateUploadedExpenseAction } from '@/app/actions/expenses/csv-import-actions';
+import { getExpenseCategoriesAction } from '@/app/actions/finance/expense-categories-actions';
 import { format } from 'date-fns';
 import {
   DIRECT_COST_CATEGORIES,
@@ -41,6 +42,11 @@ export function EditUploadedExpenseDialog({
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
+  const [directCostCategories, setDirectCostCategories] = useState<string[]>([...DIRECT_COST_CATEGORIES]);
+  const [operatingExpenseCategories, setOperatingExpenseCategories] = useState<string[]>([
+    ...OPERATING_EXPENSE_CATEGORIES,
+  ]);
+
   const [formData, setFormData] = useState({
     date: format(new Date(expense.date), 'yyyy-MM-dd'),
     description: expense.description,
@@ -49,6 +55,24 @@ export function EditUploadedExpenseDialog({
     expenseType: expense.expenseType || '',
     category: expense.category || '',
   });
+
+  async function fetchCategories() {
+    try {
+      const result = await getExpenseCategoriesAction();
+      if (result.success && result.categories) {
+        setDirectCostCategories(result.categories.directCostCategories);
+        setOperatingExpenseCategories(result.categories.operatingExpenseCategories);
+      }
+    } catch (error) {
+      console.error('Failed to fetch expense categories:', error);
+    }
+  }
+
+  useEffect(() => {
+    if (open) {
+      void fetchCategories();
+    }
+  }, [open]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -91,9 +115,9 @@ export function EditUploadedExpenseDialog({
 
   const categories =
     formData.expenseType === 'direct-cost'
-      ? DIRECT_COST_CATEGORIES
+      ? directCostCategories
       : formData.expenseType === 'operating-expense'
-      ? OPERATING_EXPENSE_CATEGORIES
+      ? operatingExpenseCategories
       : [];
 
   return (

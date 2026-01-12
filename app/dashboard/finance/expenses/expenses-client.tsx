@@ -8,12 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { ExpenseForm } from '@/components/features/finance/expense-form';
 import { ExpenseList } from '@/components/features/finance/expense-list';
+import { CSVImportButton } from '@/components/features/admin/expenses/csv-import-button';
 import {
   getExpensesAction,
   getExpenseSummaryAction,
 } from '@/app/actions/finance/expense-actions';
 import { toast } from '@/hooks/use-toast';
 import { DateRange } from 'react-day-picker';
+import Link from 'next/link';
 
 interface ExpensesPageClientProps {
   userRole?: string;
@@ -184,6 +186,12 @@ export function ExpensesPageClient({ userRole }: ExpensesPageClientProps) {
         </div>
 
         <div className="flex gap-2">
+          <CSVImportButton />
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/dashboard/expenses/uploaded">
+              View Uploaded
+            </Link>
+          </Button>
           <Button variant="outline" size="sm" disabled>
             <Download className="mr-2 h-4 w-4" />
             Export

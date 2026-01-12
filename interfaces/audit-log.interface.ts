@@ -30,7 +30,12 @@ export type AuditAction =
   | 'admin.permissions-updated'
   | 'expense.create'
   | 'expense.update'
-  | 'expense.delete';
+  | 'expense.delete'
+  | 'expense.uploaded_expense_updated'
+  | 'expense.uploaded_expense_approved'
+  | 'expense.uploaded_expense_rejected'
+  | 'expense.uploaded_expense_deleted'
+  | 'expense.uploaded_expenses_bulk_deleted';
 
 export interface IAuditLog {
   _id: Types.ObjectId;

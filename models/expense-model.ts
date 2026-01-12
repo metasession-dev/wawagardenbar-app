@@ -36,11 +36,21 @@ const ExpenseSchema = new Schema<IExpense>(
       required: true,
       min: 0,
     },
+    transactionFee: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     supplier: {
       type: String,
     },
     receiptReference: {
       type: String,
+    },
+    referenceNumber: {
+      type: String,
+      sparse: true,
+      index: true,
     },
     notes: {
       type: String,

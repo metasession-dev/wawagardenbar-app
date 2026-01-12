@@ -36,21 +36,89 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2026-01-11] - Update
+
+### Changed
+- **Moniepoint Expense Import - Migrated from CSV to XLSX:**
+  - Replaced `CSVParserService` with `XLSXParserService` using `xlsx` library
+  - Updated `importMoniepointCSVAction` to handle Excel files (.xlsx, .xls)
+  - Updated `CSVImportButton` component to accept Excel files instead of CSV
+  - Updated all UI labels and descriptions to reference Excel files
+  - File validation now checks for .xlsx and .xls extensions
+  - Parser now reads Excel files as ArrayBuffer instead of text
+  - Maintains same expense identification rules and workflow
+  - All existing features preserved (approval workflow, bulk operations, etc.)
+
+### Technical Details
+- Service: `/services/xlsx-parser-service.ts` (replaces csv-parser-service.ts)
+- Uses `XLSX.read()` and `XLSX.utils.sheet_to_json()` for parsing
+- Handles Excel workbook structure with first sheet selection
+- Maintains row 8 as header row (rows 1-7 are metadata)
+- Same transaction parsing logic and expense identification rules
+
+---
+
 ## [2026-01-07] - Feature
 
 ### Added
-- **Moniepoint CSV Expense Import Feature Documentation:**
-  - `/docs/features/moniepoint-csv-expense-import.md` - Complete requirements specification
-  - `/docs/features/moniepoint-csv-expense-import-implementation.md` - Technical implementation guide
-  - Feature enables admin users to import expense transactions from Moniepoint bank statement CSV files
-  - Includes review and approval workflow for imported expenses
-  - Supports automatic expense identification and Electronic Money Transfer Levy detection
-  - New `transactionFee` field added to expense data model
-  - Comprehensive data mapping from CSV columns to expense fields
-  - Duplicate detection using transaction reference numbers
-  - Bulk operations support (approve, reject, delete)
-  - Complete API endpoints, service layer, and UI component specifications
-  - 8-day implementation roadmap with testing strategy
+- **Moniepoint Expense Import Feature - IMPLEMENTED:**
+  - **Documentation:**
+    - `/docs/features/moniepoint-csv-expense-import.md` - Complete requirements specification
+    - `/docs/features/moniepoint-csv-expense-import-implementation.md` - Technical implementation guide
+  
+  - **Database Models:**
+    - Created `UploadedExpenseModel` with full schema for staging imported expenses
+    - Updated `ExpenseModel` with `transactionFee` and `referenceNumber` fields
+    - Added 5 new audit action types for uploaded expense operations
+  
+  - **Services:**
+    - `XLSXParserService` - Parses Moniepoint Excel files with expense identification rules
+    - `UploadedExpenseService` - Complete CRUD operations and approval workflow
+    - Supports standard expenses and Electronic Money Transfer Levy detection
+    - Duplicate detection via transaction reference numbers
+  
+  - **Server Actions (10 actions):**
+    - `importMoniepointCSVAction` - Excel file upload and parsing
+    - `listUploadedExpensesAction` - List with filters and pagination
+    - `getUploadedExpenseAction` - Get single expense details
+    - `updateUploadedExpenseAction` - Update expense fields
+    - `approveUploadedExpenseAction` - Approve and create actual expense
+    - `bulkApproveUploadedExpensesAction` - Bulk approval
+    - `rejectUploadedExpenseAction` - Reject expense
+    - `deleteUploadedExpenseAction` - Delete expense
+    - `bulkDeleteUploadedExpensesAction` - Bulk deletion
+    - `getUploadedExpensesStatsAction` - Get statistics
+  
+  - **UI Components:**
+    - `CSVImportButton` - Upload dialog with file validation (supports Excel)
+    - `UploadedExpensesList` - Review page with filtering and bulk operations
+    - `UploadedExpensesStats` - Statistics dashboard cards
+    - `EditUploadedExpenseDialog` - Edit expense details before approval
+    - New page: `/dashboard/expenses/uploaded` - Uploaded expenses review interface
+  
+  - **Integration:**
+    - Added import button to main expenses page
+    - Added "View Uploaded" link to navigate to review page
+    - Transaction fee field support in expense forms
+  
+  - **Features:**
+    - Automatic expense identification from Moniepoint Excel format
+    - Electronic Money Transfer Levy detection (₦50 charges)
+    - Review and approval workflow before adding to expenses
+    - Bulk operations (approve, reject, delete)
+    - Category and expense type assignment during review
+    - Original data preservation for reference
+    - Duplicate prevention using transaction references
+    - Statistics dashboard (pending, approved, rejected counts)
+
+### Changed
+- Updated `IExpense` interface to include `transactionFee` and `referenceNumber` fields
+- Updated expense DTOs to support new fields
+- Enhanced audit logging with uploaded expense actions
+
+### Dependencies
+- Using `xlsx` library (already installed) for Excel parsing
+- Using `date-fns` for date handling
 
 ---
 

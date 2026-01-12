@@ -51,10 +51,12 @@ export interface IExpense {
   quantity?: number;
   unit?: string;
   amount: number; // Total cost in Naira
+  transactionFee?: number; // Bank or payment processor transaction fee
 
   // Tracking
   supplier?: string;
   receiptReference?: string;
+  referenceNumber?: string; // Unique transaction reference (for imported expenses)
   notes?: string;
 
   // Audit
@@ -74,8 +76,10 @@ export interface CreateExpenseDTO {
   quantity?: number;
   unit?: string;
   amount: number;
+  transactionFee?: number;
   supplier?: string;
   receiptReference?: string;
+  referenceNumber?: string;
   notes?: string;
   createdBy: string;
 }
@@ -91,8 +95,10 @@ export interface UpdateExpenseDTO {
   quantity?: number;
   unit?: string;
   amount?: number;
+  transactionFee?: number;
   supplier?: string;
   receiptReference?: string;
+  referenceNumber?: string;
   notes?: string;
 }
 

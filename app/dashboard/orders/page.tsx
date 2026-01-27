@@ -14,7 +14,8 @@ import {
   ArrowRight, 
   ShoppingBag, 
   PlusCircle, 
-  FilePlus 
+  FilePlus,
+  ClipboardList
 } from 'lucide-react';
 
 /**
@@ -133,7 +134,7 @@ export default async function OrdersPage() {
       {/* Order Actions */}
       <div>
         <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {/* Open a Order */}
           <Link href="/menu">
             <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full border-l-4 border-l-purple-500">
@@ -179,6 +180,22 @@ export default async function OrdersPage() {
                 </CardTitle>
                 <CardDescription>
                   Find an open tab to add new orders to it.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+
+          {/* Daily Inventory Summary */}
+          <Link href="/dashboard/orders/inventory-summary">
+            <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full border-l-4 border-l-emerald-500">
+              <CardHeader>
+                <CardTitle className="flex items-center text-lg">
+                  <ClipboardList className="h-5 w-5 mr-2 text-emerald-500" />
+                  Inventory Summary
+                  <ArrowRight className="ml-auto h-4 w-4 opacity-50" />
+                </CardTitle>
+                <CardDescription>
+                  Review and adjust daily inventory counts.
                 </CardDescription>
               </CardHeader>
             </Card>

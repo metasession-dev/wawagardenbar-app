@@ -21,13 +21,13 @@ const orderItemSchema = new Schema<IOrderItem>(
     quantity: { type: Number, required: true, min: 1 },
     portionSize: {
       type: String,
-      enum: ['full', 'half'],
+      enum: ['full', 'half', 'quarter'],
       default: 'full',
     },
     portionMultiplier: {
       type: Number,
       default: 1.0,
-      min: 0.5,
+      min: 0.25,
       max: 1.0,
     },
     customizations: [

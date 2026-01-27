@@ -276,6 +276,9 @@ export function OrderCard({ order, isSelected, onSelect, showCheckbox }: OrderCa
               {item.portionSize === 'half' && (
                 <Badge variant="secondary" className="text-xs">Half</Badge>
               )}
+              {item.portionSize === 'quarter' && (
+                <Badge variant="secondary" className="text-xs">Quarter</Badge>
+              )}
             </div>
           ))}
           {order.items.length > 3 && (

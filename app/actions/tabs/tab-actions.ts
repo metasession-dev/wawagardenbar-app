@@ -535,3 +535,47 @@ export async function deleteTabAction(tabId: string): Promise<ActionResult> {
     };
   }
 }
+
+/**
+ * Update tab custom name
+ */
+export async function updateTabNameAction(
+  tabId: string,
+  customName: string
+): Promise<ActionResult> {
+  try {
+    const cookieStore = await cookies();
+    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+
+    if (!session.isLoggedIn || !session.userId) {
+      return {
+        success: false,
+        error: 'Unauthorized',
+      };
+    }
+
+    // Only admin and super-admin can update tab names
+    if (session.role !== 'admin' && session.role !== 'super-admin') {
+      return {
+        success: false,
+        error: 'Insufficient permissions',
+      };
+    }
+
+    await TabService.updateTabName(tabId, customName);
+
+    revalidatePath('/dashboard/orders/tabs');
+    revalidatePath(`/dashboard/orders/tabs/${tabId}`);
+
+    return {
+      success: true,
+      message: 'Tab name updated successfully',
+    };
+  } catch (error) {
+    console.error('Error updating tab name:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update tab name',
+    };
+  }
+}

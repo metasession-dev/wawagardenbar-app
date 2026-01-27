@@ -67,7 +67,12 @@ const menuItemSchema = new Schema<IMenuItem>(
     },
     pointsValue: { type: Number, required: false, min: 0 },
     pointsRedeemable: { type: Boolean, default: false },
-    halfPortionEnabled: { type: Boolean, default: false },
+    portionOptions: {
+      halfPortionEnabled: { type: Boolean, default: false },
+      halfPortionSurcharge: { type: Number, default: 0, min: 0 },
+      quarterPortionEnabled: { type: Boolean, default: false },
+      quarterPortionSurcharge: { type: Number, default: 0, min: 0 },
+    },
   },
   {
     timestamps: true,
@@ -79,6 +84,11 @@ const menuItemSchema = new Schema<IMenuItem>(
 // Virtual field for half portion price
 menuItemSchema.virtual('halfPortionPrice').get(function() {
   return Math.round(this.price * 0.5);
+});
+
+// Virtual field for quarter portion price
+menuItemSchema.virtual('quarterPortionPrice').get(function() {
+  return Math.round(this.price * 0.25);
 });
 
 menuItemSchema.index({ name: 'text', description: 'text', tags: 'text' });

@@ -166,6 +166,9 @@ export function KitchenOrderCard({ order }: KitchenOrderCardProps) {
                   {item.portionSize === 'half' && (
                     <Badge variant="secondary" className="text-sm">Half Portion</Badge>
                   )}
+                  {item.portionSize === 'quarter' && (
+                    <Badge variant="secondary" className="text-sm">Quarter Portion</Badge>
+                  )}
                 </div>
                 {item.customizations && item.customizations.length > 0 && (
                   <div className="mt-1 ml-12 text-gray-400">

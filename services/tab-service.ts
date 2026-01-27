@@ -648,6 +648,30 @@ export class TabService {
   }
 
   /**
+   * Update tab custom name
+   */
+  static async updateTabName(tabId: string, customName: string): Promise<ITab> {
+    await connectDB();
+
+    const trimmedName = customName.trim();
+    
+    const tab = await TabModel.findByIdAndUpdate(
+      tabId,
+      { 
+        customName: trimmedName || undefined,
+        tableNumber: trimmedName || undefined,
+      },
+      { new: true }
+    );
+
+    if (!tab) {
+      throw new Error('Tab not found');
+    }
+
+    return JSON.parse(JSON.stringify(tab));
+  }
+
+  /**
    * Delete a tab
    * Requirements:
    * - Tab must not be closed/paid (status must be 'open' or 'settling')

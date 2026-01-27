@@ -2,7 +2,7 @@ import { Types } from 'mongoose';
 
 export type OrderType = 'dine-in' | 'pickup' | 'delivery' | 'pay-now';
 
-export type PortionSize = 'full' | 'half';
+export type PortionSize = 'full' | 'half' | 'quarter';
 
 export type OrderStatus =
   | 'pending'

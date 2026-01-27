@@ -31,6 +31,9 @@ const menuItemSchema = z.object({
   preparationTime: z.number().min(1, 'Preparation time must be at least 1 minute'),
   isAvailable: z.boolean(),
   halfPortionEnabled: z.boolean(),
+  halfPortionSurcharge: z.number().min(0, 'Surcharge must be 0 or greater'),
+  quarterPortionEnabled: z.boolean(),
+  quarterPortionSurcharge: z.number().min(0, 'Surcharge must be 0 or greater'),
   tags: z.string().optional(),
   trackInventory: z.boolean(),
   currentStock: z.number().min(0).optional(),
@@ -73,6 +76,9 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
       preparationTime: 15,
       isAvailable: true,
       halfPortionEnabled: false,
+      halfPortionSurcharge: 0,
+      quarterPortionEnabled: false,
+      quarterPortionSurcharge: 0,
       tags: '',
       trackInventory: false,
       currentStock: 0,
@@ -88,6 +94,9 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
   const mainCategory = watch('mainCategory');
   const isAvailable = watch('isAvailable');
   const halfPortionEnabled = watch('halfPortionEnabled');
+  const halfPortionSurcharge = watch('halfPortionSurcharge');
+  const quarterPortionEnabled = watch('quarterPortionEnabled');
+  const quarterPortionSurcharge = watch('quarterPortionSurcharge');
   const trackInventory = watch('trackInventory');
   const price = watch('price');
 
@@ -105,6 +114,9 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
       formData.append('preparationTime', data.preparationTime.toString());
       formData.append('isAvailable', data.isAvailable.toString());
       formData.append('halfPortionEnabled', data.halfPortionEnabled.toString());
+      formData.append('halfPortionSurcharge', data.halfPortionSurcharge.toString());
+      formData.append('quarterPortionEnabled', data.quarterPortionEnabled.toString());
+      formData.append('quarterPortionSurcharge', data.quarterPortionSurcharge.toString());
       formData.append('tags', data.tags || '');
 
       // Add inventory fields
@@ -308,36 +320,111 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
       {/* Half Portion Section - Only for Food Items */}
       {mainCategory === 'food' && (
         <div className="space-y-4 rounded-lg border p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold">Portion Options</h3>
-              <p className="text-sm text-muted-foreground">
-                Allow customers to order half portions at 50% price
-              </p>
-            </div>
-            <Switch
-              id="halfPortionEnabled"
-              checked={halfPortionEnabled}
-              onCheckedChange={(checked) => setValue('halfPortionEnabled', checked)}
-              disabled={isLoading}
-            />
-          </div>
+          <div>
+            <h3 className="text-lg font-semibold mb-4">Portion Options</h3>
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="halfPortionEnabled" className="font-medium">Half Portion (50%)</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Allow customers to order half portions at 50% price
+                  </p>
+                </div>
+                <Switch
+                  id="halfPortionEnabled"
+                  checked={halfPortionEnabled}
+                  onCheckedChange={(checked) => setValue('halfPortionEnabled', checked)}
+                  disabled={isLoading}
+                />
+              </div>
 
-          {halfPortionEnabled && price > 0 && (
-            <div className="rounded-md bg-muted p-3">
-              <p className="text-sm">
-                <span className="font-medium">Half Portion Price:</span>{' '}
-                {new Intl.NumberFormat('en-NG', {
-                  style: 'currency',
-                  currency: 'NGN',
-                  minimumFractionDigits: 0,
-                }).format(Math.round(price * 0.5))}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Automatically calculated as 50% of full price
-              </p>
+              {halfPortionEnabled && (
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="halfPortionSurcharge">Surcharge (optional)</Label>
+                    <Input
+                      id="halfPortionSurcharge"
+                      type="number"
+                      min="0"
+                      step="50"
+                      {...register('halfPortionSurcharge', { valueAsNumber: true })}
+                      disabled={isLoading}
+                      placeholder="0"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Fixed amount to add to the half portion price
+                    </p>
+                  </div>
+                  {price > 0 && (
+                    <div className="rounded-md bg-muted p-3">
+                      <p className="text-sm">
+                        <span className="font-medium">Half Portion Price:</span>{' '}
+                        {new Intl.NumberFormat('en-NG', {
+                          style: 'currency',
+                          currency: 'NGN',
+                          minimumFractionDigits: 0,
+                        }).format(Math.round(price * 0.5) + (halfPortionSurcharge || 0))}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        50% of full price{halfPortionSurcharge > 0 ? ` + ₦${halfPortionSurcharge.toLocaleString()} surcharge` : ''}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="quarterPortionEnabled" className="font-medium">Quarter Portion (25%)</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Allow customers to order quarter portions at 25% price
+                  </p>
+                </div>
+                <Switch
+                  id="quarterPortionEnabled"
+                  checked={quarterPortionEnabled}
+                  onCheckedChange={(checked) => setValue('quarterPortionEnabled', checked)}
+                  disabled={isLoading}
+                />
+              </div>
+
+              {quarterPortionEnabled && (
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="quarterPortionSurcharge">Surcharge (optional)</Label>
+                    <Input
+                      id="quarterPortionSurcharge"
+                      type="number"
+                      min="0"
+                      step="50"
+                      {...register('quarterPortionSurcharge', { valueAsNumber: true })}
+                      disabled={isLoading}
+                      placeholder="0"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Fixed amount to add to the quarter portion price
+                    </p>
+                  </div>
+                  {price > 0 && (
+                    <div className="rounded-md bg-muted p-3">
+                      <p className="text-sm">
+                        <span className="font-medium">Quarter Portion Price:</span>{' '}
+                        {new Intl.NumberFormat('en-NG', {
+                          style: 'currency',
+                          currency: 'NGN',
+                          minimumFractionDigits: 0,
+                        }).format(Math.round(price * 0.25) + (quarterPortionSurcharge || 0))}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        25% of full price{quarterPortionSurcharge > 0 ? ` + ₦${quarterPortionSurcharge.toLocaleString()} surcharge` : ''}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       )}
 

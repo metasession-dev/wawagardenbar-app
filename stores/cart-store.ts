@@ -7,7 +7,7 @@ export interface CartItem {
   name: string;
   price: number;
   quantity: number;
-  portionSize?: 'full' | 'half';
+  portionSize?: 'full' | 'half' | 'quarter';
   portionMultiplier?: number;
   image?: string;
   category: string;
@@ -33,7 +33,7 @@ interface CartStore {
   removeItem: (cartItemId: string) => void;
   updateQuantity: (cartItemId: string, quantity: number) => void;
   updateInstructions: (cartItemId: string, instructions: string) => void;
-  updatePortionSize: (cartItemId: string, portionSize: 'full' | 'half', adjustedPrice: number) => void;
+  updatePortionSize: (cartItemId: string, portionSize: 'full' | 'half' | 'quarter', adjustedPrice: number) => void;
   clearCart: () => void;
   toggleCart: () => void;
   openCart: () => void;

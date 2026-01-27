@@ -11,6 +11,7 @@ import { ArrowLeft, Receipt, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { DashboardTabActions } from '@/components/features/admin/tabs/dashboard-tab-actions';
 import { DeleteTabDialog } from '@/components/features/admin/tabs/delete-tab-dialog';
+import { EditTabNameDialog } from '@/components/features/admin/tabs/edit-tab-name-dialog';
 
 interface DashboardTabDetailsPageProps {
   params: Promise<{
@@ -52,6 +53,7 @@ async function getTabDetails(tabId: string) {
   const serializedTab = {
     _id: plainTab._id,
     tabNumber: plainTab.tabNumber,
+    customName: plainTab.customName,
     tableNumber: plainTab.tableNumber,
     status: plainTab.status,
     orders: Array.isArray(plainTab.orders) ? plainTab.orders : [],
@@ -106,8 +108,18 @@ export default async function DashboardTabDetailsPage({ params }: DashboardTabDe
         </Link>
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Tab #{tab.tabNumber}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-bold">
+                {tab.customName || `Tab #${tab.tabNumber}`}
+              </h1>
+              <EditTabNameDialog
+                tabId={tab._id}
+                tabNumber={tab.tabNumber}
+                currentName={tab.customName}
+              />
+            </div>
             <p className="text-muted-foreground mt-2">
+              {tab.customName && <span className="text-sm">Tab #{tab.tabNumber} • </span>}
               Table {tab.tableNumber} • Opened {new Date(tab.openedAt).toLocaleDateString()}
             </p>
           </div>

@@ -35,7 +35,11 @@ export type AuditAction =
   | 'expense.uploaded_expense_approved'
   | 'expense.uploaded_expense_rejected'
   | 'expense.uploaded_expense_deleted'
-  | 'expense.uploaded_expenses_bulk_deleted';
+  | 'expense.uploaded_expenses_bulk_deleted'
+  | 'inventory.snapshot_submitted'
+  | 'inventory.snapshot_edited'
+  | 'inventory.snapshot_approved'
+  | 'inventory.snapshot_rejected';
 
 export interface IAuditLog {
   _id: Types.ObjectId;

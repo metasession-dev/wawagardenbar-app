@@ -194,7 +194,7 @@ class InventoryService {
   static async checkAvailability(
     menuItemId: string,
     quantity: number,
-    portionSize: 'full' | 'half' = 'full'
+    portionSize: 'full' | 'half' | 'quarter' = 'full'
   ): Promise<{ available: boolean; message?: string }> {
     const menuItem = await MenuItemModel.findById(menuItemId);
 
@@ -206,9 +206,13 @@ class InventoryService {
       return { available: false, message: 'This item is currently unavailable' };
     }
 
-    // Validate half-portion is enabled if requested
-    if (portionSize === 'half' && !menuItem.halfPortionEnabled) {
+    // Validate portion options are enabled if requested
+    if (portionSize === 'half' && !menuItem.portionOptions?.halfPortionEnabled) {
       return { available: false, message: 'Half portion is not available for this item' };
+    }
+    
+    if (portionSize === 'quarter' && !menuItem.portionOptions?.quarterPortionEnabled) {
+      return { available: false, message: 'Quarter portion is not available for this item' };
     }
 
     if (!menuItem.trackInventory || !menuItem.inventoryId) {

@@ -48,7 +48,10 @@ async function getMenuItem(itemId: string) {
     preparationTime: menuItem.preparationTime,
     servingSize: menuItem.servingSize || '',
     isAvailable: menuItem.isAvailable,
-    halfPortionEnabled: menuItem.halfPortionEnabled || false,
+    portionOptions: menuItem.portionOptions || {
+      halfPortionEnabled: false,
+      quarterPortionEnabled: false,
+    },
     tags: menuItem.tags,
     allergens: menuItem.allergens || [],
     images: menuItem.images,

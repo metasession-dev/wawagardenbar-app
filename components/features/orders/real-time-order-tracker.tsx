@@ -116,6 +116,9 @@ export function RealTimeOrderTracker({ order, className }: RealTimeOrderTrackerP
                   {item.portionSize === 'half' && (
                     <Badge variant="secondary" className="text-xs">Half</Badge>
                   )}
+                  {item.portionSize === 'quarter' && (
+                    <Badge variant="secondary" className="text-xs">Quarter</Badge>
+                  )}
                 </div>
                 {item.specialInstructions && (
                   <p className="text-xs text-muted-foreground">

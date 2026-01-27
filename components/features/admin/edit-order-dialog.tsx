@@ -36,7 +36,7 @@ interface EditOrderDialogProps {
     name: string;
     price: number;
     quantity: number;
-    portionSize?: 'full' | 'half';
+    portionSize?: 'full' | 'half' | 'quarter';
     customizations?: Array<{
       name: string;
       option: string;
@@ -61,7 +61,7 @@ interface OrderItem {
   name: string;
   price: number;
   quantity: number;
-  portionSize?: 'full' | 'half';
+  portionSize?: 'full' | 'half' | 'quarter';
   customizations?: Array<{
     name: string;
     option: string;
@@ -263,6 +263,9 @@ export function EditOrderDialog({
                           <p className="font-medium">{item.name}</p>
                           {item.portionSize === 'half' && (
                             <Badge variant="secondary" className="text-xs">Half</Badge>
+                          )}
+                          {item.portionSize === 'quarter' && (
+                            <Badge variant="secondary" className="text-xs">Quarter</Badge>
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground">

@@ -246,6 +246,9 @@ export function OrderStatus({ order }: OrderStatusProps) {
                       {item.portionSize === 'half' && (
                         <Badge variant="secondary" className="text-xs">Half</Badge>
                       )}
+                      {item.portionSize === 'quarter' && (
+                        <Badge variant="secondary" className="text-xs">Quarter</Badge>
+                      )}
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {item.quantity}x {formatPrice(item.price)}

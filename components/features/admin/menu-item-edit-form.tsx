@@ -38,6 +38,9 @@ const menuItemSchema = z.object({
   servingSize: z.string().optional(),
   isAvailable: z.boolean(),
   halfPortionEnabled: z.boolean(),
+  halfPortionSurcharge: z.number().min(0, 'Surcharge must be 0 or greater'),
+  quarterPortionEnabled: z.boolean(),
+  quarterPortionSurcharge: z.number().min(0, 'Surcharge must be 0 or greater'),
   tags: z.string().optional(),
   allergens: z.array(z.string()).optional(),
   spiceLevel: z.enum(['none', 'mild', 'medium', 'hot', 'extra-hot']).optional(),
@@ -106,7 +109,10 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
       preparationTime: menuItem.preparationTime,
       servingSize: menuItem.servingSize || '',
       isAvailable: menuItem.isAvailable,
-      halfPortionEnabled: menuItem.halfPortionEnabled || false,
+      halfPortionEnabled: menuItem.portionOptions?.halfPortionEnabled || false,
+      halfPortionSurcharge: menuItem.portionOptions?.halfPortionSurcharge || 0,
+      quarterPortionEnabled: menuItem.portionOptions?.quarterPortionEnabled || false,
+      quarterPortionSurcharge: menuItem.portionOptions?.quarterPortionSurcharge || 0,
       tags: menuItem.tags?.join(', ') || '',
       allergens: menuItem.allergens || [],
       spiceLevel: menuItem.nutritionalInfo?.spiceLevel || 'none',
@@ -129,6 +135,9 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
   const mainCategory = watch('mainCategory');
   const isAvailable = watch('isAvailable');
   const halfPortionEnabled = watch('halfPortionEnabled');
+  const halfPortionSurcharge = watch('halfPortionSurcharge');
+  const quarterPortionEnabled = watch('quarterPortionEnabled');
+  const quarterPortionSurcharge = watch('quarterPortionSurcharge');
   const name = watch('name');
   const trackInventory = watch('trackInventory');
   const price = watch('price');
@@ -178,6 +187,9 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
       formData.append('servingSize', data.servingSize || '');
       formData.append('isAvailable', data.isAvailable.toString());
       formData.append('halfPortionEnabled', data.halfPortionEnabled.toString());
+      formData.append('halfPortionSurcharge', data.halfPortionSurcharge.toString());
+      formData.append('quarterPortionEnabled', data.quarterPortionEnabled.toString());
+      formData.append('quarterPortionSurcharge', data.quarterPortionSurcharge.toString());
       formData.append('tags', data.tags || '');
       formData.append('allergens', JSON.stringify(data.allergens || []));
       formData.append('spiceLevel', data.spiceLevel || 'none');
@@ -463,7 +475,7 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label htmlFor="halfPortionEnabled">Enable Half Portion</Label>
+                  <Label htmlFor="halfPortionEnabled">Half Portion (50%)</Label>
                   <p className="text-sm text-muted-foreground">
                     Allow customers to order half portions at 50% price
                   </p>
@@ -476,19 +488,88 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
                 />
               </div>
 
-              {halfPortionEnabled && price > 0 && (
-                <div className="rounded-md bg-muted p-3">
-                  <p className="text-sm">
-                    <span className="font-medium">Half Portion Price:</span>{' '}
-                    {new Intl.NumberFormat('en-NG', {
-                      style: 'currency',
-                      currency: 'NGN',
-                      minimumFractionDigits: 0,
-                    }).format(Math.round(price * 0.5))}
+              {halfPortionEnabled && (
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="halfPortionSurcharge">Surcharge (optional)</Label>
+                    <Input
+                      id="halfPortionSurcharge"
+                      type="number"
+                      min="0"
+                      step="50"
+                      {...register('halfPortionSurcharge', { valueAsNumber: true })}
+                      disabled={isLoading}
+                      placeholder="0"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Fixed amount to add to the half portion price
+                    </p>
+                  </div>
+                  {price > 0 && (
+                    <div className="rounded-md bg-muted p-3">
+                      <p className="text-sm">
+                        <span className="font-medium">Half Portion Price:</span>{' '}
+                        {new Intl.NumberFormat('en-NG', {
+                          style: 'currency',
+                          currency: 'NGN',
+                          minimumFractionDigits: 0,
+                        }).format(Math.round(price * 0.5) + (halfPortionSurcharge || 0))}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        50% of full price{halfPortionSurcharge > 0 ? ` + ₦${halfPortionSurcharge.toLocaleString()} surcharge` : ''}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="quarterPortionEnabled">Quarter Portion (25%)</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Allow customers to order quarter portions at 25% price
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Automatically calculated as 50% of full price
-                  </p>
+                </div>
+                <Switch
+                  id="quarterPortionEnabled"
+                  checked={quarterPortionEnabled}
+                  onCheckedChange={(checked) => setValue('quarterPortionEnabled', checked)}
+                  disabled={isLoading}
+                />
+              </div>
+
+              {quarterPortionEnabled && (
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="quarterPortionSurcharge">Surcharge (optional)</Label>
+                    <Input
+                      id="quarterPortionSurcharge"
+                      type="number"
+                      min="0"
+                      step="50"
+                      {...register('quarterPortionSurcharge', { valueAsNumber: true })}
+                      disabled={isLoading}
+                      placeholder="0"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Fixed amount to add to the quarter portion price
+                    </p>
+                  </div>
+                  {price > 0 && (
+                    <div className="rounded-md bg-muted p-3">
+                      <p className="text-sm">
+                        <span className="font-medium">Quarter Portion Price:</span>{' '}
+                        {new Intl.NumberFormat('en-NG', {
+                          style: 'currency',
+                          currency: 'NGN',
+                          minimumFractionDigits: 0,
+                        }).format(Math.round(price * 0.25) + (quarterPortionSurcharge || 0))}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        25% of full price{quarterPortionSurcharge > 0 ? ` + ₦${quarterPortionSurcharge.toLocaleString()} surcharge` : ''}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>

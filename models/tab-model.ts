@@ -8,6 +8,9 @@ const tabSchema = new Schema<ITab>(
       required: true,
       unique: true,
     },
+    customName: {
+      type: String,
+    },
     tableNumber: {
       type: String,
       required: true,

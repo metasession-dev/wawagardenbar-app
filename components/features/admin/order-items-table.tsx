@@ -42,6 +42,9 @@ export function OrderItemsTable({ order }: OrderItemsTableProps) {
                           {item.portionSize === 'half' && (
                             <Badge variant="secondary" className="text-xs">Half Portion</Badge>
                           )}
+                          {item.portionSize === 'quarter' && (
+                            <Badge variant="secondary" className="text-xs">Quarter Portion</Badge>
+                          )}
                         </div>
                         <p className="text-sm text-muted-foreground">
                           ₦{item.price.toLocaleString()} × {item.quantity}

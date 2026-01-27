@@ -24,7 +24,7 @@ export interface CartTotalsResult {
 export async function validateCartItem(
   itemId: string,
   quantity: number,
-  portionSize: 'full' | 'half' = 'full'
+  portionSize: 'full' | 'half' | 'quarter' = 'full'
 ): Promise<CartActionResult> {
   try {
     const { InventoryService } = await import('@/services');

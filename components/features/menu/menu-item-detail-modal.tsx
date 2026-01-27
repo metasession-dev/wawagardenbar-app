@@ -32,7 +32,7 @@ interface MenuItemDetailModalProps {
 
 export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetailModalProps) {
   const [quantity, setQuantity] = useState(1);
-  const [portionSize, setPortionSize] = useState<'full' | 'half'>('full');
+  const [portionSize, setPortionSize] = useState<'full' | 'half' | 'quarter'>('full');
   const [adjustedPrice, setAdjustedPrice] = useState(item.price);
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [isAdding, setIsAdding] = useState(false);
@@ -43,12 +43,18 @@ export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetail
 
   // Update price when portion changes
   useEffect(() => {
-    if (item.halfPortionEnabled && portionSize === 'half') {
-      setAdjustedPrice(Math.round(item.price * 0.5));
+    if (item.portionOptions?.halfPortionEnabled && portionSize === 'half') {
+      const basePrice = Math.round(item.price * 0.5);
+      const surcharge = item.portionOptions?.halfPortionSurcharge || 0;
+      setAdjustedPrice(basePrice + surcharge);
+    } else if (item.portionOptions?.quarterPortionEnabled && portionSize === 'quarter') {
+      const basePrice = Math.round(item.price * 0.25);
+      const surcharge = item.portionOptions?.quarterPortionSurcharge || 0;
+      setAdjustedPrice(basePrice + surcharge);
     } else {
       setAdjustedPrice(item.price);
     }
-  }, [portionSize, item.price, item.halfPortionEnabled]);
+  }, [portionSize, item.price, item.portionOptions]);
 
   const isOutOfStock = item.stockStatus === 'out-of-stock';
   const isLowStock = item.stockStatus === 'low-stock';
@@ -103,14 +109,14 @@ export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetail
         price: adjustedPrice,
         quantity,
         portionSize,
-        portionMultiplier: portionSize === 'half' ? 0.5 : 1.0,
+        portionMultiplier: portionSize === 'half' ? 0.5 : portionSize === 'quarter' ? 0.25 : 1.0,
         image: item.images?.[0],
         category: item.category,
         specialInstructions: specialInstructions || undefined,
         preparationTime: item.preparationTime,
       });
 
-      const portionText = portionSize === 'half' ? ' (Half Portion)' : '';
+      const portionText = portionSize === 'half' ? ' (Half Portion)' : portionSize === 'quarter' ? ' (Quarter Portion)' : '';
       toast({
         title: 'Added to Cart',
         description: `${quantity}x ${item.name}${portionText} added to your cart`,
@@ -250,11 +256,11 @@ export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetail
 
           <Separator />
 
-          {/* Portion Size Selector - Only for food items with half-portion enabled */}
-          {item.mainCategory === 'food' && item.halfPortionEnabled && (
+          {/* Portion Size Selector - Only for food items with portion options enabled */}
+          {item.mainCategory === 'food' && (item.portionOptions?.halfPortionEnabled || item.portionOptions?.quarterPortionEnabled) && (
             <div>
               <Label className="mb-3 block font-semibold">Portion Size</Label>
-              <RadioGroup value={portionSize} onValueChange={(value) => setPortionSize(value as 'full' | 'half')}>
+              <RadioGroup value={portionSize} onValueChange={(value) => setPortionSize(value as 'full' | 'half' | 'quarter')}>
                 <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-accent">
                   <RadioGroupItem value="full" id="full" />
                   <Label htmlFor="full" className="flex-1 cursor-pointer font-normal">
@@ -264,15 +270,28 @@ export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetail
                     </div>
                   </Label>
                 </div>
-                <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-accent">
-                  <RadioGroupItem value="half" id="half" />
-                  <Label htmlFor="half" className="flex-1 cursor-pointer font-normal">
-                    <div className="flex items-center justify-between">
-                      <span>Half Portion</span>
-                      <span className="font-semibold">{formatPrice(Math.round(item.price * 0.5))}</span>
-                    </div>
-                  </Label>
-                </div>
+                {item.portionOptions?.halfPortionEnabled && (
+                  <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-accent">
+                    <RadioGroupItem value="half" id="half" />
+                    <Label htmlFor="half" className="flex-1 cursor-pointer font-normal">
+                      <div className="flex items-center justify-between">
+                        <span>Half Portion (50%)</span>
+                        <span className="font-semibold">{formatPrice(Math.round(item.price * 0.5) + (item.portionOptions?.halfPortionSurcharge || 0))}</span>
+                      </div>
+                    </Label>
+                  </div>
+                )}
+                {item.portionOptions?.quarterPortionEnabled && (
+                  <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-accent">
+                    <RadioGroupItem value="quarter" id="quarter" />
+                    <Label htmlFor="quarter" className="flex-1 cursor-pointer font-normal">
+                      <div className="flex items-center justify-between">
+                        <span>Quarter Portion (25%)</span>
+                        <span className="font-semibold">{formatPrice(Math.round(item.price * 0.25) + (item.portionOptions?.quarterPortionSurcharge || 0))}</span>
+                      </div>
+                    </Label>
+                  </div>
+                )}
               </RadioGroup>
             </div>
           )}

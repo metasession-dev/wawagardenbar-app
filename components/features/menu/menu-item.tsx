@@ -73,8 +73,12 @@ export function MenuItem({ item }: MenuItemProps) {
           <div className="flex items-start justify-between gap-2">
             <CardTitle className="line-clamp-1 text-lg">{item.name}</CardTitle>
             <Badge variant="outline" className="shrink-0">
-              {item.mainCategory === 'food' && item.halfPortionEnabled
-                ? `from ${formatPrice(Math.round(item.price * 0.5))}`
+              {item.mainCategory === 'food' && (item.portionOptions?.halfPortionEnabled || item.portionOptions?.quarterPortionEnabled)
+                ? `from ${formatPrice(
+                    item.portionOptions?.quarterPortionEnabled 
+                      ? Math.round(item.price * 0.25) + (item.portionOptions?.quarterPortionSurcharge || 0)
+                      : Math.round(item.price * 0.5) + (item.portionOptions?.halfPortionSurcharge || 0)
+                  )}`
                 : formatPrice(item.price)}
             </Badge>
           </div>

@@ -12,7 +12,7 @@ interface UpdateOrderItemsInput {
   items: Array<{
     menuItemId: string;
     quantity: number;
-    portionSize?: 'full' | 'half';
+    portionSize?: 'full' | 'half' | 'quarter';
     customizations?: Array<{
       name: string;
       option: string;
@@ -105,7 +105,7 @@ export async function updateOrderItemsAction(input: UpdateOrderItemsInput) {
         price: menuItem.price,
         quantity: inputItem.quantity,
         portionSize: inputItem.portionSize || 'full',
-        portionMultiplier: inputItem.portionSize === 'half' ? 0.5 : 1.0,
+        portionMultiplier: inputItem.portionSize === 'half' ? 0.5 : inputItem.portionSize === 'quarter' ? 0.25 : 1.0,
         customizations: customizations.map((custom) => ({
           name: custom.name,
           option: custom.option,

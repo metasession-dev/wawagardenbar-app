@@ -1,10 +1,11 @@
 import { Suspense } from 'react';
+import Link from 'next/link';
 import { connectDB } from '@/lib/mongodb';
 import InventoryModel from '@/models/inventory-model';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InventoryTable } from '@/components/features/admin/inventory-table';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ClipboardCheck } from 'lucide-react';
 
 /**
  * Get inventory items
@@ -151,11 +152,20 @@ export default async function InventoryPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Inventory Management</h1>
-        <p className="text-muted-foreground">
-          Track stock levels and manage inventory
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Inventory Management</h1>
+          <p className="text-muted-foreground">
+            Track stock levels and manage inventory
+          </p>
+        </div>
+        <Link 
+          href="/dashboard/inventory/snapshots"
+          className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+        >
+          <ClipboardCheck className="h-4 w-4" />
+          Inventory Snapshots
+        </Link>
       </div>
 
       {/* Stats */}

@@ -108,6 +108,9 @@ export function OrderSummary({ orderType, onRewardApplied, onPointsApplied }: Or
                     {item.portionSize === 'half' && (
                       <Badge variant="secondary" className="text-xs">Half</Badge>
                     )}
+                    {item.portionSize === 'quarter' && (
+                      <Badge variant="secondary" className="text-xs">Quarter</Badge>
+                    )}
                   </div>
                   <p className="text-muted-foreground">
                     {item.quantity}x {formatPrice(item.price)}

@@ -43,6 +43,9 @@ export async function createMenuItemAction(formData: FormData): Promise<ActionRe
     const preparationTime = parseInt(formData.get('preparationTime') as string);
     const isAvailable = formData.get('isAvailable') === 'true';
     const halfPortionEnabled = formData.get('halfPortionEnabled') === 'true';
+    const halfPortionSurcharge = parseFloat(formData.get('halfPortionSurcharge') as string) || 0;
+    const quarterPortionEnabled = formData.get('quarterPortionEnabled') === 'true';
+    const quarterPortionSurcharge = parseFloat(formData.get('quarterPortionSurcharge') as string) || 0;
     const tags = (formData.get('tags') as string)?.split(',').map(t => t.trim()).filter(Boolean) || [];
 
     // Extract inventory tracking data
@@ -74,7 +77,12 @@ export async function createMenuItemAction(formData: FormData): Promise<ActionRe
       price,
       preparationTime: preparationTime || 15,
       isAvailable,
-      halfPortionEnabled,
+      portionOptions: {
+        halfPortionEnabled,
+        halfPortionSurcharge,
+        quarterPortionEnabled,
+        quarterPortionSurcharge,
+      },
       tags,
       images: [],
       trackInventory,
@@ -191,6 +199,9 @@ export async function updateMenuItemAction(
     const servingSize = formData.get('servingSize') as string;
     const isAvailable = formData.get('isAvailable') === 'true';
     const halfPortionEnabled = formData.get('halfPortionEnabled') === 'true';
+    const halfPortionSurcharge = parseFloat(formData.get('halfPortionSurcharge') as string) || 0;
+    const quarterPortionEnabled = formData.get('quarterPortionEnabled') === 'true';
+    const quarterPortionSurcharge = parseFloat(formData.get('quarterPortionSurcharge') as string) || 0;
     const tags = (formData.get('tags') as string)?.split(',').map(t => t.trim()).filter(Boolean) || [];
     const slug = formData.get('slug') as string;
     const metaDescription = formData.get('metaDescription') as string;
@@ -228,7 +239,12 @@ export async function updateMenuItemAction(
     if (!isNaN(preparationTime)) menuItem.preparationTime = preparationTime;
     if (servingSize !== undefined) menuItem.servingSize = servingSize;
     menuItem.isAvailable = isAvailable;
-    menuItem.halfPortionEnabled = halfPortionEnabled;
+    menuItem.portionOptions = {
+      halfPortionEnabled,
+      halfPortionSurcharge,
+      quarterPortionEnabled,
+      quarterPortionSurcharge,
+    };
     if (tags.length > 0) menuItem.tags = tags;
     if (slug) menuItem.slug = slug;
     if (metaDescription !== undefined) menuItem.metaDescription = metaDescription;
@@ -620,6 +636,12 @@ export async function duplicateMenuItemAction(
     const { _id: _itemId, createdAt: _itemCreatedAt, updatedAt: _itemUpdatedAt, ...duplicateData } = originalItem.toObject();
     duplicateData.name = `${duplicateData.name} (Copy)`;
     duplicateData.isAvailable = false; // Set to unavailable by default
+    
+    // Generate unique slug for the duplicate
+    if (duplicateData.slug) {
+      const timestamp = Date.now();
+      duplicateData.slug = `${duplicateData.slug}-copy-${timestamp}`;
+    }
 
     const newItem = await MenuItemModel.create(duplicateData);
 

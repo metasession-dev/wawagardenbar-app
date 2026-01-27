@@ -5,6 +5,7 @@ export type TabStatus = 'open' | 'settling' | 'closed';
 export interface ITab {
   _id: Types.ObjectId;
   tabNumber: string;
+  customName?: string;
   tableNumber: string;
   userId?: Types.ObjectId;
   createdBy?: Types.ObjectId;

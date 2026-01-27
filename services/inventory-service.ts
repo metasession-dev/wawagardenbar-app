@@ -44,18 +44,27 @@ class InventoryService {
       inventory.currentStock = Math.max(0, inventory.currentStock - actualQuantity);
 
       // Add stock history entry with portion info
+      let reason = 'Sale';
+      let notes: string | undefined;
+      
+      if (item.portionSize === 'half') {
+        reason = 'Sale (Half Portion)';
+        notes = `${item.quantity}x half portions (${actualQuantity} units deducted)`;
+      } else if (item.portionSize === 'quarter') {
+        reason = 'Sale (Quarter Portion)';
+        notes = `${item.quantity}x quarter portions (${actualQuantity} units deducted)`;
+      }
+      
       inventory.stockHistory.push({
         quantity: -actualQuantity,
         type: 'deduction',
-        reason: item.portionSize === 'half' ? 'Sale (Half Portion)' : 'Sale',
+        reason,
         performedBy: new mongoose.Types.ObjectId('000000000000000000000000'),
         timestamp: new Date(),
         category: 'sale',
         orderId: order._id,
         performedByName: 'System',
-        notes: item.portionSize === 'half' 
-          ? `${item.quantity}x half portions (${actualQuantity} units deducted)` 
-          : undefined,
+        notes,
       } as any);
 
       // Update status based on stock level
@@ -122,6 +131,13 @@ class InventoryService {
       inventory.currentStock += actualQuantity;
 
       // Add stock history entry
+      let notes: string | undefined;
+      if (item.portionSize === 'half') {
+        notes = `${item.quantity}x half portions (${actualQuantity} units restored)`;
+      } else if (item.portionSize === 'quarter') {
+        notes = `${item.quantity}x quarter portions (${actualQuantity} units restored)`;
+      }
+      
       inventory.stockHistory.push({
         quantity: actualQuantity,
         type: 'addition',
@@ -131,9 +147,7 @@ class InventoryService {
         category: 'adjustment',
         orderId: order._id,
         performedByName: 'System',
-        notes: item.portionSize === 'half' 
-          ? `${item.quantity}x half portions (${actualQuantity} units restored)` 
-          : undefined,
+        notes,
       } as any);
 
       // Update status based on stock level
@@ -226,7 +240,12 @@ class InventoryService {
     }
 
     // Calculate actual quantity needed based on portion
-    const portionMultiplier = portionSize === 'half' ? 0.5 : 1.0;
+    let portionMultiplier = 1.0;
+    if (portionSize === 'half') {
+      portionMultiplier = 0.5;
+    } else if (portionSize === 'quarter') {
+      portionMultiplier = 0.25;
+    }
     const actualQuantityNeeded = quantity * portionMultiplier;
 
     if (inventory.preventOrdersWhenOutOfStock && inventory.currentStock < actualQuantityNeeded) {

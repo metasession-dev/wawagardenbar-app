@@ -59,6 +59,25 @@ export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetail
   const isOutOfStock = item.stockStatus === 'out-of-stock';
   const isLowStock = item.stockStatus === 'low-stock';
 
+  // Calculate max quantity based on portion size
+  const getMaxQuantity = () => {
+    if (!item.currentStock) return 99;
+    
+    let portionMultiplier = 1.0;
+    if (portionSize === 'half') {
+      portionMultiplier = 0.5;
+    } else if (portionSize === 'quarter') {
+      portionMultiplier = 0.25;
+    }
+    
+    // Available portions = stock / portion multiplier
+    // Example: 2 stock / 0.25 = 8 quarter portions
+    const maxPortions = Math.floor(item.currentStock / portionMultiplier);
+    return Math.min(maxPortions, 99);
+  };
+
+  const maxQuantity = getMaxQuantity();
+
   function formatPrice(price: number): string {
     return new Intl.NumberFormat('en-NG', {
       style: 'currency',
@@ -69,10 +88,19 @@ export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetail
 
   function handleQuantityChange(delta: number) {
     const newQuantity = quantity + delta;
-    if (newQuantity >= 1 && newQuantity <= 99) {
+    const max = getMaxQuantity();
+    if (newQuantity >= 1 && newQuantity <= max) {
       setQuantity(newQuantity);
     }
   }
+
+  // Reset quantity when portion size changes if it exceeds new max
+  useEffect(() => {
+    const max = getMaxQuantity();
+    if (quantity > max) {
+      setQuantity(Math.max(1, max));
+    }
+  }, [portionSize, item.currentStock]);
 
   async function handleAddToCart() {
     // Check if user is logged in (customers, admins, and super-admins can all add to cart)
@@ -184,7 +212,7 @@ export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetail
             >
               <AlertCircle className="h-5 w-5" />
               <span className="text-sm font-medium">
-                {isOutOfStock ? 'Out of Stock' : `Low Stock - Only ${item.currentStock} left`}
+                {isOutOfStock ? 'Out of Stock' : `Low Stock - Only ${maxQuantity} ${portionSize === 'full' ? 'available' : `${portionSize} portions available`}`}
               </span>
             </div>
           )}
@@ -315,7 +343,7 @@ export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetail
                 variant="outline"
                 size="icon"
                 onClick={() => handleQuantityChange(1)}
-                disabled={quantity >= 99 || (isLowStock && quantity >= (item.currentStock || 0))}
+                disabled={quantity >= maxQuantity}
               >
                 <Plus className="h-4 w-4" />
               </Button>

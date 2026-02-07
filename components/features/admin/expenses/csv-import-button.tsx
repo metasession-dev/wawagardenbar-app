@@ -49,9 +49,15 @@ export function CSVImportButton() {
         });
       }
     } catch (error) {
+      console.error('Client-side upload error:', error);
+      console.error('Error type:', error?.constructor?.name);
+      console.error('Error message:', error instanceof Error ? error.message : String(error));
+      
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      
       toast({
         title: 'Error',
-        description: 'An unexpected error occurred',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {

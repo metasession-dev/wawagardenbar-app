@@ -29,12 +29,23 @@ function requireAdmin(session: SessionData) {
  * Import Moniepoint XLSX file
  */
 export async function importMoniepointCSVAction(formData: FormData) {
+  // Wrap EVERYTHING in try-catch to ensure we always return a response
   try {
+    console.log('=== importMoniepointCSVAction called ===');
+    console.log('FormData received:', formData ? 'yes' : 'no');
+    console.log('Environment:', process.env.NODE_ENV);
+    console.log('1. Connecting to DB...');
     await connectDB();
+    
+    console.log('2. Getting session...');
     const session = await getServerSession();
+    
+    console.log('3. Checking admin access...');
     requireAdmin(session);
 
+    console.log('4. Extracting file from FormData...');
     const file = formData.get('file') as File;
+    console.log('File extracted:', file ? `${file.name} (${file.size} bytes)` : 'null');
     
     if (!file) {
       return {
@@ -61,10 +72,14 @@ export async function importMoniepointCSVAction(formData: FormData) {
     }
 
     // Read file as ArrayBuffer
+    console.log('5. Reading file as ArrayBuffer...');
     const arrayBuffer = await file.arrayBuffer();
+    console.log('ArrayBuffer created:', arrayBuffer.byteLength, 'bytes');
 
     // Validate XLSX structure
+    console.log('6. Validating XLSX structure...');
     const validation = XLSXParserService.validateMoniepointXLSX(arrayBuffer);
+    console.log('Validation result:', validation.valid ? 'valid' : 'invalid');
     if (!validation.valid) {
       return {
         success: false,
@@ -73,13 +88,18 @@ export async function importMoniepointCSVAction(formData: FormData) {
     }
 
     // Get existing reference numbers to detect duplicates
+    console.log('7. Getting existing references...');
     const existingReferences = await UploadedExpenseService.getExistingReferenceNumbers();
+    console.log('Existing references count:', existingReferences.size);
 
     // Parse XLSX
+    console.log('8. Parsing XLSX...');
     const parseResult = await XLSXParserService.parseMoniepointXLSX(
       arrayBuffer,
       existingReferences
     );
+    console.log('Parse result:', parseResult.success ? 'success' : 'failed');
+    console.log('Expenses extracted:', parseResult.expenses.length);
 
     if (!parseResult.success) {
       return {

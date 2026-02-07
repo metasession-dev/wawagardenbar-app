@@ -22,7 +22,8 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:report": "playwright show-report",
     "test:seed": "tsx tests/setup/seed-test-data.ts",
-    "test:db:clean": "tsx tests/setup/db-cleanup.ts"
+    "test:db:clean": "tsx tests/setup/db-cleanup.ts",
+    "check:xlsx": "tsx scripts/check-xlsx-module.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

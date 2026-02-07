@@ -126,9 +126,28 @@ export async function importMoniepointCSVAction(formData: FormData) {
     };
   } catch (error) {
     console.error('XLSX import error:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error('Error type:', error?.constructor?.name);
+    
+    // Capture detailed error information
+    let errorMessage = 'Failed to import Excel file';
+    let errorDetails = '';
+    
+    if (error instanceof Error) {
+      errorMessage = error.message;
+      errorDetails = error.stack || '';
+      
+      // Log specific error types
+      if (error.name === 'ReferenceError') {
+        console.error('ReferenceError - possible missing dependency:', error.message);
+      } else if (error.name === 'TypeError') {
+        console.error('TypeError - possible data format issue:', error.message);
+      }
+    }
+    
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to import Excel file',
+      error: `${errorMessage}${errorDetails ? ` (${error?.constructor?.name})` : ''}`,
     };
   }
 }

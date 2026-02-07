@@ -1,6 +1,12 @@
 import * as XLSX from 'xlsx';
 import { parse, isValid } from 'date-fns';
 
+// Verify XLSX module is available
+if (!XLSX || !XLSX.read) {
+  console.error('CRITICAL: XLSX module not properly loaded!');
+  console.error('XLSX object:', XLSX);
+}
+
 interface MoniepointTransaction {
   Date: string | number;
   'Account Name': string | number;
@@ -109,7 +115,29 @@ export class XLSXParserService {
     let invalidRows = 0;
 
     try {
-      const workbook = XLSX.read(fileBuffer, { type: 'array' });
+      // Check if XLSX module is available before attempting to read
+      if (!XLSX || typeof XLSX.read !== 'function') {
+        console.error('XLSX module not available or read function missing');
+        return {
+          success: false,
+          expenses: [],
+          errors: ['XLSX module not properly loaded. This is a server configuration issue.'],
+          stats: { totalRows: 0, expensesExtracted: 0, duplicatesSkipped: 0, invalidRows: 0 },
+        };
+      }
+
+      let workbook;
+      try {
+        workbook = XLSX.read(fileBuffer, { type: 'array' });
+      } catch (xlsxError) {
+        console.error('XLSX.read failed:', xlsxError);
+        return {
+          success: false,
+          expenses: [],
+          errors: [`Failed to read Excel file: ${xlsxError instanceof Error ? xlsxError.message : 'Unknown error'}`],
+          stats: { totalRows: 0, expensesExtracted: 0, duplicatesSkipped: 0, invalidRows: 0 },
+        };
+      }
       
       const firstSheetName = workbook.SheetNames[0];
       if (!firstSheetName) {

@@ -89,11 +89,20 @@ export default async function OrderHistoryPage() {
                   <div>
                     <h4 className="mb-2 text-sm font-semibold">Items</h4>
                     <div className="space-y-1">
-                      {order.items.slice(0, 3).map((item, index) => (
-                        <p key={index} className="text-sm text-muted-foreground">
-                          {item.quantity}x {item.name}
-                        </p>
-                      ))}
+                      {order.items.slice(0, 3).map((item, index) => {
+                        let quantityDisplay = `${item.quantity}x`;
+                        if (item.portionSize === 'half') {
+                          quantityDisplay = `${item.quantity} × 1/2x`;
+                        } else if (item.portionSize === 'quarter') {
+                          quantityDisplay = `${item.quantity} × 1/4x`;
+                        }
+                        
+                        return (
+                          <p key={index} className="text-sm text-muted-foreground">
+                            {quantityDisplay} {item.name}
+                          </p>
+                        );
+                      })}
                       {order.items.length > 3 && (
                         <p className="text-sm text-muted-foreground">
                           +{order.items.length - 3} more item

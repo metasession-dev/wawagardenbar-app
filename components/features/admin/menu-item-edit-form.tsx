@@ -41,6 +41,7 @@ const menuItemSchema = z.object({
   halfPortionSurcharge: z.number().min(0, 'Surcharge must be 0 or greater'),
   quarterPortionEnabled: z.boolean(),
   quarterPortionSurcharge: z.number().min(0, 'Surcharge must be 0 or greater'),
+  allowManualPriceOverride: z.boolean(),
   tags: z.string().optional(),
   allergens: z.array(z.string()).optional(),
   spiceLevel: z.enum(['none', 'mild', 'medium', 'hot', 'extra-hot']).optional(),
@@ -113,6 +114,7 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
       halfPortionSurcharge: menuItem.portionOptions?.halfPortionSurcharge || 0,
       quarterPortionEnabled: menuItem.portionOptions?.quarterPortionEnabled || false,
       quarterPortionSurcharge: menuItem.portionOptions?.quarterPortionSurcharge || 0,
+      allowManualPriceOverride: menuItem.allowManualPriceOverride || false,
       tags: menuItem.tags?.join(', ') || '',
       allergens: menuItem.allergens || [],
       spiceLevel: menuItem.nutritionalInfo?.spiceLevel || 'none',
@@ -190,6 +192,7 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
       formData.append('halfPortionSurcharge', data.halfPortionSurcharge.toString());
       formData.append('quarterPortionEnabled', data.quarterPortionEnabled.toString());
       formData.append('quarterPortionSurcharge', data.quarterPortionSurcharge.toString());
+      formData.append('allowManualPriceOverride', data.allowManualPriceOverride.toString());
       formData.append('tags', data.tags || '');
       formData.append('allergens', JSON.stringify(data.allergens || []));
       formData.append('spiceLevel', data.spiceLevel || 'none');
@@ -460,6 +463,23 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
                 id="isAvailable"
                 checked={isAvailable}
                 onCheckedChange={(checked) => setValue('isAvailable', checked)}
+                disabled={isLoading}
+              />
+            </div>
+
+            <Separator />
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="allowManualPriceOverride" className="font-medium">Allow Manual Price Override</Label>
+                <p className="text-sm text-muted-foreground">
+                  Enable staff to enter custom prices for this item when creating orders
+                </p>
+              </div>
+              <Switch
+                id="allowManualPriceOverride"
+                checked={watch('allowManualPriceOverride')}
+                onCheckedChange={(checked) => setValue('allowManualPriceOverride', checked)}
                 disabled={isLoading}
               />
             </div>

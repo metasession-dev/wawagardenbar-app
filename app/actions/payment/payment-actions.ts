@@ -107,6 +107,15 @@ export async function createOrder(input: CreateOrderInput): Promise<{
       estimatedWaitTime = 20;
     }
 
+    // Validate price overrides (admin only)
+    const hasOverrides = input.items.some(item => item.priceOverridden);
+    if (hasOverrides && (!session.role || !['admin', 'super-admin'].includes(session.role))) {
+      return { 
+        success: false, 
+        message: 'Unauthorized price override attempt' 
+      };
+    }
+
     // Prepare order data
     const orderData: any = {
       orderNumber,
@@ -120,6 +129,11 @@ export async function createOrder(input: CreateOrderInput): Promise<{
         portionMultiplier: item.portionMultiplier || 1.0,
         specialInstructions: item.specialInstructions,
         subtotal: item.price * item.quantity,
+        originalPrice: item.originalPrice,
+        priceOverridden: item.priceOverridden || false,
+        priceOverrideReason: item.priceOverrideReason,
+        priceOverriddenBy: item.priceOverridden && userId ? userId : undefined,
+        priceOverriddenAt: item.priceOverridden ? new Date() : undefined,
       })),
       // If user is logged in, use userId; otherwise use guest info
       ...(userId ? { userId } : {
@@ -210,6 +224,38 @@ export async function createOrder(input: CreateOrderInput): Promise<{
 
     // Revalidate kitchen dashboard
     revalidatePath('/dashboard/kitchen');
+
+    // Create audit logs for price overrides
+    if (hasOverrides && userId) {
+      const { AuditLogService } = await import('@/services/audit-log-service');
+      for (const item of input.items) {
+        if (item.priceOverridden && item.originalPrice) {
+          try {
+            await AuditLogService.createLog({
+              userId,
+              userEmail: session.email || input.customerInfo.email,
+              userRole: session.role || 'customer',
+              action: 'order.price_override',
+              resource: 'order-item',
+              resourceId: item.id,
+              details: {
+                orderId: order._id.toString(),
+                orderNumber: order.orderNumber,
+                itemName: item.name,
+                originalPrice: item.originalPrice,
+                newPrice: item.price,
+                difference: item.price - item.originalPrice,
+                percentageChange: ((item.price - item.originalPrice) / item.originalPrice * 100).toFixed(2),
+                reason: item.priceOverrideReason || 'No reason provided',
+              },
+            });
+          } catch (auditError) {
+            console.error('Error creating audit log for price override:', auditError);
+            // Don't fail the order if audit logging fails
+          }
+        }
+      }
+    }
 
     // If tabId provided, add order to tab
     if (input.tabId) {

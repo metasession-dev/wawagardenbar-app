@@ -6,6 +6,7 @@ import { ProfitabilityOverviewCards } from './profitability-overview-cards';
 import { ProfitabilityFilters } from './profitability-filters';
 import { ProfitabilityCharts } from './profitability-charts';
 import { ProfitabilityTables } from './profitability-tables';
+import { PriceOverridesSection } from '@/components/features/reports/price-overrides-section';
 import { getProfitabilityReportAction } from '@/app/actions/admin/profitability-analytics-actions';
 import type { ProfitabilityReport } from '@/services/profitability-analytics-service';
 
@@ -93,6 +94,16 @@ export function ProfitabilityDashboardClient() {
         report={report}
         isLoading={isLoading}
       />
+
+      {/* Price Overrides Analytics */}
+      {!isLoading && (
+        <PriceOverridesSection
+          dateRange={{
+            from: new Date(dateRange.startDate),
+            to: new Date(dateRange.endDate),
+          }}
+        />
+      )}
     </div>
   );
 }

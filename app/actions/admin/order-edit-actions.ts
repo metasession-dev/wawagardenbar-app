@@ -122,6 +122,7 @@ export async function updateOrderItemsAction(input: UpdateOrderItemsInput) {
                 itemSubtotal) *
               100
             : 0,
+        priceOverridden: false,
       };
     });
 

@@ -13,6 +13,10 @@ export interface CartItem {
   category: string;
   specialInstructions?: string;
   preparationTime: number;
+  allowManualPriceOverride?: boolean;
+  originalPrice?: number;
+  priceOverridden?: boolean;
+  priceOverrideReason?: string;
 }
 
 // Helper to generate unique IDs safely
@@ -34,6 +38,8 @@ interface CartStore {
   updateQuantity: (cartItemId: string, quantity: number) => void;
   updateInstructions: (cartItemId: string, instructions: string) => void;
   updatePortionSize: (cartItemId: string, portionSize: 'full' | 'half' | 'quarter', adjustedPrice: number) => void;
+  overrideItemPrice: (cartItemId: string, newPrice: number, reason?: string) => void;
+  resetItemPrice: (cartItemId: string) => void;
   clearCart: () => void;
   toggleCart: () => void;
   openCart: () => void;
@@ -79,7 +85,7 @@ export const useCartStore = create<CartStore>()(
                 cartItemId: generateId(),
                 quantity: item.quantity || 1,
                 portionSize: item.portionSize || 'full',
-                portionMultiplier: item.portionSize === 'half' ? 0.5 : 1.0,
+                portionMultiplier: item.portionMultiplier || (item.portionSize === 'half' ? 0.5 : item.portionSize === 'quarter' ? 0.25 : 1.0),
               },
             ],
           }));
@@ -122,8 +128,40 @@ export const useCartStore = create<CartStore>()(
               ? {
                   ...item,
                   portionSize,
-                  portionMultiplier: portionSize === 'half' ? 0.5 : 1.0,
+                  portionMultiplier: portionSize === 'half' ? 0.5 : portionSize === 'quarter' ? 0.25 : 1.0,
                   price: adjustedPrice,
+                }
+              : item
+          ),
+        }));
+      },
+
+      overrideItemPrice: (cartItemId, newPrice, reason) => {
+        set((state) => ({
+          items: state.items.map((item) =>
+            item.cartItemId === cartItemId
+              ? {
+                  ...item,
+                  originalPrice: item.originalPrice || item.price,
+                  price: newPrice,
+                  priceOverridden: true,
+                  priceOverrideReason: reason,
+                }
+              : item
+          ),
+        }));
+      },
+
+      resetItemPrice: (cartItemId) => {
+        set((state) => ({
+          items: state.items.map((item) =>
+            item.cartItemId === cartItemId && item.originalPrice
+              ? {
+                  ...item,
+                  price: item.originalPrice,
+                  priceOverridden: false,
+                  priceOverrideReason: undefined,
+                  originalPrice: undefined,
                 }
               : item
           ),

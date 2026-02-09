@@ -14,6 +14,7 @@ import { RevenueSection } from '@/components/features/reports/revenue-section';
 import { CostSection } from '@/components/features/reports/cost-section';
 import { ProfitSection } from '@/components/features/reports/profit-section';
 import { ExpensesSection } from '@/components/features/reports/expenses-section';
+import { PriceOverridesSection } from '@/components/features/reports/price-overrides-section';
 import { ReportCharts } from '@/components/features/reports/report-charts';
 import { exportReportAsPDF, exportReportAsExcel, exportReportAsCSV } from '@/lib/report-export';
 
@@ -288,6 +289,7 @@ export function DailyReportClient() {
               <TabsTrigger value="revenue">Revenue</TabsTrigger>
               <TabsTrigger value="costs">Costs</TabsTrigger>
               <TabsTrigger value="expenses">Expenses</TabsTrigger>
+              <TabsTrigger value="overrides">Price Overrides</TabsTrigger>
               <TabsTrigger value="charts">Charts</TabsTrigger>
             </TabsList>
 
@@ -305,6 +307,10 @@ export function DailyReportClient() {
 
             <TabsContent value="expenses" className="space-y-4">
               <ExpensesSection report={report} />
+            </TabsContent>
+
+            <TabsContent value="overrides" className="space-y-4">
+              <PriceOverridesSection dateRange={dateRange} />
             </TabsContent>
 
             <TabsContent value="charts" className="space-y-4">

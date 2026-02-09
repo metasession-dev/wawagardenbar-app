@@ -142,6 +142,7 @@ export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetail
         category: item.category,
         specialInstructions: specialInstructions || undefined,
         preparationTime: item.preparationTime,
+        allowManualPriceOverride: item.allowManualPriceOverride,
       });
 
       const portionText = portionSize === 'half' ? ' (Half Portion)' : portionSize === 'quarter' ? ' (Quarter Portion)' : '';

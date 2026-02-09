@@ -21,7 +21,7 @@ interface SerializedOrderItem {
   name: string;
   quantity: number;
   subtotal: number;
-  portionSize?: 'full' | 'half';
+  portionSize?: 'full' | 'half' | 'quarter';
 }
 
 interface SerializedOrder {
@@ -176,21 +176,25 @@ export default async function TabDetailsPage({ params }: TabDetailsPageProps) {
                         </div>
 
                         <div className="space-y-2">
-                          {order.items.map((item, itemIndex) => (
-                            <div key={itemIndex} className="flex justify-between text-sm">
-                              <div className="flex items-center gap-2">
+                          {order.items.map((item, itemIndex) => {
+                            let quantityDisplay = `${item.quantity}x`;
+                            if (item.portionSize === 'half') {
+                              quantityDisplay = `${item.quantity} × 1/2x`;
+                            } else if (item.portionSize === 'quarter') {
+                              quantityDisplay = `${item.quantity} × 1/4x`;
+                            }
+                            
+                            return (
+                              <div key={itemIndex} className="flex justify-between text-sm">
                                 <span>
-                                  {item.quantity}x {item.name}
+                                  {quantityDisplay} {item.name}
                                 </span>
-                                {item.portionSize === 'half' && (
-                                  <Badge variant="secondary" className="text-xs">Half</Badge>
-                                )}
+                                <span className="font-medium">
+                                  ₦{item.subtotal.toLocaleString()}
+                                </span>
                               </div>
-                              <span className="font-medium">
-                                ₦{item.subtotal.toLocaleString()}
-                              </span>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
 
                         {order.specialInstructions && (

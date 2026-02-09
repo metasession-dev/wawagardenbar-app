@@ -268,19 +268,20 @@ export function OrderCard({ order, isSelected, onSelect, showCheckbox }: OrderCa
 
         {/* Order Items */}
         <div className="space-y-1 mb-4">
-          {order.items.slice(0, 3).map((item: any, index: number) => (
-            <div key={index} className="text-sm flex items-center gap-2">
-              <span>
-                <span className="font-medium">{item.quantity}x</span> {item.name}
-              </span>
-              {item.portionSize === 'half' && (
-                <Badge variant="secondary" className="text-xs">Half</Badge>
-              )}
-              {item.portionSize === 'quarter' && (
-                <Badge variant="secondary" className="text-xs">Quarter</Badge>
-              )}
-            </div>
-          ))}
+          {order.items.slice(0, 3).map((item: any, index: number) => {
+            let quantityDisplay = `${item.quantity}x`;
+            if (item.portionSize === 'half') {
+              quantityDisplay = `${item.quantity} × 1/2x`;
+            } else if (item.portionSize === 'quarter') {
+              quantityDisplay = `${item.quantity} × 1/4x`;
+            }
+            
+            return (
+              <div key={index} className="text-sm">
+                <span className="font-medium">{quantityDisplay}</span> {item.name}
+              </div>
+            );
+          })}
           {order.items.length > 3 && (
             <div className="text-sm text-muted-foreground">
               +{order.items.length - 3} more items

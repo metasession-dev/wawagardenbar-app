@@ -299,14 +299,23 @@ function OrderCard({ order }: { order: any }) {
           <div>
             <h4 className="mb-2 text-sm font-semibold">Items</h4>
             <div className="space-y-1">
-              {order.items.map((item: any, index: number) => (
-                <div key={index} className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">
-                    {item.quantity}x {item.name}
-                  </span>
-                  <span className="font-medium">₦{item.subtotal.toLocaleString()}</span>
-                </div>
-              ))}
+              {order.items.map((item: any, index: number) => {
+                let quantityDisplay = `${item.quantity}x`;
+                if (item.portionSize === 'half') {
+                  quantityDisplay = `${item.quantity} × 1/2x`;
+                } else if (item.portionSize === 'quarter') {
+                  quantityDisplay = `${item.quantity} × 1/4x`;
+                }
+                
+                return (
+                  <div key={index} className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      {quantityDisplay} {item.name}
+                    </span>
+                    <span className="font-medium">₦{item.subtotal.toLocaleString()}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

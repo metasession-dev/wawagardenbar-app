@@ -154,34 +154,37 @@ export function KitchenOrderCard({ order }: KitchenOrderCardProps) {
 
         {/* Order Items */}
         <div className="space-y-2">
-          {order.items.map((item: any, index: number) => (
-            <div
-              key={index}
-              className="flex items-start justify-between bg-gray-800 p-3 rounded-lg"
-            >
-              <div className="flex-1">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl font-bold text-white">{item.quantity}x</span>
-                  <span className="text-xl text-white">{item.name}</span>
-                  {item.portionSize === 'half' && (
-                    <Badge variant="secondary" className="text-sm">Half Portion</Badge>
-                  )}
-                  {item.portionSize === 'quarter' && (
-                    <Badge variant="secondary" className="text-sm">Quarter Portion</Badge>
+          {order.items.map((item: any, index: number) => {
+            let quantityDisplay = `${item.quantity}x`;
+            if (item.portionSize === 'half') {
+              quantityDisplay = `${item.quantity} × 1/2x`;
+            } else if (item.portionSize === 'quarter') {
+              quantityDisplay = `${item.quantity} × 1/4x`;
+            }
+            
+            return (
+              <div
+                key={index}
+                className="flex items-start justify-between bg-gray-800 p-3 rounded-lg"
+              >
+                <div className="flex-1">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl font-bold text-white">{quantityDisplay}</span>
+                    <span className="text-xl text-white">{item.name}</span>
+                  </div>
+                  {item.customizations && item.customizations.length > 0 && (
+                    <div className="mt-1 ml-12 text-gray-400">
+                      {item.customizations.map((custom: any, idx: number) => (
+                        <div key={idx} className="text-sm">
+                          • {custom.name}: {custom.value}
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
-                {item.customizations && item.customizations.length > 0 && (
-                  <div className="mt-1 ml-12 text-gray-400">
-                    {item.customizations.map((custom: any, idx: number) => (
-                      <div key={idx} className="text-sm">
-                        • {custom.name}: {custom.value}
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Special Instructions */}

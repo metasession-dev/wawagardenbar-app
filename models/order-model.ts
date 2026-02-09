@@ -43,6 +43,11 @@ const orderItemSchema = new Schema<IOrderItem>(
     totalCost: { type: Number, required: true, min: 0, default: 0 },
     grossProfit: { type: Number, required: true, default: 0 },
     profitMargin: { type: Number, required: true, default: 0 },
+    originalPrice: { type: Number, required: false },
+    priceOverridden: { type: Boolean, default: false },
+    priceOverrideReason: { type: String, required: false },
+    priceOverriddenBy: { type: Schema.Types.ObjectId, ref: 'User', required: false },
+    priceOverriddenAt: { type: Date, required: false },
   },
   { _id: false }
 );

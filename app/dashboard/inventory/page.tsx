@@ -4,7 +4,7 @@ import { connectDB } from '@/lib/mongodb';
 import InventoryModel from '@/models/inventory-model';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { InventoryTable } from '@/components/features/admin/inventory-table';
+import { InventoryItemsClient } from '@/components/features/admin/inventory-items-client';
 import { AlertTriangle, ClipboardCheck } from 'lucide-react';
 
 /**
@@ -104,7 +104,7 @@ async function InventoryStats() {
 async function InventoryList() {
   const inventory = await getInventory();
 
-  return <InventoryTable inventory={inventory} />;
+  return <InventoryItemsClient inventory={inventory} />;
 }
 
 /**

@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MenuItemsTable } from '@/components/features/admin/menu-items-table';
+import { MenuItemsClient } from '@/components/features/admin/menu-items-client';
 
 /**
  * Get all menu items
@@ -102,7 +102,7 @@ async function MenuStats() {
 async function MenuItemsList() {
   const menuItems = await getMenuItems();
 
-  return <MenuItemsTable menuItems={menuItems} />;
+  return <MenuItemsClient menuItems={menuItems} />;
 }
 
 /**

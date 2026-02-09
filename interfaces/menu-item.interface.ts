@@ -75,6 +75,7 @@ export interface IMenuItem {
     quarterPortionEnabled: boolean;
     quarterPortionSurcharge: number;
   };
+  allowManualPriceOverride: boolean;
   createdAt: string;
   updatedAt: string;
 }

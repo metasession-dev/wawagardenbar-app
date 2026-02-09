@@ -111,9 +111,19 @@ export function OrderSummary({ orderType, onRewardApplied, onPointsApplied }: Or
                     {item.portionSize === 'quarter' && (
                       <Badge variant="secondary" className="text-xs">Quarter</Badge>
                     )}
+                    {item.priceOverridden && (
+                      <Badge variant="outline" className="text-xs border-orange-600 text-orange-600">
+                        Price Override
+                      </Badge>
+                    )}
                   </div>
                   <p className="text-muted-foreground">
                     {item.quantity}x {formatPrice(item.price)}
+                    {item.priceOverridden && item.originalPrice && (
+                      <span className="ml-2 line-through text-xs">
+                        {formatPrice(item.originalPrice)}
+                      </span>
+                    )}
                   </p>
                   {item.specialInstructions && (
                     <p className="text-xs text-muted-foreground italic mt-1">

@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, DollarSign } from 'lucide-react';
 
 interface OrderItemsTableProps {
   order: any;
@@ -36,19 +36,59 @@ export function OrderItemsTable({ order }: OrderItemsTableProps) {
                   
                   <div className="flex-1">
                     <div className="flex items-start justify-between gap-2">
-                      <div>
+                      <div className="flex-1">
+                        {/* Item Name with Portion Size */}
                         <div className="flex items-center gap-2">
-                          <p className="font-medium">{item.name}</p>
-                          {item.portionSize === 'half' && (
-                            <Badge variant="secondary" className="text-xs">Half Portion</Badge>
-                          )}
-                          {item.portionSize === 'quarter' && (
-                            <Badge variant="secondary" className="text-xs">Quarter Portion</Badge>
+                          <p className="font-medium">
+                            {(() => {
+                              let quantityDisplay = `${item.quantity}x`;
+                              if (item.portionSize === 'half') {
+                                quantityDisplay = `${item.quantity} × 1/2x`;
+                              } else if (item.portionSize === 'quarter') {
+                                quantityDisplay = `${item.quantity} × 1/4x`;
+                              }
+                              return `${quantityDisplay} ${item.name}`;
+                            })()}
+                          </p>
+                          {item.priceOverridden && (
+                            <Badge variant="outline" className="text-orange-600 border-orange-600">
+                              <DollarSign className="h-3 w-3 mr-1" />
+                              Price Overridden
+                            </Badge>
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          ₦{item.price.toLocaleString()} × {item.quantity}
+                          ₦{item.price.toLocaleString()} per portion
                         </p>
+                        
+                        {/* Price Override Details */}
+                        {item.priceOverridden && (
+                          <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded text-xs">
+                            <div className="flex items-center gap-2 text-orange-700 font-medium">
+                              <DollarSign className="h-3 w-3" />
+                              <span>Price Override Details</span>
+                            </div>
+                            <div className="mt-1 space-y-1 text-muted-foreground">
+                              {item.originalPrice && (
+                                <>
+                                  <div>Original: ₦{item.originalPrice.toLocaleString()}</div>
+                                  <div>Override: ₦{item.price.toLocaleString()}</div>
+                                  <div>
+                                    Difference: {item.price > item.originalPrice ? '+' : ''}₦{(item.price - item.originalPrice).toLocaleString()}
+                                  </div>
+                                </>
+                              )}
+                              {item.priceOverrideReason && (
+                                <div>Reason: {item.priceOverrideReason}</div>
+                              )}
+                              {item.priceOverriddenAt && (
+                                <div>
+                                  Overridden: {new Date(item.priceOverriddenAt).toLocaleString()}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                         
                         {/* Customizations */}
                         {item.customizations && item.customizations.length > 0 && (

@@ -32,6 +32,11 @@ export interface IOrderItem {
   totalCost: number;
   grossProfit: number;
   profitMargin: number;
+  originalPrice?: number;
+  priceOverridden: boolean;
+  priceOverrideReason?: string;
+  priceOverriddenBy?: Types.ObjectId;
+  priceOverriddenAt?: Date;
 }
 
 export interface IDeliveryDetails {

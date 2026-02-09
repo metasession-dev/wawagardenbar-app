@@ -34,6 +34,7 @@ const menuItemSchema = z.object({
   halfPortionSurcharge: z.number().min(0, 'Surcharge must be 0 or greater'),
   quarterPortionEnabled: z.boolean(),
   quarterPortionSurcharge: z.number().min(0, 'Surcharge must be 0 or greater'),
+  allowManualPriceOverride: z.boolean(),
   tags: z.string().optional(),
   trackInventory: z.boolean(),
   currentStock: z.number().min(0).optional(),
@@ -79,6 +80,7 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
       halfPortionSurcharge: 0,
       quarterPortionEnabled: false,
       quarterPortionSurcharge: 0,
+      allowManualPriceOverride: false,
       tags: '',
       trackInventory: false,
       currentStock: 0,
@@ -117,6 +119,7 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
       formData.append('halfPortionSurcharge', data.halfPortionSurcharge.toString());
       formData.append('quarterPortionEnabled', data.quarterPortionEnabled.toString());
       formData.append('quarterPortionSurcharge', data.quarterPortionSurcharge.toString());
+      formData.append('allowManualPriceOverride', data.allowManualPriceOverride.toString());
       formData.append('tags', data.tags || '');
 
       // Add inventory fields
@@ -315,6 +318,24 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
           disabled={isLoading}
         />
         <Label htmlFor="isAvailable">Available for ordering</Label>
+      </div>
+
+      {/* Manual Price Override */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between rounded-lg border p-4">
+          <div className="space-y-0.5">
+            <Label htmlFor="allowManualPriceOverride" className="font-medium">Allow Manual Price Override</Label>
+            <p className="text-sm text-muted-foreground">
+              Enable staff to enter custom prices for this item when creating orders
+            </p>
+          </div>
+          <Switch
+            id="allowManualPriceOverride"
+            checked={watch('allowManualPriceOverride')}
+            onCheckedChange={(checked) => setValue('allowManualPriceOverride', checked)}
+            disabled={isLoading}
+          />
+        </div>
       </div>
 
       {/* Half Portion Section - Only for Food Items */}

@@ -46,6 +46,7 @@ export async function createMenuItemAction(formData: FormData): Promise<ActionRe
     const halfPortionSurcharge = parseFloat(formData.get('halfPortionSurcharge') as string) || 0;
     const quarterPortionEnabled = formData.get('quarterPortionEnabled') === 'true';
     const quarterPortionSurcharge = parseFloat(formData.get('quarterPortionSurcharge') as string) || 0;
+    const allowManualPriceOverride = formData.get('allowManualPriceOverride') === 'true';
     const tags = (formData.get('tags') as string)?.split(',').map(t => t.trim()).filter(Boolean) || [];
 
     // Extract inventory tracking data
@@ -83,6 +84,7 @@ export async function createMenuItemAction(formData: FormData): Promise<ActionRe
         quarterPortionEnabled,
         quarterPortionSurcharge,
       },
+      allowManualPriceOverride,
       tags,
       images: [],
       trackInventory,
@@ -202,6 +204,8 @@ export async function updateMenuItemAction(
     const halfPortionSurcharge = parseFloat(formData.get('halfPortionSurcharge') as string) || 0;
     const quarterPortionEnabled = formData.get('quarterPortionEnabled') === 'true';
     const quarterPortionSurcharge = parseFloat(formData.get('quarterPortionSurcharge') as string) || 0;
+    const allowManualPriceOverride = formData.get('allowManualPriceOverride') === 'true';
+    console.log('🔍 allowManualPriceOverride from form:', formData.get('allowManualPriceOverride'), '-> parsed:', allowManualPriceOverride);
     const tags = (formData.get('tags') as string)?.split(',').map(t => t.trim()).filter(Boolean) || [];
     const slug = formData.get('slug') as string;
     const metaDescription = formData.get('metaDescription') as string;
@@ -245,6 +249,9 @@ export async function updateMenuItemAction(
       quarterPortionEnabled,
       quarterPortionSurcharge,
     };
+    console.log('🔍 Before save - menuItem.allowManualPriceOverride:', menuItem.allowManualPriceOverride, '-> setting to:', allowManualPriceOverride);
+    menuItem.allowManualPriceOverride = allowManualPriceOverride;
+    console.log('🔍 After assignment - menuItem.allowManualPriceOverride:', menuItem.allowManualPriceOverride);
     if (tags.length > 0) menuItem.tags = tags;
     if (slug) menuItem.slug = slug;
     if (metaDescription !== undefined) menuItem.metaDescription = metaDescription;

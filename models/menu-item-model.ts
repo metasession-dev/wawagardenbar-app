@@ -73,6 +73,7 @@ const menuItemSchema = new Schema<IMenuItem>(
       quarterPortionEnabled: { type: Boolean, default: false },
       quarterPortionSurcharge: { type: Number, default: 0, min: 0 },
     },
+    allowManualPriceOverride: { type: Boolean, default: false },
   },
   {
     timestamps: true,

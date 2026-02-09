@@ -48,6 +48,7 @@ async function getMenuItem(itemId: string) {
     preparationTime: menuItem.preparationTime,
     servingSize: menuItem.servingSize || '',
     isAvailable: menuItem.isAvailable,
+    allowManualPriceOverride: menuItem.allowManualPriceOverride || false,
     portionOptions: menuItem.portionOptions || {
       halfPortionEnabled: false,
       quarterPortionEnabled: false,

@@ -1,6 +1,7 @@
 import mongoose, { Schema, Model } from 'mongoose';
 import {
   IInventory,
+  IInventoryLocation,
   IStockHistory,
   StockStatus,
   StockHistoryCategory,
@@ -23,7 +24,7 @@ const stockHistorySchema = new Schema<IStockHistory>(
     timestamp: { type: Date, default: Date.now },
     category: {
       type: String,
-      enum: ['sale', 'restock', 'waste', 'damage', 'adjustment', 'other'] as StockHistoryCategory[],
+      enum: ['sale', 'restock', 'waste', 'damage', 'adjustment', 'transfer', 'other'] as StockHistoryCategory[],
     },
     orderId: { type: Schema.Types.ObjectId, ref: 'Order' },
     invoiceNumber: { type: String },
@@ -32,6 +33,23 @@ const stockHistorySchema = new Schema<IStockHistory>(
     totalCost: { type: Number, min: 0 },
     notes: { type: String },
     performedByName: { type: String },
+    location: { type: String },
+    fromLocation: { type: String },
+    toLocation: { type: String },
+    transferReference: { type: String },
+  },
+  { _id: false }
+);
+
+const inventoryLocationSchema = new Schema<IInventoryLocation>(
+  {
+    location: { type: String, required: true },
+    locationName: { type: String },
+    currentStock: { type: Number, required: true, min: 0, default: 0 },
+    lastUpdated: { type: Date, default: Date.now },
+    updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    updatedByName: { type: String },
+    notes: { type: String },
   },
   { _id: false }
 );
@@ -65,6 +83,10 @@ const inventorySchema = new Schema<IInventory>(
     totalSales: { type: Number, default: 0, min: 0 },
     totalWaste: { type: Number, default: 0, min: 0 },
     totalRestocked: { type: Number, default: 0, min: 0 },
+    trackByLocation: { type: Boolean, default: false },
+    locations: { type: [inventoryLocationSchema], default: [] },
+    defaultReceivingLocation: { type: String },
+    defaultSalesLocation: { type: String },
   },
   {
     timestamps: true,
@@ -75,8 +97,15 @@ const inventorySchema = new Schema<IInventory>(
 
 inventorySchema.index({ status: 1 });
 inventorySchema.index({ currentStock: 1 });
+inventorySchema.index({ 'locations.location': 1 });
 
 inventorySchema.pre('save', function preSave(next) {
+  // Sync currentStock with location totals if tracking by location
+  if (this.trackByLocation && this.locations.length > 0) {
+    this.currentStock = this.locations.reduce((sum, loc) => sum + loc.currentStock, 0);
+  }
+  
+  // Update status based on total stock
   if (this.currentStock <= 0) {
     this.status = 'out-of-stock';
   } else if (this.currentStock <= this.minimumStock) {

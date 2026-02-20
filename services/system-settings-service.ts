@@ -420,6 +420,85 @@ export class SystemSettingsService {
   }
 
   /**
+   * Get inventory locations configuration
+   */
+  static async getInventoryLocations(): Promise<import('@/interfaces').IInventoryLocationsSettings> {
+    await connectDB();
+    
+    const setting = await SystemSettingsModel.findOne({
+      key: 'inventory-locations',
+    });
+    
+    const defaults: import('@/interfaces').IInventoryLocationsSettings = {
+      enabled: false,
+      locations: [
+        { id: 'store', name: 'Main Store', type: 'storage', isActive: true, displayOrder: 1 },
+        { id: 'chiller-1', name: 'Bar Chiller 1', type: 'chiller', isActive: true, displayOrder: 2 },
+        { id: 'chiller-2', name: 'Bar Chiller 2', type: 'chiller', isActive: true, displayOrder: 3 },
+      ],
+      defaultReceivingLocation: 'store',
+      defaultSalesLocation: 'chiller-1',
+      requireTransferNotes: false,
+      allowNegativeStock: false,
+    };
+    
+    return (setting?.value as import('@/interfaces').IInventoryLocationsSettings) || defaults;
+  }
+
+  /**
+   * Update inventory locations configuration
+   */
+  static async updateInventoryLocations(
+    config: import('@/interfaces').IInventoryLocationsSettings,
+    adminUserId: string
+  ): Promise<boolean> {
+    await connectDB();
+    
+    // Validate configuration
+    if (config.enabled && config.locations.length === 0) {
+      throw new Error('At least one location must be configured when location tracking is enabled');
+    }
+    
+    if (config.enabled) {
+      const activeLocations = config.locations.filter(l => l.isActive);
+      if (activeLocations.length === 0) {
+        throw new Error('At least one location must be active');
+      }
+      
+      const locationIds = config.locations.map(l => l.id);
+      if (!locationIds.includes(config.defaultReceivingLocation)) {
+        throw new Error('Default receiving location must be one of the configured locations');
+      }
+      
+      if (!locationIds.includes(config.defaultSalesLocation)) {
+        throw new Error('Default sales location must be one of the configured locations');
+      }
+    }
+    
+    await SystemSettingsModel.findOneAndUpdate(
+      { key: 'inventory-locations' },
+      {
+        $set: {
+          value: config,
+          updatedBy: new Types.ObjectId(adminUserId),
+          updatedAt: new Date(),
+        },
+        $push: {
+          changeHistory: {
+            value: config,
+            changedBy: new Types.ObjectId(adminUserId),
+            changedAt: new Date(),
+            reason: 'Inventory locations configuration updated',
+          },
+        },
+      },
+      { upsert: true, new: true }
+    );
+    
+    return true;
+  }
+
+  /**
    * Initialize default settings
    */
   static async initializeDefaults(): Promise<void> {

@@ -22,11 +22,13 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { updateMenuItemAction, duplicateMenuItemAction } from '@/app/actions/admin/menu-actions';
+import { getInventoryLocationsConfigAction } from '@/app/actions/inventory/location-actions';
 import { MenuImageUpload } from './menu-image-upload';
 import { CustomizationOptionsBuilder } from './customization-options-builder';
 import { DietaryTagsSelector } from './dietary-tags-selector';
 import { DeleteMenuItemDialog } from './delete-menu-item-dialog';
 import { IMenuSettings } from '@/interfaces/menu-settings.interface';
+import { IInventoryLocationConfig } from '@/interfaces';
 
 const menuItemSchema = z.object({
   name: z.string().min(3, 'Name must be at least 3 characters').max(100, 'Name must be less than 100 characters'),
@@ -49,6 +51,7 @@ const menuItemSchema = z.object({
   slug: z.string().optional(),
   metaDescription: z.string().optional(),
   trackInventory: z.boolean(),
+  trackByLocation: z.boolean().optional(),
   currentStock: z.number().min(0).optional(),
   minimumStock: z.number().min(0).optional(),
   maximumStock: z.number().min(0).optional(),
@@ -76,10 +79,12 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [customizations, setCustomizations] = useState(menuItem.customizations || []);
   const [conversionRate, setConversionRate] = useState(100);
+  const [availableLocations, setAvailableLocations] = useState<IInventoryLocationConfig[]>([]);
+  const [initialLocation, setInitialLocation] = useState<string>('');
   const router = useRouter();
   const { toast } = useToast();
 
-  // Fetch conversion rate on mount
+  // Fetch conversion rate and locations on mount
   useEffect(() => {
     async function fetchConversionRate() {
       try {
@@ -90,7 +95,25 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
         console.error('Failed to fetch conversion rate:', error);
       }
     }
+    
+    async function fetchLocations() {
+      try {
+        const result = await getInventoryLocationsConfigAction();
+        if (result.success && result.data) {
+          const activeLocations = result.data.locations.filter(l => l.isActive);
+          setAvailableLocations(activeLocations);
+          // Set default to defaultReceivingLocation if available
+          if (result.data.defaultReceivingLocation && !initialLocation) {
+            setInitialLocation(result.data.defaultReceivingLocation);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch locations:', error);
+      }
+    }
+    
     fetchConversionRate();
+    fetchLocations();
   }, []);
 
   const {
@@ -122,6 +145,7 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
       slug: menuItem.slug || '',
       metaDescription: menuItem.metaDescription || '',
       trackInventory: menuItem.trackInventory || false,
+      trackByLocation: menuItem.inventory?.trackByLocation || false,
       currentStock: menuItem.inventory?.currentStock || 0,
       minimumStock: menuItem.inventory?.minimumStock || 10,
       maximumStock: menuItem.inventory?.maximumStock || 100,
@@ -142,6 +166,7 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
   const quarterPortionSurcharge = watch('quarterPortionSurcharge');
   const name = watch('name');
   const trackInventory = watch('trackInventory');
+  const trackByLocation = watch('trackByLocation');
   const price = watch('price');
   const pointsRedeemable = watch('pointsRedeemable');
   const pointsValue = watch('pointsValue');
@@ -204,6 +229,10 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
       // Add inventory tracking data
       formData.append('trackInventory', data.trackInventory.toString());
       if (data.trackInventory) {
+        formData.append('trackByLocation', (data.trackByLocation || false).toString());
+        if (data.trackByLocation && initialLocation) {
+          formData.append('initialLocation', initialLocation);
+        }
         formData.append('currentStock', (data.currentStock || 0).toString());
         formData.append('minimumStock', (data.minimumStock || 10).toString());
         formData.append('maximumStock', (data.maximumStock || 100).toString());
@@ -624,6 +653,66 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
                 disabled={isLoading}
               />
             </div>
+
+            {/* Track by Location Toggle (shown when inventory tracking is enabled) */}
+            {trackInventory && (
+              <>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="trackByLocation">Track by Location</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Enable multi-location tracking (store, chillers, etc.)
+                    </p>
+                  </div>
+                  <Switch
+                    id="trackByLocation"
+                    checked={trackByLocation || false}
+                    onCheckedChange={(checked) => setValue('trackByLocation', checked)}
+                    disabled={isLoading}
+                  />
+                </div>
+                
+                {/* Initial Location Selection (shown when track by location is enabled) */}
+                {trackByLocation && availableLocations.length > 0 && (
+                  <div className="space-y-2 pt-4">
+                    <Label htmlFor="initialLocation">Initial Location *</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Select where the current stock will be placed
+                    </p>
+                    <Select
+                      value={initialLocation}
+                      onValueChange={setInitialLocation}
+                      disabled={isLoading}
+                    >
+                      <SelectTrigger id="initialLocation">
+                        <SelectValue placeholder="Select initial location" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableLocations.map((location) => (
+                          <SelectItem key={location.id} value={location.id}>
+                            {location.name} ({location.type})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {!initialLocation && (
+                      <p className="text-xs text-destructive">
+                        Please select an initial location for the stock
+                      </p>
+                    )}
+                  </div>
+                )}
+                
+                {trackByLocation && availableLocations.length === 0 && (
+                  <div className="pt-4">
+                    <p className="text-sm text-destructive">
+                      No locations configured. Please configure locations in Settings → Locations first.
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
 
             {/* Inventory Fields (shown when tracking is enabled) */}
             {trackInventory && (

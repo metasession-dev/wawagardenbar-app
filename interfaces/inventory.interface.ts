@@ -2,7 +2,19 @@ import { Types } from 'mongoose';
 
 export type StockStatus = 'in-stock' | 'low-stock' | 'out-of-stock';
 
-export type StockHistoryCategory = 'sale' | 'restock' | 'waste' | 'damage' | 'adjustment' | 'other';
+export type StockHistoryCategory = 'sale' | 'restock' | 'waste' | 'damage' | 'adjustment' | 'transfer' | 'other';
+
+export type LocationType = 'store' | 'chiller-1' | 'chiller-2' | 'chiller-3' | 'other';
+
+export interface IInventoryLocation {
+  location: LocationType | string;
+  locationName?: string;
+  currentStock: number;
+  lastUpdated: Date;
+  updatedBy?: Types.ObjectId;
+  updatedByName?: string;
+  notes?: string;
+}
 
 export interface IStockHistory {
   quantity: number;
@@ -18,6 +30,10 @@ export interface IStockHistory {
   totalCost?: number;
   notes?: string;
   performedByName?: string;
+  location?: string;
+  fromLocation?: string;
+  toLocation?: string;
+  transferReference?: string;
 }
 
 export interface IInventory {
@@ -40,6 +56,10 @@ export interface IInventory {
   totalSales: number;
   totalWaste: number;
   totalRestocked: number;
+  trackByLocation: boolean;
+  locations: IInventoryLocation[];
+  defaultReceivingLocation?: string;
+  defaultSalesLocation?: string;
   createdAt: Date;
   updatedAt: Date;
 }

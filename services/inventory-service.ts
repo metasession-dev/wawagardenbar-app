@@ -3,6 +3,7 @@ import InventoryModel from '@/models/inventory-model';
 import MenuItemModel from '@/models/menu-item-model';
 import OrderModel from '@/models/order-model';
 import { sendLowStockAlertEmail } from '@/lib/email';
+import { SystemSettingsService } from '@/services/system-settings-service';
 
 /**
  * Inventory Service
@@ -532,6 +533,437 @@ class InventoryService {
       }));
 
     return analytics;
+  }
+
+  /**
+   * Transfer stock between locations
+   */
+  static async transferStock(params: {
+    inventoryId: string;
+    fromLocation: string;
+    toLocation: string;
+    quantity: number;
+    performedBy: string;
+    performedByName: string;
+    transferReference?: string;
+    notes?: string;
+  }): Promise<void> {
+    const { inventoryId, fromLocation, toLocation, quantity, performedBy, performedByName, transferReference, notes } = params;
+    
+    const inventory = await InventoryModel.findById(inventoryId);
+    
+    if (!inventory) {
+      throw new Error('Inventory item not found');
+    }
+    
+    if (!inventory.trackByLocation) {
+      throw new Error('Location tracking is not enabled for this item');
+    }
+    
+    if (fromLocation === toLocation) {
+      throw new Error('Source and destination locations must be different');
+    }
+    
+    const sourceLocation = inventory.locations.find(l => l.location === fromLocation);
+    
+    if (!sourceLocation) {
+      throw new Error(`Source location '${fromLocation}' not found`);
+    }
+    
+    if (sourceLocation.currentStock < quantity) {
+      throw new Error(
+        `Insufficient stock in ${fromLocation}. Available: ${sourceLocation.currentStock}, Requested: ${quantity}`
+      );
+    }
+    
+    // Resolve location names from system config
+    let fromName = fromLocation;
+    let toName = toLocation;
+    try {
+      const locConfig = await SystemSettingsService.getInventoryLocations();
+      const fromCfg = locConfig.locations.find((c: { id: string; name: string }) => c.id === fromLocation);
+      const toCfg = locConfig.locations.find((c: { id: string; name: string }) => c.id === toLocation);
+      if (fromCfg) fromName = fromCfg.name;
+      if (toCfg) toName = toCfg.name;
+    } catch { /* fallback to IDs */ }
+
+    sourceLocation.currentStock -= quantity;
+    sourceLocation.lastUpdated = new Date();
+    sourceLocation.updatedBy = new mongoose.Types.ObjectId(performedBy);
+    sourceLocation.updatedByName = performedByName;
+    
+    let destinationLocation = inventory.locations.find(l => l.location === toLocation);
+    
+    if (destinationLocation) {
+      destinationLocation.currentStock += quantity;
+      destinationLocation.lastUpdated = new Date();
+      destinationLocation.updatedBy = new mongoose.Types.ObjectId(performedBy);
+      destinationLocation.updatedByName = performedByName;
+    } else {
+      inventory.locations.push({
+        location: toLocation,
+        locationName: toName,
+        currentStock: quantity,
+        lastUpdated: new Date(),
+        updatedBy: new mongoose.Types.ObjectId(performedBy),
+        updatedByName: performedByName,
+      } as any);
+    }
+    
+    inventory.stockHistory.push({
+      quantity,
+      type: 'adjustment',
+      reason: `Transfer: ${fromName} → ${toName}`,
+      category: 'transfer',
+      fromLocation,
+      toLocation,
+      transferReference,
+      performedBy: new mongoose.Types.ObjectId(performedBy),
+      performedByName,
+      timestamp: new Date(),
+      notes,
+    } as any);
+    
+    await inventory.save();
+  }
+
+  /**
+   * Batch transfer multiple items
+   */
+  static async batchTransferStock(params: {
+    transfers: Array<{
+      inventoryId: string;
+      quantity: number;
+    }>;
+    fromLocation: string;
+    toLocation: string;
+    performedBy: string;
+    performedByName: string;
+    transferReference?: string;
+    notes?: string;
+  }): Promise<{ success: number; failed: number; errors: string[] }> {
+    const { transfers, fromLocation, toLocation, performedBy, performedByName, transferReference, notes } = params;
+    
+    let success = 0;
+    let failed = 0;
+    const errors: string[] = [];
+    
+    for (const transfer of transfers) {
+      try {
+        await this.transferStock({
+          inventoryId: transfer.inventoryId,
+          fromLocation,
+          toLocation,
+          quantity: transfer.quantity,
+          performedBy,
+          performedByName,
+          transferReference,
+          notes,
+        });
+        success++;
+      } catch (error: any) {
+        failed++;
+        errors.push(`${transfer.inventoryId}: ${error.message}`);
+      }
+    }
+    
+    return { success, failed, errors };
+  }
+
+  /**
+   * Get stock by location
+   */
+  static async getStockByLocation(
+    inventoryId: string,
+    location: string
+  ): Promise<number> {
+    const inventory = await InventoryModel.findById(inventoryId);
+    
+    if (!inventory) {
+      throw new Error('Inventory item not found');
+    }
+    
+    if (!inventory.trackByLocation) {
+      return inventory.currentStock;
+    }
+    
+    const loc = inventory.locations.find(l => l.location === location);
+    return loc?.currentStock || 0;
+  }
+
+  /**
+   * Add stock to specific location
+   */
+  static async addStockToLocation(params: {
+    inventoryId: string;
+    location: string;
+    quantity: number;
+    reason: string;
+    performedBy: string;
+    performedByName: string;
+    costPerUnit?: number;
+    invoiceNumber?: string;
+    supplier?: string;
+    notes?: string;
+  }): Promise<void> {
+    const { inventoryId, location, quantity, reason, performedBy, performedByName, costPerUnit, invoiceNumber, supplier, notes } = params;
+    
+    const inventory = await InventoryModel.findById(inventoryId);
+    
+    if (!inventory) {
+      throw new Error('Inventory item not found');
+    }
+    
+    if (inventory.trackByLocation) {
+      const loc = inventory.locations.find(l => l.location === location);
+      
+      if (loc) {
+        loc.currentStock += quantity;
+        loc.lastUpdated = new Date();
+        loc.updatedBy = new mongoose.Types.ObjectId(performedBy);
+        loc.updatedByName = performedByName;
+      } else {
+        inventory.locations.push({
+          location,
+          currentStock: quantity,
+          lastUpdated: new Date(),
+          updatedBy: new mongoose.Types.ObjectId(performedBy),
+          updatedByName: performedByName,
+        } as any);
+      }
+    } else {
+      inventory.currentStock += quantity;
+    }
+    
+    inventory.lastRestocked = new Date();
+    inventory.totalRestocked += quantity;
+    
+    inventory.stockHistory.push({
+      quantity,
+      type: 'addition',
+      reason,
+      category: 'restock',
+      location,
+      performedBy: new mongoose.Types.ObjectId(performedBy),
+      performedByName,
+      timestamp: new Date(),
+      costPerUnit,
+      totalCost: costPerUnit ? costPerUnit * quantity : undefined,
+      invoiceNumber,
+      supplier,
+      notes,
+    } as any);
+    
+    await inventory.save();
+  }
+
+  /**
+   * Deduct stock from specific location
+   */
+  static async deductStockFromLocation(params: {
+    inventoryId: string;
+    location: string;
+    quantity: number;
+    reason: string;
+    performedBy: string;
+    performedByName: string;
+    category?: 'sale' | 'waste' | 'damage' | 'adjustment' | 'other';
+    orderId?: string;
+    notes?: string;
+  }): Promise<void> {
+    const { inventoryId, location, quantity, reason, performedBy, performedByName, category, orderId, notes } = params;
+    
+    const inventory = await InventoryModel.findById(inventoryId);
+    
+    if (!inventory) {
+      throw new Error('Inventory item not found');
+    }
+    
+    if (inventory.trackByLocation) {
+      const loc = inventory.locations.find(l => l.location === location);
+      
+      if (!loc) {
+        throw new Error(`Location '${location}' not found`);
+      }
+      
+      if (loc.currentStock < quantity) {
+        throw new Error(
+          `Insufficient stock in ${location}. Available: ${loc.currentStock}, Requested: ${quantity}`
+        );
+      }
+      
+      loc.currentStock = Math.max(0, loc.currentStock - quantity);
+      loc.lastUpdated = new Date();
+      loc.updatedBy = new mongoose.Types.ObjectId(performedBy);
+      loc.updatedByName = performedByName;
+    } else {
+      inventory.currentStock = Math.max(0, inventory.currentStock - quantity);
+    }
+    
+    inventory.stockHistory.push({
+      quantity: -quantity,
+      type: 'deduction',
+      reason,
+      category: category || 'other',
+      location,
+      performedBy: new mongoose.Types.ObjectId(performedBy),
+      performedByName,
+      timestamp: new Date(),
+      orderId: orderId ? new mongoose.Types.ObjectId(orderId) : undefined,
+      notes,
+    } as any);
+    
+    if (category === 'sale') {
+      inventory.totalSales += quantity;
+      inventory.lastSaleDate = new Date();
+    } else if (category === 'waste' || category === 'damage') {
+      inventory.totalWaste += quantity;
+    }
+    
+    await inventory.save();
+  }
+
+  /**
+   * Get location breakdown for an inventory item
+   */
+  static async getLocationBreakdown(inventoryId: string) {
+    const inventory = await InventoryModel.findById(inventoryId).populate('menuItemId', 'name');
+    
+    if (!inventory) {
+      throw new Error('Inventory item not found');
+    }
+    
+    if (!inventory.trackByLocation) {
+      return {
+        trackByLocation: false,
+        totalStock: inventory.currentStock,
+        locations: [],
+      };
+    }
+    
+    return {
+      trackByLocation: true,
+      totalStock: inventory.currentStock,
+      locations: inventory.locations.map(loc => ({
+        location: loc.location,
+        locationName: loc.locationName,
+        currentStock: loc.currentStock,
+        lastUpdated: loc.lastUpdated,
+        updatedByName: loc.updatedByName,
+        percentage: inventory.currentStock > 0 
+          ? ((loc.currentStock / inventory.currentStock) * 100).toFixed(1)
+          : '0',
+      })),
+    };
+  }
+
+  /**
+   * Get transfer history for an inventory item
+   */
+  static async getTransferHistory(
+    inventoryId: string,
+    startDate?: Date,
+    endDate?: Date
+  ) {
+    const inventory = await InventoryModel.findById(inventoryId);
+    
+    if (!inventory) {
+      throw new Error('Inventory item not found');
+    }
+    
+    let transfers = inventory.stockHistory.filter(h => h.category === 'transfer');
+    
+    if (startDate) {
+      transfers = transfers.filter(t => t.timestamp >= startDate);
+    }
+    
+    if (endDate) {
+      transfers = transfers.filter(t => t.timestamp <= endDate);
+    }
+    
+    return transfers.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  }
+
+  /**
+   * Get low stock alerts by location
+   */
+  static async getLowStockByLocation() {
+    const inventories = await InventoryModel.find({ 
+      trackByLocation: true,
+      status: { $in: ['low-stock', 'out-of-stock'] }
+    }).populate('menuItemId', 'name mainCategory category');
+    
+    const alerts: any[] = [];
+    
+    for (const inventory of inventories) {
+      for (const location of inventory.locations) {
+        if (location.currentStock <= inventory.minimumStock * 0.3) {
+          alerts.push({
+            menuItemId: inventory.menuItemId,
+            menuItemName: (inventory.menuItemId as any)?.name,
+            location: location.location,
+            locationName: location.locationName,
+            currentStock: location.currentStock,
+            minimumStock: inventory.minimumStock,
+            unit: inventory.unit,
+            severity: location.currentStock === 0 ? 'critical' : 'warning',
+          });
+        }
+      }
+    }
+    
+    return alerts;
+  }
+
+  /**
+   * Enable location tracking for an inventory item
+   */
+  static async enableLocationTracking(
+    inventoryId: string,
+    initialLocation: string,
+    performedBy: string,
+    performedByName: string
+  ): Promise<void> {
+    const inventory = await InventoryModel.findById(inventoryId);
+    
+    if (!inventory) {
+      throw new Error('Inventory item not found');
+    }
+    
+    if (inventory.trackByLocation) {
+      throw new Error('Location tracking is already enabled');
+    }
+    
+    // Resolve location name from system config
+    let locationName = initialLocation;
+    try {
+      const locConfig = await SystemSettingsService.getInventoryLocations();
+      const cfg = locConfig.locations.find((c: { id: string; name: string }) => c.id === initialLocation);
+      if (cfg) locationName = cfg.name;
+    } catch { /* fallback to ID */ }
+
+    inventory.trackByLocation = true;
+    inventory.locations = [{
+      location: initialLocation,
+      locationName,
+      currentStock: inventory.currentStock,
+      lastUpdated: new Date(),
+      updatedBy: new mongoose.Types.ObjectId(performedBy),
+      updatedByName: performedByName,
+    } as any];
+    
+    inventory.stockHistory.push({
+      quantity: inventory.currentStock,
+      type: 'adjustment',
+      reason: `Enabled location tracking - moved stock to ${locationName}`,
+      category: 'adjustment',
+      location: initialLocation,
+      performedBy: new mongoose.Types.ObjectId(performedBy),
+      performedByName,
+      timestamp: new Date(),
+    } as any);
+    
+    await inventory.save();
   }
 }
 

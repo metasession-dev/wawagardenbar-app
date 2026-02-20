@@ -40,7 +40,13 @@ export type AuditAction =
   | 'inventory.snapshot_submitted'
   | 'inventory.snapshot_edited'
   | 'inventory.snapshot_approved'
-  | 'inventory.snapshot_rejected';
+  | 'inventory.snapshot_rejected'
+  | 'inventory.stock_transferred'
+  | 'inventory.batch_transfer'
+  | 'inventory.location_tracking_enabled'
+  | 'inventory.stock_added_to_location'
+  | 'inventory.stock_deducted_from_location'
+  | 'settings.inventory_locations_updated';
 
 export interface IAuditLog {
   _id: Types.ObjectId;

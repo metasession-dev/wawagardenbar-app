@@ -2,6 +2,7 @@ export * from './user.interface';
 export * from './order.interface';
 export * from './menu-item.interface';
 export * from './inventory.interface';
+export * from './inventory-location.interface';
 export * from './reward.interface';
 export * from './audit-log.interface';
 export * from './menu-item-price-history.interface';

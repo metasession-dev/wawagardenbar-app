@@ -22,6 +22,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Save } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { NotificationSettingsForm } from './notification-settings-form';
+import { InventoryLocationsForm } from './inventory-locations-form';
+import { IInventoryLocationsSettings } from '@/interfaces';
 
 /**
  * Settings form schema
@@ -106,13 +108,14 @@ interface SettingsFormProps {
       orders: 'email' | 'sms' | 'both';
     };
   };
+  inventoryLocationsSettings: IInventoryLocationsSettings;
 }
 
 /**
  * Settings form component
  * Allows super-admin to update application settings
  */
-export function SettingsForm({ initialSettings, notificationSettings }: SettingsFormProps) {
+export function SettingsForm({ initialSettings, notificationSettings, inventoryLocationsSettings }: SettingsFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -161,16 +164,21 @@ export function SettingsForm({ initialSettings, notificationSettings }: Settings
 
   return (
     <Tabs defaultValue="fees" className="w-full">
-      <TabsList className="grid w-full grid-cols-5">
+      <TabsList className="grid w-full grid-cols-6">
         <TabsTrigger value="fees">Fees & Pricing</TabsTrigger>
         <TabsTrigger value="orders">Orders</TabsTrigger>
         <TabsTrigger value="hours">Business Hours</TabsTrigger>
         <TabsTrigger value="contact">Contact Info</TabsTrigger>
         <TabsTrigger value="notifications">Notifications</TabsTrigger>
+        <TabsTrigger value="locations">Locations</TabsTrigger>
       </TabsList>
 
       <TabsContent value="notifications" className="space-y-6">
         <NotificationSettingsForm initialSettings={notificationSettings} />
+      </TabsContent>
+
+      <TabsContent value="locations" className="space-y-6">
+        <InventoryLocationsForm initialConfig={inventoryLocationsSettings} />
       </TabsContent>
 
       <Form {...form}>

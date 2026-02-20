@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import { connectDB } from '@/lib/mongodb';
 import InventoryModel from '@/models/inventory-model';
+import '@/models/menu-item-model'; // Import to ensure MenuItem model is registered
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InventoryItemsClient } from '@/components/features/admin/inventory-items-client';

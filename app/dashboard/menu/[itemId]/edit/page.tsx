@@ -72,6 +72,7 @@ async function getMenuItem(itemId: string) {
           costPerUnit: inventory.costPerUnit,
           supplier: inventory.supplier,
           preventOrdersWhenOutOfStock: inventory.preventOrdersWhenOutOfStock,
+          trackByLocation: inventory.trackByLocation || false,
         }
       : null,
     createdAt: menuItem.createdAt?.toString(),

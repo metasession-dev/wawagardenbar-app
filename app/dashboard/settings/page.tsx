@@ -20,12 +20,13 @@ export const metadata = {
  */
 export default async function SettingsPage() {
   // Get current settings
-  const [settings, notificationSettings, paymentSettings, expenseCategories, menuSettings] = await Promise.all([
+  const [settings, notificationSettings, paymentSettings, expenseCategories, menuSettings, inventoryLocationsSettings] = await Promise.all([
     SettingsService.getSettings(),
     SystemSettingsService.getNotificationSettings(),
     SystemSettingsService.getPaymentSettings(),
     SystemSettingsService.getExpenseCategories(),
     SystemSettingsService.getMenuCategories(),
+    SystemSettingsService.getInventoryLocations(),
   ]);
 
   // Serialize for client - use JSON.parse(JSON.stringify()) to remove Mongoose metadata
@@ -123,6 +124,7 @@ export default async function SettingsPage() {
           <SettingsForm 
             initialSettings={serializedSettings} 
             notificationSettings={notificationSettings}
+            inventoryLocationsSettings={inventoryLocationsSettings}
           />
         </CardContent>
       </Card>

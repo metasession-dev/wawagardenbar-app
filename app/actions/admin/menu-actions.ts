@@ -8,6 +8,7 @@ import { connectDB } from '@/lib/mongodb';
 import MenuItemModel from '@/models/menu-item-model';
 import InventoryModel from '@/models/inventory-model';
 import { AuditLogService } from '@/services/audit-log-service';
+import { SystemSettingsService } from '@/services/system-settings-service';
 import { Types } from 'mongoose';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
@@ -222,6 +223,8 @@ export async function updateMenuItemAction(
     
     // Inventory tracking
     const trackInventory = formData.get('trackInventory') === 'true';
+    const trackByLocation = formData.get('trackByLocation') === 'true';
+    const initialLocation = formData.get('initialLocation') as string;
     const currentStock = formData.get('currentStock') ? parseFloat(formData.get('currentStock') as string) : undefined;
     const minimumStock = formData.get('minimumStock') ? parseFloat(formData.get('minimumStock') as string) : undefined;
     const maximumStock = formData.get('maximumStock') ? parseFloat(formData.get('maximumStock') as string) : undefined;
@@ -299,6 +302,25 @@ export async function updateMenuItemAction(
         if (costPerUnit !== undefined) inventory.costPerUnit = costPerUnit;
         if (supplier !== undefined) inventory.supplier = supplier;
         inventory.preventOrdersWhenOutOfStock = preventOrdersWhenOutOfStock;
+        inventory.trackByLocation = trackByLocation;
+        
+        // Initialize location tracking if enabled and initial location is provided
+        if (trackByLocation && initialLocation && inventory.locations.length === 0) {
+          // Resolve location name from system config
+          let locationName = initialLocation;
+          try {
+            const locConfig = await SystemSettingsService.getInventoryLocations();
+            const cfg = locConfig.locations.find((c: { id: string; name: string }) => c.id === initialLocation);
+            if (cfg) locationName = cfg.name;
+          } catch { /* fallback to ID */ }
+          inventory.locations = [{
+            location: initialLocation,
+            locationName,
+            currentStock: inventory.currentStock,
+            lastUpdated: new Date(),
+          }];
+        }
+        
         await inventory.save();
         
         // Ensure menuItem has the correct inventoryId
@@ -307,7 +329,7 @@ export async function updateMenuItemAction(
         }
       } else {
         // Create new inventory record only if none exists
-        const newInventory = await InventoryModel.create({
+        const inventoryData: any = {
           menuItemId: menuItem._id,
           currentStock: currentStock || 0,
           minimumStock: minimumStock || 10,
@@ -316,11 +338,31 @@ export async function updateMenuItemAction(
           costPerUnit: costPerUnit || 0,
           supplier: supplier || '',
           preventOrdersWhenOutOfStock: preventOrdersWhenOutOfStock || false,
+          trackByLocation: trackByLocation || false,
           totalSales: 0,
           totalWaste: 0,
           totalRestocked: 0,
           stockHistory: [],
-        });
+        };
+        
+        // Initialize location tracking if enabled
+        if (trackByLocation && initialLocation) {
+          // Resolve location name from system config
+          let locationName = initialLocation;
+          try {
+            const locConfig = await SystemSettingsService.getInventoryLocations();
+            const cfg = locConfig.locations.find((c: { id: string; name: string }) => c.id === initialLocation);
+            if (cfg) locationName = cfg.name;
+          } catch { /* fallback to ID */ }
+          inventoryData.locations = [{
+            location: initialLocation,
+            locationName,
+            currentStock: currentStock || 0,
+            lastUpdated: new Date(),
+          }];
+        }
+        
+        const newInventory = await InventoryModel.create(inventoryData);
         menuItem.inventoryId = newInventory._id.toString() as any;
       }
     }

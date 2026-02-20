@@ -7,6 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { StockAdjustmentActions } from '@/components/features/admin/stock-adjustment-actions';
 import { StockHistoryTable } from '@/components/features/admin/stock-history-table';
+import { LocationBreakdownCard } from '@/components/features/inventory/location-breakdown-card';
 import { Package, TrendingUp, TrendingDown, AlertTriangle, ArrowLeft } from 'lucide-react';
 
 interface Props {
@@ -176,6 +177,22 @@ export default async function InventoryDetailPage({ params }: Props) {
         </CardContent>
       </Card>
 
+      {/* Location Breakdown */}
+      {inventory.trackByLocation && inventory.locations && inventory.locations.length > 0 && (
+        <LocationBreakdownCard
+          locations={inventory.locations.map((loc: any) => ({
+            location: loc.location,
+            locationName: loc.locationName,
+            currentStock: loc.currentStock,
+            percentage: inventory.currentStock > 0
+              ? ((loc.currentStock / inventory.currentStock) * 100).toFixed(1)
+              : '0',
+          }))}
+          totalStock={inventory.currentStock}
+          unit={inventory.unit}
+        />
+      )}
+
       {/* Stock Adjustment Actions */}
       <Card>
         <CardHeader>
@@ -192,7 +209,11 @@ export default async function InventoryDetailPage({ params }: Props) {
           <CardTitle>Stock Movement History</CardTitle>
         </CardHeader>
         <CardContent>
-          <StockHistoryTable history={inventory.stockHistory} unit={inventory.unit} />
+          <StockHistoryTable 
+            history={inventory.stockHistory} 
+            unit={inventory.unit} 
+            locations={inventory.configLocations || []} 
+          />
         </CardContent>
       </Card>
     </div>

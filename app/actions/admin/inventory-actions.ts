@@ -8,6 +8,7 @@ import { connectDB } from '@/lib/mongodb';
 import InventoryModel from '@/models/inventory-model';
 import { AuditLogService } from '@/services/audit-log-service';
 import { InventoryService } from '@/services';
+import { SystemSettingsService } from '@/services/system-settings-service';
 import { Types } from 'mongoose';
 
 export interface ActionResult<T = unknown> {
@@ -30,6 +31,7 @@ export async function addStockAction(
     costPerUnit?: number;
     invoiceNumber?: string;
     notes?: string;
+    location?: string;
   }
 ): Promise<ActionResult> {
   try {
@@ -58,8 +60,43 @@ export async function addStockAction(
       return { success: false, error: 'Inventory not found' };
     }
 
-    // Add stock
-    inventory.currentStock += data.quantity;
+    // Handle location-based stock addition
+    if (inventory.trackByLocation && data.location) {
+      const locationIndex = inventory.locations.findIndex(
+        (loc: any) => loc.location === data.location
+      );
+
+      if (locationIndex >= 0) {
+        // Update existing location
+        inventory.locations[locationIndex].currentStock += data.quantity;
+        inventory.locations[locationIndex].lastUpdated = new Date();
+        inventory.locations[locationIndex].updatedByName = session.email || 'Admin';
+      } else {
+        // Resolve location name from system config
+        let locationName = data.location;
+        try {
+          const locConfig = await SystemSettingsService.getInventoryLocations();
+          const cfg = locConfig.locations.find(c => c.id === data.location);
+          if (cfg) locationName = cfg.name;
+        } catch { /* fallback to ID */ }
+        // Add new location
+        inventory.locations.push({
+          location: data.location,
+          locationName,
+          currentStock: data.quantity,
+          lastUpdated: new Date(),
+          updatedByName: session.email || 'Admin',
+        });
+      }
+      // Recalculate total stock from all locations
+      inventory.currentStock = inventory.locations.reduce(
+        (sum: number, loc: any) => sum + loc.currentStock,
+        0
+      );
+    } else {
+      // Standard stock addition (no location tracking)
+      inventory.currentStock += data.quantity;
+    }
     inventory.lastRestocked = new Date();
     inventory.totalRestocked += data.quantity;
 
@@ -77,6 +114,7 @@ export async function addStockAction(
       totalCost: data.costPerUnit ? data.costPerUnit * data.quantity : undefined,
       invoiceNumber: data.invoiceNumber,
       notes: data.notes,
+      location: data.location,
     } as any);
 
     // Update status
@@ -95,7 +133,7 @@ export async function addStockAction(
       userId: session.userId,
       userEmail: session.email || '',
       userRole: session.role,
-      action: 'inventory.update',
+      action: data.location ? 'inventory.stock_added_to_location' : 'inventory.update',
       resource: 'inventory',
       resourceId: inventoryId,
       details: {
@@ -103,6 +141,7 @@ export async function addStockAction(
         quantity: data.quantity,
         reason: data.reason,
         newStock: inventory.currentStock,
+        ...(data.location && { location: data.location })
       },
     });
 
@@ -134,6 +173,7 @@ export async function deductStockAction(
     reason: string;
     category: 'waste' | 'damage' | 'theft' | 'other';
     notes?: string;
+    location?: string;
   }
 ): Promise<ActionResult> {
   try {
@@ -162,9 +202,38 @@ export async function deductStockAction(
       return { success: false, error: 'Inventory not found' };
     }
 
-    // Deduct stock
-    const previousStock = inventory.currentStock;
-    inventory.currentStock = Math.max(0, inventory.currentStock - data.quantity);
+    // Handle location-based stock deduction
+    if (inventory.trackByLocation && data.location) {
+      const locationIndex = inventory.locations.findIndex(
+        (loc: any) => loc.location === data.location
+      );
+
+      if (locationIndex >= 0) {
+        const locationStock = inventory.locations[locationIndex].currentStock;
+        if (locationStock < data.quantity) {
+          return {
+            success: false,
+            error: `Insufficient stock at this location. Available: ${locationStock}`,
+          };
+        }
+        // Deduct from location
+        inventory.locations[locationIndex].currentStock -= data.quantity;
+        inventory.locations[locationIndex].lastUpdated = new Date();
+        inventory.locations[locationIndex].updatedByName = session.email || 'Admin';
+      } else {
+        return { success: false, error: 'Location not found' };
+      }
+      // Recalculate total stock from all locations
+      inventory.currentStock = inventory.locations.reduce(
+        (sum: number, loc: any) => sum + loc.currentStock,
+        0
+      );
+    } else {
+      // Standard stock deduction (no location tracking)
+      inventory.currentStock = Math.max(0, inventory.currentStock - data.quantity);
+    }
+
+    const previousStock = inventory.currentStock + data.quantity;
     inventory.totalWaste += data.quantity;
 
     // Add to stock history
@@ -177,6 +246,7 @@ export async function deductStockAction(
       performedByName: session.email || 'Admin',
       timestamp: new Date(),
       notes: data.notes,
+      location: data.location,
     } as any);
 
     // Update status
@@ -201,7 +271,7 @@ export async function deductStockAction(
       userId: session.userId,
       userEmail: session.email || '',
       userRole: session.role,
-      action: 'inventory.update',
+      action: data.location ? 'inventory.stock_deducted_from_location' : 'inventory.update',
       resource: 'inventory',
       resourceId: inventoryId,
       details: {
@@ -211,6 +281,7 @@ export async function deductStockAction(
         category: data.category,
         previousStock,
         newStock: inventory.currentStock,
+        ...(data.location && { location: data.location })
       },
     });
 
@@ -240,6 +311,7 @@ export async function adjustStockAction(
   data: {
     newStock: number;
     reason: string;
+    location?: string;
   }
 ): Promise<ActionResult> {
   try {
@@ -268,12 +340,32 @@ export async function adjustStockAction(
       return { success: false, error: 'Inventory not found' };
     }
 
-    // Calculate difference
-    const previousStock = inventory.currentStock;
-    const difference = data.newStock - previousStock;
+    // Calculate difference and adjust stock
+    let previousStock: number;
+    let difference: number;
 
-    // Adjust stock
-    inventory.currentStock = data.newStock;
+    // Resolve location name for notes
+    let locationDisplayName = '';
+    if (inventory.trackByLocation && data.location) {
+      // Adjust stock for a specific location
+      const locIndex = inventory.locations.findIndex(
+        (l: any) => l.location === data.location
+      );
+      if (locIndex === -1) {
+        return { success: false, error: 'Location not found on this inventory item' };
+      }
+      previousStock = inventory.locations[locIndex].currentStock;
+      difference = data.newStock - previousStock;
+      inventory.locations[locIndex].currentStock = data.newStock;
+      inventory.locations[locIndex].lastUpdated = new Date();
+      inventory.locations[locIndex].updatedByName = session.email || 'Admin';
+      locationDisplayName = inventory.locations[locIndex].locationName || data.location;
+      // pre-save hook will sync inventory.currentStock from location totals
+    } else {
+      previousStock = inventory.currentStock;
+      difference = data.newStock - previousStock;
+      inventory.currentStock = data.newStock;
+    }
 
     // Add to stock history
     inventory.stockHistory.push({
@@ -284,17 +376,11 @@ export async function adjustStockAction(
       performedBy: new Types.ObjectId(session.userId),
       performedByName: session.email || 'Admin',
       timestamp: new Date(),
-      notes: `Adjusted from ${previousStock} to ${data.newStock}`,
+      notes: `Adjusted from ${previousStock} to ${data.newStock}${
+        locationDisplayName ? ` at ${locationDisplayName}` : ''
+      }`,
+      ...(data.location && { location: data.location }),
     } as any);
-
-    // Update status
-    if (inventory.currentStock <= 0) {
-      inventory.status = 'out-of-stock';
-    } else if (inventory.currentStock <= inventory.minimumStock) {
-      inventory.status = 'low-stock';
-    } else {
-      inventory.status = 'in-stock';
-    }
 
     await inventory.save();
 
@@ -318,6 +404,7 @@ export async function adjustStockAction(
         newStock: data.newStock,
         difference,
         reason: data.reason,
+        ...(data.location && { location: data.location }),
       },
     });
 
@@ -362,6 +449,23 @@ export async function getInventoryDetailsAction(
       return { success: false, error: 'Inventory not found' };
     }
 
+    // Fetch system location config for name resolution
+    let configLocations: Array<{ id: string; name: string; type: string; isActive: boolean; displayOrder: number }> = [];
+    if (inventory.trackByLocation) {
+      try {
+        const locConfig = await SystemSettingsService.getInventoryLocations();
+        configLocations = locConfig.locations || [];
+      } catch {
+        // Fall back to empty — names will show IDs
+      }
+    }
+
+    // Helper to resolve location name from config
+    const resolveLocationName = (locationId: string): string => {
+      const cfg = configLocations.find(c => c.id === locationId);
+      return cfg?.name || locationId;
+    };
+
     // Serialize for client
     const serialized = {
       _id: inventory._id.toString(),
@@ -384,6 +488,22 @@ export async function getInventoryDetailsAction(
       totalRestocked: inventory.totalRestocked,
       lastRestocked: inventory.lastRestocked?.toISOString(),
       lastSaleDate: inventory.lastSaleDate?.toISOString(),
+      trackByLocation: inventory.trackByLocation || false,
+      locations: (inventory.locations || []).map((loc: any) => ({
+        location: loc.location,
+        locationName: loc.locationName || resolveLocationName(loc.location),
+        currentStock: loc.currentStock,
+        lastUpdated: loc.lastUpdated ? new Date(loc.lastUpdated).toISOString() : null,
+        updatedByName: loc.updatedByName || null,
+        notes: loc.notes || null,
+      })),
+      configLocations: configLocations.map(c => ({
+        id: c.id,
+        name: c.name,
+        type: c.type,
+        isActive: c.isActive,
+        displayOrder: c.displayOrder,
+      })),
       stockHistory: inventory.stockHistory.map((h: any) => ({
         quantity: h.quantity,
         type: h.type,
@@ -394,6 +514,10 @@ export async function getInventoryDetailsAction(
         notes: h.notes,
         supplier: h.supplier,
         invoiceNumber: h.invoiceNumber,
+        location: h.location,
+        fromLocation: h.fromLocation,
+        toLocation: h.toLocation,
+        transferReference: h.transferReference,
       })),
     };
 

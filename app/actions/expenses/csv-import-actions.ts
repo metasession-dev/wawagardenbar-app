@@ -31,21 +31,38 @@ function requireAdmin(session: SessionData) {
 export async function importMoniepointCSVAction(formData: FormData) {
   // Wrap EVERYTHING in try-catch to ensure we always return a response
   try {
-    console.log('=== importMoniepointCSVAction called ===');
-    console.log('FormData received:', formData ? 'yes' : 'no');
-    console.log('Environment:', process.env.NODE_ENV);
-    console.log('1. Connecting to DB...');
-    await connectDB();
-    
-    console.log('2. Getting session...');
-    const session = await getServerSession();
-    
-    console.log('3. Checking admin access...');
-    requireAdmin(session);
+    console.log('[XLSX-IMPORT] === importMoniepointCSVAction called ===');
+    console.log('[XLSX-IMPORT] Timestamp:', new Date().toISOString());
+    console.log('[XLSX-IMPORT] Environment:', process.env.NODE_ENV);
+    console.log('[XLSX-IMPORT] Node version:', process.version);
+    console.log('[XLSX-IMPORT] FormData received:', formData ? 'yes' : 'no');
 
-    console.log('4. Extracting file from FormData...');
+    // Check XLSX module availability immediately
+    console.log('[XLSX-IMPORT] Checking XLSX module...');
+    try {
+      const XLSX = await import('xlsx');
+      console.log('[XLSX-IMPORT] XLSX module loaded:', typeof XLSX);
+      console.log('[XLSX-IMPORT] XLSX.read available:', typeof XLSX.read === 'function');
+      console.log('[XLSX-IMPORT] XLSX.utils available:', typeof XLSX.utils === 'object');
+    } catch (xlsxErr) {
+      console.error('[XLSX-IMPORT] CRITICAL: XLSX module failed to load:', xlsxErr);
+    }
+
+    console.log('[XLSX-IMPORT] Step 1: Connecting to DB...');
+    await connectDB();
+    console.log('[XLSX-IMPORT] Step 1: DB connected');
+    
+    console.log('[XLSX-IMPORT] Step 2: Getting session...');
+    const session = await getServerSession();
+    console.log('[XLSX-IMPORT] Step 2: Session retrieved, isLoggedIn:', session.isLoggedIn, 'role:', session.role);
+    
+    console.log('[XLSX-IMPORT] Step 3: Checking admin access...');
+    requireAdmin(session);
+    console.log('[XLSX-IMPORT] Step 3: Admin access confirmed');
+
+    console.log('[XLSX-IMPORT] Step 4: Extracting file from FormData...');
     const file = formData.get('file') as File;
-    console.log('File extracted:', file ? `${file.name} (${file.size} bytes)` : 'null');
+    console.log('[XLSX-IMPORT] Step 4: File extracted:', file ? `${file.name} (${file.size} bytes, type: ${file.type})` : 'null');
     
     if (!file) {
       return {
@@ -72,14 +89,14 @@ export async function importMoniepointCSVAction(formData: FormData) {
     }
 
     // Read file as ArrayBuffer
-    console.log('5. Reading file as ArrayBuffer...');
+    console.log('[XLSX-IMPORT] Step 5: Reading file as ArrayBuffer...');
     const arrayBuffer = await file.arrayBuffer();
-    console.log('ArrayBuffer created:', arrayBuffer.byteLength, 'bytes');
+    console.log('[XLSX-IMPORT] Step 5: ArrayBuffer created:', arrayBuffer.byteLength, 'bytes');
 
     // Validate XLSX structure
-    console.log('6. Validating XLSX structure...');
+    console.log('[XLSX-IMPORT] Step 6: Validating XLSX structure...');
     const validation = XLSXParserService.validateMoniepointXLSX(arrayBuffer);
-    console.log('Validation result:', validation.valid ? 'valid' : 'invalid');
+    console.log('[XLSX-IMPORT] Step 6: Validation result:', validation.valid ? 'valid' : `invalid - ${validation.error}`);
     if (!validation.valid) {
       return {
         success: false,
@@ -88,18 +105,18 @@ export async function importMoniepointCSVAction(formData: FormData) {
     }
 
     // Get existing reference numbers to detect duplicates
-    console.log('7. Getting existing references...');
+    console.log('[XLSX-IMPORT] Step 7: Getting existing references...');
     const existingReferences = await UploadedExpenseService.getExistingReferenceNumbers();
-    console.log('Existing references count:', existingReferences.size);
+    console.log('[XLSX-IMPORT] Step 7: Existing references count:', existingReferences.size);
 
     // Parse XLSX
-    console.log('8. Parsing XLSX...');
+    console.log('[XLSX-IMPORT] Step 8: Parsing XLSX...');
     const parseResult = await XLSXParserService.parseMoniepointXLSX(
       arrayBuffer,
       existingReferences
     );
-    console.log('Parse result:', parseResult.success ? 'success' : 'failed');
-    console.log('Expenses extracted:', parseResult.expenses.length);
+    console.log('[XLSX-IMPORT] Step 8: Parse result:', parseResult.success ? 'success' : 'failed');
+    console.log('[XLSX-IMPORT] Step 8: Expenses extracted:', parseResult.expenses.length);
 
     if (!parseResult.success) {
       return {
@@ -145,29 +162,28 @@ export async function importMoniepointCSVAction(formData: FormData) {
       errors: parseResult.errors,
     };
   } catch (error) {
-    console.error('XLSX import error:', error);
-    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-    console.error('Error type:', error?.constructor?.name);
-    
-    // Capture detailed error information
-    let errorMessage = 'Failed to import Excel file';
-    let errorDetails = '';
-    
+    console.error('[XLSX-IMPORT] === UNHANDLED ERROR ===');
+    console.error('[XLSX-IMPORT] Timestamp:', new Date().toISOString());
+    console.error('[XLSX-IMPORT] Error type:', error?.constructor?.name);
+    console.error('[XLSX-IMPORT] Error message:', error instanceof Error ? error.message : String(error));
+    console.error('[XLSX-IMPORT] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+
     if (error instanceof Error) {
-      errorMessage = error.message;
-      errorDetails = error.stack || '';
-      
-      // Log specific error types
       if (error.name === 'ReferenceError') {
-        console.error('ReferenceError - possible missing dependency:', error.message);
+        console.error('[XLSX-IMPORT] ReferenceError - likely missing/unbundled dependency:', error.message);
       } else if (error.name === 'TypeError') {
-        console.error('TypeError - possible data format issue:', error.message);
+        console.error('[XLSX-IMPORT] TypeError - data format or null reference issue:', error.message);
+      } else if (error.message?.includes('Cannot find module')) {
+        console.error('[XLSX-IMPORT] Module not found - package missing from production bundle');
+      } else if (error.message?.includes('body exceeded')) {
+        console.error('[XLSX-IMPORT] Body size limit exceeded - file too large for server action');
       }
     }
-    
+
+    const errorMessage = error instanceof Error ? error.message : 'Failed to import Excel file';
     return {
       success: false,
-      error: `${errorMessage}${errorDetails ? ` (${error?.constructor?.name})` : ''}`,
+      error: `${errorMessage} (${error?.constructor?.name ?? 'UnknownError'})`,
     };
   }
 }

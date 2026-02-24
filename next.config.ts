@@ -6,9 +6,10 @@ const nextConfig: NextConfig = {
     formats: ['image/webp'],
     remotePatterns: [],
   },
+  serverExternalPackages: ['xlsx'],
   experimental: {
     serverActions: {
-      bodySizeLimit: '2mb',
+      bodySizeLimit: '15mb',
     },
   },
 };

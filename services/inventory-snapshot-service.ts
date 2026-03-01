@@ -55,9 +55,18 @@ export class InventorySnapshotService {
       const sales = salesData.find((s) => s._id.toString() === item._id.toString());
       let inventoryCount = 0;
 
+      let locationBreakdown: { location: string; locationName: string; currentStock: number }[] = [];
+
       if (item.inventoryId) {
-        const inventory = await InventoryModel.findById(item.inventoryId).lean();
+        const inventory = await InventoryModel.findById(item.inventoryId).lean() as any;
         inventoryCount = inventory?.currentStock || 0;
+        if (inventory?.trackByLocation && Array.isArray(inventory.locations) && inventory.locations.length > 0) {
+          locationBreakdown = inventory.locations.map((loc: any) => ({
+            location: loc.location,
+            locationName: loc.locationName || loc.location || 'Unknown Location',
+            currentStock: loc.currentStock ?? 0,
+          }));
+        }
       }
 
       items.push({
@@ -70,10 +79,26 @@ export class InventorySnapshotService {
         staffConfirmed: false,
         discrepancy: 0,
         requiresAdjustment: false,
+        ...(locationBreakdown.length > 0 && { locationBreakdown }),
       });
     }
 
     return items;
+  }
+
+  private static sanitizeItems(items: IInventorySnapshotItem[]): IInventorySnapshotItem[] {
+    return items.map(item => {
+      if (item.locationBreakdown && item.locationBreakdown.length > 0) {
+        return {
+          ...item,
+          locationBreakdown: item.locationBreakdown.map(loc => ({
+            ...loc,
+            locationName: loc.locationName || loc.location || 'Unknown Location'
+          }))
+        };
+      }
+      return item;
+    });
   }
 
   static async submitSnapshot(
@@ -95,13 +120,15 @@ export class InventorySnapshotService {
       throw new Error(`A ${mainCategory} snapshot for this date has already been submitted`);
     }
 
+    const sanitizedItems = this.sanitizeItems(data.items);
+
     const snapshot = await InventorySnapshotModel.create({
       snapshotDate,
       mainCategory,
       submittedBy: new Types.ObjectId(userId),
       submittedByName: userName,
       status: 'pending',
-      items: data.items,
+      items: sanitizedItems,
     });
 
     await AuditLogService.createLog({
@@ -114,8 +141,8 @@ export class InventorySnapshotService {
       details: {
         snapshotDate: snapshotDate.toISOString(),
         mainCategory,
-        totalItems: data.items.length,
-        adjustmentItems: data.items.filter((i) => i.requiresAdjustment).length,
+        totalItems: sanitizedItems.length,
+        adjustmentItems: sanitizedItems.filter((i) => i.requiresAdjustment).length,
       },
     });
 
@@ -183,6 +210,30 @@ export class InventorySnapshotService {
             inventory.totalWaste += Math.abs(difference);
           } else {
             inventory.totalRestocked += difference;
+          }
+
+          // Update location-specific stock if tracking is enabled
+          if (inventory.trackByLocation && item.locationBreakdown && item.locationBreakdown.length > 0) {
+            for (const locSnapshot of item.locationBreakdown) {
+              const inventoryLocation = inventory.locations.find(
+                (l: any) => l.location === locSnapshot.location
+              );
+
+              if (inventoryLocation) {
+                // If adjusted, use the adjusted count. Otherwise use the snapshot's captured stock.
+                // This effectively "resets" the location stock to what was counted/confirmed.
+                const newLocStock = locSnapshot.staffAdjustedCount !== undefined 
+                  ? locSnapshot.staffAdjustedCount 
+                  : locSnapshot.currentStock;
+
+                if (inventoryLocation.currentStock !== newLocStock) {
+                  inventoryLocation.currentStock = newLocStock;
+                  inventoryLocation.lastUpdated = new Date();
+                  inventoryLocation.updatedBy = new Types.ObjectId(reviewerId);
+                  inventoryLocation.updatedByName = reviewerName;
+                }
+              }
+            }
           }
 
           await inventory.save();
@@ -379,7 +430,8 @@ export class InventorySnapshotService {
       throw new Error('Only pending snapshots can be edited');
     }
 
-    snapshot.items = items;
+    const sanitizedItems = this.sanitizeItems(items);
+    snapshot.items = sanitizedItems;
     await snapshot.save();
 
     await AuditLogService.createLog({
@@ -392,8 +444,8 @@ export class InventorySnapshotService {
       details: {
         snapshotDate: snapshot.snapshotDate.toISOString(),
         mainCategory: snapshot.mainCategory,
-        totalItems: items.length,
-        adjustmentItems: items.filter((i) => i.requiresAdjustment).length,
+        totalItems: sanitizedItems.length,
+        adjustmentItems: sanitizedItems.filter((i) => i.requiresAdjustment).length,
       },
     });
 
@@ -423,7 +475,9 @@ export class InventorySnapshotService {
       throw new Error('You can only resubmit your own snapshots');
     }
 
-    snapshot.items = data.items;
+    const sanitizedItems = this.sanitizeItems(data.items);
+
+    snapshot.items = sanitizedItems;
     snapshot.status = 'pending';
     snapshot.submittedAt = new Date();
     snapshot.reviewedAt = undefined;
@@ -441,8 +495,8 @@ export class InventorySnapshotService {
       details: {
         snapshotDate: snapshot.snapshotDate.toISOString(),
         mainCategory: snapshot.mainCategory,
-        totalItems: data.items.length,
-        adjustmentItems: data.items.filter((i) => i.requiresAdjustment).length,
+        totalItems: sanitizedItems.length,
+        adjustmentItems: sanitizedItems.filter((i) => i.requiresAdjustment).length,
         resubmission: true,
       },
     });

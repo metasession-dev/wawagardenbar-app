@@ -6,7 +6,7 @@ import '@/models/menu-item-model'; // Import to ensure MenuItem model is registe
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InventoryItemsClient } from '@/components/features/admin/inventory-items-client';
-import { AlertTriangle, ClipboardCheck } from 'lucide-react';
+import { AlertTriangle, ArrowRightLeft, ClipboardCheck } from 'lucide-react';
 
 /**
  * Get inventory items
@@ -33,6 +33,14 @@ async function getInventory() {
     maxStock: item.maximumStock,
     unit: item.unit,
     lastRestocked: item.lastRestocked ? new Date(item.lastRestocked).toISOString() : undefined,
+    trackByLocation: item.trackByLocation ?? false,
+    locations: item.trackByLocation && Array.isArray(item.locations)
+      ? item.locations.map((loc: any) => ({
+          location: loc.location,
+          locationName: loc.locationName,
+          currentStock: loc.currentStock ?? 0,
+        }))
+      : [],
   }));
 }
 
@@ -160,13 +168,22 @@ export default async function InventoryPage() {
             Track stock levels and manage inventory
           </p>
         </div>
-        <Link 
-          href="/dashboard/inventory/snapshots"
-          className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          <ClipboardCheck className="h-4 w-4" />
-          Inventory Snapshots
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard/inventory/transfer"
+            className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+          >
+            <ArrowRightLeft className="h-4 w-4" />
+            Transfer Stock
+          </Link>
+          <Link 
+            href="/dashboard/inventory/snapshots"
+            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            <ClipboardCheck className="h-4 w-4" />
+            Inventory Snapshots
+          </Link>
+        </div>
       </div>
 
       {/* Stats */}

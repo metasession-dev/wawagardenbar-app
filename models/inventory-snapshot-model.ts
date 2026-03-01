@@ -14,6 +14,13 @@ const inventorySnapshotItemSchema = new Schema(
     staffNotes: { type: String },
     discrepancy: { type: Number, required: true, default: 0 },
     requiresAdjustment: { type: Boolean, required: true, default: false },
+    locationBreakdown: [{
+      location: { type: String, required: true },
+      locationName: { type: String, required: true },
+      currentStock: { type: Number, required: true },
+      staffConfirmed: { type: Boolean },
+      staffAdjustedCount: { type: Number }
+    }]
   },
   { _id: false }
 );

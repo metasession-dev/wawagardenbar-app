@@ -4,6 +4,12 @@ import { useState, useMemo } from 'react';
 import { CategoryFilter } from './category-filter';
 import { InventoryTable } from './inventory-table';
 
+interface InventoryLocation {
+  location: string;
+  locationName: string;
+  currentStock: number;
+}
+
 interface InventoryItem {
   _id: string;
   menuItemId: {
@@ -17,6 +23,8 @@ interface InventoryItem {
   maxStock: number;
   unit: string;
   lastRestocked?: string;
+  trackByLocation: boolean;
+  locations: InventoryLocation[];
 }
 
 interface InventoryItemsClientProps {

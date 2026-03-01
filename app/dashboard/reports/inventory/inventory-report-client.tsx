@@ -13,6 +13,12 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
+interface InventoryLocation {
+  location: string;
+  locationName: string;
+  currentStock: number;
+}
+
 interface InventoryItem {
   _id: string;
   menuItemName: string;
@@ -25,6 +31,8 @@ interface InventoryItem {
   supplier?: string;
   lastRestockDate?: string;
   category?: string;
+  trackByLocation: boolean;
+  locations: InventoryLocation[];
 }
 
 interface InventoryStats {
@@ -79,18 +87,38 @@ export function InventoryReportClient() {
   }, []);
 
   const exportToCSV = () => {
-    const headers = ['Item Name', 'Current Stock', 'Min Stock', 'Max Stock', 'Unit', 'Status', 'Cost/Unit', 'Total Value', 'Supplier'];
-    const rows = filteredInventory.map(item => [
-      item.menuItemName,
-      item.currentStock,
-      item.minimumStock,
-      item.maximumStock,
-      item.unit,
-      item.status,
-      `₦${item.costPerUnit}`,
-      `₦${(item.currentStock * item.costPerUnit).toFixed(2)}`,
-      item.supplier || 'N/A',
-    ]);
+    const headers = ['Item Name', 'Location', 'Current Stock', 'Min Stock', 'Max Stock', 'Unit', 'Status', 'Cost/Unit', 'Total Value', 'Supplier'];
+    const rows: (string | number)[][] = [];
+    filteredInventory.forEach(item => {
+      rows.push([
+        item.menuItemName,
+        '',
+        item.currentStock,
+        item.minimumStock,
+        item.maximumStock,
+        item.unit,
+        item.status,
+        `₦${item.costPerUnit}`,
+        `₦${(item.currentStock * item.costPerUnit).toFixed(2)}`,
+        item.supplier || 'N/A',
+      ]);
+      if (item.trackByLocation && item.locations.length > 0) {
+        item.locations.forEach(loc => {
+          rows.push([
+            `  ${item.menuItemName}`,
+            loc.locationName,
+            loc.currentStock,
+            '',
+            '',
+            item.unit,
+            '',
+            '',
+            '',
+            '',
+          ]);
+        });
+      }
+    });
 
     const csvContent = [
       headers.join(','),
@@ -266,7 +294,8 @@ export function InventoryReportClient() {
                 <thead>
                   <tr className="border-b">
                     <th className="text-left p-2">Item Name</th>
-                    <th className="text-left p-2">Current Stock</th>
+                    <th className="text-right p-2">Current Stock</th>
+                    <th className="text-left p-2">Location Breakdown</th>
                     <th className="text-left p-2">Min/Max</th>
                     <th className="text-left p-2">Status</th>
                     <th className="text-left p-2">Stock Level</th>
@@ -279,46 +308,64 @@ export function InventoryReportClient() {
                   {filteredInventory.map((item) => {
                     const percentage = getStockPercentage(item.currentStock, item.maximumStock);
                     const totalValue = item.currentStock * item.costPerUnit;
+                    const hasLocations = item.trackByLocation && item.locations.length > 0;
 
                     return (
-                      <tr key={item._id} className="border-b hover:bg-muted/50">
-                        <td className="p-2 font-medium">{item.menuItemName}</td>
-                        <td className="p-2">
-                          {item.currentStock} {item.unit}
-                        </td>
-                        <td className="p-2 text-sm text-muted-foreground">
-                          {item.minimumStock} / {item.maximumStock}
-                        </td>
-                        <td className="p-2">{getStatusBadge(item.status)}</td>
-                        <td className="p-2">
-                          <div className="flex items-center gap-2">
-                            <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
-                              <div
-                                className={`h-full ${
-                                  percentage > 50
-                                    ? 'bg-green-500'
-                                    : percentage > 20
-                                    ? 'bg-yellow-500'
-                                    : 'bg-red-500'
-                                }`}
-                                style={{ width: `${Math.min(percentage, 100)}%` }}
-                              />
+                      <>
+                        <tr key={item._id} className={`border-b hover:bg-muted/50 ${hasLocations ? 'border-b-0' : ''}`}>
+                          <td className="p-2 font-medium">{item.menuItemName}</td>
+                          <td className="p-2 text-right">
+                            {item.currentStock} {item.unit}
+                          </td>
+                          {/* Location breakdown cell */}
+                          <td className="p-2">
+                            {hasLocations ? (
+                              <div className="flex flex-col gap-0.5">
+                                {item.locations.map((loc) => (
+                                  <div key={loc.location} className="flex items-center justify-between gap-3 text-xs">
+                                    <span className="text-muted-foreground">{loc.locationName}</span>
+                                    <span className="font-medium tabular-nums">{loc.currentStock} {item.unit}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </td>
+                          <td className="p-2 text-sm text-muted-foreground">
+                            {item.minimumStock} / {item.maximumStock}
+                          </td>
+                          <td className="p-2">{getStatusBadge(item.status)}</td>
+                          <td className="p-2">
+                            <div className="flex items-center gap-2">
+                              <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full ${
+                                    percentage > 50
+                                      ? 'bg-green-500'
+                                      : percentage > 20
+                                      ? 'bg-yellow-500'
+                                      : 'bg-red-500'
+                                  }`}
+                                  style={{ width: `${Math.min(percentage, 100)}%` }}
+                                />
+                              </div>
+                              <span className="text-xs text-muted-foreground">
+                                {percentage}%
+                              </span>
                             </div>
-                            <span className="text-xs text-muted-foreground">
-                              {percentage}%
-                            </span>
-                          </div>
-                        </td>
-                        <td className="p-2 text-right">
-                          ₦{item.costPerUnit.toLocaleString()}
-                        </td>
-                        <td className="p-2 text-right font-medium">
-                          ₦{totalValue.toLocaleString()}
-                        </td>
-                        <td className="p-2 text-sm text-muted-foreground">
-                          {item.supplier || 'N/A'}
-                        </td>
-                      </tr>
+                          </td>
+                          <td className="p-2 text-right">
+                            ₦{item.costPerUnit.toLocaleString()}
+                          </td>
+                          <td className="p-2 text-right font-medium">
+                            ₦{totalValue.toLocaleString()}
+                          </td>
+                          <td className="p-2 text-sm text-muted-foreground">
+                            {item.supplier || 'Not specified'}
+                          </td>
+                        </tr>
+                      </>
                     );
                   })}
                 </tbody>

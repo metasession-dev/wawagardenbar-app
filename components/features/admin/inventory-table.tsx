@@ -14,6 +14,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, CheckCircle, Eye } from 'lucide-react';
 
+interface InventoryLocation {
+  location: string;
+  locationName: string;
+  currentStock: number;
+}
+
 interface InventoryItem {
   _id: string;
   menuItemId: {
@@ -27,6 +33,8 @@ interface InventoryItem {
   maxStock: number;
   unit: string;
   lastRestocked?: string;
+  trackByLocation: boolean;
+  locations: InventoryLocation[];
 }
 
 interface InventoryTableProps {
@@ -65,6 +73,7 @@ export function InventoryTable({ inventory }: InventoryTableProps) {
               <TableHead>Item Name</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Current Stock</TableHead>
+              <TableHead>Locations</TableHead>
               <TableHead>Min/Max</TableHead>
               <TableHead>Stock Level</TableHead>
               <TableHead>Status</TableHead>
@@ -74,7 +83,7 @@ export function InventoryTable({ inventory }: InventoryTableProps) {
           <TableBody>
             {inventory.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                <TableCell colSpan={8} className="text-center text-muted-foreground">
                   No inventory items found
                 </TableCell>
               </TableRow>
@@ -109,6 +118,20 @@ export function InventoryTable({ inventory }: InventoryTableProps) {
                       <span className="font-medium">
                         {item.currentStock} {item.unit}
                       </span>
+                    </TableCell>
+                    <TableCell>
+                      {item.trackByLocation && item.locations.length > 0 ? (
+                        <div className="flex flex-col gap-1">
+                          {item.locations.map((loc) => (
+                            <div key={loc.location} className="flex items-center justify-between gap-2 text-xs">
+                              <span className="text-muted-foreground truncate max-w-[80px]">{loc.locationName}</span>
+                              <span className="font-medium tabular-nums">{loc.currentStock}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {item.minStock} / {item.maxStock} {item.unit}

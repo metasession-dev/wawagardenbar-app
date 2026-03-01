@@ -37,7 +37,7 @@ export async function GET() {
       .sort({ status: 1 })
       .lean();
 
-    // Transform items to include menuItemName
+    // Transform items to include menuItemName and location data
     const items = rawItems.map((item: any) => ({
       _id: item._id.toString(),
       menuItemName: item.menuItemId?.name || 'Unknown Item',
@@ -50,6 +50,12 @@ export async function GET() {
       costPerUnit: item.costPerUnit,
       supplier: item.supplier,
       lastRestockDate: item.lastRestocked,
+      trackByLocation: item.trackByLocation ?? false,
+      locations: (item.locations ?? []).map((loc: any) => ({
+        location: loc.location,
+        locationName: loc.locationName || loc.location || 'Unknown',
+        currentStock: loc.currentStock ?? 0,
+      })),
     }));
 
     // Calculate statistics

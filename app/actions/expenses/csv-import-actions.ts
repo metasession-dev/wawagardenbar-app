@@ -127,21 +127,38 @@ export async function importMoniepointCSVAction(formData: FormData) {
     }
 
     if (parseResult.expenses.length === 0) {
-      const { totalRows, expensesExtracted, duplicatesSkipped, invalidRows } =
+      const { totalRows, duplicatesSkipped, invalidRows } =
         parseResult.stats;
 
-      const sampleErrors = parseResult.errors.slice(0, 5);
-      const errorDetails = sampleErrors.length
-        ? ` Sample errors: ${sampleErrors.join(' | ')}`
-        : '';
+      // Provide specific error message based on what happened
+      let errorMessage = '';
+      
+      if (duplicatesSkipped > 0 && invalidRows === 0) {
+        // All transactions were duplicates
+        errorMessage = 
+          `All ${duplicatesSkipped} transactions in this file have already been imported. ` +
+          `No new expenses to add. If you need to re-import, please delete the existing expenses first.`;
+      } else if (invalidRows > 0) {
+        // Some transactions had errors
+        const sampleErrors = parseResult.errors.slice(0, 3);
+        const errorDetails = sampleErrors.length
+          ? ` Sample errors: ${sampleErrors.join(' | ')}`
+          : '';
+        errorMessage = 
+          `No valid expense transactions found. ` +
+          `${invalidRows} rows had errors, ${duplicatesSkipped} duplicates skipped.` +
+          errorDetails;
+      } else {
+        // No debit transactions found
+        errorMessage = 
+          `No debit transactions found in Excel file. ` +
+          `The file appears to contain only credit transactions or non-expense items. ` +
+          `Total rows: ${totalRows}`;
+      }
 
       return {
         success: false,
-        error:
-          `No valid expense transactions found in Excel file. ` +
-          `Rows: ${totalRows}, extracted: ${expensesExtracted}, ` +
-          `duplicates skipped: ${duplicatesSkipped}, invalid rows: ${invalidRows}.` +
-          errorDetails,
+        error: errorMessage,
         stats: parseResult.stats,
         errors: parseResult.errors,
       };

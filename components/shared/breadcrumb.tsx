@@ -85,10 +85,11 @@ function formatSegment(segment: string): string {
  */
 export function Breadcrumb() {
   const pathname = usePathname();
-  const breadcrumbs = generateBreadcrumbs(pathname);
+  const safePathname = pathname ?? '';
+  const breadcrumbs = generateBreadcrumbs(safePathname);
 
   // Don't show breadcrumbs on dashboard home
-  if (pathname === '/dashboard') {
+  if (safePathname === '/dashboard') {
     return null;
   }
 

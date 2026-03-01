@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { ArrowLeft, CheckCircle, XCircle, AlertTriangle, Edit, Save, X } from 'lucide-react';
@@ -66,9 +66,55 @@ export function SnapshotDetailsClient({ snapshot: initialSnapshot }: SnapshotDet
     }
   }
 
-  function handleItemChange(menuItemName: string, field: keyof IInventorySnapshotItem, value: any) {
+  function handleItemChange(menuItemName: string, field: keyof IInventorySnapshotItem | 'locationBreakdown', value: any, locationId?: string) {
     setEditedItems(prev => prev.map(item => {
       if (item.menuItemName === menuItemName) {
+        if (locationId && item.locationBreakdown) {
+          // Handle location-specific update
+          const newBreakdown = item.locationBreakdown.map(loc => {
+            if (loc.location === locationId) {
+              const updatedLoc = { ...loc };
+              
+              if (field === 'staffAdjustedCount') {
+                const adjustedCount = value === '' || value === undefined ? undefined : Number(value);
+                updatedLoc.staffAdjustedCount = adjustedCount;
+                updatedLoc.staffConfirmed = false;
+              } else if (field === 'staffConfirmed') {
+                updatedLoc.staffConfirmed = value;
+                if (value) {
+                  updatedLoc.staffAdjustedCount = undefined;
+                }
+              }
+              return updatedLoc;
+            }
+            return loc;
+          });
+
+          // Recalculate parent values based on new breakdown
+          let totalAdjusted = 0;
+          let hasAdjustments = false;
+          let allConfirmed = true;
+
+          newBreakdown.forEach((loc) => {
+            const finalCount = loc.staffAdjustedCount !== undefined ? loc.staffAdjustedCount : loc.currentStock;
+            totalAdjusted += finalCount;
+            if (loc.staffAdjustedCount !== undefined) hasAdjustments = true;
+            if (!loc.staffConfirmed) allConfirmed = false;
+          });
+
+          const discrepancy = hasAdjustments ? totalAdjusted - item.systemInventoryCount : 0;
+
+          return {
+            ...item,
+            locationBreakdown: newBreakdown,
+            staffConfirmed: allConfirmed,
+            staffAdjustedCount: hasAdjustments ? totalAdjusted : undefined,
+            requiresAdjustment: hasAdjustments,
+            discrepancy,
+          };
+        }
+
+        // Handle top-level update (legacy behavior or non-location items)
         const updated = { ...item, [field]: value };
         
         // Recalculate discrepancy and requiresAdjustment
@@ -211,6 +257,14 @@ export function SnapshotDetailsClient({ snapshot: initialSnapshot }: SnapshotDet
         return <Badge variant="outline">{status}</Badge>;
     }
   }
+
+  // Group items by subcategory for display
+  const groupedItems = currentItems.reduce((acc, item) => {
+    const subcategory = item.category || 'Uncategorized';
+    if (!acc[subcategory]) acc[subcategory] = [];
+    acc[subcategory].push(item);
+    return acc;
+  }, {} as Record<string, IInventorySnapshotItem[]>);
 
   return (
     <div className="space-y-6">
@@ -365,113 +419,209 @@ export function SnapshotDetailsClient({ snapshot: initialSnapshot }: SnapshotDet
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Menu Item</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead className="text-right">Sales</TableHead>
-                  <TableHead className="text-right">System Count</TableHead>
-                  {isEditMode && <TableHead className="text-center">Confirm No Change</TableHead>}
-                  <TableHead className="text-right">{isEditMode ? 'Adjusted Count (Edit)' : 'Adjusted Count'}</TableHead>
-                  <TableHead className="text-right">Discrepancy</TableHead>
-                  <TableHead className="text-center">Status</TableHead>
-                  <TableHead>{isEditMode ? 'Notes (Edit)' : 'Notes'}</TableHead>
+                  <TableHead className="w-[30%]">Menu Item</TableHead>
+                  <TableHead className="w-[15%]">Category</TableHead>
+                  <TableHead className="text-right w-[8%]">Sales</TableHead>
+                  <TableHead className="text-right w-[10%]">System Count</TableHead>
+                  <TableHead className="text-center w-[8%]">Confirmed</TableHead>
+                  <TableHead className="text-right w-[14%]">Adjusted Count</TableHead>
+                  <TableHead className="text-center w-[7%]">Status</TableHead>
+                  <TableHead className="w-[8%]">Notes</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {currentItems.map((item) => {
-                  const hasAdjustment = item.staffAdjustedCount !== undefined;
-                  const isConfirmed = item.staffConfirmed && !hasAdjustment;
-                  const noChange = !item.staffConfirmed && !hasAdjustment;
-                  
-                  return (
-                    <TableRow
-                      key={item.menuItemId}
-                      className={
-                        hasAdjustment ? 'bg-amber-50' : 
-                        isConfirmed ? 'bg-green-50' : 
-                        noChange ? 'bg-gray-50' : ''
-                      }
-                    >
-                      <TableCell className="font-medium">{item.menuItemName}</TableCell>
-                      <TableCell>{item.category}</TableCell>
-                      <TableCell className="text-right">{item.todaySalesCount}</TableCell>
-                      <TableCell className="text-right">{item.systemInventoryCount}</TableCell>
-                      {isEditMode && (
-                        <TableCell className="text-center">
-                          <Checkbox
-                            checked={item.staffConfirmed}
-                            onCheckedChange={(checked) => 
-                              handleItemChange(item.menuItemName, 'staffConfirmed', checked)
-                            }
-                            disabled={hasAdjustment}
-                          />
-                        </TableCell>
-                      )}
-                      <TableCell className="text-right">
-                        {isEditMode ? (
-                          <Input
-                            type="number"
-                            value={item.staffAdjustedCount ?? ''}
-                            onChange={(e) => 
-                              handleItemChange(item.menuItemName, 'staffAdjustedCount', e.target.value)
-                            }
-                            className="w-24 text-right"
-                            placeholder="-"
-                            disabled={item.staffConfirmed}
-                          />
-                        ) : item.staffAdjustedCount !== undefined ? (
-                          <span className="font-medium">{item.staffAdjustedCount}</span>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {item.discrepancy !== 0 ? (
-                          <span
-                            className={`font-medium ${
-                              item.discrepancy > 0 ? 'text-green-600' : 'text-red-600'
-                            }`}
-                          >
-                            {item.discrepancy > 0 ? '+' : ''}
-                            {item.discrepancy}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">0</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {item.staffAdjustedCount !== undefined ? (
-                          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                            Adjusted
-                          </Badge>
-                        ) : item.staffConfirmed ? (
-                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                            Confirmed
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200">
-                            No change
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {isEditMode ? (
-                          <Input
-                            value={item.staffNotes || ''}
-                            onChange={(e) => 
-                              handleItemChange(item.menuItemName, 'staffNotes', e.target.value)
-                            }
-                            className="w-full"
-                            placeholder="Add notes..."
-                          />
-                        ) : item.staffNotes ? (
-                          item.staffNotes
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
+                {Object.entries(groupedItems).map(([subcategory, subcategoryItems]) => (
+                  <Fragment key={`group-${subcategory}`}>
+                    <TableRow className="bg-muted/50">
+                      <TableCell colSpan={8} className="font-semibold">
+                        {subcategory}
                       </TableCell>
                     </TableRow>
-                  );
-                })}
+                    {subcategoryItems.map((item) => {
+                      const hasAdjustment = item.staffAdjustedCount !== undefined;
+                      const isConfirmed = item.staffConfirmed && !hasAdjustment;
+                      const hasLocationBreakdown = !!(item.locationBreakdown && item.locationBreakdown.length > 0);
+
+                      return (
+                        <Fragment key={item.menuItemId}>
+                          <TableRow
+                            className={
+                              hasAdjustment ? 'bg-amber-50/40' :
+                              isConfirmed ? 'bg-green-50/40' : ''
+                            }
+                          >
+                            <TableCell className="font-medium">{item.menuItemName}</TableCell>
+                            <TableCell className="text-muted-foreground">{item.category}</TableCell>
+                            <TableCell className="text-right">{item.todaySalesCount}</TableCell>
+                            <TableCell className="text-right font-medium">{item.systemInventoryCount}</TableCell>
+                            {/* Confirmed checkbox — disabled for location items (controlled per-location) */}
+                            <TableCell className="text-center">
+                              <Checkbox
+                                checked={item.staffConfirmed}
+                                onCheckedChange={(checked) =>
+                                  handleItemChange(item.menuItemName, 'staffConfirmed', checked)
+                                }
+                                disabled={
+                                  !isEditMode ||
+                                  hasLocationBreakdown ||
+                                  hasAdjustment
+                                }
+                              />
+                            </TableCell>
+                            {/* Adjusted count */}
+                            <TableCell className="text-right">
+                              {hasLocationBreakdown ? (
+                                <Input
+                                  type="text"
+                                  value={item.staffAdjustedCount !== undefined ? item.staffAdjustedCount : ''}
+                                  readOnly
+                                  className="w-24 bg-muted text-right ml-auto h-9"
+                                  placeholder="Sum"
+                                />
+                              ) : isEditMode ? (
+                                <div className="flex items-center justify-end gap-2">
+                                  <Input
+                                    type="number"
+                                    value={item.staffAdjustedCount ?? ''}
+                                    onChange={(e) =>
+                                      handleItemChange(item.menuItemName, 'staffAdjustedCount', e.target.value)
+                                    }
+                                    className="w-24 text-right ml-auto h-9"
+                                    placeholder="Adjust"
+                                    disabled={item.staffConfirmed}
+                                  />
+                                  {item.discrepancy !== 0 && item.staffAdjustedCount !== undefined && (
+                                    <span className={`text-xs font-medium w-8 text-right ${item.discrepancy > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                      {item.discrepancy > 0 ? '+' : ''}{item.discrepancy}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : item.staffAdjustedCount !== undefined ? (
+                                <div className="flex items-center justify-end gap-2">
+                                  <span className="font-medium">{item.staffAdjustedCount}</span>
+                                  {item.discrepancy !== 0 && (
+                                    <span className={`text-xs font-medium ${item.discrepancy > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                      {item.discrepancy > 0 ? '+' : ''}{item.discrepancy}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                            {/* Status badge */}
+                            <TableCell className="text-center">
+                              {hasAdjustment ? (
+                                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                                  Adjusted
+                                </Badge>
+                              ) : isConfirmed ? (
+                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                  Confirmed
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200">
+                                  No change
+                                </Badge>
+                              )}
+                            </TableCell>
+                            {/* Notes */}
+                            <TableCell>
+                              {isEditMode ? (
+                                <Input
+                                  value={item.staffNotes || ''}
+                                  onChange={(e) =>
+                                    handleItemChange(item.menuItemName, 'staffNotes', e.target.value)
+                                  }
+                                  className="w-full"
+                                  placeholder="Add notes..."
+                                />
+                              ) : item.staffNotes ? (
+                                <span className="text-sm">{item.staffNotes}</span>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                          {/* Per-location child rows */}
+                          {hasLocationBreakdown && item.locationBreakdown!.map((loc) => (
+                            <TableRow key={`${item.menuItemId}-${loc.location}`} className="bg-muted/10">
+                              <TableCell>
+                                <div className="pl-6 flex items-center gap-2">
+                                  <div className="w-4 border-l-2 border-b-2 border-muted-foreground/30 h-3 rounded-bl-sm" />
+                                  <span className="text-sm text-muted-foreground">{loc.locationName}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell />
+                              <TableCell />
+                              <TableCell className="text-right">
+                                <span className="text-sm text-muted-foreground">{loc.currentStock}</span>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Checkbox
+                                  checked={loc.staffConfirmed}
+                                  onCheckedChange={(checked) =>
+                                    handleItemChange(item.menuItemName, 'staffConfirmed', checked, loc.location)
+                                  }
+                                  disabled={!isEditMode}
+                                />
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {isEditMode ? (
+                                  <div className="flex items-center justify-end gap-2">
+                                    <Input
+                                      type="number"
+                                      value={loc.staffAdjustedCount ?? ''}
+                                      onChange={(e) =>
+                                        handleItemChange(item.menuItemName, 'staffAdjustedCount', e.target.value, loc.location)
+                                      }
+                                      className="w-24 text-right h-8 text-sm"
+                                      placeholder="Adjust"
+                                      disabled={loc.staffConfirmed}
+                                    />
+                                    {loc.staffAdjustedCount !== undefined && loc.staffAdjustedCount !== loc.currentStock && (
+                                      <span className={`text-xs font-medium w-8 text-right ${(loc.staffAdjustedCount - loc.currentStock) > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                        {(loc.staffAdjustedCount - loc.currentStock) > 0 ? '+' : ''}{loc.staffAdjustedCount - loc.currentStock}
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : loc.staffAdjustedCount !== undefined ? (
+                                  <div className="flex items-center justify-end gap-2">
+                                    <span className="font-medium text-sm">{loc.staffAdjustedCount}</span>
+                                    {loc.staffAdjustedCount !== loc.currentStock && (
+                                      <span className={`text-xs font-medium ${(loc.staffAdjustedCount - loc.currentStock) > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                        {(loc.staffAdjustedCount - loc.currentStock) > 0 ? '+' : ''}{loc.staffAdjustedCount - loc.currentStock}
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground text-sm">-</span>
+                                )}
+                              </TableCell>
+                              {/* Status for location row */}
+                              <TableCell className="text-center">
+                                {loc.staffAdjustedCount !== undefined ? (
+                                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
+                                    Adjusted
+                                  </Badge>
+                                ) : loc.staffConfirmed ? (
+                                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
+                                    Confirmed
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="bg-gray-50 text-gray-500 border-gray-200 text-xs">
+                                    No change
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell />
+                            </TableRow>
+                          ))}
+                        </Fragment>
+                      );
+                    })}
+                  </Fragment>
+                ))}
               </TableBody>
             </Table>
           </div>

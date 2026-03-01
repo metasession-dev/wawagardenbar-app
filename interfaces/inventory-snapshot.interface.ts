@@ -1,5 +1,13 @@
 import { Types } from 'mongoose';
 
+export interface IInventoryLocationBreakdown {
+  location: string;
+  locationName: string;
+  currentStock: number;
+  staffConfirmed?: boolean;
+  staffAdjustedCount?: number;
+}
+
 export interface IInventorySnapshotItem {
   menuItemId: string;
   menuItemName: string;
@@ -12,6 +20,7 @@ export interface IInventorySnapshotItem {
   staffNotes?: string;
   discrepancy: number;
   requiresAdjustment: boolean;
+  locationBreakdown?: IInventoryLocationBreakdown[];
 }
 
 export interface IInventorySnapshot {

@@ -190,7 +190,7 @@ export function DashboardNav({ userEmail, userRole, permissions }: DashboardNavP
           {filteredNavItems.map((item) => {
             const Icon = item.icon;
             const isActive =
-              pathname === item.href || pathname.startsWith(item.href + '/');
+              pathname === item.href || (pathname?.startsWith(`${item.href}/`) ?? false);
 
             return (
               <Link

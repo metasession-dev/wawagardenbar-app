@@ -19,7 +19,7 @@ export function CategoryNavigation({ categories, selectedCategory, categoryLabel
   const searchParams = useSearchParams();
 
   function handleCategoryChange(category: string) {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParams?.toString() ?? '');
     
     if (category === 'all') {
       params.delete('category');
@@ -34,7 +34,7 @@ export function CategoryNavigation({ categories, selectedCategory, categoryLabel
   }
 
   function handleMainCategoryChange(mainCategory: 'all' | 'drinks' | 'food') {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParams?.toString() ?? '');
     params.delete('category');
     params.delete('search');
     
@@ -47,7 +47,7 @@ export function CategoryNavigation({ categories, selectedCategory, categoryLabel
     router.push(`/menu?${params.toString()}`);
   }
 
-  const mainCategory = searchParams.get('mainCategory') as 'drinks' | 'food' | null;
+  const mainCategory = (searchParams?.get('mainCategory') ?? null) as 'drinks' | 'food' | null;
 
   return (
     <div className="space-y-4">

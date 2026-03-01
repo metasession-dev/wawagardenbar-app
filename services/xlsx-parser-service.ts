@@ -183,6 +183,9 @@ export class XLSXParserService {
 
       const headerMap = this.createHeaderMap(headerRow);
 
+      console.log(`[XLSX-PARSE] Processing ${transactionRows.length} transaction rows...`);
+      
+      let processedCount = 0;
       for (let i = 0; i < transactionRows.length; i++) {
         const row = transactionRows[i] as any[];
         const rowNumber = headerRowIndex + i + 2;
@@ -193,24 +196,42 @@ export class XLSXParserService {
 
         try {
           const transaction = this.mapRowToTransaction(row, headerMap);
+          
+          // Log first 5 transactions for debugging
+          if (processedCount < 5) {
+            console.log(`[XLSX-PARSE] Row ${rowNumber} data:`, {
+              settlementDebit: transaction['Settlement Debit (NGN)'],
+              transactionType: transaction['Transaction Type'],
+              transactionRef: String(transaction['Transaction Ref']).substring(0, 30),
+              date: transaction.Date,
+            });
+          }
+          processedCount++;
+          
           const expense = this.parseTransaction(transaction, rowNumber);
           
           if (expense) {
             if (existingReferences.has(expense.referenceNumber)) {
               duplicatesSkipped++;
+              console.log(`[XLSX-PARSE] Row ${rowNumber}: Duplicate reference ${expense.referenceNumber}`);
               continue;
             }
 
             expenses.push(expense);
             existingReferences.add(expense.referenceNumber);
+            console.log(`[XLSX-PARSE] Row ${rowNumber}: Expense extracted - ${expense.description} (${expense.amount})`);
+          } else {
+            console.log(`[XLSX-PARSE] Row ${rowNumber}: Not a debit transaction or filtered out`);
           }
         } catch (error) {
           invalidRows++;
-          errors.push(
-            `Row ${rowNumber}: ${error instanceof Error ? error.message : 'Unknown error'}`
-          );
+          const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+          errors.push(`Row ${rowNumber}: ${errorMsg}`);
+          console.log(`[XLSX-PARSE] Row ${rowNumber}: Error - ${errorMsg}`);
         }
       }
+      
+      console.log(`[XLSX-PARSE] Summary: ${expenses.length} expenses, ${duplicatesSkipped} duplicates, ${invalidRows} invalid`);
 
       return {
         success: true,
@@ -342,10 +363,21 @@ export class XLSXParserService {
   private static isDebitTransaction(row: MoniepointTransaction): boolean {
     // Check Settlement Debit first
     const settlementDebit = this.parseNumber(row['Settlement Debit (NGN)']);
+    const type = String(row['Transaction Type'] || '').trim().toUpperCase();
+    
+    // Log first few transactions for debugging
+    if (Math.random() < 0.1) { // Log ~10% of transactions
+      console.log('[XLSX-PARSE] Transaction check:', {
+        settlementDebit,
+        type,
+        transactionRef: String(row['Transaction Ref'] || '').substring(0, 20),
+        isDebit: settlementDebit > 0 || type === 'DEBIT' || type === 'DR'
+      });
+    }
+    
     if (settlementDebit > 0) return true;
 
     // Check Transaction Type as fallback
-    const type = String(row['Transaction Type'] || '').trim().toUpperCase();
     return type === 'DEBIT' || type === 'DR';
   }
 

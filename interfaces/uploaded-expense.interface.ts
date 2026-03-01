@@ -63,7 +63,7 @@ export interface IUploadedExpense {
  * Create Uploaded Expense DTO
  */
 export interface CreateUploadedExpenseDTO {
-  date: Date;
+  date: Date | string; // Accepts ISO string from parser or Date object
   description: string;
   amount: number;
   transactionFee: number;

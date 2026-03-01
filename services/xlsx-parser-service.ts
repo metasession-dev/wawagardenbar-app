@@ -30,7 +30,7 @@ interface MoniepointTransaction {
 }
 
 interface ParsedExpense {
-  date: Date;
+  date: string; // ISO string for proper serialization in server actions
   description: string;
   amount: number;
   transactionFee: number;
@@ -403,14 +403,16 @@ export class XLSXParserService {
       throw new Error('Missing transaction reference');
     }
 
-    const date = this.parseDate(row.Date);
-    if (!date) {
+    const parsedDate = this.parseDate(row.Date);
+    if (!parsedDate) {
       const rawDateValue = row.Date;
       const rawDateType = typeof rawDateValue;
       throw new Error(
         `Invalid date format. Raw value: "${rawDateValue}" (type: ${rawDateType})`
       );
     }
+    // Convert Date to ISO string for proper serialization in server actions
+    const date = parsedDate.toISOString();
 
     // Determine the actual amount
     // Use transaction amount if available, otherwise settlement debit

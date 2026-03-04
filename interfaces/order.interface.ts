@@ -66,7 +66,7 @@ export interface IDineInDetails {
 export interface IOrder {
   _id: Types.ObjectId;
   orderNumber: string;
-  idempotencyKey: string;
+  idempotencyKey?: string;
   userId?: Types.ObjectId;
   createdBy?: Types.ObjectId;
   createdByRole?: 'admin' | 'super-admin' | 'customer';

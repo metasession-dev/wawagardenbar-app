@@ -1,4 +1,5 @@
 import mongoose, { Schema, Model } from 'mongoose';
+import { randomBytes } from 'crypto';
 import {
   IOrder,
   IOrderItem,
@@ -94,8 +95,9 @@ const orderSchema = new Schema<IOrder>(
     },
     idempotencyKey: {
       type: String,
-      required: true,
+      required: false,
       unique: true,
+      sparse: true,
     },
     userId: { type: Schema.Types.ObjectId, ref: 'User' },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
@@ -218,6 +220,12 @@ orderSchema.index({ guestEmail: 1 });
 
 orderSchema.pre('save', function preSave(next) {
   if (this.isNew) {
+    if (!this.idempotencyKey) {
+      const timestamp = Date.now();
+      const randomString = randomBytes(8).toString('hex');
+      this.idempotencyKey = `checkout-${timestamp}-${randomString}`;
+    }
+    
     this.statusHistory = [
       {
         status: this.status,

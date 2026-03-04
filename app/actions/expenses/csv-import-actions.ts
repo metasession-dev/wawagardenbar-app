@@ -65,27 +65,27 @@ export async function importMoniepointCSVAction(formData: FormData) {
     console.log('[XLSX-IMPORT] Step 4: File extracted:', file ? `${file.name} (${file.size} bytes, type: ${file.type})` : 'null');
     
     if (!file) {
-      return {
+      return JSON.parse(JSON.stringify({
         success: false,
         error: 'No file provided',
-      };
+      }));
     }
 
     // Validate file type
     const fileName = file.name.toLowerCase();
     if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
-      return {
+      return JSON.parse(JSON.stringify({
         success: false,
         error: 'Please upload an Excel file (.xlsx or .xls)',
-      };
+      }));
     }
 
     // Validate file size (10 MB limit)
     if (file.size > 10 * 1024 * 1024) {
-      return {
+      return JSON.parse(JSON.stringify({
         success: false,
         error: 'File size exceeds 10 MB limit',
-      };
+      }));
     }
 
     // Read file as ArrayBuffer
@@ -98,10 +98,10 @@ export async function importMoniepointCSVAction(formData: FormData) {
     const validation = XLSXParserService.validateMoniepointXLSX(arrayBuffer);
     console.log('[XLSX-IMPORT] Step 6: Validation result:', validation.valid ? 'valid' : `invalid - ${validation.error}`);
     if (!validation.valid) {
-      return {
+      return JSON.parse(JSON.stringify({
         success: false,
         error: validation.error || 'Invalid Excel file format',
-      };
+      }));
     }
 
     // Get existing reference numbers to detect duplicates
@@ -119,11 +119,11 @@ export async function importMoniepointCSVAction(formData: FormData) {
     console.log('[XLSX-IMPORT] Step 8: Expenses extracted:', parseResult.expenses.length);
 
     if (!parseResult.success) {
-      return {
+      return JSON.parse(JSON.stringify({
         success: false,
         error: 'Failed to parse Excel file',
         errors: parseResult.errors,
-      };
+      }));
     }
 
     if (parseResult.expenses.length === 0) {
@@ -156,12 +156,12 @@ export async function importMoniepointCSVAction(formData: FormData) {
           `Total rows: ${totalRows}`;
       }
 
-      return {
+      return JSON.parse(JSON.stringify({
         success: false,
         error: errorMessage,
         stats: parseResult.stats,
         errors: parseResult.errors,
-      };
+      }));
     }
 
     // Create uploaded expenses
@@ -172,12 +172,12 @@ export async function importMoniepointCSVAction(formData: FormData) {
 
     await UploadedExpenseService.bulkCreateUploadedExpenses(expensesToCreate);
 
-    return {
+    return JSON.parse(JSON.stringify({
       success: true,
       message: `Successfully imported ${parseResult.stats.expensesExtracted} expenses`,
       stats: parseResult.stats,
       errors: parseResult.errors,
-    };
+    }));
   } catch (error) {
     console.error('[XLSX-IMPORT] === UNHANDLED ERROR ===');
     console.error('[XLSX-IMPORT] Timestamp:', new Date().toISOString());
@@ -198,10 +198,10 @@ export async function importMoniepointCSVAction(formData: FormData) {
     }
 
     const errorMessage = error instanceof Error ? error.message : 'Failed to import Excel file';
-    return {
+    return JSON.parse(JSON.stringify({
       success: false,
       error: `${errorMessage} (${error?.constructor?.name ?? 'UnknownError'})`,
-    };
+    }));
   }
 }
 

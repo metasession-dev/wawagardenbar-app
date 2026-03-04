@@ -11,6 +11,27 @@ This workflow deploys both code changes and database schema changes to Railway i
 - Railway CLI installed (`npm i -g @railway/cli`)
 - Logged in to Railway (`railway login`)
 - Project linked to Railway (`railway status` should show "Wawa Garden Bar")
+- Clean working directory on `develop` branch
+- All changes committed and tested
+
+## Git Branching Strategy
+
+**Branch Structure:**
+- `develop` - Active development branch (where you work)
+- `main` - Production-ready branch (what Railway deploys)
+- Feature branches - Temporary branches for specific features
+
+**Deployment Flow:**
+```
+develop (tested changes) → main (production) → Railway (deployed)
+```
+
+**Important Rules:**
+1. ✅ All development happens on `develop` branch
+2. ✅ Only merge to `main` when ready for production deployment
+3. ✅ Railway automatically deploys from `main` branch
+4. ✅ Never commit directly to `main` - always merge from `develop`
+5. ✅ Use `/commit-push-reset-develop` workflow for feature integration
 
 ## Context
 
@@ -21,12 +42,33 @@ This workflow deploys both code changes and database schema changes to Railway i
 - MongoDB: Private network at `mongodb.railway.internal:27017`
 - MongoDB Public URL: Available via `hopper.proxy.rlwy.net:36031` (check `railway variables --json | grep MONGO_PUBLIC_URL`)
 - App URL: `https://wawagardenbar-app-production.up.railway.app`
+- **Deployment Branch:** `main` (Railway watches this branch)
 
 **Important Notes:**
 - MongoDB is on Railway's private network — migrations must use the **public proxy URL** when run from local machine
 - The app uses `MONGODB_URI` or `MONGODB_WAWAGARDENBAR_APP_URI` environment variables
 - Database name is stored in `MONGODB_DB_NAME` (typically `wawagardenbar`)
 - Deployment uses multi-stage Dockerfile (takes 3-5 minutes to build)
+- Railway auto-deploys when `main` branch is pushed
+
+## Step 0: Pre-Deployment Checklist
+
+**Before starting deployment:**
+
+- [ ] Currently on `develop` branch
+- [ ] All changes committed to `develop`
+- [ ] Changes pushed to `origin/develop`
+- [ ] TypeScript compilation successful (`npm run build`)
+- [ ] All tests passing (if applicable)
+- [ ] Compliance artifacts complete (if using `/audit-finish`)
+- [ ] Human sign-off obtained (if required)
+
+**Verify current state:**
+```bash
+git status                    # Should show clean working tree
+git branch --show-current     # Should show "develop"
+npm run build                 # Should compile successfully
+```
 
 ## Step 1: Identify Changes to Deploy
 
@@ -166,19 +208,66 @@ MONGODB_URI="mongodb://mongo:pAayMfhDRedaLuehgYWWfJGjhNjJAwMI@hopper.proxy.rlwy.
 railway service wawagardenbar-app
 ```
 
-## Step 3: Deploy Code Changes to Railway
+## Step 3: Merge develop to main and Deploy to Railway
 
-### 3.1 Commit and Push Changes (if not already done)
+### 3.1 Merge develop branch to main
 
-Ensure all code changes are committed:
+**Important:** Railway deploys from the `main` branch. You must merge your tested changes from `develop` to `main`.
 
+// turbo
 ```bash
-git add .
-git commit -m "feat: add tab management API endpoints and summary analytics"
+# Switch to main branch
+git checkout main
+
+# Pull latest main to ensure you're up to date
+git pull origin main
+
+# Merge develop into main
+git merge develop --no-ff -m "chore: merge develop to main for production deployment"
+
+# Push to main (triggers Railway auto-deploy)
 git push origin main
 ```
 
-### 3.2 Verify Railway Configuration
+**Expected output:**
+```
+Switched to branch 'main'
+Already up to date.
+Merge made by the 'recursive' strategy.
+ models/order-model.ts | 5 ++++-
+ interfaces/order.interface.ts | 2 +-
+ compliance/RTM.md | 150 ++++++++++++++++
+ ...
+Enumerating objects: 10, done.
+To https://github.com/ostendo-io/wawagardenbar-app.git
+   b3b88fe..3783594  main -> main
+```
+
+**What happens next:**
+- Railway detects the push to `main`
+- Automatically triggers a new deployment
+- Builds Docker image using multi-stage Dockerfile
+- Deploys new container when build completes
+
+### 3.2 Return to develop branch
+
+After merging to main, switch back to develop for continued work:
+
+```bash
+# Switch back to develop
+git checkout develop
+
+# Pull latest develop
+git pull origin develop
+
+# Merge main back into develop to keep them in sync
+git merge main
+
+# Push updated develop
+git push origin develop
+```
+
+### 3.3 Verify Railway Configuration
 
 Check that `railway.toml` exists with correct settings:
 
@@ -197,41 +286,29 @@ restartPolicyMaxRetries = 5
 
 If this file doesn't exist, it will be created automatically by the workflow.
 
-### 3.3 Verify TypeScript Compilation
+### 3.4 Monitor Railway Deployment
 
-Before deploying, ensure the code compiles successfully:
+**Railway will automatically deploy when you push to `main`.**
+
+You can monitor the deployment progress:
 
 ```bash
-npm run build
+# View deployment logs
+railway logs
+
+# Or watch deployment status in Railway dashboard
+# https://railway.app/project/wawagardenbar-app
 ```
 
-**Expected output:**
-```
-> wawa-garden-bar@0.1.0 build
-> next build
-
-✓ Creating an optimized production build
-✓ Compiled successfully
-```
-
-If build fails, fix TypeScript errors before proceeding.
-
-### 3.4 Deploy to Railway
-
-// turbo
-```bash
-railway up --detach
-```
-
-This will:
-1. Index and compress the codebase (~50-100 MB)
-2. Upload to Railway
-3. Trigger multi-stage Docker build:
+**Deployment Process:**
+1. Railway detects push to `main` branch
+2. Triggers multi-stage Docker build:
    - **deps stage:** Install all dependencies
    - **builder stage:** Build Next.js app
    - **prod-deps stage:** Install production-only dependencies
    - **runner stage:** Create final production image
-4. Deploy new container when build completes (auto-swap with health check)
+3. Runs health check on new container
+4. Auto-swaps to new container when healthy (zero-downtime deployment)
 
 **Expected output:**
 ```

@@ -1,7 +1,7 @@
 # Requirements Traceability Matrix (RTM)
 
 **Project:** Wawa Garden Bar Web Application  
-**Document Version:** 1.0  
+**Document Version:** 1.1  
 **Last Updated:** 2026-03-04  
 **Maintained By:** Development & Compliance Team
 

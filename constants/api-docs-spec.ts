@@ -366,6 +366,38 @@ export const API_SECTIONS: ApiSection[] = [
   "meta": { "timestamp": "..." }
 }`,
       },
+      {
+        method: 'GET',
+        path: '/api/public/inventory/summary',
+        summary: 'Inventory summary',
+        description: 'Aggregate inventory summary with totals, stock value, status distribution, category breakdowns, restock needs, and high-value items. Optimized for AI agent dashboards.',
+        scopes: ['inventory:read'],
+        queryParams: [
+          { name: 'mainCategory', type: 'string', required: false, description: '"drinks" | "food" — filter by main category' },
+        ],
+        responseFields: [
+          { name: 'data.totals.totalItems', type: 'number', required: true, description: 'Total inventory items' },
+          { name: 'data.totals.totalStockUnits', type: 'number', required: true, description: 'Sum of all current stock' },
+          { name: 'data.totals.totalStockValue', type: 'number', required: true, description: 'Total stock value in ₦' },
+          { name: 'data.totals.averageCostPerUnit', type: 'number', required: true, description: 'Avg cost per unit in ₦' },
+          { name: 'data.byStatus', type: 'Object', required: true, description: '{ inStock, lowStock, outOfStock } counts' },
+          { name: 'data.byCategory', type: 'Object[]', required: true, description: '{ mainCategory, category, itemCount, totalStock, totalValue }' },
+          { name: 'data.needsRestock', type: 'Object[]', required: true, description: 'Items where currentStock ≤ minimumStock' },
+          { name: 'data.highValueItems', type: 'Object[]', required: true, description: 'Top 10 by stock value' },
+        ],
+        statusCodes: [{ code: 200, description: 'Summary returned' }],
+        responseExample: `{
+  "success": true,
+  "data": {
+    "totals": { "totalItems": 87, "totalStockUnits": 1240, "totalStockValue": 558000, "averageCostPerUnit": 450 },
+    "byStatus": { "inStock": 72, "lowStock": 10, "outOfStock": 5 },
+    "byCategory": [{ "mainCategory": "drinks", "category": "beer-local", "itemCount": 8, "totalStock": 240, "totalValue": 108000 }],
+    "needsRestock": [{ "name": "Star Lager", "currentStock": 3, "minimumStock": 10, "unit": "bottles", "deficit": 7 }],
+    "highValueItems": [{ "name": "Hennessy VS", "currentStock": 6, "costPerUnit": 15000, "totalValue": 90000, "unit": "bottles" }]
+  },
+  "meta": { "timestamp": "..." }
+}`,
+      },
     ],
   },
 
@@ -585,6 +617,42 @@ export const API_SECTIONS: ApiSection[] = [
   "meta": { "timestamp": "..." }
 }`,
       },
+      {
+        method: 'GET',
+        path: '/api/public/orders/summary',
+        summary: 'Period-based order summary',
+        description: 'Rich order summary with period presets (today, this-week, this-month, this-quarter, this-year, last-7-days, last-30-days, last-90-days, custom). Returns revenue, averages, type distribution, payment method breakdown, peak hours, and daily time-series. Optimized for AI agent dashboards.',
+        scopes: ['orders:read'],
+        queryParams: [
+          { name: 'period', type: 'string', required: false, description: '"today" | "yesterday" | "this-week" | "last-week" | "this-month" | "last-month" | "this-quarter" | "last-quarter" | "this-year" | "last-year" | "last-7-days" | "last-30-days" | "last-90-days" | "custom"', default: 'today' },
+          { name: 'startDate', type: 'string', required: false, description: 'ISO 8601 start date (required when period is "custom")' },
+          { name: 'endDate', type: 'string', required: false, description: 'ISO 8601 end date (required when period is "custom")' },
+          { name: 'orderType', type: 'string', required: false, description: '"dine-in" | "pickup" | "delivery" | "pay-now"' },
+        ],
+        responseFields: [
+          { name: 'data.period', type: 'Object', required: true, description: '{ label, startDate, endDate }' },
+          { name: 'data.totals', type: 'Object', required: true, description: '{ totalOrders, totalRevenue, averageOrderValue, completedOrders, cancelledOrders, cancellationRate }' },
+          { name: 'data.byType', type: 'Object', required: true, description: '{ "dine-in": { count, revenue }, ... }' },
+          { name: 'data.byStatus', type: 'Object', required: true, description: '{ pending, confirmed, preparing, ... }' },
+          { name: 'data.byPaymentMethod', type: 'Object', required: true, description: '{ cash: { count, revenue }, card: { count, revenue }, ... }' },
+          { name: 'data.peakHours', type: 'Object[]', required: true, description: '[{ hour: 0-23, orderCount, revenue }] sorted desc' },
+          { name: 'data.dailySeries', type: 'Object[]', required: true, description: '[{ date, orderCount, revenue, avgValue }]' },
+        ],
+        statusCodes: [{ code: 200, description: 'Summary returned' }],
+        responseExample: `{
+  "success": true,
+  "data": {
+    "period": { "label": "This Week", "startDate": "2025-06-02T00:00:00.000Z", "endDate": "2025-06-08T23:59:59.999Z" },
+    "totals": { "totalOrders": 85, "totalRevenue": 425000, "averageOrderValue": 5000, "completedOrders": 72, "cancelledOrders": 3, "cancellationRate": 3.53 },
+    "byType": { "dine-in": { "count": 50, "revenue": 280000 }, "pickup": { "count": 20, "revenue": 90000 } },
+    "byStatus": { "completed": 72, "pending": 5, "preparing": 3 },
+    "byPaymentMethod": { "card": { "count": 40, "revenue": 200000 }, "cash": { "count": 25, "revenue": 125000 } },
+    "peakHours": [{ "hour": 19, "orderCount": 15, "revenue": 75000 }, { "hour": 13, "orderCount": 12, "revenue": 60000 }],
+    "dailySeries": [{ "date": "2025-06-02", "orderCount": 12, "revenue": 60000, "avgValue": 5000 }]
+  },
+  "meta": { "timestamp": "..." }
+}`,
+      },
     ],
   },
 
@@ -713,11 +781,285 @@ export const API_SECTIONS: ApiSection[] = [
     ],
   },
 
+  // ─── Sales Summary ──────────────────────────────────
+  {
+    title: 'Sales Summary',
+    slug: 'sales',
+    description: 'Comprehensive sales analytics with period presets, revenue breakdown, COGS, profit, top items, and daily time-series. Designed for AI agent dashboards and reporting automation.',
+    endpoints: [
+      {
+        method: 'GET',
+        path: '/api/public/sales/summary',
+        summary: 'Sales summary',
+        description: 'Comprehensive, period-based sales summary. Supports preset periods (today, this-week, this-month, this-quarter, this-year, rolling windows) and custom date ranges. Returns revenue split by food/drinks, COGS, gross & net profit, payment breakdowns, top-selling items, and daily time-series.',
+        scopes: ['analytics:read'],
+        queryParams: [
+          { name: 'period', type: 'string', required: false, description: '"today" | "yesterday" | "this-week" | "last-week" | "this-month" | "last-month" | "this-quarter" | "last-quarter" | "this-year" | "last-year" | "last-7-days" | "last-30-days" | "last-90-days" | "custom"', default: 'today' },
+          { name: 'startDate', type: 'string', required: false, description: 'ISO 8601 start date (required when period is "custom")' },
+          { name: 'endDate', type: 'string', required: false, description: 'ISO 8601 end date (required when period is "custom")' },
+        ],
+        responseFields: [
+          { name: 'data.period', type: 'Object', required: true, description: '{ label, startDate, endDate }' },
+          { name: 'data.revenue', type: 'Object', required: true, description: '{ total, food, drinks, serviceFees, tax, tips, discounts }' },
+          { name: 'data.costs', type: 'Object', required: true, description: '{ totalCOGS, foodCOGS, drinksCOGS }' },
+          { name: 'data.profit', type: 'Object', required: true, description: '{ grossProfit, grossMargin, operatingExpenses, netProfit, netMargin }' },
+          { name: 'data.orders', type: 'Object', required: true, description: '{ total, completed, cancelled, averageValue, byType, byStatus }' },
+          { name: 'data.payments', type: 'Object', required: true, description: '{ byMethod, byStatus }' },
+          { name: 'data.topItems', type: 'Object[]', required: true, description: 'Top 10 items [{ name, category, quantity, revenue }]' },
+          { name: 'data.dailySeries', type: 'Object[]', required: true, description: '[{ date, revenue, orderCount, averageOrderValue }]' },
+        ],
+        statusCodes: [
+          { code: 200, description: 'Summary returned' },
+          { code: 400, description: 'Invalid period or missing custom dates' },
+        ],
+        responseExample: `{
+  "success": true,
+  "data": {
+    "period": { "label": "This Week", "startDate": "2025-06-02T00:00:00.000Z", "endDate": "2025-06-08T23:59:59.999Z" },
+    "revenue": { "total": 425000, "food": 250000, "drinks": 175000, "serviceFees": 21250, "tax": 31875, "tips": 8500, "discounts": 5000 },
+    "costs": { "totalCOGS": 170000, "foodCOGS": 100000, "drinksCOGS": 70000 },
+    "profit": { "grossProfit": 255000, "grossMargin": 60.0, "operatingExpenses": 45000, "netProfit": 210000, "netMargin": 49.41 },
+    "orders": { "total": 85, "completed": 72, "cancelled": 3, "averageValue": 5000, "byType": { "dine-in": 50 }, "byStatus": { "completed": 72 } },
+    "payments": { "byMethod": { "card": { "count": 40, "revenue": 200000 } }, "byStatus": { "paid": 72 } },
+    "topItems": [{ "name": "Jollof Rice", "category": "rice-dishes", "quantity": 45, "revenue": 157500 }],
+    "dailySeries": [{ "date": "2025-06-02", "revenue": 60000, "orderCount": 12, "averageOrderValue": 5000 }]
+  },
+  "meta": { "timestamp": "..." }
+}`,
+      },
+    ],
+  },
+
+  // ─── Tabs ───────────────────────────────────────────
+  {
+    title: 'Tabs',
+    slug: 'tabs',
+    description: 'Manage dine-in tabs: list, create, update, close, delete, and view aggregate summaries. Tabs allow customers to open a running bill for a table and pay once at the end.',
+    endpoints: [
+      {
+        method: 'GET',
+        path: '/api/public/tabs',
+        summary: 'List tabs',
+        description: 'List tabs with filtering by status, table number, customer, payment status, and date range. Supports sorting and pagination.',
+        scopes: ['tabs:read'],
+        queryParams: [
+          { name: 'status', type: 'string', required: false, description: '"open" | "settling" | "closed"' },
+          { name: 'tableNumber', type: 'string', required: false, description: 'Filter by table number' },
+          { name: 'customerId', type: 'string', required: false, description: 'Filter by user ObjectId' },
+          { name: 'paymentStatus', type: 'string', required: false, description: '"pending" | "paid" | "failed"' },
+          { name: 'startDate', type: 'string', required: false, description: 'ISO 8601 start date (openedAt >=)' },
+          { name: 'endDate', type: 'string', required: false, description: 'ISO 8601 end date (openedAt <=)' },
+          { name: 'sort', type: 'string', required: false, description: '"openedAt" | "-openedAt" | "total" | "-total"', default: '-openedAt' },
+          { name: 'page', type: 'number', required: false, description: 'Page number', default: '1' },
+          { name: 'limit', type: 'number', required: false, description: 'Items per page (max 100)', default: '25' },
+        ],
+        responseFields: [
+          { name: 'data[].tabNumber', type: 'string', required: true, description: 'Unique tab identifier e.g. "TAB-T5-123456"' },
+          { name: 'data[].tableNumber', type: 'string', required: true, description: 'Table identifier' },
+          { name: 'data[].status', type: 'string', required: true, description: '"open" | "settling" | "closed"' },
+          { name: 'data[].subtotal', type: 'number', required: true, description: 'Subtotal in ₦' },
+          { name: 'data[].total', type: 'number', required: true, description: 'Total incl. fees & tax in ₦' },
+          { name: 'data[].paymentStatus', type: 'string', required: true, description: '"pending" | "paid" | "failed"' },
+          { name: 'data[].orders', type: 'Object[]', required: true, description: 'Populated order objects' },
+          { name: 'data[].openedAt', type: 'string', required: true, description: 'ISO 8601 timestamp' },
+        ],
+        statusCodes: [
+          { code: 200, description: 'Paginated tabs' },
+          { code: 401, description: 'Missing or invalid API key' },
+          { code: 403, description: 'Insufficient scope' },
+        ],
+        responseExample: `{
+  "success": true,
+  "data": [
+    {
+      "tabNumber": "TAB-T5-123456",
+      "tableNumber": "T5",
+      "status": "open",
+      "subtotal": 12000,
+      "total": 13200,
+      "paymentStatus": "pending",
+      "orders": [{ "orderNumber": "WGB-A1B2C3", "total": 7000 }],
+      "openedAt": "2025-06-01T18:30:00.000Z"
+    }
+  ],
+  "meta": { "page": 1, "limit": 25, "total": 8, "totalPages": 1, "timestamp": "..." }
+}`,
+      },
+      {
+        method: 'POST',
+        path: '/api/public/tabs',
+        summary: 'Create tab',
+        description: 'Create a new tab for a table. Fails if the table already has an open tab (409 Conflict).',
+        scopes: ['tabs:write'],
+        requestBody: [
+          { name: 'tableNumber', type: 'string', required: true, description: 'Table identifier' },
+          { name: 'customerName', type: 'string', required: false, description: 'Customer display name' },
+          { name: 'customerEmail', type: 'string', required: false, description: 'Customer email' },
+          { name: 'customerPhone', type: 'string', required: false, description: 'Customer phone' },
+          { name: 'userId', type: 'string', required: false, description: 'Link to registered user ObjectId' },
+        ],
+        responseFields: [
+          { name: 'data.tabNumber', type: 'string', required: true, description: 'Generated tab number' },
+          { name: 'data.tableNumber', type: 'string', required: true, description: 'Table identifier' },
+          { name: 'data.status', type: 'string', required: true, description: '"open"' },
+        ],
+        statusCodes: [
+          { code: 201, description: 'Tab created' },
+          { code: 400, description: 'Missing tableNumber' },
+          { code: 409, description: 'Table already has an open tab' },
+        ],
+        requestExample: `{
+  "tableNumber": "T5",
+  "customerName": "Ada Obi",
+  "customerEmail": "ada@example.com"
+}`,
+        responseExample: `{
+  "success": true,
+  "data": {
+    "tabNumber": "TAB-T5-845632",
+    "tableNumber": "T5",
+    "status": "open",
+    "subtotal": 0,
+    "total": 0,
+    "paymentStatus": "pending",
+    "openedAt": "2025-06-01T18:30:00.000Z"
+  },
+  "meta": { "timestamp": "..." }
+}`,
+      },
+      {
+        method: 'GET',
+        path: '/api/public/tabs/{tabId}',
+        summary: 'Get tab detail',
+        description: 'Get a single tab by ID with all populated orders and financial details.',
+        scopes: ['tabs:read'],
+        pathParams: [
+          { name: 'tabId', type: 'string', required: true, description: 'MongoDB ObjectId of the tab' },
+        ],
+        responseFields: [
+          { name: 'data.tab', type: 'Object', required: true, description: 'Full tab object with financials' },
+          { name: 'data.orders', type: 'Object[]', required: true, description: 'All orders on this tab' },
+        ],
+        statusCodes: [
+          { code: 200, description: 'Tab detail returned' },
+          { code: 400, description: 'Invalid tab ID' },
+          { code: 404, description: 'Tab not found' },
+        ],
+        responseExample: `{
+  "success": true,
+  "data": {
+    "tab": {
+      "tabNumber": "TAB-T5-845632",
+      "tableNumber": "T5",
+      "status": "open",
+      "subtotal": 12000,
+      "serviceFee": 600,
+      "tax": 900,
+      "total": 13500,
+      "paymentStatus": "pending"
+    },
+    "orders": [
+      { "orderNumber": "WGB-A1B2C3", "status": "completed", "total": 7000 },
+      { "orderNumber": "WGB-D4E5F6", "status": "preparing", "total": 5000 }
+    ]
+  },
+  "meta": { "timestamp": "..." }
+}`,
+      },
+      {
+        method: 'PATCH',
+        path: '/api/public/tabs/{tabId}',
+        summary: 'Update tab',
+        description: 'Update a tab: close without payment (action: "close"), rename (customName), or set tip amount (tipAmount). Send exactly one action per request.',
+        scopes: ['tabs:write'],
+        pathParams: [
+          { name: 'tabId', type: 'string', required: true, description: 'MongoDB ObjectId of the tab' },
+        ],
+        requestBody: [
+          { name: 'action', type: 'string', required: false, description: '"close" — close tab without payment' },
+          { name: 'customName', type: 'string', required: false, description: 'Rename tab / table label' },
+          { name: 'tipAmount', type: 'number', required: false, description: 'Set tip amount (>= 0), recalculates total' },
+        ],
+        responseFields: [
+          { name: 'data', type: 'Object', required: true, description: 'Updated tab' },
+        ],
+        statusCodes: [
+          { code: 200, description: 'Tab updated' },
+          { code: 400, description: 'No valid action provided' },
+          { code: 404, description: 'Tab not found' },
+        ],
+        requestExample: `{ "action": "close" }`,
+        responseExample: `{
+  "success": true,
+  "data": { "tabNumber": "TAB-T5-845632", "status": "closed", "closedAt": "2025-06-01T22:00:00.000Z", ... },
+  "meta": { "timestamp": "..." }
+}`,
+      },
+      {
+        method: 'DELETE',
+        path: '/api/public/tabs/{tabId}',
+        summary: 'Delete tab',
+        description: 'Delete a tab permanently. The tab must be open/unpaid and all orders on it must be cancelled first. Creates an audit log entry.',
+        scopes: ['tabs:write'],
+        pathParams: [
+          { name: 'tabId', type: 'string', required: true, description: 'MongoDB ObjectId of the tab' },
+        ],
+        responseFields: [
+          { name: 'data.deleted', type: 'boolean', required: true, description: 'true if deleted' },
+          { name: 'data.tabId', type: 'string', required: true, description: 'Deleted tab ID' },
+        ],
+        statusCodes: [
+          { code: 200, description: 'Tab deleted' },
+          { code: 404, description: 'Tab not found' },
+          { code: 422, description: 'Cannot delete (paid tab or non-cancelled orders)' },
+        ],
+        responseExample: `{
+  "success": true,
+  "data": { "deleted": true, "tabId": "665f..." },
+  "meta": { "timestamp": "..." }
+}`,
+      },
+      {
+        method: 'GET',
+        path: '/api/public/tabs/summary',
+        summary: 'Tab summary',
+        description: 'Period-based tab summary with totals, revenue, status distribution, table utilisation, and daily time-series. Supports the same period presets as other summary endpoints.',
+        scopes: ['tabs:read'],
+        queryParams: [
+          { name: 'period', type: 'string', required: false, description: 'Period preset (see Sales Summary for full list)', default: 'today' },
+          { name: 'startDate', type: 'string', required: false, description: 'ISO 8601 start date (required when period is "custom")' },
+          { name: 'endDate', type: 'string', required: false, description: 'ISO 8601 end date (required when period is "custom")' },
+        ],
+        responseFields: [
+          { name: 'data.period', type: 'Object', required: true, description: '{ label, startDate, endDate }' },
+          { name: 'data.totals', type: 'Object', required: true, description: '{ totalTabs, totalRevenue, averageTabValue, openTabs, closedTabs, paidTabs }' },
+          { name: 'data.byStatus', type: 'Object', required: true, description: '{ open, settling, closed }' },
+          { name: 'data.byPayment', type: 'Object', required: true, description: '{ pending, paid, failed }' },
+          { name: 'data.tableUsage', type: 'Object[]', required: true, description: '[{ tableNumber, tabCount, totalRevenue }] sorted desc' },
+          { name: 'data.dailySeries', type: 'Object[]', required: true, description: '[{ date, tabsOpened, tabsClosed, revenue }]' },
+        ],
+        statusCodes: [{ code: 200, description: 'Summary returned' }],
+        responseExample: `{
+  "success": true,
+  "data": {
+    "period": { "label": "This Week", "startDate": "...", "endDate": "..." },
+    "totals": { "totalTabs": 25, "totalRevenue": 180000, "averageTabValue": 9000, "openTabs": 3, "closedTabs": 22, "paidTabs": 20 },
+    "byStatus": { "open": 3, "settling": 0, "closed": 22 },
+    "byPayment": { "pending": 3, "paid": 20, "failed": 2 },
+    "tableUsage": [{ "tableNumber": "T5", "tabCount": 8, "totalRevenue": 72000 }],
+    "dailySeries": [{ "date": "2025-06-02", "tabsOpened": 4, "tabsClosed": 3, "revenue": 27000 }]
+  },
+  "meta": { "timestamp": "..." }
+}`,
+      },
+    ],
+  },
+
   // ─── Customers ─────────────────────────────────────
   {
     title: 'Customers',
     slug: 'customers',
-    description: 'List, search, view, and update customer profiles. Sensitive fields are always excluded.',
+    description: 'Create, list, search, view, update, and summarize customer profiles. Sensitive fields are always excluded.',
     endpoints: [
       {
         method: 'GET',
@@ -830,6 +1172,51 @@ export const API_SECTIONS: ApiSection[] = [
 }`,
       },
       {
+        method: 'POST',
+        path: '/api/public/customers',
+        summary: 'Create customer',
+        description: 'Create a new customer account. Returns 409 if a customer with the same email already exists. Sensitive fields are never returned.',
+        scopes: ['customers:write'],
+        requestBody: [
+          { name: 'email', type: 'string', required: true, description: 'Customer email address' },
+          { name: 'firstName', type: 'string', required: false, description: 'First name' },
+          { name: 'lastName', type: 'string', required: false, description: 'Last name' },
+          { name: 'phone', type: 'string', required: false, description: 'Phone number' },
+          { name: 'preferences', type: 'Object', required: false, description: '{ dietaryRestrictions?: string[], communicationPreferences?: { email?, sms?, push? } }' },
+        ],
+        responseFields: [
+          { name: 'data._id', type: 'string', required: true, description: 'New customer ID' },
+          { name: 'data.email', type: 'string', required: true, description: 'Email' },
+          { name: 'data.role', type: 'string', required: true, description: '"customer"' },
+        ],
+        statusCodes: [
+          { code: 201, description: 'Customer created' },
+          { code: 400, description: 'Missing or invalid email' },
+          { code: 409, description: 'Email already registered' },
+        ],
+        requestExample: `{
+  "email": "ada@example.com",
+  "firstName": "Ada",
+  "lastName": "Obi",
+  "phone": "+2348012345678"
+}`,
+        responseExample: `{
+  "success": true,
+  "data": {
+    "_id": "665e...",
+    "email": "ada@example.com",
+    "firstName": "Ada",
+    "lastName": "Obi",
+    "role": "customer",
+    "accountStatus": "active",
+    "totalSpent": 0,
+    "totalOrders": 0,
+    "loyaltyPoints": 0
+  },
+  "meta": { "timestamp": "..." }
+}`,
+      },
+      {
         method: 'GET',
         path: '/api/public/customers/{customerId}/orders',
         summary: 'Get customer order history',
@@ -854,6 +1241,37 @@ export const API_SECTIONS: ApiSection[] = [
     { "orderNumber": "WGB-X1Y2Z3", "status": "completed", "total": 5200, ... }
   ],
   "meta": { "page": 1, "limit": 25, "total": 12, "totalPages": 1, "timestamp": "..." }
+}`,
+      },
+      {
+        method: 'GET',
+        path: '/api/public/customers/summary',
+        summary: 'Customer summary',
+        description: 'Period-based customer analytics: total customers, new registrations, top spenders, loyalty stats, role distribution, and daily acquisition series. Supports the same period presets as other summary endpoints.',
+        scopes: ['customers:read'],
+        queryParams: [
+          { name: 'period', type: 'string', required: false, description: 'Period preset (see Sales Summary for full list)', default: 'today' },
+          { name: 'startDate', type: 'string', required: false, description: 'ISO 8601 start date (required when period is "custom")' },
+          { name: 'endDate', type: 'string', required: false, description: 'ISO 8601 end date (required when period is "custom")' },
+        ],
+        responseFields: [
+          { name: 'data.period', type: 'Object', required: true, description: '{ label, startDate, endDate }' },
+          { name: 'data.totals', type: 'Object', required: true, description: '{ totalCustomers, newCustomersInPeriod, totalSpent, averageSpent, totalLoyaltyPoints }' },
+          { name: 'data.topSpenders', type: 'Object[]', required: true, description: 'Top 10 [{ _id, firstName, lastName, email, totalSpent, totalOrders, loyaltyPoints }]' },
+          { name: 'data.byRole', type: 'Object', required: true, description: '{ customer, admin, "super-admin" }' },
+          { name: 'data.acquisitionSeries', type: 'Object[]', required: true, description: '[{ date, newCustomers }]' },
+        ],
+        statusCodes: [{ code: 200, description: 'Summary returned' }],
+        responseExample: `{
+  "success": true,
+  "data": {
+    "period": { "label": "This Month", "startDate": "...", "endDate": "..." },
+    "totals": { "totalCustomers": 342, "newCustomersInPeriod": 28, "totalSpent": 4500000, "averageSpent": 13158, "totalLoyaltyPoints": 85000 },
+    "topSpenders": [{ "_id": "665e...", "firstName": "Ada", "lastName": "Obi", "email": "ada@example.com", "totalSpent": 85000, "totalOrders": 24, "loyaltyPoints": 2400 }],
+    "byRole": { "customer": 335, "admin": 5, "super-admin": 2 },
+    "acquisitionSeries": [{ "date": "2025-06-01", "newCustomers": 3 }, { "date": "2025-06-02", "newCustomers": 5 }]
+  },
+  "meta": { "timestamp": "..." }
 }`,
       },
     ],

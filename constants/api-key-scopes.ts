@@ -10,6 +10,8 @@ export const API_KEY_SCOPE_LABELS: Record<ApiKeyScope, string> = {
   'customers:write': 'Customers — Write',
   'payments:read': 'Payments — Read',
   'payments:write': 'Payments — Write',
+  'tabs:read': 'Tabs — Read',
+  'tabs:write': 'Tabs — Write',
   'rewards:read': 'Rewards — Read',
   'settings:read': 'Settings — Read',
   'analytics:read': 'Analytics — Read',

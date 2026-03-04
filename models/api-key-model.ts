@@ -11,6 +11,8 @@ const API_KEY_SCOPES: ApiKeyScope[] = [
   'customers:write',
   'payments:read',
   'payments:write',
+  'tabs:read',
+  'tabs:write',
   'rewards:read',
   'settings:read',
   'analytics:read',

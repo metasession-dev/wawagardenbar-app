@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import UserModel from '@/models/user-model';
 import { UserService } from '@/services/user-service';
-import { withApiAuth, apiSuccess, apiError, parsePagination, serialize } from '@/lib/api-response';
+import { withApiAuth, apiSuccess, apiError, parsePagination, parseJsonBody, serialize } from '@/lib/api-response';
 
 /**
  * GET /api/public/customers
@@ -72,6 +72,70 @@ import { withApiAuth, apiSuccess, apiError, parsePagination, serialize } from '@
  *   "meta": { "page": 1, "limit": 1, "total": 1, "totalPages": 1, "timestamp": "..." }
  * }
  */
+/**
+ * POST /api/public/customers
+ *
+ * Create a new customer account. If a customer with the given email already
+ * exists, returns 409 Conflict with the existing customer data.
+ *
+ * @authentication API Key required — scope: `customers:write`
+ * @ratelimit      30 requests / minute (moderate)
+ *
+ * @body {string}  email               - Required. Customer email.
+ * @body {string}  [firstName]         - First name.
+ * @body {string}  [lastName]          - Last name.
+ * @body {string}  [phone]             - Phone number.
+ * @body {Object}  [preferences]       - { dietaryRestrictions?: string[], communicationPreferences?: { email?, sms?, push? } }
+ *
+ * @returns {Object} response.data     - Created customer profile (sensitive fields excluded).
+ *
+ * @status 201 - Customer created
+ * @status 400 - Missing email
+ * @status 409 - Email already registered (returns existing customer)
+ */
+export async function POST(request: NextRequest): Promise<Response> {
+  return withApiAuth(request, ['customers:write'], async () => {
+    try {
+      const body = await parseJsonBody<Record<string, unknown>>(request);
+      if (!body) return apiError('Invalid JSON body', 400);
+
+      const { email, firstName, lastName, phone, preferences } = body as Record<string, any>;
+      if (!email || typeof email !== 'string' || !email.includes('@')) {
+        return apiError('A valid email is required', 400);
+      }
+
+      // Check for existing user
+      const existing = await UserModel.findOne({ email: email.toLowerCase().trim() })
+        .select('-pinHash -pinExpiry -loginToken -loginTokenExpiry -__v')
+        .lean();
+      if (existing) {
+        return apiError('A customer with this email already exists', 409);
+      }
+
+      const customer = await UserModel.create({
+        email: email.toLowerCase().trim(),
+        firstName: firstName || undefined,
+        lastName: lastName || undefined,
+        phone: phone || undefined,
+        role: 'customer',
+        accountStatus: 'active',
+        isGuest: false,
+        emailVerified: false,
+        preferences: preferences || undefined,
+      });
+
+      const safe = await UserModel.findById(customer._id)
+        .select('-pinHash -pinExpiry -loginToken -loginTokenExpiry -__v')
+        .lean();
+
+      return apiSuccess(serialize(safe), 201);
+    } catch (error) {
+      console.error('[PUBLIC API] POST /api/public/customers', error);
+      return apiError('Failed to create customer', 500);
+    }
+  });
+}
+
 export async function GET(request: NextRequest): Promise<Response> {
   return withApiAuth(request, ['customers:read'], async () => {
     const { searchParams } = request.nextUrl;

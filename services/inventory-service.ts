@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import InventoryModel from '@/models/inventory-model';
 import MenuItemModel from '@/models/menu-item-model';
 import OrderModel from '@/models/order-model';
+import StockMovementModel from '@/models/stock-movement-model';
 import { sendLowStockAlertEmail } from '@/lib/email';
 import { SystemSettingsService } from '@/services/system-settings-service';
 
@@ -27,12 +28,12 @@ class InventoryService {
       const menuItem = await MenuItemModel.findById(item.menuItemId);
 
       // Skip if item doesn't track inventory
-      if (!menuItem?.trackInventory || !menuItem.inventoryId) {
+      if (!menuItem?.trackInventory) {
         continue;
       }
 
-      // Get inventory record
-      const inventory = await InventoryModel.findById(menuItem.inventoryId);
+      // Get inventory record via canonical lookup
+      const inventory = await InventoryModel.findOne({ menuItemId: item.menuItemId });
 
       if (!inventory) {
         continue;
@@ -55,18 +56,22 @@ class InventoryService {
         reason = 'Sale (Quarter Portion)';
         notes = `${item.quantity}x quarter portions (${actualQuantity} units deducted)`;
       }
-      
-      inventory.stockHistory.push({
+
+      const movementData = {
+        inventoryId: inventory._id,
         quantity: -actualQuantity,
-        type: 'deduction',
+        type: 'deduction' as const,
         reason,
         performedBy: new mongoose.Types.ObjectId('000000000000000000000000'),
         timestamp: new Date(),
-        category: 'sale',
+        category: 'sale' as const,
         orderId: order._id,
         performedByName: 'System',
         notes,
-      } as any);
+      };
+
+      // Write to normalized StockMovement collection
+      await StockMovementModel.create(movementData);
 
       // Update status based on stock level
       if (inventory.currentStock <= 0) {
@@ -114,12 +119,12 @@ class InventoryService {
       const menuItem = await MenuItemModel.findById(item.menuItemId);
 
       // Skip if item doesn't track inventory
-      if (!menuItem?.trackInventory || !menuItem.inventoryId) {
+      if (!menuItem?.trackInventory) {
         continue;
       }
 
-      // Get inventory record
-      const inventory = await InventoryModel.findById(menuItem.inventoryId);
+      // Get inventory record via canonical lookup
+      const inventory = await InventoryModel.findOne({ menuItemId: item.menuItemId });
 
       if (!inventory) {
         continue;
@@ -138,18 +143,22 @@ class InventoryService {
       } else if (item.portionSize === 'quarter') {
         notes = `${item.quantity}x quarter portions (${actualQuantity} units restored)`;
       }
-      
-      inventory.stockHistory.push({
+
+      const movementData = {
+        inventoryId: inventory._id,
         quantity: actualQuantity,
-        type: 'addition',
+        type: 'addition' as const,
         reason: 'Order Cancelled - Stock Restored',
         performedBy: new mongoose.Types.ObjectId('000000000000000000000000'),
         timestamp: new Date(),
-        category: 'adjustment',
+        category: 'adjustment' as const,
         orderId: order._id,
         performedByName: 'System',
         notes,
-      } as any);
+      };
+
+      // Write to normalized StockMovement collection
+      await StockMovementModel.create(movementData);
 
       // Update status based on stock level
       if (inventory.currentStock <= 0) {
@@ -184,11 +193,11 @@ class InventoryService {
     const menuItem = await MenuItemModel.findById(menuItemId);
 
     // If not tracking inventory, always available
-    if (!menuItem?.trackInventory || !menuItem.inventoryId) {
+    if (!menuItem?.trackInventory) {
       return true;
     }
 
-    const inventory = await InventoryModel.findById(menuItem.inventoryId);
+    const inventory = await InventoryModel.findOne({ menuItemId: new mongoose.Types.ObjectId(menuItemId) });
 
     if (!inventory) {
       return true;
@@ -230,11 +239,11 @@ class InventoryService {
       return { available: false, message: 'Quarter portion is not available for this item' };
     }
 
-    if (!menuItem.trackInventory || !menuItem.inventoryId) {
+    if (!menuItem.trackInventory) {
       return { available: true };
     }
 
-    const inventory = await InventoryModel.findById(menuItem.inventoryId);
+    const inventory = await InventoryModel.findOne({ menuItemId: menuItem._id });
 
     if (!inventory) {
       return { available: true };
@@ -296,18 +305,27 @@ class InventoryService {
       return 0;
     }
 
-    // Get sales from stock history in the last X days
+    // Get sales from StockMovement collection in the last X days
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
 
-    const salesHistory = inventory.stockHistory.filter(
-      (h) => h.category === 'sale' && h.timestamp >= cutoffDate
-    );
+    const salesAgg = await StockMovementModel.aggregate([
+      {
+        $match: {
+          inventoryId: inventory._id,
+          category: 'sale',
+          timestamp: { $gte: cutoffDate },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalSales: { $sum: { $abs: '$quantity' } },
+        },
+      },
+    ]);
 
-    const totalSales = salesHistory.reduce(
-      (sum, h) => sum + Math.abs(h.quantity),
-      0
-    );
+    const totalSales = salesAgg.length > 0 ? salesAgg[0].totalSales : 0;
     const velocity = totalSales / days;
 
     // Update cached velocity
@@ -384,20 +402,37 @@ class InventoryService {
       };
     }
 
-    const wasteHistory = inventory.stockHistory.filter(
-      (h) => h.category === 'waste' || h.category === 'damage'
-    );
+    const [wasteAgg, totalMovementAgg] = await Promise.all([
+      StockMovementModel.aggregate([
+        {
+          $match: {
+            inventoryId: inventory._id,
+            category: { $in: ['waste', 'damage'] },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            totalWaste: { $sum: { $abs: '$quantity' } },
+          },
+        },
+      ]),
+      StockMovementModel.aggregate([
+        {
+          $match: { inventoryId: inventory._id },
+        },
+        {
+          $group: {
+            _id: null,
+            totalMovement: { $sum: { $abs: '$quantity' } },
+          },
+        },
+      ]),
+    ]);
 
-    const totalWaste = wasteHistory.reduce(
-      (sum, h) => sum + Math.abs(h.quantity),
-      0
-    );
+    const totalWaste = wasteAgg.length > 0 ? wasteAgg[0].totalWaste : 0;
     const wasteCost = totalWaste * inventory.costPerUnit;
-
-    const totalMovement = inventory.stockHistory.reduce(
-      (sum, h) => sum + Math.abs(h.quantity),
-      0
-    );
+    const totalMovement = totalMovementAgg.length > 0 ? totalMovementAgg[0].totalMovement : 0;
     const wastePercentage =
       totalMovement > 0 ? (totalWaste / totalMovement) * 100 : 0;
 
@@ -610,11 +645,12 @@ class InventoryService {
       } as any);
     }
     
-    inventory.stockHistory.push({
+    const movementData = {
+      inventoryId: inventory._id,
       quantity,
-      type: 'adjustment',
+      type: 'adjustment' as const,
       reason: `Transfer: ${fromName} → ${toName}`,
-      category: 'transfer',
+      category: 'transfer' as const,
       fromLocation,
       toLocation,
       transferReference,
@@ -622,7 +658,10 @@ class InventoryService {
       performedByName,
       timestamp: new Date(),
       notes,
-    } as any);
+    };
+
+    // Write to normalized StockMovement collection
+    await StockMovementModel.create(movementData);
     
     await inventory.save();
   }
@@ -738,11 +777,12 @@ class InventoryService {
     inventory.lastRestocked = new Date();
     inventory.totalRestocked += quantity;
     
-    inventory.stockHistory.push({
+    const movementData = {
+      inventoryId: inventory._id,
       quantity,
-      type: 'addition',
+      type: 'addition' as const,
       reason,
-      category: 'restock',
+      category: 'restock' as const,
       location,
       performedBy: new mongoose.Types.ObjectId(performedBy),
       performedByName,
@@ -752,7 +792,10 @@ class InventoryService {
       invoiceNumber,
       supplier,
       notes,
-    } as any);
+    };
+
+    // Write to normalized StockMovement collection
+    await StockMovementModel.create(movementData);
     
     await inventory.save();
   }
@@ -800,18 +843,22 @@ class InventoryService {
       inventory.currentStock = Math.max(0, inventory.currentStock - quantity);
     }
     
-    inventory.stockHistory.push({
+    const movementData = {
+      inventoryId: inventory._id,
       quantity: -quantity,
-      type: 'deduction',
+      type: 'deduction' as const,
       reason,
-      category: category || 'other',
+      category: (category || 'other') as any,
       location,
       performedBy: new mongoose.Types.ObjectId(performedBy),
       performedByName,
       timestamp: new Date(),
       orderId: orderId ? new mongoose.Types.ObjectId(orderId) : undefined,
       notes,
-    } as any);
+    };
+
+    // Write to normalized StockMovement collection
+    await StockMovementModel.create(movementData);
     
     if (category === 'sale') {
       inventory.totalSales += quantity;
@@ -865,23 +912,16 @@ class InventoryService {
     startDate?: Date,
     endDate?: Date
   ) {
-    const inventory = await InventoryModel.findById(inventoryId);
-    
-    if (!inventory) {
-      throw new Error('Inventory item not found');
+    const query: any = {
+      inventoryId: new mongoose.Types.ObjectId(inventoryId),
+      category: 'transfer',
+    };
+    if (startDate || endDate) {
+      query.timestamp = {};
+      if (startDate) query.timestamp.$gte = startDate;
+      if (endDate) query.timestamp.$lte = endDate;
     }
-    
-    let transfers = inventory.stockHistory.filter(h => h.category === 'transfer');
-    
-    if (startDate) {
-      transfers = transfers.filter(t => t.timestamp >= startDate);
-    }
-    
-    if (endDate) {
-      transfers = transfers.filter(t => t.timestamp <= endDate);
-    }
-    
-    return transfers.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    return StockMovementModel.find(query).sort({ timestamp: -1 }).lean();
   }
 
   /**
@@ -952,16 +992,20 @@ class InventoryService {
       updatedByName: performedByName,
     } as any];
     
-    inventory.stockHistory.push({
+    const movementData = {
+      inventoryId: inventory._id,
       quantity: inventory.currentStock,
-      type: 'adjustment',
+      type: 'adjustment' as const,
       reason: `Enabled location tracking - moved stock to ${locationName}`,
-      category: 'adjustment',
+      category: 'adjustment' as const,
       location: initialLocation,
       performedBy: new mongoose.Types.ObjectId(performedBy),
       performedByName,
       timestamp: new Date(),
-    } as any);
+    };
+
+    // Write to normalized StockMovement collection
+    await StockMovementModel.create(movementData);
     
     await inventory.save();
   }

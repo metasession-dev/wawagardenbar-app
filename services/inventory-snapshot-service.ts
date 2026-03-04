@@ -3,6 +3,7 @@ import { InventorySnapshotModel } from '@/models/inventory-snapshot-model';
 import MenuItemModel from '@/models/menu-item-model';
 import InventoryModel from '@/models/inventory-model';
 import OrderModel from '@/models/order-model';
+import StockMovementModel from '@/models/stock-movement-model';
 import { AuditLogService } from '@/services/audit-log-service';
 import type {
   IInventorySnapshot,
@@ -23,7 +24,6 @@ export class InventorySnapshotService {
     }
 
     const menuItems = await MenuItemModel.find(query)
-      .populate('inventoryId')
       .sort({ name: 1 })
       .lean();
 
@@ -57,10 +57,13 @@ export class InventorySnapshotService {
 
       let locationBreakdown: { location: string; locationName: string; currentStock: number }[] = [];
 
-      if (item.inventoryId) {
-        const inventory = await InventoryModel.findById(item.inventoryId).lean() as any;
-        inventoryCount = inventory?.currentStock || 0;
-        if (inventory?.trackByLocation && Array.isArray(inventory.locations) && inventory.locations.length > 0) {
+      // Canonical lookup: find inventory by menuItemId
+      const inventory = await InventoryModel.findOne({ menuItemId: item._id }).lean() as any;
+      let inventoryIdStr: string | undefined;
+      if (inventory) {
+        inventoryCount = inventory.currentStock || 0;
+        inventoryIdStr = inventory._id.toString();
+        if (inventory.trackByLocation && Array.isArray(inventory.locations) && inventory.locations.length > 0) {
           locationBreakdown = inventory.locations.map((loc: any) => ({
             location: loc.location,
             locationName: loc.locationName || loc.location || 'Unknown Location',
@@ -72,6 +75,7 @@ export class InventorySnapshotService {
       items.push({
         menuItemId: item._id.toString(),
         menuItemName: item.name,
+        inventoryId: inventoryIdStr,
         mainCategory: item.mainCategory,
         category: item.category,
         systemInventoryCount: inventoryCount,
@@ -197,14 +201,20 @@ export class InventorySnapshotService {
           const difference = newStock - oldStock;
 
           inventory.currentStock = newStock;
-          inventory.stockHistory.push({
+
+          const movementData = {
+            inventoryId: inventory._id,
             quantity: difference,
-            type: 'adjustment',
-            category: difference > 0 ? 'restock' : 'adjustment',
+            type: 'adjustment' as const,
+            category: (difference > 0 ? 'restock' : 'adjustment') as any,
             reason: `Inventory snapshot adjustment - ${snapshot.snapshotDate.toISOString().split('T')[0]}`,
             performedBy: new Types.ObjectId(reviewerId),
+            performedByName: reviewerName,
             timestamp: new Date(),
-          });
+          };
+
+          // Write to normalized StockMovement collection
+          await StockMovementModel.create(movementData);
 
           if (difference < 0) {
             inventory.totalWaste += Math.abs(difference);

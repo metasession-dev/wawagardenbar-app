@@ -1,5 +1,26 @@
+import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { WhatsAppService } from '@/lib/whatsapp';
+
+/**
+ * Validate Meta's x-hub-signature-256 header for incoming webhook events.
+ */
+function validateWhatsAppSignature(rawBody: string, signatureHeader: string): boolean {
+  const appSecret = process.env.WHATSAPP_APP_SECRET;
+  if (!appSecret) {
+    console.warn('[WhatsApp] WHATSAPP_APP_SECRET not set — skipping signature validation');
+    return true;
+  }
+  if (!signatureHeader?.startsWith('sha256=')) return false;
+  const expected = `sha256=${crypto
+    .createHmac('sha256', appSecret)
+    .update(rawBody, 'utf8')
+    .digest('hex')}`;
+  return crypto.timingSafeEqual(
+    Buffer.from(signatureHeader),
+    Buffer.from(expected)
+  );
+}
 
 /**
  * GET endpoint for WhatsApp webhook verification
@@ -42,7 +63,15 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const payload = await request.json();
+    const rawBody = await request.text();
+    const signatureHeader = request.headers.get('x-hub-signature-256') ?? '';
+
+    if (!validateWhatsAppSignature(rawBody, signatureHeader)) {
+      console.warn('[WhatsApp] Invalid webhook signature — request rejected');
+      return new NextResponse('Forbidden', { status: 403 });
+    }
+
+    const payload = JSON.parse(rawBody);
 
     console.log('WhatsApp webhook event received');
 

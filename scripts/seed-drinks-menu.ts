@@ -961,7 +961,7 @@ async function seedDrinksMenu() {
 
       // Create inventory if tracking is enabled
       if (drink.inventoryTracking.enabled) {
-        const inventory = await InventoryModel.create({
+        await InventoryModel.create({
           menuItemId: menuItem._id,
           menuItemName: drink.name,
           currentStock: drink.inventoryTracking.initialStock,
@@ -973,13 +973,8 @@ async function seedDrinksMenu() {
           preventOrdersWhenOutOfStock: drink.inventoryTracking.preventOrdersWhenOutOfStock,
         });
 
-        // Link inventory back to menu item
-        menuItem.inventoryId = inventory._id.toString();
-        await menuItem.save();
-
         inventoryCreated++;
-        console.log(`   📊 Created inventory: ${drink.inventoryTracking.initialStock} ${drink.inventoryTracking.unit}`);
-        console.log(`   🔗 Linked inventory to menu item\n`);
+        console.log(`   📊 Created inventory: ${drink.inventoryTracking.initialStock} ${drink.inventoryTracking.unit}\n`);
       }
     }
 

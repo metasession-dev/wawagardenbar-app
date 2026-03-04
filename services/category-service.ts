@@ -13,10 +13,10 @@ export interface MenuItemWithStock extends IMenuItem {
  * Serialize Mongoose document to plain object for Client Components
  */
 function serializeMenuItem(item: any): any {
+  const { inventoryId: _legacyInvId, ...rest } = item;
   return {
-    ...item,
+    ...rest,
     _id: item._id.toString(),
-    inventoryId: item.inventoryId?.toString(),
     createdAt: item.createdAt?.toISOString(),
     updatedAt: item.updatedAt?.toISOString(),
   };

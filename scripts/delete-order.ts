@@ -97,16 +97,20 @@ async function deleteOrder(orderId: string): Promise<DeleteOrderResult> {
           const quantityToRestore = item.quantity;
           
           inventory.currentStock += quantityToRestore;
-          inventory.stockHistory.push({
+          await inventory.save();
+
+          // Write to StockMovement collection
+          const { default: StockMovementModel } = await import('../models/stock-movement-model');
+          await StockMovementModel.create({
+            inventoryId: inventory._id,
             quantity: quantityToRestore,
             type: 'addition',
             reason: `Order ${order.orderNumber} deleted - inventory restored`,
             category: 'adjustment',
             performedBy: new Types.ObjectId('000000000000000000000000'),
+            performedByName: 'Delete Order Script',
             timestamp: new Date(),
           });
-
-          await inventory.save();
           details.inventoryRestored++;
           console.log(`   ✓ Restored ${quantityToRestore}x ${item.name}`);
         }

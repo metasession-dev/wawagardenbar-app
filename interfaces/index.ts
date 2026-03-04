@@ -10,3 +10,5 @@ export * from './inventory-item-cost-history.interface';
 export * from './admin-permissions.interface';
 export * from './tab.interface';
 export * from './payment.interface';
+export * from './api-key.interface';
+export * from './stock-movement.interface';

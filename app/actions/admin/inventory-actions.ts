@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { sessionOptions, SessionData } from '@/lib/session';
 import { connectDB } from '@/lib/mongodb';
 import InventoryModel from '@/models/inventory-model';
+import StockMovementModel from '@/models/stock-movement-model';
 import { AuditLogService } from '@/services/audit-log-service';
 import { InventoryService } from '@/services';
 import { SystemSettingsService } from '@/services/system-settings-service';
@@ -101,11 +102,12 @@ export async function addStockAction(
     inventory.totalRestocked += data.quantity;
 
     // Add to stock history
-    inventory.stockHistory.push({
+    const movementData = {
+      inventoryId: inventory._id,
       quantity: data.quantity,
-      type: 'addition',
+      type: 'addition' as const,
       reason: data.reason,
-      category: 'restock',
+      category: 'restock' as const,
       performedBy: new Types.ObjectId(session.userId),
       performedByName: session.email || 'Admin',
       timestamp: new Date(),
@@ -115,7 +117,10 @@ export async function addStockAction(
       invoiceNumber: data.invoiceNumber,
       notes: data.notes,
       location: data.location,
-    } as any);
+    };
+
+    // Write to normalized StockMovement collection
+    await StockMovementModel.create(movementData);
 
     // Update status
     if (inventory.currentStock <= 0) {
@@ -237,17 +242,21 @@ export async function deductStockAction(
     inventory.totalWaste += data.quantity;
 
     // Add to stock history
-    inventory.stockHistory.push({
+    const movementData = {
+      inventoryId: inventory._id,
       quantity: -data.quantity,
-      type: 'deduction',
+      type: 'deduction' as const,
       reason: data.reason,
-      category: data.category,
+      category: data.category as any,
       performedBy: new Types.ObjectId(session.userId),
       performedByName: session.email || 'Admin',
       timestamp: new Date(),
       notes: data.notes,
       location: data.location,
-    } as any);
+    };
+
+    // Write to normalized StockMovement collection
+    await StockMovementModel.create(movementData);
 
     // Update status
     if (inventory.currentStock <= 0) {
@@ -368,11 +377,12 @@ export async function adjustStockAction(
     }
 
     // Add to stock history
-    inventory.stockHistory.push({
+    const movementData = {
+      inventoryId: inventory._id,
       quantity: difference,
-      type: 'adjustment',
+      type: 'adjustment' as const,
       reason: data.reason,
-      category: 'adjustment',
+      category: 'adjustment' as const,
       performedBy: new Types.ObjectId(session.userId),
       performedByName: session.email || 'Admin',
       timestamp: new Date(),
@@ -380,7 +390,10 @@ export async function adjustStockAction(
         locationDisplayName ? ` at ${locationDisplayName}` : ''
       }`,
       ...(data.location && { location: data.location }),
-    } as any);
+    };
+
+    // Write to normalized StockMovement collection
+    await StockMovementModel.create(movementData);
 
     await inventory.save();
 
@@ -504,21 +517,25 @@ export async function getInventoryDetailsAction(
         isActive: c.isActive,
         displayOrder: c.displayOrder,
       })),
-      stockHistory: inventory.stockHistory.map((h: any) => ({
-        quantity: h.quantity,
-        type: h.type,
-        reason: h.reason,
-        category: h.category,
-        timestamp: h.timestamp.toISOString(),
-        performedByName: h.performedByName,
-        notes: h.notes,
-        supplier: h.supplier,
-        invoiceNumber: h.invoiceNumber,
-        location: h.location,
-        fromLocation: h.fromLocation,
-        toLocation: h.toLocation,
-        transferReference: h.transferReference,
-      })),
+      stockHistory: await StockMovementModel.find({ inventoryId: inventory._id })
+        .sort({ timestamp: -1 })
+        .limit(100)
+        .lean()
+        .then(movements => movements.map((h: any) => ({
+          quantity: h.quantity,
+          type: h.type,
+          reason: h.reason,
+          category: h.category,
+          timestamp: h.timestamp.toISOString(),
+          performedByName: h.performedByName,
+          notes: h.notes,
+          supplier: h.supplier,
+          invoiceNumber: h.invoiceNumber,
+          location: h.location,
+          fromLocation: h.fromLocation,
+          toLocation: h.toLocation,
+          transferReference: h.transferReference,
+        }))),
     };
 
     return {

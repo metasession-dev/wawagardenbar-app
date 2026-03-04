@@ -11,6 +11,7 @@ export interface IInventoryLocationBreakdown {
 export interface IInventorySnapshotItem {
   menuItemId: string;
   menuItemName: string;
+  inventoryId?: string;
   mainCategory: 'food' | 'drinks';
   category: string;
   systemInventoryCount: number;

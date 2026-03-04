@@ -85,8 +85,12 @@ async function fixOrphanStock() {
             } as any);
           }
           
-          // Add history entry
-          inventory.stockHistory.push({
+          await inventory.save();
+
+          // Write to StockMovement collection
+          const StockMovementModel = (await import('../models/stock-movement-model')).default;
+          await StockMovementModel.create({
+            inventoryId: inventory._id,
             quantity: orphanStock,
             type: 'adjustment',
             reason: `System Fix: Moved orphan stock to ${defaultLocationName}`,
@@ -95,9 +99,7 @@ async function fixOrphanStock() {
             performedBy: new mongoose.Types.ObjectId('000000000000000000000000'),
             performedByName: 'System Fix Script',
             timestamp: new Date(),
-          } as any);
-          
-          await inventory.save();
+          });
           console.log('  ✓ Fixed');
           fixedCount++;
         } else {
@@ -112,7 +114,10 @@ async function fixOrphanStock() {
           
           inventory.currentStock = locationTotal;
           
-          inventory.stockHistory.push({
+          // Write to StockMovement collection
+          const StockMovementModel2 = (await import('../models/stock-movement-model')).default;
+          await StockMovementModel2.create({
+            inventoryId: inventory._id,
             quantity: Math.abs(orphanStock),
             type: 'adjustment',
             reason: `System Fix: Synced total stock with location sum`,
@@ -120,7 +125,7 @@ async function fixOrphanStock() {
             performedBy: new mongoose.Types.ObjectId('000000000000000000000000'),
             performedByName: 'System Fix Script',
             timestamp: new Date(),
-          } as any);
+          });
           
           await inventory.save();
           console.log('  ✓ Fixed');

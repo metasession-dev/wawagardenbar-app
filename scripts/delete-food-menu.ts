@@ -44,9 +44,9 @@ async function deleteFoodMenu() {
       const menuItem = await MenuItemModel.findOne({ name });
       
       if (menuItem) {
-        // Delete associated inventory
-        if (menuItem.inventoryId) {
-          await InventoryModel.findByIdAndDelete(menuItem.inventoryId);
+        // Delete associated inventory (canonical lookup via menuItemId)
+        const inventory = await InventoryModel.findOneAndDelete({ menuItemId: menuItem._id });
+        if (inventory) {
           console.log(`  📦 Deleted inventory for ${name}`);
         }
         

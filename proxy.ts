@@ -4,6 +4,32 @@ import { getIronSession } from 'iron-session';
 import { sessionOptions, SessionData } from '@/lib/session';
 import { routePermissions } from '@/lib/permissions';
 import { UserRole } from '@/interfaces/user.interface';
+import { checkRateLimit, resolvePreset } from '@/lib/rate-limiter';
+import { applyCors, buildPreflightResponse } from '@/lib/cors';
+
+/**
+ * Extract the client IP address from common proxy headers.
+ */
+function getClientIp(request: NextRequest): string {
+  return (
+    request.headers.get('x-real-ip') ??
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    '127.0.0.1'
+  );
+}
+
+/**
+ * Return a JSON error response with CORS headers attached.
+ */
+function jsonError(
+  request: NextRequest,
+  message: string,
+  status: number
+): NextResponse {
+  const response = NextResponse.json({ error: message }, { status });
+  applyCors(request, response);
+  return response;
+}
 
 /**
  * Next.js proxy for route protection
@@ -12,16 +38,62 @@ import { UserRole } from '@/interfaces/user.interface';
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip middleware for public routes
+  // Skip middleware for static/public page routes
   if (
     pathname.startsWith('/_next') ||
-    pathname.startsWith('/api') ||
     pathname.startsWith('/static') ||
     pathname === '/login' ||
     pathname === '/unauthorized' ||
     pathname === '/forbidden'
   ) {
     return NextResponse.next();
+  }
+
+  // ── Handle CORS preflight for API routes ─────────────────────────────
+  if (request.method === 'OPTIONS' && pathname.startsWith('/api/')) {
+    return buildPreflightResponse(request);
+  }
+
+  // ── Rate limiting on all API routes ──────────────────────────────────
+  if (pathname.startsWith('/api/')) {
+    const ip = getClientIp(request);
+    const preset = resolvePreset(pathname);
+    const { allowed, retryAfter } = checkRateLimit(`${ip}:${preset}`, preset);
+
+    if (!allowed) {
+      const errResponse = jsonError(request, 'Too many requests', 429);
+      errResponse.headers.set('Retry-After', String(retryAfter));
+      return errResponse;
+    }
+  }
+
+  // ── Protect /api/admin/* routes (always require admin session) ───────
+  if (pathname.startsWith('/api/admin/')) {
+    try {
+      const adminResponse = NextResponse.next();
+      const session = await getIronSession<SessionData>(
+        request,
+        adminResponse,
+        sessionOptions
+      );
+
+      if (!session.isLoggedIn) {
+        return jsonError(request, 'Unauthorized', 401);
+      }
+
+      if (session.role !== 'admin' && session.role !== 'super-admin') {
+        return jsonError(request, 'Forbidden', 403);
+      }
+    } catch {
+      return jsonError(request, 'Unauthorized', 401);
+    }
+  }
+
+  // ── Attach CORS headers to all API responses ─────────────────────────
+  if (pathname.startsWith('/api/')) {
+    const apiResponse = NextResponse.next();
+    applyCors(request, apiResponse);
+    return apiResponse;
   }
 
   // Check if route requires authentication

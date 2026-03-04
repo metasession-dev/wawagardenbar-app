@@ -2,8 +2,6 @@ import { Types } from 'mongoose';
 
 export type StockStatus = 'in-stock' | 'low-stock' | 'out-of-stock';
 
-export type StockHistoryCategory = 'sale' | 'restock' | 'waste' | 'damage' | 'adjustment' | 'transfer' | 'other';
-
 export type LocationType = 'store' | 'chiller-1' | 'chiller-2' | 'chiller-3' | 'other';
 
 export interface IInventoryLocation {
@@ -16,26 +14,6 @@ export interface IInventoryLocation {
   notes?: string;
 }
 
-export interface IStockHistory {
-  quantity: number;
-  type: 'addition' | 'deduction' | 'adjustment';
-  reason: string;
-  performedBy: Types.ObjectId;
-  timestamp: Date;
-  category?: StockHistoryCategory;
-  orderId?: Types.ObjectId;
-  invoiceNumber?: string;
-  supplier?: string;
-  costPerUnit?: number;
-  totalCost?: number;
-  notes?: string;
-  performedByName?: string;
-  location?: string;
-  fromLocation?: string;
-  toLocation?: string;
-  transferReference?: string;
-}
-
 export interface IInventory {
   _id: Types.ObjectId;
   menuItemId: Types.ObjectId;
@@ -45,10 +23,10 @@ export interface IInventory {
   unit: string;
   status: StockStatus;
   lastRestocked?: Date;
-  stockHistory: IStockHistory[];
   autoReorderEnabled: boolean;
   reorderQuantity: number;
   supplier?: string;
+  /** @deprecated Use MenuItemPriceHistory / InventoryItemCostHistory for canonical cost tracking. */
   costPerUnit: number;
   preventOrdersWhenOutOfStock: boolean;
   salesVelocity?: number;

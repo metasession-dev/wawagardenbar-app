@@ -66,7 +66,6 @@ export interface IMenuItem {
   slug?: string;
   metaDescription?: string;
   trackInventory: boolean;
-  inventoryId?: string;
   pointsValue?: number;
   pointsRedeemable: boolean;
   portionOptions: {

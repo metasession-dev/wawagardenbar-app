@@ -414,7 +414,7 @@ async function seedFoodMenu() {
 
         // Create inventory record if tracking is enabled
         if (item.inventoryTracking.enabled) {
-          const inventory = await InventoryModel.create({
+          await InventoryModel.create({
             menuItemId: menuItem._id,
             itemName: item.name,
             currentStock: item.inventoryTracking.initialStock,
@@ -425,11 +425,6 @@ async function seedFoodMenu() {
             supplier: item.inventoryTracking.supplier,
             lastRestocked: new Date(),
             preventOrdersWhenOutOfStock: item.inventoryTracking.preventOrdersWhenOutOfStock,
-          });
-
-          // Update menu item with inventory reference
-          await MenuItemModel.findByIdAndUpdate(menuItem._id, {
-            inventoryId: inventory._id,
           });
 
           console.log(`  📦 Created inventory record for ${item.name}`);

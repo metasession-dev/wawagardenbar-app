@@ -7,6 +7,7 @@ import { sessionOptions, SessionData } from '@/lib/session';
 import { connectDB } from '@/lib/mongodb';
 import MenuItemModel from '@/models/menu-item-model';
 import InventoryModel from '@/models/inventory-model';
+import StockMovementModel from '@/models/stock-movement-model';
 import { AuditLogService } from '@/services/audit-log-service';
 import { SystemSettingsService } from '@/services/system-settings-service';
 import { Types } from 'mongoose';
@@ -107,22 +108,19 @@ export async function createMenuItemAction(formData: FormData): Promise<ActionRe
         totalSales: 0,
         totalWaste: 0,
         totalRestocked: currentStock,
-        stockHistory: [
-          {
-            quantity: currentStock,
-            type: 'addition',
-            reason: 'Initial stock',
-            category: 'restock',
-            performedBy: new Types.ObjectId(session.userId),
-            performedByName: session.email || 'Admin',
-            timestamp: new Date(),
-          },
-        ],
       });
 
-      // Link inventory to menu item
-      menuItem.inventoryId = inventory._id.toString() as any;
-      await menuItem.save();
+      // Create normalized StockMovement record for initial stock
+      await StockMovementModel.create({
+        inventoryId: inventory._id,
+        quantity: currentStock,
+        type: 'addition',
+        reason: 'Initial stock',
+        category: 'restock',
+        performedBy: new Types.ObjectId(session.userId),
+        performedByName: session.email || 'Admin',
+        timestamp: new Date(),
+      });
 
       // Create audit log for inventory creation
       await AuditLogService.createLog({
@@ -281,17 +279,8 @@ export async function updateMenuItemAction(
     
     // Handle inventory record
     if (trackInventory) {
-      // First, try to find existing inventory by menuItemId or inventoryId
-      let inventory = null;
-      
-      if (menuItem.inventoryId) {
-        inventory = await InventoryModel.findById(menuItem.inventoryId);
-      }
-      
-      // If not found by ID, check if one exists for this menu item
-      if (!inventory) {
-        inventory = await InventoryModel.findOne({ menuItemId: menuItem._id });
-      }
+      // Canonical lookup: always use findOne({ menuItemId })
+      let inventory = await InventoryModel.findOne({ menuItemId: menuItem._id });
       
       if (inventory) {
         // Update existing inventory
@@ -322,11 +311,6 @@ export async function updateMenuItemAction(
         }
         
         await inventory.save();
-        
-        // Ensure menuItem has the correct inventoryId
-        if (!menuItem.inventoryId) {
-          menuItem.inventoryId = inventory._id.toString() as any;
-        }
       } else {
         // Create new inventory record only if none exists
         const inventoryData: any = {
@@ -342,7 +326,6 @@ export async function updateMenuItemAction(
           totalSales: 0,
           totalWaste: 0,
           totalRestocked: 0,
-          stockHistory: [],
         };
         
         // Initialize location tracking if enabled
@@ -362,8 +345,7 @@ export async function updateMenuItemAction(
           }];
         }
         
-        const newInventory = await InventoryModel.create(inventoryData);
-        menuItem.inventoryId = newInventory._id.toString() as any;
+        await InventoryModel.create(inventoryData);
       }
     }
 
@@ -695,8 +677,8 @@ export async function duplicateMenuItemAction(
     const newItem = await MenuItemModel.create(duplicateData);
 
     // If original has inventory tracking, create new inventory record
-    if (originalItem.trackInventory && originalItem.inventoryId) {
-      const originalInventory = await InventoryModel.findById(originalItem.inventoryId);
+    if (originalItem.trackInventory) {
+      const originalInventory = await InventoryModel.findOne({ menuItemId: originalItem._id });
       if (originalInventory) {
         const { _id: _invId, createdAt: _invCreatedAt, updatedAt: _invUpdatedAt, ...inventoryData } = originalInventory.toObject();
         inventoryData.menuItemId = newItem._id as unknown as Types.ObjectId;
@@ -704,11 +686,8 @@ export async function duplicateMenuItemAction(
         inventoryData.totalSales = 0;
         inventoryData.totalWaste = 0;
         inventoryData.totalRestocked = 0;
-        inventoryData.stockHistory = [];
 
-        const newInventory = await InventoryModel.create(inventoryData);
-        newItem.inventoryId = newInventory._id.toString();
-        await newItem.save();
+        await InventoryModel.create(inventoryData);
       }
     }
 

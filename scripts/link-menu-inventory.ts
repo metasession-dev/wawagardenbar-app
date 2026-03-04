@@ -19,7 +19,7 @@ async function linkMenuToInventory() {
 
     for (const inventory of inventoryRecords) {
       try {
-        // Find the menu item
+        // Find the menu item via canonical Inventory.menuItemId
         const menuItem = await MenuItemModel.findById(inventory.menuItemId);
 
         if (!menuItem) {
@@ -28,22 +28,18 @@ async function linkMenuToInventory() {
           continue;
         }
 
-        // Check if already linked
-        if (
-          menuItem.trackInventory === true &&
-          menuItem.inventoryId?.toString() === inventory._id.toString()
-        ) {
+        // Check if already linked (trackInventory is true)
+        if (menuItem.trackInventory === true) {
           console.log(`✅ ${menuItem.name}: Already linked`);
           alreadyLinked++;
           continue;
         }
 
-        // Link the menu item to inventory
+        // Enable inventory tracking on the menu item
         menuItem.trackInventory = true;
-        menuItem.inventoryId = inventory._id.toString();
         await menuItem.save();
 
-        console.log(`🔗 ${menuItem.name}: Linked to inventory (${inventory.currentStock} ${inventory.unit})`);
+        console.log(`🔗 ${menuItem.name}: Enabled tracking (${inventory.currentStock} ${inventory.unit})`);
         linked++;
       } catch (error) {
         console.error(`❌ Error processing inventory ${inventory._id}:`, error);

@@ -5,7 +5,7 @@ const inventoryItemCostHistorySchema = new Schema<IInventoryItemCostHistory>(
   {
     inventoryItemId: {
       type: Schema.Types.ObjectId,
-      ref: 'InventoryItem',
+      ref: 'Inventory',
       required: true,
       index: true,
     },

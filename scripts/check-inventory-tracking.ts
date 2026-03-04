@@ -19,41 +19,32 @@ async function checkInventoryTracking() {
 
     // Check each menu item
     let trackingEnabled = 0;
-    let hasInventoryId = 0;
+    let hasInventoryRecord = 0;
     let fullyConfigured = 0;
     const issues: string[] = [];
 
     for (const item of menuItems) {
       const hasTracking = item.trackInventory === true;
-      const hasInvId = !!item.inventoryId;
+      const inv = inventoryRecords.find(
+        (i: any) => i.menuItemId?.toString() === item._id.toString()
+      );
 
       if (hasTracking) trackingEnabled++;
-      if (hasInvId) hasInventoryId++;
-      if (hasTracking && hasInvId) fullyConfigured++;
+      if (inv) hasInventoryRecord++;
+      if (hasTracking && inv) fullyConfigured++;
 
       // Report issues
-      if (hasTracking && !hasInvId) {
-        issues.push(`❌ ${item.name}: trackInventory=true but inventoryId is missing`);
+      if (hasTracking && !inv) {
+        issues.push(`❌ ${item.name}: trackInventory=true but no Inventory record found`);
       }
-      if (!hasTracking && hasInvId) {
-        issues.push(`⚠️  ${item.name}: has inventoryId but trackInventory=false`);
-      }
-      if (!hasTracking && !hasInvId) {
-        // Check if inventory exists for this item
-        const inv = inventoryRecords.find(
-          (i: any) => i.menuItemId?.toString() === item._id.toString()
-        );
-        if (inv) {
-          issues.push(
-            `🔧 ${item.name}: Inventory exists but menu item not linked (inventoryId missing, trackInventory=false)`
-          );
-        }
+      if (!hasTracking && inv) {
+        issues.push(`⚠️  ${item.name}: has Inventory record but trackInventory=false`);
       }
     }
 
     console.log('📊 Summary:');
     console.log(`   Items with trackInventory=true: ${trackingEnabled}`);
-    console.log(`   Items with inventoryId set: ${hasInventoryId}`);
+    console.log(`   Items with Inventory record: ${hasInventoryRecord}`);
     console.log(`   Fully configured (both): ${fullyConfigured}`);
     console.log(`   Issues found: ${issues.length}\n`);
 
@@ -63,7 +54,7 @@ async function checkInventoryTracking() {
       console.log('\n');
     }
 
-    // Show inventory records without menu item link
+    // Show inventory records without valid menu item
     console.log('🔗 Checking inventory → menu item links:\n');
     for (const inv of inventoryRecords) {
       const menuItem = menuItems.find(
@@ -73,15 +64,12 @@ async function checkInventoryTracking() {
       if (!menuItem) {
         console.log(`   ❌ Inventory record ${inv._id} has invalid menuItemId: ${inv.menuItemId}`);
       } else {
-        const isLinked = menuItem.inventoryId?.toString() === inv._id.toString();
         const isTracking = menuItem.trackInventory === true;
 
-        if (!isLinked || !isTracking) {
+        if (!isTracking) {
           console.log(
-            `   ⚠️  ${menuItem.name}: inventory exists but menu item not properly configured`
+            `   ⚠️  ${menuItem.name}: inventory exists but trackInventory=false`
           );
-          console.log(`      - inventoryId matches: ${isLinked}`);
-          console.log(`      - trackInventory: ${isTracking}`);
         }
       }
     }

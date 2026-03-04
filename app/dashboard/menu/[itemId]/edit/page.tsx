@@ -30,10 +30,10 @@ async function getMenuItem(itemId: string) {
     return null;
   }
 
-  // Get inventory data if tracking is enabled
+  // Get inventory data if tracking is enabled (canonical lookup via menuItemId)
   let inventory = null;
-  if (menuItem.trackInventory && menuItem.inventoryId) {
-    inventory = await InventoryModel.findById(menuItem.inventoryId).lean();
+  if (menuItem.trackInventory) {
+    inventory = await InventoryModel.findOne({ menuItemId: menuItem._id }).lean();
   }
 
   // Serialize data
@@ -61,7 +61,7 @@ async function getMenuItem(itemId: string) {
     slug: menuItem.slug || '',
     metaDescription: menuItem.metaDescription || '',
     trackInventory: menuItem.trackInventory,
-    inventoryId: menuItem.inventoryId?.toString(),
+    inventoryId: inventory?._id?.toString(),
     inventory: inventory
       ? {
           _id: inventory._id.toString(),

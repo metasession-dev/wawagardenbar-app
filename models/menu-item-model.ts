@@ -60,11 +60,6 @@ const menuItemSchema = new Schema<IMenuItem>(
     slug: { type: String, unique: true, sparse: true },
     metaDescription: { type: String },
     trackInventory: { type: Boolean, default: false },
-    inventoryId: {
-      type: Schema.Types.ObjectId,
-      ref: 'Inventory',
-      required: false,
-    },
     pointsValue: { type: Number, required: false, min: 0 },
     pointsRedeemable: { type: Boolean, default: false },
     portionOptions: {

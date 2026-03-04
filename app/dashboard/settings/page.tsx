@@ -7,7 +7,7 @@ import { ExpenseCategoriesForm } from '@/components/features/admin/expense-categ
 import { MenuCategoriesForm } from '@/components/features/admin/menu-categories-form';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { UserX, Users } from 'lucide-react';
+import { Key, UserX, Users } from 'lucide-react';
 
 export const metadata = {
   title: 'Settings | Admin Dashboard',
@@ -78,6 +78,26 @@ export default async function SettingsPage() {
           <Button asChild variant="outline" className="w-full sm:w-auto">
             <Link href="/dashboard/settings/admins">
               Manage Admins
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* API Keys */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <div className="space-y-1">
+            <CardTitle>API Keys</CardTitle>
+            <CardDescription>
+              Manage programmatic access for external integrations
+            </CardDescription>
+          </div>
+          <Key className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <Button asChild variant="outline" className="w-full sm:w-auto">
+            <Link href="/dashboard/settings/api-keys">
+              Manage API Keys
             </Link>
           </Button>
         </CardContent>

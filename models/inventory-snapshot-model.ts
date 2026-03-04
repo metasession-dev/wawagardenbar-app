@@ -5,6 +5,7 @@ const inventorySnapshotItemSchema = new Schema(
   {
     menuItemId: { type: Schema.Types.ObjectId, ref: 'MenuItem', required: true },
     menuItemName: { type: String, required: true },
+    inventoryId: { type: Schema.Types.ObjectId, ref: 'Inventory' },
     mainCategory: { type: String, enum: ['food', 'drinks'], required: true },
     category: { type: String, required: true },
     systemInventoryCount: { type: Number, required: true, default: 0 },

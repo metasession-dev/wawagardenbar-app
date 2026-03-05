@@ -2,6 +2,7 @@ import { createServer } from 'http';
 import { parse } from 'url';
 import next from 'next';
 import { initSocketServer } from './lib/socket-server';
+import { connectDB } from './lib/mongodb';
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = process.env.HOSTNAME || 'localhost';
@@ -10,7 +11,15 @@ const port = parseInt(process.env.PORT || '3000', 10);
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
-app.prepare().then(() => {
+app.prepare().then(async () => {
+  // Warm up MongoDB connection before accepting requests
+  try {
+    await connectDB();
+    console.log('✅ MongoDB connection established');
+  } catch (error) {
+    console.error('⚠️ MongoDB warmup failed (will retry on first request):', error);
+  }
+
   const httpServer = createServer(async (req, res) => {
     try {
       const parsedUrl = parse(req.url!, true);

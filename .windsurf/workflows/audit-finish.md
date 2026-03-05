@@ -136,5 +136,6 @@ After human sign-off:
 1. Move release ticket from `pending-releases/` to `approved-releases/`
 2. Update RTM status to `APPROVED - DEPLOYED`
 3. Tag the commit with version number
-4. Deploy to production
-5. Archive test evidence (retain for audit period)
+4. Archive test evidence (retain for audit period)
+
+> **Note:** Deployment is handled separately via the `/deploy-railway` workflow. This workflow focuses solely on compliance and audit artifacts.

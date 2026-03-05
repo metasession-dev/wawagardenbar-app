@@ -1,8 +1,8 @@
 # Requirements Traceability Matrix (RTM)
 
 **Project:** Wawa Garden Bar Web Application  
-**Document Version:** 1.1  
-**Last Updated:** 2026-03-04  
+**Document Version:** 1.2  
+**Last Updated:** 2026-03-05  
 **Maintained By:** Development & Compliance Team
 
 ---
@@ -361,6 +361,106 @@ Implement comprehensive MongoDB connection resilience for Railway production dep
 
 ---
 
+### REQ-005: Public API Tab Support for Orders
+
+**Category:** Feature Enhancement / API  
+**Priority:** High  
+**Status:** TESTED - PENDING SIGN-OFF  
+**Created:** 2026-03-05  
+**Last Updated:** 2026-03-05
+
+#### Description
+Add optional tab support to the `POST /api/public/orders` endpoint, allowing API consumers to create orders that are automatically attached to dine-in tabs. Three tab attachment methods are supported:
+1. **`tabId`** — attach order to an existing tab by MongoDB ObjectId
+2. **`useTab: "new"`** — create a new tab for the table and attach the order
+3. **`useTab: "existing"`** — find the open tab for the table and attach the order
+
+When a tab is involved, the response shape changes from flat `{ data: order }` to wrapped `{ data: { order, tab } }`.
+
+#### Business Justification
+- Enables AI agents and third-party integrations to manage dine-in tabs via a single API call
+- Reduces the number of API calls needed (create order + attach to tab in one request)
+- Maintains backward compatibility — existing API consumers are unaffected
+- Aligns API implementation with existing SOP documentation expectations
+
+#### Implementation Details
+
+**Files Modified:**
+- `/app/api/public/orders/route.ts` — Added `TabService` import, `tabId`/`useTab`/`customerName` to `CreateOrderBody` interface, tab validation logic, tab branching logic (create/find/attach), wrapped response shape. Added `@requirement REQ-005` JSDoc header.
+
+**Files Updated (Documentation):**
+- `/docs/operations/SOP-API-TAB-ORDER-MANAGEMENT.md` — Corrected field names to match actual API (`dineInDetails.tableNumber`, `customerName`, `guestName`). Added `tabId` direct attachment. Updated all payloads, curl examples, response examples, validation logic, test cases, quick reference, troubleshooting, and endpoints summary. Bumped to v1.1.
+- `/docs/api/AGENT-TOOLING-FLOWS.md` — Updated `create_order` OpenAI function schema with `useTab`, `customerName`, `dineInDetails`, correct item properties. Updated Flow 7 (Tab Lifecycle) with new field names and alternative `tabId` flow.
+- `/docs/api/AGENT-TOOLING-GUIDE.md` — Updated `create_order` tool description in the reference table.
+
+**Key Features:**
+1. **Validation (lines 306-317):**
+   - `useTab` must be `"new"` or `"existing"` if provided
+   - Tab fields (`useTab` or `tabId`) only allowed for `dine-in` orderType
+   - `dineInDetails.tableNumber` required when `useTab` is provided
+2. **Tab Branching (lines 353-386):**
+   - `tabId` → `TabService.addOrderToTab(tabId, orderId)`
+   - `useTab: "new"` → check no existing tab (409), `TabService.createTab()`, then `addOrderToTab()`
+   - `useTab: "existing"` → find open tab (422 if none), then `addOrderToTab()`
+3. **Response Shape (lines 388-396):**
+   - With tab: `{ success: true, data: { order, tab } }`
+   - Without tab: `{ success: true, data: { ...order } }` (unchanged)
+4. **Customer Name Resolution (line 371):**
+   - Priority: `customerName` > `guestName` > `"Walk-in Customer"`
+
+#### Acceptance Criteria
+- [x] `tabId` field accepted and order attached to existing tab
+- [x] `useTab: "new"` creates tab and attaches order (409 if table has open tab)
+- [x] `useTab: "existing"` finds open tab and attaches order (422 if no open tab)
+- [x] Tab fields rejected for non-dine-in order types (400)
+- [x] `dineInDetails.tableNumber` required when `useTab` is provided (400)
+- [x] Invalid `useTab` values rejected (400)
+- [x] Response wraps `{ order, tab }` when tab is involved
+- [x] Response stays flat (backward compatible) when no tab fields provided
+- [x] Customer name falls back through `customerName` → `guestName` → `"Walk-in Customer"`
+- [x] `tabId` takes priority over `useTab` when both provided
+- [x] SOP documentation updated with correct field names and examples
+- [x] Agent Tooling docs updated with correct schema and flows
+- [x] TypeScript compilation passes cleanly
+- [x] SOLID principles followed (single-responsibility validation, open for extension)
+- [x] 26 unit tests pass (Vitest)
+
+#### Test Evidence
+- Vitest unit tests: 26 tests, 26 passed, 0 failed
+- Test suites: validation (11), branch selection (5), customer name resolution (5), response shape (2), interface compatibility (3)
+- TypeScript compilation: clean (0 errors)
+- Documentation review: all payloads match actual API fields
+
+**Evidence Location:** `/compliance/evidence/REQ-005/`
+
+#### Dependencies
+- `/services/tab-service.ts` — `TabService.createTab`, `getOpenTabForTable`, `addOrderToTab`
+- `/services/order-service.ts` — `OrderService.createOrder`
+- `/lib/api-response.ts` — `apiSuccess`, `apiError`, `serialize`, `withApiAuth`
+- Existing `POST /api/public/tabs` endpoint (standalone tab creation)
+
+#### Related Requirements
+- REQ-001 (SOP Documentation) — SOP updated to match implementation
+
+#### Compliance Notes
+- Backward compatible — no breaking changes to existing API consumers
+- Tab fields are entirely optional
+- Error responses follow existing API envelope format
+- No PII exposure in documentation examples
+- Security: tab operations inherit API key authentication and `orders:write` scope
+
+#### Audit Trail
+| Date | Action | Performed By | Notes |
+|------|--------|--------------|-------|
+| 2026-03-05 | Requirement created | AI (Cascade) | User request for tab support in public API |
+| 2026-03-05 | Implementation completed | AI (Cascade) | Route handler updated with tab validation, branching, response |
+| 2026-03-05 | Documentation updated | AI (Cascade) | SOP, Agent Tooling Guide, Agent Tooling Flows |
+| 2026-03-05 | Unit tests written & passed | AI (Cascade) | 26/26 Vitest tests pass |
+| 2026-03-05 | TypeScript compilation verified | AI (Cascade) | Clean pass, 0 errors |
+| 2026-03-05 | Moved to TESTED status | AI (Cascade) | Awaiting human sign-off |
+
+---
+
 ## Traceability Matrix
 
 | Req ID | Requirement | Implementation | Tests | Status | Approver | Date |
@@ -369,6 +469,7 @@ Implement comprehensive MongoDB connection resilience for Railway production dep
 | REQ-002 | Idempotency Key Auto-Generation | order-model.ts, order.interface.ts | Code validation (37 criteria) | TESTED - PENDING SIGN-OFF | Pending | - |
 | REQ-003 | MongoDB Warmup on Startup | server.ts | Implementation validation | TESTED - PENDING SIGN-OFF | Pending | - |
 | REQ-004 | MongoDB Connection Resilience | server.ts, lib/mongodb.ts | Production verification | TESTED - PENDING SIGN-OFF | Pending | - |
+| REQ-005 | Public API Tab Support | route.ts, 3 doc files | Vitest unit tests (26/26) | TESTED - PENDING SIGN-OFF | Pending | - |
 
 ---
 

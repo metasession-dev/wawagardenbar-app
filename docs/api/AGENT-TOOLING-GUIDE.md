@@ -148,7 +148,7 @@ Returns: `{ period, revenue: { total, food, drinks, serviceFees, tax, tips, disc
 | Tool | Method | Path | Scope | Description |
 |---|---|---|---|---|
 | `list_orders` | GET | `/orders` | `orders:read` | Filter by status/type/payment/date |
-| `create_order` | POST | `/orders` | `orders:write` | Body: orderType, items[], customer info |
+| `create_order` | POST | `/orders` | `orders:write` | Body: orderType, items[], total, optional tab (tabId or useTab) |
 | `get_order` | GET | `/orders/{id}` | `orders:read` | Full order detail |
 | `update_order_status` | PATCH | `/orders/{id}` | `orders:write` | Body: `{ status, cancelReason? }` |
 | `get_order_stats` | GET | `/orders/stats` | `orders:read` | Quick aggregates |

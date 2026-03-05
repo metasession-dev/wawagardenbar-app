@@ -1,6 +1,10 @@
+/**
+ * @requirement REQ-005 - Public API Tab Support for Orders
+ */
 import { NextRequest } from 'next/server';
 import Order from '@/models/order-model';
 import { OrderService } from '@/services/order-service';
+import { TabService } from '@/services/tab-service';
 import { OrderStatus, OrderType } from '@/interfaces';
 import {
   withApiAuth,
@@ -172,6 +176,9 @@ interface CreateOrderBody {
   pickupDetails?: { preferredPickupTime: string };
   dineInDetails?: { tableNumber: string; qrCodeScanned?: boolean };
   specialInstructions?: string;
+  tabId?: string;
+  useTab?: 'new' | 'existing';
+  customerName?: string;
 }
 
 /**
@@ -180,6 +187,16 @@ interface CreateOrderBody {
  * Create a new order. Each item must reference a valid menu item ID.
  * The service enriches items with cost data, generates an order number,
  * calculates estimated wait time, and optionally deducts inventory.
+ *
+ * Optionally attach the order to a tab:
+ * - Provide `tabId` to attach to an **existing tab by ID**.
+ * - Provide `useTab: "new"` with `dineInDetails.tableNumber` to **create a new tab**
+ *   and attach the order automatically.
+ * - Provide `useTab: "existing"` with `dineInDetails.tableNumber` to **find the open
+ *   tab for that table** and attach the order.
+ *
+ * When a tab is involved, the response wraps the result in `{ order, tab }` instead
+ * of returning the order directly.
  *
  * @authentication API Key required — scope: `orders:write`
  * @ratelimit      30 requests / minute (moderate)
@@ -214,58 +231,62 @@ interface CreateOrderBody {
  * @requestBody {string}   body.dineInDetails.tableNumber         - Table identifier
  * @requestBody {boolean}  [body.dineInDetails.qrCodeScanned]     - Whether QR code was scanned
  * @requestBody {string}   [body.specialInstructions]             - Order-level special instructions
+ * @requestBody {string}   [body.tabId]                           - Attach to an existing tab by MongoDB ObjectId
+ * @requestBody {string}   [body.useTab]                          - `"new"` to create a tab, `"existing"` to find the open tab for the table
+ * @requestBody {string}   [body.customerName]                    - Customer display name (used for new tab creation)
  *
  * @returns {Object}  response
- * @returns {boolean} response.success       - `true`
- * @returns {Object}  response.data          - Created order (full order object)
- * @returns {string}  response.data.orderNumber - Generated order number
- * @returns {string}  response.data._id      - Order MongoDB ObjectId
- * @returns {string}  response.data.status   - Initial status (`"pending"`)
- * @returns {number}  response.data.estimatedWaitTime - Estimated wait in minutes
+ * @returns {boolean} response.success                    - `true`
+ * @returns {Object}  response.data                       - Created order (or `{ order, tab }` when tab is involved)
+ * @returns {string}  response.data.orderNumber            - Generated order number (flat response)
+ * @returns {string}  response.data._id                    - Order MongoDB ObjectId (flat response)
+ * @returns {string}  response.data.status                 - Initial status (`"pending"`)
+ * @returns {number}  response.data.estimatedWaitTime      - Estimated wait in minutes
+ * @returns {Object}  [response.data.order]                - Order object (tab response)
+ * @returns {Object}  [response.data.tab]                  - Tab object with totals and order list (tab response)
  * @returns {Object}  response.meta
  * @returns {string}  response.meta.timestamp
  *
  * @status 201 - Order created successfully
- * @status 400 - Invalid body (missing required fields, invalid orderType)
+ * @status 400 - Invalid body (missing required fields, invalid orderType, invalid useTab)
  * @status 401 - Missing or invalid API key
  * @status 403 - API key lacks `orders:write` scope
- * @status 422 - Business logic error (e.g. unavailable items, validation failure)
+ * @status 409 - Tab already exists for table (when useTab="new")
+ * @status 422 - Business logic error (e.g. unavailable items, validation failure, no open tab found)
  * @status 429 - Rate limit exceeded
  *
  * @example
- * // Request — create a dine-in order
+ * // Request — create a dine-in order (no tab)
  * POST /api/public/orders
  * x-api-key: wawa_abc_7f3a...
  * Content-Type: application/json
  *
  * {
  *   "orderType": "dine-in",
- *   "items": [
- *     {
- *       "menuItemId": "665a...",
- *       "name": "Jollof Rice",
- *       "price": 3500,
- *       "quantity": 2,
- *       "portionSize": "full",
- *       "subtotal": 7000
- *     }
- *   ],
- *   "subtotal": 7000,
- *   "tax": 350,
- *   "deliveryFee": 0,
- *   "discount": 0,
- *   "total": 7350,
- *   "guestName": "Ada Obi",
- *   "guestEmail": "ada@example.com",
+ *   "items": [{ "menuItemId": "665a...", "name": "Jollof Rice", "price": 3500, "quantity": 2, "portionSize": "full", "subtotal": 7000 }],
+ *   "subtotal": 7000, "tax": 350, "deliveryFee": 0, "discount": 0, "total": 7350,
+ *   "guestName": "Ada Obi", "guestEmail": "ada@example.com",
  *   "dineInDetails": { "tableNumber": "T5" }
  * }
  *
- * // Response 201
+ * // Response 201 (flat — no tab)
+ * { "success": true, "data": { "_id": "...", "orderNumber": "WGB-A1B2C3", "status": "pending", ... }, "meta": { "timestamp": "..." } }
+ *
+ * @example
+ * // Request — create order + new tab
  * {
- *   "success": true,
- *   "data": { "_id": "...", "orderNumber": "WGB-A1B2C3", "status": "pending", "estimatedWaitTime": 15, ... },
- *   "meta": { "timestamp": "..." }
+ *   "orderType": "dine-in", "useTab": "new", "customerName": "John Doe",
+ *   "items": [{ "menuItemId": "665a...", "name": "Star Lager", "price": 800, "quantity": 2, "subtotal": 1600 }],
+ *   "subtotal": 1600, "tax": 0, "deliveryFee": 0, "discount": 0, "total": 1600,
+ *   "dineInDetails": { "tableNumber": "T5" }
  * }
+ *
+ * // Response 201 (wrapped — with tab)
+ * { "success": true, "data": { "order": { ... }, "tab": { "tabNumber": "TAB-T5-123456", "status": "open", ... } }, "meta": { "timestamp": "..." } }
+ *
+ * @example
+ * // Request — add order to existing tab by tabId
+ * { "orderType": "dine-in", "tabId": "abc123", "items": [...], ... }
  */
 export async function POST(request: NextRequest): Promise<Response> {
   return withApiAuth(request, ['orders:write'], async () => {
@@ -283,6 +304,19 @@ export async function POST(request: NextRequest): Promise<Response> {
     const validTypes: OrderType[] = ['dine-in', 'pickup', 'delivery', 'pay-now'];
     if (!validTypes.includes(orderType)) {
       return apiError(`orderType must be one of: ${validTypes.join(', ')}`, 400);
+    }
+
+    // Validate optional tab fields
+    const { tabId, useTab, customerName } = body;
+    if (useTab && !['new', 'existing'].includes(useTab)) {
+      return apiError('useTab must be "new" or "existing"', 400);
+    }
+    if ((useTab || tabId) && orderType !== 'dine-in') {
+      return apiError('Tab support is only available for dine-in orders', 400);
+    }
+    const tableNumber = body.dineInDetails?.tableNumber?.trim();
+    if (useTab && !tableNumber) {
+      return apiError('dineInDetails.tableNumber is required when using useTab', 400);
     }
 
     try {
@@ -318,6 +352,49 @@ export async function POST(request: NextRequest): Promise<Response> {
         specialInstructions: body.specialInstructions,
         createdByRole: 'customer',
       });
+
+      // --- Tab handling (optional) ---
+      let tab = null;
+
+      if (tabId) {
+        // Attach order to existing tab by ID
+        tab = await TabService.addOrderToTab(tabId, order._id.toString());
+      } else if (useTab === 'new') {
+        // Create a new tab for the table
+        const existingTab = await TabService.getOpenTabForTable(tableNumber!);
+        if (existingTab) {
+          return apiError(
+            `Table ${tableNumber} already has an open tab`,
+            409,
+          );
+        }
+        tab = await TabService.createTab({
+          tableNumber: tableNumber!,
+          userId: body.userId,
+          customerName: customerName || body.guestName || 'Walk-in Customer',
+          customerEmail: body.guestEmail,
+          customerPhone: body.guestPhone,
+        });
+        tab = await TabService.addOrderToTab(tab._id.toString(), order._id.toString());
+      } else if (useTab === 'existing') {
+        // Find existing open tab for the table
+        const existingTab = await TabService.getOpenTabForTable(tableNumber!);
+        if (!existingTab) {
+          return apiError(
+            `No open tab found for table ${tableNumber}`,
+            422,
+          );
+        }
+        tab = await TabService.addOrderToTab(existingTab._id.toString(), order._id.toString());
+      }
+
+      // Return wrapped response when tab is involved
+      if (tab) {
+        return apiSuccess(
+          serialize({ order, tab }),
+          201,
+        );
+      }
 
       return apiSuccess(serialize(order), 201);
     } catch (error) {

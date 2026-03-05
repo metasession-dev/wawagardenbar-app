@@ -461,6 +461,60 @@ When a tab is involved, the response shape changes from flat `{ data: order }` t
 
 ---
 
+### REQ-006: Tab Lookup by tabNumber, Item Name Lookup, SOP Enhancement
+
+**Category:** Feature Enhancement / API / Documentation  
+**Priority:** High  
+**Status:** TESTED - PENDING SIGN-OFF  
+**Created:** 2026-03-05  
+**Last Updated:** 2026-03-05
+
+#### Description
+
+Enhances the public API and SOP documentation with three capabilities:
+1. Menu item name lookup via `GET /api/public/menu?q=` to resolve item names to `menuItemId`
+2. Tab lookup by table number or tab number via `GET /api/public/tabs?tableNumber=` / `tabNumber=`
+3. Comprehensive SOP update (v1.2) with Prerequisite A & B sections and updated workflow examples
+
+#### Implementation Details
+
+| Component | File | Change |
+|-----------|------|--------|
+| Tabs API Route | `app/api/public/tabs/route.ts` | Added `tabNumber` query param filter to GET handler |
+| SOP Document | `docs/operations/SOP-API-TAB-ORDER-MANAGEMENT.md` | Added Prerequisite A (menu item lookup), Prerequisite B (tab lookup), updated Complete Workflow Example |
+| JSDoc Header | `app/api/public/tabs/route.ts` | Added `@requirement REQ-006` reference |
+
+#### Test Evidence
+
+- **Test File:** `__tests__/api/public/tabs-filter-support.test.ts`
+- **Test Count:** 27 tests
+- **Results:** 27/27 passed
+- **Evidence Location:** `/compliance/evidence/REQ-006/unit-test-results.txt`
+
+#### Test Coverage
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| Tab Filter Building — tabNumber support | 4 | ✅ Pass |
+| Tab Filter Building — tableNumber support | 2 | ✅ Pass |
+| Tab Filter Building — status validation | 5 | ✅ Pass |
+| Tab Filter Building — combined filters | 6 | ✅ Pass |
+| Tab Sort Resolution | 4 | ✅ Pass |
+| Menu Item Name Resolution | 6 | ✅ Pass |
+
+#### Audit Trail
+
+| Date | Action | Actor | Notes |
+|------|--------|-------|-------|
+| 2026-03-05 | Requirement created | AI (Cascade) | User request for SOP enhancement |
+| 2026-03-05 | tabNumber filter added to tabs API | AI (Cascade) | GET /api/public/tabs now supports tabNumber query |
+| 2026-03-05 | SOP v1.2 published | AI (Cascade) | Prerequisite A, B, updated workflow |
+| 2026-03-05 | Unit tests written & passed | AI (Cascade) | 27/27 Vitest tests pass |
+| 2026-03-05 | TypeScript compilation verified | AI (Cascade) | Clean pass, 0 errors |
+| 2026-03-05 | Moved to TESTED status | AI (Cascade) | Awaiting human sign-off |
+
+---
+
 ## Traceability Matrix
 
 | Req ID | Requirement | Implementation | Tests | Status | Approver | Date |
@@ -470,6 +524,7 @@ When a tab is involved, the response shape changes from flat `{ data: order }` t
 | REQ-003 | MongoDB Warmup on Startup | server.ts | Implementation validation | TESTED - PENDING SIGN-OFF | Pending | - |
 | REQ-004 | MongoDB Connection Resilience | server.ts, lib/mongodb.ts | Production verification | TESTED - PENDING SIGN-OFF | Pending | - |
 | REQ-005 | Public API Tab Support | route.ts, 3 doc files | Vitest unit tests (26/26) | APPROVED - DEPLOYED | William | 2026-03-05 |
+| REQ-006 | Tab/Menu Lookup + SOP Enhancement | tabs/route.ts, SOP doc | Vitest unit tests (27/27) | TESTED - PENDING SIGN-OFF | Pending | - |
 
 ---
 
@@ -483,7 +538,7 @@ When a tab is involved, the response shape changes from flat `{ data: order }` t
 ---
 
 **Document Control:**
-- Version: 1.0
+- Version: 1.3
 - Classification: Internal
 - Retention Period: Permanent
 - Review Frequency: Quarterly

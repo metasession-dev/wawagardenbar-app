@@ -1,3 +1,6 @@
+/**
+ * @requirement REQ-006 - Tab Lookup by tabNumber, Item Name Lookup, SOP Enhancement
+ */
 import { NextRequest } from 'next/server';
 import { Types } from 'mongoose';
 import TabModel from '@/models/tab-model';

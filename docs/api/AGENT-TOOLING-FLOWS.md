@@ -66,12 +66,24 @@ Companion to [AGENT-TOOLING-GUIDE.md](./AGENT-TOOLING-GUIDE.md).
 ### Flow 7: Tab Lifecycle (Open → Order → Close)
 
 ```
-1. create_tab(tableNumber="T7", customerName="John")
-2. create_order(orderType="dine-in", tableNumber="T7", tabId=tab._id, items=[...])
+1. create_order(orderType="dine-in", useTab="new", customerName="John",
+     dineInDetails={tableNumber:"T7"}, items=[...], total=...)
+   → Creates tab + first order in one call. Store tab._id.
+2. create_order(orderType="dine-in", useTab="existing",
+     dineInDetails={tableNumber:"T7"}, items=[...], total=...)
+   → Adds second order to the same tab.
 3. update_order_status(orderId, status="completed")
 4. update_tab(tabId, tipAmount=500)
 5. update_tab(tabId, action="close")
-→ Tab opened, order placed and completed, tip added, tab closed.
+→ Tab opened with first order, second order added, completed, tip added, tab closed.
+```
+
+**Alternative (using tabId directly):**
+```
+1. create_tab(tableNumber="T7", customerName="John")  → standalone tab
+2. create_order(orderType="dine-in", tabId=tab._id,
+     dineInDetails={tableNumber:"T7"}, items=[...], total=...)
+3-5. Same as above.
 ```
 
 ---
@@ -372,33 +384,51 @@ LangChain, Anthropic, or any JSON Schema-based tool framework.
   "type": "function",
   "function": {
     "name": "create_order",
-    "description": "Create a new order. For dine-in with tab, include tabId.",
+    "description": "Create a new order. For dine-in with tab: use tabId to attach to existing tab, or useTab='new'/'existing' with dineInDetails.tableNumber to create/find a tab automatically. When a tab is involved the response is { order, tab }.",
     "parameters": {
       "type": "object",
       "properties": {
         "orderType": { "type": "string", "enum": ["dine-in", "pickup", "delivery", "pay-now"] },
-        "tableNumber": { "type": "string", "description": "Required for dine-in." },
         "items": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
               "menuItemId": { "type": "string" },
+              "name": { "type": "string", "description": "Item display name." },
+              "price": { "type": "number", "description": "Unit price in Naira." },
               "quantity": { "type": "integer" },
+              "portionSize": { "type": "string", "enum": ["full", "half", "quarter"], "default": "full" },
+              "subtotal": { "type": "number", "description": "Line item subtotal." },
               "customizations": { "type": "array", "items": { "type": "object" } },
               "specialInstructions": { "type": "string" }
             },
-            "required": ["menuItemId", "quantity"]
+            "required": ["menuItemId", "name", "price", "quantity", "subtotal"]
           },
-          "description": "Order items array."
+          "description": "Order items array (min 1)."
         },
-        "customerName": { "type": "string" },
-        "customerEmail": { "type": "string" },
-        "customerPhone": { "type": "string" },
+        "subtotal": { "type": "number" },
+        "tax": { "type": "number" },
+        "deliveryFee": { "type": "number" },
+        "discount": { "type": "number" },
+        "total": { "type": "number", "description": "Final total in Naira." },
+        "guestName": { "type": "string" },
+        "guestEmail": { "type": "string" },
+        "guestPhone": { "type": "string" },
+        "userId": { "type": "string", "description": "Registered user ObjectId." },
+        "dineInDetails": {
+          "type": "object",
+          "properties": {
+            "tableNumber": { "type": "string" }
+          },
+          "description": "Required for dine-in orders."
+        },
         "specialInstructions": { "type": "string" },
-        "tabId": { "type": "string", "description": "Attach order to existing tab." }
+        "tabId": { "type": "string", "description": "Attach order to existing tab by ID." },
+        "useTab": { "type": "string", "enum": ["new", "existing"], "description": "'new' creates a tab, 'existing' finds the open tab for the table." },
+        "customerName": { "type": "string", "description": "Customer name for new tab creation." }
       },
-      "required": ["orderType", "items"]
+      "required": ["orderType", "items", "total"]
     }
   }
 }

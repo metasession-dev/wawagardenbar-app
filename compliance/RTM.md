@@ -257,6 +257,110 @@ app.prepare().then(async () => {
 
 ---
 
+### REQ-004: MongoDB Connection Resilience for Railway Deployment
+
+**Category:** Infrastructure / Reliability  
+**Priority:** Critical  
+**Status:** TESTED - PENDING SIGN-OFF  
+**Created:** 2026-03-05  
+**Last Updated:** 2026-03-05
+
+#### Description
+Implement comprehensive MongoDB connection resilience for Railway production deployment, including non-blocking warmup, connection health checks, and Railway-specific configuration. This resolves persistent 500 errors on `/api/public/orders` and deployment healthcheck failures caused by blocking MongoDB warmup and stale cached connections.
+
+#### Business Justification
+- Eliminates 500 errors on production API endpoints
+- Ensures Railway healthcheck passes during deployment
+- Prevents service downtime from stale MongoDB connections
+- Supports Railway's standalone MongoDB architecture
+- Enables automatic reconnection on connection drops
+
+#### Implementation Details
+
+**Files Modified:**
+- `/server.ts` — Non-blocking MongoDB warmup after server listen
+- `/lib/mongodb.ts` — Connection health checks and resilience options
+
+**Key Features:**
+
+1. **Non-blocking Warmup (`server.ts:47-73`):**
+   - Warmup runs AFTER `httpServer.listen()` to pass Railway healthcheck
+   - 5 retry attempts with 3-second delays
+   - Background execution doesn't block server startup
+   - Graceful degradation if all retries fail
+
+2. **Connection Health Checks (`lib/mongodb.ts:35-45`):**
+   - Check `mongoose.connection.readyState` before returning cached connection
+   - Invalidate cache if connection is disconnected/disconnecting
+   - Force reconnection on stale connections
+
+3. **Railway-Specific Configuration (`lib/mongodb.ts:47-58`):**
+   - `directConnection: true` for standalone MongoDB (bypasses replica set discovery)
+   - `serverSelectionTimeoutMS: 15000` (15s timeout)
+   - `socketTimeoutMS: 45000` (45s socket timeout)
+   - `connectTimeoutMS: 15000` (15s connection timeout)
+   - `heartbeatFrequencyMS: 10000` (10s heartbeat)
+   - `maxPoolSize: 10` (connection pooling)
+   - `retryWrites: true` and `retryReads: true`
+
+4. **Fresh MongoDB Instance:**
+   - Deployed new MongoDB service on Railway
+   - Migrated 11,870 documents from local database
+   - Updated connection credentials in environment variables
+
+#### Acceptance Criteria
+- [x] Server passes Railway healthcheck during deployment
+- [x] MongoDB warmup is non-blocking (runs after server listen)
+- [x] Connection health checks prevent stale connection usage
+- [x] `directConnection: true` for Railway standalone MongoDB
+- [x] Resilience options configured (timeouts, retries, pooling)
+- [x] Fresh MongoDB instance deployed and data migrated
+- [x] Production logs show `✅ MongoDB connection established`
+- [x] No 500 errors on `/api/public/orders` endpoint
+- [x] TypeScript compilation successful
+- [x] No breaking changes to existing functionality
+
+#### Test Evidence
+- Railway deployment healthcheck: PASS
+- MongoDB connection established: PASS (production logs)
+- API endpoint `/api/public/orders`: PASS (no 500 errors)
+- Database migration: PASS (11,870 documents migrated)
+- User authentication and dashboard access: PASS
+- Connection resilience verified in production
+
+**Evidence Location:** `/compliance/evidence/REQ-004/`
+
+#### Dependencies
+- Railway MongoDB service (fresh instance)
+- Railway private network (`mongodb.railway.internal`)
+- Environment variables: `MONGODB_URI`, `MONGODB_DB_NAME`
+
+#### Related Requirements
+- REQ-003 (MongoDB Warmup) — Superseded by REQ-004's non-blocking approach
+
+#### Compliance Notes
+- Follows Railway deployment best practices
+- Non-blocking startup ensures healthcheck compliance
+- Connection pooling and retries improve reliability
+- No sensitive data in logs or code
+
+#### Audit Trail
+| Date | Action | Performed By | Notes |
+|------|--------|--------------|-------|
+| 2026-03-05 | Requirement created | AI (Cascade) | Persistent 500 errors and healthcheck failures |
+| 2026-03-05 | Initial fix deployed | AI (Cascade) | REQ-003 blocking warmup with retries |
+| 2026-03-05 | Healthcheck failure diagnosed | AI (Cascade) | Blocking warmup exceeded Railway timeout |
+| 2026-03-05 | Non-blocking warmup implemented | AI (Cascade) | Warmup moved after server listen |
+| 2026-03-05 | Connection health checks added | AI (Cascade) | readyState validation in lib/mongodb.ts |
+| 2026-03-05 | Railway-specific config added | AI (Cascade) | directConnection and resilience options |
+| 2026-03-05 | MongoDB service redeployed | AI (Cascade) | Fresh instance due to corrupted old service |
+| 2026-03-05 | Database migrated | AI (Cascade) | 11,870 documents from local to Railway |
+| 2026-03-05 | Production verification | AI (Cascade) | All tests passed, app running successfully |
+| 2026-03-05 | Code pushed to main | AI (Cascade) | Git merge and push completed |
+| 2026-03-05 | Moved to TESTED status | AI (Cascade) | Awaiting human sign-off |
+
+---
+
 ## Traceability Matrix
 
 | Req ID | Requirement | Implementation | Tests | Status | Approver | Date |
@@ -264,6 +368,7 @@ app.prepare().then(async () => {
 | REQ-001 | SOP Documentation | 3 SOP documents | Documentation validation | TESTED - PENDING SIGN-OFF | Pending | - |
 | REQ-002 | Idempotency Key Auto-Generation | order-model.ts, order.interface.ts | Code validation (37 criteria) | TESTED - PENDING SIGN-OFF | Pending | - |
 | REQ-003 | MongoDB Warmup on Startup | server.ts | Implementation validation | TESTED - PENDING SIGN-OFF | Pending | - |
+| REQ-004 | MongoDB Connection Resilience | server.ts, lib/mongodb.ts | Production verification | TESTED - PENDING SIGN-OFF | Pending | - |
 
 ---
 

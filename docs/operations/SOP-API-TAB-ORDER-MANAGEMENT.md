@@ -55,13 +55,280 @@ Content-Type: application/json
 
 ### Required API Key Scopes
 
+- `menu:read` - Look up menu items by name/category
 - `orders:write` - Create and modify orders
 - `orders:read` - Read order and tab information
+- `tabs:read` - Look up tabs by table number or tab number
+- `tabs:write` - Create standalone tabs (optional)
 - `customers:write` - Create/update customer information (optional)
 
 ---
 
 ## Procedure
+
+### Prerequisite A: Looking Up Menu Items by Name
+
+Before creating an order, you need the `menuItemId`, `name`, and `price` for each item.
+Use the menu search endpoint to find items by name.
+
+**Endpoint:** `GET /api/public/menu`  
+**Scope Required:** `menu:read`
+
+#### Search by Item Name
+
+```bash
+curl -X GET "https://api.wawagardenbar.com/api/public/menu?q=star+lager" \
+  -H "x-api-key: wawa_your_api_key_here"
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Description | Example |
+|-----------|------|-------------|---------|
+| `q` | string | Free-text search across name, description, and tags | `"star lager"`, `"jollof"`, `"chapman"` |
+| `mainCategory` | string | Filter by top-level category | `"drinks"` or `"food"` |
+| `category` | string | Filter by sub-category slug | `"beer-local"`, `"main-courses"`, `"starters"` |
+| `page` | number | Page number (default: 1) | `1` |
+| `limit` | number | Items per page (default: 25, max: 100) | `10` |
+
+**Response (200 OK):**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "_id": "665a1b2c3d4e5f6a7b8c9d0e",
+      "name": "Star Lager Beer",
+      "mainCategory": "drinks",
+      "category": "beer-local",
+      "price": 800,
+      "isAvailable": true,
+      "stockStatus": "in-stock",
+      "currentStock": 48,
+      "preparationTime": 2,
+      "portionOptions": { "allowHalf": false, "allowQuarter": false },
+      "customizationOptions": []
+    }
+  ],
+  "meta": { "page": 1, "limit": 25, "total": 1, "totalPages": 1, "timestamp": "..." }
+}
+```
+
+**Key fields to extract for order items:**
+
+| Response Field | Maps to Order Field | Description |
+|----------------|---------------------|-------------|
+| `_id` | `menuItemId` | The item's database ID |
+| `name` | `name` | Item display name |
+| `price` | `price` | Unit price in ₦ |
+| `isAvailable` | — | Check this is `true` before ordering |
+| `stockStatus` | — | Ensure not `"out-of-stock"` |
+| `portionOptions` | `portionSize` | Whether half/quarter portions are allowed |
+| `customizationOptions` | `customizations` | Available add-ons and modifiers |
+
+#### Example: Resolve Item Names to Order Items
+
+```javascript
+/**
+ * Look up a menu item by name and return the fields needed for an order.
+ * Returns null if the item is not found or unavailable.
+ */
+async function lookupMenuItem(itemName) {
+  const url = new URL('https://api.wawagardenbar.com/api/public/menu');
+  url.searchParams.append('q', itemName);
+  url.searchParams.append('limit', '5');
+
+  const response = await fetch(url, {
+    headers: { 'x-api-key': process.env.WAWA_API_KEY }
+  });
+  const result = await response.json();
+
+  if (!result.success || result.data.length === 0) {
+    return null; // Item not found
+  }
+
+  // Find best match (first available result)
+  const item = result.data.find(i => i.isAvailable && i.stockStatus !== 'out-of-stock');
+  if (!item) return null;
+
+  return {
+    menuItemId: item._id,
+    name: item.name,
+    price: item.price,
+    portionOptions: item.portionOptions,
+    customizationOptions: item.customizationOptions
+  };
+}
+
+// Usage: customer says "2 Star Lager and 1 Jollof Rice"
+const starLager = await lookupMenuItem('Star Lager');
+const jollofRice = await lookupMenuItem('Jollof Rice');
+
+if (!starLager) throw new Error('Star Lager not found or unavailable');
+if (!jollofRice) throw new Error('Jollof Rice not found or unavailable');
+
+const orderItems = [
+  { ...starLager, quantity: 2, subtotal: starLager.price * 2 },
+  { ...jollofRice, quantity: 1, portionSize: 'half', subtotal: jollofRice.price / 2 }
+];
+```
+
+---
+
+### Prerequisite B: Looking Up a Tab by Table Number or Tab Number
+
+When adding an order to an existing tab, you may need to find the tab's `_id` first.
+Use the tabs list endpoint to look up a tab by table number or tab number.
+
+**Endpoint:** `GET /api/public/tabs`  
+**Scope Required:** `tabs:read`
+
+#### Look Up by Table Number
+
+Find the open tab for a specific table:
+
+```bash
+curl -X GET "https://api.wawagardenbar.com/api/public/tabs?tableNumber=5&status=open" \
+  -H "x-api-key: wawa_your_api_key_here"
+```
+
+#### Look Up by Tab Number
+
+Find a tab by its human-readable tab number (e.g. `TAB-5-123456`):
+
+```bash
+curl -X GET "https://api.wawagardenbar.com/api/public/tabs?tabNumber=TAB-5-123456" \
+  -H "x-api-key: wawa_your_api_key_here"
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Description | Example |
+|-----------|------|-------------|---------|
+| `tableNumber` | string | Filter by physical table identifier | `"5"`, `"A3"` |
+| `tabNumber` | string | Filter by tab number | `"TAB-5-123456"` |
+| `status` | string | Filter by tab status | `"open"`, `"settling"`, `"closed"` |
+| `customerId` | string | Filter by user ObjectId | `"665a..."` |
+| `paymentStatus` | string | Filter by payment status | `"pending"`, `"paid"` |
+| `page` | number | Page number (default: 1) | `1` |
+| `limit` | number | Items per page (default: 25, max: 100) | `1` |
+
+**Response (200 OK):**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "_id": "tab_abc123",
+      "tabNumber": "TAB-5-123456",
+      "tableNumber": "5",
+      "status": "open",
+      "customerName": "John Doe",
+      "subtotal": 800,
+      "serviceFee": 0,
+      "tax": 0,
+      "total": 800,
+      "orders": [
+        {
+          "_id": "order_001",
+          "orderNumber": "WGB-A1B2C3",
+          "status": "completed",
+          "total": 800
+        }
+      ],
+      "openedAt": "2026-03-05T12:00:00Z"
+    }
+  ],
+  "meta": { "page": 1, "limit": 25, "total": 1, "totalPages": 1, "timestamp": "..." }
+}
+```
+
+**Key fields to extract:**
+
+| Response Field | Use For | Description |
+|----------------|---------|-------------|
+| `_id` | `tabId` in order payload | Tab database ID for direct attachment |
+| `tabNumber` | Display / reference | Human-readable tab identifier |
+| `tableNumber` | `dineInDetails.tableNumber` | Table number for `useTab: "existing"` |
+| `status` | Validation | Must be `"open"` to add orders |
+| `total` | Display | Current running tab total |
+| `orders` | Reference | List of orders already on the tab |
+
+#### Example: Resolve Tab from Table Number or Tab Number
+
+```javascript
+/**
+ * Find the open tab for a table number or tab number.
+ * Returns the tab object or null if not found.
+ */
+async function findTab({ tableNumber, tabNumber }) {
+  const url = new URL('https://api.wawagardenbar.com/api/public/tabs');
+  url.searchParams.append('status', 'open');
+  url.searchParams.append('limit', '1');
+
+  if (tabNumber) {
+    url.searchParams.append('tabNumber', tabNumber);
+  } else if (tableNumber) {
+    url.searchParams.append('tableNumber', tableNumber);
+  } else {
+    throw new Error('Provide either tableNumber or tabNumber');
+  }
+
+  const response = await fetch(url, {
+    headers: { 'x-api-key': process.env.WAWA_API_KEY }
+  });
+  const result = await response.json();
+
+  if (!result.success || result.data.length === 0) {
+    return null; // No open tab found
+  }
+
+  return result.data[0];
+}
+
+// Usage: look up by table number
+const tab = await findTab({ tableNumber: '5' });
+if (tab) {
+  console.log(`Found tab ${tab.tabNumber} (${tab._id}) — current total: ₦${tab.total}`);
+  // Use tab._id as tabId in the order payload
+}
+
+// Usage: look up by tab number
+const tab2 = await findTab({ tabNumber: 'TAB-5-123456' });
+```
+
+#### Two Ways to Add an Order to a Found Tab
+
+Once you have the tab, you can attach an order using **either** method:
+
+**Method 1: Using `tabId` (direct attachment)**
+```json
+{
+  "orderType": "dine-in",
+  "tabId": "tab_abc123",
+  "items": [...],
+  "total": 1600,
+  "dineInDetails": { "tableNumber": "5" }
+}
+```
+
+**Method 2: Using `useTab: "existing"` (finds open tab by table number)**
+```json
+{
+  "orderType": "dine-in",
+  "useTab": "existing",
+  "items": [...],
+  "total": 1600,
+  "dineInDetails": { "tableNumber": "5" }
+}
+```
+
+> **Tip:** Use `tabId` when you already have the tab's `_id` from a previous lookup or creation.
+> Use `useTab: "existing"` when you only know the table number and want the API to find the open tab automatically.
+
+---
 
 ### Part 1: Creating a New Tab with Order
 
@@ -498,161 +765,185 @@ curl -X POST https://api.wawagardenbar.com/api/public/orders \
 
 ### Scenario: AI Agent Takes Customer Order
 
+This workflow demonstrates the full end-to-end flow: looking up items by name,
+creating a tab with the first order, looking up the tab later, and adding a
+second order to it.
+
 ```javascript
-// Step 1: Fetch available menu items
-async function getMenuItems(category = null) {
-  const url = new URL('https://api.wawagardenbar.com/api/public/menu');
-  if (category) {
-    url.searchParams.append('category', category);
-  }
-  
-  const response = await fetch(url, {
-    headers: {
-      'x-api-key': process.env.WAWA_API_KEY
-    }
-  });
-  
+const API_BASE = 'https://api.wawagardenbar.com';
+const headers = {
+  'x-api-key': process.env.WAWA_API_KEY,
+  'Content-Type': 'application/json'
+};
+
+// ── Helper: Look up a menu item by name ──────────────────────────
+async function lookupMenuItem(itemName) {
+  const url = new URL(`${API_BASE}/api/public/menu`);
+  url.searchParams.append('q', itemName);
+  url.searchParams.append('limit', '5');
+
+  const response = await fetch(url, { headers });
   const result = await response.json();
+  if (!result.success || result.data.length === 0) return null;
+
+  const item = result.data.find(i => i.isAvailable && i.stockStatus !== 'out-of-stock');
+  if (!item) return null;
+
+  return {
+    menuItemId: item._id,
+    name: item.name,
+    price: item.price,
+    portionOptions: item.portionOptions,
+    customizationOptions: item.customizationOptions
+  };
+}
+
+// ── Helper: Find an open tab by table number or tab number ───────
+async function findTab({ tableNumber, tabNumber }) {
+  const url = new URL(`${API_BASE}/api/public/tabs`);
+  url.searchParams.append('status', 'open');
+  url.searchParams.append('limit', '1');
+  if (tabNumber) url.searchParams.append('tabNumber', tabNumber);
+  else if (tableNumber) url.searchParams.append('tableNumber', tableNumber);
+  else throw new Error('Provide either tableNumber or tabNumber');
+
+  const response = await fetch(url, { headers });
+  const result = await response.json();
+  if (!result.success || result.data.length === 0) return null;
+  return result.data[0];
+}
+
+// ── Helper: Build order items from resolved menu items ───────────
+function buildOrderItems(resolvedItems) {
+  return resolvedItems.map(item => ({
+    menuItemId: item.menuItemId,
+    name: item.name,
+    price: item.price,
+    quantity: item.quantity,
+    portionSize: item.portionSize || 'full',
+    customizations: item.customizations || [],
+    subtotal: item.price * item.quantity
+  }));
+}
+
+// ── Helper: Create order (with optional tab) ─────────────────────
+async function createOrder(payload) {
+  const response = await fetch(`${API_BASE}/api/public/orders`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(payload)
+  });
+  const result = await response.json();
+  if (!result.success) throw new Error(result.error);
   return result.data;
 }
 
-// Step 2: Create tab + first order when customer arrives
-async function createTabWithOrder(tableNumber, items, customerName = "Walk-in Customer") {
-  const response = await fetch('https://api.wawagardenbar.com/api/public/orders', {
-    method: 'POST',
-    headers: {
-      'x-api-key': process.env.WAWA_API_KEY,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      orderType: 'dine-in',
-      useTab: 'new',
-      customerName: customerName,
-      items: items.map(item => ({
-        menuItemId: item.id,
-        name: item.name,
-        price: item.price,
-        quantity: item.quantity,
-        portionSize: item.portionSize || 'full',
-        customizations: item.customizations || [],
-        subtotal: item.price * item.quantity
-      })),
-      subtotal: items.reduce((sum, i) => sum + i.price * i.quantity, 0),
-      tax: 0,
-      deliveryFee: 0,
-      discount: 0,
-      total: items.reduce((sum, i) => sum + i.price * i.quantity, 0),
-      dineInDetails: { tableNumber }
-    })
-  });
-  
-  const result = await response.json();
-  
-  if (!result.success) {
-    throw new Error(result.error);
-  }
-  
-  return {
-    tabId: result.data.tab._id,
-    tabNumber: result.data.tab.tabNumber,
-    orderId: result.data.order._id,
-    orderNumber: result.data.order.orderNumber
-  };
-}
+// ── Step 1: Customer arrives at table 5, orders by item name ─────
+async function handleNewCustomer() {
+  // 1a. Resolve item names to menuItemIds
+  const starLager = await lookupMenuItem('Star Lager');
+  const pepperSoup = await lookupMenuItem('Pepper Soup');
+  if (!starLager) throw new Error('Star Lager not found or unavailable');
+  if (!pepperSoup) throw new Error('Pepper Soup not found or unavailable');
 
-// Step 3: Add subsequent orders to existing tab
-async function addOrderToTab(tableNumber, items, specialInstructions = null) {
-  const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
-  const payload = {
+  // 1b. Build order items
+  const items = buildOrderItems([
+    { ...starLager, quantity: 2 },
+    { ...pepperSoup, quantity: 1 }
+  ]);
+  const total = items.reduce((sum, i) => sum + i.subtotal, 0);
+
+  // 1c. Create tab + first order in a single call
+  const data = await createOrder({
     orderType: 'dine-in',
-    useTab: 'existing',
-    items: items.map(item => ({
-      menuItemId: item.id,
-      name: item.name,
-      price: item.price,
-      quantity: item.quantity,
-      portionSize: item.portionSize || 'full',
-      customizations: item.customizations || [],
-      subtotal: item.price * item.quantity
-    })),
-    subtotal,
+    useTab: 'new',
+    customerName: 'John Doe',
+    items,
+    subtotal: total,
     tax: 0,
     deliveryFee: 0,
     discount: 0,
-    total: subtotal,
-    dineInDetails: { tableNumber },
-    specialInstructions
-  };
-  
-  const response = await fetch('https://api.wawagardenbar.com/api/public/orders', {
-    method: 'POST',
-    headers: {
-      'x-api-key': process.env.WAWA_API_KEY,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
+    total,
+    dineInDetails: { tableNumber: '5' }
   });
-  
-  const result = await response.json();
-  
-  if (!result.success) {
-    throw new Error(result.error);
-  }
-  
-  return {
-    orderId: result.data.order._id,
-    orderNumber: result.data.order.orderNumber,
-    orderTotal: result.data.order.total,
-    tabTotal: result.data.tab.total,
-    status: result.data.order.status
-  };
+
+  console.log(`Tab created: ${data.tab.tabNumber}`);
+  console.log(`First order: ${data.order.orderNumber} — ₦${data.order.total}`);
+  return data;
 }
 
-// Step 4: Complete workflow
-async function processCustomerOrder() {
+// ── Step 2: Customer orders more items later ─────────────────────
+async function handleFollowUpOrder() {
+  // 2a. Look up the existing tab by table number
+  const tab = await findTab({ tableNumber: '5' });
+  if (!tab) throw new Error('No open tab for table 5');
+  console.log(`Found tab ${tab.tabNumber} — current total: ₦${tab.total}`);
+
+  // 2b. Resolve new items by name
+  const jollofRice = await lookupMenuItem('Jollof Rice');
+  if (!jollofRice) throw new Error('Jollof Rice not found or unavailable');
+
+  // 2c. Build order items
+  const items = buildOrderItems([
+    { ...jollofRice, quantity: 1, portionSize: 'half' }
+  ]);
+  const total = items.reduce((sum, i) => sum + i.subtotal, 0);
+
+  // 2d. Add order to existing tab using tabId
+  const data = await createOrder({
+    orderType: 'dine-in',
+    tabId: tab._id,
+    items,
+    subtotal: total,
+    tax: 0,
+    deliveryFee: 0,
+    discount: 0,
+    total,
+    dineInDetails: { tableNumber: '5' },
+    specialInstructions: 'Customer has peanut allergy'
+  });
+
+  console.log(`Order added: ${data.order.orderNumber} — ₦${data.order.total}`);
+  console.log(`Updated tab total: ₦${data.tab.total}`);
+  return data;
+}
+
+// ── Step 3: Alternative — add to tab using tab number ────────────
+async function handleOrderByTabNumber(tabNumberStr) {
+  // 3a. Look up the tab by its human-readable tab number
+  const tab = await findTab({ tabNumber: tabNumberStr });
+  if (!tab) throw new Error(`Tab ${tabNumberStr} not found or not open`);
+
+  // 3b. Resolve items and build order (same pattern)
+  const chapman = await lookupMenuItem('Chapman');
+  if (!chapman) throw new Error('Chapman not found or unavailable');
+
+  const items = buildOrderItems([{ ...chapman, quantity: 2 }]);
+  const total = items.reduce((sum, i) => sum + i.subtotal, 0);
+
+  // 3c. Add order using the resolved tabId
+  const data = await createOrder({
+    orderType: 'dine-in',
+    tabId: tab._id,
+    items,
+    subtotal: total,
+    tax: 0,
+    deliveryFee: 0,
+    discount: 0,
+    total,
+    dineInDetails: { tableNumber: tab.tableNumber }
+  });
+
+  return data;
+}
+
+// ── Run the complete workflow ─────────────────────────────────────
+async function processCustomerVisit() {
   try {
-    // 1. Get menu
-    const menuItems = await getMenuItems('drinks');
-    
-    // 2. Create tab + first order
-    const firstItems = [
-      {
-        id: menuItems[0]._id,
-        name: menuItems[0].name,
-        price: menuItems[0].price,
-        quantity: 2,
-        portionSize: 'full'
-      }
-    ];
-    
-    const tab = await createTabWithOrder('5', firstItems, 'John Doe');
-    console.log(`Tab created: ${tab.tabNumber}`);
-    console.log(`First order: ${tab.orderNumber}`);
-    
-    // 3. Customer orders more items later
-    const moreItems = [
-      {
-        id: menuItems[1]._id,
-        name: menuItems[1].name,
-        price: menuItems[1].price,
-        quantity: 1,
-        portionSize: 'half'
-      }
-    ];
-    
-    const order = await addOrderToTab(
-      '5',
-      moreItems,
-      'Customer has peanut allergy'
-    );
-    
-    console.log(`Order created: ${order.orderNumber}`);
-    console.log(`Order total: ₦${order.orderTotal}`);
-    console.log(`Tab total: ₦${order.tabTotal}`);
-    console.log(`Status: ${order.status}`);
-    
-    return { tab, order };
-    
+    const first = await handleNewCustomer();
+    const second = await handleFollowUpOrder();
+    // Or: const byTab = await handleOrderByTabNumber('TAB-5-123456');
+    return { first, second };
   } catch (error) {
     console.error('Error processing order:', error.message);
     throw error;
@@ -1014,6 +1305,7 @@ async function testAddOrder() {
 |---------|------|--------|----------|
 | 1.0 | March 4, 2026 | Technical Team | Initial release |
 | 1.1 | March 5, 2026 | Technical Team | Updated field names to match actual API (`dineInDetails.tableNumber`, `customerName`, `guestName`). Added `tabId` direct attachment. Updated response examples. Added `tabs` endpoints to summary. |
+| 1.2 | March 5, 2026 | Technical Team | Added Prerequisite A: menu item name lookup (`GET /api/public/menu?q=`). Added Prerequisite B: tab lookup by table number or tab number (`GET /api/public/tabs?tableNumber=` / `tabNumber=`). Added `tabNumber` filter to tabs API. Updated Complete Workflow Example with `lookupMenuItem`, `findTab`, and `handleOrderByTabNumber` helpers. |
 
 ---
 

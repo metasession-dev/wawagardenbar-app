@@ -12,12 +12,22 @@ const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
 app.prepare().then(async () => {
-  // Warm up MongoDB connection before accepting requests
-  try {
-    await connectDB();
-    console.log('✅ MongoDB connection established');
-  } catch (error) {
-    console.error('⚠️ MongoDB warmup failed (will retry on first request):', error);
+  // Warm up MongoDB connection before accepting requests (with retry)
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY_MS = 5000;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      await connectDB();
+      console.log('✅ MongoDB connection established');
+      break;
+    } catch (error) {
+      if (attempt < MAX_RETRIES) {
+        console.warn(`⚠️ MongoDB warmup attempt ${attempt}/${MAX_RETRIES} failed, retrying in ${RETRY_DELAY_MS / 1000}s...`);
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+      } else {
+        console.error('⚠️ MongoDB warmup failed after all retries (will retry on first request):', error);
+      }
+    }
   }
 
   const httpServer = createServer(async (req, res) => {

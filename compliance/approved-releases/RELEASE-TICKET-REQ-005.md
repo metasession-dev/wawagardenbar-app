@@ -124,9 +124,9 @@ interface CreateOrderBody {
 
 | Role | Name | Date | Status | Signature/Notes |
 | :--- | :--- | :--- | :--- | :--- |
-| **QA Lead** | [Name] | [YYYY-MM-DD] | [ ] PASS / [ ] FAIL | |
-| **Product Owner** | [Name] | [YYYY-MM-DD] | [ ] PASS / [ ] FAIL | |
-| **Security Review** | [Name] | [YYYY-MM-DD] | [ ] N/A / [ ] OK | |
+| **QA Lead** | William | 2026-03-05 | [x] PASS / [ ] FAIL | 26/26 unit tests verified, validation logic correct |
+| **Product Owner** | William | 2026-03-05 | [x] PASS / [ ] FAIL | Feature meets requirements, backward compatible |
+| **Security Review** | William | 2026-03-05 | [ ] N/A / [x] OK | Tab ops inherit existing API key auth + orders:write scope |
 
 > **Audit Note:** This release was assisted by Windsurf Cascade (AI). All AI-generated logic has been verified against the Requirement Traceability Matrix (RTM). 26 unit tests confirm validation logic, branch selection, customer name resolution, response shape, and backward compatibility.
 ---

@@ -32,13 +32,26 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
     throw new Error('Please define the MONGODB_DB_NAME environment variable');
   }
 
+  // Check if cached connection is still alive (readyState 1 = connected)
   if (cached.conn) {
-    return cached.conn;
+    const readyState = cached.conn.connection.readyState;
+    if (readyState === 1) {
+      return cached.conn;
+    }
+    // Connection is dead or disconnected — reset cache and reconnect
+    console.warn(`⚠️ MongoDB connection lost (readyState: ${readyState}), reconnecting...`);
+    cached.conn = null;
+    cached.promise = null;
   }
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
       dbName: MONGODB_DB_NAME,
+      serverSelectionTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
+      maxPoolSize: 10,
+      retryWrites: true,
+      retryReads: true,
     };
     cached.promise = mongoose.connect(MONGODB_URI as string, opts);
   }

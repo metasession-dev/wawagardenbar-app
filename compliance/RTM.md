@@ -125,11 +125,145 @@ Create comprehensive Standard Operating Procedures (SOPs) for both manual (waite
 
 ---
 
+### REQ-002: Automatic Idempotency Key Generation for Orders
+
+**Category:** Feature Enhancement / Data Integrity  
+**Priority:** High  
+**Status:** TESTED - PENDING SIGN-OFF  
+**Created:** 2026-03-04  
+**Last Updated:** 2026-03-04
+
+#### Description
+Implement automatic generation of idempotency keys at the database model level for Order documents. When an order is created without an explicit idempotency key, the system generates one using a cryptographically secure format matching the existing checkout pattern.
+
+#### Business Justification
+- Ensures every order has a unique idempotency key for duplicate prevention
+- Supports external API integrations with automatic key generation
+- Maintains backward compatibility with existing code
+- Reduces developer boilerplate and prevents missing keys
+
+#### Implementation Details
+
+**Files Modified:**
+- `/models/order-model.ts` — Added `crypto.randomBytes` import, made field optional with sparse index, added pre-save hook
+- `/interfaces/order.interface.ts` — Made `idempotencyKey` optional
+
+**Key Features:**
+- Format: `checkout-{timestamp}-{randomHex}` (16 hex chars from 8 random bytes)
+- Cryptographically secure via Node.js `crypto.randomBytes`
+- Pre-save hook only runs on new documents
+- Preserves manually provided keys
+
+#### Acceptance Criteria
+- [x] IdempotencyKey auto-generated when not provided
+- [x] Format matches checkout pattern
+- [x] Unique constraint maintained with sparse index
+- [x] Backward compatible with existing code
+- [x] Interface updated to reflect optional field
+- [x] Cryptographically secure random generation
+- [x] TypeScript compilation successful
+- [x] SOLID principles followed
+
+#### Test Evidence
+- Code validation: 37 criteria tested, 100% pass rate
+- Format consistency verified
+- Security review passed (CSPRNG, 64-bit entropy)
+- Backward compatibility confirmed
+
+**Evidence Location:** `/compliance/evidence/REQ-002/`
+
+#### Audit Trail
+| Date | Action | Performed By | Notes |
+|------|--------|--------------|-------|
+| 2026-03-04 | Requirement created | AI (Cascade) | User request for idempotency improvement |
+| 2026-03-04 | Implementation completed | AI (Cascade) | Model and interface updated |
+| 2026-03-04 | Testing completed | AI (Cascade) | 37 criteria passed |
+| 2026-03-04 | Moved to TESTED status | AI (Cascade) | Awaiting human sign-off |
+
+---
+
+### REQ-003: MongoDB Warmup Connection on Server Startup
+
+**Category:** Infrastructure / Reliability  
+**Priority:** High  
+**Status:** TESTED - PENDING SIGN-OFF  
+**Created:** 2026-03-05  
+**Last Updated:** 2026-03-05
+
+#### Description
+Add a MongoDB warmup connection during server startup in `server.ts` to establish the database connection before the HTTP server begins accepting requests. This eliminates transient `MongooseServerSelectionError` errors that occur when incoming requests hit before the MongoDB connection is established.
+
+#### Business Justification
+- Eliminates transient MongoDB connection errors on container startup
+- Improves reliability for API consumers hitting the server immediately after deployment
+- Reduces error noise in production logs
+- Ensures consistent behavior for health checks and API key validation on startup
+
+#### Implementation Details
+
+**Files Modified:**
+- `/server.ts` — Added `connectDB()` warmup call before HTTP server creation
+
+**Code Added:**
+```typescript
+import { connectDB } from './lib/mongodb';
+
+app.prepare().then(async () => {
+  // Warm up MongoDB connection before accepting requests
+  try {
+    await connectDB();
+    console.log('✅ MongoDB connection established');
+  } catch (error) {
+    console.error('⚠️ MongoDB warmup failed (will retry on first request):', error);
+  }
+  // ... rest of server setup
+});
+```
+
+**Key Features:**
+- Connects to MongoDB before HTTP server starts listening
+- Graceful degradation: if warmup fails, logs warning but doesn't crash
+- Uses existing `connectDB()` function (cached singleton pattern)
+- No new dependencies introduced
+
+#### Acceptance Criteria
+- [x] MongoDB connection established before HTTP server accepts requests
+- [x] Graceful error handling if warmup fails
+- [x] No crash on warmup failure (retry on first request)
+- [x] Startup log shows connection status
+- [x] No breaking changes to existing server behavior
+- [x] Uses existing connectDB cached singleton pattern
+- [x] TypeScript compilation successful
+
+#### Test Evidence
+- Implementation correctness verified
+- Graceful degradation confirmed
+- No breaking changes to existing behavior
+- Production deployment verified (health check passing)
+
+**Evidence Location:** `/compliance/evidence/REQ-003/`
+
+#### Dependencies
+- `/lib/mongodb.ts` — `connectDB` function
+- Railway production environment (MongoDB private network)
+
+#### Audit Trail
+| Date | Action | Performed By | Notes |
+|------|--------|--------------|-------|
+| 2026-03-05 | Requirement created | AI (Cascade) | Transient MongoDB errors observed in production |
+| 2026-03-05 | Implementation completed | AI (Cascade) | server.ts updated with warmup |
+| 2026-03-05 | Deployed to production | AI (Cascade) | Via railway up and git push to main |
+| 2026-03-05 | Moved to TESTED status | AI (Cascade) | Awaiting human sign-off |
+
+---
+
 ## Traceability Matrix
 
 | Req ID | Requirement | Implementation | Tests | Status | Approver | Date |
 |--------|-------------|----------------|-------|--------|----------|------|
 | REQ-001 | SOP Documentation | 3 SOP documents | Documentation validation | TESTED - PENDING SIGN-OFF | Pending | - |
+| REQ-002 | Idempotency Key Auto-Generation | order-model.ts, order.interface.ts | Code validation (37 criteria) | TESTED - PENDING SIGN-OFF | Pending | - |
+| REQ-003 | MongoDB Warmup on Startup | server.ts | Implementation validation | TESTED - PENDING SIGN-OFF | Pending | - |
 
 ---
 

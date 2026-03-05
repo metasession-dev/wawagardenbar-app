@@ -47,8 +47,11 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
     const opts = {
       bufferCommands: false,
       dbName: MONGODB_DB_NAME,
-      serverSelectionTimeoutMS: 10000,
+      directConnection: true,
+      serverSelectionTimeoutMS: 15000,
       socketTimeoutMS: 45000,
+      connectTimeoutMS: 15000,
+      heartbeatFrequencyMS: 10000,
       maxPoolSize: 10,
       retryWrites: true,
       retryReads: true,

@@ -465,9 +465,9 @@ When a tab is involved, the response shape changes from flat `{ data: order }` t
 
 **Category:** Feature Enhancement / API / Documentation  
 **Priority:** High  
-**Status:** TESTED - PENDING SIGN-OFF  
+**Status:** APPROVED - DEPLOYED  
 **Created:** 2026-03-05  
-**Last Updated:** 2026-03-05
+**Last Updated:** 2026-03-06
 
 #### Description
 
@@ -512,6 +512,7 @@ Enhances the public API and SOP documentation with three capabilities:
 | 2026-03-05 | Unit tests written & passed | AI (Cascade) | 27/27 Vitest tests pass |
 | 2026-03-05 | TypeScript compilation verified | AI (Cascade) | Clean pass, 0 errors |
 | 2026-03-05 | Moved to TESTED status | AI (Cascade) | Awaiting human sign-off |
+| 2026-03-06 | Human sign-off completed | William | All tests verified, approved for deployment |
 
 ---
 
@@ -524,7 +525,7 @@ Enhances the public API and SOP documentation with three capabilities:
 | REQ-003 | MongoDB Warmup on Startup | server.ts | Implementation validation | TESTED - PENDING SIGN-OFF | Pending | - |
 | REQ-004 | MongoDB Connection Resilience | server.ts, lib/mongodb.ts | Production verification | TESTED - PENDING SIGN-OFF | Pending | - |
 | REQ-005 | Public API Tab Support | route.ts, 3 doc files | Vitest unit tests (26/26) | APPROVED - DEPLOYED | William | 2026-03-05 |
-| REQ-006 | Tab/Menu Lookup + SOP Enhancement | tabs/route.ts, SOP doc | Vitest unit tests (27/27) | TESTED - PENDING SIGN-OFF | Pending | - |
+| REQ-006 | Tab/Menu Lookup + SOP Enhancement | tabs/route.ts, SOP doc | Vitest unit tests (27/27) | APPROVED - DEPLOYED | William | 2026-03-06 |
 
 ---
 

@@ -18,7 +18,8 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
+    screenshot: 'on', // Capture screenshot for every test
+    video: 'on-first-retry', // Also capture video on retry for evidence
   },
   projects: [
     {

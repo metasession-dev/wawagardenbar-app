@@ -107,6 +107,33 @@ Produced by systematic codebase review:
 | E2E test results (human-readable) | `/compliance/evidence/REQ-007/e2e-test-results.txt` |
 | E2E test results (JSON) | `/compliance/evidence/REQ-007/e2e-results.json` |
 | E2E test spec | `/e2e/requirements-verification.spec.ts` |
+| Screenshots (21 PNG files) | `/compliance/evidence/REQ-007/screenshots/` |
+
+### Screenshot Evidence (21 Captures)
+
+| # | File | Test Verified |
+|---|------|---------------|
+| 01 | `01-home-page-branding-CTA.png` | §1/§5.1 Home page renders with branding and CTA |
+| 02 | `02-home-page-order-type-cards.png` | §5.1 Order type cards (Dine In, Pickup, Delivery) |
+| 03 | `03-home-page-mobile-responsive.png` | §27 Responsive — mobile viewport (375×812) |
+| 04 | `04-auth-login-page.png` | §4 Login page with WhatsApp/SMS/Email options |
+| 05 | `05-auth-redirect-orders-to-login.png` | §4 /orders redirects unauthenticated users |
+| 06 | `06-auth-redirect-dashboard-to-login.png` | §4 /dashboard redirects unauthenticated users |
+| 07 | `07-menu-page-items.png` | §6 Menu page loads and displays items |
+| 08 | `08-menu-page-categories.png` | §6 Menu category navigation visible |
+| 09 | `09-checkout-page.png` | §9 Checkout page renders |
+| 10 | `10-rewards-page.png` | §10 Rewards page loads |
+| 11 | `11-rbac-orders-redirect.png` | §11/§12 /dashboard/orders RBAC redirect |
+| 12 | `12-rbac-menu-redirect.png` | §11/§13 /dashboard/menu RBAC redirect |
+| 13 | `13-rbac-inventory-redirect.png` | §14 /dashboard/inventory RBAC redirect |
+| 14 | `14-rbac-settings-redirect.png` | §19 /dashboard/settings RBAC redirect |
+| 15 | `15-rbac-rewards-redirect.png` | §18 /dashboard/rewards RBAC redirect |
+| 16 | `16-rbac-audit-logs-redirect.png` | §23 /dashboard/audit-logs RBAC redirect |
+| 17 | `17-rbac-reports-redirect.png` | §16 /dashboard/reports RBAC redirect |
+| 18 | `18-rbac-kitchen-redirect.png` | §17 /dashboard/kitchen RBAC redirect |
+| 19 | `19-privacy-page.png` | §24 Privacy policy page publicly accessible |
+| 20 | `20-data-deletion-page.png` | §24 Data deletion page publicly accessible |
+| 21 | `21-navigation-menu-link.png` | §3 Home page includes /menu navigation link |
 
 ## 6. Risk Assessment
 

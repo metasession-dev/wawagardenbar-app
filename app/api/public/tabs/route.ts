@@ -1,3 +1,6 @@
+/**
+ * @requirement REQ-006 - Tab Lookup by tabNumber, Item Name Lookup, SOP Enhancement
+ */
 import { NextRequest } from 'next/server';
 import { Types } from 'mongoose';
 import TabModel from '@/models/tab-model';
@@ -21,6 +24,7 @@ import {
  *
  * @queryParam {string}  [status]       - "open" | "settling" | "closed"
  * @queryParam {string}  [tableNumber]  - Filter by table number
+ * @queryParam {string}  [tabNumber]   - Filter by tab number (e.g. "TAB-5-123456")
  * @queryParam {string}  [customerId]   - Filter by user ObjectId
  * @queryParam {string}  [paymentStatus]- "pending" | "paid" | "failed"
  * @queryParam {string}  [startDate]    - ISO 8601 start date (openedAt >=)
@@ -43,6 +47,8 @@ export async function GET(request: NextRequest): Promise<Response> {
       }
       const tableNumber = searchParams.get('tableNumber');
       if (tableNumber) filter.tableNumber = tableNumber;
+      const tabNumber = searchParams.get('tabNumber');
+      if (tabNumber) filter.tabNumber = tabNumber;
       const customerId = searchParams.get('customerId');
       if (customerId && Types.ObjectId.isValid(customerId)) {
         filter.userId = new Types.ObjectId(customerId);

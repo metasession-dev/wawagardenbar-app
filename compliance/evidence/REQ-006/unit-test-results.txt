@@ -1,0 +1,62 @@
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90m/home/william/Documents/SoftwareProjects/wawagardenbar/wawagardenbar app[39m
+
+ [32m✓[39m __tests__/api/public/tabs-filter-support.test.ts[2m > [22mREQ-006: Tab Filter Building — tabNumber support[2m > [22mshould include tabNumber in filter when provided[32m 1[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/tabs-filter-support.test.ts[2m > [22mREQ-006: Tab Filter Building — tabNumber support[2m > [22mshould not include tabNumber when null[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/tabs-filter-support.test.ts[2m > [22mREQ-006: Tab Filter Building — tabNumber support[2m > [22mshould not include tabNumber when undefined[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/tabs-filter-support.test.ts[2m > [22mREQ-006: Tab Filter Building — tabNumber support[2m > [22mshould include both tableNumber and tabNumber when both provided[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/tabs-filter-support.test.ts[2m > [22mREQ-006: Tab Filter Building — tableNumber support[2m > [22mshould include tableNumber when provided[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/tabs-filter-support.test.ts[2m > [22mREQ-006: Tab Filter Building — tableNumber support[2m > [22mshould not include tableNumber when null[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/tabs-filter-support.test.ts[2m > [22mREQ-006: Tab Filter Building — status validation[2m > [22mshould accept valid status "open"[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/tabs-filter-support.test.ts[2m > [22mREQ-006: Tab Filter Building — status validation[2m > [22mshould accept valid status "settling"[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/tabs-filter-support.test.ts[2m > [22mREQ-006: Tab Filter Building — status validation[2m > [22mshould accept valid status "closed"[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/tabs-filter-support.test.ts[2m > [22mREQ-006: Tab Filter Building — status validation[2m > [22mshould reject invalid status values[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/tabs-filter-support.test.ts[2m > [22mREQ-006: Tab Filter Building — status validation[2m > [22mshould not set status when null[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/tabs-filter-support.test.ts[2m > [22mREQ-006: Tab Filter Building — combined filters[2m > [22mshould build filter with status + tableNumber[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/tabs-filter-support.test.ts[2m > [22mREQ-006: Tab Filter Building — combined filters[2m > [22mshould build filter with status + tabNumber[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/tabs-filter-support.test.ts[2m > [22mREQ-006: Tab Filter Building — combined filters[2m > [22mshould build empty filter when no params provided[32m 1[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/tabs-filter-support.test.ts[2m > [22mREQ-006: Tab Filter Building — combined filters[2m > [22mshould include paymentStatus when valid[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/tabs-filter-support.test.ts[2m > [22mREQ-006: Tab Filter Building — combined filters[2m > [22mshould reject invalid paymentStatus[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/tabs-filter-support.test.ts[2m > [22mREQ-006: Tab Filter Building — combined filters[2m > [22mshould include date range filter[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/tabs-filter-support.test.ts[2m > [22mREQ-006: Tab Sort Resolution[2m > [22mshould default to -openedAt when null[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/tabs-filter-support.test.ts[2m > [22mREQ-006: Tab Sort Resolution[2m > [22mshould parse ascending sort[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/tabs-filter-support.test.ts[2m > [22mREQ-006: Tab Sort Resolution[2m > [22mshould parse descending sort with dash prefix[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/tabs-filter-support.test.ts[2m > [22mREQ-006: Tab Sort Resolution[2m > [22mshould fall back to openedAt for disallowed fields[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/tabs-filter-support.test.ts[2m > [22mREQ-006: Menu Item Name Resolution[2m > [22mshould return first available item from search results[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/tabs-filter-support.test.ts[2m > [22mREQ-006: Menu Item Name Resolution[2m > [22mshould skip unavailable items[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/tabs-filter-support.test.ts[2m > [22mREQ-006: Menu Item Name Resolution[2m > [22mshould skip out-of-stock items[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/tabs-filter-support.test.ts[2m > [22mREQ-006: Menu Item Name Resolution[2m > [22mshould return null when no results[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/tabs-filter-support.test.ts[2m > [22mREQ-006: Menu Item Name Resolution[2m > [22mshould return null when all items are unavailable[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/tabs-filter-support.test.ts[2m > [22mREQ-006: Menu Item Name Resolution[2m > [22mshould include portionOptions and customizationOptions[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/orders-tab-support.test.ts[2m > [22mREQ-005: Public API Tab Support — Validation[2m > [22mvalidateTabFields[2m > [22mshould pass when no tab fields are provided[32m 1[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/orders-tab-support.test.ts[2m > [22mREQ-005: Public API Tab Support — Validation[2m > [22mvalidateTabFields[2m > [22mshould pass for useTab="new" with dine-in and tableNumber[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/orders-tab-support.test.ts[2m > [22mREQ-005: Public API Tab Support — Validation[2m > [22mvalidateTabFields[2m > [22mshould pass for useTab="existing" with dine-in and tableNumber[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/orders-tab-support.test.ts[2m > [22mREQ-005: Public API Tab Support — Validation[2m > [22mvalidateTabFields[2m > [22mshould pass for tabId with dine-in (no tableNumber required)[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/orders-tab-support.test.ts[2m > [22mREQ-005: Public API Tab Support — Validation[2m > [22mvalidateTabFields[2m > [22mshould reject invalid useTab value[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/orders-tab-support.test.ts[2m > [22mREQ-005: Public API Tab Support — Validation[2m > [22mvalidateTabFields[2m > [22mshould reject useTab with non-dine-in orderType[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/orders-tab-support.test.ts[2m > [22mREQ-005: Public API Tab Support — Validation[2m > [22mvalidateTabFields[2m > [22mshould reject tabId with non-dine-in orderType[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/orders-tab-support.test.ts[2m > [22mREQ-005: Public API Tab Support — Validation[2m > [22mvalidateTabFields[2m > [22mshould reject useTab without dineInDetails.tableNumber[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/orders-tab-support.test.ts[2m > [22mREQ-005: Public API Tab Support — Validation[2m > [22mvalidateTabFields[2m > [22mshould reject useTab with empty tableNumber[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/orders-tab-support.test.ts[2m > [22mREQ-005: Public API Tab Support — Validation[2m > [22mvalidateTabFields[2m > [22mshould reject useTab="new" with pay-now orderType[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/orders-tab-support.test.ts[2m > [22mREQ-005: Public API Tab Support — Validation[2m > [22mvalidateTabFields[2m > [22mshould allow no-tab orders for any valid orderType[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/orders-tab-support.test.ts[2m > [22mREQ-005: Public API Tab Support — Validation[2m > [22mdetermineTabBranch[2m > [22mshould return "none" when no tab fields provided[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/orders-tab-support.test.ts[2m > [22mREQ-005: Public API Tab Support — Validation[2m > [22mdetermineTabBranch[2m > [22mshould return "tabId" when tabId is provided[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/orders-tab-support.test.ts[2m > [22mREQ-005: Public API Tab Support — Validation[2m > [22mdetermineTabBranch[2m > [22mshould return "useTab-new" when useTab is "new"[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/orders-tab-support.test.ts[2m > [22mREQ-005: Public API Tab Support — Validation[2m > [22mdetermineTabBranch[2m > [22mshould return "useTab-existing" when useTab is "existing"[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/orders-tab-support.test.ts[2m > [22mREQ-005: Public API Tab Support — Validation[2m > [22mdetermineTabBranch[2m > [22mshould prioritize tabId over useTab[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/orders-tab-support.test.ts[2m > [22mREQ-005: Public API Tab Support — Validation[2m > [22mresolveCustomerName[2m > [22mshould use customerName when provided[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/orders-tab-support.test.ts[2m > [22mREQ-005: Public API Tab Support — Validation[2m > [22mresolveCustomerName[2m > [22mshould fall back to guestName when customerName is not provided[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/orders-tab-support.test.ts[2m > [22mREQ-005: Public API Tab Support — Validation[2m > [22mresolveCustomerName[2m > [22mshould fall back to "Walk-in Customer" when neither is provided[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/orders-tab-support.test.ts[2m > [22mREQ-005: Public API Tab Support — Validation[2m > [22mresolveCustomerName[2m > [22mshould fall back to guestName when customerName is empty string[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/orders-tab-support.test.ts[2m > [22mREQ-005: Public API Tab Support — Validation[2m > [22mresolveCustomerName[2m > [22mshould return "Walk-in Customer" when both are empty strings[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/orders-tab-support.test.ts[2m > [22mREQ-005: Public API Tab Support — Response Shape[2m > [22mshould produce flat order response when no tab is involved[32m 1[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/orders-tab-support.test.ts[2m > [22mREQ-005: Public API Tab Support — Response Shape[2m > [22mshould produce wrapped { order, tab } response when tab is involved[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/orders-tab-support.test.ts[2m > [22mREQ-005: Public API Tab Support — CreateOrderBody Interface[2m > [22mshould accept body without tab fields (backward compatible)[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/orders-tab-support.test.ts[2m > [22mREQ-005: Public API Tab Support — CreateOrderBody Interface[2m > [22mshould accept body with tabId field[32m 0[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/orders-tab-support.test.ts[2m > [22mREQ-005: Public API Tab Support — CreateOrderBody Interface[2m > [22mshould accept body with useTab and customerName fields[32m 0[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m2 passed[39m[22m[90m (2)[39m
+[2m      Tests [22m [1m[32m53 passed[39m[22m[90m (53)[39m
+[2m   Start at [22m 23:17:37
+[2m   Duration [22m 232ms[2m (transform 68ms, setup 0ms, import 91ms, tests 12ms, environment 0ms)[22m
+

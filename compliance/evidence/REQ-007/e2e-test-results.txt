@@ -1,0 +1,78 @@
+REQ-007 E2E Test Results — Playwright
+======================================
+Date: 2026-03-06
+Runner: Playwright 1.57.0
+Browser: Chromium 143.0.7499.4
+Duration: 9.0s
+Result: 31/31 PASSED
+
+TEST SUITE BREAKDOWN
+--------------------
+
+Section 1/5.1: Home Page (3 tests)
+  ✅ renders home page with branding and CTA (2.4s)
+  ✅ displays order type feature cards (Dine In, Pickup, Delivery) (2.4s)
+  ✅ is responsive — renders on mobile viewport (2.3s)
+
+Section 4: Authentication (3 tests)
+  ✅ login page renders with authentication options (WhatsApp/SMS/Email) (2.5s)
+  ✅ unauthenticated user is redirected from /orders to /login (2.6s)
+  ✅ unauthenticated user is redirected from /dashboard to /login (2.6s)
+
+Section 5.2/6: Menu System (2 tests)
+  ✅ menu page loads and displays items (3.3s)
+  ✅ menu page has category navigation (3.8s)
+
+Section 9: Checkout (1 test)
+  ✅ checkout page renders with form (3.2s)
+
+Section 20: Public REST API (9 tests)
+  ✅ health endpoint returns success (108ms)
+  ✅ menu API returns items without auth (requires API key) (121ms)
+  ✅ orders API requires authentication (146ms)
+  ✅ inventory API requires authentication (85ms)
+  ✅ customers API requires authentication (68ms)
+  ✅ tabs API requires authentication (79ms)
+  ✅ settings API requires authentication (68ms)
+  ✅ rewards API requires authentication (51ms)
+  ✅ sales summary API requires authentication (59ms)
+
+Section 22: Security Headers (1 test)
+  ✅ returns security headers on responses (340ms)
+
+Section 11/12: Dashboard RBAC (8 tests)
+  ✅ dashboard/orders redirects unauthenticated users (1.4s)
+  ✅ dashboard/menu redirects unauthenticated users (1.4s)
+  ✅ dashboard/inventory redirects unauthenticated users (1.5s)
+  ✅ dashboard/settings redirects unauthenticated users (1.5s)
+  ✅ dashboard/rewards redirects unauthenticated users (1.5s)
+  ✅ dashboard/audit-logs redirects unauthenticated users (1.4s)
+  ✅ dashboard/reports redirects unauthenticated users (1.0s)
+  ✅ dashboard/kitchen redirects unauthenticated users (930ms)
+
+Section 24: Data Management & Privacy (2 tests)
+  ✅ privacy page is publicly accessible (996ms)
+  ✅ data deletion page is publicly accessible (983ms)
+
+Section 10: Rewards (1 test)
+  ✅ rewards page loads (1.9s)
+
+Section 3: Navigation (1 test)
+  ✅ home page includes menu link (1.6s)
+
+REQUIREMENTS COVERAGE MAP
+-------------------------
+| Req Section | Tests | Verified |
+|-------------|-------|----------|
+| §1 Project Overview / §5.1 Home Page | 3 | ✅ |
+| §4 Authentication & Authorization | 3 | ✅ |
+| §5.2/§6 Menu System | 2 | ✅ |
+| §9 Checkout & Payment | 1 | ✅ |
+| §10 Rewards & Loyalty | 1 | ✅ |
+| §11/§12 Dashboard RBAC | 8 | ✅ |
+| §20 Public REST API (auth enforcement) | 9 | ✅ |
+| §22 Security (HTTP headers) | 1 | ✅ |
+| §24 Data Management & Privacy | 2 | ✅ |
+| §3 Architecture / Navigation | 1 | ✅ |
+
+RESULT: ALL 31 TESTS PASSED

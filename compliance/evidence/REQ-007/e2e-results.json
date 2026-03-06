@@ -1,0 +1,1212 @@
+{
+    "config": {
+        "configFile": "/home/william/Documents/SoftwareProjects/wawagardenbar/wawagardenbar app/playwright.config.ts",
+        "rootDir": "/home/william/Documents/SoftwareProjects/wawagardenbar/wawagardenbar app/e2e",
+        "forbidOnly": false,
+        "fullyParallel": true,
+        "globalSetup": null,
+        "globalTeardown": null,
+        "globalTimeout": 0,
+        "grep": {},
+        "grepInvert": null,
+        "maxFailures": 0,
+        "metadata": {
+            "actualWorkers": 8
+        },
+        "preserveOutput": "always",
+        "reporter": [
+            [
+                "json"
+            ]
+        ],
+        "reportSlowTests": {
+            "max": 5,
+            "threshold": 300000
+        },
+        "quiet": false,
+        "projects": [
+            {
+                "outputDir": "/home/william/Documents/SoftwareProjects/wawagardenbar/wawagardenbar app/test-results",
+                "repeatEach": 1,
+                "retries": 0,
+                "metadata": {
+                    "actualWorkers": 8
+                },
+                "id": "chromium",
+                "name": "chromium",
+                "testDir": "/home/william/Documents/SoftwareProjects/wawagardenbar/wawagardenbar app/e2e",
+                "testIgnore": [],
+                "testMatch": [
+                    "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+                ],
+                "timeout": 30000
+            }
+        ],
+        "shard": null,
+        "tags": [],
+        "updateSnapshots": "missing",
+        "updateSourceMethod": "patch",
+        "version": "1.57.0",
+        "workers": 8,
+        "webServer": {
+            "command": "npm run dev",
+            "url": "http://localhost:3000",
+            "reuseExistingServer": true,
+            "timeout": 120000
+        }
+    },
+    "suites": [
+        {
+            "title": "requirements-verification.spec.ts",
+            "file": "requirements-verification.spec.ts",
+            "column": 0,
+            "line": 0,
+            "specs": [],
+            "suites": [
+                {
+                    "title": "Section 1/5.1: Home Page",
+                    "file": "requirements-verification.spec.ts",
+                    "line": 16,
+                    "column": 6,
+                    "specs": [
+                        {
+                            "title": "renders home page with branding and CTA",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 0,
+                                            "parallelIndex": 0,
+                                            "status": "passed",
+                                            "duration": 2159,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:10.270Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-a0e4d6d91f875deb3d0d",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 17,
+                            "column": 7
+                        },
+                        {
+                            "title": "displays order type feature cards (Dine In, Pickup, Delivery)",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 1,
+                                            "parallelIndex": 1,
+                                            "status": "passed",
+                                            "duration": 2086,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:10.247Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-2dac71825b7abdb9947f",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 28,
+                            "column": 7
+                        },
+                        {
+                            "title": "is responsive \u2014 renders on mobile viewport",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 2,
+                                            "parallelIndex": 2,
+                                            "status": "passed",
+                                            "duration": 2192,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:10.287Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-5f83e6365e3af3cd2104",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 36,
+                            "column": 7
+                        }
+                    ]
+                },
+                {
+                    "title": "Section 4: Authentication",
+                    "file": "requirements-verification.spec.ts",
+                    "line": 46,
+                    "column": 6,
+                    "specs": [
+                        {
+                            "title": "login page renders with authentication options",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 3,
+                                            "parallelIndex": 3,
+                                            "status": "passed",
+                                            "duration": 2137,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:10.269Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-8525481feb2f6dfe9c1f",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 47,
+                            "column": 7
+                        },
+                        {
+                            "title": "unauthenticated user is redirected from /orders to /login",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 4,
+                                            "parallelIndex": 4,
+                                            "status": "passed",
+                                            "duration": 2401,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:10.257Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-9f74823badd850dc1e17",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 58,
+                            "column": 7
+                        },
+                        {
+                            "title": "unauthenticated user is redirected from /dashboard to /login",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 5,
+                                            "parallelIndex": 5,
+                                            "status": "passed",
+                                            "duration": 2277,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:10.264Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-294e0d6ef47da1708c32",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 64,
+                            "column": 7
+                        }
+                    ]
+                },
+                {
+                    "title": "Section 5.2/6: Menu System",
+                    "file": "requirements-verification.spec.ts",
+                    "line": 75,
+                    "column": 6,
+                    "specs": [
+                        {
+                            "title": "menu page loads and displays items",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 6,
+                                            "parallelIndex": 6,
+                                            "status": "passed",
+                                            "duration": 2988,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:10.284Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-d12f6cb68887f76dffe5",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 76,
+                            "column": 7
+                        },
+                        {
+                            "title": "menu page has category navigation",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 7,
+                                            "parallelIndex": 7,
+                                            "status": "passed",
+                                            "duration": 3270,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:10.270Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-09f638267dad7512f312",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 87,
+                            "column": 7
+                        }
+                    ]
+                },
+                {
+                    "title": "Section 9: Checkout",
+                    "file": "requirements-verification.spec.ts",
+                    "line": 100,
+                    "column": 6,
+                    "specs": [
+                        {
+                            "title": "checkout page renders with form",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 1,
+                                            "parallelIndex": 1,
+                                            "status": "passed",
+                                            "duration": 2794,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:12.478Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-62fd84b81cf81974f103",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 101,
+                            "column": 7
+                        }
+                    ]
+                },
+                {
+                    "title": "Section 20: Public REST API",
+                    "file": "requirements-verification.spec.ts",
+                    "line": 114,
+                    "column": 6,
+                    "specs": [
+                        {
+                            "title": "health endpoint returns success",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 3,
+                                            "parallelIndex": 3,
+                                            "status": "passed",
+                                            "duration": 63,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:12.531Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-cdef51a4c6f26e09bb01",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 115,
+                            "column": 7
+                        },
+                        {
+                            "title": "menu API returns items without auth (requires API key)",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 0,
+                                            "parallelIndex": 0,
+                                            "status": "passed",
+                                            "duration": 102,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:12.575Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-9ae7ebde9c80bf3a8296",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 124,
+                            "column": 7
+                        },
+                        {
+                            "title": "orders API requires authentication",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 3,
+                                            "parallelIndex": 3,
+                                            "status": "passed",
+                                            "duration": 53,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:12.618Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-042f9ea5fc36ceaa1cd7",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 130,
+                            "column": 7
+                        },
+                        {
+                            "title": "inventory API requires authentication",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 2,
+                                            "parallelIndex": 2,
+                                            "status": "passed",
+                                            "duration": 77,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:12.656Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-f64554dda40afd80f124",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 135,
+                            "column": 7
+                        },
+                        {
+                            "title": "customers API requires authentication",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 5,
+                                            "parallelIndex": 5,
+                                            "status": "passed",
+                                            "duration": 71,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:12.659Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-540e358c38a02857fd0d",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 140,
+                            "column": 7
+                        },
+                        {
+                            "title": "tabs API requires authentication",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 3,
+                                            "parallelIndex": 3,
+                                            "status": "passed",
+                                            "duration": 72,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:12.684Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-598e5148f7d3157a4330",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 145,
+                            "column": 7
+                        },
+                        {
+                            "title": "settings API requires authentication",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 0,
+                                            "parallelIndex": 0,
+                                            "status": "passed",
+                                            "duration": 60,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:12.690Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-91dd5ec167ad2ca75378",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 150,
+                            "column": 7
+                        },
+                        {
+                            "title": "rewards API requires authentication",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 5,
+                                            "parallelIndex": 5,
+                                            "status": "passed",
+                                            "duration": 44,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:12.744Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-aa4709687486908c24ec",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 155,
+                            "column": 7
+                        },
+                        {
+                            "title": "sales summary API requires authentication",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 2,
+                                            "parallelIndex": 2,
+                                            "status": "passed",
+                                            "duration": 52,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:12.748Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-77c52d5b9add0c9bcae8",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 160,
+                            "column": 7
+                        }
+                    ]
+                },
+                {
+                    "title": "Section 22: Security Headers",
+                    "file": "requirements-verification.spec.ts",
+                    "line": 169,
+                    "column": 6,
+                    "specs": [
+                        {
+                            "title": "returns security headers on responses",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 0,
+                                            "parallelIndex": 0,
+                                            "status": "passed",
+                                            "duration": 309,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:12.760Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-f49807d091c681944254",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 170,
+                            "column": 7
+                        }
+                    ]
+                },
+                {
+                    "title": "Section 11/12: Dashboard RBAC",
+                    "file": "requirements-verification.spec.ts",
+                    "line": 185,
+                    "column": 6,
+                    "specs": [
+                        {
+                            "title": "dashboard/orders redirects unauthenticated users",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 3,
+                                            "parallelIndex": 3,
+                                            "status": "passed",
+                                            "duration": 1186,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:12.766Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-bd5150ecede223cb4cc4",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 186,
+                            "column": 7
+                        },
+                        {
+                            "title": "dashboard/menu redirects unauthenticated users",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 4,
+                                            "parallelIndex": 4,
+                                            "status": "passed",
+                                            "duration": 1264,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:12.775Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-11f1dbb6ee99e91d0111",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 192,
+                            "column": 7
+                        },
+                        {
+                            "title": "dashboard/inventory redirects unauthenticated users",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 5,
+                                            "parallelIndex": 5,
+                                            "status": "passed",
+                                            "duration": 1285,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:12.801Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-67c820eec39ec1ec4ecd",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 198,
+                            "column": 7
+                        },
+                        {
+                            "title": "dashboard/settings redirects unauthenticated users",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 2,
+                                            "parallelIndex": 2,
+                                            "status": "passed",
+                                            "duration": 1283,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:12.810Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-69f93534ec5081ad2b31",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 204,
+                            "column": 7
+                        },
+                        {
+                            "title": "dashboard/rewards redirects unauthenticated users",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 0,
+                                            "parallelIndex": 0,
+                                            "status": "passed",
+                                            "duration": 1244,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:13.079Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-81f460fb005215543c5d",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 210,
+                            "column": 7
+                        },
+                        {
+                            "title": "dashboard/audit-logs redirects unauthenticated users",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 6,
+                                            "parallelIndex": 6,
+                                            "status": "passed",
+                                            "duration": 1030,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:13.447Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-d66eb171ba9db03d6b5f",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 216,
+                            "column": 7
+                        },
+                        {
+                            "title": "dashboard/reports redirects unauthenticated users",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 7,
+                                            "parallelIndex": 7,
+                                            "status": "passed",
+                                            "duration": 967,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:13.655Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-642437cccd1462ad113c",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 222,
+                            "column": 7
+                        },
+                        {
+                            "title": "dashboard/kitchen redirects unauthenticated users",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 3,
+                                            "parallelIndex": 3,
+                                            "status": "passed",
+                                            "duration": 861,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:13.962Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-ddf647685c67e06e5a57",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 228,
+                            "column": 7
+                        }
+                    ]
+                },
+                {
+                    "title": "Section 24: Data Management & Privacy",
+                    "file": "requirements-verification.spec.ts",
+                    "line": 238,
+                    "column": 6,
+                    "specs": [
+                        {
+                            "title": "privacy page is publicly accessible",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 4,
+                                            "parallelIndex": 4,
+                                            "status": "passed",
+                                            "duration": 832,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:14.057Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-7edf7ff9d1127c7b4848",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 239,
+                            "column": 7
+                        },
+                        {
+                            "title": "data deletion page is publicly accessible",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 5,
+                                            "parallelIndex": 5,
+                                            "status": "passed",
+                                            "duration": 870,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:14.098Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-a767c18bdda22955d1a2",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 246,
+                            "column": 7
+                        }
+                    ]
+                },
+                {
+                    "title": "Section 10: Rewards",
+                    "file": "requirements-verification.spec.ts",
+                    "line": 256,
+                    "column": 6,
+                    "specs": [
+                        {
+                            "title": "rewards page loads",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 2,
+                                            "parallelIndex": 2,
+                                            "status": "passed",
+                                            "duration": 1347,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:14.109Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-9014b9fae4397852809e",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 257,
+                            "column": 7
+                        }
+                    ]
+                },
+                {
+                    "title": "Section 3: Navigation",
+                    "file": "requirements-verification.spec.ts",
+                    "line": 268,
+                    "column": 6,
+                    "specs": [
+                        {
+                            "title": "home page includes menu link",
+                            "ok": true,
+                            "tags": [],
+                            "tests": [
+                                {
+                                    "timeout": 30000,
+                                    "annotations": [],
+                                    "expectedStatus": "passed",
+                                    "projectId": "chromium",
+                                    "projectName": "chromium",
+                                    "results": [
+                                        {
+                                            "workerIndex": 0,
+                                            "parallelIndex": 0,
+                                            "status": "passed",
+                                            "duration": 1084,
+                                            "errors": [],
+                                            "stdout": [],
+                                            "stderr": [],
+                                            "retry": 0,
+                                            "startTime": "2026-03-06T19:37:14.333Z",
+                                            "annotations": [],
+                                            "attachments": []
+                                        }
+                                    ],
+                                    "status": "expected"
+                                }
+                            ],
+                            "id": "bffb09ad17d216fc77a3-2c56fce02f20c6e56ef2",
+                            "file": "requirements-verification.spec.ts",
+                            "line": 269,
+                            "column": 7
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "errors": [],
+    "stats": {
+        "startTime": "2026-03-06T19:37:09.588Z",
+        "duration": 5912.537,
+        "expected": 31,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+    }
+}

@@ -70,6 +70,8 @@ Produced by systematic codebase review:
 
 ## 5. Test Results
 
+### 5a. Documentation Validation (Static)
+
 | Verification | Result |
 |-------------|--------|
 | Section completeness (27/27) | ✅ PASS |
@@ -79,7 +81,32 @@ Produced by systematic codebase review:
 | API route coverage (27/27) | ✅ PASS |
 | Data model accuracy (17 interfaces verified) | ✅ PASS |
 
-**Evidence Location:** `/compliance/evidence/REQ-007/validation-report.txt`
+### 5b. E2E Tests (Playwright — 31/31 Passed)
+
+| Requirement Section | Tests | Result |
+|---------------------|-------|--------|
+| §1/§5.1 Home Page (branding, CTA, responsive) | 3 | ✅ PASS |
+| §4 Authentication (login page, redirects) | 3 | ✅ PASS |
+| §5.2/§6 Menu System (items, categories) | 2 | ✅ PASS |
+| §9 Checkout (form renders) | 1 | ✅ PASS |
+| §10 Rewards (page loads) | 1 | ✅ PASS |
+| §11/§12 Dashboard RBAC (8 routes protected) | 8 | ✅ PASS |
+| §20 Public REST API (health + 8 auth checks) | 9 | ✅ PASS |
+| §22 Security Headers (X-Frame, nosniff, referrer) | 1 | ✅ PASS |
+| §24 Data Management (privacy, data-deletion) | 2 | ✅ PASS |
+| §3 Navigation (menu link) | 1 | ✅ PASS |
+| **Total** | **31** | **✅ ALL PASS** |
+
+**Runner:** Playwright 1.57.0, Chromium 143.0.7499.4, Duration: 9.0s
+
+### Evidence Location
+
+| Artifact | Path |
+|----------|------|
+| Documentation validation | `/compliance/evidence/REQ-007/validation-report.txt` |
+| E2E test results (human-readable) | `/compliance/evidence/REQ-007/e2e-test-results.txt` |
+| E2E test results (JSON) | `/compliance/evidence/REQ-007/e2e-results.json` |
+| E2E test spec | `/e2e/requirements-verification.spec.ts` |
 
 ## 6. Risk Assessment
 

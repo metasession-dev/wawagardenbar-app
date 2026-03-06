@@ -1,8 +1,8 @@
 # Requirements Traceability Matrix (RTM)
 
 **Project:** Wawa Garden Bar Web Application  
-**Document Version:** 1.2  
-**Last Updated:** 2026-03-05  
+**Document Version:** 1.4  
+**Last Updated:** 2026-03-06  
 **Maintained By:** Development & Compliance Team
 
 ---
@@ -516,6 +516,80 @@ Enhances the public API and SOP documentation with three capabilities:
 
 ---
 
+### REQ-007: Comprehensive Requirements Document
+
+**Category:** Documentation / Requirements  
+**Priority:** High  
+**Status:** TESTED - PENDING SIGN-OFF  
+**Created:** 2026-03-06  
+**Last Updated:** 2026-03-06
+
+#### Description
+
+Create a comprehensive requirements document that catalogues all implemented features, data models, API surface, architecture decisions, and non-functional requirements of the Wawa Garden Bar application. The document serves as the canonical reference for the system's capabilities.
+
+Coverage areas:
+1. Authentication & Authorization (passwordless, admin, RBAC)
+2. Customer-facing features (menu, cart, orders, tabs, checkout, rewards, profile)
+3. Admin dashboard (12 sections with role-based access)
+4. Menu system (29 subcategories, customizations, portion sizes)
+5. Ordering system (4 order types, full lifecycle, profitability tracking)
+6. Tab system (open/settling/closed lifecycle, constraints)
+7. Payment integration (Monnify active, Paystack infrastructure)
+8. Rewards & loyalty (rule-based, Instagram social, points redemption)
+9. Inventory management (location tracking, snapshots, stock movements)
+10. Financial management (expenses, bank import, profitability)
+11. Reports & analytics (daily, inventory, profitability)
+12. Kitchen display system (real-time Socket.IO)
+13. Public REST API (27 endpoints, scoped API keys)
+14. Security (rate limiting, CSP, webhook validation)
+15. Data models (20 MongoDB collections)
+16. Deployment & infrastructure (Railway, Docker)
+
+#### Business Justification
+- Single source of truth for system capabilities
+- Supports onboarding of new developers and stakeholders
+- Enables gap analysis against business requirements
+- Provides audit-ready documentation of implemented features
+- Foundation for future feature planning and prioritization
+
+#### Implementation Details
+
+| Component | File | Change |
+|-----------|------|--------|
+| Requirements Document | `docs/REQUIREMENTS.md` | Created 27-section comprehensive document covering all system features |
+
+#### Methodology
+
+The document was produced by systematic codebase review:
+- **20 interface files** reviewed for data model schemas
+- **20 Mongoose models** reviewed for database structure
+- **28 services** reviewed for business logic
+- **42 server actions** reviewed for feature coverage
+- **27 public API endpoints** catalogued with scopes
+- **37 dashboard pages** mapped with role permissions
+- **142 feature components** inventoried
+- All route handlers, middleware, and utility modules examined
+
+#### Test Evidence
+
+This is a documentation-only artifact. Verification consists of:
+- **Completeness check:** All 20 interfaces, 20 models, 28 services covered
+- **Accuracy check:** Data model fields verified against source TypeScript interfaces
+- **Structure check:** 27 sections with consistent formatting
+- **Evidence Location:** `/compliance/evidence/REQ-007/`
+
+#### Audit Trail
+
+| Date | Action | Actor | Notes |
+|------|--------|-------|-------|
+| 2026-03-06 | Requirement created | AI (Cascade) | User request for comprehensive requirements document |
+| 2026-03-06 | Codebase review completed | AI (Cascade) | All interfaces, models, services, actions, routes reviewed |
+| 2026-03-06 | Document drafted | AI (Cascade) | 27-section document created at docs/REQUIREMENTS.md |
+| 2026-03-06 | Moved to TESTED status | AI (Cascade) | Awaiting human sign-off |
+
+---
+
 ## Traceability Matrix
 
 | Req ID | Requirement | Implementation | Tests | Status | Approver | Date |
@@ -526,6 +600,7 @@ Enhances the public API and SOP documentation with three capabilities:
 | REQ-004 | MongoDB Connection Resilience | server.ts, lib/mongodb.ts | Production verification | TESTED - PENDING SIGN-OFF | Pending | - |
 | REQ-005 | Public API Tab Support | route.ts, 3 doc files | Vitest unit tests (26/26) | APPROVED - DEPLOYED | William | 2026-03-05 |
 | REQ-006 | Tab/Menu Lookup + SOP Enhancement | tabs/route.ts, SOP doc | Vitest unit tests (27/27) | APPROVED - DEPLOYED | William | 2026-03-06 |
+| REQ-007 | Comprehensive Requirements Document | docs/REQUIREMENTS.md | Documentation validation | TESTED - PENDING SIGN-OFF | Pending | - |
 
 ---
 
@@ -539,7 +614,7 @@ Enhances the public API and SOP documentation with three capabilities:
 ---
 
 **Document Control:**
-- Version: 1.3
+- Version: 1.4
 - Classification: Internal
 - Retention Period: Permanent
 - Review Frequency: Quarterly

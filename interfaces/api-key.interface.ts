@@ -16,7 +16,7 @@ export type ApiKeyScope =
   | 'settings:read'
   | 'analytics:read';
 
-export type ApiKeyRole = 'customer' | 'admin' | 'super-admin';
+export type ApiKeyRole = 'customer' | 'csr' | 'admin' | 'super-admin';
 
 export interface IApiKey {
   _id: Types.ObjectId;

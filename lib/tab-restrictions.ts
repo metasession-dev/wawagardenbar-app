@@ -2,7 +2,7 @@ import { TabService } from '@/services/tab-service';
 import { ITab } from '@/interfaces';
 
 export interface TabRestrictionContext {
-  userRole: 'admin' | 'super-admin' | 'customer';
+  userRole: 'customer' | 'csr' | 'admin' | 'super-admin';
   userId: string;
   customerId?: string;
   tableNumber?: string;

@@ -72,6 +72,7 @@ export function AdminList() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Roles</SelectItem>
+              <SelectItem value="csr">CSR</SelectItem>
               <SelectItem value="admin">Admin</SelectItem>
               <SelectItem value="super-admin">Super Admin</SelectItem>
             </SelectContent>

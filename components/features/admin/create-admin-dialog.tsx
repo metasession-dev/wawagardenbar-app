@@ -27,7 +27,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PermissionsEditor } from './permissions-editor';
-import { IAdminPermissions, DEFAULT_ADMIN_PERMISSIONS } from '@/interfaces';
+import { IAdminPermissions, DEFAULT_ADMIN_PERMISSIONS, CSR_DEFAULT_PERMISSIONS } from '@/interfaces';
 
 const createAdminSchema = z
   .object({
@@ -53,7 +53,7 @@ const createAdminSchema = z
     email: z.string().email('Invalid email address').optional().or(z.literal('')),
     firstName: z.string().optional(),
     lastName: z.string().optional(),
-    role: z.enum(['admin', 'super-admin']),
+    role: z.enum(['csr', 'admin', 'super-admin']),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
@@ -100,7 +100,7 @@ export function CreateAdminDialog({ children }: CreateAdminDialogProps) {
         firstName: data.firstName || undefined,
         lastName: data.lastName || undefined,
         role: data.role,
-        permissions: data.role === 'admin' ? permissions : undefined,
+        permissions: data.role === 'admin' || data.role === 'csr' ? permissions : undefined,
       });
 
       if (!result.success) {
@@ -249,26 +249,33 @@ export function CreateAdminDialog({ children }: CreateAdminDialogProps) {
             </Label>
             <Select
               value={role}
-              onValueChange={(value) => setValue('role', value as any)}
+              onValueChange={(value) => {
+                setValue('role', value as any);
+                if (value === 'csr') setPermissions(CSR_DEFAULT_PERMISSIONS);
+                else if (value === 'admin') setPermissions(DEFAULT_ADMIN_PERMISSIONS);
+              }}
               disabled={isLoading}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select role" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="csr">Customer Service Rep</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
                 <SelectItem value="super-admin">Super Admin</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              {role === 'admin'
+              {role === 'csr'
+                ? 'Order management, customer communication, and refund requests'
+                : role === 'admin'
                 ? 'Customizable permissions for specific features'
                 : 'Full access to all dashboard features'}
             </p>
           </div>
 
-          {/* Permissions - Only for Admin role */}
-          {role === 'admin' && (
+          {/* Permissions - For CSR and Admin roles */}
+          {(role === 'csr' || role === 'admin') && (
             <div className="space-y-2">
               <Label>Permissions</Label>
               <p className="text-xs text-muted-foreground mb-4">

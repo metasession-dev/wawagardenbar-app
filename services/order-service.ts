@@ -131,7 +131,7 @@ export class OrderService {
   static async createOrder(orderData: {
     userId?: string;
     createdBy?: string;
-    createdByRole?: 'admin' | 'super-admin' | 'customer';
+    createdByRole?: 'customer' | 'csr' | 'admin' | 'super-admin';
     guestEmail?: string;
     guestName?: string;
     guestPhone?: string;

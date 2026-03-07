@@ -9,7 +9,7 @@ export interface ITab {
   tableNumber: string;
   userId?: Types.ObjectId;
   createdBy?: Types.ObjectId;
-  createdByRole?: 'admin' | 'super-admin' | 'customer';
+  createdByRole?: 'customer' | 'csr' | 'admin' | 'super-admin';
   openedByStaffId?: Types.ObjectId;
   customerName?: string;
   customerEmail?: string;

@@ -27,6 +27,18 @@ export const API_KEY_ROLE_SCOPES: Record<ApiKeyRole, ApiKeyScope[]> = {
     'rewards:read',
     'tabs:read',
   ],
+  csr: [
+    'menu:read',
+    'orders:read',
+    'orders:write',
+    'customers:read',
+    'customers:write',
+    'payments:read',
+    'payments:write',
+    'rewards:read',
+    'tabs:read',
+    'tabs:write',
+  ],
   admin: [
     'menu:read',
     'orders:read',
@@ -60,12 +72,14 @@ export const API_KEY_ROLE_SCOPES: Record<ApiKeyRole, ApiKeyScope[]> = {
 
 export const API_KEY_ROLE_LABELS: Record<ApiKeyRole, string> = {
   customer: 'Customer',
+  csr: 'Customer Service',
   admin: 'Admin',
   'super-admin': 'Super Admin',
 };
 
 export const API_KEY_ROLE_DESCRIPTIONS: Record<ApiKeyRole, string> = {
   customer: 'Menu browsing, ordering, payments, and rewards',
+  csr: 'Orders, customers, payments, rewards, and tab management',
   admin: 'Customer scopes plus tabs, inventory reads, customers, and analytics',
   'super-admin': 'Full access to all API scopes',
 };

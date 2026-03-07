@@ -6,12 +6,12 @@ import { SessionData } from './session';
  * Maps routes to allowed roles
  */
 export const routePermissions: Record<string, UserRole[]> = {
-  '/dashboard': ['admin', 'super-admin'],
+  '/dashboard': ['csr', 'admin', 'super-admin'],
   '/dashboard/menu': ['super-admin'],
-  '/dashboard/orders': ['admin', 'super-admin'],
-  '/dashboard/customers': ['super-admin'],
+  '/dashboard/orders': ['csr', 'admin', 'super-admin'],
+  '/dashboard/customers': ['csr', 'super-admin'],
   '/dashboard/inventory': ['super-admin'],
-  '/dashboard/rewards': ['super-admin'],
+  '/dashboard/rewards': ['csr', 'super-admin'],
   '/dashboard/analytics': ['super-admin'],
   '/dashboard/audit-logs': ['super-admin'],
   '/dashboard/settings': ['super-admin'],
@@ -24,10 +24,10 @@ export const routePermissions: Record<string, UserRole[]> = {
 export const dashboardSections = {
   overview: { roles: ['admin', 'super-admin'] as UserRole[] },
   menu: { roles: ['super-admin'] as UserRole[] },
-  orders: { roles: ['admin', 'super-admin'] as UserRole[] },
-  customers: { roles: ['super-admin'] as UserRole[] },
+  orders: { roles: ['csr', 'admin', 'super-admin'] as UserRole[] },
+  customers: { roles: ['csr', 'super-admin'] as UserRole[] },
   inventory: { roles: ['super-admin'] as UserRole[] },
-  rewards: { roles: ['super-admin'] as UserRole[] },
+  rewards: { roles: ['csr', 'super-admin'] as UserRole[] },
   analytics: { roles: ['super-admin'] as UserRole[] },
   auditLogs: { roles: ['super-admin'] as UserRole[] },
   settings: { roles: ['super-admin'] as UserRole[] },
@@ -38,7 +38,7 @@ export const dashboardSections = {
  */
 export function isAdmin(session: SessionData | null): boolean {
   if (!session?.role) return false;
-  return session.role === 'admin' || session.role === 'super-admin';
+  return session.role === 'csr' || session.role === 'admin' || session.role === 'super-admin';
 }
 
 /**
@@ -109,8 +109,10 @@ export function requiresSuperAdmin(route: string): boolean {
 export function getPermissionLevel(role: UserRole | undefined): number {
   switch (role) {
     case 'super-admin':
-      return 3;
+      return 4;
     case 'admin':
+      return 3;
+    case 'csr':
       return 2;
     case 'customer':
       return 1;

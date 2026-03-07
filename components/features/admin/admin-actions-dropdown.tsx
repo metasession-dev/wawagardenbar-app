@@ -134,7 +134,7 @@ export function AdminActionsDropdown({
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
           <DropdownMenuSeparator />
 
-          {admin.role === 'admin' && (
+          {(admin.role === 'csr' || admin.role === 'admin') && (
             <DropdownMenuItem
               onClick={() => router.push(`/dashboard/settings/admins/${admin._id}/permissions`)}
             >

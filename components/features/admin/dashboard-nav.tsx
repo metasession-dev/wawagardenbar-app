@@ -46,7 +46,7 @@ const navItems: NavItem[] = [
     title: 'Orders',
     href: '/dashboard/orders',
     icon: ShoppingCart,
-    roles: ['admin', 'super-admin'],
+    roles: ['csr', 'admin', 'super-admin'],
     permission: 'orderManagement',
   },
   {
@@ -60,7 +60,7 @@ const navItems: NavItem[] = [
     title: 'Customers',
     href: '/dashboard/customers',
     icon: Users,
-    roles: ['super-admin'],
+    roles: ['csr', 'super-admin'],
   },
   {
     title: 'Inventory',
@@ -73,7 +73,7 @@ const navItems: NavItem[] = [
     title: 'Rewards',
     href: '/dashboard/rewards',
     icon: Gift,
-    roles: ['admin', 'super-admin'],
+    roles: ['csr', 'admin', 'super-admin'],
     permission: 'rewardsAndLoyalty',
   },
   {
@@ -129,7 +129,7 @@ export function DashboardNav({ userEmail, userRole, permissions }: DashboardNavP
     // Super-admin has access to everything
     if (userRole === 'super-admin') return true;
     
-    // For admin role, check permissions if specified
+    // For csr/admin role, check permissions if specified
     if (item.permission) {
       if (!permissions) return false;
       return permissions[item.permission] === true;

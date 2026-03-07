@@ -38,7 +38,7 @@ export async function requireRole(
  * Check if user is admin
  */
 export async function requireAdmin(): Promise<SessionData> {
-  return requireRole(['admin', 'super-admin']);
+  return requireRole(['csr', 'admin', 'super-admin']);
 }
 
 /**

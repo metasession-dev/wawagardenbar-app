@@ -27,7 +27,7 @@ export function CartItem({ item }: CartItemProps) {
   const [instructions, setInstructions] = useState(item.specialInstructions || '');
   const [overrideDialogOpen, setOverrideDialogOpen] = useState(false);
 
-  const isAdmin = user?.role === 'admin' || user?.role === 'super-admin';
+  const isAdmin = user?.role === 'csr' || user?.role === 'admin' || user?.role === 'super-admin';
   const canOverridePrice = isAdmin && item.allowManualPriceOverride;
 
   function handleQuantityChange(delta: number) {

@@ -239,8 +239,8 @@ function MetricsSkeleton() {
 export default async function DashboardPage() {
   const session = await getCurrentSession();
 
-  // Redirect regular admins to orders page since they don't have access to overview
-  if (session?.role === 'admin') {
+  // Redirect CSR and regular admins to orders page since they don't have access to overview
+  if (session?.role === 'csr' || session?.role === 'admin') {
     redirect('/dashboard/orders');
   }
 

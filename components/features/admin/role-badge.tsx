@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { UserRole } from '@/interfaces/user.interface';
-import { Shield, ShieldCheck, User } from 'lucide-react';
+import { Headset, Shield, ShieldCheck, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface RoleBadgeProps {
@@ -37,6 +37,13 @@ function getRoleConfig(role: UserRole) {
         variant: 'default' as const,
         className: 'bg-gradient-to-r from-purple-600 to-pink-600 text-white border-0',
         icon: ShieldCheck,
+      };
+    case 'csr':
+      return {
+        label: 'CSR',
+        variant: 'default' as const,
+        className: 'bg-teal-600 text-white border-0',
+        icon: Headset,
       };
     case 'admin':
       return {

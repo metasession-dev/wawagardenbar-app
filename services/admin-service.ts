@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
 import { UserModel } from '../models';
 import { AuditLogService } from './audit-log-service';
-import { IAdminPermissions, DEFAULT_ADMIN_PERMISSIONS } from '../interfaces';
+import { IAdminPermissions, DEFAULT_ADMIN_PERMISSIONS, CSR_DEFAULT_PERMISSIONS } from '../interfaces';
 
 export class AdminService {
   private static readonly BCRYPT_ROUNDS = 12;
@@ -104,7 +104,7 @@ export class AdminService {
     email?: string;
     firstName?: string;
     lastName?: string;
-    role: 'admin' | 'super-admin';
+    role: 'csr' | 'admin' | 'super-admin';
     createdBy: string;
     permissions?: IAdminPermissions;
   }) {
@@ -127,9 +127,13 @@ export class AdminService {
     const hashedPassword = await this.hashPassword(data.password);
 
     // Determine permissions based on role
-    const adminPermissions = data.role === 'admin' 
-      ? (data.permissions || DEFAULT_ADMIN_PERMISSIONS)
-      : null; // Super-admin has no restrictions
+    let adminPermissions: IAdminPermissions | null = null;
+    if (data.role === 'csr') {
+      adminPermissions = data.permissions || CSR_DEFAULT_PERMISSIONS;
+    } else if (data.role === 'admin') {
+      adminPermissions = data.permissions || DEFAULT_ADMIN_PERMISSIONS;
+    }
+    // Super-admin has no restrictions (null)
 
     // Create user
     const admin = await UserModel.create({
@@ -170,7 +174,7 @@ export class AdminService {
    */
   static async listAdmins(filters?: {
     search?: string;
-    role?: 'admin' | 'super-admin';
+    role?: 'csr' | 'admin' | 'super-admin';
     status?: 'active' | 'suspended' | 'deleted';
     sortBy?: 'username' | 'role' | 'lastLoginAt' | 'createdAt';
     sortOrder?: 'asc' | 'desc';

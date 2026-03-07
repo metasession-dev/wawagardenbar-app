@@ -1,4 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
+import { config } from 'dotenv';
+import path from 'path';
+
+// Load .env.local so auth credentials are available in test workers
+config({ path: path.resolve(__dirname, '.env.local'), override: false });
 
 /**
  * Playwright configuration for Wawa Garden Bar E2E tests
@@ -22,9 +27,24 @@ export default defineConfig({
     video: 'on-first-retry', // Also capture video on retry for evidence
   },
   projects: [
+    // Unauthenticated tests — no login required
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      testMatch: /requirements-verification\.spec\.ts/,
+    },
+    // Auth setup — logs in as admin and super-admin, saves storageState
+    {
+      name: 'auth-setup',
+      testMatch: /auth\.setup\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    // Authenticated tests — reuse saved sessions
+    {
+      name: 'authenticated',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /authenticated\.spec\.ts/,
+      dependencies: ['auth-setup'],
     },
   ],
   /* Start dev server before tests */

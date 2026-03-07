@@ -59,12 +59,21 @@ This directory contains all Standard Operating Procedures for the Wawa Garden Ba
 | Environment Variables | `environment-variables-fixed.md` | Environment variable reference and migration guide |
 | Operational Scripts | `operational-scripts.md` | Database scripts for seeding, cleanup, and diagnostics |
 
+## Role-to-Scope Mapping (API Keys)
+
+| Role | Scope Count | Scopes |
+|------|-------------|--------|
+| **Customer** | 7 | menu:read, orders:read, orders:write, payments:read, payments:write, rewards:read, tabs:read |
+| **CSR** | 10 | All Customer scopes + customers:read, customers:write, tabs:write |
+| **Admin** | 12 | All CSR scopes + inventory:read, analytics:read |
+| **Super-Admin** | 14 | All scopes (adds inventory:write, settings:read) |
+
 ## Roles and Permissions
 
 | Role | Level | Dashboard Access | SOPs to Follow |
 |------|-------|-----------------|----------------|
 | Waiter / Server | -- | Orders, Kitchen only | SOP-WAITER-001, 002, 003 |
-| Customer Service Rep | -- | Orders (delivery focus) | SOP-CSR-001, SOP-WAITER-* |
+| Customer Service Rep (CSR) | -- | Orders, Customers, Rewards | SOP-CSR-001, SOP-WAITER-* |
 | Kitchen Staff | -- | Kitchen Display only | SOP-KITCHEN-001 |
 | Admin | 2 | Orders, Kitchen | SOP-ADMIN-001, SOP-WAITER-* |
 | Super-Admin | 3 | All sections | All SOP-ADMIN-*, SOP-WAITER-* |

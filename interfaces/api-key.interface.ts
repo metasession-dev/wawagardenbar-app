@@ -16,11 +16,14 @@ export type ApiKeyScope =
   | 'settings:read'
   | 'analytics:read';
 
+export type ApiKeyRole = 'customer' | 'admin' | 'super-admin';
+
 export interface IApiKey {
   _id: Types.ObjectId;
   name: string;
   keyHash: string;
   keyPrefix: string;
+  role?: ApiKeyRole;
   scopes: ApiKeyScope[];
   createdBy: Types.ObjectId;
   lastUsedAt?: Date;
@@ -35,6 +38,7 @@ export interface IApiKeyPublic {
   _id: string;
   name: string;
   keyPrefix: string;
+  role?: ApiKeyRole;
   scopes: ApiKeyScope[];
   createdBy: string;
   lastUsedAt?: string;
@@ -46,6 +50,7 @@ export interface IApiKeyPublic {
 
 export interface ICreateApiKeyInput {
   name: string;
+  role?: ApiKeyRole;
   scopes: ApiKeyScope[];
   expiresAt?: Date;
   rateLimit?: number;

@@ -31,8 +31,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { revokeApiKeyAction, deleteApiKeyAction } from '@/app/actions/admin/api-key-actions';
-import { API_KEY_SCOPE_LABELS } from '@/constants/api-key-scopes';
-import { IApiKeyPublic, ApiKeyScope } from '@/interfaces/api-key.interface';
+import { API_KEY_SCOPE_LABELS, API_KEY_ROLE_LABELS } from '@/constants/api-key-scopes';
+import { IApiKeyPublic, ApiKeyScope, ApiKeyRole } from '@/interfaces/api-key.interface';
 import { toast } from 'sonner';
 
 interface ApiKeysTableProps {
@@ -101,6 +101,7 @@ export function ApiKeysTable({ keys, onRefresh }: ApiKeysTableProps) {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Prefix</TableHead>
+              <TableHead>Role</TableHead>
               <TableHead>Scopes</TableHead>
               <TableHead>Rate Limit</TableHead>
               <TableHead>Last Used</TableHead>
@@ -115,6 +116,15 @@ export function ApiKeysTable({ keys, onRefresh }: ApiKeysTableProps) {
                 <TableCell className="font-medium">{key.name}</TableCell>
                 <TableCell>
                   <code className="rounded bg-muted px-1 py-0.5 text-xs">{key.keyPrefix}…</code>
+                </TableCell>
+                <TableCell>
+                  {key.role ? (
+                    <Badge variant="secondary" className="text-xs">
+                      {API_KEY_ROLE_LABELS[key.role as ApiKeyRole]}
+                    </Badge>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">Custom</span>
+                  )}
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">

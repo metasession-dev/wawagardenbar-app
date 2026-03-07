@@ -37,6 +37,10 @@ const apiKeySchema = new Schema<IApiKey>(
       required: true,
       index: true,
     },
+    role: {
+      type: String,
+      enum: ['customer', 'admin', 'super-admin'],
+    },
     scopes: {
       type: [String],
       enum: API_KEY_SCOPES,

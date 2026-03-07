@@ -1,4 +1,4 @@
-import { ApiKeyScope } from '@/interfaces/api-key.interface';
+import { ApiKeyScope, ApiKeyRole } from '@/interfaces/api-key.interface';
 
 export const API_KEY_SCOPE_LABELS: Record<ApiKeyScope, string> = {
   'menu:read': 'Menu — Read',
@@ -15,4 +15,57 @@ export const API_KEY_SCOPE_LABELS: Record<ApiKeyScope, string> = {
   'rewards:read': 'Rewards — Read',
   'settings:read': 'Settings — Read',
   'analytics:read': 'Analytics — Read',
+};
+
+export const API_KEY_ROLE_SCOPES: Record<ApiKeyRole, ApiKeyScope[]> = {
+  customer: [
+    'menu:read',
+    'orders:read',
+    'orders:write',
+    'payments:read',
+    'payments:write',
+    'rewards:read',
+    'tabs:read',
+  ],
+  admin: [
+    'menu:read',
+    'orders:read',
+    'orders:write',
+    'payments:read',
+    'payments:write',
+    'rewards:read',
+    'tabs:read',
+    'tabs:write',
+    'inventory:read',
+    'customers:read',
+    'analytics:read',
+  ],
+  'super-admin': [
+    'menu:read',
+    'orders:read',
+    'orders:write',
+    'inventory:read',
+    'inventory:write',
+    'customers:read',
+    'customers:write',
+    'payments:read',
+    'payments:write',
+    'tabs:read',
+    'tabs:write',
+    'rewards:read',
+    'settings:read',
+    'analytics:read',
+  ],
+};
+
+export const API_KEY_ROLE_LABELS: Record<ApiKeyRole, string> = {
+  customer: 'Customer',
+  admin: 'Admin',
+  'super-admin': 'Super Admin',
+};
+
+export const API_KEY_ROLE_DESCRIPTIONS: Record<ApiKeyRole, string> = {
+  customer: 'Menu browsing, ordering, payments, and rewards',
+  admin: 'Customer scopes plus tabs, inventory reads, customers, and analytics',
+  'super-admin': 'Full access to all API scopes',
 };

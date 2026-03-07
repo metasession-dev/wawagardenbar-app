@@ -65,7 +65,7 @@ In short: the application was well-built and the requirements were well-document
 
 ---
 
-## What We Did: The Three-Phase Build-Out
+## What We Did: The Four-Phase Build-Out
 
 ### Phase 1: Expand E2E Coverage (31 → 142 Unauthenticated Tests)
 
@@ -206,6 +206,143 @@ Every link in this chain is version-controlled in Git, meaning changes are track
 
 ---
 
+## Phase 4: The Workflow System — Closing the Process Gap
+
+Documentation and tests are only half the story. An auditor will also ask: *"How does code get from a developer's machine to production? Who approved it? Where's the proof?"*
+
+The existing development workflows had the same problem as the test suite — they existed, but they didn't enforce compliance. An analysis of the four Windsurf workflow files revealed critical gaps:
+
+### What the Workflow Audit Found
+
+| Issue | Impact |
+|-------|--------|
+| **No test gate.** The commit workflow pushed code without running any tests. | Code could reach `main` with failing tests — no quality guarantee. |
+| **`git add .` used everywhere.** | Risk of accidentally committing `.env` files, credentials, or session state. |
+| **No PR-based approval.** Merges to `main` were done directly. | No audit trail of who approved what. Paper sign-off tables in markdown files are editable. |
+| **Confused branch flow.** The feature branch workflow pushed a branch but never merged it anywhere. | Developers ended up on `develop` with their work orphaned on an unmerged branch. |
+| **No link to compliance documents.** | Workflows operated in isolation from the RTM, test plan, and evidence chain. |
+| **Four overlapping workflows with unclear boundaries.** | No clear pipeline — developers had to guess which workflow to use when. |
+
+### The Insight: GitHub PRs as Formal Sign-Off
+
+The key design decision was recognizing that **GitHub Pull Request approvals are superior to paper sign-off tables** for compliance purposes:
+
+- **Immutable.** GitHub records the reviewer's username, timestamp, and approval decision. Unlike a markdown table, these cannot be silently edited after the fact.
+- **Contextual.** The reviewer sees the actual code diff alongside the compliance artifacts in the same interface.
+- **Auditable.** An auditor can click a PR link and see exactly who approved what, when, and what comments were made.
+- **Enforceable.** Branch protection rules can require approvals before merge (though even without them, the PR history serves as evidence).
+
+### The Five-Stage Pipeline
+
+The four overlapping workflows were replaced with a clear, linear pipeline where each stage feeds into the next:
+
+```
+ 1. PLAN          Define the requirement (REQ-XXX) in RTM
+                  ↓
+ 2. IMPLEMENT     Code on develop, commit with REQ reference, run tests
+                  ↓
+ 3. EVIDENCE      Generate compliance artifacts (RTM update, release ticket)
+                  ↓
+ 4. REVIEW        Create PR: develop → main with compliance checklist
+                  ↓                    ↑
+                  ↓              Human reviews code + artifacts
+                  ↓              Comments, requests changes, or approves
+                  ↓                    ↓
+ 5. DEPLOY        Merge approved PR → Railway auto-deploys → verify → finalize
+```
+
+#### Stage 1: Plan (`plan-requirement.md`)
+
+Before writing code, the requirement is defined in the RTM with status `DRAFT`. An evidence directory is created. If the requirement changes the system's capabilities, `docs/REQUIREMENTS.md` is updated to reflect the intended behaviour — establishing "what should it do" before "what did we build."
+
+#### Stage 2: Implement & Test (`implement-and-test.md`)
+
+The core development loop with one critical addition: a **mandatory test gate**. No push to `develop` without:
+
+```bash
+npx tsc --noEmit           # TypeScript compilation: 0 errors
+npx playwright test        # E2E suite: 183 tests must pass
+```
+
+Other compliance safeguards enforced at this stage:
+- **Selective staging only** — `git add .` is explicitly forbidden. Every staged file is reviewed.
+- **Sensitive file check** — a grep against staged files catches `.env`, credentials, and session state before they're committed.
+- **Conventional commits** with requirement references (`Ref: REQ-XXX`) and AI co-authorship disclosure.
+- **JSDoc requirement headers** in modified source files for traceability.
+
+#### Stage 3: Audit Finish (`audit-finish.md`)
+
+For tracked requirements, this stage generates the formal compliance artifacts:
+
+1. **Test evidence** saved to `compliance/evidence/REQ-XXX/`
+2. **RTM updated** with status `TESTED - PENDING SIGN-OFF`
+3. **Release ticket** created in `compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md` with:
+   - Implementation summary and files modified
+   - Test results table (type, count, passed, failed, evidence path)
+   - Acceptance criteria checklist
+   - Risk assessment
+   - Reviewer checklist
+   - Audit trail table
+
+#### Stage 4: Submit for Review (`submit-for-review.md`)
+
+A Pull Request is created from `develop` to `main` using `gh pr create`. The PR body includes a structured compliance checklist:
+
+```markdown
+## Compliance Artifacts
+- [ ] RTM updated (compliance/RTM.md)
+- [ ] Release ticket created (compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md)
+- [ ] Test evidence saved (compliance/evidence/REQ-XXX/)
+- [ ] JSDoc requirement headers in modified files
+
+## Reviewer Checklist
+- [ ] Code changes are correct and complete
+- [ ] Test evidence shows all tests passing
+- [ ] No sensitive data committed
+- [ ] RTM status is TESTED - PENDING SIGN-OFF
+- [ ] No regressions introduced
+```
+
+The reviewer examines both the code changes (in the Files Changed tab) and the compliance artifacts (in the `compliance/` directory). They can comment, request changes, or approve. **Their GitHub approval IS the formal sign-off** — no separate sign-off table needed.
+
+#### Stage 5: Deploy (`deploy-main.md`)
+
+After approval, the PR is merged to `main` (using merge commit, not squash — preserving full commit history for audit). Railway auto-deploys. Post-deploy verification includes health checks and smoke tests. For tracked requirements, the release ticket is moved from `pending-releases/` to `approved-releases/` and the RTM status is updated to `APPROVED - DEPLOYED` with the reviewer's name and date from the PR approval.
+
+### CI/CD: Automated Test Gate on PRs
+
+A GitHub Actions workflow (`test-on-pr.yml`) provides automated verification on every PR to `main`:
+
+```yaml
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [develop]
+```
+
+The workflow spins up a MongoDB service container, installs dependencies, runs TypeScript type checking, and executes the 142 unauthenticated Playwright tests. Results are posted as a PR comment. This means the reviewer sees both the automated test results and the compliance checklist before making their approval decision.
+
+### Release Ticket Lifecycle
+
+The release ticket has a clear lifecycle that mirrors the pipeline:
+
+```
+compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md
+  Created at Stage 3 (audit-finish)
+  Linked to PR at Stage 4 (submit-for-review)
+  Reviewed by human at Stage 4
+                ↓
+compliance/approved-releases/RELEASE-TICKET-REQ-XXX.md
+  Moved at Stage 5 (deploy) after PR approval
+  RTM updated: APPROVED - DEPLOYED
+  Audit trail entry: "PR #N approved by [reviewer] on [date]"
+```
+
+This gives auditors a single directory to check: `compliance/approved-releases/` contains every change that reached production, each with a complete audit trail linking back to the requirement, implementation, tests, and approval.
+
+---
+
 ## Final Outcome: By the Numbers
 
 | Metric | Before | After |
@@ -220,10 +357,14 @@ Every link in this chain is version-controlled in Git, meaning changes are track
 | Compliance documents | 1 (partial RTM) | 4 (Test Plan, RTM v2.0, Test Cases, TSR) |
 | Formal defect log | None | 6 defects documented with resolutions |
 | Residual risk assessment | None | 7 risks documented with mitigations |
-| Approval sign-off blocks | None | On all 4 documents |
+| Approval sign-off blocks | None | On all 4 documents + GitHub PR approvals |
 | Evidence artifacts | 21 screenshots | 21 screenshots + JSON results + test listing |
+| Development workflows | 4 (overlapping, no test gate) | 5-stage pipeline with mandatory test gate |
+| Approval mechanism | None (direct push to main) | GitHub PR review + approval (immutable) |
+| CI/CD test automation | Docker build only | Docker build + 142 E2E tests on every PR |
+| Release ticket lifecycle | None | pending-releases → approved-releases with audit trail |
 
-The test suite runs in **~1.6 minutes** on a single machine with 8 parallel workers. It requires no external services beyond MongoDB and the Next.js dev server. The entire compliance documentation suite — all four ISO/IEC/IEEE 29119-3 documents — lives alongside the code in version control, making it trivially reproducible, auditable, and maintainable.
+The test suite runs in **~1.6 minutes** on a single machine with 8 parallel workers. It requires no external services beyond MongoDB and the Next.js dev server. The entire compliance suite — documentation, workflows, and CI/CD — lives alongside the code in version control, making it trivially reproducible, auditable, and maintainable.
 
 ---
 
@@ -237,10 +378,14 @@ The test suite runs in **~1.6 minutes** on a single machine with 8 parallel work
 
 4. **Document residual risk honestly.** Rather than claiming 100% coverage, the TSR explicitly lists 7 areas where automated testing has limitations (single browser, no load testing, payment gateway, etc.). Auditors trust documentation that acknowledges what it doesn't cover.
 
-5. **Make evidence immutable.** JSON results, screenshots, and test listings are version-controlled in Git. The RTM links to specific evidence files by path. No spreadsheets that anyone can edit after the fact.
+5. **Make evidence immutable.** JSON results, screenshots, and test listings are version-controlled in Git. The RTM links to specific evidence files by path. PR approvals are recorded by GitHub with immutable timestamps. No spreadsheets that anyone can edit after the fact.
 
-6. **Design for the "bus test."** If the lead QA engineer disappears, can a stranger follow the documentation to understand the current state of quality? With formal test case specifications that include pre-conditions, numbered steps, and expected results — yes.
+6. **Design for the "bus test."** If the lead QA engineer disappears, can a stranger follow the documentation to understand the current state of quality? With formal test case specifications, a clear 5-stage pipeline, and numbered steps in every workflow — yes.
+
+7. **Use the platform's native approval mechanism.** GitHub PR approvals are more auditable than sign-off tables in markdown files. The reviewer's identity is verified by GitHub authentication, the timestamp is server-generated, and the approval cannot be retroactively edited. This is a stronger compliance guarantee than any paper-based process.
+
+8. **One pipeline, not four overlapping workflows.** When developers have to guess which workflow to use, they'll pick the easiest one — which is usually the one with the fewest compliance steps. A single, linear pipeline with clear "you are here" stages eliminates that choice entirely.
 
 ---
 
-*All compliance documents are located in the `compliance/` directory of the repository. The test suite can be run with `npx playwright test` after following the setup guide in `docs/E2E-TEST-GUIDE.md`.*
+*All compliance documents are located in the `compliance/` directory. Development workflows are in `.windsurf/workflows/` with a README providing the pipeline overview. The test suite can be run with `npx playwright test` after following the setup guide in `docs/E2E-TEST-GUIDE.md`.*

@@ -62,7 +62,7 @@ Content-Type: application/json
 - `payments:read` - Verify payment status
 - `payments:write` - Initialize and record payments
 
-> **Role-Based Keys:** Select the **Admin** role when creating an API key (Admin Dashboard > Settings > API Keys) to automatically include all required scopes (`tabs:read`, `tabs:write`, `payments:read`, `payments:write`). Alternatively, use **Custom** to select individual scopes.
+> **Role-Based Keys:** Select the **CSR** role when creating an API key (Admin Dashboard > Settings > API Keys) to automatically include all required scopes (`tabs:read`, `tabs:write`, `payments:read`, `payments:write`). Alternatively, use **Custom** to select individual scopes.
 
 ---
 

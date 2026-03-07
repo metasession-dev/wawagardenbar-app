@@ -164,8 +164,9 @@ Admin accounts should be deactivated when:
 
 | Role | Scopes Granted | Use Case |
 |------|---------------|----------|
-| **Customer** | menu:read, orders:read/write, payments:read/write, rewards:read, tabs:read | Customer-facing apps, chatbots, ordering kiosks |
-| **Admin** | All Customer scopes + tabs:write, inventory:read, customers:read, analytics:read | Staff tools, POS integrations, display boards |
+| **Customer** | menu:read, orders:read/write, payments:read/write, rewards:read, tabs:read (7 scopes) | Customer-facing apps, chatbots, ordering kiosks |
+| **CSR** | All Customer scopes + customers:read, customers:write, tabs:write (10 scopes) | Customer service tools, CRM integrations |
+| **Admin** | All CSR scopes + inventory:read, analytics:read (12 scopes) | Staff tools, POS integrations, display boards |
 | **Super Admin** | All 14 scopes | Full system integrations, BI tools, management dashboards |
 | **Custom** | Individually selected scopes | Advanced use cases requiring specific scope combinations |
 
@@ -225,7 +226,8 @@ The following 14 scopes are available when creating API keys:
 | Role | Scopes Included |
 |------|----------------|
 | **Customer** (7 scopes) | menu:read, orders:read, orders:write, payments:read, payments:write, rewards:read, tabs:read |
-| **Admin** (11 scopes) | All Customer scopes + tabs:write, inventory:read, customers:read, analytics:read |
+| **CSR** (10 scopes) | All Customer scopes + customers:read, customers:write, tabs:write |
+| **Admin** (12 scopes) | All CSR scopes + inventory:read, analytics:read |
 | **Super Admin** (14 scopes) | All scopes |
 
 **Best practice:** Use role-based keys for standard integrations. Only use Custom scope selection when a predefined role grants more access than needed. Avoid assigning write scopes unless the integration explicitly requires them.

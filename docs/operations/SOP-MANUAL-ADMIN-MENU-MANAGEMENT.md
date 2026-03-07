@@ -2,7 +2,7 @@
 
 | Field            | Detail                                      |
 |------------------|---------------------------------------------|
-| **Document ID**  | SOP-ADMIN-002                               |
+| **Document ID**  | SOP-MANUAL-ADMIN-002                               |
 | **Title**        | Menu Management                             |
 | **Version**      | 1.0                                         |
 | **Effective Date** | March 7, 2026                             |
@@ -48,7 +48,7 @@ This SOP covers all menu management operations performed through the Wawa Garden
 - Category assignment and management
 - Linking menu items to inventory records
 
-This procedure does **not** cover inventory stock management (see SOP-ADMIN-003).
+This procedure does **not** cover inventory stock management (see SOP-MANUAL-ADMIN-003).
 
 ## 3. Prerequisites
 
@@ -63,7 +63,7 @@ Before performing any menu management task, confirm that:
 
 1. You are logged in with a Super-Admin account that holds the `menuManagement` permission.
 2. You have the correct item details available (name, description, price, cost price, category, images).
-3. If linking to inventory, the relevant inventory record already exists or will be created concurrently (coordinate with SOP-ADMIN-003).
+3. If linking to inventory, the relevant inventory record already exists or will be created concurrently (coordinate with SOP-MANUAL-ADMIN-003).
 
 ---
 
@@ -189,7 +189,7 @@ If a new category is required, coordinate with the system administrator to add i
    - Stock will be restored when orders containing this item are cancelled.
 5. Save the link.
 
-**Important:** Ensure the inventory record exists before attempting to link. If it does not exist, create it first following SOP-ADMIN-003 (Inventory Management).
+**Important:** Ensure the inventory record exists before attempting to link. If it does not exist, create it first following SOP-MANUAL-ADMIN-003 (Inventory Management).
 
 ---
 
@@ -245,7 +245,7 @@ If a new category is required, coordinate with the system administrator to add i
 |----------------------------------------------|---------------------------------------------|---------------------------------------------------------------|
 | Unable to create or edit menu items          | Missing `menuManagement` permission         | Contact the system administrator to verify role permissions.  |
 | Item not appearing on customer menu          | Availability set to Unavailable             | Check and toggle the availability status.                     |
-| Item showing as out of stock unexpectedly    | Linked inventory record has zero stock      | Check the inventory record; restock as needed (SOP-ADMIN-003).|
+| Item showing as out of stock unexpectedly    | Linked inventory record has zero stock      | Check the inventory record; restock as needed (SOP-MANUAL-ADMIN-003).|
 | Price history not recording changes          | System error or caching issue               | Clear browser cache and retry; if persistent, report to IT.   |
 | Images not uploading                         | File size or format not supported           | Ensure images meet supported format and size requirements.    |
 | Category not available in dropdown           | Category does not exist in the system       | Contact the system administrator to add the new category.     |
@@ -267,7 +267,7 @@ If a new category is required, coordinate with the system administrator to add i
 
 | Document ID   | Title                  | Relevance                                              |
 |---------------|------------------------|--------------------------------------------------------|
-| SOP-ADMIN-003 | Inventory Management   | Stock management, delivery receiving, inventory counts |
+| SOP-MANUAL-ADMIN-003 | Inventory Management   | Stock management, delivery receiving, inventory counts |
 
 ---
 
@@ -289,4 +289,4 @@ If a new category is required, coordinate with the system administrator to add i
 
 ---
 
-*End of Document -- SOP-ADMIN-002 Menu Management v1.0*
+*End of Document -- SOP-MANUAL-ADMIN-002 Menu Management v1.0*

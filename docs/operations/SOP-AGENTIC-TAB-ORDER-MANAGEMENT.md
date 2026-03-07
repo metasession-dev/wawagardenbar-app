@@ -1,6 +1,6 @@
 # SOP: Agentic API Tab and Order Management
 
-**Document ID:** SOP-API-001  
+**Document ID:** SOP-AGENTIC-001  
 **Version:** 1.0  
 **Effective Date:** March 4, 2026  
 **Department:** Technical Integration / API Consumers  
@@ -1297,7 +1297,7 @@ async function testAddOrder() {
 - API Reference: `/docs/api/public-api-reference.md`
 - Authentication Guide: `/docs/api/authentication.md`
 - Error Codes: `/docs/api/error-codes.md`
-- SOP-WAITER-001: Manual Tab and Order Management
+- SOP-MANUAL-WAITER-001: Manual Tab and Order Management
 
 ---
 

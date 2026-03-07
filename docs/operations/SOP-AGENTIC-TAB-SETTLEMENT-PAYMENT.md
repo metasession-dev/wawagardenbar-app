@@ -1,6 +1,6 @@
 # SOP: Agentic API Tab Settlement and Payment Processing
 
-**Document ID:** SOP-API-003
+**Document ID:** SOP-AGENTIC-003
 **Version:** 1.0
 **Effective Date:** March 7, 2026
 **Department:** Technical Integration
@@ -1235,8 +1235,8 @@ function sleep(ms) {
 - API Reference: `/docs/api/public-api-reference.md`
 - Authentication Guide: `/docs/api/authentication.md`
 - Error Codes: `/docs/api/error-codes.md`
-- SOP-API-001: Agentic API Tab and Order Management
-- SOP-WAITER-001: Manual Tab and Order Management
+- SOP-AGENTIC-001: Agentic API Tab and Order Management
+- SOP-MANUAL-WAITER-001: Manual Tab and Order Management
 
 ---
 

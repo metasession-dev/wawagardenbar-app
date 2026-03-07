@@ -1,6 +1,6 @@
 # SOP: Kitchen Display System Operations
 
-**Document ID:** SOP-KITCHEN-001
+**Document ID:** SOP-MANUAL-KITCHEN-001
 **Version:** 1.0
 **Effective Date:** March 7, 2026
 **Department:** Kitchen / Back of House
@@ -312,8 +312,8 @@ Kitchen staff are responsible for transitioning orders through the first four st
 
 ## Related Procedures
 
-- **SOP-WAITER-001:** Waiter Tab and Order Management
-- **SOP-WAITER-003:** Handling Order Modifications and Cancellations
+- **SOP-MANUAL-WAITER-001:** Waiter Tab and Order Management
+- **SOP-MANUAL-WAITER-003:** Handling Order Modifications and Cancellations
 
 ---
 

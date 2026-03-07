@@ -1,6 +1,10 @@
 import { NextRequest } from 'next/server';
+import { Types } from 'mongoose';
 import { CategoryService } from '@/services/category-service';
-import { withApiAuth, apiSuccess, apiError, serialize } from '@/lib/api-response';
+import MenuItemModel from '@/models/menu-item-model';
+import MenuItemPriceHistory from '@/models/menu-item-price-history-model';
+import { withApiAuth, apiSuccess, apiError, serialize, parseJsonBody } from '@/lib/api-response';
+import { AuditLogService } from '@/services/audit-log-service';
 
 /**
  * GET /api/public/menu/:itemId
@@ -87,6 +91,134 @@ export async function GET(
     } catch (error) {
       console.error('[PUBLIC API] GET /api/public/menu/:itemId', error);
       return apiError('Failed to fetch menu item', 500);
+    }
+  });
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ itemId: string }> }
+): Promise<Response> {
+  return withApiAuth(request, ['menu:write'], async () => {
+    const { itemId } = await params;
+
+    if (!Types.ObjectId.isValid(itemId)) {
+      return apiError('Invalid item ID', 400);
+    }
+
+    try {
+      const body = await parseJsonBody<Record<string, unknown>>(request);
+      if (!body) return apiError('Invalid JSON body', 400);
+
+      const existing = await MenuItemModel.findById(itemId);
+      if (!existing) {
+        return apiError('Menu item not found', 404);
+      }
+
+      if (body.price !== undefined && (typeof body.price !== 'number' || body.price < 0)) {
+        return apiError('price must be a number >= 0', 400);
+      }
+      if (body.costPerUnit !== undefined && (typeof body.costPerUnit !== 'number' || body.costPerUnit < 0)) {
+        return apiError('costPerUnit must be a number >= 0', 400);
+      }
+      if (body.preparationTime !== undefined && (typeof body.preparationTime !== 'number' || body.preparationTime < 0)) {
+        return apiError('preparationTime must be a number >= 0', 400);
+      }
+      if (body.mainCategory !== undefined && !['drinks', 'food'].includes(body.mainCategory as string)) {
+        return apiError('mainCategory must be "drinks" or "food"', 400);
+      }
+
+      const priceChanged = body.price !== undefined && body.price !== existing.price;
+
+      if (priceChanged) {
+        await MenuItemPriceHistory.updateMany(
+          { menuItemId: existing._id, effectiveTo: null },
+          { $set: { effectiveTo: new Date() } }
+        );
+
+        await MenuItemPriceHistory.create({
+          menuItemId: existing._id,
+          price: body.price as number,
+          costPerUnit: body.costPerUnit !== undefined ? body.costPerUnit as number : existing.costPerUnit,
+          effectiveFrom: new Date(),
+          effectiveTo: null,
+          reason: 'manual_adjustment',
+          changedBy: new Types.ObjectId('000000000000000000000000'),
+        });
+      }
+
+      const allowedFields = [
+        'name', 'description', 'mainCategory', 'category', 'price', 'costPerUnit',
+        'images', 'customizations', 'isAvailable', 'preparationTime', 'servingSize',
+        'tags', 'allergens', 'nutritionalInfo', 'slug', 'metaDescription',
+        'trackInventory', 'pointsValue', 'pointsRedeemable', 'portionOptions',
+        'allowManualPriceOverride',
+      ];
+
+      const updates: Record<string, unknown> = {};
+      for (const field of allowedFields) {
+        if (body[field] !== undefined) {
+          updates[field] = body[field];
+        }
+      }
+
+      const updated = await MenuItemModel.findByIdAndUpdate(
+        itemId,
+        { $set: updates },
+        { new: true, runValidators: true }
+      );
+
+      await AuditLogService.createLog({
+        userId: '000000000000000000000000',
+        userEmail: 'api',
+        userRole: 'api',
+        action: 'menu.update',
+        resource: 'menu-item',
+        resourceId: itemId,
+        details: { updatedFields: Object.keys(updates) },
+      });
+
+      return apiSuccess(serialize(updated));
+    } catch (error) {
+      console.error('[PUBLIC API] PATCH /api/public/menu/:itemId', error);
+      return apiError('Failed to update menu item', 500);
+    }
+  });
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ itemId: string }> }
+): Promise<Response> {
+  return withApiAuth(request, ['menu:write'], async () => {
+    const { itemId } = await params;
+
+    if (!Types.ObjectId.isValid(itemId)) {
+      return apiError('Invalid item ID', 400);
+    }
+
+    try {
+      const item = await MenuItemModel.findById(itemId);
+      if (!item) {
+        return apiError('Menu item not found', 404);
+      }
+
+      await MenuItemModel.findByIdAndUpdate(itemId, { $set: { isAvailable: false } });
+
+      await AuditLogService.createLog({
+        userId: '000000000000000000000000',
+        userEmail: 'api',
+        userRole: 'api',
+        action: 'menu.delete',
+        resource: 'menu-item',
+        resourceId: itemId,
+        details: { name: item.name, softDelete: true },
+      });
+
+      return apiSuccess({ message: 'Menu item has been soft-deleted (isAvailable set to false)', itemId });
+    } catch (error) {
+      console.error('[PUBLIC API] DELETE /api/public/menu/:itemId', error);
+      return apiError('Failed to delete menu item', 500);
     }
   });
 }

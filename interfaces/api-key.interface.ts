@@ -2,6 +2,7 @@ import { Types } from 'mongoose';
 
 export type ApiKeyScope =
   | 'menu:read'
+  | 'menu:write'
   | 'orders:read'
   | 'orders:write'
   | 'inventory:read'
@@ -14,7 +15,9 @@ export type ApiKeyScope =
   | 'tabs:write'
   | 'rewards:read'
   | 'settings:read'
-  | 'analytics:read';
+  | 'settings:write'
+  | 'analytics:read'
+  | 'audit:read';
 
 export type ApiKeyRole = 'customer' | 'csr' | 'admin' | 'super-admin';
 

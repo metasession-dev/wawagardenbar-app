@@ -1,6 +1,6 @@
 # SOP: Customer Service Representative - Delivery Order Management
 
-**Document ID:** SOP-CSR-001
+**Document ID:** SOP-MANUAL-CSR-001
 **Version:** 1.0
 **Effective Date:** March 7, 2026
 **Department:** Customer Service
@@ -504,11 +504,11 @@ For manual communication:
 
 ## Related Procedures
 
-- SOP-WAITER-001: Tab and Order Creation
-- SOP-WAITER-002: Tab Settlement and Payment Processing
-- SOP-WAITER-003: Handling Order Modifications and Cancellations
-- SOP-ADMIN-001: Order Queue Management
-- SOP-ADMIN-004: Daily Close-Out and Financial Reporting
+- SOP-MANUAL-WAITER-001: Tab and Order Creation
+- SOP-MANUAL-WAITER-002: Tab Settlement and Payment Processing
+- SOP-MANUAL-WAITER-003: Handling Order Modifications and Cancellations
+- SOP-MANUAL-ADMIN-001: Order Queue Management
+- SOP-MANUAL-ADMIN-004: Daily Close-Out and Financial Reporting
 
 ---
 

@@ -1,8 +1,8 @@
-# SOP-ADMIN-005: Rewards and Loyalty Program Management
+# SOP-MANUAL-ADMIN-005: Rewards and Loyalty Program Management
 
 | Field            | Detail                                              |
 |------------------|-----------------------------------------------------|
-| **Document ID**  | SOP-ADMIN-005                                       |
+| **Document ID**  | SOP-MANUAL-ADMIN-005                                       |
 | **Title**        | Rewards and Loyalty Program Management               |
 | **Version**      | 1.0                                                 |
 | **Effective Date** | March 7, 2026                                     |
@@ -345,10 +345,10 @@ Customer disputes related to the loyalty program must be handled promptly and pr
 
 | Document ID | Title |
 |---|---|
-| SOP-ADMIN-001 | Menu and Inventory Management |
-| SOP-ADMIN-002 | Staff and Role Management |
-| SOP-ADMIN-003 | Order Processing and Table Management |
-| SOP-ADMIN-004 | Daily Close-Out and Financial Reporting |
+| SOP-MANUAL-ADMIN-001 | Menu and Inventory Management |
+| SOP-MANUAL-ADMIN-002 | Staff and Role Management |
+| SOP-MANUAL-ADMIN-003 | Order Processing and Table Management |
+| SOP-MANUAL-ADMIN-004 | Daily Close-Out and Financial Reporting |
 
 ---
 

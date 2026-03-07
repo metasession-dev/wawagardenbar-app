@@ -1,6 +1,6 @@
 # SOP: Agentic API Order Lifecycle Management
 
-**Document ID:** SOP-API-004
+**Document ID:** SOP-AGENTIC-004
 **Version:** 1.0
 **Effective Date:** March 7, 2026
 **Department:** Technical Integration
@@ -12,7 +12,7 @@
 
 This Standard Operating Procedure (SOP) provides technical specifications and step-by-step API integration instructions for agentic systems to programmatically monitor orders, advance order status through kitchen and delivery workflows, cancel orders, and retrieve order analytics using the Wawa Garden Bar Public REST API.
 
-This SOP serves as the API equivalent of SOP-WAITER-003 (order modifications and cancellations) and SOP-KITCHEN-001 (kitchen display operations).
+This SOP serves as the API equivalent of SOP-MANUAL-WAITER-003 (order modifications and cancellations) and SOP-MANUAL-KITCHEN-001 (kitchen display operations).
 
 ---
 
@@ -1299,9 +1299,9 @@ curl -X GET "https://api.wawagardenbar.com/api/public/orders/summary?period=toda
 
 ## Related Documentation
 
-- SOP-API-001: Agentic API Tab and Order Management (creating tabs and orders)
-- SOP-WAITER-003: Order Modifications and Cancellations (manual equivalent)
-- SOP-KITCHEN-001: Kitchen Display Operations (manual equivalent)
+- SOP-AGENTIC-001: Agentic API Tab and Order Management (creating tabs and orders)
+- SOP-MANUAL-WAITER-003: Order Modifications and Cancellations (manual equivalent)
+- SOP-MANUAL-KITCHEN-001: Kitchen Display Operations (manual equivalent)
 - API Reference: `/docs/api/public-api-reference.md`
 - Authentication Guide: `/docs/api/authentication.md`
 - Error Codes: `/docs/api/error-codes.md`

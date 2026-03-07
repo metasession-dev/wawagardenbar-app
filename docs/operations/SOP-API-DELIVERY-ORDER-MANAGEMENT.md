@@ -69,6 +69,8 @@ Content-Type: application/json
 - `payments:write` - Initialize payment transactions
 - `payments:read` - Verify payment status
 
+> **Role-Based Keys:** Select the **Super Admin** role when creating an API key (Admin Dashboard > Settings > API Keys) to automatically include all required scopes (`menu:read`, `settings:read`, `orders:write`, `orders:read`, `payments:write`, `payments:read`). The `settings:read` scope is only available in the Super Admin role. Alternatively, use **Custom** to select individual scopes.
+
 ---
 
 ## Delivery Fee Calculation

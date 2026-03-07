@@ -61,6 +61,8 @@ Content-Type: application/json
 
 - `rewards:read` - Query rewards, validate codes, and redeem rewards
 
+> **Role-Based Keys:** Select the **Customer** role when creating an API key (Admin Dashboard > Settings > API Keys) to automatically include the required `rewards:read` scope. Alternatively, use **Custom** to select individual scopes.
+
 ---
 
 ## Points System

@@ -63,6 +63,8 @@ Content-Type: application/json
 - `customers:write` - Create and update customer records
 - `orders:read` - View customer order history (required in combination with `customers:read`)
 
+> **Role-Based Keys:** Select the **Super Admin** role when creating an API key (Admin Dashboard > Settings > API Keys) to automatically include all required scopes (`customers:read`, `customers:write`, `orders:read`). For read-only access, select **Admin** (includes `customers:read` and `orders:read` but not `customers:write`). Alternatively, use **Custom** to select individual scopes.
+
 ---
 
 ## Procedure

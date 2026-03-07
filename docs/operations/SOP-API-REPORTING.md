@@ -54,6 +54,8 @@ Content-Type: application/json
 - `inventory:read` - Inventory reports
 - `payments:read` - Payment and revenue data
 
+> **Role-Based Keys:** Select the **Admin** role when creating an API key (Admin Dashboard > Settings > API Keys) to automatically include all required scopes (`analytics:read`, `orders:read`, `inventory:read`, `payments:read`). Alternatively, use **Custom** to select individual scopes.
+
 ---
 
 ## Report Types and Endpoints

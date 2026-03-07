@@ -59,6 +59,8 @@ Content-Type: application/json
 - `inventory:read` - View inventory items, summaries, analytics, and alerts
 - `inventory:write` - Adjust stock levels (additions and deductions)
 
+> **Role-Based Keys:** Select the **Super Admin** role when creating an API key (Admin Dashboard > Settings > API Keys) to automatically include all required scopes (`inventory:read`, `inventory:write`). For read-only inventory access, select **Admin** (includes `inventory:read` but not `inventory:write`). Alternatively, use **Custom** to select individual scopes.
+
 ---
 
 ## Procedure

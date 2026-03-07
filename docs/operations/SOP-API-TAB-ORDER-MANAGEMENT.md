@@ -62,6 +62,8 @@ Content-Type: application/json
 - `tabs:write` - Create standalone tabs (optional)
 - `customers:write` - Create/update customer information (optional)
 
+> **Role-Based Keys:** Select the **Customer** role when creating an API key (Admin Dashboard > Settings > API Keys) to automatically include all required scopes (`menu:read`, `orders:read`, `orders:write`, `tabs:read`). For optional `tabs:write` scope, select **Admin**; for optional `customers:write` scope, select **Super Admin**. Alternatively, use **Custom** to select individual scopes.
+
 ---
 
 ## Procedure

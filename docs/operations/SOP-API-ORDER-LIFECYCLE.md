@@ -64,6 +64,8 @@ Content-Type: application/json
 - `orders:read` - List orders, retrieve order details, view statistics and summaries
 - `orders:write` - Update order status, cancel orders
 
+> **Role-Based Keys:** Select the **Customer** role when creating an API key (Admin Dashboard > Settings > API Keys) to automatically include all required scopes (`orders:read`, `orders:write`). Alternatively, use **Custom** to select individual scopes.
+
 ---
 
 ## Order Status Flow

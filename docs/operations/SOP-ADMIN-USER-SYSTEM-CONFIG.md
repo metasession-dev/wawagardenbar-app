@@ -155,15 +155,26 @@ Admin accounts should be deactivated when:
 
 ### Part 2: API Key Management
 
-#### 2.1 Creating API Keys with Specific Scopes
+#### 2.1 Creating API Keys
 
 1. Navigate to `/dashboard/settings/api-keys`.
-2. Click **Create New API Key**.
+2. Click **New API Key**.
 3. Enter a descriptive **name** for the key that identifies its intended use (e.g., "POS Integration - Branch 1").
-4. Select the required **scopes** from the 17 available options (see Section 2.4 for the full scope reference).
-5. Click **Generate Key**.
-6. **Copy the API key immediately.** The full key value is displayed only once at the time of creation.
-7. Store the key securely in an approved credential management system.
+4. Select a **role** to assign a predefined set of scopes:
+
+| Role | Scopes Granted | Use Case |
+|------|---------------|----------|
+| **Customer** | menu:read, orders:read/write, payments:read/write, rewards:read, tabs:read | Customer-facing apps, chatbots, ordering kiosks |
+| **Admin** | All Customer scopes + tabs:write, inventory:read, customers:read, analytics:read | Staff tools, POS integrations, display boards |
+| **Super Admin** | All 14 scopes | Full system integrations, BI tools, management dashboards |
+| **Custom** | Individually selected scopes | Advanced use cases requiring specific scope combinations |
+
+5. Optionally set a **rate limit** (requests per minute, default: 60) and **expiration date**.
+6. Click **Create Key**.
+7. **Copy the API key immediately.** The full key value is displayed only once at the time of creation.
+8. Store the key securely in an approved credential management system.
+
+**Best practice:** Use the role that matches the integration's purpose. Only use Custom when a role grants more access than needed.
 
 #### 2.2 Revoking API Keys
 
@@ -190,29 +201,34 @@ Admin accounts should be deactivated when:
 
 #### 2.4 API Key Scope Reference
 
-The following 17 scopes are available when creating API keys:
+The following 14 scopes are available when creating API keys:
 
 | # | Scope | Description |
 |---|---|---|
-| 1 | `orders:read` | Read access to order data |
-| 2 | `orders:write` | Create and modify orders |
-| 3 | `menu:read` | Read access to menu items and categories |
-| 4 | `menu:write` | Create, update, and remove menu items |
-| 5 | `inventory:read` | Read access to inventory levels |
-| 6 | `inventory:write` | Adjust inventory quantities |
-| 7 | `customers:read` | Read access to customer records |
-| 8 | `customers:write` | Create and modify customer records |
-| 9 | `reports:read` | Access to reports and analytics data |
-| 10 | `loyalty:read` | Read access to loyalty and rewards data |
-| 11 | `loyalty:write` | Manage loyalty points and rewards |
-| 12 | `expenses:read` | Read access to expense records |
-| 13 | `expenses:write` | Create and modify expense entries |
-| 14 | `settings:read` | Read access to system configuration |
-| 15 | `settings:write` | Modify system configuration |
-| 16 | `audit:read` | Read access to audit log entries |
-| 17 | `webhooks:manage` | Create, modify, and delete webhook configurations |
+| 1 | `menu:read` | Read access to menu items and categories |
+| 2 | `orders:read` | Read access to order data, statistics, and summaries |
+| 3 | `orders:write` | Create and modify orders, update order status |
+| 4 | `inventory:read` | Read access to inventory levels, alerts, and summaries |
+| 5 | `inventory:write` | Adjust inventory quantities (additions and deductions) |
+| 6 | `customers:read` | Read access to customer records and analytics |
+| 7 | `customers:write` | Create and modify customer records |
+| 8 | `payments:read` | Verify payment status |
+| 9 | `payments:write` | Initialize and record payments |
+| 10 | `tabs:read` | Read access to tabs and tab summaries |
+| 11 | `tabs:write` | Create, close, and delete tabs |
+| 12 | `rewards:read` | Read rewards data, validate and redeem reward codes |
+| 13 | `settings:read` | Read access to system configuration |
+| 14 | `analytics:read` | Access to sales summaries and analytics data |
 
-**Best practice:** Grant only the scopes required for the specific integration. Avoid assigning write scopes unless the integration explicitly requires them.
+**Role-to-scope mapping:**
+
+| Role | Scopes Included |
+|------|----------------|
+| **Customer** (7 scopes) | menu:read, orders:read, orders:write, payments:read, payments:write, rewards:read, tabs:read |
+| **Admin** (11 scopes) | All Customer scopes + tabs:write, inventory:read, customers:read, analytics:read |
+| **Super Admin** (14 scopes) | All scopes |
+
+**Best practice:** Use role-based keys for standard integrations. Only use Custom scope selection when a predefined role grants more access than needed. Avoid assigning write scopes unless the integration explicitly requires them.
 
 ---
 

@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server';
 import { CategoryService } from '@/services/category-service';
-import { withApiAuth, apiSuccess, apiError, parsePagination, serialize } from '@/lib/api-response';
+import MenuItemModel from '@/models/menu-item-model';
+import { withApiAuth, apiSuccess, apiError, parsePagination, serialize, parseJsonBody } from '@/lib/api-response';
+import { AuditLogService } from '@/services/audit-log-service';
 
 /**
  * GET /api/public/menu
@@ -99,6 +101,78 @@ export async function GET(request: NextRequest): Promise<Response> {
     } catch (error) {
       console.error('[PUBLIC API] GET /api/public/menu', error);
       return apiError('Failed to fetch menu items', 500);
+    }
+  });
+}
+
+export async function POST(request: NextRequest): Promise<Response> {
+  return withApiAuth(request, ['menu:write'], async () => {
+    try {
+      const body = await parseJsonBody<Record<string, unknown>>(request);
+      if (!body) return apiError('Invalid JSON body', 400);
+
+      const { name, description, mainCategory, category, price, costPerUnit, preparationTime } = body as Record<string, any>;
+
+      if (!name || typeof name !== 'string') {
+        return apiError('name is required', 400);
+      }
+      if (!description || typeof description !== 'string') {
+        return apiError('description is required', 400);
+      }
+      if (!mainCategory || !['drinks', 'food'].includes(mainCategory)) {
+        return apiError('mainCategory must be "drinks" or "food"', 400);
+      }
+      if (!category || typeof category !== 'string') {
+        return apiError('category is required', 400);
+      }
+      if (price === undefined || price === null || typeof price !== 'number' || price < 0) {
+        return apiError('price must be a number >= 0', 400);
+      }
+      if (costPerUnit === undefined || costPerUnit === null || typeof costPerUnit !== 'number' || costPerUnit < 0) {
+        return apiError('costPerUnit must be a number >= 0', 400);
+      }
+      if (preparationTime === undefined || preparationTime === null || typeof preparationTime !== 'number' || preparationTime < 0) {
+        return apiError('preparationTime must be a number >= 0', 400);
+      }
+
+      const item = await MenuItemModel.create({
+        name,
+        description,
+        mainCategory,
+        category,
+        price,
+        costPerUnit,
+        preparationTime,
+        images: body.images || undefined,
+        customizations: body.customizations || undefined,
+        isAvailable: body.isAvailable !== undefined ? body.isAvailable : true,
+        servingSize: body.servingSize || undefined,
+        tags: body.tags || undefined,
+        allergens: body.allergens || undefined,
+        nutritionalInfo: body.nutritionalInfo || undefined,
+        slug: body.slug || undefined,
+        metaDescription: body.metaDescription || undefined,
+        trackInventory: body.trackInventory !== undefined ? body.trackInventory : false,
+        pointsValue: body.pointsValue || undefined,
+        pointsRedeemable: body.pointsRedeemable !== undefined ? body.pointsRedeemable : false,
+        portionOptions: body.portionOptions || undefined,
+        allowManualPriceOverride: body.allowManualPriceOverride !== undefined ? body.allowManualPriceOverride : false,
+      });
+
+      await AuditLogService.createLog({
+        userId: '000000000000000000000000',
+        userEmail: 'api',
+        userRole: 'api',
+        action: 'menu.create',
+        resource: 'menu-item',
+        resourceId: item._id.toString(),
+        details: { name, mainCategory, category, price },
+      });
+
+      return apiSuccess(serialize(item), 201);
+    } catch (error) {
+      console.error('[PUBLIC API] POST /api/public/menu', error);
+      return apiError('Failed to create menu item', 500);
     }
   });
 }

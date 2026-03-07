@@ -1,8 +1,8 @@
-# SOP-ADMIN-001: Order Queue Management
+# SOP-MANUAL-ADMIN-001: Order Queue Management
 
 | Field              | Value                                      |
 |--------------------|--------------------------------------------|
-| **Document ID**    | SOP-ADMIN-001                              |
+| **Document ID**    | SOP-MANUAL-ADMIN-001                              |
 | **Title**          | Order Queue Management                     |
 | **Version**        | 1.0                                        |
 | **Effective Date** | March 7, 2026                              |

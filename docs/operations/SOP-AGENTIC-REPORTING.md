@@ -1,6 +1,6 @@
 # SOP: Agentic API Reporting and Analytics
 
-**Document ID:** SOP-API-002  
+**Document ID:** SOP-AGENTIC-002  
 **Version:** 1.0  
 **Effective Date:** March 4, 2026  
 **Department:** Technical Integration / Business Intelligence  

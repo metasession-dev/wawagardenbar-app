@@ -1,6 +1,6 @@
 # SOP: Agentic API Delivery Order Management
 
-**Document ID:** SOP-API-005
+**Document ID:** SOP-AGENTIC-005
 **Version:** 1.0
 **Effective Date:** March 7, 2026
 **Department:** Technical Integration
@@ -12,7 +12,7 @@
 
 This Standard Operating Procedure (SOP) provides technical specifications and step-by-step API integration instructions for agentic systems to programmatically create delivery orders, process payments, track delivery progress, and manage delivery statuses using the Wawa Garden Bar Public REST API.
 
-This document is the API counterpart to SOP-CSR-001 (Customer Service Delivery Order Management).
+This document is the API counterpart to SOP-MANUAL-CSR-001 (Customer Service Delivery Order Management).
 
 ---
 
@@ -1409,8 +1409,8 @@ function validateDeliveryOrderPayload(payload) {
 - API Reference: `/docs/api/public-api-reference.md`
 - Authentication Guide: `/docs/api/authentication.md`
 - Error Codes: `/docs/api/error-codes.md`
-- SOP-CSR-001: Customer Service Delivery Order Management
-- SOP-API-001: Agentic API Tab and Order Management
+- SOP-MANUAL-CSR-001: Customer Service Delivery Order Management
+- SOP-AGENTIC-001: Agentic API Tab and Order Management
 
 ---
 

@@ -2,7 +2,7 @@
 
 | Field            | Detail                                          |
 |------------------|-------------------------------------------------|
-| **Document ID**  | SOP-ADMIN-003                                   |
+| **Document ID**  | SOP-MANUAL-ADMIN-003                                   |
 | **Title**        | Inventory Management                            |
 | **Version**      | 1.0                                             |
 | **Effective Date** | March 7, 2026                                 |
@@ -49,7 +49,7 @@ This SOP covers all inventory management operations performed through the Wawa G
 - Adjusting stock for waste, breakage, and spillage
 - Reviewing stock movement history and audit records
 
-This procedure does **not** cover menu item creation or pricing (see SOP-ADMIN-002).
+This procedure does **not** cover menu item creation or pricing (see SOP-MANUAL-ADMIN-002).
 
 ## 3. Prerequisites
 
@@ -174,7 +174,7 @@ The system triggers low stock alerts when an item's **currentStock** falls at or
    |------------------------------------|-----------------------------------------------------------|
    | Routine restock needed             | Place a reorder with the supplier.                        |
    | Stock available at another location | Initiate a transfer (see Section 4.3).                   |
-   | Item linked to a menu item         | Consider toggling menu item availability (SOP-ADMIN-002). |
+   | Item linked to a menu item         | Consider toggling menu item availability (SOP-MANUAL-ADMIN-002). |
    | Supplier lead time is long         | Notify management for advance planning.                   |
 
 3. After restocking, verify that the alert has cleared.
@@ -281,7 +281,7 @@ Stock adjustments must be recorded whenever inventory is lost due to waste, brea
 3. Check if stock is available at another location:
    - If yes, initiate an immediate transfer (Section 4.3).
    - If no, proceed to step 4.
-4. Navigate to `/dashboard/menu` and toggle the affected menu item(s) to **Unavailable** (refer to SOP-ADMIN-002, Section 4.3).
+4. Navigate to `/dashboard/menu` and toggle the affected menu item(s) to **Unavailable** (refer to SOP-MANUAL-ADMIN-002, Section 4.3).
 5. Notify front-of-house staff that the item is unavailable.
 6. Place an emergency reorder with the supplier if applicable.
 7. Once stock is replenished, restore the menu item availability.
@@ -297,7 +297,7 @@ Stock adjustments must be recorded whenever inventory is lost due to waste, brea
 | Low stock alert triggered incorrectly          | minimumStock threshold set too high           | Review and adjust the minimumStock value for the item.           |
 | Low stock alert not triggering                 | minimumStock threshold set too low or at zero | Review and increase the minimumStock value for the item.         |
 | Transfer fails or shows error                  | Insufficient stock at source location         | Verify stock at the source location before attempting transfer.  |
-| Stock not deducting when orders are placed     | Menu item not linked to inventory record      | Link the menu item to the inventory record (SOP-ADMIN-002).     |
+| Stock not deducting when orders are placed     | Menu item not linked to inventory record      | Link the menu item to the inventory record (SOP-MANUAL-ADMIN-002).     |
 | Stock not restoring when orders are cancelled  | System processing delay or configuration issue| Check the order cancellation status; report to IT if persistent. |
 | Cost per unit appears incorrect                | Outdated cost not updated after new delivery  | Update cost per unit when recording the next delivery.           |
 | Snapshot shows items not in current inventory  | Discontinued items still in system            | Archive or remove discontinued items per business policy.        |
@@ -308,7 +308,7 @@ Stock adjustments must be recorded whenever inventory is lost due to waste, brea
 
 | Document ID   | Title              | Relevance                                                     |
 |---------------|--------------------|---------------------------------------------------------------|
-| SOP-ADMIN-002 | Menu Management    | Menu item creation, pricing, availability, inventory linking  |
+| SOP-MANUAL-ADMIN-002 | Menu Management    | Menu item creation, pricing, availability, inventory linking  |
 
 ---
 
@@ -330,4 +330,4 @@ Stock adjustments must be recorded whenever inventory is lost due to waste, brea
 
 ---
 
-*End of Document -- SOP-ADMIN-003 Inventory Management v1.0*
+*End of Document -- SOP-MANUAL-ADMIN-003 Inventory Management v1.0*

@@ -1,6 +1,6 @@
 # Standard Operating Procedure
 
-**Document ID:** SOP-ADMIN-007
+**Document ID:** SOP-MANUAL-ADMIN-007
 **Title:** Audit Log Review and Customer Data Management
 **Version:** 1.0
 **Effective Date:** March 7, 2026
@@ -124,7 +124,7 @@ When unusual activity is identified in the audit logs, follow these steps:
    - Do the actions fall within the user's assigned permissions?
    - Is the volume or type of activity consistent with normal operations?
 5. Document all findings (see Part 4: Incident Investigation).
-6. If unauthorized access is confirmed, immediately deactivate the compromised account (refer to SOP-ADMIN-006, Section 1.5).
+6. If unauthorized access is confirmed, immediately deactivate the compromised account (refer to SOP-MANUAL-ADMIN-006, Section 1.5).
 
 #### 1.5 Regular Review Schedule
 
@@ -467,12 +467,12 @@ Escalate an incident based on severity:
 
 | Document ID | Title |
 |---|---|
-| SOP-ADMIN-006 | Admin User Management and System Configuration |
-| SOP-ADMIN-001 | Order Management Procedures |
-| SOP-ADMIN-002 | Menu and Inventory Management |
-| SOP-ADMIN-003 | Rewards and Loyalty Program Administration |
-| SOP-ADMIN-004 | Reports and Analytics Review |
-| SOP-ADMIN-005 | Expense Management |
+| SOP-MANUAL-ADMIN-006 | Admin User Management and System Configuration |
+| SOP-MANUAL-ADMIN-001 | Order Management Procedures |
+| SOP-MANUAL-ADMIN-002 | Menu and Inventory Management |
+| SOP-MANUAL-ADMIN-003 | Rewards and Loyalty Program Administration |
+| SOP-MANUAL-ADMIN-004 | Reports and Analytics Review |
+| SOP-MANUAL-ADMIN-005 | Expense Management |
 
 ---
 

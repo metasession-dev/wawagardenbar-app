@@ -1,6 +1,6 @@
 # Standard Operating Procedure
 
-**Document ID:** SOP-ADMIN-006
+**Document ID:** SOP-MANUAL-ADMIN-006
 **Title:** Admin User Management and System Configuration
 **Version:** 1.0
 **Effective Date:** March 7, 2026
@@ -422,12 +422,12 @@ The following 14 scopes are available when creating API keys:
 
 | Document ID | Title |
 |---|---|
-| SOP-ADMIN-007 | Audit Log Review and Customer Data Management |
-| SOP-ADMIN-001 | Order Management Procedures |
-| SOP-ADMIN-002 | Menu and Inventory Management |
-| SOP-ADMIN-003 | Rewards and Loyalty Program Administration |
-| SOP-ADMIN-004 | Reports and Analytics Review |
-| SOP-ADMIN-005 | Expense Management |
+| SOP-MANUAL-ADMIN-007 | Audit Log Review and Customer Data Management |
+| SOP-MANUAL-ADMIN-001 | Order Management Procedures |
+| SOP-MANUAL-ADMIN-002 | Menu and Inventory Management |
+| SOP-MANUAL-ADMIN-003 | Rewards and Loyalty Program Administration |
+| SOP-MANUAL-ADMIN-004 | Reports and Analytics Review |
+| SOP-MANUAL-ADMIN-005 | Expense Management |
 
 ---
 

@@ -1,6 +1,6 @@
 # SOP: Agentic API Inventory Management
 
-**Document ID:** SOP-API-006
+**Document ID:** SOP-AGENTIC-006
 **Version:** 1.0
 **Effective Date:** March 7, 2026
 **Department:** Technical Integration
@@ -1416,8 +1416,8 @@ function validateStockAdjustment(payload) {
 - API Reference: `/docs/api/public-api-reference.md`
 - Authentication Guide: `/docs/api/authentication.md`
 - Error Codes: `/docs/api/error-codes.md`
-- SOP-ADMIN-003: Admin Inventory Management (manual counterpart)
-- SOP-API-001: Agentic API Tab and Order Management
+- SOP-MANUAL-ADMIN-003: Admin Inventory Management (manual counterpart)
+- SOP-AGENTIC-001: Agentic API Tab and Order Management
 
 ---
 

@@ -1,6 +1,6 @@
 # SOP: Handling Order Modifications and Cancellations
 
-**Document ID:** SOP-WAITER-003
+**Document ID:** SOP-MANUAL-WAITER-003
 **Version:** 1.0
 **Effective Date:** March 7, 2026
 **Department:** Front of House / Service Staff
@@ -30,7 +30,7 @@ This SOP covers:
 - Access to the Wawa Garden Bar admin dashboard
 - Valid admin or staff login credentials
 - Understanding of order statuses and lifecycle
-- Familiarity with SOP-WAITER-001 (Tab and Order Management)
+- Familiarity with SOP-MANUAL-WAITER-001 (Tab and Order Management)
 
 ### Order Status Reference
 
@@ -424,9 +424,9 @@ In the Wawa Garden Bar system, the terms are used as follows:
 
 ## Related Procedures
 
-- SOP-WAITER-001: Waiter Tab and Order Management
-- SOP-WAITER-002: Closing Tabs and Processing Payments
-- SOP-KITCHEN-001: Order Preparation and Status Updates
+- SOP-MANUAL-WAITER-001: Waiter Tab and Order Management
+- SOP-MANUAL-WAITER-002: Closing Tabs and Processing Payments
+- SOP-MANUAL-KITCHEN-001: Order Preparation and Status Updates
 
 ---
 

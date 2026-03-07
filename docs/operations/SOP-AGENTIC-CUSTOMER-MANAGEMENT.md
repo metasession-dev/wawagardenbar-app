@@ -1,6 +1,6 @@
 # SOP: Agentic API Customer Management
 
-**Document ID:** SOP-API-008
+**Document ID:** SOP-AGENTIC-008
 **Version:** 1.0
 **Effective Date:** March 7, 2026
 **Department:** Technical Integration
@@ -12,7 +12,7 @@
 
 This Standard Operating Procedure (SOP) provides technical specifications and step-by-step API integration instructions for agentic systems to programmatically search, create, retrieve, and update customer records, view customer order history, and access customer analytics using the Wawa Garden Bar Public REST API.
 
-This document is the API counterpart to SOP-ADMIN-007 (Customer Data Management).
+This document is the API counterpart to SOP-MANUAL-ADMIN-007 (Customer Data Management).
 
 ---
 
@@ -1101,9 +1101,9 @@ curl -X GET "https://api.wawagardenbar.com/api/public/customers/summary?period=3
 - API Reference: `/docs/api/public-api-reference.md`
 - Authentication Guide: `/docs/api/authentication.md`
 - Error Codes: `/docs/api/error-codes.md`
-- SOP-ADMIN-007: Customer Data Management (Admin Panel)
-- SOP-API-001: Agentic API Tab and Order Management
-- SOP-API-007: Agentic API Rewards and Loyalty Management
+- SOP-MANUAL-ADMIN-007: Customer Data Management (Admin Panel)
+- SOP-AGENTIC-001: Agentic API Tab and Order Management
+- SOP-AGENTIC-007: Agentic API Rewards and Loyalty Management
 
 ---
 

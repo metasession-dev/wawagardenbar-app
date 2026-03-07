@@ -2,6 +2,7 @@ import { ApiKeyScope, ApiKeyRole } from '@/interfaces/api-key.interface';
 
 export const API_KEY_SCOPE_LABELS: Record<ApiKeyScope, string> = {
   'menu:read': 'Menu — Read',
+  'menu:write': 'Menu — Write',
   'orders:read': 'Orders — Read',
   'orders:write': 'Orders — Write',
   'inventory:read': 'Inventory — Read',
@@ -14,7 +15,9 @@ export const API_KEY_SCOPE_LABELS: Record<ApiKeyScope, string> = {
   'tabs:write': 'Tabs — Write',
   'rewards:read': 'Rewards — Read',
   'settings:read': 'Settings — Read',
+  'settings:write': 'Settings — Write',
   'analytics:read': 'Analytics — Read',
+  'audit:read': 'Audit Logs — Read',
 };
 
 export const API_KEY_ROLE_SCOPES: Record<ApiKeyRole, ApiKeyScope[]> = {
@@ -41,6 +44,7 @@ export const API_KEY_ROLE_SCOPES: Record<ApiKeyRole, ApiKeyScope[]> = {
   ],
   admin: [
     'menu:read',
+    'menu:write',
     'orders:read',
     'orders:write',
     'customers:read',
@@ -52,9 +56,11 @@ export const API_KEY_ROLE_SCOPES: Record<ApiKeyRole, ApiKeyScope[]> = {
     'tabs:write',
     'inventory:read',
     'analytics:read',
+    'audit:read',
   ],
   'super-admin': [
     'menu:read',
+    'menu:write',
     'orders:read',
     'orders:write',
     'inventory:read',
@@ -67,7 +73,9 @@ export const API_KEY_ROLE_SCOPES: Record<ApiKeyRole, ApiKeyScope[]> = {
     'tabs:write',
     'rewards:read',
     'settings:read',
+    'settings:write',
     'analytics:read',
+    'audit:read',
   ],
 };
 
@@ -81,6 +89,6 @@ export const API_KEY_ROLE_LABELS: Record<ApiKeyRole, string> = {
 export const API_KEY_ROLE_DESCRIPTIONS: Record<ApiKeyRole, string> = {
   customer: 'Menu browsing, ordering, payments, and rewards',
   csr: 'Orders, customers, payments, rewards, and tab management',
-  admin: 'Customer scopes plus tabs, inventory reads, customers, and analytics',
+  admin: 'CSR scopes plus menu writes, inventory reads, analytics, and audit logs',
   'super-admin': 'Full access to all API scopes',
 };

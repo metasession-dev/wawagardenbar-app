@@ -17,6 +17,7 @@ import path from 'path';
  * run that script first.
  */
 
+const CSR_FILE = path.join(__dirname, '../.auth/csr.json');
 const ADMIN_FILE = path.join(__dirname, '../.auth/admin.json');
 const SUPER_ADMIN_FILE = path.join(__dirname, '../.auth/super-admin.json');
 
@@ -48,6 +49,29 @@ async function loginAsAdmin(
     return false;
   }
 }
+
+setup('authenticate as csr', async ({ page }) => {
+  const username = process.env.E2E_CSR_USERNAME;
+  const password = process.env.E2E_CSR_PASSWORD;
+
+  if (!username || !password) {
+    console.warn('CSR credentials not set — saving empty state');
+    await page.goto('/');
+    await page.context().storageState({ path: CSR_FILE });
+    return;
+  }
+
+  const success = await loginAsAdmin(page, username, password);
+
+  if (success) {
+    expect(page.url()).toContain('/dashboard');
+  } else {
+    console.warn('CSR auth setup failed — authenticated CSR tests will be skipped');
+    await page.goto('/');
+  }
+
+  await page.context().storageState({ path: CSR_FILE });
+});
 
 setup('authenticate as admin', async ({ page }) => {
   const username = process.env.E2E_ADMIN_USERNAME || process.env.ADMIN_USERNAME;

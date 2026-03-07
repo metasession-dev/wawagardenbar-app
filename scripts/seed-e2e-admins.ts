@@ -16,6 +16,15 @@ import { connectDB } from '../lib/mongodb';
 import { AdminService } from '../services/admin-service';
 import { UserModel } from '../models';
 
+const E2E_CSR = {
+  username: 'e2e-csr',
+  password: 'E2eTest@2026!',
+  email: 'e2e-csr@test.wawagardenbar.com',
+  firstName: 'E2E',
+  lastName: 'CSR',
+  role: 'csr' as const,
+};
+
 const E2E_ADMIN = {
   username: 'e2e-admin',
   password: 'E2eTest@2026!',
@@ -55,7 +64,7 @@ async function seed() {
     }
     const createdBy = systemUser._id.toString();
 
-    for (const spec of [E2E_ADMIN, E2E_SUPER_ADMIN]) {
+    for (const spec of [E2E_CSR, E2E_ADMIN, E2E_SUPER_ADMIN]) {
       // Remove existing user if present (idempotent)
       await UserModel.deleteMany({ username: spec.username });
 
@@ -75,6 +84,19 @@ async function seed() {
               },
             }
           : {}),
+        ...(spec.role === 'csr'
+          ? {
+              permissions: {
+                orderManagement: true,
+                menuManagement: false,
+                inventoryManagement: false,
+                rewardsAndLoyalty: true,
+                reportsAndAnalytics: false,
+                expensesManagement: false,
+                settingsAndConfiguration: false,
+              },
+            }
+          : {}),
       });
 
       console.log(`Created ${spec.role}: ${spec.username} (${spec.email})`);
@@ -82,6 +104,8 @@ async function seed() {
 
     console.log('\nE2E admin users seeded successfully.');
     console.log('Add these to .env.local:\n');
+    console.log(`E2E_CSR_USERNAME=${E2E_CSR.username}`);
+    console.log(`E2E_CSR_PASSWORD=${E2E_CSR.password}`);
     console.log(`E2E_ADMIN_USERNAME=${E2E_ADMIN.username}`);
     console.log(`E2E_ADMIN_PASSWORD=${E2E_ADMIN.password}`);
     console.log(`E2E_SUPER_ADMIN_USERNAME=${E2E_SUPER_ADMIN.username}`);

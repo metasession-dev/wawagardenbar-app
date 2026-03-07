@@ -164,7 +164,7 @@ export function CheckoutForm() {
     comments?: string;
   } | null>(null);
 
-  const isAdmin = role === 'admin' || role === 'super-admin';
+  const isAdmin = role === 'csr' || role === 'admin' || role === 'super-admin';
 
   const form = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
@@ -277,7 +277,7 @@ export function CheckoutForm() {
           
           // Check permissions: Admin OR Owner
           // user.id comes from useAuth hook which fetches from /api/auth/user
-          const isAdmin = role === 'admin' || role === 'super-admin';
+          const isAdmin = role === 'csr' || role === 'admin' || role === 'super-admin';
           // Note: tab.userId is likely a string from JSON serialization, user.id is string
           // Cast to string for comparison to avoid TS error with ObjectId
           const isMyTab = user?.id && tab.userId?.toString() === user.id;
@@ -456,7 +456,7 @@ export function CheckoutForm() {
       // If using a tab, don't initialize payment yet
       if (tabId) {
         // Redirect admins to dashboard, customers to customer view
-        const tabRedirectUrl = (role === 'admin' || role === 'super-admin') 
+        const tabRedirectUrl = (role === 'csr' || role === 'admin' || role === 'super-admin')
           ? `/dashboard/orders/tabs/${tabId}`
           : `/orders/tabs/${tabId}`;
         

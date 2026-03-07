@@ -36,7 +36,7 @@ export interface IPaymentMethod {
   isDefault: boolean;
 }
 
-export type UserRole = 'customer' | 'admin' | 'super-admin';
+export type UserRole = 'customer' | 'csr' | 'admin' | 'super-admin';
 
 export interface ISocialProfile {
   handle: string;

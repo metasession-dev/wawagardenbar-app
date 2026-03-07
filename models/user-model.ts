@@ -95,7 +95,7 @@ const userSchema = new Schema<IUser>(
     // Authentication
     role: {
       type: String,
-      enum: ['customer', 'admin', 'super-admin'],
+      enum: ['customer', 'csr', 'admin', 'super-admin'],
       default: 'customer',
     },
     verificationPin: { type: String, select: false },

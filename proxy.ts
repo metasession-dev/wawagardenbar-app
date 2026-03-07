@@ -130,8 +130,8 @@ export async function proxy(request: NextRequest) {
         const allowedRoles = routePermissions[matchedRoute];
 
         if (allowedRoles && !allowedRoles.includes(session.role as UserRole)) {
-          // Admin trying to access super-admin route
-          if (session.role === 'admin') {
+          // Staff trying to access higher-level route
+          if (session.role === 'csr' || session.role === 'admin') {
             return NextResponse.redirect(new URL('/dashboard/forbidden', request.url));
           }
           // Other unauthorized access

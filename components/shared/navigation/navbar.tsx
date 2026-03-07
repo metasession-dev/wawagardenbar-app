@@ -42,7 +42,7 @@ export function Navbar() {
 
   // Add Dashboard link for admin and super-admin users
   const navLinks = [...baseNavLinks];
-  if (role === 'admin' || role === 'super-admin') {
+  if (role === 'csr' || role === 'admin' || role === 'super-admin') {
     navLinks.push({ href: '/dashboard', label: 'Dashboard' });
   }
 

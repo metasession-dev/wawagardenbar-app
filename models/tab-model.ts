@@ -25,7 +25,7 @@ const tabSchema = new Schema<ITab>(
     },
     createdByRole: {
       type: String,
-      enum: ['admin', 'super-admin', 'customer'],
+      enum: ['customer', 'csr', 'admin', 'super-admin'],
       default: 'customer',
     },
     openedByStaffId: {

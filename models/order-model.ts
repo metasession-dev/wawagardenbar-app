@@ -103,7 +103,7 @@ const orderSchema = new Schema<IOrder>(
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
     createdByRole: {
       type: String,
-      enum: ['admin', 'super-admin', 'customer'],
+      enum: ['customer', 'csr', 'admin', 'super-admin'],
       default: 'customer',
     },
     guestEmail: { type: String, lowercase: true, trim: true },

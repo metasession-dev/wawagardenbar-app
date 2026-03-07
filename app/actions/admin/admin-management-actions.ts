@@ -14,7 +14,7 @@ export async function createAdminAction(data: {
   email?: string;
   firstName?: string;
   lastName?: string;
-  role: 'admin' | 'super-admin';
+  role: 'csr' | 'admin' | 'super-admin';
   permissions?: IAdminPermissions;
 }) {
   try {
@@ -45,7 +45,7 @@ export async function createAdminAction(data: {
  */
 export async function listAdminsAction(filters?: {
   search?: string;
-  role?: 'admin' | 'super-admin';
+  role?: 'csr' | 'admin' | 'super-admin';
   status?: 'active' | 'suspended' | 'deleted';
   sortBy?: 'username' | 'role' | 'lastLoginAt' | 'createdAt';
   sortOrder?: 'asc' | 'desc';

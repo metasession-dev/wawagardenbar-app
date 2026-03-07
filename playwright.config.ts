@@ -46,6 +46,13 @@ export default defineConfig({
       testMatch: /authenticated\.spec\.ts/,
       dependencies: ['auth-setup'],
     },
+    // CSR role UAT tests
+    {
+      name: 'csr-uat',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /csr-uat\.spec\.ts/,
+      dependencies: ['auth-setup'],
+    },
   ],
   /* Start dev server before tests */
   webServer: {

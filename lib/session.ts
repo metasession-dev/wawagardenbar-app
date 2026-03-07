@@ -36,7 +36,7 @@ export const defaultSession: SessionData = {
  */
 export function isAdmin(session: SessionData | null): boolean {
   if (!session?.role) return false;
-  return session.role === 'admin' || session.role === 'super-admin';
+  return session.role === 'csr' || session.role === 'admin' || session.role === 'super-admin';
 }
 
 /**

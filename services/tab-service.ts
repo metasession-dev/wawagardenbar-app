@@ -25,7 +25,7 @@ export class TabService {
     tableNumber: string;
     userId?: string;
     createdBy?: string;
-    createdByRole?: 'admin' | 'super-admin' | 'customer';
+    createdByRole?: 'customer' | 'csr' | 'admin' | 'super-admin';
     openedByStaffId?: string;
     customerName?: string;
     customerEmail?: string;

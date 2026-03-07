@@ -31,8 +31,8 @@ export async function checkUserTabRestrictionsAction(): Promise<TabRestrictionRe
       };
     }
 
-    // Admins are never restricted
-    if (role === 'admin' || role === 'super-admin') {
+    // Staff are never restricted
+    if (role === 'csr' || role === 'admin' || role === 'super-admin') {
       return {
         isRestricted: false,
         existingTab: null,

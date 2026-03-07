@@ -18,6 +18,16 @@ export const DEFAULT_ADMIN_PERMISSIONS: IAdminPermissions = {
   settingsAndConfiguration: false,
 };
 
+export const CSR_DEFAULT_PERMISSIONS: IAdminPermissions = {
+  orderManagement: true,
+  menuManagement: false,
+  inventoryManagement: false,
+  rewardsAndLoyalty: true,
+  reportsAndAnalytics: false,
+  expensesManagement: false,
+  settingsAndConfiguration: false,
+};
+
 export const SUPER_ADMIN_PERMISSIONS: IAdminPermissions = {
   orderManagement: true,
   menuManagement: true,

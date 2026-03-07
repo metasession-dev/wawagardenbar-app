@@ -1,141 +1,162 @@
 ---
-description: Finalize task with traceability, automated testing, and human sign-off block
+description: Generate compliance artifacts, update RTM, create release ticket for human sign-off
 ---
 
-# Audit-Finish Workflow
+# Audit Finish
 
-This workflow formalizes the **Human-in-the-Loop** requirement for compliance and audit purposes. It ensures that while AI handles implementation and testing, a human authorizes the release.
+**Pipeline Stage:** 3 of 5
+**Previous:** `implement-and-test.md`
+**Next:** `submit-for-review.md`
 
-## Workflow Steps
+This workflow generates the compliance artifacts that bridge implementation to approval. It updates the RTM, saves test evidence, and creates a release ticket that the human reviewer will evaluate during PR review.
 
-### 1. Traceability
-- Identify or create a Requirement ID (e.g., `REQ-XXX`) in `/compliance/RTM.md`
-- If RTM doesn't exist, create it with proper structure
-- Link the requirement to the feature/change being implemented
+## When to Use
 
-### 2. Implementation Verification
-- Ensure all relevant code files have JSDoc headers linking to Requirement IDs
-- Format: `@requirement REQ-XXX - [Brief description]`
-- Verify SOLID principles compliance
-- Verify security best practices compliance
+- After implementing a tracked requirement (REQ-XXX)
+- After significant changes that need audit trail documentation
+- Before creating a PR to `main`
 
-### 3. Test Execution
-- Generate or run Vitest unit tests for business logic
-- Generate or run Playwright E2E tests for user flows
-- Save test artifacts (screenshots, videos, reports) to `/compliance/evidence/REQ-XXX/`
-- Ensure all tests pass before proceeding
+**Skip this workflow** for trivial changes (go straight to `submit-for-review.md`).
 
-### 4. Audit Artifact Generation
-- Update `/compliance/RTM.md` status to `TESTED - PENDING SIGN-OFF`
-- Generate `RELEASE-TICKET-REQ-XXX.md` in `/compliance/pending-releases/`
-- Include:
-  - Requirement summary
-  - Implementation details
-  - Test results summary
-  - Links to test evidence
-  - Human sign-off table
+## Steps
 
-### 5. Automated Sign-off Block
-- Append standardized sign-off table to release ticket
-- Include roles: QA Lead, Product Owner, Security Review
-- Add audit note about AI assistance and verification
+### Step 1: Verify All Tests Pass
 
-### 6. Git Commit
-- Commit message format: `compliance: [REQ-XXX] feature complete - awaiting UAT sign-off`
-- Include all code changes, tests, and compliance artifacts
-- Tag commit with requirement ID for traceability
+```bash
+npx playwright test
+```
 
-## Sign-off Template
+Do not proceed unless all tests pass. The evidence captured must reflect a green suite.
 
-The following template is automatically appended to each release ticket:
+### Step 2: Verify JSDoc Headers
+
+Ensure all modified source files have requirement references:
+
+```bash
+# Find files changed since last merge to main
+git diff --name-only origin/main...HEAD -- '*.ts' '*.tsx' | head -20
+```
+
+Each file should have:
+```typescript
+/**
+ * @requirement REQ-XXX - Brief description
+ */
+```
+
+### Step 3: Save Test Evidence
+
+```bash
+# Ensure latest test results are saved
+ls -la compliance/evidence/REQ-XXX/
+
+# Copy relevant evidence (screenshots, JSON results, logs)
+cp compliance/evidence/REQ-007/e2e-results.json compliance/evidence/REQ-XXX/
+```
+
+For requirement-specific unit tests (Vitest):
+```bash
+npx vitest run --reporter=verbose 2>&1 | tee compliance/evidence/REQ-XXX/unit-test-results.txt
+```
+
+### Step 4: Update RTM Status
+
+Open `compliance/RTM.md` and update the requirement entry in Part B:
 
 ```markdown
+| REQ-XXX | Description | implementation-files | Test evidence description | TESTED - PENDING SIGN-OFF | Pending | -- |
+```
+
+Change status from `DRAFT` or `IN PROGRESS` to `TESTED - PENDING SIGN-OFF`.
+
+### Step 5: Generate Release Ticket
+
+Create `compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md`:
+
+```markdown
+# Release Ticket: REQ-XXX — [Title]
+
+**Status:** TESTED - PENDING SIGN-OFF
+**Date:** [YYYY-MM-DD]
+**Requirement ID:** REQ-XXX
+**PR:** [Will be linked when PR is created]
+
 ---
-## 🛡️ Compliance & UAT Sign-off
-*This section must be completed by a human reviewer before merging to Production.*
 
-| Role | Name | Date | Status | Signature/Notes |
-| :--- | :--- | :--- | :--- | :--- |
-| **QA Lead** | [Name] | [YYYY-MM-DD] | [ ] PASS / [ ] FAIL | |
-| **Product Owner** | [Name] | [YYYY-MM-DD] | [ ] PASS / [ ] FAIL | |
-| **Security Review** | [Name] | [YYYY-MM-DD] | [ ] N/A / [ ] OK | |
+## Summary
 
-> **Audit Note:** This release was assisted by Windsurf Cascade (AI). All AI-generated logic has been verified against the Requirement Traceability Matrix (RTM).
+[1-3 sentence description of what was implemented and why]
+
+## Implementation Details
+
+**Files Modified:**
+- `path/to/file1.ts` — [what changed]
+- `path/to/file2.tsx` — [what changed]
+
+**Key Decisions:**
+- [Any architectural or design decisions made]
+
+## Test Evidence
+
+| Test Type | Count | Passed | Failed | Evidence |
+|-----------|-------|--------|--------|----------|
+| E2E (Playwright) | 183 | 183 | 0 | `compliance/evidence/REQ-007/e2e-results.json` |
+| Unit (Vitest) | [N] | [N] | 0 | `compliance/evidence/REQ-XXX/unit-test-results.txt` |
+
+## Acceptance Criteria
+
+- [x] Criterion 1
+- [x] Criterion 2
+- [x] All E2E tests passing
+- [x] TypeScript compilation clean
+- [x] JSDoc requirement headers added
+
+## Risk Assessment
+
+- [Any risks introduced by this change]
+- [Any areas that need manual testing]
+
 ---
+
+## Reviewer Checklist
+
+The PR reviewer should verify:
+
+- [ ] Code changes match the requirement description
+- [ ] Test evidence is present and shows all-pass
+- [ ] RTM is updated with correct status
+- [ ] No sensitive data in committed files
+- [ ] No regressions in existing functionality
+
+---
+
+## Audit Trail
+
+| Date | Action | Actor | Notes |
+|------|--------|-------|-------|
+| [date] | Requirement created | [who] | [context] |
+| [date] | Implementation completed | [who] | [details] |
+| [date] | Tests passed | [who] | [test counts] |
+| [date] | Submitted for review | [who] | PR #[number] |
 ```
 
-## Usage Example
+### Step 6: Commit Compliance Artifacts
 
-```
-User: /audit-finish the new Stripe integration. ID: REQ-402
-```
-
-Windsurf will:
-1. Update RTM with REQ-402
-2. Verify JSDoc headers in code
-3. Run all relevant tests
-4. Capture test evidence
-5. Generate release ticket with sign-off table
-6. Commit with proper message
-
-Human reviewer then:
-1. Opens `/compliance/pending-releases/RELEASE-TICKET-REQ-402.md`
-2. Reviews test results and evidence
-3. Fills in sign-off table with name, date, and status
-4. Commits the signed-off ticket
-5. Merges to production
-
-## Audit Benefits
-
-- **Separation of Concerns**: AI handles implementation, human makes final decision
-- **Immutable Evidence**: Git-tracked sign-offs with timestamps
-- **Zero Friction**: All compliance work stays in IDE
-- **Clear Accountability**: Every release has named approvers
-- **Regulatory Compliance**: Meets SOC 2, ISO 27001, GDPR requirements
-
-## Directory Structure
-
-```
-/compliance/
-├── RTM.md                          # Requirements Traceability Matrix
-├── pending-releases/               # Release tickets awaiting sign-off
-│   ├── RELEASE-TICKET-REQ-101.md
-│   ├── RELEASE-TICKET-REQ-102.md
-│   └── ...
-├── approved-releases/              # Signed-off releases (moved after approval)
-│   └── ...
-└── evidence/                       # Test artifacts and screenshots
-    ├── REQ-101/
-    │   ├── unit-tests.xml
-    │   ├── e2e-results.json
-    │   ├── screenshot-1.png
-    │   └── video-1.webm
-    └── REQ-102/
-        └── ...
+```bash
+git add compliance/RTM.md
+git add compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md
+git add compliance/evidence/REQ-XXX/
+git commit -m "compliance: [REQ-XXX] artifacts complete - awaiting review"
+git push origin develop
 ```
 
-## Compliance Checklist
+## Output
 
-Before marking a release ticket as complete:
+- RTM updated with status `TESTED - PENDING SIGN-OFF`
+- Release ticket in `compliance/pending-releases/`
+- Test evidence saved to `compliance/evidence/REQ-XXX/`
+- All artifacts committed and pushed on `develop`
 
-- [ ] Requirement ID exists in RTM
-- [ ] Code has JSDoc headers with requirement links
-- [ ] Unit tests written and passing
-- [ ] E2E tests written and passing
-- [ ] Test evidence saved to `/compliance/evidence/`
-- [ ] Release ticket generated
-- [ ] Sign-off table included
-- [ ] RTM status updated to "TESTED - PENDING SIGN-OFF"
-- [ ] Git commit includes all artifacts
-- [ ] Human reviewer has been notified
+## Next Step
 
-## Post-Approval Process
-
-After human sign-off:
-
-1. Move release ticket from `pending-releases/` to `approved-releases/`
-2. Update RTM status to `APPROVED - DEPLOYED`
-3. Tag the commit with version number
-4. Archive test evidence (retain for audit period)
-
-> **Note:** Deployment is handled separately via the `/deploy-railway` workflow. This workflow focuses solely on compliance and audit artifacts.
+Proceed to `submit-for-review.md` to create the PR.

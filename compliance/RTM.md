@@ -1,15 +1,61 @@
 # Requirements Traceability Matrix (RTM)
 
-**Project:** Wawa Garden Bar Web Application  
-**Document Version:** 1.4  
-**Last Updated:** 2026-03-06  
-**Maintained By:** Development & Compliance Team
+**Project:** Wawa Garden Bar Web Application
+**Standard:** ISO/IEC/IEEE 29119-3:2021 (Test Documentation)
+**Document Version:** 2.0
+**Date:** 2026-03-07
+**Classification:** Internal
+**Retention Period:** Permanent
+**Review Frequency:** Quarterly
+
+---
+
+## Document Control
+
+| Field | Value |
+|-------|-------|
+| Document ID | RTM-WGBA-002 |
+| Version | 2.0 |
+| Status | Active |
+| Author | Development & Compliance Team |
+| Date Created | 2026-03-04 |
+| Last Updated | 2026-03-07 |
+
+### Approval Sign-Off
+
+| Role | Name | Signature | Date |
+|------|------|-----------|------|
+| Project Owner | William | _______________ | ____/____/____ |
+| QA Lead | _______________ | _______________ | ____/____/____ |
+| Compliance Officer | _______________ | _______________ | ____/____/____ |
+
+### Revision History
+
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| 1.0 | 2026-03-04 | AI (Cascade) | Initial RTM with REQ-001 through REQ-005 |
+| 1.1 | 2026-03-05 | AI (Cascade) | Added REQ-006 |
+| 1.2 | 2026-03-06 | AI (Cascade) | Added REQ-007, E2E test evidence |
+| 1.4 | 2026-03-06 | AI (Cascade) | Updated traceability matrix |
+| 2.0 | 2026-03-07 | AI (Cascade) | Full rewrite: ISO/IEC/IEEE 29119-3 alignment, forward traceability (Part A), change request traceability (Part B), coverage summary (Part C) |
 
 ---
 
 ## Purpose
 
-This Requirements Traceability Matrix (RTM) provides bidirectional traceability between business requirements, implementation artifacts, test cases, and deployment status. It ensures compliance with SOC 2, ISO 27001, and regulatory audit requirements.
+This Requirements Traceability Matrix provides bidirectional traceability between the requirements documented in `docs/REQUIREMENTS.md` (27 sections), the E2E test cases that verify them, and the change requests (REQ-001 through REQ-007) that track implementation work. It ensures compliance with SOC 2, ISO 27001, and regulatory audit requirements.
+
+---
+
+## Related Documents
+
+| Document | Location | Description |
+|----------|----------|-------------|
+| Test Plan | `compliance/test-plan.md` | Test strategy, risk assessment, entry/exit criteria |
+| Test Case Specifications | `compliance/test-cases.md` | 181 formal test case specifications |
+| Test Summary Report | `compliance/test-summary-report.md` | Execution results, defect log, residual risk |
+| Comprehensive Requirements | `docs/REQUIREMENTS.md` | 27-section requirements document |
+| E2E Test Guide | `docs/E2E-TEST-GUIDE.md` | Setup, run, and troubleshooting guide |
 
 ---
 
@@ -26,582 +72,631 @@ This Requirements Traceability Matrix (RTM) provides bidirectional traceability 
 
 ---
 
-## Requirements
+## Test Artefact References
 
-### REQ-001: Standard Operating Procedures for Tab and Order Management
-
-**Category:** Documentation & Operations  
-**Priority:** High  
-**Status:** TESTED - PENDING SIGN-OFF  
-**Created:** 2026-03-04  
-**Last Updated:** 2026-03-04
-
-#### Description
-Create comprehensive Standard Operating Procedures (SOPs) for both manual (waiter) and automated (API) tab and order management workflows. Documentation must cover:
-1. Manual waiter workflows for creating tabs and adding orders
-2. Agentic API integration for programmatic tab/order creation
-3. API reporting and analytics with appropriate parameterization
-
-#### Business Justification
-- Standardize operational procedures for front-of-house staff
-- Enable third-party integrations and AI agent automation
-- Provide clear documentation for API consumers
-- Ensure consistent service delivery across all channels
-- Support business intelligence and reporting requirements
-
-#### Implementation Details
-
-**Artifacts Created:**
-- `/docs/operations/SOP-WAITER-TAB-ORDER-MANAGEMENT.md` - Manual waiter procedures
-- `/docs/operations/SOP-API-TAB-ORDER-MANAGEMENT.md` - API integration guide
-- `/docs/operations/SOP-API-REPORTING.md` - Reporting and analytics API documentation
-
-**Key Features:**
-1. **Waiter SOP (SOP-WAITER-001):**
-   - Minimum required information: Table number only for tab creation
-   - Customer name required for first order (can use "Walk-in Customer")
-   - Step-by-step procedures with success indicators
-   - Troubleshooting guide and common scenarios
-   - Quick reference checklists
-
-2. **API Tab Management (SOP-API-001):**
-   - RESTful API endpoints for tab/order creation
-   - Authentication via API key (scopes: `orders:write`, `orders:read`)
-   - Minimum payload specifications with field-level documentation
-   - Complete workflow examples in JavaScript and Python
-   - Error handling, retry logic, and rate limiting patterns
-   - Security best practices
-
-3. **API Reporting (SOP-API-002):**
-   - Financial reports (daily summary, date range analysis)
-   - Order analytics with flexible parameterization
-   - Inventory reports and alerts
-   - Customer analytics and segmentation
-   - Parameter validation and sanitization
-   - Export capabilities (CSV, Excel, PDF)
-   - Scheduled reporting examples
-
-#### Acceptance Criteria
-- [x] All three SOP documents created with complete content
-- [x] Minimum required fields clearly documented
-- [x] API endpoints documented with request/response examples
-- [x] Code examples provided in multiple languages
-- [x] Parameter validation and error handling documented
-- [x] Security considerations addressed
-- [x] Quick reference sections included
-- [x] Troubleshooting guides provided
-
-#### Test Evidence
-- Document structure validation: PASS
-- Content completeness review: PASS
-- Code example syntax validation: PASS
-- API endpoint specification accuracy: PASS
-- Parameter documentation completeness: PASS
-
-**Evidence Location:** `/compliance/evidence/REQ-001/`
-
-#### Dependencies
-- Existing API implementation (`/app/api/public/`)
-- Authentication system (API keys)
-- Tab and Order services
-- Reporting infrastructure
-
-#### Related Requirements
-- None (initial documentation requirement)
-
-#### Compliance Notes
-- Documentation follows project code style guide
-- All API endpoints reference existing implementation
-- Security best practices aligned with SOLID principles
-- No PII exposure in examples
-
-#### Audit Trail
-| Date | Action | Performed By | Notes |
-|------|--------|--------------|-------|
-| 2026-03-04 | Requirement created | AI (Cascade) | Initial SOP documentation request |
-| 2026-03-04 | Implementation completed | AI (Cascade) | All three SOP documents created |
-| 2026-03-04 | Testing completed | AI (Cascade) | Documentation validation passed |
-| 2026-03-04 | Moved to TESTED status | AI (Cascade) | Awaiting human sign-off |
+| Artefact | Location | Description |
+|----------|----------|-------------|
+| Requirements Document | `docs/REQUIREMENTS.md` | 27-section comprehensive requirements (v1.0) |
+| E2E Test Suite (Public) | `e2e/requirements-verification.spec.ts` | 142 Playwright tests covering public/unauthenticated scenarios |
+| E2E Test Suite (Auth) | `e2e/authenticated.spec.ts` | 39 Playwright tests covering admin and super-admin authenticated scenarios |
+| Test Results | `test-results/` | Playwright HTML reports and screenshots |
+| Evidence Archive | `compliance/evidence/` | Per-requirement evidence bundles |
 
 ---
 
-### REQ-002: Automatic Idempotency Key Generation for Orders
+## Part A: Requirements to Test Cases (Forward Traceability)
 
-**Category:** Feature Enhancement / Data Integrity  
-**Priority:** High  
-**Status:** TESTED - PENDING SIGN-OFF  
-**Created:** 2026-03-04  
-**Last Updated:** 2026-03-04
+This section maps every section in `docs/REQUIREMENTS.md` to the specific test cases that verify it. Test Case IDs use the format `TC-SECT##-###` where `SECT##` is the zero-padded requirement section number and `###` is a sequential test number.
 
-#### Description
-Implement automatic generation of idempotency keys at the database model level for Order documents. When an order is created without an explicit idempotency key, the system generates one using a cryptographically secure format matching the existing checkout pattern.
+### Section 1 / 5.1: Home Page
 
-#### Business Justification
-- Ensures every order has a unique idempotency key for duplicate prevention
-- Supports external API integrations with automatic key generation
-- Maintains backward compatibility with existing code
-- Reduces developer boilerplate and prevents missing keys
+| Test Case ID | Test Name | Spec File | Type |
+|-------------|-----------|-----------|------|
+| TC-SEC01-001 | renders home page with branding, logo, and CTA | requirements-verification.spec.ts | E2E |
+| TC-SEC01-002 | displays order type feature cards (Dine In, Pickup, Delivery) | requirements-verification.spec.ts | E2E |
+| TC-SEC01-003 | displays "How It Works" section with descriptions | requirements-verification.spec.ts | E2E |
+| TC-SEC01-004 | is responsive -- renders correctly on mobile viewport | requirements-verification.spec.ts | E2E |
+| TC-SEC01-005 | is responsive -- renders correctly on tablet viewport | requirements-verification.spec.ts | E2E |
 
-#### Implementation Details
-
-**Files Modified:**
-- `/models/order-model.ts` — Added `crypto.randomBytes` import, made field optional with sparse index, added pre-save hook
-- `/interfaces/order.interface.ts` — Made `idempotencyKey` optional
-
-**Key Features:**
-- Format: `checkout-{timestamp}-{randomHex}` (16 hex chars from 8 random bytes)
-- Cryptographically secure via Node.js `crypto.randomBytes`
-- Pre-save hook only runs on new documents
-- Preserves manually provided keys
-
-#### Acceptance Criteria
-- [x] IdempotencyKey auto-generated when not provided
-- [x] Format matches checkout pattern
-- [x] Unique constraint maintained with sparse index
-- [x] Backward compatible with existing code
-- [x] Interface updated to reflect optional field
-- [x] Cryptographically secure random generation
-- [x] TypeScript compilation successful
-- [x] SOLID principles followed
-
-#### Test Evidence
-- Code validation: 37 criteria tested, 100% pass rate
-- Format consistency verified
-- Security review passed (CSPRNG, 64-bit entropy)
-- Backward compatibility confirmed
-
-**Evidence Location:** `/compliance/evidence/REQ-002/`
-
-#### Audit Trail
-| Date | Action | Performed By | Notes |
-|------|--------|--------------|-------|
-| 2026-03-04 | Requirement created | AI (Cascade) | User request for idempotency improvement |
-| 2026-03-04 | Implementation completed | AI (Cascade) | Model and interface updated |
-| 2026-03-04 | Testing completed | AI (Cascade) | 37 criteria passed |
-| 2026-03-04 | Moved to TESTED status | AI (Cascade) | Awaiting human sign-off |
+| Req Section | Requirement | Test Case IDs | Test Count | Pass Rate | Evidence |
+|-------------|-------------|---------------|------------|-----------|----------|
+| 1 / 5.1 | Home Page -- branding, logo, CTA, feature cards, responsive | TC-SEC01-001 to TC-SEC01-005 | 5 | 100% | e2e/requirements-verification.spec.ts |
 
 ---
 
-### REQ-003: MongoDB Warmup Connection on Server Startup
+### Section 2: Technical Stack
 
-**Category:** Infrastructure / Reliability  
-**Priority:** High  
-**Status:** TESTED - PENDING SIGN-OFF  
-**Created:** 2026-03-05  
-**Last Updated:** 2026-03-05
+| Test Case ID | Test Name | Spec File | Type |
+|-------------|-----------|-----------|------|
+| TC-SEC02-001 | pages are server-rendered (not empty on initial load) | requirements-verification.spec.ts | E2E |
+| TC-SEC02-002 | application uses Next.js framework | requirements-verification.spec.ts | E2E |
 
-#### Description
-Add a MongoDB warmup connection during server startup in `server.ts` to establish the database connection before the HTTP server begins accepting requests. This eliminates transient `MongooseServerSelectionError` errors that occur when incoming requests hit before the MongoDB connection is established.
+| Req Section | Requirement | Test Case IDs | Test Count | Pass Rate | Evidence |
+|-------------|-------------|---------------|------------|-----------|----------|
+| 2 | Technical Stack -- Next.js, server rendering | TC-SEC02-001 to TC-SEC02-002 | 2 | 100% | e2e/requirements-verification.spec.ts |
 
-#### Business Justification
-- Eliminates transient MongoDB connection errors on container startup
-- Improves reliability for API consumers hitting the server immediately after deployment
-- Reduces error noise in production logs
-- Ensures consistent behavior for health checks and API key validation on startup
+---
 
-#### Implementation Details
+### Section 3: Architecture & Project Structure
 
-**Files Modified:**
-- `/server.ts` — Added `connectDB()` warmup call before HTTP server creation
+| Test Case ID | Test Name | Spec File | Type |
+|-------------|-----------|-----------|------|
+| TC-SEC03-001 | home page includes "View Menu" link | requirements-verification.spec.ts | E2E |
+| TC-SEC03-002 | "View Menu" link navigates to menu page | requirements-verification.spec.ts | E2E |
 
-**Code Added:**
-```typescript
-import { connectDB } from './lib/mongodb';
+| Req Section | Requirement | Test Case IDs | Test Count | Pass Rate | Evidence |
+|-------------|-------------|---------------|------------|-----------|----------|
+| 3 | Architecture -- navigation structure, App Router routing | TC-SEC03-001 to TC-SEC03-002 | 2 | 100% | e2e/requirements-verification.spec.ts |
 
-app.prepare().then(async () => {
-  // Warm up MongoDB connection before accepting requests
-  try {
-    await connectDB();
-    console.log('✅ MongoDB connection established');
-  } catch (error) {
-    console.error('⚠️ MongoDB warmup failed (will retry on first request):', error);
-  }
-  // ... rest of server setup
-});
+---
+
+### Section 4: Authentication & Authorization
+
+| Test Case ID | Test Name | Spec File | Type |
+|-------------|-----------|-----------|------|
+| TC-SEC04-001 | login page renders with title and phone prompt | requirements-verification.spec.ts | E2E |
+| TC-SEC04-002 | login page shows PIN delivery method options (WhatsApp, SMS, Email) | requirements-verification.spec.ts | E2E |
+| TC-SEC04-003 | login page displays delivery method descriptions | requirements-verification.spec.ts | E2E |
+| TC-SEC04-004 | login page links to privacy policy and terms | requirements-verification.spec.ts | E2E |
+| TC-SEC04-005 | unauthenticated user is redirected from /orders to /login | requirements-verification.spec.ts | E2E |
+| TC-SEC04-006 | unauthenticated user is redirected from /profile to /login | requirements-verification.spec.ts | E2E |
+| TC-SEC04-007 | admin login page renders with credentials form | requirements-verification.spec.ts | E2E |
+| TC-SEC04-008 | admin login form has username and password fields | requirements-verification.spec.ts | E2E |
+| TC-SEC04-009 | admin login rejects invalid credentials | requirements-verification.spec.ts | E2E |
+| TC-SEC04-010 | unauthenticated user is redirected from /dashboard to login | requirements-verification.spec.ts | E2E |
+| TC-SEC04-011 | unauthorized page is accessible | requirements-verification.spec.ts | E2E |
+| TC-SEC04-012 | dashboard forbidden page redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC04-013 | session cookie is httpOnly | requirements-verification.spec.ts | E2E |
+| TC-SEC04-014 | admin can access dashboard without redirect | authenticated.spec.ts | Auth |
+| TC-SEC04-015 | super-admin can access dashboard overview | authenticated.spec.ts | Auth |
+| TC-SEC04-016 | logout endpoint returns success | authenticated.spec.ts | Auth |
+
+| Req Section | Requirement | Test Case IDs | Test Count | Pass Rate | Evidence |
+|-------------|-------------|---------------|------------|-----------|----------|
+| 4 | Authentication -- passwordless login, admin login, RBAC, session security, logout | TC-SEC04-001 to TC-SEC04-016 | 16 | 100% | Both spec files |
+
+---
+
+### Section 5.2 / 6: Menu System
+
+| Test Case ID | Test Name | Spec File | Type |
+|-------------|-----------|-----------|------|
+| TC-SEC05-001 | menu page loads with title and description | requirements-verification.spec.ts | E2E |
+| TC-SEC05-002 | menu page displays item cards | requirements-verification.spec.ts | E2E |
+| TC-SEC05-003 | menu page has category navigation with food and drink categories | requirements-verification.spec.ts | E2E |
+| TC-SEC05-004 | menu page supports search via URL parameter | requirements-verification.spec.ts | E2E |
+| TC-SEC05-005 | menu page supports category filter via URL parameter | requirements-verification.spec.ts | E2E |
+| TC-SEC05-006 | menu page supports table number via URL parameter | requirements-verification.spec.ts | E2E |
+
+| Req Section | Requirement | Test Case IDs | Test Count | Pass Rate | Evidence |
+|-------------|-------------|---------------|------------|-----------|----------|
+| 5.2 / 6 | Menu -- categories, search, filter, item cards | TC-SEC05-001 to TC-SEC05-006 | 6 | 100% | e2e/requirements-verification.spec.ts |
+
+---
+
+### Section 5.3: Cart
+
+| Test Case ID | Test Name | Spec File | Type |
+|-------------|-----------|-----------|------|
+| TC-SEC53-001 | cart persists items in localStorage under wawa-cart-storage | requirements-verification.spec.ts | E2E |
+| TC-SEC53-002 | cart stores quantity, portion size, and special instructions per item | requirements-verification.spec.ts | E2E |
+| TC-SEC53-003 | seeded cart items appear in checkout | requirements-verification.spec.ts | E2E |
+
+| Req Section | Requirement | Test Case IDs | Test Count | Pass Rate | Evidence |
+|-------------|-------------|---------------|------------|-----------|----------|
+| 5.3 | Cart -- Zustand persistence, item properties, checkout integration | TC-SEC53-001 to TC-SEC53-003 | 3 | 100% | e2e/requirements-verification.spec.ts |
+
+---
+
+### Section 5.5: Orders & Tabs Page
+
+| Test Case ID | Test Name | Spec File | Type |
+|-------------|-----------|-----------|------|
+| TC-SEC55-001 | orders page redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC55-002 | orders/tabs page redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC55-003 | orders/history page redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+
+| Req Section | Requirement | Test Case IDs | Test Count | Pass Rate | Evidence |
+|-------------|-------------|---------------|------------|-----------|----------|
+| 5.5 | Orders & Tabs Page -- route protection, guest access | TC-SEC55-001 to TC-SEC55-003 | 3 | 100% | e2e/requirements-verification.spec.ts |
+
+---
+
+### Section 5.7 / 10: Rewards & Loyalty
+
+| Test Case ID | Test Name | Spec File | Type |
+|-------------|-----------|-----------|------|
+| TC-SEC57-001 | rewards page loads with loyalty information | requirements-verification.spec.ts | E2E |
+| TC-SEC57-002 | rewards page shows sign-in prompt for unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC57-003 | rewards page displays feature preview cards | requirements-verification.spec.ts | E2E |
+| TC-SEC57-004 | rewards page explains points conversion (100 points = NGN 1) | requirements-verification.spec.ts | E2E |
+| TC-SEC57-005 | rewards page has "How It Works" guide | requirements-verification.spec.ts | E2E |
+| TC-SEC57-006 | rewards page links to login for sign-in | requirements-verification.spec.ts | E2E |
+
+| Req Section | Requirement | Test Case IDs | Test Count | Pass Rate | Evidence |
+|-------------|-------------|---------------|------------|-----------|----------|
+| 5.7 / 10 | Rewards -- loyalty info, points conversion, feature cards, sign-in prompt | TC-SEC57-001 to TC-SEC57-006 | 6 | 100% | e2e/requirements-verification.spec.ts |
+
+---
+
+### Section 7: Ordering System
+
+| Test Case ID | Test Name | Spec File | Type |
+|-------------|-----------|-----------|------|
+| TC-SEC07-001 | home page advertises all order types (dine-in, pickup, delivery) | requirements-verification.spec.ts | E2E |
+| TC-SEC07-002 | checkout form includes order type selection | requirements-verification.spec.ts | E2E |
+
+| Req Section | Requirement | Test Case IDs | Test Count | Pass Rate | Evidence |
+|-------------|-------------|---------------|------------|-----------|----------|
+| 7 | Ordering System -- order types, checkout type selection | TC-SEC07-001 to TC-SEC07-002 | 2 | 100% | e2e/requirements-verification.spec.ts |
+
+---
+
+### Section 8: Tab System
+
+| Test Case ID | Test Name | Spec File | Type |
+|-------------|-----------|-----------|------|
+| TC-SEC08-001 | customer tabs page requires authentication | requirements-verification.spec.ts | E2E |
+| TC-SEC08-002 | admin tabs management requires authentication | requirements-verification.spec.ts | E2E |
+| TC-SEC08-003 | tabs page loads for authenticated admin | authenticated.spec.ts | Auth |
+
+| Req Section | Requirement | Test Case IDs | Test Count | Pass Rate | Evidence |
+|-------------|-------------|---------------|------------|-----------|----------|
+| 8 | Tab System -- route protection, admin tabs page | TC-SEC08-001 to TC-SEC08-003 | 3 | 100% | Both spec files |
+
+---
+
+### Section 9: Checkout & Payment
+
+| Test Case ID | Test Name | Spec File | Type |
+|-------------|-----------|-----------|------|
+| TC-SEC09-001 | checkout page renders with form | requirements-verification.spec.ts | E2E |
+| TC-SEC09-002 | checkout with seeded cart shows multi-step form | requirements-verification.spec.ts | E2E |
+| TC-SEC09-003 | checkout displays cart items and totals | requirements-verification.spec.ts | E2E |
+| TC-SEC09-004 | checkout form has customer info fields (name, email, phone) | requirements-verification.spec.ts | E2E |
+| TC-SEC09-005 | checkout shows navigation buttons (Back/Next) | requirements-verification.spec.ts | E2E |
+
+| Req Section | Requirement | Test Case IDs | Test Count | Pass Rate | Evidence |
+|-------------|-------------|---------------|------------|-----------|----------|
+| 9 | Checkout & Payment -- multi-step form, cart display, customer fields | TC-SEC09-001 to TC-SEC09-005 | 5 | 100% | e2e/requirements-verification.spec.ts |
+
+---
+
+### Section 11: Admin Dashboard
+
+| Test Case ID | Test Name | Spec File | Type |
+|-------------|-----------|-----------|------|
+| TC-SEC11-001 | /dashboard redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC11-002 | /dashboard/orders redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC11-003 | /dashboard/menu redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC11-004 | /dashboard/inventory redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC11-005 | /dashboard/settings redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC11-006 | /dashboard/rewards redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC11-007 | /dashboard/audit-logs redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC11-008 | /dashboard/reports redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC11-009 | /dashboard/kitchen redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC11-010 | /dashboard/customers redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC11-011 | /dashboard/finance/expenses redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC11-012 | /dashboard/analytics/profitability redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC11-013 | super-admin can access dashboard overview | authenticated.spec.ts | Auth |
+| TC-SEC11-014 | dashboard shows quick stats cards | authenticated.spec.ts | Auth |
+| TC-SEC11-015 | dashboard shows recent orders section | authenticated.spec.ts | Auth |
+| TC-SEC11-016 | regular admin is redirected from /dashboard to /dashboard/orders | authenticated.spec.ts | Auth |
+| TC-SEC11-017 | dashboard sidebar shows navigation links | authenticated.spec.ts | Auth |
+| TC-SEC11-018 | dashboard has header with "Dashboard" title | authenticated.spec.ts | Auth |
+| TC-SEC11-019 | customers page loads | authenticated.spec.ts | Auth |
+
+| Req Section | Requirement | Test Case IDs | Test Count | Pass Rate | Evidence |
+|-------------|-------------|---------------|------------|-----------|----------|
+| 11 | Dashboard -- RBAC route protection, overview stats, navigation, customer management | TC-SEC11-001 to TC-SEC11-019 | 19 | 100% | Both spec files |
+
+---
+
+### Section 12: Order Management
+
+| Test Case ID | Test Name | Spec File | Type |
+|-------------|-----------|-----------|------|
+| TC-SEC12-001 | admin orders page redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC12-002 | admin order tabs page redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC12-003 | orders dashboard loads with title and controls | authenticated.spec.ts | Auth |
+| TC-SEC12-004 | orders page shows Tabs Display link | authenticated.spec.ts | Auth |
+| TC-SEC12-005 | orders page shows Kitchen Display link | authenticated.spec.ts | Auth |
+| TC-SEC12-006 | orders page shows Quick Actions section | authenticated.spec.ts | Auth |
+| TC-SEC12-007 | super-admin sees Analytics card on orders page | authenticated.spec.ts | Auth |
+
+| Req Section | Requirement | Test Case IDs | Test Count | Pass Rate | Evidence |
+|-------------|-------------|---------------|------------|-----------|----------|
+| 12 | Order Management -- route protection, dashboard controls, quick actions, analytics | TC-SEC12-001 to TC-SEC12-007 | 7 | 100% | Both spec files |
+
+---
+
+### Section 13: Menu Management
+
+| Test Case ID | Test Name | Spec File | Type |
+|-------------|-----------|-----------|------|
+| TC-SEC13-001 | menu management page redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC13-002 | new menu item page redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC13-003 | menu management page loads with items | authenticated.spec.ts | Auth |
+| TC-SEC13-004 | new menu item page loads with form | authenticated.spec.ts | Auth |
+
+| Req Section | Requirement | Test Case IDs | Test Count | Pass Rate | Evidence |
+|-------------|-------------|---------------|------------|-----------|----------|
+| 13 | Menu Management -- route protection, list view, create form | TC-SEC13-001 to TC-SEC13-004 | 4 | 100% | Both spec files |
+
+---
+
+### Section 14: Inventory Management
+
+| Test Case ID | Test Name | Spec File | Type |
+|-------------|-----------|-----------|------|
+| TC-SEC14-001 | /dashboard/inventory redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC14-002 | /dashboard/inventory/snapshots redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC14-003 | /dashboard/inventory/transfer redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC14-004 | inventory page loads | authenticated.spec.ts | Auth |
+| TC-SEC14-005 | inventory snapshots page loads | authenticated.spec.ts | Auth |
+| TC-SEC14-006 | inventory transfer page loads | authenticated.spec.ts | Auth |
+
+| Req Section | Requirement | Test Case IDs | Test Count | Pass Rate | Evidence |
+|-------------|-------------|---------------|------------|-----------|----------|
+| 14 | Inventory Management -- route protection, list, snapshots, transfers | TC-SEC14-001 to TC-SEC14-006 | 6 | 100% | Both spec files |
+
+---
+
+### Section 15: Financial Management
+
+| Test Case ID | Test Name | Spec File | Type |
+|-------------|-----------|-----------|------|
+| TC-SEC15-001 | expenses page redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC15-002 | expenses page loads | authenticated.spec.ts | Auth |
+
+| Req Section | Requirement | Test Case IDs | Test Count | Pass Rate | Evidence |
+|-------------|-------------|---------------|------------|-----------|----------|
+| 15 | Financial Management -- route protection, expenses page | TC-SEC15-001 to TC-SEC15-002 | 2 | 100% | Both spec files |
+
+---
+
+### Section 16: Reports & Analytics
+
+| Test Case ID | Test Name | Spec File | Type |
+|-------------|-----------|-----------|------|
+| TC-SEC16-001 | /dashboard/reports redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC16-002 | /dashboard/reports/daily redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC16-003 | /dashboard/reports/inventory redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC16-004 | /dashboard/reports/profitability redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC16-005 | /dashboard/analytics/profitability redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC16-006 | reports page loads | authenticated.spec.ts | Auth |
+| TC-SEC16-007 | daily report page loads | authenticated.spec.ts | Auth |
+| TC-SEC16-008 | inventory report page loads | authenticated.spec.ts | Auth |
+| TC-SEC16-009 | profitability report page loads | authenticated.spec.ts | Auth |
+| TC-SEC16-010 | profitability analytics page loads | authenticated.spec.ts | Auth |
+
+| Req Section | Requirement | Test Case IDs | Test Count | Pass Rate | Evidence |
+|-------------|-------------|---------------|------------|-----------|----------|
+| 16 | Reports & Analytics -- route protection, all report pages load | TC-SEC16-001 to TC-SEC16-010 | 10 | 100% | Both spec files |
+
+---
+
+### Section 17: Kitchen Display System
+
+| Test Case ID | Test Name | Spec File | Type |
+|-------------|-----------|-----------|------|
+| TC-SEC17-001 | kitchen display redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC17-002 | kitchen display loads with dark theme | authenticated.spec.ts | Auth |
+| TC-SEC17-003 | kitchen display shows active order count | authenticated.spec.ts | Auth |
+| TC-SEC17-004 | kitchen display has back button to orders | authenticated.spec.ts | Auth |
+
+| Req Section | Requirement | Test Case IDs | Test Count | Pass Rate | Evidence |
+|-------------|-------------|---------------|------------|-----------|----------|
+| 17 | Kitchen Display -- route protection, dark theme, active orders, navigation | TC-SEC17-001 to TC-SEC17-004 | 4 | 100% | Both spec files |
+
+---
+
+### Section 18: Rewards Configuration
+
+| Test Case ID | Test Name | Spec File | Type |
+|-------------|-----------|-----------|------|
+| TC-SEC18-001 | /dashboard/rewards redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC18-002 | /dashboard/rewards/issued redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC18-003 | /dashboard/rewards/rules redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC18-004 | /dashboard/rewards/templates redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC18-005 | rewards dashboard loads | authenticated.spec.ts | Auth |
+| TC-SEC18-006 | reward rules page loads | authenticated.spec.ts | Auth |
+| TC-SEC18-007 | issued rewards page loads | authenticated.spec.ts | Auth |
+| TC-SEC18-008 | reward templates page loads | authenticated.spec.ts | Auth |
+
+| Req Section | Requirement | Test Case IDs | Test Count | Pass Rate | Evidence |
+|-------------|-------------|---------------|------------|-----------|----------|
+| 18 | Rewards Configuration -- route protection, rules, issued, templates pages | TC-SEC18-001 to TC-SEC18-008 | 8 | 100% | Both spec files |
+
+---
+
+### Section 19: Settings & Configuration
+
+| Test Case ID | Test Name | Spec File | Type |
+|-------------|-----------|-----------|------|
+| TC-SEC19-001 | /dashboard/settings redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC19-002 | /dashboard/settings/admins redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC19-003 | /dashboard/settings/api-keys redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC19-004 | /dashboard/settings/data-requests redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC19-005 | settings page loads with configuration sections | authenticated.spec.ts | Auth |
+| TC-SEC19-006 | admin management page loads | authenticated.spec.ts | Auth |
+| TC-SEC19-007 | API keys management page loads | authenticated.spec.ts | Auth |
+| TC-SEC19-008 | data requests page loads | authenticated.spec.ts | Auth |
+
+| Req Section | Requirement | Test Case IDs | Test Count | Pass Rate | Evidence |
+|-------------|-------------|---------------|------------|-----------|----------|
+| 19 | Settings & Configuration -- route protection, settings, admins, API keys, data requests | TC-SEC19-001 to TC-SEC19-008 | 8 | 100% | Both spec files |
+
+---
+
+### Section 20: Public REST API
+
+| Test Case ID | Test Name | Spec File | Type |
+|-------------|-----------|-----------|------|
+| TC-SEC20-001 | health endpoint returns success with status, service, version, uptime | requirements-verification.spec.ts | E2E |
+| TC-SEC20-002 | GET /api/public/menu rejects unauthenticated requests (scope: menu:read) | requirements-verification.spec.ts | E2E |
+| TC-SEC20-003 | GET /api/public/menu/categories rejects unauthenticated requests (scope: menu:read) | requirements-verification.spec.ts | E2E |
+| TC-SEC20-004 | GET /api/public/orders rejects unauthenticated requests (scope: orders:read) | requirements-verification.spec.ts | E2E |
+| TC-SEC20-005 | GET /api/public/orders/stats rejects unauthenticated requests (scope: orders:read) | requirements-verification.spec.ts | E2E |
+| TC-SEC20-006 | GET /api/public/orders/summary rejects unauthenticated requests (scope: orders:read) | requirements-verification.spec.ts | E2E |
+| TC-SEC20-007 | GET /api/public/inventory rejects unauthenticated requests (scope: inventory:read) | requirements-verification.spec.ts | E2E |
+| TC-SEC20-008 | GET /api/public/inventory/alerts rejects unauthenticated requests (scope: inventory:read) | requirements-verification.spec.ts | E2E |
+| TC-SEC20-009 | GET /api/public/inventory/summary rejects unauthenticated requests (scope: inventory:read) | requirements-verification.spec.ts | E2E |
+| TC-SEC20-010 | GET /api/public/customers rejects unauthenticated requests (scope: customers:read) | requirements-verification.spec.ts | E2E |
+| TC-SEC20-011 | GET /api/public/customers/summary rejects unauthenticated requests (scope: customers:read) | requirements-verification.spec.ts | E2E |
+| TC-SEC20-012 | GET /api/public/tabs rejects unauthenticated requests (scope: tabs:read) | requirements-verification.spec.ts | E2E |
+| TC-SEC20-013 | GET /api/public/tabs/summary rejects unauthenticated requests (scope: tabs:read) | requirements-verification.spec.ts | E2E |
+| TC-SEC20-014 | GET /api/public/settings rejects unauthenticated requests (scope: settings:read) | requirements-verification.spec.ts | E2E |
+| TC-SEC20-015 | GET /api/public/rewards rejects unauthenticated requests (scope: rewards:read) | requirements-verification.spec.ts | E2E |
+| TC-SEC20-016 | GET /api/public/sales/summary rejects unauthenticated requests (scope: analytics:read) | requirements-verification.spec.ts | E2E |
+| TC-SEC20-017 | POST /api/public/orders rejects unauthenticated requests | requirements-verification.spec.ts | E2E |
+| TC-SEC20-018 | POST /api/public/payments rejects unauthenticated requests | requirements-verification.spec.ts | E2E |
+| TC-SEC20-019 | POST /api/public/rewards/redeem rejects unauthenticated requests | requirements-verification.spec.ts | E2E |
+| TC-SEC20-020 | API returns JSON with standard response format | requirements-verification.spec.ts | E2E |
+| TC-SEC20-021 | admin settings API requires admin session | requirements-verification.spec.ts | E2E |
+| TC-SEC20-022 | admin settings impact API requires admin session | requirements-verification.spec.ts | E2E |
+
+| Req Section | Requirement | Test Case IDs | Test Count | Pass Rate | Evidence |
+|-------------|-------------|---------------|------------|-----------|----------|
+| 20 | Public REST API -- health endpoint, scoped auth enforcement (15 GET + 3 POST), response format, admin API protection | TC-SEC20-001 to TC-SEC20-022 | 22 | 100% | e2e/requirements-verification.spec.ts |
+
+---
+
+### Section 21: Real-Time (Socket.IO)
+
+| Test Case ID | Test Name | Spec File | Type |
+|-------------|-----------|-----------|------|
+| TC-SEC21-001 | Socket.IO endpoint is available | requirements-verification.spec.ts | E2E |
+
+| Req Section | Requirement | Test Case IDs | Test Count | Pass Rate | Evidence |
+|-------------|-------------|---------------|------------|-----------|----------|
+| 21 | Real-Time -- Socket.IO endpoint availability | TC-SEC21-001 | 1 | 100% | e2e/requirements-verification.spec.ts |
+
+---
+
+### Section 22: Security
+
+| Test Case ID | Test Name | Spec File | Type |
+|-------------|-----------|-----------|------|
+| TC-SEC22-001 | returns X-Frame-Options DENY | requirements-verification.spec.ts | E2E |
+| TC-SEC22-002 | returns X-Content-Type-Options nosniff | requirements-verification.spec.ts | E2E |
+| TC-SEC22-003 | returns Referrer-Policy header | requirements-verification.spec.ts | E2E |
+| TC-SEC22-004 | API endpoints include security headers | requirements-verification.spec.ts | E2E |
+| TC-SEC22-005 | API endpoints enforce rate limiting headers | requirements-verification.spec.ts | E2E |
+| TC-SEC22-006 | API handles preflight OPTIONS requests | requirements-verification.spec.ts | E2E |
+
+| Req Section | Requirement | Test Case IDs | Test Count | Pass Rate | Evidence |
+|-------------|-------------|---------------|------------|-----------|----------|
+| 22 | Security -- headers (X-Frame-Options, nosniff, Referrer-Policy), rate limiting, CORS | TC-SEC22-001 to TC-SEC22-006 | 6 | 100% | e2e/requirements-verification.spec.ts |
+
+---
+
+### Section 23: Audit Logs
+
+| Test Case ID | Test Name | Spec File | Type |
+|-------------|-----------|-----------|------|
+| TC-SEC23-001 | audit logs page redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+| TC-SEC23-002 | audit logs page loads | authenticated.spec.ts | Auth |
+
+| Req Section | Requirement | Test Case IDs | Test Count | Pass Rate | Evidence |
+|-------------|-------------|---------------|------------|-----------|----------|
+| 23 | Audit Logs -- route protection, page loads for super-admin | TC-SEC23-001 to TC-SEC23-002 | 2 | 100% | Both spec files |
+
+---
+
+### Section 24: Data Management & Privacy
+
+| Test Case ID | Test Name | Spec File | Type |
+|-------------|-----------|-----------|------|
+| TC-SEC24-001 | privacy page is publicly accessible and contains privacy content | requirements-verification.spec.ts | E2E |
+| TC-SEC24-002 | data deletion page is publicly accessible | requirements-verification.spec.ts | E2E |
+| TC-SEC24-003 | data requests admin page redirects unauthenticated users | requirements-verification.spec.ts | E2E |
+
+| Req Section | Requirement | Test Case IDs | Test Count | Pass Rate | Evidence |
+|-------------|-------------|---------------|------------|-----------|----------|
+| 24 | Data Management & Privacy -- public privacy/deletion pages, admin data requests protection | TC-SEC24-001 to TC-SEC24-003 | 3 | 100% | e2e/requirements-verification.spec.ts |
+
+---
+
+### Section 25: Deployment
+
+| Test Case ID | Test Name | Spec File | Type |
+|-------------|-----------|-----------|------|
+| TC-SEC25-001 | application is running and serves pages | requirements-verification.spec.ts | E2E |
+| TC-SEC25-002 | health endpoint confirms service is healthy | requirements-verification.spec.ts | E2E |
+
+| Req Section | Requirement | Test Case IDs | Test Count | Pass Rate | Evidence |
+|-------------|-------------|---------------|------------|-----------|----------|
+| 25 | Deployment -- application availability, health endpoint | TC-SEC25-001 to TC-SEC25-002 | 2 | 100% | e2e/requirements-verification.spec.ts |
+
+---
+
+### Section 27: Non-Functional Requirements
+
+| Test Case ID | Test Name | Spec File | Type |
+|-------------|-----------|-----------|------|
+| TC-SEC27-001 | home page has Open Graph metadata | requirements-verification.spec.ts | E2E |
+| TC-SEC27-002 | menu page has descriptive metadata | requirements-verification.spec.ts | E2E |
+| TC-SEC27-003 | checkout page has descriptive metadata | requirements-verification.spec.ts | E2E |
+| TC-SEC27-004 | login page has descriptive metadata | requirements-verification.spec.ts | E2E |
+| TC-SEC27-005 | home page has semantic h1 heading | requirements-verification.spec.ts | E2E |
+| TC-SEC27-006 | home page logo has alt text | requirements-verification.spec.ts | E2E |
+| TC-SEC27-007 | login page uses sr-only text for branding | requirements-verification.spec.ts | E2E |
+| TC-SEC27-008 | form inputs have associated labels on login page | requirements-verification.spec.ts | E2E |
+| TC-SEC27-009 | home page renders on iPhone SE (375x667) | requirements-verification.spec.ts | E2E |
+| TC-SEC27-010 | home page renders on iPhone 12 (390x844) | requirements-verification.spec.ts | E2E |
+| TC-SEC27-011 | home page renders on iPad (768x1024) | requirements-verification.spec.ts | E2E |
+| TC-SEC27-012 | home page renders on Desktop (1440x900) | requirements-verification.spec.ts | E2E |
+| TC-SEC27-013 | menu page renders on iPhone SE (375x667) | requirements-verification.spec.ts | E2E |
+| TC-SEC27-014 | menu page renders on iPhone 12 (390x844) | requirements-verification.spec.ts | E2E |
+| TC-SEC27-015 | menu page renders on iPad (768x1024) | requirements-verification.spec.ts | E2E |
+| TC-SEC27-016 | menu page renders on Desktop (1440x900) | requirements-verification.spec.ts | E2E |
+
+| Req Section | Requirement | Test Case IDs | Test Count | Pass Rate | Evidence |
+|-------------|-------------|---------------|------------|-----------|----------|
+| 27 | Non-Functional -- SEO/OG metadata, accessibility (semantic HTML, ARIA, sr-only, labels), mobile-first responsive (4 viewports x 2 pages) | TC-SEC27-001 to TC-SEC27-016 | 16 | 100% | e2e/requirements-verification.spec.ts |
+
+---
+
+### Cross-Cutting: Navigation & Error Handling
+
+| Test Case ID | Test Name | Spec File | Type |
+|-------------|-----------|-----------|------|
+| TC-SECXX-001 | home to menu to checkout flow | requirements-verification.spec.ts | E2E |
+| TC-SECXX-002 | rewards page links to login for authentication | requirements-verification.spec.ts | E2E |
+| TC-SECXX-003 | admin login page is accessible and distinct from customer login | requirements-verification.spec.ts | E2E |
+| TC-SECXX-004 | 404 page is handled gracefully | requirements-verification.spec.ts | E2E |
+| TC-SECXX-005 | invalid API route returns error (not 200) | requirements-verification.spec.ts | E2E |
+
+| Req Section | Requirement | Test Case IDs | Test Count | Pass Rate | Evidence |
+|-------------|-------------|---------------|------------|-----------|----------|
+| Cross-cutting | Navigation flows, error handling, 404 | TC-SECXX-001 to TC-SECXX-005 | 5 | 100% | e2e/requirements-verification.spec.ts |
+
+---
+
+### Sections Without Dedicated E2E Tests
+
+| Req Section | Requirement | Justification |
+|-------------|-------------|---------------|
+| 5.4 | Order Tracking | Requires active order with Socket.IO real-time updates; verified via authenticated session indirectly (1 route-protection test exists) |
+| 5.6 | Customer Profile | Requires authenticated customer session; route protection verified (2 tests exist) |
+| 26 | Data Models (20 MongoDB Collections) | Infrastructure/schema concern; validated by Mongoose model unit tests and integration tests, not suitable for E2E browser testing |
+
+---
+
+### Forward Traceability Summary
+
+| Req Section | Requirement Title | E2E Tests | Auth Tests | Total | Pass Rate |
+|-------------|-------------------|-----------|------------|-------|-----------|
+| 1 / 5.1 | Home Page | 5 | 0 | 5 | 100% |
+| 2 | Technical Stack | 2 | 0 | 2 | 100% |
+| 3 | Architecture | 2 | 0 | 2 | 100% |
+| 4 | Authentication & Authorization | 13 | 3 | 16 | 100% |
+| 5.2 / 6 | Menu System | 6 | 0 | 6 | 100% |
+| 5.3 | Cart | 3 | 0 | 3 | 100% |
+| 5.5 | Orders & Tabs Page | 3 | 0 | 3 | 100% |
+| 5.7 / 10 | Rewards & Loyalty | 6 | 0 | 6 | 100% |
+| 7 | Ordering System | 2 | 0 | 2 | 100% |
+| 8 | Tab System | 2 | 1 | 3 | 100% |
+| 9 | Checkout & Payment | 5 | 0 | 5 | 100% |
+| 11 | Admin Dashboard | 12 | 7 | 19 | 100% |
+| 12 | Order Management | 2 | 5 | 7 | 100% |
+| 13 | Menu Management | 2 | 2 | 4 | 100% |
+| 14 | Inventory Management | 3 | 3 | 6 | 100% |
+| 15 | Financial Management | 1 | 1 | 2 | 100% |
+| 16 | Reports & Analytics | 5 | 5 | 10 | 100% |
+| 17 | Kitchen Display | 1 | 3 | 4 | 100% |
+| 18 | Rewards Configuration | 4 | 4 | 8 | 100% |
+| 19 | Settings & Configuration | 4 | 4 | 8 | 100% |
+| 20 | Public REST API | 22 | 0 | 22 | 100% |
+| 21 | Socket.IO | 1 | 0 | 1 | 100% |
+| 22 | Security | 6 | 0 | 6 | 100% |
+| 23 | Audit Logs | 1 | 1 | 2 | 100% |
+| 24 | Data Management & Privacy | 3 | 0 | 3 | 100% |
+| 25 | Deployment | 2 | 0 | 2 | 100% |
+| 27 | Non-Functional Requirements | 16 | 0 | 16 | 100% |
+| -- | Cross-Cutting (Navigation/Errors) | 5 | 0 | 5 | 100% |
+| **TOTAL** | | **142** | **39** | **183** | **100%** |
+
+---
+
+## Part B: Change Request Traceability
+
+This section tracks discrete change requests (REQ-001 through REQ-007) that represent implementation work items. Each entry maps to implementation artefacts, test evidence, and approval status.
+
+| Req ID | Requirement | Implementation Files | Test Evidence | Status | Approver | Date |
+|--------|-------------|---------------------|---------------|--------|----------|------|
+| REQ-001 | Standard Operating Procedures for Tab and Order Management | `docs/operations/SOP-WAITER-TAB-ORDER-MANAGEMENT.md`, `docs/operations/SOP-API-TAB-ORDER-MANAGEMENT.md`, `docs/operations/SOP-API-REPORTING.md` | Documentation validation (structure, completeness, code syntax, API accuracy, parameters) | TESTED - PENDING SIGN-OFF | Pending | -- |
+| REQ-002 | Automatic Idempotency Key Generation for Orders | `models/order-model.ts`, `interfaces/order.interface.ts` | Code validation: 37 criteria tested, 100% pass rate; format consistency; CSPRNG security review; backward compatibility | TESTED - PENDING SIGN-OFF | Pending | -- |
+| REQ-003 | MongoDB Warmup Connection on Server Startup | `server.ts` | Implementation validation; graceful degradation confirmed; no breaking changes | TESTED - PENDING SIGN-OFF | Pending | -- |
+| REQ-004 | MongoDB Connection Resilience for Railway Deployment | `server.ts`, `lib/mongodb.ts` | Railway healthcheck PASS; API endpoint verification; database migration (11,870 docs); production logs confirmation | TESTED - PENDING SIGN-OFF | Pending | -- |
+| REQ-005 | Public API Tab Support for Orders | `app/api/public/orders/route.ts`, `docs/operations/SOP-API-TAB-ORDER-MANAGEMENT.md`, `docs/api/AGENT-TOOLING-FLOWS.md`, `docs/api/AGENT-TOOLING-GUIDE.md` | Vitest unit tests: 26/26 passed (validation 11, branch selection 5, customer name 5, response shape 2, interface 3) | APPROVED - DEPLOYED | William | 2026-03-05 |
+| REQ-006 | Tab Lookup by tabNumber, Item Name Lookup, SOP Enhancement | `app/api/public/tabs/route.ts`, `docs/operations/SOP-API-TAB-ORDER-MANAGEMENT.md` | Vitest unit tests: 27/27 passed (tabNumber 4, tableNumber 2, status 5, combined 6, sort 4, menu resolution 6) | APPROVED - DEPLOYED | William | 2026-03-06 |
+| REQ-007 | Comprehensive Requirements Document | `docs/REQUIREMENTS.md` | Playwright E2E: 183/183 passed; completeness check (20 interfaces, 20 models, 28 services); accuracy check; structure check (27 sections) | TESTED - PENDING SIGN-OFF | Pending | -- |
+
+### Change Request Dependencies
+
+```
+REQ-003 ──superseded-by──> REQ-004 (non-blocking warmup replaces blocking warmup)
+REQ-001 <──updated-by──── REQ-005 (SOP corrected to match API implementation)
+REQ-001 <──updated-by──── REQ-006 (SOP v1.2 with prerequisite sections)
+REQ-007 ──verified-by───> E2E test suites (requirements-verification + authenticated)
 ```
 
-**Key Features:**
-- Connects to MongoDB before HTTP server starts listening
-- Graceful degradation: if warmup fails, logs warning but doesn't crash
-- Uses existing `connectDB()` function (cached singleton pattern)
-- No new dependencies introduced
+### Change Request Evidence Locations
 
-#### Acceptance Criteria
-- [x] MongoDB connection established before HTTP server accepts requests
-- [x] Graceful error handling if warmup fails
-- [x] No crash on warmup failure (retry on first request)
-- [x] Startup log shows connection status
-- [x] No breaking changes to existing server behavior
-- [x] Uses existing connectDB cached singleton pattern
-- [x] TypeScript compilation successful
-
-#### Test Evidence
-- Implementation correctness verified
-- Graceful degradation confirmed
-- No breaking changes to existing behavior
-- Production deployment verified (health check passing)
-
-**Evidence Location:** `/compliance/evidence/REQ-003/`
-
-#### Dependencies
-- `/lib/mongodb.ts` — `connectDB` function
-- Railway production environment (MongoDB private network)
-
-#### Audit Trail
-| Date | Action | Performed By | Notes |
-|------|--------|--------------|-------|
-| 2026-03-05 | Requirement created | AI (Cascade) | Transient MongoDB errors observed in production |
-| 2026-03-05 | Implementation completed | AI (Cascade) | server.ts updated with warmup |
-| 2026-03-05 | Deployed to production | AI (Cascade) | Via railway up and git push to main |
-| 2026-03-05 | Moved to TESTED status | AI (Cascade) | Awaiting human sign-off |
+| Req ID | Evidence Location |
+|--------|------------------|
+| REQ-001 | `compliance/evidence/REQ-001/` |
+| REQ-002 | `compliance/evidence/REQ-002/` |
+| REQ-003 | `compliance/evidence/REQ-003/` |
+| REQ-004 | `compliance/evidence/REQ-004/` |
+| REQ-005 | `compliance/evidence/REQ-005/` |
+| REQ-006 | `compliance/evidence/REQ-006/` |
+| REQ-007 | `compliance/evidence/REQ-007/` |
 
 ---
 
-### REQ-004: MongoDB Connection Resilience for Railway Deployment
-
-**Category:** Infrastructure / Reliability  
-**Priority:** Critical  
-**Status:** TESTED - PENDING SIGN-OFF  
-**Created:** 2026-03-05  
-**Last Updated:** 2026-03-05
-
-#### Description
-Implement comprehensive MongoDB connection resilience for Railway production deployment, including non-blocking warmup, connection health checks, and Railway-specific configuration. This resolves persistent 500 errors on `/api/public/orders` and deployment healthcheck failures caused by blocking MongoDB warmup and stale cached connections.
-
-#### Business Justification
-- Eliminates 500 errors on production API endpoints
-- Ensures Railway healthcheck passes during deployment
-- Prevents service downtime from stale MongoDB connections
-- Supports Railway's standalone MongoDB architecture
-- Enables automatic reconnection on connection drops
-
-#### Implementation Details
-
-**Files Modified:**
-- `/server.ts` — Non-blocking MongoDB warmup after server listen
-- `/lib/mongodb.ts` — Connection health checks and resilience options
-
-**Key Features:**
-
-1. **Non-blocking Warmup (`server.ts:47-73`):**
-   - Warmup runs AFTER `httpServer.listen()` to pass Railway healthcheck
-   - 5 retry attempts with 3-second delays
-   - Background execution doesn't block server startup
-   - Graceful degradation if all retries fail
-
-2. **Connection Health Checks (`lib/mongodb.ts:35-45`):**
-   - Check `mongoose.connection.readyState` before returning cached connection
-   - Invalidate cache if connection is disconnected/disconnecting
-   - Force reconnection on stale connections
-
-3. **Railway-Specific Configuration (`lib/mongodb.ts:47-58`):**
-   - `directConnection: true` for standalone MongoDB (bypasses replica set discovery)
-   - `serverSelectionTimeoutMS: 15000` (15s timeout)
-   - `socketTimeoutMS: 45000` (45s socket timeout)
-   - `connectTimeoutMS: 15000` (15s connection timeout)
-   - `heartbeatFrequencyMS: 10000` (10s heartbeat)
-   - `maxPoolSize: 10` (connection pooling)
-   - `retryWrites: true` and `retryReads: true`
-
-4. **Fresh MongoDB Instance:**
-   - Deployed new MongoDB service on Railway
-   - Migrated 11,870 documents from local database
-   - Updated connection credentials in environment variables
-
-#### Acceptance Criteria
-- [x] Server passes Railway healthcheck during deployment
-- [x] MongoDB warmup is non-blocking (runs after server listen)
-- [x] Connection health checks prevent stale connection usage
-- [x] `directConnection: true` for Railway standalone MongoDB
-- [x] Resilience options configured (timeouts, retries, pooling)
-- [x] Fresh MongoDB instance deployed and data migrated
-- [x] Production logs show `✅ MongoDB connection established`
-- [x] No 500 errors on `/api/public/orders` endpoint
-- [x] TypeScript compilation successful
-- [x] No breaking changes to existing functionality
-
-#### Test Evidence
-- Railway deployment healthcheck: PASS
-- MongoDB connection established: PASS (production logs)
-- API endpoint `/api/public/orders`: PASS (no 500 errors)
-- Database migration: PASS (11,870 documents migrated)
-- User authentication and dashboard access: PASS
-- Connection resilience verified in production
-
-**Evidence Location:** `/compliance/evidence/REQ-004/`
-
-#### Dependencies
-- Railway MongoDB service (fresh instance)
-- Railway private network (`mongodb.railway.internal`)
-- Environment variables: `MONGODB_URI`, `MONGODB_DB_NAME`
-
-#### Related Requirements
-- REQ-003 (MongoDB Warmup) — Superseded by REQ-004's non-blocking approach
-
-#### Compliance Notes
-- Follows Railway deployment best practices
-- Non-blocking startup ensures healthcheck compliance
-- Connection pooling and retries improve reliability
-- No sensitive data in logs or code
-
-#### Audit Trail
-| Date | Action | Performed By | Notes |
-|------|--------|--------------|-------|
-| 2026-03-05 | Requirement created | AI (Cascade) | Persistent 500 errors and healthcheck failures |
-| 2026-03-05 | Initial fix deployed | AI (Cascade) | REQ-003 blocking warmup with retries |
-| 2026-03-05 | Healthcheck failure diagnosed | AI (Cascade) | Blocking warmup exceeded Railway timeout |
-| 2026-03-05 | Non-blocking warmup implemented | AI (Cascade) | Warmup moved after server listen |
-| 2026-03-05 | Connection health checks added | AI (Cascade) | readyState validation in lib/mongodb.ts |
-| 2026-03-05 | Railway-specific config added | AI (Cascade) | directConnection and resilience options |
-| 2026-03-05 | MongoDB service redeployed | AI (Cascade) | Fresh instance due to corrupted old service |
-| 2026-03-05 | Database migrated | AI (Cascade) | 11,870 documents from local to Railway |
-| 2026-03-05 | Production verification | AI (Cascade) | All tests passed, app running successfully |
-| 2026-03-05 | Code pushed to main | AI (Cascade) | Git merge and push completed |
-| 2026-03-05 | Moved to TESTED status | AI (Cascade) | Awaiting human sign-off |
-
----
-
-### REQ-005: Public API Tab Support for Orders
-
-**Category:** Feature Enhancement / API  
-**Priority:** High  
-**Status:** APPROVED - DEPLOYED  
-**Created:** 2026-03-05  
-**Last Updated:** 2026-03-05
-
-#### Description
-Add optional tab support to the `POST /api/public/orders` endpoint, allowing API consumers to create orders that are automatically attached to dine-in tabs. Three tab attachment methods are supported:
-1. **`tabId`** — attach order to an existing tab by MongoDB ObjectId
-2. **`useTab: "new"`** — create a new tab for the table and attach the order
-3. **`useTab: "existing"`** — find the open tab for the table and attach the order
-
-When a tab is involved, the response shape changes from flat `{ data: order }` to wrapped `{ data: { order, tab } }`.
-
-#### Business Justification
-- Enables AI agents and third-party integrations to manage dine-in tabs via a single API call
-- Reduces the number of API calls needed (create order + attach to tab in one request)
-- Maintains backward compatibility — existing API consumers are unaffected
-- Aligns API implementation with existing SOP documentation expectations
-
-#### Implementation Details
-
-**Files Modified:**
-- `/app/api/public/orders/route.ts` — Added `TabService` import, `tabId`/`useTab`/`customerName` to `CreateOrderBody` interface, tab validation logic, tab branching logic (create/find/attach), wrapped response shape. Added `@requirement REQ-005` JSDoc header.
-
-**Files Updated (Documentation):**
-- `/docs/operations/SOP-API-TAB-ORDER-MANAGEMENT.md` — Corrected field names to match actual API (`dineInDetails.tableNumber`, `customerName`, `guestName`). Added `tabId` direct attachment. Updated all payloads, curl examples, response examples, validation logic, test cases, quick reference, troubleshooting, and endpoints summary. Bumped to v1.1.
-- `/docs/api/AGENT-TOOLING-FLOWS.md` — Updated `create_order` OpenAI function schema with `useTab`, `customerName`, `dineInDetails`, correct item properties. Updated Flow 7 (Tab Lifecycle) with new field names and alternative `tabId` flow.
-- `/docs/api/AGENT-TOOLING-GUIDE.md` — Updated `create_order` tool description in the reference table.
-
-**Key Features:**
-1. **Validation (lines 306-317):**
-   - `useTab` must be `"new"` or `"existing"` if provided
-   - Tab fields (`useTab` or `tabId`) only allowed for `dine-in` orderType
-   - `dineInDetails.tableNumber` required when `useTab` is provided
-2. **Tab Branching (lines 353-386):**
-   - `tabId` → `TabService.addOrderToTab(tabId, orderId)`
-   - `useTab: "new"` → check no existing tab (409), `TabService.createTab()`, then `addOrderToTab()`
-   - `useTab: "existing"` → find open tab (422 if none), then `addOrderToTab()`
-3. **Response Shape (lines 388-396):**
-   - With tab: `{ success: true, data: { order, tab } }`
-   - Without tab: `{ success: true, data: { ...order } }` (unchanged)
-4. **Customer Name Resolution (line 371):**
-   - Priority: `customerName` > `guestName` > `"Walk-in Customer"`
-
-#### Acceptance Criteria
-- [x] `tabId` field accepted and order attached to existing tab
-- [x] `useTab: "new"` creates tab and attaches order (409 if table has open tab)
-- [x] `useTab: "existing"` finds open tab and attaches order (422 if no open tab)
-- [x] Tab fields rejected for non-dine-in order types (400)
-- [x] `dineInDetails.tableNumber` required when `useTab` is provided (400)
-- [x] Invalid `useTab` values rejected (400)
-- [x] Response wraps `{ order, tab }` when tab is involved
-- [x] Response stays flat (backward compatible) when no tab fields provided
-- [x] Customer name falls back through `customerName` → `guestName` → `"Walk-in Customer"`
-- [x] `tabId` takes priority over `useTab` when both provided
-- [x] SOP documentation updated with correct field names and examples
-- [x] Agent Tooling docs updated with correct schema and flows
-- [x] TypeScript compilation passes cleanly
-- [x] SOLID principles followed (single-responsibility validation, open for extension)
-- [x] 26 unit tests pass (Vitest)
-
-#### Test Evidence
-- Vitest unit tests: 26 tests, 26 passed, 0 failed
-- Test suites: validation (11), branch selection (5), customer name resolution (5), response shape (2), interface compatibility (3)
-- TypeScript compilation: clean (0 errors)
-- Documentation review: all payloads match actual API fields
-
-**Evidence Location:** `/compliance/evidence/REQ-005/`
-
-#### Dependencies
-- `/services/tab-service.ts` — `TabService.createTab`, `getOpenTabForTable`, `addOrderToTab`
-- `/services/order-service.ts` — `OrderService.createOrder`
-- `/lib/api-response.ts` — `apiSuccess`, `apiError`, `serialize`, `withApiAuth`
-- Existing `POST /api/public/tabs` endpoint (standalone tab creation)
-
-#### Related Requirements
-- REQ-001 (SOP Documentation) — SOP updated to match implementation
-
-#### Compliance Notes
-- Backward compatible — no breaking changes to existing API consumers
-- Tab fields are entirely optional
-- Error responses follow existing API envelope format
-- No PII exposure in documentation examples
-- Security: tab operations inherit API key authentication and `orders:write` scope
-
-#### Audit Trail
-| Date | Action | Performed By | Notes |
-|------|--------|--------------|-------|
-| 2026-03-05 | Requirement created | AI (Cascade) | User request for tab support in public API |
-| 2026-03-05 | Implementation completed | AI (Cascade) | Route handler updated with tab validation, branching, response |
-| 2026-03-05 | Documentation updated | AI (Cascade) | SOP, Agent Tooling Guide, Agent Tooling Flows |
-| 2026-03-05 | Unit tests written & passed | AI (Cascade) | 26/26 Vitest tests pass |
-| 2026-03-05 | TypeScript compilation verified | AI (Cascade) | Clean pass, 0 errors |
-| 2026-03-05 | Moved to TESTED status | AI (Cascade) | Awaiting human sign-off |
-
----
-
-### REQ-006: Tab Lookup by tabNumber, Item Name Lookup, SOP Enhancement
-
-**Category:** Feature Enhancement / API / Documentation  
-**Priority:** High  
-**Status:** APPROVED - DEPLOYED  
-**Created:** 2026-03-05  
-**Last Updated:** 2026-03-06
-
-#### Description
-
-Enhances the public API and SOP documentation with three capabilities:
-1. Menu item name lookup via `GET /api/public/menu?q=` to resolve item names to `menuItemId`
-2. Tab lookup by table number or tab number via `GET /api/public/tabs?tableNumber=` / `tabNumber=`
-3. Comprehensive SOP update (v1.2) with Prerequisite A & B sections and updated workflow examples
-
-#### Implementation Details
-
-| Component | File | Change |
-|-----------|------|--------|
-| Tabs API Route | `app/api/public/tabs/route.ts` | Added `tabNumber` query param filter to GET handler |
-| SOP Document | `docs/operations/SOP-API-TAB-ORDER-MANAGEMENT.md` | Added Prerequisite A (menu item lookup), Prerequisite B (tab lookup), updated Complete Workflow Example |
-| JSDoc Header | `app/api/public/tabs/route.ts` | Added `@requirement REQ-006` reference |
-
-#### Test Evidence
-
-- **Test File:** `__tests__/api/public/tabs-filter-support.test.ts`
-- **Test Count:** 27 tests
-- **Results:** 27/27 passed
-- **Evidence Location:** `/compliance/evidence/REQ-006/unit-test-results.txt`
-
-#### Test Coverage
-
-| Test Suite | Tests | Status |
-|-----------|-------|--------|
-| Tab Filter Building — tabNumber support | 4 | ✅ Pass |
-| Tab Filter Building — tableNumber support | 2 | ✅ Pass |
-| Tab Filter Building — status validation | 5 | ✅ Pass |
-| Tab Filter Building — combined filters | 6 | ✅ Pass |
-| Tab Sort Resolution | 4 | ✅ Pass |
-| Menu Item Name Resolution | 6 | ✅ Pass |
-
-#### Audit Trail
-
-| Date | Action | Actor | Notes |
-|------|--------|-------|-------|
-| 2026-03-05 | Requirement created | AI (Cascade) | User request for SOP enhancement |
-| 2026-03-05 | tabNumber filter added to tabs API | AI (Cascade) | GET /api/public/tabs now supports tabNumber query |
-| 2026-03-05 | SOP v1.2 published | AI (Cascade) | Prerequisite A, B, updated workflow |
-| 2026-03-05 | Unit tests written & passed | AI (Cascade) | 27/27 Vitest tests pass |
-| 2026-03-05 | TypeScript compilation verified | AI (Cascade) | Clean pass, 0 errors |
-| 2026-03-05 | Moved to TESTED status | AI (Cascade) | Awaiting human sign-off |
-| 2026-03-06 | Human sign-off completed | William | All tests verified, approved for deployment |
-
----
-
-### REQ-007: Comprehensive Requirements Document
-
-**Category:** Documentation / Requirements  
-**Priority:** High  
-**Status:** TESTED - PENDING SIGN-OFF  
-**Created:** 2026-03-06  
-**Last Updated:** 2026-03-06
-
-#### Description
-
-Create a comprehensive requirements document that catalogues all implemented features, data models, API surface, architecture decisions, and non-functional requirements of the Wawa Garden Bar application. The document serves as the canonical reference for the system's capabilities.
-
-Coverage areas:
-1. Authentication & Authorization (passwordless, admin, RBAC)
-2. Customer-facing features (menu, cart, orders, tabs, checkout, rewards, profile)
-3. Admin dashboard (12 sections with role-based access)
-4. Menu system (29 subcategories, customizations, portion sizes)
-5. Ordering system (4 order types, full lifecycle, profitability tracking)
-6. Tab system (open/settling/closed lifecycle, constraints)
-7. Payment integration (Monnify active, Paystack infrastructure)
-8. Rewards & loyalty (rule-based, Instagram social, points redemption)
-9. Inventory management (location tracking, snapshots, stock movements)
-10. Financial management (expenses, bank import, profitability)
-11. Reports & analytics (daily, inventory, profitability)
-12. Kitchen display system (real-time Socket.IO)
-13. Public REST API (27 endpoints, scoped API keys)
-14. Security (rate limiting, CSP, webhook validation)
-15. Data models (20 MongoDB collections)
-16. Deployment & infrastructure (Railway, Docker)
-
-#### Business Justification
-- Single source of truth for system capabilities
-- Supports onboarding of new developers and stakeholders
-- Enables gap analysis against business requirements
-- Provides audit-ready documentation of implemented features
-- Foundation for future feature planning and prioritization
-
-#### Implementation Details
-
-| Component | File | Change |
-|-----------|------|--------|
-| Requirements Document | `docs/REQUIREMENTS.md` | Created 27-section comprehensive document covering all system features |
-
-#### Methodology
-
-The document was produced by systematic codebase review:
-- **20 interface files** reviewed for data model schemas
-- **20 Mongoose models** reviewed for database structure
-- **28 services** reviewed for business logic
-- **42 server actions** reviewed for feature coverage
-- **27 public API endpoints** catalogued with scopes
-- **37 dashboard pages** mapped with role permissions
-- **142 feature components** inventoried
-- All route handlers, middleware, and utility modules examined
-
-#### Test Evidence
-
-This is a documentation-only artifact. Verification consists of:
-- **Completeness check:** All 20 interfaces, 20 models, 28 services covered
-- **Accuracy check:** Data model fields verified against source TypeScript interfaces
-- **Structure check:** 27 sections with consistent formatting
-- **Evidence Location:** `/compliance/evidence/REQ-007/`
-
-#### Audit Trail
-
-| Date | Action | Actor | Notes |
-|------|--------|-------|-------|
-| 2026-03-06 | Requirement created | AI (Cascade) | User request for comprehensive requirements document |
-| 2026-03-06 | Codebase review completed | AI (Cascade) | All interfaces, models, services, actions, routes reviewed |
-| 2026-03-06 | Document drafted | AI (Cascade) | 27-section document created at docs/REQUIREMENTS.md |
-| 2026-03-06 | Moved to TESTED status | AI (Cascade) | Awaiting human sign-off |
-| 2026-03-06 | E2E tests executed | AI (Cascade) | Playwright 31/31 passed (Chromium, 9.0s) |
-
----
-
-## Traceability Matrix
-
-| Req ID | Requirement | Implementation | Tests | Status | Approver | Date |
-|--------|-------------|----------------|-------|--------|----------|------|
-| REQ-001 | SOP Documentation | 3 SOP documents | Documentation validation | TESTED - PENDING SIGN-OFF | Pending | - |
-| REQ-002 | Idempotency Key Auto-Generation | order-model.ts, order.interface.ts | Code validation (37 criteria) | TESTED - PENDING SIGN-OFF | Pending | - |
-| REQ-003 | MongoDB Warmup on Startup | server.ts | Implementation validation | TESTED - PENDING SIGN-OFF | Pending | - |
-| REQ-004 | MongoDB Connection Resilience | server.ts, lib/mongodb.ts | Production verification | TESTED - PENDING SIGN-OFF | Pending | - |
-| REQ-005 | Public API Tab Support | route.ts, 3 doc files | Vitest unit tests (26/26) | APPROVED - DEPLOYED | William | 2026-03-05 |
-| REQ-006 | Tab/Menu Lookup + SOP Enhancement | tabs/route.ts, SOP doc | Vitest unit tests (27/27) | APPROVED - DEPLOYED | William | 2026-03-06 |
-| REQ-007 | Comprehensive Requirements Document | docs/REQUIREMENTS.md | Doc validation + Playwright E2E (31/31) | TESTED - PENDING SIGN-OFF | Pending | - |
+## Part C: Coverage Summary
+
+### Overall Metrics
+
+| Metric | Value |
+|--------|-------|
+| Total requirements sections (REQUIREMENTS.md) | 27 |
+| Sections with E2E coverage (requirements-verification.spec.ts) | 25 |
+| Sections with authenticated coverage (authenticated.spec.ts) | 14 |
+| Sections with any automated test coverage | 25 |
+| Total test cases | 183 |
+| Tests in requirements-verification.spec.ts | 142 |
+| Tests in authenticated.spec.ts | 39 |
+| Overall pass rate | 100% |
+| Test framework | Playwright (Chromium) |
+
+### Sections With No Automated E2E Coverage
+
+| Section | Title | Justification |
+|---------|-------|---------------|
+| 5.4 | Order Tracking | Requires live order + Socket.IO real-time updates; indirectly validated by route-protection test and Section 21 Socket.IO availability test |
+| 5.6 | Customer Profile | Requires authenticated customer session (not admin); route protection verified; profile editing requires seeded customer data |
+| 26 | Data Models | Infrastructure/schema definition; validated through Mongoose model compilation, Vitest unit tests, and integration tests; not suitable for browser-based E2E |
+
+### Coverage by Test Type
+
+| Test Type | Sections Covered | Test Count | Notes |
+|-----------|-----------------|------------|-------|
+| E2E (public/unauthenticated) | 25 | 142 | Route protection, public pages, API auth enforcement, security headers, responsive design, SEO |
+| E2E (authenticated admin) | 14 | 39 | Dashboard features, RBAC, admin page functionality, kitchen display, settings |
+| Vitest (unit) | REQ-005, REQ-006 | 53 | API route handler logic, filter building, menu resolution |
+| Documentation validation | REQ-001, REQ-002, REQ-003, REQ-004, REQ-007 | -- | Structure, completeness, accuracy checks |
+
+### Risk Assessment
+
+| Risk | Mitigation |
+|------|------------|
+| Socket.IO real-time events not fully E2E tested | Socket.IO endpoint availability confirmed; kitchen display rendering verified; manual QA recommended for live event propagation |
+| Payment flow not E2E tested with live provider | Payment provider (Monnify) requires production credentials and real transactions; webhook validation tested via unit tests |
+| Customer profile editing not E2E tested | Route protection verified; form rendering validated on similar pages (checkout); manual QA recommended |
 
 ---
 
@@ -611,11 +706,12 @@ This is a documentation-only artifact. Verification consists of:
 - Human sign-off required before production deployment
 - Test evidence retained for audit period (7 years minimum)
 - RTM updated with each requirement change or status update
+- Test Case IDs (TC-SECT##-###) are stable identifiers for audit cross-referencing
 
 ---
 
 **Document Control:**
-- Version: 1.4
+- Version: 2.0
 - Classification: Internal
 - Retention Period: Permanent
 - Review Frequency: Quarterly

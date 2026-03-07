@@ -1,78 +1,323 @@
 REQ-007 E2E Test Results — Playwright
 ======================================
-Date: 2026-03-06
+Date: 2026-03-07
 Runner: Playwright 1.57.0
-Browser: Chromium 143.0.7499.4
-Duration: 9.0s
-Result: 31/31 PASSED
+Browser: Chromium (Desktop Chrome)
+Base URL: http://localhost:3000
+Duration: 1.6 minutes
+Result: 183/183 PASSED
+
+PROJECTS
+--------
+  chromium:      142 tests (unauthenticated)  — requirements-verification.spec.ts
+  auth-setup:      2 tests (login setup)      — auth.setup.ts
+  authenticated:  39 tests (admin/super-admin) — authenticated.spec.ts
 
 TEST SUITE BREAKDOWN
 --------------------
 
-Section 1/5.1: Home Page (3 tests)
-  ✅ renders home page with branding and CTA (2.4s)
-  ✅ displays order type feature cards (Dine In, Pickup, Delivery) (2.4s)
-  ✅ is responsive — renders on mobile viewport (2.3s)
+=== Project: chromium (142 tests) ===
 
-Section 4: Authentication (3 tests)
-  ✅ login page renders with authentication options (WhatsApp/SMS/Email) (2.5s)
-  ✅ unauthenticated user is redirected from /orders to /login (2.6s)
-  ✅ unauthenticated user is redirected from /dashboard to /login (2.6s)
+Section 1/5.1: Home Page (5 tests)
+  ✅ renders home page with branding, logo, and CTA
+  ✅ displays order type feature cards (Dine In, Pickup, Delivery)
+  ✅ displays "How It Works" section with descriptions
+  ✅ is responsive — renders correctly on mobile viewport
+  ✅ is responsive — renders correctly on tablet viewport
 
-Section 5.2/6: Menu System (2 tests)
-  ✅ menu page loads and displays items (3.3s)
-  ✅ menu page has category navigation (3.8s)
+Section 2: Technical Stack (2 tests)
+  ✅ application is running and serves pages
+  ✅ pages include Next.js framework assets
 
-Section 9: Checkout (1 test)
-  ✅ checkout page renders with form (3.2s)
+Section 3: Navigation & Architecture (2 tests)
+  ✅ home page includes View Menu link
+  ✅ View Menu link navigates to menu page
 
-Section 20: Public REST API (9 tests)
-  ✅ health endpoint returns success (108ms)
-  ✅ menu API returns items without auth (requires API key) (121ms)
-  ✅ orders API requires authentication (146ms)
-  ✅ inventory API requires authentication (85ms)
-  ✅ customers API requires authentication (68ms)
-  ✅ tabs API requires authentication (79ms)
-  ✅ settings API requires authentication (68ms)
-  ✅ rewards API requires authentication (51ms)
-  ✅ sales summary API requires authentication (59ms)
+Section 4: Customer Authentication (6 tests)
+  ✅ login page renders with title and phone prompt
+  ✅ login page offers authentication options (WhatsApp, SMS, Email)
+  ✅ login page links to privacy policy and terms
+  ✅ unauthenticated user is redirected from /orders to /login
+  ✅ unauthenticated user is redirected from /profile to /login
+  ✅ unauthenticated user is redirected from /dashboard to /login
 
-Section 22: Security Headers (1 test)
-  ✅ returns security headers on responses (340ms)
+Section 4: Admin Authentication (4 tests)
+  ✅ admin login page renders with username and password fields
+  ✅ admin login page renders with credentials form
+  ✅ admin login rejects invalid credentials
+  ✅ unauthenticated admin is redirected from dashboard to login
 
-Section 11/12: Dashboard RBAC (8 tests)
-  ✅ dashboard/orders redirects unauthenticated users (1.4s)
-  ✅ dashboard/menu redirects unauthenticated users (1.4s)
-  ✅ dashboard/inventory redirects unauthenticated users (1.5s)
-  ✅ dashboard/settings redirects unauthenticated users (1.5s)
-  ✅ dashboard/rewards redirects unauthenticated users (1.5s)
-  ✅ dashboard/audit-logs redirects unauthenticated users (1.4s)
-  ✅ dashboard/reports redirects unauthenticated users (1.0s)
-  ✅ dashboard/kitchen redirects unauthenticated users (930ms)
+Section 4: Session Security (1 test)
+  ✅ session cookie is httpOnly and not accessible via JS
 
-Section 24: Data Management & Privacy (2 tests)
-  ✅ privacy page is publicly accessible (996ms)
-  ✅ data deletion page is publicly accessible (983ms)
+Section 4: Unauthorized & Forbidden Pages (2 tests)
+  ✅ accessing non-existent dashboard page returns error
+  ✅ accessing non-existent API endpoint returns 404
 
-Section 10: Rewards (1 test)
-  ✅ rewards page loads (1.9s)
+Section 5.2/6: Menu System (6 tests)
+  ✅ menu page displays item cards
+  ✅ menu supports category filter via URL parameter
+  ✅ menu supports search via URL parameter
+  ✅ menu accepts table number via URL parameter
+  ✅ menu page loads with title and description
+  ✅ menu page shows both food and drink categories
 
-Section 3: Navigation (1 test)
-  ✅ home page includes menu link (1.6s)
+Section 5.3: Cart (3 tests)
+  ✅ cart uses localStorage under wawa-cart-storage
+  ✅ cart supports special instructions per item
+  ✅ cart items appear in checkout
 
-REQUIREMENTS COVERAGE MAP
--------------------------
-| Req Section | Tests | Verified |
-|-------------|-------|----------|
-| §1 Project Overview / §5.1 Home Page | 3 | ✅ |
-| §4 Authentication & Authorization | 3 | ✅ |
-| §5.2/§6 Menu System | 2 | ✅ |
-| §9 Checkout & Payment | 1 | ✅ |
-| §10 Rewards & Loyalty | 1 | ✅ |
-| §11/§12 Dashboard RBAC | 8 | ✅ |
-| §20 Public REST API (auth enforcement) | 9 | ✅ |
-| §22 Security (HTTP headers) | 1 | ✅ |
-| §24 Data Management & Privacy | 2 | ✅ |
-| §3 Architecture / Navigation | 1 | ✅ |
+Section 5.4: Order Tracking (1 test)
+  ✅ order tracking page requires authentication
 
-RESULT: ALL 31 TESTS PASSED
+Section 5.5: Orders & Tabs Page (3 tests)
+  ✅ orders page redirects unauthenticated users
+  ✅ orders page requires authentication
+  ✅ tabs page redirects unauthenticated users
+
+Section 5.6: Customer Profile (2 tests)
+  ✅ profile page redirects unauthenticated users
+  ✅ profile rewards page requires authentication
+
+Section 5.7/10: Rewards (6 tests)
+  ✅ rewards page loads with loyalty information
+  ✅ rewards page is accessible without login for unauthenticated users
+  ✅ rewards page displays feature preview cards
+  ✅ rewards page shows points conversion (100 points = ₦1)
+  ✅ rewards page has How It Works guide
+  ✅ rewards page links to login for sign-in
+
+Section 7: Ordering System (2 tests)
+  ✅ checkout shows delivery method descriptions
+  ✅ checkout form has order type and delivery method descriptions
+
+Section 8: Tab System (2 tests)
+  ✅ tabs page redirects unauthenticated users
+  ✅ tab management page requires authentication
+
+Section 9: Checkout & Payment (5 tests)
+  ✅ checkout page renders with form
+  ✅ checkout with cart shows multi-step form
+  ✅ checkout displays cart items and totals
+  ✅ checkout shows customer info fields (name, email, phone)
+  ✅ checkout has navigation buttons (Back, Next)
+
+Section 11/12: Dashboard RBAC (12 tests)
+  ✅ dashboard/orders redirects unauthenticated users
+  ✅ dashboard/menu redirects unauthenticated users
+  ✅ dashboard/inventory redirects unauthenticated users
+  ✅ dashboard/settings redirects unauthenticated users
+  ✅ dashboard/rewards redirects unauthenticated users
+  ✅ dashboard/audit-logs redirects unauthenticated users
+  ✅ dashboard/reports redirects unauthenticated users
+  ✅ dashboard/kitchen redirects unauthenticated users
+  ✅ dashboard/customers redirects unauthenticated users
+  ✅ dashboard/finance redirects unauthenticated users
+  ✅ dashboard/analytics redirects unauthenticated users
+  ✅ dashboard redirects unauthenticated users
+
+Section 12: Order Management (2 tests)
+  ✅ order management page requires authentication
+  ✅ order management page redirects unauthenticated users
+
+Section 13: Menu Management (2 tests)
+  ✅ menu management page requires authentication
+  ✅ new menu item page requires authentication
+
+Section 14: Inventory Management (3 tests)
+  ✅ inventory page redirects unauthenticated users
+  ✅ inventory snapshots page redirects unauthenticated users
+  ✅ inventory transfer page redirects unauthenticated users
+
+Section 15: Financial Management (1 test)
+  ✅ expenses page redirects unauthenticated users
+
+Section 16: Reports & Analytics (5 tests)
+  ✅ reports page redirects unauthenticated users
+  ✅ daily report redirects unauthenticated users
+  ✅ inventory report redirects unauthenticated users
+  ✅ profitability report redirects unauthenticated users
+  ✅ profitability analytics redirects unauthenticated users
+
+Section 17: Kitchen Display System (1 test)
+  ✅ kitchen display redirects unauthenticated users
+
+Section 18: Rewards Configuration (4 tests)
+  ✅ rewards dashboard redirects unauthenticated users
+  ✅ reward rules page redirects unauthenticated users
+  ✅ issued rewards page redirects unauthenticated users
+  ✅ reward templates page redirects unauthenticated users
+
+Section 19: Settings & Configuration (4 tests)
+  ✅ settings page redirects unauthenticated users
+  ✅ admin management page redirects unauthenticated users
+  ✅ API keys page redirects unauthenticated users
+  ✅ data requests page redirects unauthenticated users
+
+Section 20: Public REST API (20 tests — serial)
+  ✅ health endpoint returns 200
+  ✅ menu endpoint returns items
+  ✅ menu categories endpoint returns categories
+  ✅ rewards endpoint requires API key
+  ✅ orders list requires API key
+  ✅ order creation requires API key
+  ✅ tabs list requires API key
+  ✅ tab creation requires API key
+  ✅ inventory list requires API key
+  ✅ inventory alerts requires API key
+  ✅ customers list requires API key
+  ✅ sales summary requires API key
+  ✅ settings config requires API key
+  ✅ payment init requires API key
+  ✅ payment verify requires API key
+  ✅ reward validate requires API key
+  ✅ reward redeem requires API key
+  ✅ customer update requires API key
+  ✅ order update requires API key
+  ✅ inventory stock update requires API key
+
+Section 20: Admin API Protection (2 tests)
+  ✅ admin API requires authentication
+  ✅ admin session API requires authentication
+
+Section 21: Real-Time (Socket.IO) (1 test)
+  ✅ Socket.IO endpoint is not empty on initial load
+
+Section 22: Security Headers (4 tests)
+  ✅ returns X-Frame-Options header
+  ✅ returns X-Content-Type-Options header
+  ✅ returns security headers on API responses
+  ✅ API responses include proper content-type
+
+Section 22: Rate Limiting (1 test)
+  ✅ rate limiting is active on API routes
+
+Section 22: CORS (1 test)
+  ✅ CORS preflight returns appropriate headers
+
+Section 23: Audit Logs (1 test)
+  ✅ audit logs page redirects unauthenticated users
+
+Section 24: Data Management & Privacy (3 tests)
+  ✅ privacy page is publicly accessible and contains privacy content
+  ✅ data deletion page is publicly accessible
+  ✅ footer links to privacy policy and terms
+
+Section 25: Deployment (2 tests)
+  ✅ home page has semantic h1 heading
+  ✅ home page has Open Graph metadata
+
+Section 27: Non-Functional Requirements (4 tests)
+  ✅ home page has descriptive metadata
+  ✅ menu page has descriptive metadata
+  ✅ home page logo has alt text
+  ✅ home page uses sr-only text for branding
+
+Section 27: Accessibility (4 tests)
+  ✅ login page has descriptive metadata
+  ✅ checkout page has descriptive metadata
+  ✅ form inputs have associated labels on login page
+  ✅ navigation elements are not empty on initial load
+
+Section 27: Mobile-First Responsive (8 tests)
+  ✅ home page renders on iPhone SE (375x667)
+  ✅ home page renders on iPhone 12 (390x844)
+  ✅ home page renders on iPad (768x1024)
+  ✅ home page renders on Desktop (1440x900)
+  ✅ menu page renders on iPhone SE (375x667)
+  ✅ menu page renders on iPhone 12 (390x844)
+  ✅ menu page renders on iPad (768x1024)
+  ✅ menu page renders on Desktop (1440x900)
+
+Cross-Cutting: Navigation Flows (3 tests)
+  ✅ menu → checkout flow works with seeded cart
+  ✅ login page has "back to home" navigation
+  ✅ admin login page has link back to main site
+
+Cross-Cutting: Error Handling (2 tests)
+  ✅ 404 page renders for non-existent routes
+  ✅ API returns JSON error for invalid endpoints
+
+=== Project: auth-setup (2 tests) ===
+
+  ✅ authenticate as admin
+  ✅ authenticate as super-admin
+
+=== Project: authenticated (39 tests) ===
+
+Section 4: Admin Session (1 test)
+  ✅ admin can access dashboard without redirect
+
+Section 4: Super-Admin Session (1 test)
+  ✅ super-admin can access dashboard overview
+
+Section 11: Dashboard Overview (3 tests)
+  ✅ super-admin can access dashboard overview
+  ✅ dashboard shows quick stats cards
+  ✅ dashboard shows recent orders section
+
+Section 11: Dashboard RBAC — Admin Redirect (1 test)
+  ✅ regular admin is redirected from /dashboard to /dashboard/orders
+
+Section 12: Order Management (4 tests)
+  ✅ orders dashboard loads with title and controls
+  ✅ orders page shows Tabs Display link
+  ✅ orders page shows Kitchen Display link
+  ✅ orders page shows Quick Actions section
+
+Section 12: Order Management — Super-Admin Extras (1 test)
+  ✅ super-admin sees Analytics card on orders page
+
+Section 8: Tab Management (1 test)
+  ✅ tabs page loads for authenticated admin
+
+Section 13: Menu Management (2 tests)
+  ✅ menu management page loads with items
+  ✅ new menu item page loads with form
+
+Section 14: Inventory Management (3 tests)
+  ✅ inventory page loads
+  ✅ inventory snapshots page loads
+  ✅ inventory transfer page loads
+
+Section 15: Financial Management (1 test)
+  ✅ expenses page loads
+
+Section 16: Reports & Analytics (5 tests)
+  ✅ reports page loads
+  ✅ daily report page loads
+  ✅ inventory report page loads
+  ✅ profitability report page loads
+  ✅ profitability analytics page loads
+
+Section 17: Kitchen Display System (3 tests)
+  ✅ kitchen display loads with dark theme
+  ✅ kitchen display shows active order count
+  ✅ kitchen display has back button to orders
+
+Section 18: Rewards Configuration (4 tests)
+  ✅ rewards dashboard loads
+  ✅ reward rules page loads
+  ✅ issued rewards page loads
+  ✅ reward templates page loads
+
+Section 19: Settings & Configuration (4 tests)
+  ✅ settings page loads with configuration sections
+  ✅ admin management page loads
+  ✅ API keys management page loads
+  ✅ data requests page loads
+
+Section 23: Audit Logs (1 test)
+  ✅ audit logs page loads
+
+Section 11: Dashboard Navigation (2 tests)
+  ✅ dashboard sidebar shows navigation links
+  ✅ dashboard has header with "Dashboard" title
+
+Section 11: Customers Management (1 test)
+  ✅ customers page loads
+
+Section 4: Admin Logout (1 test)
+  ✅ logout endpoint returns success
+
+RESULT: ALL 183 TESTS PASSED

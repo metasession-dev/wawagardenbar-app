@@ -1,0 +1,138 @@
+================================================================
+REQ-008: Customer SOPs (Manual + Agentic) — Validation Report
+================================================================
+Date: 2026-03-13
+Validator: AI (Cascade)
+Type: Documentation artifact — no code changes
+
+================================================================
+1. FILES CREATED / MODIFIED
+================================================================
+
+NEW: docs/operations/SOP-MANUAL-CUSTOMER-ORDERING.md (312 lines)
+  - Document ID: SOP-MANUAL-CUSTOMER-001
+  - Manual SOP for all customer ordering workflows
+
+NEW: docs/operations/SOP-AGENTIC-CUSTOMER-ORDERING.md (~780 lines)
+  - Document ID: SOP-AGENTIC-012
+  - Agentic API SOP for customer-facing AI agents
+
+MODIFIED: docs/operations/README.md
+  - Added SOP-AGENTIC-012 to agentic SOPs index table
+  - Added Customer Ordering row to Manual/Agentic SOP Pairs table
+  - Updated API Consumer role reference: "001 through 012"
+
+================================================================
+2. STRUCTURE VALIDATION
+================================================================
+
+SOP-MANUAL-CUSTOMER-ORDERING.md:
+  [✅] Document header (ID, version, date, department, applies-to)
+  [✅] Purpose section
+  [✅] Scope section
+  [✅] Prerequisites section
+  [✅] Procedure sections (8 parts covering full customer journey)
+  [✅] Quick Reference Checklist
+  [✅] Common Scenarios
+  [✅] Troubleshooting
+  [✅] Important Reminders
+  [✅] Related Procedures
+  [✅] Revision History
+  [✅] Consistent with SOP-MANUAL-WAITER-TAB-ORDER-MANAGEMENT.md format
+
+SOP-AGENTIC-CUSTOMER-ORDERING.md:
+  [✅] Document header (ID, version, date, department, applies-to)
+  [✅] Purpose section with manual SOP cross-reference
+  [✅] Scope section
+  [✅] Prerequisites section
+  [✅] API Authentication (headers + required scopes table)
+  [✅] App Settings & Fee Configuration (endpoint + JS helper)
+  [✅] Part 1: Browsing the Menu (4 sub-sections + JS helper)
+  [✅] Part 2: Creating Orders (6 sub-sections, all 4 order types + tab variants)
+  [✅] Part 3: Tab Management (3 sub-sections + constraint logic)
+  [✅] Part 4: Processing Payments (2 sub-sections + polling JS helper)
+  [✅] Part 5: Tracking Orders (3 sub-sections + polling JS helper)
+  [✅] Part 6: Rewards and Loyalty (3 sub-sections)
+  [✅] Part 7: Customer Profile Lookup (3 sub-sections)
+  [✅] Complete Workflow Examples (4 end-to-end flows)
+  [✅] Error Handling Best Practices (retry logic, customer-friendly messages, validation)
+  [✅] Rate Limiting guidance
+  [✅] API Endpoints Summary (17 endpoints)
+  [✅] Troubleshooting table
+  [✅] Related Documentation cross-references
+  [✅] Revision History
+  [✅] Consistent with SOP-AGENTIC-TAB-ORDER-MANAGEMENT.md format
+
+README.md updates:
+  [✅] SOP-AGENTIC-012 in agentic index table
+  [✅] Customer Ordering pair in Manual/Agentic pairs table
+  [✅] API Consumer role updated to "001 through 012"
+
+================================================================
+3. CONTENT ACCURACY VALIDATION
+================================================================
+
+API Endpoints verified against AGENT-TOOLING-GUIDE.md:
+  [✅] GET  /api/public/settings         (settings:read)
+  [✅] GET  /api/public/menu              (menu:read)
+  [✅] GET  /api/public/menu/categories   (menu:read)
+  [✅] GET  /api/public/menu/{itemId}     (menu:read)
+  [✅] GET  /api/public/orders            (orders:read)
+  [✅] POST /api/public/orders            (orders:write)
+  [✅] GET  /api/public/orders/{orderId}  (orders:read)
+  [✅] GET  /api/public/tabs              (tabs:read)
+  [✅] GET  /api/public/tabs/{tabId}      (tabs:read)
+  [✅] POST /api/public/payments          (payments:write)
+  [✅] POST /api/public/payments/verify   (payments:read)
+  [✅] GET  /api/public/rewards           (rewards:read)
+  [✅] POST /api/public/rewards/validate  (rewards:read)
+  [✅] POST /api/public/rewards/redeem    (rewards:read)
+  [✅] GET  /api/public/customers         (customers:read)
+  [✅] GET  /api/public/customers/{id}    (customers:read)
+  [✅] GET  /api/public/customers/{id}/orders (customers:read + orders:read)
+
+Request/response formats verified against:
+  [✅] SOP-AGENTIC-TAB-ORDER-MANAGEMENT.md (tab/order creation)
+  [✅] SOP-AGENTIC-TAB-SETTLEMENT-PAYMENT.md (payment init/verify)
+  [✅] SOP-AGENTIC-REWARDS-LOYALTY.md (rewards endpoints)
+  [✅] SOP-AGENTIC-ORDER-LIFECYCLE.md (order status flow)
+  [✅] AGENT-TOOLING-FLOWS.md (workflow patterns)
+
+Business rules verified against feature specs:
+  [✅] Tab constraint: one open tab per customer/table (tabs-and-orders-system-spec.md)
+  [✅] Dine-in flow: pay-now vs open-tab vs add-to-existing (checkout-process.txt)
+  [✅] Order types: dine-in, pickup, delivery, pay-now (pay-now-order-type.md)
+  [✅] Order status flow: pending→confirmed→preparing→ready→completed (REQUIREMENTS.md)
+  [✅] Delivery status flow includes out-for-delivery→delivered (REQUIREMENTS.md)
+  [✅] Points conversion: 100 points = ₦1 (rewards-system-spec.md)
+  [✅] Rewards redeemed before payment initialization
+
+================================================================
+4. CODE SYNTAX VALIDATION
+================================================================
+
+curl examples:      [✅] All 18 curl commands use valid syntax
+JSON payloads:      [✅] All request/response JSON is valid
+JavaScript helpers: [✅] All 9 JS functions use valid async/await patterns
+Tables:             [✅] All 22 markdown tables are well-formed
+
+================================================================
+5. CROSS-REFERENCE VALIDATION
+================================================================
+
+  [✅] SOP-AGENTIC-012 references SOP-MANUAL-CUSTOMER-001 as manual counterpart
+  [✅] References SOP-AGENTIC-001 (tab management)
+  [✅] References SOP-AGENTIC-003 (tab settlement)
+  [✅] References SOP-AGENTIC-004 (order lifecycle)
+  [✅] References SOP-AGENTIC-007 (rewards)
+  [✅] References AGENT-TOOLING-GUIDE.md and AGENT-TOOLING-FLOWS.md
+
+================================================================
+6. COMPILATION CHECK
+================================================================
+
+TypeScript compilation: ✅ PASS (no source code modified)
+
+================================================================
+RESULT: ALL VALIDATION CHECKS PASSED
+================================================================

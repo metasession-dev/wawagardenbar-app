@@ -19,7 +19,7 @@
 | Status | Active |
 | Author | Development & Compliance Team |
 | Date Created | 2026-03-04 |
-| Last Updated | 2026-03-07 |
+| Last Updated | 2026-03-13 |
 
 ### Approval Sign-Off
 
@@ -38,6 +38,7 @@
 | 1.2 | 2026-03-06 | AI (Cascade) | Added REQ-007, E2E test evidence |
 | 1.4 | 2026-03-06 | AI (Cascade) | Updated traceability matrix |
 | 2.0 | 2026-03-07 | AI (Cascade) | Full rewrite: ISO/IEC/IEEE 29119-3 alignment, forward traceability (Part A), change request traceability (Part B), coverage summary (Part C) |
+| 2.1 | 2026-03-13 | AI (Cascade) | Added REQ-008 (Customer SOPs — Manual + Agentic) |
 
 ---
 
@@ -622,7 +623,7 @@ This section maps every section in `docs/REQUIREMENTS.md` to the specific test c
 
 ## Part B: Change Request Traceability
 
-This section tracks discrete change requests (REQ-001 through REQ-007) that represent implementation work items. Each entry maps to implementation artefacts, test evidence, and approval status.
+This section tracks discrete change requests (REQ-001 through REQ-008) that represent implementation work items. Each entry maps to implementation artefacts, test evidence, and approval status.
 
 | Req ID | Requirement | Implementation Files | Test Evidence | Status | Approver | Date |
 |--------|-------------|---------------------|---------------|--------|----------|------|
@@ -633,6 +634,7 @@ This section tracks discrete change requests (REQ-001 through REQ-007) that repr
 | REQ-005 | Public API Tab Support for Orders | `app/api/public/orders/route.ts`, `docs/operations/SOP-API-TAB-ORDER-MANAGEMENT.md`, `docs/api/AGENT-TOOLING-FLOWS.md`, `docs/api/AGENT-TOOLING-GUIDE.md` | Vitest unit tests: 26/26 passed (validation 11, branch selection 5, customer name 5, response shape 2, interface 3) | APPROVED - DEPLOYED | William | 2026-03-05 |
 | REQ-006 | Tab Lookup by tabNumber, Item Name Lookup, SOP Enhancement | `app/api/public/tabs/route.ts`, `docs/operations/SOP-API-TAB-ORDER-MANAGEMENT.md` | Vitest unit tests: 27/27 passed (tabNumber 4, tableNumber 2, status 5, combined 6, sort 4, menu resolution 6) | APPROVED - DEPLOYED | William | 2026-03-06 |
 | REQ-007 | Comprehensive Requirements Document | `docs/REQUIREMENTS.md` | Playwright E2E: 183/183 passed; completeness check (20 interfaces, 20 models, 28 services); accuracy check; structure check (27 sections) | TESTED - PENDING SIGN-OFF | Pending | -- |
+| REQ-008 | Customer SOPs (Manual + Agentic) | `docs/operations/SOP-MANUAL-CUSTOMER-ORDERING.md`, `docs/operations/SOP-AGENTIC-CUSTOMER-ORDERING.md`, `docs/operations/README.md` | Documentation validation: structure, content accuracy, API endpoint verification, cross-reference checks, business rule verification | TESTED - PENDING SIGN-OFF | Pending | -- |
 
 ### Change Request Dependencies
 
@@ -641,6 +643,7 @@ REQ-003 ──superseded-by──> REQ-004 (non-blocking warmup replaces blockin
 REQ-001 <──updated-by──── REQ-005 (SOP corrected to match API implementation)
 REQ-001 <──updated-by──── REQ-006 (SOP v1.2 with prerequisite sections)
 REQ-007 ──verified-by───> E2E test suites (requirements-verification + authenticated)
+REQ-008 ──references────> REQ-001 (SOP format), REQ-007 (requirements coverage)
 ```
 
 ### Change Request Evidence Locations
@@ -654,6 +657,7 @@ REQ-007 ──verified-by───> E2E test suites (requirements-verification +
 | REQ-005 | `compliance/evidence/REQ-005/` |
 | REQ-006 | `compliance/evidence/REQ-006/` |
 | REQ-007 | `compliance/evidence/REQ-007/` |
+| REQ-008 | `compliance/evidence/REQ-008/` |
 
 ---
 

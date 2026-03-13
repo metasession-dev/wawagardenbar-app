@@ -23,6 +23,12 @@ This directory contains all Standard Operating Procedures for the Wawa Garden Ba
 |-------------|-------|------|----------|
 | SOP-MANUAL-KITCHEN-001 | Kitchen Display System Operations | `SOP-MANUAL-KITCHEN-DISPLAY-OPERATIONS.md` | Kitchen Staff, Chefs, Line Cooks |
 
+### Manual SOPs -- Customer-Facing
+
+| Document ID | Title | File | Audience |
+|-------------|-------|------|----------|
+| SOP-MANUAL-CUSTOMER-001 | Customer Ordering Guide | `SOP-MANUAL-CUSTOMER-ORDERING.md` | All Customers (Registered and Guest) |
+
 ### Manual SOPs -- Customer Service
 
 | Document ID | Title | File | Audience |
@@ -58,6 +64,7 @@ This directory contains all Standard Operating Procedures for the Wawa Garden Ba
 | SOP-AGENTIC-009 | Menu Management | `SOP-AGENTIC-MENU-MANAGEMENT.md` | AI Agents, Menu Management Systems |
 | SOP-AGENTIC-010 | Admin User Management and System Configuration | `SOP-AGENTIC-ADMIN-MANAGEMENT.md` | AI Agents, Admin Automation Systems |
 | SOP-AGENTIC-011 | Audit Log Review | `SOP-AGENTIC-AUDIT-LOGS.md` | AI Agents, Security Monitoring Systems |
+| SOP-AGENTIC-012 | Customer Ordering | `SOP-AGENTIC-CUSTOMER-ORDERING.md` | AI Chatbots, WhatsApp Bots, Customer-Facing Agents |
 
 ### Reference Documents
 
@@ -84,6 +91,7 @@ The following table shows the correspondence between manual (dashboard) and agen
 | Menu Management | SOP-MANUAL-ADMIN-002 | SOP-AGENTIC-009 |
 | Admin User Management | SOP-MANUAL-ADMIN-006 | SOP-AGENTIC-010 |
 | Audit Log Review | SOP-MANUAL-ADMIN-007 | SOP-AGENTIC-011 |
+| Customer Ordering | SOP-MANUAL-CUSTOMER-001 | SOP-AGENTIC-012 |
 
 ## Role-to-Scope Mapping (API Keys)
 
@@ -98,14 +106,19 @@ The following table shows the correspondence between manual (dashboard) and agen
 
 | Role | Level | Dashboard Access | SOPs to Follow |
 |------|-------|-----------------|----------------|
+| Customer | -- | None | SOP-MANUAL-CUSTOMER-001 |
 | Waiter / Server | -- | Orders, Kitchen only | SOP-MANUAL-WAITER-001, 002, 003 |
 | Customer Service Rep (CSR) | -- | Orders, Customers, Rewards | SOP-MANUAL-CSR-001, SOP-MANUAL-ADMIN-008 |
 | Kitchen Staff | -- | Kitchen Display only | SOP-MANUAL-KITCHEN-001 |
 | Admin | 2 | Orders, Kitchen | SOP-MANUAL-ADMIN-001, SOP-MANUAL-ADMIN-009 |
 | Super-Admin | 3 | All sections | All SOP-MANUAL-ADMIN-*, SOP-MANUAL-WAITER-* |
-| API Consumer | -- | Via API only | SOP-AGENTIC-001 through 011 |
+| API Consumer | -- | Via API only | SOP-AGENTIC-001 through 012 |
 
 ## Training Path
+
+### Customer Self-Service
+1. Read SOP-MANUAL-CUSTOMER-001 (Customer Ordering Guide)
+2. Covers: sign-in, menu browsing, all order types, tabs, rewards, profile management
 
 ### New Waiter Onboarding
 1. Read SOP-MANUAL-WAITER-001 (Tab and Order Creation)

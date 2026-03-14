@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  migration:
+    # Use the same image as production
+    image: ghcr.io/${GITHUB_REPOSITORY:-ostendo-io/wawagardenbar-app}:latest
+    container_name: wawa-garden-bar-migration
+    pull_policy: always
+    
+    environment:
+      - NODE_ENV=production
+      
+      # MongoDB Configuration (same as production)
+      - MONGODB_WAWAGARDENBAR_APP_URI=${MONGODB_WAWAGARDENBAR_APP_URI}
+      - MONGODB_DB_NAME=${MONGODB_DB_NAME}
+      
+      # Add MONGODB_URI as fallback for scripts that expect it
+      - MONGODB_URI=${MONGODB_WAWAGARDENBAR_APP_URI}
+      
+      # Other required env vars (copy from production)
+      - SESSION_PASSWORD=${SESSION_PASSWORD}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      - MONNIFY_API_KEY=${MONNIFY_API_KEY}
+      - MONNIFY_SECRET_KEY=${MONNIFY_SECRET_KEY}
+      - MONNIFY_CONTRACT_CODE=${MONNIFY_CONTRACT_CODE}
+      - PAYSTACK_SECRET_KEY=${PAYSTACK_SECRET_KEY}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+    
+    # Mount the migration script
+    volumes:
+      - ./scripts/run-migrations.sh:/app/scripts/run-migrations.sh:ro
+    
+    # Run the migration script
+    command: bash /app/scripts/run-migrations.sh
+    
+    # One-time execution - no restart
+    restart: "no"
+    
+    networks:
+      - ostendo-network
+
+networks:
+  ostendo-network:
+    external: true

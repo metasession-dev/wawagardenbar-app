@@ -1,3 +1,19 @@
+import dotenv from 'dotenv';
+import path from 'path';
+import fs from 'fs';
+
+// Load environment variables from .env.local (or .env as fallback)
+const envLocalPath = path.resolve(process.cwd(), '.env.local');
+const envPath = path.resolve(process.cwd(), '.env');
+
+if (fs.existsSync(envLocalPath)) {
+  dotenv.config({ path: envLocalPath });
+} else if (fs.existsSync(envPath)) {
+  dotenv.config({ path: envPath });
+} else {
+  console.error('No .env or .env.local file found!');
+  process.exit(1);
+}
 
 import { connectDB } from '../lib/mongodb';
 import UserModel from '../models/user-model';

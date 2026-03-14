@@ -3,6 +3,22 @@
  * Run this once to migrate existing menu items
  */
 
+import dotenv from 'dotenv';
+import path from 'path';
+import fs from 'fs';
+
+const envLocalPath = path.resolve(process.cwd(), '.env.local');
+const envPath = path.resolve(process.cwd(), '.env');
+
+if (fs.existsSync(envLocalPath)) {
+  dotenv.config({ path: envLocalPath });
+} else if (fs.existsSync(envPath)) {
+  dotenv.config({ path: envPath });
+} else {
+  console.error('No .env or .env.local file found!');
+  process.exit(1);
+}
+
 import { connectDB } from '../lib/mongodb';
 import MenuItemModel from '../models/menu-item-model';
 

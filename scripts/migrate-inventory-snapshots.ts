@@ -9,16 +9,31 @@
  * Run with: npx tsx scripts/migrate-inventory-snapshots.ts
  */
 
-import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+import path from 'path';
+import fs from 'fs';
 
-const MONGODB_URI = process.env.MONGODB_URI || '';
+const envLocalPath = path.resolve(process.cwd(), '.env.local');
+const envPath = path.resolve(process.cwd(), '.env');
+
+if (fs.existsSync(envLocalPath)) {
+  dotenv.config({ path: envLocalPath });
+} else if (fs.existsSync(envPath)) {
+  dotenv.config({ path: envPath });
+} else {
+  console.error('No .env or .env.local file found!');
+  process.exit(1);
+}
+
+import mongoose from 'mongoose';
+import { connectDB } from '../lib/mongodb';
 
 async function migrateInventorySnapshots() {
   try {
     console.log('🔄 Starting inventory snapshots migration...\n');
 
     // Connect to MongoDB
-    await mongoose.connect(MONGODB_URI);
+    await connectDB();
     console.log('✅ Connected to MongoDB\n');
 
     // Get the collection

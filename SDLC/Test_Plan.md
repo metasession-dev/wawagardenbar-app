@@ -2,7 +2,7 @@
 
 **Document Type:** Test Plan (Project-Specific) | **Version:** 1.0 | **Effective Date:** March 2026
 
-**Project:** Wawa Garden Bar | **Repository:** `ostendo-io/wawagardenbar-app`
+**Project:** Wawa Garden Bar | **Repository:** `metasession-dev/wawagardenbar-app`
 
 **Parent Documents:** Test Policy, Test Strategy, Test Architecture (all Tier 1)
 
@@ -20,10 +20,12 @@ This Test Plan defines project-specific testing details for Wawa Garden Bar. It 
 |---|---|
 | Application | Wawa Garden Bar — full-stack food and drink ordering platform |
 | Stack | TypeScript 5.6, Next.js 16, React 19, MongoDB 8, Socket.IO 4.8, Zustand 5 |
-| Hosting | Railway (auto-deploy from `main`) |
-| Production URL | `https://wawagardenbar-app-production.up.railway.app` |
+| Hosting | Railway Pro (metasession-dev account), auto-deploy from `main` |
+| Production URL | `https://wawagardenbar-app-production-45c8.up.railway.app` |
+| UAT URL | `https://wawagardenbar-app-uat.up.railway.app` |
 | Health Endpoint | `GET /api/health` (returns status, service, version, uptime) |
-| Database | MongoDB 8 (Railway, `directConnection: true`, private network) |
+| Database (Production) | MongoDB 8 (Railway), DB name: `wawagardenbar`, `directConnection: true`, private network |
+| Database (UAT) | MongoDB 8 (Railway), DB name: `wawagardenbar_uat`, separate instance |
 | Runtime | `node_modules/.bin/tsx server.ts` (custom HTTP server for Socket.IO) |
 | Build | Multi-stage Dockerfile (deps → builder → prod-deps → runner) |
 | Region | Lagos, Nigeria | Currency: Nigerian Naira (NGN) |
@@ -34,9 +36,22 @@ This Test Plan defines project-specific testing details for Wawa Garden Bar. It 
 
 Trunk-based with develop branch:
 
-- **`main`** — Production. Auto-deploys to Railway. PR approval + all checks required.
-- **`develop`** — Working branch. All implementation here. Permanent, never deleted.
+- **`main`** — Production. Auto-deploys to Railway production environment. PR approval + all checks required.
+- **`develop`** — Working branch. Auto-deploys to Railway UAT environment. All implementation here. Permanent, never deleted.
 - Merge commits (not squash) for `develop` → `main` to preserve audit history.
+
+---
+
+## Environments
+
+| Environment | URL | Deploy Branch | Database | SMS/WhatsApp |
+|---|---|---|---|---|
+| Production | `wawagardenbar-app-production-45c8.up.railway.app` | `main` | `wawagardenbar` | Enabled |
+| UAT | `wawagardenbar-app-uat.up.railway.app` | `develop` | `wawagardenbar_uat` | Disabled |
+
+**UAT purpose:** Validate changes on `develop` before merging to `main`. Mirrors production config except notifications are disabled and session cookies are namespaced (`wawa_session_uat`) to avoid conflicts.
+
+**Database seeding:** Both environments were initially populated from the same backup (`wawagardenbar_backup_20260315_095922`). Indexes are created automatically by Mongoose on first connection (restored with `--noIndexRestore`). No post-restore migrations are needed — all migrations are idempotent and run as part of the application startup or via `scripts/run-migrations.sh` when required.
 
 ---
 
@@ -127,15 +142,16 @@ Additional for Medium/High risk:
 
 | Trigger | What Runs | Independent Evidence |
 |---|---|---|
-| Push to `develop` | TypeScript check + build | Compilation clean |
+| Push to `develop` | TypeScript check + E2E tests | Compilation clean, tests pass |
 | PR to `main` | TypeScript + SAST + dependency audit + E2E (unauthenticated) | All gates independently verified by GitHub |
-| Merge to `main` | Auto-deploy to Railway | Deployment triggered |
+| Merge to `main` | Auto-deploy to Railway production | Deployment triggered |
+| Push to `develop` (Railway) | Auto-deploy to Railway UAT | UAT deployment triggered |
 
 ### Workflow Files
 
 | Workflow | File | Purpose |
 |---|---|---|
-| Test on PR | `.github/workflows/test-on-pr.yml` | E2E tests, TypeScript check on PR to main |
+| CI Pipeline | `.github/workflows/test-on-pr.yml` | TypeScript check, SAST scan, dependency audit, E2E tests |
 | Build & Publish | `.github/workflows/build-and-publish.yml` | Docker build, publish to GHCR |
 
 ### Evidence Model
@@ -220,21 +236,21 @@ compliance/
 
 ```bash
 # Health check
-curl -s https://wawagardenbar-app-production.up.railway.app/api/health
+curl -s https://wawagardenbar-app-production-45c8.up.railway.app/api/health
 
 # Smoke test — public menu
-curl -s -o /dev/null -w "%{http_code}" https://wawagardenbar-app-production.up.railway.app/
+curl -s -o /dev/null -w "%{http_code}" https://wawagardenbar-app-production-45c8.up.railway.app/
 # Expected: 200
 
 # Security verification — admin endpoint
-curl -s -o /dev/null -w "%{http_code}" https://wawagardenbar-app-production.up.railway.app/api/admin/orders
+curl -s -o /dev/null -w "%{http_code}" https://wawagardenbar-app-production-45c8.up.railway.app/api/admin/orders
 # Expected: 401 or 403
 
 # Security headers
-curl -s -I https://wawagardenbar-app-production.up.railway.app/ | grep -iE 'x-frame-options|x-content-type|referrer-policy'
+curl -s -I https://wawagardenbar-app-production-45c8.up.railway.app/ | grep -iE 'x-frame-options|x-content-type|referrer-policy'
 
 # No stack traces
-curl -s https://wawagardenbar-app-production.up.railway.app/api/nonexistent
+curl -s https://wawagardenbar-app-production-45c8.up.railway.app/api/nonexistent
 # Expected: generic error, NOT stack trace
 ```
 
@@ -270,7 +286,7 @@ npm outdated --json > compliance/evidence/periodic/dependency-audit/outdated-$(d
 npx playwright test --grep "access control\|unauthorized\|forbidden\|RBAC"
 ```
 
-Annual pen test scope: `https://wawagardenbar-app-production.up.railway.app`, 27 public API endpoints across 10 groups, iron-session authentication, Monnify payment webhooks, customer ordering flow, admin RBAC (3 roles, 7 permission groups, 17 API key scopes).
+Annual pen test scope: `https://wawagardenbar-app-production-45c8.up.railway.app`, 27 public API endpoints across 10 groups, iron-session authentication, Monnify payment webhooks, customer ordering flow, admin RBAC (3 roles, 7 permission groups, 17 API key scopes).
 
 ---
 
@@ -292,5 +308,6 @@ Annual pen test scope: `https://wawagardenbar-app-production.up.railway.app`, 27
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 1.0 | March 2026 | Engineering Team | Initial plan for Wawa Garden Bar |
+| 1.1 | March 2026 | Engineering Team | Updated domains, added UAT environment, database naming, corrected repository to metasession-dev |
 
 **Parent Documents:** Test Policy, Test Strategy, Test Architecture, Periodic Security Review Schedule

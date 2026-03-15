@@ -45,7 +45,7 @@ Wait for Railway auto-deploy to complete, then:
 
 ```bash
 # Health check
-curl -s https://wawagardenbar-app-production.up.railway.app/api/health
+curl -s https://wawagardenbar-app-production-45c8.up.railway.app/api/health
 ```
 
 If it fails, check Railway logs: `railway logs -n 20`
@@ -54,25 +54,25 @@ If it fails, check Railway logs: `railway logs -n 20`
 
 ```bash
 # Homepage
-curl -s -o /dev/null -w "%{http_code}" https://wawagardenbar-app-production.up.railway.app/
+curl -s -o /dev/null -w "%{http_code}" https://wawagardenbar-app-production-45c8.up.railway.app/
 # Expected: 200
 
 # Public menu endpoint
-curl -s https://wawagardenbar-app-production.up.railway.app/api/public/menu | head -c 200
+curl -s https://wawagardenbar-app-production-45c8.up.railway.app/api/public/menu | head -c 200
 ```
 
 ### Step 5: Security Verification
 
 ```bash
 # Access control — admin endpoint without auth
-curl -s -o /dev/null -w "%{http_code}" https://wawagardenbar-app-production.up.railway.app/api/admin/orders
+curl -s -o /dev/null -w "%{http_code}" https://wawagardenbar-app-production-45c8.up.railway.app/api/admin/orders
 # Expected: 401 or 403
 
 # Security headers
-curl -s -I https://wawagardenbar-app-production.up.railway.app/ | grep -iE 'x-frame-options|x-content-type|referrer-policy'
+curl -s -I https://wawagardenbar-app-production-45c8.up.railway.app/ | grep -iE 'x-frame-options|x-content-type|referrer-policy'
 
 # No stack traces on invalid endpoint
-curl -s https://wawagardenbar-app-production.up.railway.app/api/nonexistent
+curl -s https://wawagardenbar-app-production-45c8.up.railway.app/api/nonexistent
 # Expected: generic error, NOT stack trace
 ```
 
@@ -117,6 +117,23 @@ git push origin develop
 git checkout main && git merge develop --no-edit && git push origin main
 git checkout develop
 ```
+
+### Note: UAT Verification Before Production
+
+Before creating a PR from `develop` → `main`, verify the change works on UAT first:
+
+```bash
+# UAT health check (auto-deployed from develop)
+curl -s https://wawagardenbar-app-uat.up.railway.app/api/health
+
+# UAT smoke test
+curl -s -o /dev/null -w "%{http_code}" https://wawagardenbar-app-uat.up.railway.app/
+# Expected: 200
+```
+
+UAT mirrors production config except SMS/WhatsApp notifications are disabled and the database is `wawagardenbar_uat`.
+
+---
 
 ## Rollback
 

@@ -1,0 +1,258 @@
+---
+description: One-time project setup — configure repository, CI pipeline, compliance structure, and tooling before workflows can run
+---
+
+# Project Setup Guide
+
+**Document Type:** Setup Guide | **Run Once:** At project start, before any workflow is executed
+
+**Parent Documents:** Test Policy, Test Strategy, Test Architecture (all Tier 1)
+
+---
+
+## Purpose
+
+This guide configures the Wawa Garden Bar project so that the five pipeline workflows can run correctly. It sets up the repository structure, branch protection, CI pipeline (the independent verification gate), compliance directories, and local tooling.
+
+**Run this guide once when starting a new project.** The pipeline workflows (1-5) assume this setup is complete.
+
+---
+
+## Prerequisites
+
+- GitHub repository created (`ostendo-io/wawagardenbar-app`)
+- Railway configured with auto-deploy from `main`
+- Local development environment working (app builds and runs)
+- Node.js 20+ and npm installed
+- GitHub CLI (`gh`) installed and authenticated
+
+---
+
+## Step 1: Branch Structure
+
+```bash
+# Ensure main exists and is up to date
+git checkout main
+git pull origin main
+
+# Create develop branch
+git checkout -b develop
+git push origin develop
+```
+
+**Branch roles:**
+- `main` — Production. Auto-deploys to Railway. Never commit directly.
+- `develop` — All work happens here. Permanent, never deleted.
+
+**Status:** Already configured. Both branches exist.
+
+---
+
+## Step 2: Branch Protection Rules
+
+Configure in GitHub → Settings → Branches → Branch protection rules:
+
+**`main` branch:**
+- [x] Require a pull request before merging
+- [x] Require approvals: 1
+- [x] Require status checks to pass before merging
+  - Required checks: `typecheck`, `sast`, `dependency-audit`, `e2e-tests`
+- [x] Require branches to be up to date before merging
+- [x] Do not allow bypassing the above settings
+
+**`develop` branch (optional but recommended):**
+- [x] Require status checks to pass (push-to-develop checks)
+
+---
+
+## Step 3: Compliance Directory Structure
+
+```bash
+# Create compliance directories
+mkdir -p compliance/evidence/periodic/{sast-quarterly,dependency-audit,access-control,audit-log,pentest,dr-test,third-party}
+mkdir -p compliance/pending-releases
+mkdir -p compliance/approved-releases
+
+# Commit
+git add compliance/
+git commit -m "compliance: initialize compliance directory structure"
+git push origin develop
+```
+
+**Status:** Partially configured. `compliance/` exists with RTM, test-plan, test-cases, and evidence directories for REQ-001 through REQ-008.
+
+---
+
+## Step 4: CI Pipeline Configuration
+
+This is the **independent verification gate**. Tests run locally during development (comprehensive, all tests). Tests run in CI during PR review (independent, tamper-resistant evidence produced by GitHub).
+
+### What CI Must Run
+
+| Pipeline | Trigger | Jobs | Purpose |
+|---|---|---|---|
+| Develop CI | Push to `develop` | TypeScript check + build | Fast feedback |
+| PR CI | PR to `main` | TypeScript + SAST + dependency audit + E2E | Independent verification |
+| Deploy | Merge to `main` | Auto-deploy to Railway | Production release |
+
+### Existing Workflow Files
+
+| File | Trigger | Purpose |
+|---|---|---|
+| `.github/workflows/test-on-pr.yml` | PR to main, push to develop | E2E tests with MongoDB 7 service |
+| `.github/workflows/build-and-publish.yml` | Push to main/develop, tags | Docker build, GHCR publish |
+
+### Recommended CI Enhancement
+
+Add SAST and dependency audit jobs to `test-on-pr.yml`:
+
+```yaml
+  sast:
+    name: SAST Scan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install semgrep
+      - run: semgrep scan --config auto app/ lib/ services/ models/ --severity ERROR --severity WARNING --error
+      - name: Save SAST results
+        if: always()
+        run: semgrep scan --config auto app/ lib/ services/ models/ --json > sast-results.json || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sast-results
+          path: sast-results.json
+          retention-days: 90
+
+  dependency-audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm audit --audit-level=high
+      - name: Save audit results
+        if: always()
+        run: npm audit --json > dependency-audit.json || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-audit
+          path: dependency-audit.json
+          retention-days: 90
+```
+
+### After CI Is Configured
+
+```
+Developer Machine (comprehensive)          GitHub Actions (independent)
+─────────────────────────────────          ──────────────────────────────
+TypeScript check ──────────────────────→   TypeScript check
+SAST scan (Semgrep) ───────────────────→   SAST scan (Semgrep)
+Dependency audit ──────────────────────→   Dependency audit
+E2E tests (ALL — 183) ────────────────→   E2E tests (unauthenticated — 142)
+E2E tests (authenticated — local only)     ✗ (credentials not in CI)
+Post-deploy verification (local only)      ✗ (runs after merge)
+
+Evidence → compliance/evidence/REQ-XXX/    Evidence → GitHub Actions logs + artifacts
+(comprehensive, developer-produced)        (independent, tamper-resistant)
+```
+
+---
+
+## Step 5: Local Tooling Setup
+
+```bash
+# SAST
+pip install semgrep
+
+# Verify
+semgrep --version
+npm audit --help
+
+# Playwright
+npx playwright install chromium
+
+# Seed test data
+npx tsx scripts/seed-e2e-admins.ts
+```
+
+---
+
+## Step 6: Create Project Test Plan
+
+The Test Plan (`SDLC/Test_Plan.md`) is already created with:
+
+- [x] Project name and repository
+- [x] Stack and hosting details
+- [x] Production URL and health endpoint
+- [x] Database configuration
+- [x] Test suite counts and framework
+- [x] Entry/exit criteria with actual thresholds
+- [x] AI tool permissions
+- [x] Disaster recovery targets (RTO/RPO)
+- [x] Penetration test scope
+
+---
+
+## Step 7: Verify Everything Works
+
+Run through the complete pipeline once with a small test change:
+
+```bash
+# 1. Plan (workflow 1)
+# Create a test requirement in RTM
+
+# 2. Implement (workflow 2)
+# Make a small change, run all local gates
+
+# 3. Compile evidence (workflow 3)
+# Generate compliance artifacts
+
+# 4. Submit for review (workflow 4)
+# Create PR — verify all CI checks run and pass
+
+# 5. Deploy (workflow 5)
+# Merge, verify deployment, finalize compliance
+```
+
+---
+
+## Setup Checklist
+
+| Step | Status |
+|---|---|
+| Repository created | [x] |
+| `develop` branch created | [x] |
+| Branch protection configured | [ ] Needs SAST + dep audit checks added |
+| Compliance directories created | [x] Partially — needs periodic subdirs |
+| RTM initialized | [x] REQ-001 through REQ-008 |
+| CI workflow files created | [x] test-on-pr.yml + build-and-publish.yml |
+| CI verified — SAST + dep audit jobs added | [ ] |
+| Required status checks added to branch protection | [ ] |
+| Local tooling installed (Semgrep, Playwright) | [ ] |
+| Project Test Plan created | [x] |
+| End-to-end pipeline verified with test change | [ ] |
+
+---
+
+## What Happens Next
+
+With setup complete, all development follows the five pipeline workflows:
+
+```
+1-plan-requirement.md       → Define requirement, classify risk, generate test scope
+2-implement-and-test.md     → Code, commit, run all local gates
+3-compile-evidence.md       → Gather test + security + AI evidence
+4-submit-for-review.md      → Create PR (CI runs independent verification)
+5-deploy-main.md            → Merge, deploy, verify, finalize
+```

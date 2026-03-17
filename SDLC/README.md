@@ -74,7 +74,8 @@ AI in Medium/High categories raises risk one level.
 |---------|-----------|
 | Push to `develop` | TypeScript + build |
 | PR to `main` | TypeScript + SAST + deps + E2E (unauthenticated) |
-| Merge to `main` | Auto-deploy to Railway |
+| Merge to `main` | Auto-deploy to Railway production |
+| Push to `develop` (Railway) | Auto-deploy to Railway UAT |
 
 CI is the independent verification gate — evidence produced by GitHub, not the developer. See Test Plan for details.
 
@@ -90,8 +91,9 @@ This system is designed to be driven by prompts to your AI assistant. Each workf
 Read 0-project-setup.md and execute the full project setup for Wawa Garden Bar.
 
 The project is a full-stack food and drink ordering platform built with Next.js 16,
-TypeScript, MongoDB, and Socket.IO. It's hosted on Railway at
-https://wawagardenbar-app-production.up.railway.app. The database is MongoDB 8.
+TypeScript, MongoDB, and Socket.IO. It's hosted on Railway (metasession-dev Pro account)
+at https://wawagardenbar-app-production-45c8.up.railway.app with a UAT environment at
+https://wawagardenbar-app-uat.up.railway.app. The database is MongoDB 8.
 
 Set up the repository structure, branch protection, CI pipeline, compliance
 directories, and create the project Test Plan from the template.

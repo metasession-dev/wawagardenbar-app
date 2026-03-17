@@ -20,8 +20,8 @@ This guide configures the Wawa Garden Bar project so that the five pipeline work
 
 ## Prerequisites
 
-- GitHub repository created (`ostendo-io/wawagardenbar-app`)
-- Railway configured with auto-deploy from `main`
+- GitHub repository created (`metasession-dev/wawagardenbar-app`)
+- Railway configured (metasession-dev Pro account) with auto-deploy from `main` (production) and `develop` (UAT)
 - Local development environment working (app builds and runs)
 - Node.js 20+ and npm installed
 - GitHub CLI (`gh`) installed and authenticated
@@ -95,16 +95,16 @@ This is the **independent verification gate**. Tests run locally during developm
 | PR CI | PR to `main` | TypeScript + SAST + dependency audit + E2E | Independent verification |
 | Deploy | Merge to `main` | Auto-deploy to Railway | Production release |
 
-### Existing Workflow Files
+### Workflow Files
 
 | File | Trigger | Purpose |
 |---|---|---|
-| `.github/workflows/test-on-pr.yml` | PR to main, push to develop | E2E tests with MongoDB 7 service |
+| `.github/workflows/test-on-pr.yml` | PR to main, push to develop | TypeScript check, SAST scan, dependency audit, E2E tests |
 | `.github/workflows/build-and-publish.yml` | Push to main/develop, tags | Docker build, GHCR publish |
 
-### Recommended CI Enhancement
+### Required CI Enhancement
 
-Add SAST and dependency audit jobs to `test-on-pr.yml`:
+Add SAST and dependency audit jobs to `test-on-pr.yml` (these are **mandatory** gates, not optional):
 
 ```yaml
   sast:
@@ -231,17 +231,22 @@ Run through the complete pipeline once with a small test change:
 
 | Step | Status |
 |---|---|
-| Repository created | [x] |
+| Repository created (`metasession-dev/wawagardenbar-app`) | [x] |
 | `develop` branch created | [x] |
-| Branch protection configured | [ ] Needs SAST + dep audit checks added |
+| Railway project created (metasession-dev Pro account) | [x] |
+| Production environment configured (auto-deploy from `main`) | [x] |
+| UAT environment configured (auto-deploy from `develop`) | [x] |
+| Production MongoDB populated from backup | [x] |
+| UAT MongoDB populated from backup | [x] |
 | Compliance directories created | [x] Partially — needs periodic subdirs |
 | RTM initialized | [x] REQ-001 through REQ-008 |
 | CI workflow files created | [x] test-on-pr.yml + build-and-publish.yml |
-| CI verified — SAST + dep audit jobs added | [ ] |
-| Required status checks added to branch protection | [ ] |
-| Local tooling installed (Semgrep, Playwright) | [ ] |
+| CI: SAST + dep audit jobs added to test-on-pr.yml | [x] Added typecheck, sast, dependency-audit, e2e-tests jobs |
+| **Branch protection configured on `main`** | **[ ] REQUIRED — not yet configured** |
+| **Required status checks added to branch protection** | **[ ] REQUIRED — depends on CI jobs** |
+| **Local tooling installed (Semgrep, Playwright)** | **[ ] REQUIRED for local gates** |
 | Project Test Plan created | [x] |
-| End-to-end pipeline verified with test change | [ ] |
+| **End-to-end pipeline verified with test change** | **[ ] REQUIRED — pipeline not yet validated** |
 
 ---
 

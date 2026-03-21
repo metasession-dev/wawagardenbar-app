@@ -21,3 +21,11 @@
 - `app/dashboard/orders/express/create-tab/page.tsx`
 - `app/dashboard/orders/express/create-order/page.tsx`
 - `app/dashboard/orders/express/close-tab/page.tsx`
+
+## UAT Verification — 2026-03-21
+- UAT Health check: PASS (status: healthy)
+- UAT Homepage: PASS (200)
+- UAT Express Create Tab: PASS (307 redirect — auth enforced)
+- UAT Express Create Order: PASS (307 redirect — auth enforced)
+- UAT Express Close Tab: PASS (307 redirect — auth enforced)
+- UAT URL: https://wawagardenbar-app-uat.up.railway.app

@@ -200,13 +200,19 @@ export async function expressCreateOrderAction(params: {
 
     const orderType = params.tabId ? ('dine-in' as const) : ('pay-now' as const);
     const items = params.items.map((item) => ({
-      menuItem: item.menuItemId,
+      menuItemId: item.menuItemId,
       name: item.name,
       price: item.price,
       quantity: item.quantity,
       portionSize: item.portionSize || 'full',
+      portionMultiplier: 1,
+      customizations: [],
       specialInstructions: item.specialInstructions,
       subtotal: item.price * item.quantity,
+      costPerUnit: 0,
+      totalCost: 0,
+      grossProfit: 0,
+      profitMargin: 0,
     }));
 
     const order = await OrderService.createOrder({

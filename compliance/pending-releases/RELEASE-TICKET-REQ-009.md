@@ -5,7 +5,7 @@
 **Requirement ID:** REQ-009
 **GitHub Issue:** #2
 **Risk Level:** HIGH
-**PR:** [Will be linked when PR is created]
+**PR:** #3
 
 ---
 
@@ -88,4 +88,5 @@ Three accelerated admin flows added to `/dashboard/orders` under a new "Express 
 | 2026-03-21 | AI code reviewed | Pending | All files AI-generated |
 | 2026-03-21 | Local gates passed | William | TypeScript 0, SAST 0, deps 0, E2E 31/31 |
 | 2026-03-21 | UAT verification | Pending | |
-| | Submitted for review | | PR # |
+| 2026-03-21 | UAT verification passed | William + Claude | Health + smoke + auth enforcement verified |
+| 2026-03-21 | Submitted for review | William | PR #3 |

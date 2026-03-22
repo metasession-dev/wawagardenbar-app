@@ -17,3 +17,8 @@
 ### Files Scanned
 - `services/financial-report-service.ts`
 - `app/dashboard/reports/daily/daily-report-client.tsx`
+
+## UAT Verification — 2026-03-22
+- UAT Health check: PASS (status: healthy)
+- UAT Daily report auth: PASS (307 redirect for unauthenticated)
+- UAT URL: https://wawagardenbar-app-uat.up.railway.app

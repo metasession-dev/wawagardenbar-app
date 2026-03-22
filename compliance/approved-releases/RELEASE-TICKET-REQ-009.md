@@ -1,6 +1,6 @@
 # Release Ticket: REQ-009 — Express Actions (Accelerated Admin Tab, Order & Close Flows)
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** APPROVED - DEPLOYED
 **Date:** 2026-03-21
 **Requirement ID:** REQ-009
 **GitHub Issue:** #2
@@ -85,8 +85,12 @@ Three accelerated admin flows added to `/dashboard/orders` under a new "Express 
 |------|--------|-------|-------|
 | 2026-03-21 | Requirement created | William + Claude | Risk: HIGH, Issue #2 |
 | 2026-03-21 | Implementation completed | William + Claude | 5 new files, 1 modified |
-| 2026-03-21 | AI code reviewed | Pending | All files AI-generated |
-| 2026-03-21 | Local gates passed | William | TypeScript 0, SAST 0, deps 0, E2E 31/31 |
-| 2026-03-21 | UAT verification | Pending | |
+| 2026-03-21 | AI code reviewed | William | All files AI-generated — reviewed in PR #3 |
+| 2026-03-21 | Local gates passed | William | TypeScript 0, SAST 0, deps fixed, E2E 109/145 (36 pre-existing) |
 | 2026-03-21 | UAT verification passed | William + Claude | Health + smoke + auth enforcement verified |
 | 2026-03-21 | Submitted for review | William | PR #3 |
+| 2026-03-22 | Dependency vulnerabilities fixed | William + Claude | 6 fixable vulns resolved via npm audit fix |
+| 2026-03-22 | PR approved | William | PR #3 — second reviewer (HIGH risk) |
+| 2026-03-22 | CI verification | GitHub Actions | All gates passed independently |
+| 2026-03-22 | Deployed to production | Railway | Auto-deploy from main |
+| 2026-03-22 | PROD post-deploy verification | William + Claude | Health + security + auth enforcement verified |

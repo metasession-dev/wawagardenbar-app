@@ -29,3 +29,14 @@
 - UAT Express Create Order: PASS (307 redirect — auth enforced)
 - UAT Express Close Tab: PASS (307 redirect — auth enforced)
 - UAT URL: https://wawagardenbar-app-uat.up.railway.app
+
+## Production Post-Deploy Verification — 2026-03-22
+- PROD Health check: PASS (status: healthy)
+- PROD Homepage: PASS (200)
+- PROD Express Create Tab: PASS (307 redirect — auth enforced)
+- PROD Express Create Order: PASS (307 redirect — auth enforced)
+- PROD Express Close Tab: PASS (307 redirect — auth enforced)
+- PROD Admin auth check: PASS (401)
+- PROD Security headers: PASS (X-Frame-Options: DENY, X-Content-Type-Options: nosniff, Referrer-Policy: strict-origin-when-cross-origin)
+- PROD No stack traces: PASS (generic HTML, no error details exposed)
+- PROD URL: https://wawagardenbar-app-production-45c8.up.railway.app

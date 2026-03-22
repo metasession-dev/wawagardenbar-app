@@ -7,15 +7,18 @@ import { OrderStats } from '@/components/features/admin/order-stats';
 import { CreateTabDialog } from '@/components/features/admin/tabs/create-tab-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { 
-  ChefHat, 
-  BarChart3, 
-  Receipt, 
-  ArrowRight, 
-  ShoppingBag, 
-  PlusCircle, 
+import {
+  ChefHat,
+  BarChart3,
+  Receipt,
+  ArrowRight,
+  ShoppingBag,
+  PlusCircle,
   FilePlus,
-  ClipboardList
+  ClipboardList,
+  Zap,
+  Plus,
+  XCircle,
 } from 'lucide-react';
 
 /**
@@ -129,6 +132,60 @@ export default async function OrdersPage() {
             </Card>
           </Link>
         )}
+      </div>
+
+      {/* Express Actions */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+          <Zap className="h-5 w-5 text-amber-500" />
+          Express Actions
+        </h2>
+        <div className="grid gap-4 md:grid-cols-3">
+          <Link href="/dashboard/orders/express/create-tab">
+            <Card className="hover:bg-accent/50 transition-all hover:shadow-md cursor-pointer h-full border-l-4 border-l-amber-500 group">
+              <CardHeader>
+                <CardTitle className="flex items-center text-lg">
+                  <Plus className="h-5 w-5 mr-2 text-amber-500" />
+                  Create a new Tab
+                  <ArrowRight className="ml-auto h-4 w-4 opacity-50 group-hover:opacity-100 transition-opacity" />
+                </CardTitle>
+                <CardDescription>
+                  Open a tab for a table with minimal steps.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+
+          <Link href="/dashboard/orders/express/create-order">
+            <Card className="hover:bg-accent/50 transition-all hover:shadow-md cursor-pointer h-full border-l-4 border-l-amber-500 group">
+              <CardHeader>
+                <CardTitle className="flex items-center text-lg">
+                  <ShoppingBag className="h-5 w-5 mr-2 text-amber-500" />
+                  Create a new Order
+                  <ArrowRight className="ml-auto h-4 w-4 opacity-50 group-hover:opacity-100 transition-opacity" />
+                </CardTitle>
+                <CardDescription>
+                  Search menu, add items, pay or add to tab.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+
+          <Link href="/dashboard/orders/express/close-tab">
+            <Card className="hover:bg-accent/50 transition-all hover:shadow-md cursor-pointer h-full border-l-4 border-l-amber-500 group">
+              <CardHeader>
+                <CardTitle className="flex items-center text-lg">
+                  <XCircle className="h-5 w-5 mr-2 text-amber-500" />
+                  Close a Tab
+                  <ArrowRight className="ml-auto h-4 w-4 opacity-50 group-hover:opacity-100 transition-opacity" />
+                </CardTitle>
+                <CardDescription>
+                  Select tab, review summary, record payment.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+        </div>
       </div>
 
       {/* Order Actions */}

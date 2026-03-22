@@ -19,7 +19,7 @@
 | Status | Active |
 | Author | Development & Compliance Team |
 | Date Created | 2026-03-04 |
-| Last Updated | 2026-03-13 |
+| Last Updated | 2026-03-20 |
 
 ### Approval Sign-Off
 
@@ -39,6 +39,7 @@
 | 1.4 | 2026-03-06 | AI (Cascade) | Updated traceability matrix |
 | 2.0 | 2026-03-07 | AI (Cascade) | Full rewrite: ISO/IEC/IEEE 29119-3 alignment, forward traceability (Part A), change request traceability (Part B), coverage summary (Part C) |
 | 2.1 | 2026-03-13 | AI (Cascade) | Added REQ-008 (Customer SOPs — Manual + Agentic) |
+| 2.2 | 2026-03-20 | William | Approved REQ-001, REQ-002, REQ-003, REQ-004, REQ-007, REQ-008 — all requirements now APPROVED - DEPLOYED |
 
 ---
 
@@ -625,16 +626,17 @@ This section maps every section in `docs/REQUIREMENTS.md` to the specific test c
 
 This section tracks discrete change requests (REQ-001 through REQ-008) that represent implementation work items. Each entry maps to implementation artefacts, test evidence, and approval status.
 
-| Req ID | Requirement | Implementation Files | Test Evidence | Status | Approver | Date |
-|--------|-------------|---------------------|---------------|--------|----------|------|
-| REQ-001 | Standard Operating Procedures for Tab and Order Management | `docs/operations/SOP-WAITER-TAB-ORDER-MANAGEMENT.md`, `docs/operations/SOP-API-TAB-ORDER-MANAGEMENT.md`, `docs/operations/SOP-API-REPORTING.md` | Documentation validation (structure, completeness, code syntax, API accuracy, parameters) | TESTED - PENDING SIGN-OFF | Pending | -- |
-| REQ-002 | Automatic Idempotency Key Generation for Orders | `models/order-model.ts`, `interfaces/order.interface.ts` | Code validation: 37 criteria tested, 100% pass rate; format consistency; CSPRNG security review; backward compatibility | TESTED - PENDING SIGN-OFF | Pending | -- |
-| REQ-003 | MongoDB Warmup Connection on Server Startup | `server.ts` | Implementation validation; graceful degradation confirmed; no breaking changes | TESTED - PENDING SIGN-OFF | Pending | -- |
-| REQ-004 | MongoDB Connection Resilience for Railway Deployment | `server.ts`, `lib/mongodb.ts` | Railway healthcheck PASS; API endpoint verification; database migration (11,870 docs); production logs confirmation | TESTED - PENDING SIGN-OFF | Pending | -- |
-| REQ-005 | Public API Tab Support for Orders | `app/api/public/orders/route.ts`, `docs/operations/SOP-API-TAB-ORDER-MANAGEMENT.md`, `docs/api/AGENT-TOOLING-FLOWS.md`, `docs/api/AGENT-TOOLING-GUIDE.md` | Vitest unit tests: 26/26 passed (validation 11, branch selection 5, customer name 5, response shape 2, interface 3) | APPROVED - DEPLOYED | William | 2026-03-05 |
-| REQ-006 | Tab Lookup by tabNumber, Item Name Lookup, SOP Enhancement | `app/api/public/tabs/route.ts`, `docs/operations/SOP-API-TAB-ORDER-MANAGEMENT.md` | Vitest unit tests: 27/27 passed (tabNumber 4, tableNumber 2, status 5, combined 6, sort 4, menu resolution 6) | APPROVED - DEPLOYED | William | 2026-03-06 |
-| REQ-007 | Comprehensive Requirements Document | `docs/REQUIREMENTS.md` | Playwright E2E: 183/183 passed; completeness check (20 interfaces, 20 models, 28 services); accuracy check; structure check (27 sections) | TESTED - PENDING SIGN-OFF | Pending | -- |
-| REQ-008 | Customer SOPs (Manual + Agentic) | `docs/operations/SOP-MANUAL-CUSTOMER-ORDERING.md`, `docs/operations/SOP-AGENTIC-CUSTOMER-ORDERING.md`, `docs/operations/README.md` | Documentation validation: structure, content accuracy, API endpoint verification, cross-reference checks, business rule verification | TESTED - PENDING SIGN-OFF | Pending | -- |
+| REQ-ID | Issue | Risk | Evidence | Status | Approver | Date |
+|--------|-------|------|----------|--------|----------|------|
+| REQ-001 | -- | LOW | compliance/evidence/REQ-001/ | APPROVED - DEPLOYED | William | 2026-03-20 |
+| REQ-002 | -- | MEDIUM | compliance/evidence/REQ-002/ | APPROVED - DEPLOYED | William | 2026-03-20 |
+| REQ-003 | -- | LOW | compliance/evidence/REQ-003/ | APPROVED - DEPLOYED | William | 2026-03-20 |
+| REQ-004 | -- | MEDIUM | compliance/evidence/REQ-004/ | APPROVED - DEPLOYED | William | 2026-03-20 |
+| REQ-005 | -- | MEDIUM | compliance/evidence/REQ-005/ | APPROVED - DEPLOYED | William | 2026-03-05 |
+| REQ-006 | -- | MEDIUM | compliance/evidence/REQ-006/ | APPROVED - DEPLOYED | William | 2026-03-06 |
+| REQ-007 | -- | LOW | compliance/evidence/REQ-007/ | APPROVED - DEPLOYED | William | 2026-03-20 |
+| REQ-008 | -- | LOW | compliance/evidence/REQ-008/ | APPROVED - DEPLOYED | William | 2026-03-20 |
+| REQ-009 | #2 | HIGH | compliance/evidence/REQ-009/ | TESTED - PENDING SIGN-OFF | -- | -- |
 
 ### Change Request Dependencies
 
@@ -645,19 +647,6 @@ REQ-001 <──updated-by──── REQ-006 (SOP v1.2 with prerequisite sectio
 REQ-007 ──verified-by───> E2E test suites (requirements-verification + authenticated)
 REQ-008 ──references────> REQ-001 (SOP format), REQ-007 (requirements coverage)
 ```
-
-### Change Request Evidence Locations
-
-| Req ID | Evidence Location |
-|--------|------------------|
-| REQ-001 | `compliance/evidence/REQ-001/` |
-| REQ-002 | `compliance/evidence/REQ-002/` |
-| REQ-003 | `compliance/evidence/REQ-003/` |
-| REQ-004 | `compliance/evidence/REQ-004/` |
-| REQ-005 | `compliance/evidence/REQ-005/` |
-| REQ-006 | `compliance/evidence/REQ-006/` |
-| REQ-007 | `compliance/evidence/REQ-007/` |
-| REQ-008 | `compliance/evidence/REQ-008/` |
 
 ---
 

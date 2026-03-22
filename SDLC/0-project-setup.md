@@ -244,9 +244,9 @@ Run through the complete pipeline once with a small test change:
 | CI: SAST + dep audit jobs added to test-on-pr.yml | [x] Added typecheck, sast, dependency-audit, e2e-tests jobs |
 | **Branch protection configured on `main`** | **[ ] REQUIRED — not yet configured** |
 | **Required status checks added to branch protection** | **[ ] REQUIRED — depends on CI jobs** |
-| **Local tooling installed (Semgrep, Playwright)** | **[ ] REQUIRED for local gates** |
+| Local tooling installed (Semgrep, Playwright) | [x] Semgrep 1.155.0, Playwright installed |
 | Project Test Plan created | [x] |
-| **End-to-end pipeline verified with test change** | **[ ] REQUIRED — pipeline not yet validated** |
+| End-to-end pipeline verified with test change | [x] PR #1 — all 4 CI gates passed, merged, deployed |
 
 ---
 

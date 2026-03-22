@@ -468,6 +468,9 @@ test.describe('Section 11/12: Dashboard RBAC', () => {
     '/dashboard/customers',
     '/dashboard/finance/expenses',
     '/dashboard/analytics/profitability',
+    '/dashboard/orders/express/create-tab',
+    '/dashboard/orders/express/create-order',
+    '/dashboard/orders/express/close-tab',
   ];
 
   for (const route of protectedRoutes) {

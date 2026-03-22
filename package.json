@@ -25,7 +25,8 @@
     "test:e2e:report": "playwright show-report",
     "test:seed": "tsx tests/setup/seed-test-data.ts",
     "test:db:clean": "tsx tests/setup/db-cleanup.ts",
-    "check:xlsx": "tsx scripts/check-xlsx-module.ts"
+    "check:xlsx": "tsx scripts/check-xlsx-module.ts",
+    "prepare": "husky"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -79,6 +80,8 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
     "@playwright/test": "^1.57.0",
     "@types/bcrypt": "^6.0.0",
     "@types/node": "^22.7.5",
@@ -98,6 +101,7 @@
     "eslint-plugin-jsx-a11y": "^6.10.0",
     "eslint-plugin-react": "^7.37.1",
     "eslint-plugin-react-hooks": "^4.6.2",
+    "husky": "^9.1.7",
     "postcss": "^8.5.6",
     "prettier": "^3.3.3",
     "tailwindcss": "^3.4.18",

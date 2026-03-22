@@ -2,7 +2,7 @@
 **Date:** 2026-03-21
 **SAST Tool:** Semgrep (auto config)
 **SAST Findings:** 0 (4 files scanned, 205 rules)
-**Dependency Audit:** 0 unaccepted high/critical (xlsx = accepted risk)
+**Dependency Audit:** 0 unaccepted high/critical (xlsx = accepted risk). 6 fixable vulnerabilities resolved via `npm audit fix` on 2026-03-22.
 **TypeScript:** 0 errors
 
 ### Access Control

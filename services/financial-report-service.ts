@@ -146,10 +146,11 @@ export class FinancialReportService {
     };
 
     // Aggregate payment breakdown
+    const validMethods = ['cash', 'card', 'transfer', 'ussd', 'phone'];
     for (const order of orders) {
       const amount = order.total || 0;
       const method = order.paymentMethod as string | undefined;
-      if (method && method in report.paymentBreakdown) {
+      if (method && validMethods.includes(method)) {
         (report.paymentBreakdown as Record<string, number>)[method] += amount;
       } else {
         report.paymentBreakdown.unspecified += amount;
@@ -351,10 +352,11 @@ export class FinancialReportService {
     };
 
     // Aggregate payment breakdown
+    const validMethods = ['cash', 'card', 'transfer', 'ussd', 'phone'];
     for (const order of orders) {
       const amount = order.total || 0;
       const method = order.paymentMethod as string | undefined;
-      if (method && method in report.paymentBreakdown) {
+      if (method && validMethods.includes(method)) {
         (report.paymentBreakdown as Record<string, number>)[method] += amount;
       } else {
         report.paymentBreakdown.unspecified += amount;

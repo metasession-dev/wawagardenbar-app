@@ -57,7 +57,8 @@ export function DailyReportClient() {
         setError(result.error || 'Failed to load report');
       }
     } catch (err) {
-      setError('An unexpected error occurred');
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred';
+      setError(message);
       console.error('Report error:', err);
     } finally {
       setLoading(false);

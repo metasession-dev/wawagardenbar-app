@@ -17,7 +17,7 @@ jobs:
   # ──────────────────────────────────────────────
   typecheck:
     name: TypeScript Check
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -34,7 +34,7 @@ jobs:
   # ──────────────────────────────────────────────
   sast:
     name: SAST Scan
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
@@ -84,7 +84,7 @@ jobs:
   # ──────────────────────────────────────────────
   dependency-audit:
     name: Dependency Audit
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
@@ -142,7 +142,7 @@ jobs:
   # ──────────────────────────────────────────────
   e2e-tests:
     name: E2E Tests
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [typecheck]
 
     services:
@@ -217,3 +217,19 @@ jobs:
               issue_number: context.issue.number,
               body
             });
+
+  # ──────────────────────────────────────────────
+  # JOB 5: Upload Evidence to META-COMPLY
+  # Runs on: PR to main only, after all gates pass
+  # Centralised compliance evidence storage
+  # ──────────────────────────────────────────────
+  upload-evidence:
+    name: Upload Evidence
+    needs: [typecheck, sast, dependency-audit, e2e-tests]
+    if: github.event_name == 'pull_request'
+    uses: metasession-dev/META-COMPLY/.github/workflows/upload-evidence.yml@main
+    with:
+      project-slug: wawagardenbar-app
+    secrets:
+      SUPABASE_URL: ${{ secrets.META_COMPLY_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.META_COMPLY_SERVICE_ROLE_KEY }}

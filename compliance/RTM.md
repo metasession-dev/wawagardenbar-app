@@ -636,7 +636,8 @@ This section tracks discrete change requests (REQ-001 through REQ-008) that repr
 | REQ-006 | -- | MEDIUM | compliance/evidence/REQ-006/ | APPROVED - DEPLOYED | William | 2026-03-06 |
 | REQ-007 | -- | LOW | compliance/evidence/REQ-007/ | APPROVED - DEPLOYED | William | 2026-03-20 |
 | REQ-008 | -- | LOW | compliance/evidence/REQ-008/ | APPROVED - DEPLOYED | William | 2026-03-20 |
-| REQ-009 | #2 | HIGH | compliance/evidence/REQ-009/ | TESTED - PENDING SIGN-OFF | -- | -- |
+| REQ-009 | #2 | HIGH | compliance/evidence/REQ-009/ | APPROVED - DEPLOYED | William | 2026-03-22 |
+| REQ-010 | #4 | MEDIUM | compliance/evidence/REQ-010/ | TESTED - PENDING SIGN-OFF | -- | -- |
 
 ### Change Request Dependencies
 

@@ -41,6 +41,15 @@ export interface DailySummaryReport {
     totalOperatingExpenses: number;
     totalExpenses: number;
   };
+  paymentBreakdown: {
+    cash: number;
+    card: number;
+    transfer: number;
+    ussd: number;
+    phone: number;
+    unspecified: number;
+    total: number;
+  };
   netProfit: number;
   metrics: {
     grossProfitMargin: number;
@@ -119,6 +128,15 @@ export class FinancialReportService {
         totalOperatingExpenses: 0,
         totalExpenses: 0,
       },
+      paymentBreakdown: {
+        cash: 0,
+        card: 0,
+        transfer: 0,
+        ussd: 0,
+        phone: 0,
+        unspecified: 0,
+        total: 0,
+      },
       netProfit: 0,
       metrics: {
         grossProfitMargin: 0,
@@ -126,6 +144,19 @@ export class FinancialReportService {
         orderCount: orders.length,
       },
     };
+
+    // Aggregate payment breakdown
+    const validMethods = ['cash', 'card', 'transfer', 'ussd', 'phone'];
+    for (const order of orders) {
+      const amount = order.total || 0;
+      const method = order.paymentMethod as string | undefined;
+      if (method && validMethods.includes(method)) {
+        (report.paymentBreakdown as Record<string, number>)[method] += amount;
+      } else {
+        report.paymentBreakdown.unspecified += amount;
+      }
+      report.paymentBreakdown.total += amount;
+    }
 
     // Aggregate items by menu item
     const itemMap = new Map<
@@ -303,6 +334,15 @@ export class FinancialReportService {
         totalOperatingExpenses: 0,
         totalExpenses: 0,
       },
+      paymentBreakdown: {
+        cash: 0,
+        card: 0,
+        transfer: 0,
+        ussd: 0,
+        phone: 0,
+        unspecified: 0,
+        total: 0,
+      },
       netProfit: 0,
       metrics: {
         grossProfitMargin: 0,
@@ -310,6 +350,19 @@ export class FinancialReportService {
         orderCount: orders.length,
       },
     };
+
+    // Aggregate payment breakdown
+    const validMethods = ['cash', 'card', 'transfer', 'ussd', 'phone'];
+    for (const order of orders) {
+      const amount = order.total || 0;
+      const method = order.paymentMethod as string | undefined;
+      if (method && validMethods.includes(method)) {
+        (report.paymentBreakdown as Record<string, number>)[method] += amount;
+      } else {
+        report.paymentBreakdown.unspecified += amount;
+      }
+      report.paymentBreakdown.total += amount;
+    }
 
     // Aggregate items
     const itemMap = new Map<

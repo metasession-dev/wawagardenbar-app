@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { subDays } from 'date-fns';
-import { Calendar, Download, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { Calendar, Download, TrendingUp, TrendingDown, DollarSign, Banknote, CreditCard, Building2, Smartphone, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
@@ -57,7 +57,8 @@ export function DailyReportClient() {
         setError(result.error || 'Failed to load report');
       }
     } catch (err) {
-      setError('An unexpected error occurred');
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred';
+      setError(message);
       console.error('Report error:', err);
     } finally {
       setLoading(false);
@@ -265,6 +266,106 @@ export function DailyReportClient() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Payment Breakdown */}
+          {report.paymentBreakdown && report.metrics.orderCount > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold">Revenue by Payment Method</h3>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {report.paymentBreakdown.cash > 0 && (
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Cash</CardTitle>
+                      <Banknote className="h-4 w-4 text-green-600" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{formatCurrency(report.paymentBreakdown.cash)}</div>
+                      <p className="text-xs text-muted-foreground">
+                        {((report.paymentBreakdown.cash / (report.paymentBreakdown.total || 1)) * 100).toFixed(1)}% of total
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+                {report.paymentBreakdown.card > 0 && (
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">POS / Card</CardTitle>
+                      <CreditCard className="h-4 w-4 text-blue-600" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{formatCurrency(report.paymentBreakdown.card)}</div>
+                      <p className="text-xs text-muted-foreground">
+                        {((report.paymentBreakdown.card / (report.paymentBreakdown.total || 1)) * 100).toFixed(1)}% of total
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+                {report.paymentBreakdown.transfer > 0 && (
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Transfer</CardTitle>
+                      <Building2 className="h-4 w-4 text-purple-600" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{formatCurrency(report.paymentBreakdown.transfer)}</div>
+                      <p className="text-xs text-muted-foreground">
+                        {((report.paymentBreakdown.transfer / (report.paymentBreakdown.total || 1)) * 100).toFixed(1)}% of total
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+                {report.paymentBreakdown.ussd > 0 && (
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">USSD</CardTitle>
+                      <Phone className="h-4 w-4 text-orange-600" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{formatCurrency(report.paymentBreakdown.ussd)}</div>
+                      <p className="text-xs text-muted-foreground">
+                        {((report.paymentBreakdown.ussd / (report.paymentBreakdown.total || 1)) * 100).toFixed(1)}% of total
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+                {report.paymentBreakdown.phone > 0 && (
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Phone</CardTitle>
+                      <Smartphone className="h-4 w-4 text-teal-600" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{formatCurrency(report.paymentBreakdown.phone)}</div>
+                      <p className="text-xs text-muted-foreground">
+                        {((report.paymentBreakdown.phone / (report.paymentBreakdown.total || 1)) * 100).toFixed(1)}% of total
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+                {report.paymentBreakdown.unspecified > 0 && (
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Unspecified</CardTitle>
+                      <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{formatCurrency(report.paymentBreakdown.unspecified)}</div>
+                      <p className="text-xs text-muted-foreground">
+                        {((report.paymentBreakdown.unspecified / (report.paymentBreakdown.total || 1)) * 100).toFixed(1)}% of total
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+                {report.paymentBreakdown.total === 0 && (
+                  <Card className="col-span-full">
+                    <CardContent className="py-6 text-center text-muted-foreground">
+                      Payment method data not available for these orders. Orders may have been recorded without specifying a payment method.
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Export Buttons */}
           <div className="flex justify-end gap-2">

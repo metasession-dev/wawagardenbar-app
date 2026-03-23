@@ -268,7 +268,7 @@ export function DailyReportClient() {
           </div>
 
           {/* Payment Breakdown */}
-          {report.paymentBreakdown && report.paymentBreakdown.total > 0 && (
+          {report.paymentBreakdown && report.metrics.orderCount > 0 && (
             <div className="space-y-3">
               <h3 className="text-lg font-semibold">Revenue by Payment Method</h3>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -281,7 +281,7 @@ export function DailyReportClient() {
                     <CardContent>
                       <div className="text-2xl font-bold">{formatCurrency(report.paymentBreakdown.cash)}</div>
                       <p className="text-xs text-muted-foreground">
-                        {((report.paymentBreakdown.cash / report.paymentBreakdown.total) * 100).toFixed(1)}% of total
+                        {((report.paymentBreakdown.cash / (report.paymentBreakdown.total || 1)) * 100).toFixed(1)}% of total
                       </p>
                     </CardContent>
                   </Card>
@@ -295,7 +295,7 @@ export function DailyReportClient() {
                     <CardContent>
                       <div className="text-2xl font-bold">{formatCurrency(report.paymentBreakdown.card)}</div>
                       <p className="text-xs text-muted-foreground">
-                        {((report.paymentBreakdown.card / report.paymentBreakdown.total) * 100).toFixed(1)}% of total
+                        {((report.paymentBreakdown.card / (report.paymentBreakdown.total || 1)) * 100).toFixed(1)}% of total
                       </p>
                     </CardContent>
                   </Card>
@@ -309,7 +309,7 @@ export function DailyReportClient() {
                     <CardContent>
                       <div className="text-2xl font-bold">{formatCurrency(report.paymentBreakdown.transfer)}</div>
                       <p className="text-xs text-muted-foreground">
-                        {((report.paymentBreakdown.transfer / report.paymentBreakdown.total) * 100).toFixed(1)}% of total
+                        {((report.paymentBreakdown.transfer / (report.paymentBreakdown.total || 1)) * 100).toFixed(1)}% of total
                       </p>
                     </CardContent>
                   </Card>
@@ -323,7 +323,7 @@ export function DailyReportClient() {
                     <CardContent>
                       <div className="text-2xl font-bold">{formatCurrency(report.paymentBreakdown.ussd)}</div>
                       <p className="text-xs text-muted-foreground">
-                        {((report.paymentBreakdown.ussd / report.paymentBreakdown.total) * 100).toFixed(1)}% of total
+                        {((report.paymentBreakdown.ussd / (report.paymentBreakdown.total || 1)) * 100).toFixed(1)}% of total
                       </p>
                     </CardContent>
                   </Card>
@@ -337,7 +337,7 @@ export function DailyReportClient() {
                     <CardContent>
                       <div className="text-2xl font-bold">{formatCurrency(report.paymentBreakdown.phone)}</div>
                       <p className="text-xs text-muted-foreground">
-                        {((report.paymentBreakdown.phone / report.paymentBreakdown.total) * 100).toFixed(1)}% of total
+                        {((report.paymentBreakdown.phone / (report.paymentBreakdown.total || 1)) * 100).toFixed(1)}% of total
                       </p>
                     </CardContent>
                   </Card>
@@ -351,8 +351,15 @@ export function DailyReportClient() {
                     <CardContent>
                       <div className="text-2xl font-bold">{formatCurrency(report.paymentBreakdown.unspecified)}</div>
                       <p className="text-xs text-muted-foreground">
-                        {((report.paymentBreakdown.unspecified / report.paymentBreakdown.total) * 100).toFixed(1)}% of total
+                        {((report.paymentBreakdown.unspecified / (report.paymentBreakdown.total || 1)) * 100).toFixed(1)}% of total
                       </p>
+                    </CardContent>
+                  </Card>
+                )}
+                {report.paymentBreakdown.total === 0 && (
+                  <Card className="col-span-full">
+                    <CardContent className="py-6 text-center text-muted-foreground">
+                      Payment method data not available for these orders. Orders may have been recorded without specifying a payment method.
                     </CardContent>
                   </Card>
                 )}

@@ -1,0 +1,310 @@
+[dotenv@17.2.3] injecting env (47) from .env.local -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+[2m[WebServer] [22m[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+
+Running 209 tests using 8 workers
+
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: ⚙️  suppress all logs with { quiet: true }
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: 🔑 add access controls to secrets: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: ✅ audit secrets and track compliance: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: ⚙️  write to custom object with { processEnv: myObject }
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: ✅ audit secrets and track compliance: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+  ✓    7 [chromium] › e2e/requirements-verification.spec.ts:63:7 › Section 1/5.1: Home Page › renders home page with branding, logo, and CTA (1.4s)
+  ✓    8 [chromium] › e2e/requirements-verification.spec.ts:84:7 › Section 1/5.1: Home Page › displays "How It Works" section with descriptions (1.4s)
+  ✓    6 [chromium] › e2e/requirements-verification.spec.ts:77:7 › Section 1/5.1: Home Page › displays order type feature cards (Dine In, Pickup, Delivery) (1.4s)
+  ✓    5 [chromium] › e2e/requirements-verification.spec.ts:93:7 › Section 1/5.1: Home Page › is responsive — renders correctly on mobile viewport (1.4s)
+  ✓    3 [chromium] › e2e/requirements-verification.spec.ts:100:7 › Section 1/5.1: Home Page › is responsive — renders correctly on tablet viewport (1.5s)
+[2m[WebServer] [22mAdmin login error: Error: Invalid credentials
+[2m[WebServer] [22m    at AdminService.authenticate (services/admin-service.ts:476:13)
+[2m[WebServer] [22m    at async adminLoginAction (app/actions/auth/admin-login.ts:31:22)
+[2m[WebServer] [22m    at async Server.<anonymous> (server.ts:18:7)
+[2m[WebServer] [22m[0m [90m 474 |[39m
+[2m[WebServer] [22m [90m 475 |[39m     [36mif[39m ([33m![39madmin) {
+[2m[WebServer] [22m[31m[1m>[22m[39m[90m 476 |[39m       [36mthrow[39m [36mnew[39m [33mError[39m([32m'Invalid credentials'[39m)[33m;[39m
+[2m[WebServer] [22m [90m     |[39m             [31m[1m^[22m[39m
+[2m[WebServer] [22m [90m 477 |[39m     }
+[2m[WebServer] [22m [90m 478 |[39m
+[2m[WebServer] [22m [90m 479 |[39m     [90m// Check account status[39m[0m
+[2m[WebServer] [22mAdmin login error: Error: Invalid credentials
+[2m[WebServer] [22m    at AdminService.authenticate (services/admin-service.ts:476:13)
+[2m[WebServer] [22m    at async adminLoginAction (app/actions/auth/admin-login.ts:31:22)
+[2m[WebServer] [22m    at async Server.<anonymous> (server.ts:18:7)
+[2m[WebServer] [22m[0m [90m 474 |[39m
+[2m[WebServer] [22m [90m 475 |[39m     [36mif[39m ([33m![39madmin) {
+[2m[WebServer] [22m[31m[1m>[22m[39m[90m 476 |[39m       [36mthrow[39m [36mnew[39m [33mError[39m([32m'Invalid credentials'[39m)[33m;[39m
+[2m[WebServer] [22m [90m     |[39m             [31m[1m^[22m[39m
+[2m[WebServer] [22m [90m 477 |[39m     }
+[2m[WebServer] [22m [90m 478 |[39m
+[2m[WebServer] [22m [90m 479 |[39m     [90m// Check account status[39m[0m
+[2m[WebServer] [22mAdmin login error: Error: Invalid credentials
+[2m[WebServer] [22m    at AdminService.authenticate (services/admin-service.ts:476:13)
+[2m[WebServer] [22m    at async adminLoginAction (app/actions/auth/admin-login.ts:31:22)
+[2m[WebServer] [22m    at async Server.<anonymous> (server.ts:18:7)
+[2m[WebServer] [22m[0m [90m 474 |[39m
+[2m[WebServer] [22m [90m 475 |[39m     [36mif[39m ([33m![39madmin) {
+[2m[WebServer] [22m[31m[1m>[22m[39m[90m 476 |[39m       [36mthrow[39m [36mnew[39m [33mError[39m([32m'Invalid credentials'[39m)[33m;[39m
+[2m[WebServer] [22m [90m     |[39m             [31m[1m^[22m[39m
+[2m[WebServer] [22m [90m 477 |[39m     }
+[2m[WebServer] [22m [90m 478 |[39m
+[2m[WebServer] [22m [90m 479 |[39m     [90m// Check account status[39m[0m
+  ✓   12 [chromium] › e2e/requirements-verification.spec.ts:138:7 › Section 4: Customer Authentication › login page links to privacy policy and terms (2.4s)
+  ✓    9 [chromium] › e2e/requirements-verification.spec.ts:112:7 › Section 4: Customer Authentication › login page renders with title and phone prompt (2.5s)
+  ✓   13 [chromium] › e2e/requirements-verification.spec.ts:144:7 › Section 4: Customer Authentication › unauthenticated user is redirected from /orders to /login (2.5s)
+  ✓   16 [chromium] › e2e/requirements-verification.spec.ts:168:7 › Section 4: Admin Authentication › admin login form has username and password fields (552ms)
+  ✓   15 [chromium] › e2e/requirements-verification.spec.ts:161:7 › Section 4: Admin Authentication › admin login page renders with credentials form (641ms)
+  ✓   10 [chromium] › e2e/requirements-verification.spec.ts:120:7 › Section 4: Customer Authentication › login page shows PIN delivery method options (WhatsApp, SMS, Email) (3.2s)
+  ✓   11 [chromium] › e2e/requirements-verification.spec.ts:129:7 › Section 4: Customer Authentication › login page displays delivery method descriptions (3.2s)
+  ✓   14 [chromium] › e2e/requirements-verification.spec.ts:150:7 › Section 4: Customer Authentication › unauthenticated user is redirected from /profile to /login (939ms)
+  ✓   17 [chromium] › e2e/requirements-verification.spec.ts:185:7 › Section 4: Admin Authentication › unauthenticated user is redirected from /dashboard to login (2.0s)
+[2m[WebServer] [22mAdmin login error: Error: Invalid credentials
+[2m[WebServer] [22m    at AdminService.authenticate (services/admin-service.ts:476:13)
+[2m[WebServer] [22m    at async adminLoginAction (app/actions/auth/admin-login.ts:31:22)
+[2m[WebServer] [22m    at async Server.<anonymous> (server.ts:18:7)
+[2m[WebServer] [22m[0m [90m 474 |[39m
+[2m[WebServer] [22m [90m 475 |[39m     [36mif[39m ([33m![39madmin) {
+[2m[WebServer] [22m[31m[1m>[22m[39m[90m 476 |[39m       [36mthrow[39m [36mnew[39m [33mError[39m([32m'Invalid credentials'[39m)[33m;[39m
+[2m[WebServer] [22m [90m     |[39m             [31m[1m^[22m[39m
+[2m[WebServer] [22m [90m 477 |[39m     }
+[2m[WebServer] [22m [90m 478 |[39m
+[2m[WebServer] [22m [90m 479 |[39m     [90m// Check account status[39m[0m
+  ✓   18 [chromium] › e2e/requirements-verification.spec.ts:175:7 › Section 4: Admin Authentication › admin login rejects invalid credentials (3.4s)
+  ✓   20 [chromium] › e2e/requirements-verification.spec.ts:202:7 › Section 5.2/6: Menu System › menu page displays item cards (3.4s)
+  ✓   19 [chromium] › e2e/requirements-verification.spec.ts:196:7 › Section 5.2/6: Menu System › menu page loads with title and description (3.9s)
+  ✓   22 [chromium] › e2e/requirements-verification.spec.ts:224:7 › Section 5.2/6: Menu System › menu page supports search via URL parameter (2.1s)
+  ✓   21 [chromium] › e2e/requirements-verification.spec.ts:212:7 › Section 5.2/6: Menu System › menu page has category navigation with food and drink categories (3.8s)
+  ✓   26 [chromium] › e2e/requirements-verification.spec.ts:261:7 › Section 5.3: Cart › cart stores quantity, portion size, and special instructions per item (2.1s)
+  ✓   23 [chromium] › e2e/requirements-verification.spec.ts:231:7 › Section 5.2/6: Menu System › menu page supports category filter via URL parameter (3.1s)
+  ✓   24 [chromium] › e2e/requirements-verification.spec.ts:237:7 › Section 5.2/6: Menu System › menu page supports table number via URL parameter (3.1s)
+  ✓   25 [chromium] › e2e/requirements-verification.spec.ts:248:7 › Section 5.3: Cart › cart persists items in localStorage under wawa-cart-storage (2.9s)
+  ✓   28 [chromium] › e2e/requirements-verification.spec.ts:291:7 › Section 5.4: Order Tracking › order page requires authentication (1.4s)
+  ✓   29 [chromium] › e2e/requirements-verification.spec.ts:302:7 › Section 5.5: Orders & Tabs Page › orders page redirects unauthenticated users (1.0s)
+  ✓   30 [chromium] › e2e/requirements-verification.spec.ts:308:7 › Section 5.5: Orders & Tabs Page › orders/tabs page redirects unauthenticated users (987ms)
+  ✓   31 [chromium] › e2e/requirements-verification.spec.ts:314:7 › Section 5.5: Orders & Tabs Page › orders/history page redirects unauthenticated users (877ms)
+  ✓   27 [chromium] › e2e/requirements-verification.spec.ts:277:7 › Section 5.3: Cart › seeded cart items appear in checkout (3.9s)
+  ✓   32 [chromium] › e2e/requirements-verification.spec.ts:325:7 › Section 5.6: Customer Profile › profile page redirects unauthenticated users (935ms)
+  ✓   33 [chromium] › e2e/requirements-verification.spec.ts:331:7 › Section 5.6: Customer Profile › profile/rewards page redirects unauthenticated users (936ms)
+  ✓   35 [chromium] › e2e/requirements-verification.spec.ts:349:7 › Section 5.7/10: Rewards › rewards page shows sign-in prompt for unauthenticated users (1.4s)
+  ✓   34 [chromium] › e2e/requirements-verification.spec.ts:342:7 › Section 5.7/10: Rewards › rewards page loads with loyalty information (1.5s)
+  ✓   36 [chromium] › e2e/requirements-verification.spec.ts:356:7 › Section 5.7/10: Rewards › rewards page displays feature preview cards (1.2s)
+  ✓   37 [chromium] › e2e/requirements-verification.spec.ts:365:7 › Section 5.7/10: Rewards › rewards page explains points conversion (100 points = NGN 1) (1.0s)
+  ✓   38 [chromium] › e2e/requirements-verification.spec.ts:372:7 › Section 5.7/10: Rewards › rewards page has "How It Works" guide (971ms)
+  ✓   39 [chromium] › e2e/requirements-verification.spec.ts:380:7 › Section 5.7/10: Rewards › rewards page links to login for sign-in (1.1s)
+  ✓   40 [chromium] › e2e/requirements-verification.spec.ts:392:7 › Section 9: Checkout & Payment › checkout page renders with form (2.1s)
+  ✓   41 [chromium] › e2e/requirements-verification.spec.ts:398:7 › Section 9: Checkout & Payment › checkout with seeded cart shows multi-step form (2.1s)
+  ✓   45 [chromium] › e2e/requirements-verification.spec.ts:439:7 › Section 3: Navigation & Architecture › home page includes "View Menu" link (1.1s)
+Login failed for "e2e-csr": Admin LoginEnter your credentials to access the admin dashboardInvalid credentialsUsernamePasswordLoginself.__next_r="2OCNHAuazNR5tIPq-kUVQ"(self.__next_f=self.__next_f||[]).push([0])self.__next_f.pus
+CSR auth setup failed — authenticated CSR tests will be skipped
+Login failed for "e2e-superadmin": Admin LoginEnter your credentials to access the admin dashboardInvalid credentialsUsernamePasswordLoginself.__next_r="d9lFyvgY08MyPuIZa-KHb"(self.__next_f=self.__next_f||[]).push([0])self.__next_f.pus
+Super-admin auth setup failed — authenticated super-admin tests will be skipped
+Login failed for "e2e-admin": Admin LoginEnter your credentials to access the admin dashboardInvalid credentialsUsernamePasswordLoginself.__next_r="iG6ulBN5-5hY5LLAz84PM"(self.__next_f=self.__next_f||[]).push([0])self.__next_f.pus
+Admin auth setup failed — authenticated admin tests will be skipped
+  ✓   43 [chromium] › e2e/requirements-verification.spec.ts:416:7 › Section 9: Checkout & Payment › checkout form has customer info fields (name, email, phone) (3.2s)
+  ✓   42 [chromium] › e2e/requirements-verification.spec.ts:407:7 › Section 9: Checkout & Payment › checkout displays cart items and totals (3.2s)
+  ✓   44 [chromium] › e2e/requirements-verification.spec.ts:425:7 › Section 9: Checkout & Payment › checkout shows navigation buttons (Back/Next) (2.5s)
+  ✓    4 [auth-setup] › e2e/auth.setup.ts:53:6 › authenticate as csr (18.2s)
+  ✓    2 [auth-setup] › e2e/auth.setup.ts:76:6 › authenticate as admin (18.3s)
+  ✓    1 [auth-setup] › e2e/auth.setup.ts:101:6 › authenticate as super-admin (18.3s)
+  ✓   46 [chromium] › e2e/requirements-verification.spec.ts:446:7 › Section 3: Navigation & Architecture › "View Menu" link navigates to menu page (2.5s)
+  ✓   47 [chromium] › e2e/requirements-verification.spec.ts:474:9 › Section 11/12: Dashboard RBAC › /dashboard redirects unauthenticated users (1.5s)
+  ✓   49 [chromium] › e2e/requirements-verification.spec.ts:474:9 › Section 11/12: Dashboard RBAC › /dashboard/menu redirects unauthenticated users (1.2s)
+  ✓   48 [chromium] › e2e/requirements-verification.spec.ts:474:9 › Section 11/12: Dashboard RBAC › /dashboard/orders redirects unauthenticated users (1.2s)
+  ✓   50 [chromium] › e2e/requirements-verification.spec.ts:474:9 › Section 11/12: Dashboard RBAC › /dashboard/inventory redirects unauthenticated users (1.2s)
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: ⚙️  suppress all logs with { quiet: true }
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+  ✓   51 [chromium] › e2e/requirements-verification.spec.ts:474:9 › Section 11/12: Dashboard RBAC › /dashboard/reports redirects unauthenticated users (926ms)
+  ✓   54 [chromium] › e2e/requirements-verification.spec.ts:474:9 › Section 11/12: Dashboard RBAC › /dashboard/finance/expenses redirects unauthenticated users (915ms)
+  ✓   52 [chromium] › e2e/requirements-verification.spec.ts:474:9 › Section 11/12: Dashboard RBAC › /dashboard/kitchen redirects unauthenticated users (1.0s)
+  ✓   53 [chromium] › e2e/requirements-verification.spec.ts:474:9 › Section 11/12: Dashboard RBAC › /dashboard/customers redirects unauthenticated users (957ms)
+  ✓   55 [chromium] › e2e/requirements-verification.spec.ts:474:9 › Section 11/12: Dashboard RBAC › /dashboard/analytics/profitability redirects unauthenticated users (953ms)
+  ✓   57 [chromium] › e2e/requirements-verification.spec.ts:474:9 › Section 11/12: Dashboard RBAC › /dashboard/rewards redirects unauthenticated users (980ms)
+  ✓   56 [chromium] › e2e/requirements-verification.spec.ts:474:9 › Section 11/12: Dashboard RBAC › /dashboard/settings redirects unauthenticated users (1.2s)
+  ✓   58 [chromium] › e2e/requirements-verification.spec.ts:474:9 › Section 11/12: Dashboard RBAC › /dashboard/audit-logs redirects unauthenticated users (1.3s)
+  ✓   59 [chromium] › e2e/requirements-verification.spec.ts:486:7 › Section 13: Menu Management › menu management page redirects unauthenticated users (1.2s)
+  ✓   60 [chromium] › e2e/requirements-verification.spec.ts:492:7 › Section 13: Menu Management › new menu item page redirects unauthenticated users (1.1s)
+  ✓   61 [chromium] › e2e/requirements-verification.spec.ts:510:9 › Section 14: Inventory Management › /dashboard/inventory redirects unauthenticated users (1.2s)
+  ✓   62 [chromium] › e2e/requirements-verification.spec.ts:510:9 › Section 14: Inventory Management › /dashboard/inventory/snapshots redirects unauthenticated users (1.2s)
+  ✓   63 [chromium] › e2e/requirements-verification.spec.ts:510:9 › Section 14: Inventory Management › /dashboard/inventory/transfer redirects unauthenticated users (1.2s)
+  ✓   64 [chromium] › e2e/requirements-verification.spec.ts:522:7 › Section 15: Financial Management › expenses page redirects unauthenticated users (1.1s)
+  ✓   65 [chromium] › e2e/requirements-verification.spec.ts:542:9 › Section 16: Reports & Analytics › /dashboard/reports redirects unauthenticated users (1.1s)
+  ✓   66 [chromium] › e2e/requirements-verification.spec.ts:542:9 › Section 16: Reports & Analytics › /dashboard/reports/daily redirects unauthenticated users (1.1s)
+  ✓   67 [chromium] › e2e/requirements-verification.spec.ts:542:9 › Section 16: Reports & Analytics › /dashboard/reports/inventory redirects unauthenticated users (1.2s)
+  ✓   68 [chromium] › e2e/requirements-verification.spec.ts:542:9 › Section 16: Reports & Analytics › /dashboard/reports/profitability redirects unauthenticated users (1.2s)
+  ✓   69 [chromium] › e2e/requirements-verification.spec.ts:542:9 › Section 16: Reports & Analytics › /dashboard/analytics/profitability redirects unauthenticated users (1.2s)
+  ✓   70 [chromium] › e2e/requirements-verification.spec.ts:554:7 › Section 17: Kitchen Display System › kitchen display redirects unauthenticated users (1.1s)
+  ✓   71 [chromium] › e2e/requirements-verification.spec.ts:573:9 › Section 18: Rewards Configuration › /dashboard/rewards redirects unauthenticated users (1.2s)
+  ✓   79 [chromium] › e2e/requirements-verification.spec.ts:610:7 › Section 20: Public REST API › health endpoint returns success with status, service, version, uptime (252ms)
+  ✓   72 [chromium] › e2e/requirements-verification.spec.ts:573:9 › Section 18: Rewards Configuration › /dashboard/rewards/issued redirects unauthenticated users (1.1s)
+  ✓   80 [chromium] › e2e/requirements-verification.spec.ts:648:9 › Section 20: Public REST API › GET /api/public/menu rejects unauthenticated requests (scope: menu:read) (254ms)
+  ✓   81 [chromium] › e2e/requirements-verification.spec.ts:689:7 › Section 20: Admin API Protection › admin settings API requires admin session (162ms)
+  ✓   73 [chromium] › e2e/requirements-verification.spec.ts:573:9 › Section 18: Rewards Configuration › /dashboard/rewards/rules redirects unauthenticated users (1.1s)
+  ✓   82 [chromium] › e2e/requirements-verification.spec.ts:648:9 › Section 20: Public REST API › GET /api/public/menu/categories rejects unauthenticated requests (scope: menu:read) (201ms)
+  ✓   83 [chromium] › e2e/requirements-verification.spec.ts:696:7 › Section 20: Admin API Protection › admin settings impact API requires admin session (117ms)
+  ✓   85 [chromium] › e2e/requirements-verification.spec.ts:648:9 › Section 20: Public REST API › GET /api/public/orders rejects unauthenticated requests (scope: orders:read) (170ms)
+  ✓   74 [chromium] › e2e/requirements-verification.spec.ts:573:9 › Section 18: Rewards Configuration › /dashboard/rewards/templates redirects unauthenticated users (1.2s)
+  ✓   75 [chromium] › e2e/requirements-verification.spec.ts:593:9 › Section 19: Settings & Configuration › /dashboard/settings redirects unauthenticated users (1.2s)
+  ✓   87 [chromium] › e2e/requirements-verification.spec.ts:648:9 › Section 20: Public REST API › GET /api/public/orders/stats rejects unauthenticated requests (scope: orders:read) (186ms)
+  ✓   76 [chromium] › e2e/requirements-verification.spec.ts:593:9 › Section 19: Settings & Configuration › /dashboard/settings/admins redirects unauthenticated users (1.3s)
+  ✓   89 [chromium] › e2e/requirements-verification.spec.ts:721:7 › Section 22: Security Headers › API endpoints include security headers (194ms)
+  ✓   78 [chromium] › e2e/requirements-verification.spec.ts:593:9 › Section 19: Settings & Configuration › /dashboard/settings/data-requests redirects unauthenticated users (1.3s)
+  ✓   92 [chromium] › e2e/requirements-verification.spec.ts:750:7 › Section 22: CORS › API handles preflight OPTIONS requests (25ms)
+  ✓   91 [chromium] › e2e/requirements-verification.spec.ts:733:7 › Section 22: Rate Limiting › API endpoints enforce rate limiting headers (77ms)
+  ✓   84 [chromium] › e2e/requirements-verification.spec.ts:706:7 › Section 22: Security Headers › returns X-Frame-Options DENY (499ms)
+  ✓   90 [chromium] › e2e/requirements-verification.spec.ts:648:9 › Section 20: Public REST API › GET /api/public/orders/summary rejects unauthenticated requests (scope: orders:read) (155ms)
+  ✓   86 [chromium] › e2e/requirements-verification.spec.ts:711:7 › Section 22: Security Headers › returns X-Content-Type-Options nosniff (484ms)
+  ✓   77 [chromium] › e2e/requirements-verification.spec.ts:593:9 › Section 19: Settings & Configuration › /dashboard/settings/api-keys redirects unauthenticated users (1.4s)
+  ✓   97 [chromium] › e2e/requirements-verification.spec.ts:648:9 › Section 20: Public REST API › GET /api/public/inventory rejects unauthenticated requests (scope: inventory:read) (211ms)
+  ✓   88 [chromium] › e2e/requirements-verification.spec.ts:716:7 › Section 22: Security Headers › returns Referrer-Policy header (558ms)
+  ✓   98 [chromium] › e2e/requirements-verification.spec.ts:804:7 › Section 25: Deployment › health endpoint confirms service is healthy (247ms)
+  ✓  100 [chromium] › e2e/requirements-verification.spec.ts:648:9 › Section 20: Public REST API › GET /api/public/inventory/alerts rejects unauthenticated requests (scope: inventory:read) (154ms)
+  ✓  103 [chromium] › e2e/requirements-verification.spec.ts:648:9 › Section 20: Public REST API › GET /api/public/inventory/summary rejects unauthenticated requests (scope: inventory:read) (141ms)
+  ✓  104 [chromium] › e2e/requirements-verification.spec.ts:648:9 › Section 20: Public REST API › GET /api/public/customers rejects unauthenticated requests (scope: customers:read) (183ms)
+  ✓  105 [chromium] › e2e/requirements-verification.spec.ts:648:9 › Section 20: Public REST API › GET /api/public/customers/summary rejects unauthenticated requests (scope: customers:read) (1.0s)
+  ✓  106 [chromium] › e2e/requirements-verification.spec.ts:648:9 › Section 20: Public REST API › GET /api/public/tabs rejects unauthenticated requests (scope: tabs:read) (398ms)
+  ✓   93 [chromium] › e2e/requirements-verification.spec.ts:763:7 › Section 23: Audit Logs › audit logs page redirects unauthenticated users (2.2s)
+  ✓  107 [chromium] › e2e/requirements-verification.spec.ts:648:9 › Section 20: Public REST API › GET /api/public/tabs/summary rejects unauthenticated requests (scope: tabs:read) (131ms)
+  ✓   99 [chromium] › e2e/requirements-verification.spec.ts:799:7 › Section 25: Deployment › application is running and serves pages (2.3s)
+  ✓   96 [chromium] › e2e/requirements-verification.spec.ts:788:7 › Section 24: Data Management & Privacy › data requests admin page redirects unauthenticated users (2.4s)
+  ✓   95 [chromium] › e2e/requirements-verification.spec.ts:774:7 › Section 24: Data Management & Privacy › privacy page is publicly accessible and contains privacy content (2.4s)
+  ✓  101 [chromium] › e2e/requirements-verification.spec.ts:819:7 › Section 27: Non-Functional Requirements › home page has Open Graph metadata (2.2s)
+  ✓  109 [chromium] › e2e/requirements-verification.spec.ts:648:9 › Section 20: Public REST API › GET /api/public/settings rejects unauthenticated requests (scope: settings:read) (202ms)
+  ✓  114 [chromium] › e2e/requirements-verification.spec.ts:648:9 › Section 20: Public REST API › GET /api/public/rewards rejects unauthenticated requests (scope: rewards:read) (152ms)
+  ✓  115 [chromium] › e2e/requirements-verification.spec.ts:648:9 › Section 20: Public REST API › GET /api/public/sales/summary rejects unauthenticated requests (scope: analytics:read) (50ms)
+  ✓  116 [chromium] › e2e/requirements-verification.spec.ts:656:7 › Section 20: Public REST API › POST /api/public/orders rejects unauthenticated requests (64ms)
+  ✓  117 [chromium] › e2e/requirements-verification.spec.ts:661:7 › Section 20: Public REST API › POST /api/public/payments rejects unauthenticated requests (91ms)
+  ✓  118 [chromium] › e2e/requirements-verification.spec.ts:666:7 › Section 20: Public REST API › POST /api/public/rewards/redeem rejects unauthenticated requests (97ms)
+  ✓   94 [chromium] › e2e/requirements-verification.spec.ts:781:7 › Section 24: Data Management & Privacy › data deletion page is publicly accessible (3.1s)
+  ✓  119 [chromium] › e2e/requirements-verification.spec.ts:671:7 › Section 20: Public REST API › API returns JSON with standard response format (54ms)
+  ✓  108 [chromium] › e2e/requirements-verification.spec.ts:837:7 › Section 27: Non-Functional Requirements › checkout page has descriptive metadata (988ms)
+  ✓  110 [chromium] › e2e/requirements-verification.spec.ts:843:7 › Section 27: Non-Functional Requirements › login page has descriptive metadata (906ms)
+[2m[WebServer] [22m[31m[1m⨯[22m[39m Error: aborted
+[2m[WebServer] [22m    at [3mignore-listed frames[23m {
+[2m[WebServer] [22m  code: [32m'ECONNRESET'[39m
+[2m[WebServer] [22m}
+  ✓  111 [chromium] › e2e/requirements-verification.spec.ts:854:7 › Section 27: Accessibility › home page has semantic h1 heading (1.0s)
+  ✓  112 [chromium] › e2e/requirements-verification.spec.ts:861:7 › Section 27: Accessibility › home page logo has alt text (1.0s)
+  ✓  102 [chromium] › e2e/requirements-verification.spec.ts:827:7 › Section 27: Non-Functional Requirements › menu page has descriptive metadata (3.1s)
+  ✓  113 [chromium] › e2e/requirements-verification.spec.ts:869:7 › Section 27: Accessibility › login page uses sr-only text for branding (1.0s)
+  ✓  120 [chromium] › e2e/requirements-verification.spec.ts:876:7 › Section 27: Accessibility › form inputs have associated labels on login page (2.1s)
+  ✓  121 [chromium] › e2e/requirements-verification.spec.ts:898:9 › Section 27: Mobile-First Responsive › home page renders on iPhone SE (375x667) (2.3s)
+  ✓  122 [chromium] › e2e/requirements-verification.spec.ts:898:9 › Section 27: Mobile-First Responsive › home page renders on iPhone 12 (390x844) (2.5s)
+  ✓  123 [chromium] › e2e/requirements-verification.spec.ts:898:9 › Section 27: Mobile-First Responsive › home page renders on iPad (768x1024) (2.5s)
+  ✓  124 [chromium] › e2e/requirements-verification.spec.ts:898:9 › Section 27: Mobile-First Responsive › home page renders on Desktop (1440x900) (3.2s)
+  ✓  129 [chromium] › e2e/requirements-verification.spec.ts:920:7 › Section 8: Tab System › customer tabs page requires authentication (2.2s)
+  ✓  130 [chromium] › e2e/requirements-verification.spec.ts:926:7 › Section 8: Tab System › admin tabs management requires authentication (2.0s)
+  ✓  131 [chromium] › e2e/requirements-verification.spec.ts:937:7 › Section 12: Order Management › admin orders page redirects unauthenticated users (1.9s)
+  ✓  132 [chromium] › e2e/requirements-verification.spec.ts:943:7 › Section 12: Order Management › admin order tabs page redirects unauthenticated users (1.2s)
+  ✓  135 [chromium] › e2e/requirements-verification.spec.ts:972:7 › Section 2: Technical Stack › pages are server-rendered (not empty on initial load) (402ms)
+  ✓  125 [chromium] › e2e/requirements-verification.spec.ts:907:9 › Section 27: Mobile-First Responsive › menu page renders on iPhone SE (375x667) (4.7s)
+  ✓  126 [chromium] › e2e/requirements-verification.spec.ts:907:9 › Section 27: Mobile-First Responsive › menu page renders on iPhone 12 (390x844) (4.7s)
+  ✓  139 [chromium] › e2e/requirements-verification.spec.ts:1023:7 › Section 21: Real-Time (Socket.IO) › Socket.IO endpoint is available (24ms)
+  ✓  127 [chromium] › e2e/requirements-verification.spec.ts:907:9 › Section 27: Mobile-First Responsive › menu page renders on iPad (768x1024) (4.8s)
+  ✓  128 [chromium] › e2e/requirements-verification.spec.ts:907:9 › Section 27: Mobile-First Responsive › menu page renders on Desktop (1440x900) (3.1s)
+  ✓  136 [chromium] › e2e/requirements-verification.spec.ts:982:7 › Section 2: Technical Stack › application uses Next.js framework (566ms)
+  ✓  134 [chromium] › e2e/requirements-verification.spec.ts:961:7 › Section 4: Unauthorized & Forbidden Pages › dashboard forbidden page redirects unauthenticated users (707ms)
+  ✓  133 [chromium] › e2e/requirements-verification.spec.ts:954:7 › Section 4: Unauthorized & Forbidden Pages › unauthorized page is accessible (1.1s)
+  ✓  145 [chromium] › e2e/requirements-verification.spec.ts:1089:7 › Cross-Cutting: Error Handling › invalid API route returns error (not 200) (123ms)
+  ✓  137 [chromium] › e2e/requirements-verification.spec.ts:1001:7 › Section 7: Ordering System › home page advertises all order types (dine-in, pickup, delivery) (931ms)
+  ✓  140 [chromium] › e2e/requirements-verification.spec.ts:1035:7 › Section 4: Session Security › session cookie is httpOnly (908ms)
+  ✓  144 [chromium] › e2e/requirements-verification.spec.ts:1084:7 › Cross-Cutting: Error Handling › 404 page is handled gracefully (837ms)
+  ✓  143 [chromium] › e2e/requirements-verification.spec.ts:1070:7 › Cross-Cutting: Navigation Flows › admin login page is accessible and distinct from customer login (899ms)
+  ✓  142 [chromium] › e2e/requirements-verification.spec.ts:1063:7 › Cross-Cutting: Navigation Flows › rewards page links to login for authentication (1.8s)
+  ✓  141 [chromium] › e2e/requirements-verification.spec.ts:1053:7 › Cross-Cutting: Navigation Flows › home → menu → checkout flow (2.2s)
+[2m[WebServer] [22mError: aborted
+[2m[WebServer] [22m    at [3mignore-listed frames[23m {
+[2m[WebServer] [22m  code: [32m'ECONNRESET'[39m
+[2m[WebServer] [22m}
+[2m[WebServer] [22m[31m[1m⨯[22m[39m uncaughtException: Error: aborted
+[2m[WebServer] [22m    at [3mignore-listed frames[23m {
+[2m[WebServer] [22m  code: [32m'ECONNRESET'[39m
+[2m[WebServer] [22m}
+[2m[WebServer] [22m[31m[1m⨯[22m[39m uncaughtException:  Error: aborted
+[2m[WebServer] [22m    at [3mignore-listed frames[23m {
+[2m[WebServer] [22m  code: [32m'ECONNRESET'[39m
+[2m[WebServer] [22m}
+  ✓  138 [chromium] › e2e/requirements-verification.spec.ts:1009:7 › Section 7: Ordering System › checkout form includes order type selection (2.6s)
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: ⚙️  enable debug logging with { debug: true }
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: 🔑 add access controls to secrets: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: ⚙️  override existing env vars with { override: true }
+  -  146 [authenticated] › e2e/authenticated.spec.ts:122:3 › Section 12: Order Management › orders dashboard loads with title and controls
+  -  150 [authenticated] › e2e/authenticated.spec.ts:101:3 › Section 11: Dashboard Overview › dashboard shows recent orders section
+  -  148 [authenticated] › e2e/authenticated.spec.ts:130:3 › Section 12: Order Management › orders page shows Tabs Display link
+  -  147 [authenticated] › e2e/authenticated.spec.ts:92:3 › Section 11: Dashboard Overview › dashboard shows quick stats cards
+  -  152 [authenticated] › e2e/authenticated.spec.ts:68:3 › Section 4: Super-Admin Session › super-admin can access dashboard overview
+  -  151 [authenticated] › e2e/authenticated.spec.ts:109:3 › Section 11: Dashboard RBAC — Admin Redirect › regular admin is redirected from /dashboard to /dashboard/orders
+  -  153 [authenticated] › e2e/authenticated.spec.ts:60:3 › Section 4: Admin Session › admin can access dashboard without redirect
+  -  149 [authenticated] › e2e/authenticated.spec.ts:81:3 › Section 11: Dashboard Overview › super-admin can access dashboard overview
+  -  154 [authenticated] › e2e/authenticated.spec.ts:136:3 › Section 12: Order Management › orders page shows Kitchen Display link
+  -  155 [authenticated] › e2e/authenticated.spec.ts:142:3 › Section 12: Order Management › orders page shows Quick Actions section
+  -  156 [authenticated] › e2e/authenticated.spec.ts:155:3 › Section 12: Order Management — Super-Admin Extras › super-admin sees Analytics card on orders page
+  -  157 [authenticated] › e2e/authenticated.spec.ts:168:3 › Section 8: Tab Management › tabs page loads for authenticated admin
+  -  159 [authenticated] › e2e/authenticated.spec.ts:190:3 › Section 13: Menu Management › new menu item page loads with form
+  -  158 [authenticated] › e2e/authenticated.spec.ts:182:3 › Section 13: Menu Management › menu management page loads with items
+  -  160 [authenticated] › e2e/authenticated.spec.ts:204:3 › Section 14: Inventory Management › inventory page loads
+  -  161 [authenticated] › e2e/authenticated.spec.ts:212:3 › Section 14: Inventory Management › inventory snapshots page loads
+  -  162 [authenticated] › e2e/authenticated.spec.ts:218:3 › Section 14: Inventory Management › inventory transfer page loads
+  -  163 [authenticated] › e2e/authenticated.spec.ts:229:3 › Section 15: Financial Management › expenses page loads
+  -  164 [authenticated] › e2e/authenticated.spec.ts:242:3 › Section 16: Reports & Analytics › reports page loads
+  -  165 [authenticated] › e2e/authenticated.spec.ts:250:3 › Section 16: Reports & Analytics › daily report page loads
+  -  167 [authenticated] › e2e/authenticated.spec.ts:262:3 › Section 16: Reports & Analytics › profitability report page loads
+  -  166 [authenticated] › e2e/authenticated.spec.ts:256:3 › Section 16: Reports & Analytics › inventory report page loads
+  -  168 [authenticated] › e2e/authenticated.spec.ts:268:3 › Section 16: Reports & Analytics › profitability analytics page loads
+  -  169 [authenticated] › e2e/authenticated.spec.ts:279:3 › Section 17: Kitchen Display System › kitchen display loads with dark theme
+  -  170 [authenticated] › e2e/authenticated.spec.ts:289:3 › Section 17: Kitchen Display System › kitchen display shows active order count
+  -  171 [authenticated] › e2e/authenticated.spec.ts:296:3 › Section 17: Kitchen Display System › kitchen display has back button to orders
+  -  172 [authenticated] › e2e/authenticated.spec.ts:307:3 › Section 18: Rewards Configuration › rewards dashboard loads
+  -  173 [authenticated] › e2e/authenticated.spec.ts:315:3 › Section 18: Rewards Configuration › reward rules page loads
+  -  174 [authenticated] › e2e/authenticated.spec.ts:321:3 › Section 18: Rewards Configuration › issued rewards page loads
+  -  175 [authenticated] › e2e/authenticated.spec.ts:327:3 › Section 18: Rewards Configuration › reward templates page loads
+  -  176 [authenticated] › e2e/authenticated.spec.ts:338:3 › Section 19: Settings & Configuration › settings page loads with configuration sections
+  -  177 [authenticated] › e2e/authenticated.spec.ts:346:3 › Section 19: Settings & Configuration › admin management page loads
+  -  178 [authenticated] › e2e/authenticated.spec.ts:354:3 › Section 19: Settings & Configuration › API keys management page loads
+  -  179 [authenticated] › e2e/authenticated.spec.ts:362:3 › Section 19: Settings & Configuration › data requests page loads
+  -  180 [authenticated] › e2e/authenticated.spec.ts:373:3 › Section 23: Audit Logs › audit logs page loads
+  -  181 [authenticated] › e2e/authenticated.spec.ts:386:3 › Section 11: Dashboard Navigation › dashboard sidebar shows navigation links
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: ⚙️  suppress all logs with { quiet: true }
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: ⚙️  write to custom object with { processEnv: myObject }
+  -  182 [authenticated] › e2e/authenticated.spec.ts:396:3 › Section 11: Dashboard Navigation › dashboard has header with "Dashboard" title
+  -  183 [authenticated] › e2e/authenticated.spec.ts:407:3 › Section 11: Customers Management › customers page loads
+  -  184 [authenticated] › e2e/authenticated.spec.ts:420:3 › Section 4: Admin Logout › logout endpoint returns success
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: 🔐 encrypt with Dotenvx: https://dotenvx.com
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+  -  185 [csr-uat] › e2e/csr-uat.spec.ts:52:3 › UAT: CSR Login & Redirect › CSR is redirected from /dashboard to /dashboard/orders
+  -  186 [csr-uat] › e2e/csr-uat.spec.ts:58:3 › UAT: CSR Login & Redirect › CSR can access orders dashboard
+  -  187 [csr-uat] › e2e/csr-uat.spec.ts:70:3 › UAT: CSR Navigation — Permitted Items › CSR sidebar shows Orders link
+  -  189 [csr-uat] › e2e/csr-uat.spec.ts:83:3 › UAT: CSR Navigation — Permitted Items › CSR sidebar shows Rewards link
+  -  188 [csr-uat] › e2e/csr-uat.spec.ts:77:3 › UAT: CSR Navigation — Permitted Items › CSR sidebar shows Customers link
+  -  193 [csr-uat] › e2e/csr-uat.spec.ts:116:3 › UAT: CSR Navigation — Restricted Items Hidden › CSR sidebar does NOT show Inventory link
+  -  190 [csr-uat] › e2e/csr-uat.spec.ts:89:3 › UAT: CSR Navigation — Permitted Items › CSR sidebar shows CSR badge
+  -  191 [csr-uat] › e2e/csr-uat.spec.ts:100:3 › UAT: CSR Navigation — Restricted Items Hidden › CSR sidebar does NOT show Overview link
+  -  192 [csr-uat] › e2e/csr-uat.spec.ts:109:3 › UAT: CSR Navigation — Restricted Items Hidden › CSR sidebar does NOT show Menu link
+  -  194 [csr-uat] › e2e/csr-uat.spec.ts:123:3 › UAT: CSR Navigation — Restricted Items Hidden › CSR sidebar does NOT show Settings link
+  -  195 [csr-uat] › e2e/csr-uat.spec.ts:130:3 › UAT: CSR Navigation — Restricted Items Hidden › CSR sidebar does NOT show Reports link
+  -  197 [csr-uat] › e2e/csr-uat.spec.ts:144:3 › UAT: CSR Navigation — Restricted Items Hidden › CSR sidebar does NOT show Expenses link
+  -  196 [csr-uat] › e2e/csr-uat.spec.ts:137:3 › UAT: CSR Navigation — Restricted Items Hidden › CSR sidebar does NOT show Audit Logs link
+  -  198 [csr-uat] › e2e/csr-uat.spec.ts:156:3 › UAT: CSR Access — Permitted Pages › CSR can access customers page
+  -  199 [csr-uat] › e2e/csr-uat.spec.ts:164:3 › UAT: CSR Access — Permitted Pages › CSR can access rewards page
+  -  200 [csr-uat] › e2e/csr-uat.spec.ts:172:3 › UAT: CSR Access — Permitted Pages › CSR can access tabs page
+  -  201 [csr-uat] › e2e/csr-uat.spec.ts:185:3 › UAT: CSR Access — Restricted Pages › CSR cannot access settings page
+  -  202 [csr-uat] › e2e/csr-uat.spec.ts:192:3 › UAT: CSR Access — Restricted Pages › CSR cannot access menu management
+  -  203 [csr-uat] › e2e/csr-uat.spec.ts:198:3 › UAT: CSR Access — Restricted Pages › CSR cannot access inventory page
+  -  204 [csr-uat] › e2e/csr-uat.spec.ts:204:3 › UAT: CSR Access — Restricted Pages › CSR cannot access audit logs
+  -  205 [csr-uat] › e2e/csr-uat.spec.ts:210:3 › UAT: CSR Access — Restricted Pages › CSR cannot access reports
+  -  206 [csr-uat] › e2e/csr-uat.spec.ts:216:3 › UAT: CSR Access — Restricted Pages › CSR cannot access expenses
+  -  207 [csr-uat] › e2e/csr-uat.spec.ts:227:3 › UAT: Admin List — CSR Role Visible › admin management page shows CSR user
+  -  208 [csr-uat] › e2e/csr-uat.spec.ts:234:3 › UAT: Admin List — CSR Role Visible › admin list CSR role filter works
+  -  209 [csr-uat] › e2e/csr-uat.spec.ts:247:3 › UAT: Admin List — CSR Role Visible › create admin dialog shows CSR role option
+
+  64 skipped
+  145 passed (52.9s)

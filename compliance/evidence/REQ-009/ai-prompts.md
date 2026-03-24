@@ -13,4 +13,4 @@ Regenerated: No
 ---
 
 ## TODO (post-delivery)
-- [ ] Add "implementation plan review" as a formal step in the SDLC workflow (between planning and implementation) — the step where the developer and AI align on file structure, component architecture, and approach before code is written. Currently this happens informally but should be documented in `SDLC/2-implement-and-test.md` as a recommended practice.
+- [x] ~~Add "implementation plan review" as a formal step in the SDLC workflow~~ — Done. Added as Step 2 in `SDLC/2-implement-and-test.md` for MEDIUM/HIGH risk. Document stored at `compliance/evidence/REQ-XXX/implementation-plan.md`.

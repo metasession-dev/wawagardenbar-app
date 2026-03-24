@@ -238,13 +238,15 @@ Run through the complete pipeline once with a small test change:
 | UAT environment configured (auto-deploy from `develop`) | [x] |
 | Production MongoDB populated from backup | [x] |
 | UAT MongoDB populated from backup | [x] |
-| Compliance directories created | [x] Partially — needs periodic subdirs |
+| Compliance directories created | [x] Complete — including periodic evidence subdirs |
 | RTM initialized | [x] REQ-001 through REQ-008 |
 | CI workflow files created | [x] test-on-pr.yml + build-and-publish.yml |
 | CI: SAST + dep audit jobs added to test-on-pr.yml | [x] Added typecheck, sast, dependency-audit, e2e-tests jobs |
 | **Branch protection configured on `main`** | **[ ] REQUIRED — not yet configured** |
 | **Required status checks added to branch protection** | **[ ] REQUIRED — depends on CI jobs** |
-| Local tooling installed (Semgrep, Playwright) | [x] Semgrep 1.155.0, Playwright installed |
+| Local tooling installed (Semgrep, Playwright, Husky, Commitlint) | [x] Semgrep 1.155.0, Playwright, Husky + commitlint installed |
+| CLAUDE.md with SDLC enforcement rules | [x] AI assistant enforces SDLC process |
+| META-COMPLY evidence upload in CI | [x] upload-evidence job in test-on-pr.yml |
 | Project Test Plan created | [x] |
 | End-to-end pipeline verified with test change | [x] PR #1 — all 4 CI gates passed, merged, deployed |
 

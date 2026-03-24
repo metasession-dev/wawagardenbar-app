@@ -20,7 +20,16 @@ description: Define a new requirement in the RTM, classify risk, generate test s
 
 ## Steps
 
-### Step 1: Determine the Next Requirement ID
+### Step 1: Identify the GitHub Issue
+
+Every tracked change starts from a GitHub Issue. The issue provides the *what* and *why*; the RTM provides the compliance audit trail.
+
+- If the user references an issue number (e.g., `#123`): fetch its title, description, and labels using `gh issue view 123`.
+- If the user describes work without an issue: ask **"Is there a GitHub Issue for this, or should we create one?"**
+  - To create one: `gh issue create --title "[title]" --body "[description]" --label "[labels]"`
+- Use issue labels to inform risk classification in Step 3 (e.g., `security`, `user-facing`, `internal`).
+
+### Step 2: Determine the Next Requirement ID
 
 ```bash
 grep -oP 'REQ-\d+' compliance/RTM.md | sort -t- -k2 -n | tail -1
@@ -28,7 +37,7 @@ grep -oP 'REQ-\d+' compliance/RTM.md | sort -t- -k2 -n | tail -1
 
 The next ID is one higher (e.g., if the last is REQ-008, use REQ-009).
 
-### Step 2: Classify Risk Level
+### Step 3: Classify Risk Level
 
 | Risk Level | Criteria | Wawa Garden Bar Examples |
 |---|---|---|
@@ -38,21 +47,23 @@ The next ID is one higher (e.g., if the last is REQ-008, use REQ-009).
 
 AI involvement raises risk by one level when touching Medium or High categories. See Test Policy for the full risk matrix.
 
-### Step 3: Add Entry to RTM
+### Step 4: Add Entry to RTM
 
-Open `compliance/RTM.md`, Part B:
+Open `compliance/RTM.md`, Part B. The issue provides full context; the RTM is a traceability index, not a content store.
 
 ```markdown
-| REQ-XXX | [Brief description] | [LOW/MEDIUM/HIGH] | TBD | TBD | DRAFT | -- | -- |
+| REQ-XXX | #NNN | [LOW/MEDIUM/HIGH] | compliance/evidence/REQ-XXX/ | DRAFT | -- | -- |
 ```
 
-### Step 4: Create Evidence Directory
+The auditor reads one row and follows the links: Issue for context and rationale, evidence directory for test artifacts, PR for code changes.
+
+### Step 5: Create Evidence Directory
 
 ```bash
 mkdir -p compliance/evidence/REQ-XXX
 ```
 
-### Step 5: Generate Test Scope
+### Step 6: Generate Test Scope
 
 Create a test scope document proportional to the assessed risk level. This must exist **before implementation begins**.
 
@@ -64,6 +75,7 @@ cat > compliance/evidence/REQ-XXX/test-scope.md << 'EOF'
 
 **Risk Level:** LOW
 **Requirement:** [Brief description]
+**GitHub Issue:** #NNN
 **Date:** [YYYY-MM-DD]
 
 ## Test Approach
@@ -92,6 +104,7 @@ cat > compliance/evidence/REQ-XXX/test-scope.md << 'EOF'
 
 **Risk Level:** MEDIUM
 **Requirement:** [Brief description]
+**GitHub Issue:** #NNN
 **Date:** [YYYY-MM-DD]
 
 ## Test Approach
@@ -132,6 +145,7 @@ cat > compliance/evidence/REQ-XXX/test-scope.md << 'EOF'
 
 **Risk Level:** HIGH
 **Requirement:** [Brief description]
+**GitHub Issue:** #NNN
 **Date:** [YYYY-MM-DD]
 
 ## Test Approach
@@ -180,11 +194,11 @@ Full verification and validation per Test Strategy high-risk requirements.
 EOF
 ```
 
-### Step 6: Update Requirements Document (If Applicable)
+### Step 7: Update Requirements Document (If Applicable)
 
 If the requirement modifies a documented feature, update `docs/REQUIREMENTS.md` to reflect the intended change.
 
-### Step 7: Document AI Use Intent (If Applicable)
+### Step 8: Document AI Use Intent (If Applicable)
 
 If AI will generate code (Medium/High risk):
 
@@ -200,16 +214,20 @@ EOF
 
 For Low risk, the `Co-Authored-By` commit tag is sufficient.
 
-### Step 8: Commit
+### Step 9: Commit
 
 ```bash
 git add compliance/RTM.md compliance/evidence/REQ-XXX docs/REQUIREMENTS.md
-git commit -m "compliance: [REQ-XXX] define requirement and test scope - [description] [RISK: LOW/MEDIUM/HIGH]"
+git commit -m "compliance: [REQ-XXX] define requirement and test scope - [description] [RISK: LOW/MEDIUM/HIGH]
+
+Ref: REQ-XXX
+Closes: #NNN"
 ```
 
 ## Output
 
-- REQ-XXX in RTM with `DRAFT` and risk classification
+- GitHub Issue `#NNN` identified or created as the origin of the change
+- REQ-XXX in RTM with `DRAFT`, risk classification, and issue reference
 - Evidence directory with test scope (exists before implementation)
 - AI use note (if applicable)
 

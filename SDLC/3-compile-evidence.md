@@ -40,33 +40,50 @@ git diff --name-only origin/main...HEAD -- '*.ts' '*.tsx' | head -20
 
 Each modified file should have `@requirement REQ-XXX` header.
 
-### Step 3: Save Test Evidence
+### Step 3: Upload Test Evidence to META-COMPLY
+
+Upload evidence to META-COMPLY so reviewers can access full test results (Playwright reports, SAST scans, dependency audits) without needing GitHub Checks tab access. This is the primary way reviewers verify test evidence.
 
 ```bash
-ls -la compliance/evidence/REQ-XXX/
+# Ensure META-COMPLY environment variables are set
+# SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY
 
-# Copy E2E results
-cp playwright-report/results.json compliance/evidence/REQ-XXX/e2e-results.json 2>/dev/null || true
+# Upload E2E results
+./scripts/upload-evidence.sh wawagardenbar-app REQ-XXX e2e_result playwright-report/ \
+  --git-sha "$(git rev-parse HEAD)" \
+  --branch "$(git branch --show-current)"
+
+# Upload unit test results (if applicable)
+npx vitest run --reporter=verbose 2>&1 | tee /tmp/unit-test-results.txt
+./scripts/upload-evidence.sh wawagardenbar-app REQ-XXX test_report /tmp/unit-test-results.txt \
+  --git-sha "$(git rev-parse HEAD)"
 ```
 
-For unit tests:
+**Do NOT commit JSON/binary evidence to git.** It goes to META-COMPLY only.
+
+### Step 4: Upload Security Evidence to META-COMPLY
+
 ```bash
-npx vitest run --reporter=verbose 2>&1 | tee compliance/evidence/REQ-XXX/unit-test-results.txt
+# Generate and upload SAST results
+semgrep scan --config auto app/ lib/ services/ models/ --json > /tmp/sast-results.json 2>&1
+./scripts/upload-evidence.sh wawagardenbar-app REQ-XXX audit_log /tmp/sast-results.json \
+  --git-sha "$(git rev-parse HEAD)"
+
+# Generate and upload dependency audit
+npm audit --json > /tmp/dependency-audit.json 2>&1
+./scripts/upload-evidence.sh wawagardenbar-app REQ-XXX audit_log /tmp/dependency-audit.json \
+  --git-sha "$(git rev-parse HEAD)"
 ```
 
-### Step 4: Save Security Evidence
-
+Create a security summary (keep in git — this is a compliance document, not binary evidence):
 ```bash
-semgrep scan --config auto app/ lib/ services/ models/ --json > compliance/evidence/REQ-XXX/sast-results.json 2>&1
-npm audit --json > compliance/evidence/REQ-XXX/dependency-audit.json 2>&1
-
 cat > compliance/evidence/REQ-XXX/security-summary.md << EOF
 ## Security Evidence Summary — REQ-XXX
 **Date:** $(date -I)
 **SAST Tool:** Semgrep (auto config)
 **SAST High/Critical Findings:** 0
 **Dependency Audit High/Critical:** 0
-See sast-results.json and dependency-audit.json for full details.
+Evidence uploaded to META-COMPLY project: wawagardenbar-app
 EOF
 ```
 
@@ -87,7 +104,7 @@ cat > compliance/evidence/REQ-XXX/ai-use-note.md << 'EOF'
 EOF
 ```
 
-### Step 6: Verify Test Scope Addressed
+### Step 6: Verify Test Scope and Implementation Plan
 
 Review `compliance/evidence/REQ-XXX/test-scope.md` (created during PLAN stage). Confirm all testing items have been addressed:
 
@@ -95,6 +112,14 @@ Review `compliance/evidence/REQ-XXX/test-scope.md` (created during PLAN stage). 
 cat compliance/evidence/REQ-XXX/test-scope.md
 # Check: are all [ ] items now [x]?
 # If not, complete the outstanding items before proceeding
+```
+
+For MEDIUM/HIGH risk, verify the implementation plan exists and matches what was built:
+
+```bash
+cat compliance/evidence/REQ-XXX/implementation-plan.md
+# Check: does the plan match the actual implementation?
+# If the approach changed during development, update the plan to reflect what was actually built.
 ```
 
 ### Step 7: Update RTM
@@ -185,6 +210,7 @@ Create `compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md`:
 | [date] | Implementation completed | [who] | [details] |
 | [date] | AI code reviewed | [reviewer] | [files] |
 | [date] | Tests passed | [who] | E2E + SAST: clean |
+| [date] | UAT verification passed | [who] | Health + smoke + feature verified |
 | [date] | Submitted for review | [who] | PR #[number] |
 ```
 
@@ -196,12 +222,63 @@ git commit -m "compliance: [REQ-XXX] evidence compiled - awaiting review"
 git push origin develop
 ```
 
+### Step 10: UAT Verification (MANDATORY)
+
+Pushing to `develop` triggers an auto-deploy to UAT (Railway). **Wait for the deployment to complete**, then verify the change works in the UAT environment before creating a PR.
+
+#### 10a. Wait for UAT deployment
+
+Monitor in Railway dashboard or wait ~2-3 minutes for the build to complete.
+
+#### 10b. Health check
+
+```bash
+curl -s https://wawagardenbar-app-uat.up.railway.app/api/health
+# Expected: {"status":"ok", ...}
+```
+
+#### 10c. Smoke test
+
+```bash
+# Homepage loads
+curl -s -o /dev/null -w "%{http_code}" https://wawagardenbar-app-uat.up.railway.app/
+# Expected: 200
+
+# Public menu endpoint
+curl -s -o /dev/null -w "%{http_code}" https://wawagardenbar-app-uat.up.railway.app/api/public/menu
+# Expected: 401 (requires API key)
+```
+
+#### 10d. Feature-specific verification
+
+Manually verify the specific feature or fix you implemented works on UAT. This catches environment-specific issues (env vars, database differences, Railway build behavior) that local testing cannot.
+
+#### 10e. Record UAT results
+
+```bash
+cat >> compliance/evidence/REQ-XXX/security-summary.md << EOF
+
+## UAT Verification — $(date -I)
+- UAT Health check: PASS
+- UAT Smoke test: PASS
+- Feature verification: PASS — [brief description of what was verified]
+- UAT URL: https://wawagardenbar-app-uat.up.railway.app
+EOF
+
+git add compliance/evidence/REQ-XXX/security-summary.md
+git commit -m "compliance: [REQ-XXX] UAT verification passed"
+git push origin develop
+```
+
+**If UAT verification fails:** Fix the issue on `develop`, re-run local gates, push again, and repeat UAT verification. Do NOT proceed to creating a PR until UAT is green.
+
 ## Output
 
 - RTM: `TESTED - PENDING SIGN-OFF`
 - Release ticket in `compliance/pending-releases/`
 - Test + security + AI evidence in `compliance/evidence/REQ-XXX/`
 - Test scope fully addressed
+- UAT verification passed and recorded
 
 ## Next Step
 

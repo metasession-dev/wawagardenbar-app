@@ -31,7 +31,64 @@ git branch --show-current
 
 If not: `git checkout develop && git pull origin develop`
 
-### Step 2: Implement the Change
+### Step 2: Implementation Plan (MEDIUM/HIGH Risk — Required)
+
+For MEDIUM and HIGH risk requirements, create an implementation plan before writing code. This documents the design decisions, file structure, and approach — evidence that architecture was deliberate, not accidental.
+
+**Skip this step** for LOW risk requirements — proceed directly to Step 3.
+
+**2a. Explore the codebase:**
+- Understand existing patterns, models, services, and API routes relevant to the change
+- Identify files that will be created, modified, or affected
+
+**2b. Create the implementation plan:**
+
+Create `compliance/evidence/REQ-XXX/implementation-plan.md`:
+
+```markdown
+# Implementation Plan — REQ-XXX
+
+**Requirement:** REQ-XXX
+**GitHub Issue:** #NNN
+**Risk Level:** [MEDIUM / HIGH]
+**Date:** [YYYY-MM-DD]
+
+## Approach
+[1-3 sentences describing the overall approach]
+
+## Files to Create
+- `path/to/new-file.ts` — [purpose]
+
+## Files to Modify
+- `path/to/existing-file.ts` — [what changes and why]
+
+## Architecture Decisions
+- [Key decision 1 and rationale]
+- [Key decision 2 and rationale]
+
+## Dependencies
+- [New packages needed, or "None"]
+
+## Risks / Considerations
+- [Anything that could go wrong or needs special attention]
+```
+
+**2c. Review with the developer:**
+
+The developer confirms the plan before implementation begins. For HIGH risk, this review is especially important — it's cheaper to change the plan than to refactor the code.
+
+**2d. Commit the plan:**
+
+```bash
+git add compliance/evidence/REQ-XXX/implementation-plan.md
+git commit -m "chore(compliance): [REQ-XXX] implementation plan
+
+Ref: REQ-XXX
+
+Co-Authored-By: [AI tool tag]"
+```
+
+### Step 3: Implement the Change
 
 Write your code. For tracked requirements, add JSDoc headers:
 
@@ -57,7 +114,42 @@ echo "REGENERATION: [component] regenerated on $(date -I). Full retest required.
 
 Per Test Strategy: regeneration triggers full retest.
 
-### Step 3: Stage Selectively
+### Step 4: Review and Update Tests
+
+Before staging, review the test suite to ensure it covers the changes made:
+
+**4a. Check if existing tests need updating:**
+```bash
+# List test files that may be affected by your changes
+git diff --name-only | grep -iE 'spec|test|e2e'
+
+# Check for hardcoded values, route lists, or assertions that reference changed areas
+# Example: if you added new routes, check protected route arrays
+grep -rn 'protectedRoutes\|const routes' e2e/ __tests__/ --include='*.ts' --include='*.tsx'
+```
+
+**4b. Update existing tests if needed:**
+- New routes added? → Add them to route protection test arrays
+- API response shape changed? → Update assertions
+- UI components changed? → Update selectors and expected content
+- Business logic changed? → Update unit test expectations
+
+**4c. Write new tests for new functionality:**
+- New pages → route protection tests (unauthenticated redirect)
+- New API endpoints → auth enforcement tests, response format tests
+- New user flows → E2E tests for critical paths
+- New business logic → unit tests
+
+**4d. Verify test scope alignment:**
+```bash
+cat compliance/evidence/REQ-XXX/test-scope.md
+# Check: does the test scope list testing items that aren't yet covered?
+# If so, write the tests now before proceeding.
+```
+
+The goal is that gates (Step 7) run against a test suite that actually covers the changes, not just the pre-existing code.
+
+### Step 5: Stage Selectively
 
 ```bash
 git diff --name-only
@@ -68,7 +160,7 @@ git diff --cached --name-only | grep -iE '\.env|secret|credential|\.auth|\.pem'
 # Must return nothing
 ```
 
-### Step 4: Commit
+### Step 6: Commit
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -86,7 +178,7 @@ EOF
 
 Types: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`, `compliance`, `security`
 
-### Step 5: Run All Local Gates (Mandatory)
+### Step 7: Run All Local Gates (Mandatory)
 
 #### Gate 1: TypeScript
 ```bash
@@ -128,7 +220,7 @@ For Medium/High risk, also verify access control and audit log tests pass (see T
 echo "SAST finding: [rule-id] in [file] — [fixed/false-positive: reason]" >> compliance/evidence/REQ-XXX/sast-review.md
 ```
 
-### Step 6: Push
+### Step 8: Push
 
 ```bash
 git push origin develop
@@ -141,7 +233,9 @@ git pull --rebase origin develop
 git push origin develop
 ```
 
-### Step 7: Update Evidence
+Pushing to `develop` triggers an auto-deploy to UAT (Railway). You can monitor the deployment in the Railway dashboard. UAT will be formally verified in the next workflow stage.
+
+### Step 9: Update Evidence
 
 ```bash
 git status compliance/evidence/
@@ -152,13 +246,14 @@ git push origin develop
 
 ## Iteration
 
-Repeat Steps 2-7. Every commit must leave all local gates green.
+Repeat Steps 3-9. Every commit must leave all local gates green. Step 2 (implementation plan) is done once per requirement. Each push auto-deploys to UAT.
 
 ## Output
 
 - Code committed and pushed on `develop`
 - All local gates passing
 - AI use documented (if applicable)
+- UAT auto-deployed with latest changes
 
 ## Next Step
 

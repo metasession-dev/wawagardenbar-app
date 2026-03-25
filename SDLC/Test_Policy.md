@@ -1,6 +1,6 @@
 # Test Policy
 
-**Document Type:** Policy | **Version:** 1.0 | **Effective Date:** March 2026 | **Review Cycle:** Annual
+**Document Type:** Policy | **Version:** 3.0 | **Effective Date:** March 2026 | **Review Cycle:** Annual
 
 **Owner:** Engineering Leadership | **Approved By:** Ade Thompson (Super Admin)
 
@@ -226,6 +226,8 @@ Test Plan (project-specific)
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 1.0 | March 2026 | Engineering Leadership | Initial creation for Wawa Garden Bar |
+| 2.0 | March 2026 | Engineering Leadership | Added AI governance, security commitments |
+| 3.0 | March 2026 | Engineering Leadership | Clean boundary split — removed content now owned by Test Strategy (methodology) and Test Architecture (tooling) |
 
 **Next Review Date:** March 2027
 

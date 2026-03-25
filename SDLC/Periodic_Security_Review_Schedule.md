@@ -1,6 +1,6 @@
 # Periodic Security Review Schedule
 
-**Document Type:** Schedule | **Version:** 1.0 | **Effective Date:** March 2026 | **Review Cycle:** Quarterly
+**Document Type:** Schedule | **Version:** 1.1 | **Effective Date:** March 2026 | **Review Cycle:** Quarterly
 
 **Owner:** Engineering Leadership | **Approved By:** Ade Thompson
 
@@ -189,6 +189,7 @@ semgrep scan --config auto --config p/security-audit --config p/owasp-top-ten ap
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 1.0 | March 2026 | Engineering Leadership | Initial schedule for Wawa Garden Bar |
+| 1.1 | March 2026 | Engineering Leadership | Updated document references for clean boundary split |
 
 **Next Review Date:** June 2026 (quarterly)
 

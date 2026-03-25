@@ -7,13 +7,13 @@ description: Create a PR from develop to main — triggers CI independent verifi
 **Pipeline Stage:** 4 of 5
 **Previous:** `3-compile-evidence.md` (tracked) or `2-implement-and-test.md` (untracked)
 **Next:** `5-deploy-main.md` (after PR approved)
-**References:** Test Policy (approval gate, AI governance), Test Strategy (reviewer requirements)
+**References:** Test Policy (`sdlc/files/Test_Policy.md` in META-COMPLY) (approval gate, AI governance), Test Strategy (reviewer requirements)
 
 ---
 
 ## What Happens at This Stage
 
-When you create the PR, CI runs automatically — GitHub Actions executes the independent verification gates (TypeScript, SAST, dependency audit, E2E). This produces tamper-resistant evidence that the code passes gates, verified by GitHub's infrastructure.
+When you create the PR, CI runs automatically — GitHub Actions re-executes the verification gates (TypeScript, SAST, dependency audit, E2E) independently. The META-COMPLY UAT approval check also runs, verifying the release has been approved for UAT in META-COMPLY. This produces tamper-resistant evidence verified by GitHub's infrastructure.
 
 What happens next depends on the risk level of the requirements in the PR:
 
@@ -28,7 +28,8 @@ If a PR contains requirements at multiple risk levels, the highest risk level de
 
 - All changes committed and pushed on `develop`
 - All local gates passing
-- **UAT verification passed** (health check, smoke test, feature verification — recorded in evidence)
+- **UAT verification passed** — health check, smoke test, feature verification recorded in evidence
+- **META-COMPLY UAT approval granted** — release status is `uat_approved` in META-COMPLY (required for the UAT approval check to pass on the PR)
 - For tracked requirements: RTM updated, release ticket created, evidence saved
 - **Know the risk level** of the requirement(s) — this determines whether a second reviewer is required
 
@@ -215,7 +216,7 @@ gh pr checks
 # Or view in GitHub web UI — checks tab on the PR
 ```
 
-CI must pass before the reviewer can approve. If CI fails:
+CI must pass before the reviewer can approve (enforced by branch protection). If CI fails:
 
 ```bash
 # Check which job failed
@@ -264,9 +265,9 @@ The reviewer sees:
 3. **Test changes** — in the PR description ("Test Changes" section) and in the Files changed tab (look for `e2e/`, `__tests__/`, `*.spec.ts`, `*.test.ts` files)
 4. **Compliance evidence** — in the compliance/ directory
 5. **Test scope** — in compliance/evidence/REQ-XXX/test-scope.md
-5. **Implementation plan** — in compliance/evidence/REQ-XXX/implementation-plan.md (MEDIUM/HIGH risk)
+6. **Implementation plan** — in compliance/evidence/REQ-XXX/implementation-plan.md (MEDIUM/HIGH risk)
 
-The developer may NOT merge until the reviewer approves.
+They cannot approve until CI is green. They then verify the comprehensive local evidence and compliance artifacts. The developer may NOT merge until the reviewer approves.
 
 ### Step 7: Handle Feedback (MEDIUM/HIGH risk only)
 
@@ -281,11 +282,13 @@ git push origin develop
 
 ## What Approval Means
 
-The verification model is risk-tiered to satisfy separation of duties (ISO 27001 A.5.3, SOC 2 CC6.1/CC8.1):
+The verification model is risk-tiered to satisfy separation of duties (ISO 27001 A.5.3, SOC 2 CC6.1/CC8.1) where it matters:
 
 **LOW risk — CI-verified self-merge:**
 1. **CI** — GitHub confirms gates passed (tamper-resistant, independent)
 2. **Developer** — Confirms code quality and compliance (author verification)
+
+CI provides the independent verification source. The developer's self-merge is acceptable because the risk classification is LOW and the automated gates provide objective verification.
 
 **MEDIUM/HIGH risk — second human reviewer required:**
 1. **CI** — GitHub confirms gates passed (tamper-resistant, independent)

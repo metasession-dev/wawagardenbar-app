@@ -7,7 +7,7 @@ description: Implement changes on develop, run all local gates (tests + security
 **Pipeline Stage:** 2 of 5
 **Previous:** `1-plan-requirement.md` (if tracked) or start here for untracked changes
 **Next:** `3-compile-evidence.md`
-**References:** Test Strategy (security gates, AI methodology), Test Architecture (tooling), Test Plan (exit criteria)
+**References:** Test Strategy (`sdlc/files/Test_Strategy.md` in META-COMPLY) (security gates, AI methodology), Test Architecture (tooling), Test Plan (exit criteria)
 
 ---
 
@@ -233,7 +233,7 @@ git pull --rebase origin develop
 git push origin develop
 ```
 
-Pushing to `develop` triggers an auto-deploy to UAT (Railway). You can monitor the deployment in the Railway dashboard. UAT will be formally verified in the next workflow stage.
+Pushing to `develop` triggers the full CI pipeline (TypeScript, SAST, dependency audit, E2E, build). All gate results are automatically uploaded to META-COMPLY tagged with the release version and `environment=uat`. The develop branch auto-deploys to the UAT environment (Railway staging). UAT will be formally reviewed and approved in META-COMPLY before a PR to main can be created.
 
 ### Step 9: Update Evidence
 
@@ -246,12 +246,13 @@ git push origin develop
 
 ## Iteration
 
-Repeat Steps 3-9. Every commit must leave all local gates green. Step 2 (implementation plan) is done once per requirement. Each push auto-deploys to UAT.
+Repeat Steps 3-9. Every commit must leave all local gates green. Step 2 (implementation plan) is done once per requirement. Each push triggers full CI and auto-deploys to UAT.
 
 ## Output
 
 - Code committed and pushed on `develop`
-- All local gates passing
+- All CI gates passing (TypeScript, SAST, dep audit, E2E, build)
+- Evidence auto-uploaded to META-COMPLY (environment=uat)
 - AI use documented (if applicable)
 - UAT auto-deployed with latest changes
 

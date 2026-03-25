@@ -7,7 +7,7 @@ description: Compile test, security, and AI evidence, update RTM, create release
 **Pipeline Stage:** 3 of 5
 **Previous:** `2-implement-and-test.md`
 **Next:** `4-submit-for-review.md`
-**References:** Test Strategy (evidence requirements), Test Architecture (tooling), Test Plan (artifact structure)
+**References:** Test Strategy (`sdlc/files/Test_Strategy.md` in META-COMPLY) (evidence requirements), Test Architecture (tooling), Test Plan (artifact structure)
 
 ---
 
@@ -18,6 +18,26 @@ description: Compile test, security, and AI evidence, update RTM, create release
 - Before creating a PR to `main`
 
 **Skip** for trivial changes — go straight to `4-submit-for-review.md`.
+
+## Evidence Storage Rule
+
+**Markdown stays in git. Binary and JSON evidence goes to META-COMPLY.**
+
+| Artifact | Store in | Why |
+|----------|----------|-----|
+| `compliance/RTM.md` | Git | Source of truth, version history, PR-reviewable |
+| `compliance/evidence/REQ-XXX/test-scope.md` | Git | Planning artifact, reviewed in PRs |
+| `compliance/evidence/REQ-XXX/implementation-plan.md` | Git | Design decisions artifact (MEDIUM/HIGH risk), reviewed in PRs |
+| `compliance/evidence/REQ-XXX/ai-use-note.md` | Git | Small markdown, needs PR review |
+| `compliance/evidence/REQ-XXX/ai-prompts.md` | Git | Small markdown, needs PR review |
+| `compliance/evidence/REQ-XXX/security-summary.md` | Git | Small markdown, needs PR review |
+| `compliance/pending-releases/RELEASE-TICKET-*.md` | Git | Reviewed and moved to approved-releases |
+| E2E results (JSON) | META-COMPLY | Large, bloats git history |
+| Screenshots (PNG/JPG) | META-COMPLY | Binary, bloats git history |
+| SAST results (JSON) | META-COMPLY | Large JSON, bloats git history |
+| Dependency audit (JSON) | META-COMPLY | Large JSON, bloats git history |
+| Unit test output (TXT) | META-COMPLY | Verbose output, bloats git history |
+| Test reports (HTML) | META-COMPLY | Binary, bloats git history |
 
 ## Steps
 
@@ -165,16 +185,16 @@ Create `compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md`:
 ## Test Evidence
 | Test Type | Count | Passed | Failed | Evidence |
 |-----------|-------|--------|--------|----------|
-| E2E (Playwright) | 183 | 183 | 0 | `compliance/evidence/REQ-XXX/e2e-results.json` |
-| Unit (Vitest) | [N] | [N] | 0 | `compliance/evidence/REQ-XXX/unit-test-results.txt` |
+| E2E (Playwright) | [N] | [N] | 0 | META-COMPLY portal: wawagardenbar-app/REQ-XXX |
+| Unit (Vitest) | [N] | [N] | 0 | META-COMPLY portal: wawagardenbar-app/REQ-XXX |
 
 ## Security Evidence
 | Check | Result | Evidence |
 |-------|--------|----------|
-| SAST | 0 high/critical | `compliance/evidence/REQ-XXX/sast-results.json` |
-| Dependency Audit | 0 high/critical | `compliance/evidence/REQ-XXX/dependency-audit.json` |
-| Access Control | [PASS/N/A] | `compliance/evidence/REQ-XXX/security-summary.md` |
-| Audit Log | [PASS/N/A] | `compliance/evidence/REQ-XXX/security-summary.md` |
+| SAST | 0 high/critical | META-COMPLY portal: wawagardenbar-app/REQ-XXX |
+| Dependency Audit | 0 high/critical | META-COMPLY portal: wawagardenbar-app/REQ-XXX |
+| Access Control | [PASS/N/A] | Git: `compliance/evidence/REQ-XXX/security-summary.md` |
+| Audit Log | [PASS/N/A] | Git: `compliance/evidence/REQ-XXX/security-summary.md` |
 
 ## Acceptance Criteria
 - [x] [From test-scope.md]
@@ -216,15 +236,29 @@ Create `compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md`:
 
 ### Step 9: Commit
 
+If using META-COMPLY, commit only compliance documents (RTM, release ticket, test scope, AI notes, security summary). Binary evidence (JSON results, screenshots) is stored in META-COMPLY, not git.
+
+```bash
+# META-COMPLY projects — commit compliance docs only
+git add compliance/RTM.md compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md \
+  compliance/evidence/REQ-XXX/test-scope.md \
+  compliance/evidence/REQ-XXX/implementation-plan.md \
+  compliance/evidence/REQ-XXX/ai-use-note.md \
+  compliance/evidence/REQ-XXX/security-summary.md
+git commit -m "compliance: [REQ-XXX] evidence compiled - awaiting review"
+git push origin develop
+```
+
+If NOT using META-COMPLY (git-based evidence):
 ```bash
 git add compliance/RTM.md compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md compliance/evidence/REQ-XXX/
 git commit -m "compliance: [REQ-XXX] evidence compiled - awaiting review"
 git push origin develop
 ```
 
-### Step 10: UAT Verification (MANDATORY)
+### Step 10: UAT Verification and META-COMPLY Approval (MANDATORY)
 
-Pushing to `develop` triggers an auto-deploy to UAT (Railway). **Wait for the deployment to complete**, then verify the change works in the UAT environment before creating a PR.
+The develop branch auto-deploys to UAT. CI has already uploaded all gate evidence to META-COMPLY. **Wait for the deployment to complete**, then verify the change works in the UAT environment before creating a PR.
 
 #### 10a. Wait for UAT deployment
 
@@ -272,13 +306,44 @@ git push origin develop
 
 **If UAT verification fails:** Fix the issue on `develop`, re-run local gates, push again, and repeat UAT verification. Do NOT proceed to creating a PR until UAT is green.
 
+**If no UAT environment:** Skip this step and proceed to `4-submit-for-review.md`.
+
+## META-COMPLY CI Integration
+
+Projects using META-COMPLY can automate evidence upload via the reusable GitHub Actions workflow. After CI tests pass, evidence is uploaded to the centralized portal where auditors can browse it.
+
+### CI Workflow Setup
+
+Add this job to your CI pipeline (after E2E tests pass):
+
+```yaml
+upload-evidence:
+  needs: [e2e-tests]
+  uses: metasession-dev/META-COMPLY/.github/workflows/upload-evidence.yml@main
+  with:
+    project-slug: your-project-slug
+    release-version: v1.0.0
+    environment: uat
+  secrets:
+    SUPABASE_URL: ${{ secrets.META_COMPLY_SUPABASE_URL }}
+    SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.META_COMPLY_SERVICE_ROLE_KEY }}
+```
+
+This automatically uploads:
+- Compliance source documents (RTM, test plan, test cases, test summary report) as read-only snapshots
+- Each upload tagged with git SHA and CI run ID for traceability
+
+The source of truth for compliance documents remains in git. META-COMPLY holds read-only snapshots so auditors see the full compliance picture in one place.
+
 ## Output
 
 - RTM: `TESTED - PENDING SIGN-OFF`
 - Release ticket in `compliance/pending-releases/`
-- Test + security + AI evidence in `compliance/evidence/REQ-XXX/`
+- Test + security + AI evidence uploaded to META-COMPLY (or in `compliance/evidence/REQ-XXX/` if git-based)
+- Compliance documents (test scope, AI notes, security summary) committed to git
 - Test scope fully addressed
 - UAT verification passed and recorded
+- META-COMPLY UAT release approved (required before PR to main)
 
 ## Next Step
 

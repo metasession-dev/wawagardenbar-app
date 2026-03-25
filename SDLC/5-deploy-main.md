@@ -6,7 +6,7 @@ description: Merge approved PR, verify deployment including security checks, syn
 
 **Pipeline Stage:** 5 of 5
 **Previous:** `4-submit-for-review.md` (after PR approved and CI passed)
-**References:** Test Plan (post-deploy verification, DR targets)
+**References:** Test Plan (post-deploy verification, DR targets), Test Strategy (`sdlc/files/Test_Strategy.md` in META-COMPLY)
 
 ---
 
@@ -16,6 +16,7 @@ description: Merge approved PR, verify deployment including security checks, syn
 - **LOW risk:** Self-merged after CI passed
 - **MEDIUM/HIGH risk:** PR approved by a second human reviewer, no unresolved review comments
 - UAT verification passed (completed in workflow 3, recorded in evidence)
+- META-COMPLY UAT approval granted (verified by CI check on PR)
 
 ## Steps
 
@@ -137,12 +138,12 @@ git checkout develop
 
 ### Environment Summary
 
-| Environment | Branch | URL | Auto-deploy | Database |
+| Environment | Branch | URL | Auto-deploy | Evidence |
 |-------------|--------|-----|-------------|----------|
-| UAT | `develop` | https://wawagardenbar-app-uat.up.railway.app | Yes | `wawagardenbar_uat` |
-| Production | `main` | https://wawagardenbar-app-production-45c8.up.railway.app | Yes | `wawagardenbar` |
+| UAT | `develop` | https://wawagardenbar-app-uat.up.railway.app | Yes | CI evidence uploaded to META-COMPLY, reviewed and approved before PR |
+| Production | `main` | https://wawagardenbar-app-production-45c8.up.railway.app | Yes | Post-deploy evidence captured and uploaded to META-COMPLY |
 
-UAT mirrors production config except SMS/WhatsApp notifications are disabled. UAT verification is completed in workflow 3 (compile evidence) before the PR is created.
+UAT verification and META-COMPLY approval are completed in workflow 3 before the PR is created. After merge to main, the post-deploy workflow runs smoke tests against production, uploads evidence to META-COMPLY (environment=production), and submits the release for production review.
 
 ---
 

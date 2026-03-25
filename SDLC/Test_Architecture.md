@@ -1,6 +1,6 @@
 # Test Architecture
 
-**Document Type:** Architecture Standards | **Version:** 1.0 | **Effective Date:** March 2026 | **Review Cycle:** Annual
+**Document Type:** Architecture Standards | **Version:** 2.0 | **Effective Date:** March 2026 | **Review Cycle:** Annual
 
 **Owner:** Engineering Team | **Approved By:** Engineering Leadership
 
@@ -308,6 +308,7 @@ Extends: `eslint:recommended`, `plugin:@typescript-eslint/recommended`, Airbnb T
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 1.0 | March 2026 | Engineering Team | Initial creation for Wawa Garden Bar |
+| 2.0 | March 2026 | Engineering Team | Clean boundary split — removed compliance/governance content (now in Policy), removed methodology content (now in Strategy). Architecture now owns tools, patterns, code standards, CI config only. Added security tooling table. |
 
 **Next Review Date:** March 2027
 

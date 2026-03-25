@@ -1,6 +1,9 @@
 ---
 description: Implement changes on develop, run all local gates (tests + security scans), commit with compliance-aware conventions
 ---
+<!-- SDLC source: META-COMPLY/sdlc/files/2-implement-and-test.md -->
+<!-- SDLC version: sdlc-v1.0.0 -->
+<!-- Last synced: 2026-03-25 -->
 
 # Implement & Test
 

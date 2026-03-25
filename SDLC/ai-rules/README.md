@@ -1,3 +1,7 @@
+<!-- SDLC source: META-COMPLY/sdlc/ai-rules/README.md -->
+<!-- SDLC version: sdlc-v1.0.0 -->
+<!-- Last synced: 2026-03-25 -->
+
 # SDLC AI Rules
 
 Drop-in instruction files that enforce the Metasession SDLC compliance process through AI coding assistants. When added to a project, the AI assistant will guide developers through the SDLC workflow on every code change.

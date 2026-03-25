@@ -1,3 +1,7 @@
+<!-- SDLC source: META-COMPLY/sdlc/files/README_TEMPLATE.md -->
+<!-- SDLC version: sdlc-v1.0.0 -->
+<!-- Last synced: 2026-03-25 -->
+
 # [PROJECT NAME] — Development & Compliance Workflow System
 
 **Standard:** ISO/IEC/IEEE 29119-3:2021 | **Version:** 1.0 | **Date:** [DATE]

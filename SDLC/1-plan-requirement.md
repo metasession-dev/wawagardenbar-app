@@ -1,6 +1,9 @@
 ---
 description: Define a new requirement in the RTM, classify risk, generate test scope, and prepare for implementation
 ---
+<!-- SDLC source: META-COMPLY/sdlc/files/1-plan-requirement.md -->
+<!-- SDLC version: sdlc-v1.0.0 -->
+<!-- Last synced: 2026-03-25 -->
 
 # Plan Requirement
 

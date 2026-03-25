@@ -1,6 +1,9 @@
 ---
 description: Merge approved PR, verify deployment including security checks, sync branches, finalize compliance
 ---
+<!-- SDLC source: META-COMPLY/sdlc/files/5-deploy-main.md -->
+<!-- SDLC version: sdlc-v1.0.0 -->
+<!-- Last synced: 2026-03-25 -->
 
 # Deploy to Production
 

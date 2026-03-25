@@ -1,3 +1,7 @@
+<!-- SDLC source: META-COMPLY/sdlc/files/Periodic_Security_Review_Schedule.md -->
+<!-- SDLC version: sdlc-v1.0.0 -->
+<!-- Last synced: 2026-03-25 -->
+
 # Periodic Security Review Schedule
 
 **Document Type:** Schedule | **Version:** 1.1 | **Effective Date:** March 2026 | **Review Cycle:** Quarterly

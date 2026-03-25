@@ -1,3 +1,7 @@
+<!-- SDLC source: META-COMPLY/sdlc/files/Test_Strategy.md -->
+<!-- SDLC version: sdlc-v1.0.0 -->
+<!-- Last synced: 2026-03-25 -->
+
 # Test Strategy
 
 **Document Type:** Strategy | **Version:** 3.0 | **Effective Date:** March 2026 | **Review Cycle:** Annual

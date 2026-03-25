@@ -1,3 +1,7 @@
+<!-- SDLC source: META-COMPLY/sdlc/files/Test_Plan_TEMPLATE.md -->
+<!-- SDLC version: sdlc-v1.0.0 -->
+<!-- Last synced: 2026-03-25 -->
+
 # Test Plan — [PROJECT NAME]
 
 **Document Type:** Test Plan (Project-Specific) | **Version:** 1.0 | **Effective Date:** [DATE]

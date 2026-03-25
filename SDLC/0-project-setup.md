@@ -1,6 +1,9 @@
 ---
 description: One-time project setup — configure repository, CI pipeline, compliance structure, and tooling before workflows can run
 ---
+<!-- SDLC source: META-COMPLY/sdlc/files/0-project-setup.md -->
+<!-- SDLC version: sdlc-v1.0.0 -->
+<!-- Last synced: 2026-03-25 -->
 
 # Project Setup Guide
 

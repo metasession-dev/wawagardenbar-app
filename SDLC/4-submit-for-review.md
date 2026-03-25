@@ -1,6 +1,9 @@
 ---
 description: Create a PR from develop to main — triggers CI independent verification and human review
 ---
+<!-- SDLC source: META-COMPLY/sdlc/files/4-submit-for-review.md -->
+<!-- SDLC version: sdlc-v1.0.0 -->
+<!-- Last synced: 2026-03-25 -->
 
 # Submit for Review
 

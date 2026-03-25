@@ -1,3 +1,7 @@
+<!-- SDLC source: META-COMPLY/sdlc/ai-rules/claude/CLAUDE.md -->
+<!-- SDLC version: sdlc-v1.0.0 -->
+<!-- Last synced: 2026-03-25 -->
+
 # SDLC Compliance — Paste the section below into your project's CLAUDE.md
 
 ## SDLC Compliance Process (MANDATORY)

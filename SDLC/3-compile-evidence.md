@@ -1,6 +1,9 @@
 ---
 description: Compile test, security, and AI evidence, update RTM, create release ticket for review
 ---
+<!-- SDLC source: META-COMPLY/sdlc/files/3-compile-evidence.md -->
+<!-- SDLC version: sdlc-v1.0.0 -->
+<!-- Last synced: 2026-03-25 -->
 
 # Compile Evidence
 
@@ -319,7 +322,7 @@ Add this job to your CI pipeline (after E2E tests pass):
 ```yaml
 upload-evidence:
   needs: [e2e-tests]
-  uses: metasession-dev/META-COMPLY/.github/workflows/upload-evidence.yml@main
+  uses: metasession-dev/META-COMPLY/.github/workflows/upload-evidence.yml@sdlc-v1.0.0
   with:
     project-slug: your-project-slug
     release-version: v1.0.0

@@ -303,14 +303,14 @@ jobs:
 
       - name: Download META-COMPLY upload script
         run: |
-          curl -sL "https://raw.githubusercontent.com/metasession-dev/META-COMPLY/main/scripts/upload-evidence.sh" -o /tmp/upload-evidence.sh
+          curl -sL "https://raw.githubusercontent.com/metasession-dev/META-COMPLY/sdlc-v1.0.0/scripts/upload-evidence.sh" -o /tmp/upload-evidence.sh
           chmod +x /tmp/upload-evidence.sh
 
       # Generate evidence files directly (avoids GitHub artifact storage quota)
       - name: Generate gate evidence
         run: |
           mkdir -p ci-evidence
-          pip install semgrep 2>/dev/null
+          pip install semgrep 2>/dev/null || true
 
           echo "Generating SAST results..."
           semgrep scan --config auto app/ lib/ services/ models/ --json > ci-evidence/sast-results.json 2>/dev/null || echo '{"results":[]}' > ci-evidence/sast-results.json

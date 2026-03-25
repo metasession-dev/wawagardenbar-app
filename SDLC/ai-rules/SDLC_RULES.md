@@ -1,3 +1,7 @@
+<!-- SDLC source: META-COMPLY/sdlc/ai-rules/SDLC_RULES.md -->
+<!-- SDLC version: sdlc-v1.0.0 -->
+<!-- Last synced: 2026-03-25 -->
+
 # SDLC Compliance Rules for AI Assistants
 
 These rules enforce the Metasession SDLC process. They MUST be followed for every code change. These rules OVERRIDE default behaviour.

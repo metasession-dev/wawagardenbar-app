@@ -18,7 +18,7 @@ Standard gates apply. No additional testing beyond universal exit criteria.
 
 ## Acceptance Criteria
 
-- [ ] Dashboard tabs page loads with no preset status filter (all tabs shown)
-- [ ] Filter component initializes with no statuses selected
-- [ ] Clear filters resets to empty state (not back to "open")
-- [ ] Users can still manually select any status filter
+- [x] Dashboard tabs page loads with no preset status filter (all tabs shown)
+- [x] Filter component initializes with no statuses selected
+- [x] Clear filters resets to empty state (not back to "open")
+- [x] Users can still manually select any status filter

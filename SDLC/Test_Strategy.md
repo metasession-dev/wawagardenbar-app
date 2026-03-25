@@ -1,6 +1,10 @@
+<!-- SDLC source: META-COMPLY/sdlc/files/Test_Strategy.md -->
+<!-- SDLC version: sdlc-v1.0.0 -->
+<!-- Last synced: 2026-03-25 -->
+
 # Test Strategy
 
-**Document Type:** Strategy | **Version:** 1.0 | **Effective Date:** March 2026 | **Review Cycle:** Annual
+**Document Type:** Strategy | **Version:** 3.0 | **Effective Date:** March 2026 | **Review Cycle:** Annual
 
 **Owner:** QA / Engineering Team | **Approved By:** Engineering Leadership
 
@@ -72,7 +76,7 @@ Both are required before any release.
 
 ### Per-Commit Gates (Mandatory for All Changes)
 
-Every code change must pass these automated gates before merge:
+Every push to `develop` triggers the full CI pipeline. All gates run on both develop pushes and PRs to main. Gate results are auto-uploaded to META-COMPLY (environment=uat) on develop pushes. Every code change must pass these automated gates:
 
 **Static Application Security Testing (SAST)** — Scans source code for vulnerability patterns including injection, insecure defaults, and improper error handling. Exit criteria: 0 high/critical findings.
 
@@ -229,12 +233,14 @@ Every requirement is traceable through: Requirement → Test Cases → Test Resu
 
 1. **Implement** — Code on develop with requirement references
 2. **Local gates** — TypeScript, ESLint, SAST, dependency audit, E2E tests
-3. **Push** — Triggers CI pipeline
-4. **PR** — Created with compliance checklist
-5. **Review** — Human reviews code, security, AI involvement, compliance artifacts
-6. **Approve** — Immutable record of reviewer identity and timestamp
-7. **Merge** — Triggers Railway auto-deploy
-8. **Verify** — Post-deploy health and security checks
+3. **Push to develop** — Triggers full CI pipeline (all gates), evidence auto-uploaded to META-COMPLY, auto-deploys to UAT
+4. **UAT review** — Review evidence in META-COMPLY, approve UAT release
+5. **PR to main** — CI re-runs gates independently, META-COMPLY UAT approval check verified
+6. **Review** — Human reviews code, security, AI involvement, compliance artifacts
+7. **Approve** — Immutable record of reviewer identity and timestamp
+8. **Merge** — Triggers Railway production deployment
+9. **Post-deploy** — Smoke tests against production, evidence uploaded to META-COMPLY (environment=production)
+10. **Prod review** — Approve production release in META-COMPLY
 
 ### Commit Standards
 
@@ -272,6 +278,8 @@ Tracked requirements include: `Ref: REQ-XXX`
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 1.0 | March 2026 | Engineering Team | Initial creation for Wawa Garden Bar |
+| 2.0 | March 2026 | Engineering Team | Added AI methodology, security methodology, V&V |
+| 3.0 | March 2026 | Engineering Team | Clean boundary split — moved specific tools, code patterns, CI config to Test Architecture. Strategy now owns methodology only. Added META-COMPLY CI integration references. |
 
 **Next Review Date:** March 2027
 

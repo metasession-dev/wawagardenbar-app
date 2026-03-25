@@ -1,12 +1,15 @@
 ---
 description: One-time project setup — configure repository, CI pipeline, compliance structure, and tooling before workflows can run
 ---
+<!-- SDLC source: META-COMPLY/sdlc/files/0-project-setup.md -->
+<!-- SDLC version: sdlc-v1.0.0 -->
+<!-- Last synced: 2026-03-25 -->
 
 # Project Setup Guide
 
 **Document Type:** Setup Guide | **Run Once:** At project start, before any workflow is executed
 
-**Parent Documents:** Test Policy, Test Strategy, Test Architecture (all Tier 1)
+**Parent Documents:** Test Policy, Test Strategy, Test Architecture (all Tier 1, in META-COMPLY/sdlc/files/)
 
 ---
 
@@ -91,65 +94,21 @@ This is the **independent verification gate**. Tests run locally during developm
 
 | Pipeline | Trigger | Jobs | Purpose |
 |---|---|---|---|
-| Develop CI | Push to `develop` | TypeScript check + build | Fast feedback |
-| PR CI | PR to `main` | TypeScript + SAST + dependency audit + E2E | Independent verification |
+| Develop CI | Push to `develop` | TypeScript + SAST + dep audit + E2E + build | Full gates + evidence upload to META-COMPLY |
+| PR CI | PR to `main` | TypeScript + SAST + dep audit + E2E + build | Independent re-verification |
+| UAT Approval | PR to `main` | META-COMPLY UAT approval check | Hard gate — release must be UAT-approved |
+| Post-Deploy | Push to `main` | Smoke tests + E2E + evidence upload | Production evidence capture |
 | Deploy | Merge to `main` | Auto-deploy to Railway | Production release |
 
 ### Workflow Files
 
 | File | Trigger | Purpose |
 |---|---|---|
-| `.github/workflows/test-on-pr.yml` | PR to main, push to develop | TypeScript check, SAST scan, dependency audit, E2E tests |
-| `.github/workflows/build-and-publish.yml` | Push to main/develop, tags | Docker build, GHCR publish |
+| `.github/workflows/test-on-pr.yml` | PR to main, push to develop | TypeScript check, SAST scan, dependency audit, E2E tests, build check |
+| `.github/workflows/check-uat-approval.yml` | PR to main | META-COMPLY UAT approval gate |
+| `.github/workflows/post-deploy-prod.yml` | Push to main | Post-production evidence capture |
 
-### Required CI Enhancement
-
-Add SAST and dependency audit jobs to `test-on-pr.yml` (these are **mandatory** gates, not optional):
-
-```yaml
-  sast:
-    name: SAST Scan
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - run: pip install semgrep
-      - run: semgrep scan --config auto app/ lib/ services/ models/ --severity ERROR --severity WARNING --error
-      - name: Save SAST results
-        if: always()
-        run: semgrep scan --config auto app/ lib/ services/ models/ --json > sast-results.json || true
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: sast-results
-          path: sast-results.json
-          retention-days: 90
-
-  dependency-audit:
-    name: Dependency Audit
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-      - run: npm ci
-      - run: npm audit --audit-level=high
-      - name: Save audit results
-        if: always()
-        run: npm audit --json > dependency-audit.json || true
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: dependency-audit
-          path: dependency-audit.json
-          retention-days: 90
-```
+**Status:** All gates now run on both develop push and PR to main. Evidence auto-uploads to META-COMPLY on develop push with release/environment=uat tagging. UAT approval gate and post-deploy production evidence workflows added.
 
 ### After CI Is Configured
 
@@ -238,13 +197,17 @@ Run through the complete pipeline once with a small test change:
 | UAT environment configured (auto-deploy from `develop`) | [x] |
 | Production MongoDB populated from backup | [x] |
 | UAT MongoDB populated from backup | [x] |
-| Compliance directories created | [x] Partially — needs periodic subdirs |
+| Compliance directories created | [x] Complete — including periodic evidence subdirs |
 | RTM initialized | [x] REQ-001 through REQ-008 |
-| CI workflow files created | [x] test-on-pr.yml + build-and-publish.yml |
+| CI workflow files created | [x] test-on-pr.yml, check-uat-approval.yml, post-deploy-prod.yml |
 | CI: SAST + dep audit jobs added to test-on-pr.yml | [x] Added typecheck, sast, dependency-audit, e2e-tests jobs |
 | **Branch protection configured on `main`** | **[ ] REQUIRED — not yet configured** |
 | **Required status checks added to branch protection** | **[ ] REQUIRED — depends on CI jobs** |
-| Local tooling installed (Semgrep, Playwright) | [x] Semgrep 1.155.0, Playwright installed |
+| Local tooling installed (Semgrep, Playwright, Husky, Commitlint) | [x] Semgrep 1.155.0, Playwright, Husky + commitlint installed |
+| CLAUDE.md with SDLC enforcement rules | [x] AI assistant enforces SDLC process |
+| META-COMPLY evidence upload in CI | [x] upload-evidence job in test-on-pr.yml |
+| UAT approval gate configured (`check-uat-approval.yml`) | [x] |
+| Post-deploy production evidence configured (`post-deploy-prod.yml`) | [x] |
 | Project Test Plan created | [x] |
 | End-to-end pipeline verified with test change | [x] PR #1 — all 4 CI gates passed, merged, deployed |
 
@@ -256,8 +219,8 @@ With setup complete, all development follows the five pipeline workflows:
 
 ```
 1-plan-requirement.md       → Define requirement, classify risk, generate test scope
-2-implement-and-test.md     → Code, commit, run all local gates
-3-compile-evidence.md       → Gather test + security + AI evidence
+2-implement-and-test.md     → Code, commit, run all local gates, auto-deploy to UAT
+3-compile-evidence.md       → Gather evidence, verify on UAT, create release ticket
 4-submit-for-review.md      → Create PR (CI runs independent verification)
 5-deploy-main.md            → Merge, deploy, verify, finalize
 ```

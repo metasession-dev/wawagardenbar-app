@@ -1,0 +1,121 @@
+# META-COMPLY UAT approval gate
+#
+# Runs on PRs to main. Verifies the release version has been approved
+# for UAT in META-COMPLY before allowing merge. This is a hard gate —
+# the PR cannot merge without UAT approval.
+#
+# To pass this check:
+# 1. Push to develop — CI runs all gates + uploads evidence to META-COMPLY
+# 2. Review evidence in META-COMPLY dashboard
+# 3. Approve UAT release in META-COMPLY
+# 4. This check passes automatically (or re-run it on the PR)
+
+name: UAT Approval Gate
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  check-approval:
+    name: META-COMPLY UAT Approval
+    runs-on: self-hosted
+    env:
+      SUPABASE_URL: ${{ secrets.META_COMPLY_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.META_COMPLY_SERVICE_ROLE_KEY }}
+      PROJECT_SLUG: wawagardenbar-app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine release version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=v${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Checking UAT approval for version: v${VERSION}"
+
+      - name: Look up project
+        id: project
+        run: |
+          PROJECT_ID=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_projects?slug=eq.${PROJECT_SLUG}&select=id" \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+
+          if [ -z "$PROJECT_ID" ]; then
+            echo "::error::Project '${PROJECT_SLUG}' not found in META-COMPLY. Create it first."
+            exit 1
+          fi
+          echo "project_id=${PROJECT_ID}" >> "$GITHUB_OUTPUT"
+
+      - name: Check release UAT approval status
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          PROJECT_ID="${{ steps.project.outputs.project_id }}"
+
+          # Query for the release
+          RELEASE_JSON=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_releases?project_id=eq.${PROJECT_ID}&version=eq.${VERSION}&select=id,version,status" \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}")
+
+          # Check if release exists
+          RELEASE_STATUS=$(echo "$RELEASE_JSON" | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4)
+
+          if [ -z "$RELEASE_STATUS" ]; then
+            echo "::error::Release ${VERSION} not found in META-COMPLY."
+            echo "::error::Push to develop first to trigger CI and create the release."
+            echo ""
+            echo "To fix:"
+            echo "  1. Push your changes to the develop branch"
+            echo "  2. Wait for CI to pass and upload evidence"
+            echo "  3. Review evidence in META-COMPLY"
+            echo "  4. Approve the UAT release in META-COMPLY"
+            echo "  5. Re-run this check"
+            exit 1
+          fi
+
+          echo "Release ${VERSION} status: ${RELEASE_STATUS}"
+
+          # Statuses that indicate UAT has been approved
+          case "$RELEASE_STATUS" in
+            uat_approved|prod_review|prod_approved|released)
+              echo "UAT approval confirmed for ${VERSION} (status: ${RELEASE_STATUS})"
+              echo "::notice::META-COMPLY UAT approval verified for ${VERSION}"
+              ;;
+            draft)
+              echo "::error::Release ${VERSION} is in draft. Submit for UAT review first."
+              echo ""
+              echo "To fix:"
+              echo "  1. Open META-COMPLY → project → Releases → ${VERSION}"
+              echo "  2. Click 'Submit for Review'"
+              echo "  3. Have a reviewer approve the UAT release"
+              echo "  4. Re-run this check"
+              exit 1
+              ;;
+            uat_review)
+              echo "::error::Release ${VERSION} is awaiting UAT review."
+              echo ""
+              echo "To fix:"
+              echo "  1. Open META-COMPLY → project → Releases → ${VERSION}"
+              echo "  2. Review the UAT evidence"
+              echo "  3. Approve or reject the release"
+              echo "  4. Re-run this check after approval"
+              exit 1
+              ;;
+            uat_rejected)
+              echo "::error::Release ${VERSION} UAT was rejected."
+              echo ""
+              echo "To fix:"
+              echo "  1. Fix the issues noted in the rejection comments"
+              echo "  2. Push fixes to develop"
+              echo "  3. Resubmit for UAT review in META-COMPLY"
+              echo "  4. Get approval, then re-run this check"
+              exit 1
+              ;;
+            *)
+              echo "::error::Release ${VERSION} has unexpected status: ${RELEASE_STATUS}"
+              exit 1
+              ;;
+          esac

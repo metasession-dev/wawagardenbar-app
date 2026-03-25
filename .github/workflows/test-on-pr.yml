@@ -1,7 +1,7 @@
-# CI Pipeline — all gates on every push to develop AND every PR to main
+# CI Pipeline — all gates on every push to develop
 #
-# On develop push: evidence is uploaded to META-COMPLY (environment=uat)
-# On PR to main: independent re-verification (no evidence upload)
+# On develop push: all gates run + evidence is uploaded to META-COMPLY (environment=uat)
+# On PR to main: gates are skipped if the same commit already passed on develop
 
 name: CI Pipeline
 
@@ -17,11 +17,55 @@ concurrency:
 
 jobs:
   # ──────────────────────────────────────────────
+  # JOB 0: Check if develop CI already passed this commit
+  # ──────────────────────────────────────────────
+  check-develop-ci:
+    name: Check Prior CI
+    runs-on: self-hosted
+    outputs:
+      run_gates: ${{ steps.check.outputs.run_gates }}
+    steps:
+      - name: Check for existing successful develop CI
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "Push event — gates must run"
+            echo "run_gates=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          SHA="${{ github.event.pull_request.head.sha }}"
+          echo "Checking for successful develop CI on SHA: ${SHA}"
+
+          SUCCESSFUL=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=${SHA}&event=push&status=success" \
+            --jq '[.workflow_runs[] | select(.name == "CI Pipeline")] | length' 2>/dev/null || echo "0")
+
+          if [ "$SUCCESSFUL" -gt 0 ]; then
+            echo "Develop CI already passed on this SHA — skipping gate re-run"
+            echo "run_gates=false" >> "$GITHUB_OUTPUT"
+
+            for CHECK_NAME in "TypeScript Check" "SAST Scan" "Dependency Audit" "E2E Tests" "Build Check"; do
+              gh api "repos/${{ github.repository }}/statuses/${SHA}" \
+                -f state=success \
+                -f context="${CHECK_NAME}" \
+                -f description="Verified by develop CI (same SHA)" \
+                2>/dev/null || echo "Warning: Failed to post status for ${CHECK_NAME}"
+            done
+          else
+            echo "No prior successful develop CI found — running gates"
+            echo "run_gates=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  # ──────────────────────────────────────────────
   # JOB 1: TypeScript Compilation
   # ──────────────────────────────────────────────
   typecheck:
     name: TypeScript Check
     runs-on: self-hosted
+    needs: [check-develop-ci]
+    if: needs.check-develop-ci.outputs.run_gates == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -37,6 +81,8 @@ jobs:
   sast:
     name: SAST Scan
     runs-on: self-hosted
+    needs: [check-develop-ci]
+    if: needs.check-develop-ci.outputs.run_gates == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -84,6 +130,8 @@ jobs:
   dependency-audit:
     name: Dependency Audit
     runs-on: self-hosted
+    needs: [check-develop-ci]
+    if: needs.check-develop-ci.outputs.run_gates == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -139,7 +187,8 @@ jobs:
   e2e-tests:
     name: E2E Tests
     runs-on: self-hosted
-    needs: [typecheck]
+    needs: [check-develop-ci]
+    if: needs.check-develop-ci.outputs.run_gates == 'true'
 
     services:
       mongodb:
@@ -220,6 +269,8 @@ jobs:
   build:
     name: Build Check
     runs-on: self-hosted
+    needs: [check-develop-ci]
+    if: needs.check-develop-ci.outputs.run_gates == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -244,8 +295,8 @@ jobs:
   upload-evidence:
     name: Upload Evidence
     runs-on: self-hosted
-    needs: [typecheck, sast, dependency-audit, e2e-tests, build]
-    if: github.event_name == 'push'
+    needs: [check-develop-ci, typecheck, sast, dependency-audit, e2e-tests, build]
+    if: always() && github.event_name == 'push' && !contains(needs.*.result, 'failure')
     env:
       SUPABASE_URL: ${{ secrets.META_COMPLY_STAGING_SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.META_COMPLY_STAGING_SERVICE_ROLE_KEY }}

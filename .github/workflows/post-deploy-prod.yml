@@ -15,12 +15,8 @@ jobs:
     name: Production Evidence
     runs-on: self-hosted
     env:
-      # Production Supabase — evidence upload and production release management
-      SUPABASE_URL: ${{ secrets.META_COMPLY_PROD_SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.META_COMPLY_PROD_SERVICE_ROLE_KEY }}
-      # Staging Supabase — read UAT approval status (release lifecycle starts in staging)
-      STAGING_SUPABASE_URL: ${{ secrets.META_COMPLY_STAGING_SUPABASE_URL }}
-      STAGING_SERVICE_ROLE_KEY: ${{ secrets.META_COMPLY_STAGING_SERVICE_ROLE_KEY }}
+      SUPABASE_URL: ${{ secrets.META_COMPLY_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.META_COMPLY_SERVICE_ROLE_KEY }}
       PROD_URL: ${{ secrets.WAWAGARDENBAR_PROD_URL }}
       PROJECT_SLUG: wawagardenbar-app
       GIT_SHA: ${{ github.sha }}
@@ -148,82 +144,39 @@ jobs:
               --branch "${GIT_BRANCH}" || echo "Warning: Failed to upload E2E results"
           fi
 
-      - name: Verify UAT approval in staging
-        if: env.STAGING_SUPABASE_URL != ''
-        id: uat-check
+      - name: Submit release for production review
+        if: env.SUPABASE_URL != ''
         run: |
           VERSION="${{ steps.version.outputs.version }}"
 
-          # Read UAT approval status from staging Supabase (where the release lifecycle begins)
-          STAGING_PROJECT_ID=$(curl -s "${STAGING_SUPABASE_URL}/rest/v1/compliance_projects?slug=eq.${PROJECT_SLUG}&select=id" \
-            -H "apikey: ${STAGING_SERVICE_ROLE_KEY}" \
-            -H "Authorization: Bearer ${STAGING_SERVICE_ROLE_KEY}" \
-            | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
-
-          if [ -z "$STAGING_PROJECT_ID" ]; then
-            echo "Warning: Project not found in staging — skipping UAT verification"
-            echo "uat_approved=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          UAT_STATUS=$(curl -s "${STAGING_SUPABASE_URL}/rest/v1/compliance_releases?project_id=eq.${STAGING_PROJECT_ID}&version=eq.${VERSION}&select=status" \
-            -H "apikey: ${STAGING_SERVICE_ROLE_KEY}" \
-            -H "Authorization: Bearer ${STAGING_SERVICE_ROLE_KEY}" \
-            | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4)
-
-          echo "Staging release ${VERSION} status: ${UAT_STATUS}"
-
-          case "$UAT_STATUS" in
-            uat_approved|prod_review|prod_approved|released)
-              echo "UAT approval confirmed in staging"
-              echo "uat_approved=true" >> "$GITHUB_OUTPUT"
-              ;;
-            *)
-              echo "Warning: Release not UAT-approved in staging (status: ${UAT_STATUS})"
-              echo "uat_approved=false" >> "$GITHUB_OUTPUT"
-              ;;
-          esac
-
-      - name: Create release in production and submit for review
-        if: env.SUPABASE_URL != '' && steps.uat-check.outputs.uat_approved == 'true'
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-
-          # Look up project in production Supabase
+          # Look up project and release
           PROJECT_ID=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_projects?slug=eq.${PROJECT_SLUG}&select=id" \
             -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
             -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
             | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
 
           if [ -z "$PROJECT_ID" ]; then
-            echo "Warning: Project not found in production — skipping"
+            echo "Warning: Project not found — skipping prod review submission"
             exit 0
           fi
 
-          # Check if release exists in production
-          RELEASE_ID=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_releases?project_id=eq.${PROJECT_ID}&version=eq.${VERSION}&select=id" \
+          RELEASE_ID=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_releases?project_id=eq.${PROJECT_ID}&version=eq.${VERSION}&select=id,status" \
             -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
             -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
             | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
 
-          # Create release in production if it doesn't exist (mirroring from staging)
+          RELEASE_STATUS=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_releases?project_id=eq.${PROJECT_ID}&version=eq.${VERSION}&select=status" \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4)
+
           if [ -z "$RELEASE_ID" ]; then
-            echo "Creating release ${VERSION} in production..."
-            curl -s -o /dev/null -w "HTTP %{http_code}" \
-              -X POST "${SUPABASE_URL}/rest/v1/compliance_releases" \
-              -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-              -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-              -H "Content-Type: application/json" \
-              -H "Prefer: return=minimal" \
-              -d "{
-                \"project_id\": \"${PROJECT_ID}\",
-                \"version\": \"${VERSION}\",
-                \"branch\": \"${{ github.ref_name }}\",
-                \"status\": \"prod_review\"
-              }"
-            echo ""
-            echo "Release ${VERSION} created in production with status prod_review"
-          else
+            echo "Warning: Release ${VERSION} not found — skipping prod review submission"
+            exit 0
+          fi
+
+          # Only submit for prod review if currently uat_approved
+          if [ "$RELEASE_STATUS" = "uat_approved" ]; then
             echo "Submitting release ${VERSION} for production review..."
             curl -s -o /dev/null -w "HTTP %{http_code}" \
               -X PATCH "${SUPABASE_URL}/rest/v1/compliance_releases?id=eq.${RELEASE_ID}" \
@@ -233,6 +186,8 @@ jobs:
               -d '{"status": "prod_review"}'
             echo ""
             echo "Release ${VERSION} submitted for production review"
+          else
+            echo "Release ${VERSION} status is '${RELEASE_STATUS}' — not submitting for prod review"
           fi
 
       - name: Summary

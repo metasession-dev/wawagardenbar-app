@@ -298,8 +298,8 @@ jobs:
     needs: [check-develop-ci, typecheck, sast, dependency-audit, e2e-tests, build]
     if: always() && github.event_name == 'push' && !contains(needs.*.result, 'failure')
     env:
-      SUPABASE_URL: ${{ secrets.META_COMPLY_STAGING_SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.META_COMPLY_STAGING_SERVICE_ROLE_KEY }}
+      SUPABASE_URL: ${{ secrets.META_COMPLY_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.META_COMPLY_SERVICE_ROLE_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

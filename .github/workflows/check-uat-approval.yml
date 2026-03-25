@@ -22,8 +22,8 @@ jobs:
     name: META-COMPLY UAT Approval
     runs-on: self-hosted
     env:
-      SUPABASE_URL: ${{ secrets.META_COMPLY_STAGING_SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.META_COMPLY_STAGING_SERVICE_ROLE_KEY }}
+      SUPABASE_URL: ${{ secrets.META_COMPLY_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.META_COMPLY_SERVICE_ROLE_KEY }}
       PROJECT_SLUG: wawagardenbar-app
 
     steps:

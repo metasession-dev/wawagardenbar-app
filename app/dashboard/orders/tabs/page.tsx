@@ -1,11 +1,8 @@
 import { TabService } from '@/services';
 import { DashboardTabsListClient } from '@/components/features/admin/tabs/dashboard-tabs-list-client';
 
-async function getOpenTabs() {
-  // Get tabs with default filter (open tabs)
-  const tabs = await TabService.listAllTabsWithFilters({
-    statuses: ['open'],
-  });
+async function getAllTabs() {
+  const tabs = await TabService.listAllTabsWithFilters({});
 
   // Fully serialize tabs to plain objects
   const serializedTabs = tabs.map((tab: any) => ({
@@ -29,7 +26,7 @@ async function getOpenTabs() {
 }
 
 export default async function DashboardTabsPage() {
-  const { tabs } = await getOpenTabs();
+  const { tabs } = await getAllTabs();
 
   return (
     <div className="space-y-6">

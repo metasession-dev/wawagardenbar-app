@@ -101,8 +101,7 @@ This is the **independent verification gate**. Tests run locally during developm
 
 | File | Trigger | Purpose |
 |---|---|---|
-| `.github/workflows/test-on-pr.yml` | PR to main, push to develop | TypeScript check, SAST scan, dependency audit, E2E tests |
-| `.github/workflows/build-and-publish.yml` | Push to main/develop, tags | Docker build, GHCR publish |
+| `.github/workflows/test-on-pr.yml` | PR to main, push to develop | TypeScript check, SAST scan, dependency audit, E2E tests, build check |
 | `.github/workflows/check-uat-approval.yml` | PR to main | META-COMPLY UAT approval gate |
 | `.github/workflows/post-deploy-prod.yml` | Push to main | Post-production evidence capture |
 
@@ -197,7 +196,7 @@ Run through the complete pipeline once with a small test change:
 | UAT MongoDB populated from backup | [x] |
 | Compliance directories created | [x] Complete — including periodic evidence subdirs |
 | RTM initialized | [x] REQ-001 through REQ-008 |
-| CI workflow files created | [x] test-on-pr.yml + build-and-publish.yml |
+| CI workflow files created | [x] test-on-pr.yml, check-uat-approval.yml, post-deploy-prod.yml |
 | CI: SAST + dep audit jobs added to test-on-pr.yml | [x] Added typecheck, sast, dependency-audit, e2e-tests jobs |
 | **Branch protection configured on `main`** | **[ ] REQUIRED — not yet configured** |
 | **Required status checks added to branch protection** | **[ ] REQUIRED — depends on CI jobs** |

@@ -4,7 +4,7 @@
 **Date:** 2026-03-25
 **Requirement ID:** REQ-011
 **Risk Level:** LOW
-**PR:** [Will be linked when PR is created]
+**PR:** #7
 
 ---
 

@@ -40,7 +40,7 @@ const TAB_STATUSES = [
  */
 export function DashboardTabsFilter({ onFilterChange }: DashboardTabsFilterProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['open']);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   const handleStatusChange = (status: string, checked: boolean) => {

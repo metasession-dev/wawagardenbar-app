@@ -26,3 +26,10 @@ Evidence generated locally. CI auto-uploads to META-COMPLY on develop push.
 - PaymentType restricted to enum: 'cash' | 'transfer' | 'card'
 - TabId validated as existing document
 - No user-controlled input reaches MongoDB queries without validation
+
+## UAT Verification — 2026-03-26
+- UAT Health check: PASS — `{"status":"healthy"}`
+- UAT Smoke test: PASS — Homepage 200, Public menu 401 (requires API key)
+- UAT Tabs page: PASS — 307 redirect to login (auth required)
+- Feature verification: PASS — Deploy successful, application healthy, tab-related routes accessible behind auth
+- UAT URL: https://wawagardenbar-app-uat.up.railway.app

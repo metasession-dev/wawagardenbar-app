@@ -1,3 +1,6 @@
+/**
+ * @requirement REQ-012 - Display partial payments on tab details page
+ */
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';

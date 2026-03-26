@@ -1,3 +1,6 @@
+/**
+ * @requirement REQ-012 - Pass partial payments data to tabs list
+ */
 import { TabService } from '@/services';
 import { DashboardTabsListClient } from '@/components/features/admin/tabs/dashboard-tabs-list-client';
 

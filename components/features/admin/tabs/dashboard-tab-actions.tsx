@@ -1,3 +1,6 @@
+/**
+ * @requirement REQ-012 - Pass outstanding balance to payment dialog
+ */
 'use client';
 
 import { useState } from 'react';

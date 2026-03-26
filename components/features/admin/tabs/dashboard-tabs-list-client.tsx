@@ -1,3 +1,6 @@
+/**
+ * @requirement REQ-012 - Include partial payments in tab data for outstanding balance calculation
+ */
 'use client';
 
 import { useState } from 'react';

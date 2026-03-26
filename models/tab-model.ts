@@ -1,3 +1,6 @@
+/**
+ * @requirement REQ-012 - Add partialPayments subdocument to tab schema
+ */
 import mongoose, { Schema, Model } from 'mongoose';
 import { ITab, TabStatus } from '../interfaces';
 

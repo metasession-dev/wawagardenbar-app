@@ -53,6 +53,13 @@ export default defineConfig({
       testMatch: /csr-uat\.spec\.ts/,
       dependencies: ['auth-setup'],
     },
+    // Partial payment tests (REQ-012)
+    {
+      name: 'partial-payments',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /partial-payments\.spec\.ts/,
+      dependencies: ['auth-setup'],
+    },
   ],
   /* Start dev server before tests */
   webServer: {

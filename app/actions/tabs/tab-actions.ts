@@ -327,6 +327,65 @@ export async function getDashboardFilteredTabsAction(filters: {
 }
 
 /**
+ * @requirement REQ-012 - Record a partial payment on an open tab
+ */
+export async function recordPartialPaymentAction(params: {
+  tabId: string;
+  amount: number;
+  note: string;
+  paymentType: 'cash' | 'transfer' | 'card';
+  paymentReference?: string;
+}): Promise<ActionResult<{ tab: ITab }>> {
+  try {
+    const cookieStore = await cookies();
+    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+
+    if (!session.userId || (session.role !== 'admin' && session.role !== 'super-admin')) {
+      return {
+        success: false,
+        error: 'Unauthorized. Only admins can process partial payments.',
+      };
+    }
+
+    if (!params.tabId) {
+      return { success: false, error: 'Tab ID is required' };
+    }
+
+    if (!params.amount || params.amount <= 0) {
+      return { success: false, error: 'A valid payment amount is required' };
+    }
+
+    if (!params.note || !params.note.trim()) {
+      return { success: false, error: 'A note is required for partial payments' };
+    }
+
+    const tab = await TabService.recordPartialPayment({
+      tabId: params.tabId,
+      amount: params.amount,
+      note: params.note,
+      paymentType: params.paymentType,
+      paymentReference: params.paymentReference,
+      processedBy: session.userId,
+    });
+
+    revalidatePath('/dashboard/orders/tabs');
+    revalidatePath(`/dashboard/orders/tabs/${params.tabId}`);
+
+    return {
+      success: true,
+      message: 'Partial payment recorded successfully',
+      data: { tab },
+    };
+  } catch (error) {
+    console.error('Error recording partial payment:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to record partial payment',
+    };
+  }
+}
+
+/**
  * Complete tab payment manually (admin)
  * For cash, transfer, or POS payments
  */

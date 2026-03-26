@@ -20,6 +20,14 @@ async function getAllTabs() {
     total: tab.total,
     paymentStatus: tab.paymentStatus,
     openedAt: typeof tab.openedAt === 'string' ? tab.openedAt : tab.openedAt.toISOString(),
+    partialPayments: Array.isArray(tab.partialPayments)
+      ? tab.partialPayments.map((pp: any) => ({
+          amount: pp.amount,
+          note: pp.note,
+          paymentType: pp.paymentType,
+          paidAt: typeof pp.paidAt === 'string' ? pp.paidAt : pp.paidAt?.toISOString?.() || '',
+        }))
+      : [],
   }));
 
   return { tabs: serializedTabs };

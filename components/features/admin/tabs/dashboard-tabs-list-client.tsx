@@ -12,6 +12,13 @@ import { AdminPayTabDialog } from './admin-pay-tab-dialog';
 import { getDashboardFilteredTabsAction } from '@/app/actions/tabs/tab-actions';
 import { useToast } from '@/hooks/use-toast';
 
+interface PartialPayment {
+  amount: number;
+  note: string;
+  paymentType: string;
+  paidAt: string;
+}
+
 interface Tab {
   _id: string;
   tabNumber: string;
@@ -27,6 +34,7 @@ interface Tab {
   total: number;
   paymentStatus: string;
   openedAt: string;
+  partialPayments: PartialPayment[];
 }
 
 interface DashboardTabsListClientProps {
@@ -81,6 +89,7 @@ export function DashboardTabsListClient({ initialTabs }: DashboardTabsListClient
           total: tab.total,
           paymentStatus: tab.paymentStatus,
           openedAt: tab.openedAt,
+          partialPayments: Array.isArray(tab.partialPayments) ? tab.partialPayments : [],
         }));
         setTabs(serializedTabs);
       } else {
@@ -274,6 +283,7 @@ export function DashboardTabsListClient({ initialTabs }: DashboardTabsListClient
           tabNumber={selectedTab.tabNumber}
           tableNumber={selectedTab.tableNumber}
           total={selectedTab.total}
+          outstandingBalance={selectedTab.total - (selectedTab.partialPayments || []).reduce((sum, pp) => sum + pp.amount, 0)}
           open={showPayDialog}
           onOpenChange={setShowPayDialog}
           onSuccess={() => handleFilterChange(currentFilters)}

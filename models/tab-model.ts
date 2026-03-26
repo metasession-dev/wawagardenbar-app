@@ -91,6 +91,16 @@ const tabSchema = new Schema<ITab>(
       default: 0,
       min: 0,
     },
+    partialPayments: [
+      {
+        amount: { type: Number, required: true, min: 0 },
+        note: { type: String, required: true },
+        paymentType: { type: String, enum: ['cash', 'transfer', 'card'], required: true },
+        paymentReference: { type: String },
+        processedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+        paidAt: { type: Date, default: Date.now },
+      },
+    ],
     paymentStatus: {
       type: String,
       enum: ['pending', 'paid', 'failed'],

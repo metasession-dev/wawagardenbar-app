@@ -536,6 +536,88 @@ export class TabService {
   }
 
   /**
+   * @requirement REQ-012 - Record a partial payment on an open tab
+   */
+  static async recordPartialPayment(params: {
+    tabId: string;
+    amount: number;
+    note: string;
+    paymentType: 'cash' | 'transfer' | 'card';
+    paymentReference?: string;
+    processedBy: string;
+  }): Promise<ITab> {
+    await connectDB();
+
+    const tab = await TabModel.findById(params.tabId);
+    if (!tab) {
+      throw new Error('Tab not found');
+    }
+
+    if (tab.status === 'closed') {
+      throw new Error('Cannot make a partial payment on a closed tab');
+    }
+
+    if (tab.paymentStatus === 'paid') {
+      throw new Error('Tab is already fully paid');
+    }
+
+    // Calculate outstanding balance
+    const totalPartialPayments = (tab.partialPayments || []).reduce(
+      (sum: number, pp: any) => sum + pp.amount,
+      0
+    );
+    const outstandingBalance = tab.total - totalPartialPayments;
+
+    if (params.amount <= 0) {
+      throw new Error('Partial payment amount must be greater than zero');
+    }
+
+    if (params.amount >= outstandingBalance) {
+      throw new Error(
+        `Partial payment amount (₦${params.amount.toLocaleString()}) must be less than the outstanding balance (₦${outstandingBalance.toLocaleString()}). Use full payment to close the tab.`
+      );
+    }
+
+    if (!params.note || !params.note.trim()) {
+      throw new Error('A note is required for partial payments');
+    }
+
+    // Record the partial payment
+    tab.partialPayments.push({
+      amount: params.amount,
+      note: params.note.trim(),
+      paymentType: params.paymentType,
+      paymentReference: params.paymentReference,
+      processedBy: new Types.ObjectId(params.processedBy),
+      paidAt: new Date(),
+    });
+
+    await tab.save();
+
+    // Create audit log
+    const AuditLogService = (await import('./audit-log-service')).AuditLogService;
+    await AuditLogService.createLog({
+      userId: params.processedBy,
+      userEmail: tab.customerEmail || 'guest@wawagardenbar.com',
+      userRole: 'admin',
+      action: 'tab.partial_payment',
+      resource: 'tab',
+      resourceId: params.tabId,
+      details: {
+        amount: params.amount,
+        note: params.note.trim(),
+        paymentType: params.paymentType,
+        paymentReference: params.paymentReference,
+        outstandingBalanceAfter: outstandingBalance - params.amount,
+        totalPartialPayments: totalPartialPayments + params.amount,
+        tabTotal: tab.total,
+      },
+    });
+
+    return JSON.parse(JSON.stringify(tab.toObject()));
+  }
+
+  /**
    * Complete tab payment manually (admin)
    * For cash, transfer, or POS payments
    */

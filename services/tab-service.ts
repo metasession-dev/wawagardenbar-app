@@ -1,3 +1,6 @@
+/**
+ * @requirement REQ-013 - Propagate payment method to orders on tab close
+ */
 import { Types } from 'mongoose';
 import { connectDB } from '@/lib/mongodb';
 import TabModel from '@/models/tab-model';

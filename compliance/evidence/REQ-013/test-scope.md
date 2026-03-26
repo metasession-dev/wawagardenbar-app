@@ -17,16 +17,16 @@ Full verification and validation per Test Strategy high-risk requirements.
 - Human code review via PR
 
 **Security testing (mandatory for HIGH):**
-- [ ] Access control: no new endpoints; existing admin-only restrictions unchanged
-- [ ] Audit logging: payment method included in all existing audit log entries
-- [ ] Input validation: backend rejects payment requests without a payment method; paymentMethod validated against enum
-- [ ] Error handling: no sensitive data in error responses
+- [x] Access control: no new endpoints; existing admin-only restrictions unchanged
+- [x] Audit logging: payment method included in all existing audit log entries
+- [x] Input validation: backend rejects payment requests without a payment method; paymentMethod validated against enum
+- [x] Error handling: no sensitive data in error responses
 
 **Additional high-risk testing:**
 - [ ] Independent review: second human reviewer required before merge
-- [ ] Penetration testing consideration: not warranted — tightens validation on existing flows
-- [ ] Performance impact: one additional aggregation query on Tab.partialPayments for daily report; indexed by paidAt
-- [ ] Regression scope: verify daily report totals unchanged for historical data; verify all payment flows still work; verify express close tab unaffected
+- [x] Penetration testing consideration: not warranted — tightens validation on existing flows
+- [x] Performance impact: one additional aggregation query on Tab.partialPayments for daily report; indexed by paidAt
+- [x] Regression scope: verify daily report totals unchanged for historical data; verify all payment flows still work; verify express close tab unaffected
 
 ## Validation Approach
 
@@ -49,16 +49,16 @@ Full verification and validation per Test Strategy high-risk requirements.
 
 ## Acceptance Criteria
 
-- [ ] "Customer wants to pay" popup on tabs requires payment method selection before submission
-- [ ] Express close tab requires payment method selection before submission
-- [ ] Order payments require payment method selection before submission
-- [ ] Submit/confirm button disabled until payment method selected
-- [ ] Backend rejects payment requests without a payment method
-- [ ] No new "Unspecified" entries in daily report
-- [ ] Partial payments appear in daily report on day made with correct payment method
-- [ ] Final tab closure payment appears on closing day with correct payment method
-- [ ] paymentMethod set on all orders when tab is closed
-- [ ] No double-counting between partial payments and order totals
-- [ ] Revenue totals remain accurate across single-day and date-range reports
-- [ ] All security testing items pass
+- [x] "Customer wants to pay" popup on tabs requires payment method selection before submission
+- [x] Express close tab requires payment method selection before submission
+- [x] Order payments require payment method selection before submission
+- [x] Submit/confirm button disabled until payment method selected
+- [x] Backend rejects payment requests without a payment method
+- [x] No new "Unspecified" entries in daily report
+- [x] Partial payments appear in daily report on day made with correct payment method
+- [x] Final tab closure payment appears on closing day with correct payment method
+- [x] paymentMethod set on all orders when tab is closed
+- [x] No double-counting between partial payments and order totals
+- [x] Revenue totals remain accurate across single-day and date-range reports
+- [x] All security testing items pass
 - [ ] Independent review completed

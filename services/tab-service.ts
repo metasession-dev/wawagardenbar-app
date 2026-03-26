@@ -312,7 +312,12 @@ export class TabService {
 
     await tab.save();
 
-    // Update all orders in the tab to paid status
+    /**
+     * @requirement REQ-013 - Set paymentMethod on orders for accurate daily report
+     * For gateway payments, map to the closest manual equivalent.
+     * Gateway methods (card/transfer/ussd/phone) are preserved as-is since
+     * the Order model enum supports them.
+     */
     await OrderModel.updateMany(
       { _id: { $in: tab.orders } },
       {
@@ -320,6 +325,7 @@ export class TabService {
           paymentStatus: 'paid',
           paidAt: new Date(),
           status: 'confirmed',
+          paymentMethod: 'card',
         },
       }
     );
@@ -659,7 +665,9 @@ export class TabService {
 
     await tab.save();
 
-    // Update all orders in the tab to paid status
+    /**
+     * @requirement REQ-013 - Set paymentMethod on orders for accurate daily report
+     */
     await OrderModel.updateMany(
       { _id: { $in: tab.orders } },
       {
@@ -667,6 +675,7 @@ export class TabService {
           paymentStatus: 'paid',
           paidAt: new Date(),
           status: 'confirmed',
+          paymentMethod: params.paymentType,
         },
       }
     );

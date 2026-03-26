@@ -1,6 +1,10 @@
+/**
+ * @requirement REQ-013 - Include partial payments in daily report aggregation
+ */
 import { startOfDay, endOfDay } from 'date-fns';
 import { connectDB } from '@/lib/mongodb';
 import OrderModel from '@/models/order-model';
+import TabModel from '@/models/tab-model';
 import { ExpenseModel } from '@/models/expense-model';
 import InventoryModel from '@/models/inventory-model';
 import MenuItemModel from '@/models/menu-item-model';
@@ -59,6 +63,52 @@ export interface DailySummaryReport {
 }
 
 export class FinancialReportService {
+  /**
+   * @requirement REQ-013 - Aggregate partial payments from tabs into payment breakdown
+   * Queries Tab.partialPayments where paidAt falls in the date range and adds
+   * amounts to the payment breakdown by payment type. Also returns the total
+   * partial payment amount per tab so order totals can be adjusted to avoid
+   * double-counting.
+   */
+  private static async aggregatePartialPayments(
+    startDate: Date,
+    endDate: Date,
+    paymentBreakdown: Record<string, number>
+  ): Promise<{ tabPartialTotals: Map<string, number>; totalPartialPayments: number }> {
+    const validMethods = ['cash', 'card', 'transfer', 'ussd', 'phone'];
+    const tabPartialTotals = new Map<string, number>();
+    let totalPartialPayments = 0;
+
+    // Find all tabs that have partial payments in this date range
+    const tabsWithPartials = await TabModel.find({
+      'partialPayments.paidAt': { $gte: startDate, $lte: endDate },
+    }).lean();
+
+    for (const tab of tabsWithPartials) {
+      for (const pp of (tab.partialPayments || [])) {
+        const paidAt = new Date(pp.paidAt);
+        if (paidAt >= startDate && paidAt <= endDate) {
+          const method = pp.paymentType as string;
+          const amount = pp.amount || 0;
+
+          if (method && validMethods.includes(method)) {
+            paymentBreakdown[method] += amount;
+          } else {
+            paymentBreakdown.unspecified += amount;
+          }
+          paymentBreakdown.total += amount;
+          totalPartialPayments += amount;
+
+          // Track total partial payments per tab for double-counting prevention
+          const tabId = tab._id.toString();
+          tabPartialTotals.set(tabId, (tabPartialTotals.get(tabId) || 0) + amount);
+        }
+      }
+    }
+
+    return { tabPartialTotals, totalPartialPayments };
+  }
+
   /**
    * Generate daily summary report for a specific date
    */
@@ -145,17 +195,79 @@ export class FinancialReportService {
       },
     };
 
-    // Aggregate payment breakdown
+    /**
+     * @requirement REQ-013 - Aggregate partial payments from tabs first,
+     * then aggregate order payments, subtracting partial payment amounts
+     * from tab orders to avoid double-counting.
+     */
+    const { } = await FinancialReportService.aggregatePartialPayments(
+      startDate,
+      endDate,
+      report.paymentBreakdown as Record<string, number>
+    );
+
+    // Build a map of tabId -> total partial payments (all time, not just this period)
+    // to correctly subtract from order totals when the tab is closed in this period
+    const tabIdsWithPartials = new Set<string>();
+    const allTimeTabPartials = new Map<string, number>();
+
+    // For orders belonging to tabs, we need to know ALL partial payments on that tab
+    // (not just ones in this date range) to correctly subtract from the order total
+    for (const order of orders) {
+      if (order.tabId) {
+        tabIdsWithPartials.add(order.tabId.toString());
+      }
+    }
+
+    if (tabIdsWithPartials.size > 0) {
+      const tabsForOrders = await TabModel.find({
+        _id: { $in: Array.from(tabIdsWithPartials) },
+        'partialPayments.0': { $exists: true },
+      }).lean();
+
+      for (const tab of tabsForOrders) {
+        const totalPP = (tab.partialPayments || []).reduce(
+          (sum: number, pp: any) => sum + (pp.amount || 0),
+          0
+        );
+        if (totalPP > 0) {
+          allTimeTabPartials.set(tab._id.toString(), totalPP);
+        }
+      }
+    }
+
     const validMethods = ['cash', 'card', 'transfer', 'ussd', 'phone'];
     for (const order of orders) {
-      const amount = order.total || 0;
+      let amount = order.total || 0;
       const method = order.paymentMethod as string | undefined;
-      if (method && validMethods.includes(method)) {
-        (report.paymentBreakdown as Record<string, number>)[method] += amount;
-      } else {
-        report.paymentBreakdown.unspecified += amount;
+
+      // If this order belongs to a tab with partial payments, subtract the
+      // partial payment total so only the final payment portion is attributed
+      // to the closing day. The partial payments are counted separately above.
+      if (order.tabId) {
+        const tabId = order.tabId.toString();
+        const ppTotal = allTimeTabPartials.get(tabId) || 0;
+        if (ppTotal > 0) {
+          // Distribute the subtraction proportionally across orders in the tab
+          // For simplicity, subtract from the first order's attribution
+          // by reducing the total attributed amount for this tab's orders
+          const remaining = allTimeTabPartials.get(tabId) || 0;
+          if (remaining > 0) {
+            const subtract = Math.min(remaining, amount);
+            amount -= subtract;
+            allTimeTabPartials.set(tabId, remaining - subtract);
+          }
+        }
       }
-      report.paymentBreakdown.total += amount;
+
+      if (amount > 0) {
+        if (method && validMethods.includes(method)) {
+          (report.paymentBreakdown as Record<string, number>)[method] += amount;
+        } else {
+          report.paymentBreakdown.unspecified += amount;
+        }
+        report.paymentBreakdown.total += amount;
+      }
     }
 
     // Aggregate items by menu item
@@ -351,17 +463,64 @@ export class FinancialReportService {
       },
     };
 
-    // Aggregate payment breakdown
+    /**
+     * @requirement REQ-013 - Same partial payment logic as generateDailySummary
+     */
+    const { } = await FinancialReportService.aggregatePartialPayments(
+      start,
+      end,
+      report.paymentBreakdown as Record<string, number>
+    );
+
+    const rangeTabIdsWithPartials = new Set<string>();
+    const rangeAllTimeTabPartials = new Map<string, number>();
+
+    for (const order of orders) {
+      if (order.tabId) {
+        rangeTabIdsWithPartials.add(order.tabId.toString());
+      }
+    }
+
+    if (rangeTabIdsWithPartials.size > 0) {
+      const tabsForOrders = await TabModel.find({
+        _id: { $in: Array.from(rangeTabIdsWithPartials) },
+        'partialPayments.0': { $exists: true },
+      }).lean();
+
+      for (const tab of tabsForOrders) {
+        const totalPP = (tab.partialPayments || []).reduce(
+          (sum: number, pp: any) => sum + (pp.amount || 0),
+          0
+        );
+        if (totalPP > 0) {
+          rangeAllTimeTabPartials.set(tab._id.toString(), totalPP);
+        }
+      }
+    }
+
     const validMethods = ['cash', 'card', 'transfer', 'ussd', 'phone'];
     for (const order of orders) {
-      const amount = order.total || 0;
+      let amount = order.total || 0;
       const method = order.paymentMethod as string | undefined;
-      if (method && validMethods.includes(method)) {
-        (report.paymentBreakdown as Record<string, number>)[method] += amount;
-      } else {
-        report.paymentBreakdown.unspecified += amount;
+
+      if (order.tabId) {
+        const tabId = order.tabId.toString();
+        const remaining = rangeAllTimeTabPartials.get(tabId) || 0;
+        if (remaining > 0) {
+          const subtract = Math.min(remaining, amount);
+          amount -= subtract;
+          rangeAllTimeTabPartials.set(tabId, remaining - subtract);
+        }
       }
-      report.paymentBreakdown.total += amount;
+
+      if (amount > 0) {
+        if (method && validMethods.includes(method)) {
+          (report.paymentBreakdown as Record<string, number>)[method] += amount;
+        } else {
+          report.paymentBreakdown.unspecified += amount;
+        }
+        report.paymentBreakdown.total += amount;
+      }
     }
 
     // Aggregate items

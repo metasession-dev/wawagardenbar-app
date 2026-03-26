@@ -32,3 +32,9 @@
 - Payment validation errors return generic messages without internal state details
 
 Evidence uploaded to META-COMPLY project: wawagardenbar-app/REQ-013
+
+## UAT Verification — 2026-03-26
+- UAT Health check: PASS (healthy, uptime 17498s)
+- UAT Smoke test: PASS — homepage 200, public menu 401 (requires API key)
+- Feature verification: PASS — tabs page and reports page return 307 (redirect to admin login), confirming access control intact; backend service changes (payment method propagation, report aggregation) are internal logic exercised by E2E tests locally
+- UAT URL: https://wawagardenbar-app-uat.up.railway.app

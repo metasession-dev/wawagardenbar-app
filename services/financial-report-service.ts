@@ -84,6 +84,20 @@ export class FinancialReportService {
       'partialPayments.paidAt': { $gte: startDate, $lte: endDate },
     }).lean();
 
+    console.log(`📊 [aggregatePartialPayments] date range: ${startDate.toISOString()} - ${endDate.toISOString()}`);
+    console.log(`📊 [aggregatePartialPayments] tabs with partials in range: ${tabsWithPartials.length}`);
+
+    // Debug: also check how many tabs have ANY partial payments
+    const allTabsWithPartials = await TabModel.find({
+      'partialPayments.0': { $exists: true },
+    }).select('_id tabNumber partialPayments').lean();
+    console.log(`📊 [aggregatePartialPayments] tabs with ANY partial payments: ${allTabsWithPartials.length}`);
+    for (const t of allTabsWithPartials) {
+      for (const pp of (t.partialPayments || [])) {
+        console.log(`📊   tab=${t.tabNumber} amount=${pp.amount} type=${pp.paymentType} paidAt=${new Date(pp.paidAt).toISOString()}`);
+      }
+    }
+
     for (const tab of tabsWithPartials) {
       for (const pp of (tab.partialPayments || [])) {
         const paidAt = new Date(pp.paidAt);

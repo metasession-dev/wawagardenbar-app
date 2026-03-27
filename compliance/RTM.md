@@ -23,11 +23,11 @@
 
 ### Approval Sign-Off
 
-| Role               | Name               | Signature          | Date                   |
-| ------------------ | ------------------ | ------------------ | ---------------------- |
-| Project Owner      | William            | ******\_\_\_****** | \_**\_/\_\_**/\_\_\_\_ |
-| QA Lead            | ******\_\_\_****** | ******\_\_\_****** | \_**\_/\_\_**/\_\_\_\_ |
-| Compliance Officer | ******\_\_\_****** | ******\_\_\_****** | \_**\_/\_\_**/\_\_\_\_ |
+| Role               | Name                   | Signature              | Date                   |
+| ------------------ | ---------------------- | ---------------------- | ---------------------- |
+| Project Owner      | William                | **\*\***\_\_\_**\*\*** | \_**\_/\_\_**/\_\_\_\_ |
+| QA Lead            | **\*\***\_\_\_**\*\*** | **\*\***\_\_\_**\*\*** | \_**\_/\_\_**/\_\_\_\_ |
+| Compliance Officer | **\*\***\_\_\_**\*\*** | **\*\***\_\_\_**\*\*** | \_**\_/\_\_**/\_\_\_\_ |
 
 ### Revision History
 
@@ -641,7 +641,7 @@ This section tracks discrete change requests (REQ-001 through REQ-008) that repr
 | REQ-011 | #6    | LOW    | compliance/evidence/REQ-011/ | APPROVED - DEPLOYED       | William  | 2026-03-25 |
 | REQ-012 | #9    | HIGH   | compliance/evidence/REQ-012/ | TESTED - PENDING SIGN-OFF | --       | --         |
 | REQ-013 | #10   | HIGH   | compliance/evidence/REQ-013/ | TESTED - PENDING SIGN-OFF | Pending  | --         |
-| REQ-014 | #11   | MEDIUM | compliance/evidence/REQ-014/ | DRAFT                     | --       | --         |
+| REQ-014 | #11   | MEDIUM | compliance/evidence/REQ-014/ | TESTED - PENDING SIGN-OFF | Pending  | --         |
 
 ### Change Request Dependencies
 

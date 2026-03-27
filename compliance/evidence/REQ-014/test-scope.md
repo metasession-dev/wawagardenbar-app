@@ -23,15 +23,16 @@ Full verification per Test Strategy medium-risk requirements.
 
 ## Acceptance Criteria
 
-- [ ] Reconciled checkbox is displayed alongside every tab on `/dashboard/orders/tabs`
-- [ ] Reconciled checkbox is displayed alongside every standalone order (not associated with a tab) on `/dashboard/orders`
-- [ ] Orders belonging to a tab do NOT show an individual reconciliation checkbox
-- [ ] Clicking the checkbox persists the reconciled status immediately
-- [ ] Reconciled state records timestamp (`reconciledAt`) and admin user (`reconciledBy`)
-- [ ] Filters on tabs page include reconciliation status options (All / Reconciled / Not Reconciled)
-- [ ] Filters on orders page include reconciliation status options (All / Reconciled / Not Reconciled)
-- [ ] Reconciliation status is visible at a glance (checked/unchecked)
-- [ ] All existing E2E tests continue to pass (no regressions)
+- [x] Reconciled checkbox is displayed alongside every tab on `/dashboard/orders/tabs`
+- [x] Reconciled checkbox is displayed alongside every standalone order (not associated with a tab) on `/dashboard/orders`
+- [x] Orders belonging to a tab do NOT show an individual reconciliation checkbox
+- [x] Clicking the checkbox persists the reconciled status immediately
+- [x] Reconciled state records timestamp (`reconciledAt`) and admin user (`reconciledBy`)
+- [x] Filters on tabs page include reconciliation status options (All / Reconciled / Not Reconciled)
+- [x] Filters on orders page include reconciliation status options (All / Reconciled / Not Reconciled)
+- [x] Reconciliation status is visible at a glance (checked/unchecked)
+- [x] All existing E2E tests continue to pass (no regressions)
+- [ ] Independent review: second human reviewer required before merge
 
 ## Data Model Changes
 

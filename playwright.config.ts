@@ -60,6 +60,13 @@ export default defineConfig({
       testMatch: /partial-payments\.spec\.ts/,
       dependencies: ['auth-setup'],
     },
+    // Daily report payment accuracy (REQ-013)
+    {
+      name: 'daily-report-payments',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /daily-report-payments\.spec\.ts/,
+      dependencies: ['auth-setup'],
+    },
   ],
   /* Start dev server before tests */
   webServer: {

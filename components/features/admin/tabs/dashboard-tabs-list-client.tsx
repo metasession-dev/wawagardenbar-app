@@ -249,40 +249,6 @@ export function DashboardTabsListClient({
                   data-testid="tab-card"
                   data-tab-number={tab.tabNumber}
                 >
-                  <label className="flex items-center gap-1.5 mr-3 cursor-pointer">
-                    <Checkbox
-                      checked={tab.reconciled || false}
-                      onCheckedChange={async () => {
-                        const prev = tab.reconciled;
-                        setTabs((current) =>
-                          current.map((t) =>
-                            t._id === tab._id
-                              ? { ...t, reconciled: !t.reconciled }
-                              : t
-                          )
-                        );
-                        const result = await toggleTabReconciliationAction(
-                          tab._id
-                        );
-                        if (!result.success) {
-                          setTabs((current) =>
-                            current.map((t) =>
-                              t._id === tab._id ? { ...t, reconciled: prev } : t
-                            )
-                          );
-                          toast({
-                            title: 'Error',
-                            description: result.error,
-                            variant: 'destructive',
-                          });
-                        }
-                      }}
-                      aria-label={`Mark tab ${tab.tabNumber} as reconciled`}
-                    />
-                    <span className="text-xs text-muted-foreground">
-                      Reconciled
-                    </span>
-                  </label>
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-3">
                       <h3 className="font-semibold">Table {tab.tableNumber}</h3>
@@ -347,6 +313,42 @@ export function DashboardTabsListClient({
                         View Details
                       </Button>
                     </Link>
+                    <label className="flex items-center gap-1.5 ml-2 cursor-pointer border-l pl-3">
+                      <Checkbox
+                        checked={tab.reconciled || false}
+                        onCheckedChange={async () => {
+                          const prev = tab.reconciled;
+                          setTabs((current) =>
+                            current.map((t) =>
+                              t._id === tab._id
+                                ? { ...t, reconciled: !t.reconciled }
+                                : t
+                            )
+                          );
+                          const result = await toggleTabReconciliationAction(
+                            tab._id
+                          );
+                          if (!result.success) {
+                            setTabs((current) =>
+                              current.map((t) =>
+                                t._id === tab._id
+                                  ? { ...t, reconciled: prev }
+                                  : t
+                              )
+                            );
+                            toast({
+                              title: 'Error',
+                              description: result.error,
+                              variant: 'destructive',
+                            });
+                          }
+                        }}
+                        aria-label={`Mark tab ${tab.tabNumber} as reconciled`}
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        Reconciled
+                      </span>
+                    </label>
                   </div>
                 </div>
               ))}

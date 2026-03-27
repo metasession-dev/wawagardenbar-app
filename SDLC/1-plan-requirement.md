@@ -1,15 +1,12 @@
 ---
 description: Define a new requirement in the RTM, classify risk, generate test scope, and prepare for implementation
 ---
-<!-- SDLC source: META-COMPLY/sdlc/files/1-plan-requirement.md -->
-<!-- SDLC version: sdlc-v1.0.0 -->
-<!-- Last synced: 2026-03-25 -->
 
 # Plan Requirement
 
 **Pipeline Stage:** 1 of 5
 **Next:** `2-implement-and-test.md`
-**References:** Test Policy (risk classification, AI governance), Test Strategy (risk matrix, testing depth, AI documentation)
+**References:** Test Policy (`sdlc/files/Test_Policy.md` in META-COMPLY) (risk classification, AI governance), Test Strategy (risk matrix, testing depth, AI documentation)
 
 ---
 
@@ -25,7 +22,7 @@ description: Define a new requirement in the RTM, classify risk, generate test s
 
 ### Step 1: Identify the GitHub Issue
 
-Every tracked change starts from a GitHub Issue. The issue provides the *what* and *why*; the RTM provides the compliance audit trail.
+Every tracked change starts from a GitHub Issue. The issue provides the _what_ and _why_; the RTM provides the compliance audit trail.
 
 - If the user references an issue number (e.g., `#123`): fetch its title, description, and labels using `gh issue view 123`.
 - If the user describes work without an issue: ask **"Is there a GitHub Issue for this, or should we create one?"**
@@ -38,15 +35,15 @@ Every tracked change starts from a GitHub Issue. The issue provides the *what* a
 grep -oP 'REQ-\d+' compliance/RTM.md | sort -t- -k2 -n | tail -1
 ```
 
-The next ID is one higher (e.g., if the last is REQ-008, use REQ-009).
+The next ID is one higher (e.g., if the last is REQ-007, use REQ-008).
 
 ### Step 3: Classify Risk Level
 
-| Risk Level | Criteria | Wawa Garden Bar Examples |
-|---|---|---|
-| **Low** | Internal tools, no regulated data, no auth changes | Dashboard UI tweaks, documentation, config changes |
-| **Medium** | Touches PII, user-facing features, API changes, new dependencies | Menu management, inventory, rewards/loyalty, kitchen display, Socket.IO features |
-| **High** | Security, payments, RBAC, data handling, authentication | Iron-session auth, Monnify payments, RBAC permissions, API key scopes, audit logging, customer PII |
+| Risk Level | Criteria                                                         |
+| ---------- | ---------------------------------------------------------------- |
+| **Low**    | Internal tools, no regulated data, no auth changes               |
+| **Medium** | Touches PII, user-facing features, API changes, new dependencies |
+| **High**   | Security, payments, RBAC, data handling, authentication          |
 
 AI involvement raises risk by one level when touching Medium or High categories. See Test Policy for the full risk matrix.
 
@@ -68,7 +65,9 @@ mkdir -p compliance/evidence/REQ-XXX
 
 ### Step 6: Generate Test Scope
 
-Create a test scope document proportional to the assessed risk level. This must exist **before implementation begins**.
+Create a test scope document proportional to the assessed risk level. This must exist **before implementation begins** — it is the evidence that testing was planned, not retroactively documented.
+
+The AI generates this based on the risk classification and the Test Strategy's risk-based testing depth matrix.
 
 **For LOW risk:**
 
@@ -88,7 +87,7 @@ Standard gates apply. No additional testing beyond universal exit criteria.
 - TypeScript compilation: 0 errors
 - SAST scan: 0 high/critical findings
 - Dependency audit: 0 high/critical vulnerabilities
-- E2E suite: all 183 tests pass
+- E2E suite: all pass
 - CI independent verification: all PR checks pass
 - Human code review via PR
 
@@ -118,19 +117,20 @@ Standard gates plus targeted verification.
 - TypeScript compilation: 0 errors
 - SAST scan: 0 high/critical findings
 - Dependency audit: 0 high/critical vulnerabilities
-- E2E suite: all pass (183 local, 142 unauthenticated in CI)
+- E2E suite: all pass (full suite local, unauthenticated subset in CI)
 - Human code review via PR
 
 **Additional testing required by risk level:**
 - [ ] Access control: [which endpoints/roles need verification]
-- [ ] Audit logging: [which admin actions must produce AuditLog entries]
+- [ ] Audit logging: [which actions must produce log entries]
 - [ ] Dependency review: [if new packages, verify real/current/no CVEs]
-- [ ] Socket.IO events: [if real-time features affected]
+- [ ] [Any other area-specific testing]
 
 ## Validation Approach
 
-- [e.g., "Verify menu item CRUD works end-to-end"]
-- [e.g., "Confirm inventory snapshot approval workflow"]
+How we confirm this meets the business requirement:
+- [e.g., "Verify public page displays new content correctly"]
+- [e.g., "Confirm edits are visible to users within expected time"]
 
 ## Acceptance Criteria
 
@@ -163,21 +163,22 @@ Full verification and validation per Test Strategy high-risk requirements.
 - Human code review via PR
 
 **Security testing (mandatory for HIGH):**
-- [ ] Access control: [specific endpoints, roles, expected 401/403 behaviors]
-- [ ] Audit logging: [specific admin actions that must produce entries]
-- [ ] Input validation: [boundary/injection testing — Zod schemas, MongoDB queries]
+- [ ] Access control: [specific endpoints, roles, expected behaviors]
+- [ ] Audit logging: [specific actions that must produce entries]
+- [ ] Input validation: [boundary/injection testing needed]
 - [ ] Error handling: [verify no sensitive data in error responses]
 
 **Additional high-risk testing:**
 - [ ] Independent review: [who will provide secondary review]
 - [ ] Penetration testing consideration: [warranted? justification]
-- [ ] Performance impact: [Socket.IO, MongoDB query, payment webhook concerns]
+- [ ] Performance impact: [load/performance concerns]
 - [ ] Regression scope: [areas needing manual verification beyond E2E]
 
 ## Validation Approach
 
+How we confirm this meets the business requirement:
 - [Specific user workflow to test end-to-end]
-- [Business rule to validate — e.g., payment reconciliation]
+- [Business rule to validate]
 - [Stakeholder sign-off needed? From whom?]
 
 ## AI Involvement (if applicable)
@@ -197,9 +198,21 @@ Full verification and validation per Test Strategy high-risk requirements.
 EOF
 ```
 
+### WAIT CHECKPOINT: Test Scope Review
+
+**Present the test scope to the developer.** Summarize:
+
+- Risk classification and rationale
+- Test approach (which additional testing applies)
+- Acceptance criteria
+
+**Do NOT proceed** until the developer confirms the test scope is complete and correct. If the developer requests changes, update `test-scope.md` and re-present.
+
+---
+
 ### Step 7: Update Requirements Document (If Applicable)
 
-If the requirement modifies a documented feature, update `docs/REQUIREMENTS.md` to reflect the intended change.
+If the requirement modifies a documented feature, update the requirements document to reflect the intended change.
 
 ### Step 8: Document AI Use Intent (If Applicable)
 

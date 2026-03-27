@@ -37,14 +37,14 @@ This project follows the Metasession SDLC framework. These rules are MANDATORY a
 
 Detailed workflow instructions are in this project's `SDLC/` directory. **Read the relevant workflow file before executing each stage:**
 
-| Stage | File | When to read |
-|-------|------|-------------|
-| 0 | `SDLC/0-project-setup.md` | One-time project initialisation |
-| 1 | `SDLC/1-plan-requirement.md` | Starting a new feature or tracked change |
-| 2 | `SDLC/2-implement-and-test.md` | Writing and testing code |
-| 3 | `SDLC/3-compile-evidence.md` | After implementation, before PR |
-| 4 | `SDLC/4-submit-for-review.md` | Creating the PR to main |
-| 5 | `SDLC/5-deploy-main.md` | After PR approval, deploying |
+| Stage | File                           | When to read                             |
+| ----- | ------------------------------ | ---------------------------------------- |
+| 0     | `SDLC/0-project-setup.md`      | One-time project initialisation          |
+| 1     | `SDLC/1-plan-requirement.md`   | Starting a new feature or tracked change |
+| 2     | `SDLC/2-implement-and-test.md` | Writing and testing code                 |
+| 3     | `SDLC/3-compile-evidence.md`   | After implementation, before PR          |
+| 4     | `SDLC/4-submit-for-review.md`  | Creating the PR to main                  |
+| 5     | `SDLC/5-deploy-main.md`        | After PR approval, deploying             |
 
 When a workflow step requires detailed commands or templates, **read the full workflow file** rather than relying on the summary below. The files contain exact commands, templates, and checklists.
 
@@ -67,22 +67,25 @@ Tier 1 reference documents (policy, strategy, architecture) are also in `SDLC/` 
 3. Classify risk (use issue labels as input): LOW (internal, no auth) / MEDIUM (PII, user-facing, APIs) / HIGH (security, payments, RBAC). AI involvement raises risk by one level.
 4. Add to `compliance/RTM.md` Part B: `| REQ-XXX | #NNN | [RISK] | compliance/evidence/REQ-XXX/ | DRAFT | -- | -- |`
 5. Create `compliance/evidence/REQ-XXX/test-scope.md` with acceptance criteria.
-6. Create `compliance/evidence/REQ-XXX/ai-use-note.md` if AI is involved.
-7. Commit plan: `compliance: [REQ-XXX] define requirement and test scope`
+6. **WAIT CHECKPOINT:** Present the test scope to the developer. Do NOT proceed until confirmed.
+7. Create `compliance/evidence/REQ-XXX/ai-use-note.md` if AI is involved.
+8. Commit plan: `compliance: [REQ-XXX] define requirement and test scope`
 
 ### During Implementation
 
 **Read `SDLC/2-implement-and-test.md` for full details.** Summary:
 
-- **MEDIUM/HIGH risk:** Create `compliance/evidence/REQ-XXX/implementation-plan.md` before coding — document approach, files, architecture decisions. Commit the plan first.
+- **Before coding:** Verify `compliance/evidence/REQ-XXX/test-scope.md` exists. If missing, STOP and run planning workflow first.
+- **MEDIUM/HIGH risk:** Create `compliance/evidence/REQ-XXX/implementation-plan.md` before coding — document approach, files, architecture decisions. **WAIT CHECKPOINT:** Present the plan to the developer. Do NOT code until approved. Commit the plan first.
 - Every commit: conventional format with `Ref: REQ-XXX` and `Co-Authored-By` for AI.
 - Add `@requirement REQ-XXX` JSDoc headers to modified files.
-- Log AI prompts in `compliance/evidence/REQ-XXX/ai-prompts.md` for MEDIUM/HIGH risk.
+- Log AI prompts in `compliance/evidence/REQ-XXX/ai-prompts.md` for MEDIUM/HIGH risk. Verify `ai-prompts.md` is updated before committing AI-generated code.
 - **Before staging:** review and update existing tests, write new tests for new functionality, verify test scope coverage. Gates must run against a test suite that covers the changes.
 
 ### Before Pushing
 
 Run ALL gates — every one must pass:
+
 ```bash
 npx tsc --noEmit                                      # 0 errors
 semgrep scan --config auto app/ lib/ services/ models/ # 0 new findings above baseline
@@ -90,11 +93,20 @@ npm audit --audit-level=high                           # 0 unaccepted vulnerabil
 npx playwright test                                    # all pass
 ```
 
+### After Pushing: WAIT — Confirm CI Green
+
+```bash
+gh run list --branch develop --limit 1
+```
+
+Do NOT proceed to evidence compilation or PR creation until CI is green. If CI fails, fix locally and re-push.
+
 ### Evidence Storage Rule
 
 **Markdown stays in git. Binary/JSON evidence goes to META-COMPLY portal.**
 
 Upload to META-COMPLY (NEVER commit to git):
+
 - E2E results (JSON), screenshots (PNG/JPG), SAST results (JSON), dependency audit (JSON), unit test output (TXT), test reports (HTML)
 
 ```bash
@@ -102,33 +114,47 @@ Upload to META-COMPLY (NEVER commit to git):
 ```
 
 Keep in git (small markdown, needs PR review):
+
 - `compliance/RTM.md`, `test-scope.md`, `security-summary.md`, `ai-use-note.md`, `ai-prompts.md`, release tickets
 
 ### After Implementation
 
 **Read `SDLC/3-compile-evidence.md` for full details, including release ticket template.** Summary:
 
-1. Upload binary/JSON evidence to META-COMPLY portal
-2. Create `compliance/evidence/REQ-XXX/security-summary.md` (in git)
-3. Update RTM status to `TESTED - PENDING SIGN-OFF`
-4. Create `compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md` (use template from workflow file)
-5. **Verify on UAT** — wait for Railway auto-deploy from `develop`, then run health check, smoke test, and feature-specific verification. Record results in `security-summary.md`. Do NOT create a PR until UAT is green.
-6. Commit compliance markdown ONLY:
+1. Confirm CI is green before compiling evidence: `gh run list --branch develop --limit 1`
+2. Upload binary/JSON evidence to META-COMPLY portal
+3. Create `compliance/evidence/REQ-XXX/security-summary.md` (in git)
+4. Update RTM status to `TESTED - PENDING SIGN-OFF`
+5. Create `compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md` (use template from workflow file)
+6. **WAIT CHECKPOINT:** Confirm CI + UAT deployment complete before UAT verification. Do NOT test against a stale deployment.
+7. Commit compliance markdown locally (do NOT push yet — batch with UAT results):
+
 ```bash
 git add compliance/RTM.md compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md \
   compliance/evidence/REQ-XXX/test-scope.md \
   compliance/evidence/REQ-XXX/security-summary.md \
   compliance/evidence/REQ-XXX/ai-use-note.md
+git commit -m "compliance: [REQ-XXX] evidence compiled - awaiting review"
 ```
+
+8. **Verify on UAT** (if configured) — health check, smoke test, feature verification. Record in `security-summary.md`. Commit locally. Do NOT create a PR until UAT is green.
+9. **Push all compliance commits** in a single push: `git push origin develop`
+
+### Pre-Flight Checklist (Before Creating PR)
+
+Before creating a PR, verify ALL of the following:
+
+- [ ] CI green on develop (not stale): `gh run list --branch develop --limit 1`
+- [ ] Working tree clean: `git status`
+- [ ] UAT verification passed (if configured)
+- [ ] For tracked requirements: test-scope.md complete, implementation-plan.md exists (MEDIUM/HIGH), RTM is `TESTED - PENDING SIGN-OFF`, release ticket created, evidence uploaded
+
+If any item fails, resolve it before proceeding. Read `SDLC/4-submit-for-review.md` for full PR creation steps.
 
 ### Review Policy (Risk-Tiered)
 
-Review requirements are determined by the risk classification in the RTM:
-
 - **LOW risk:** CI provides independent verification. Self-merge is permitted after all CI checks pass.
 - **MEDIUM/HIGH risk:** A second human reviewer MUST approve before merge. Self-merge is NOT permitted.
-
-When creating a PR, check the risk level of the requirement(s) included. If any requirement is MEDIUM or HIGH, the entire PR requires a second reviewer.
 
 ### Rules (NEVER break these)
 
@@ -138,8 +164,9 @@ When creating a PR, check the risk level of the requirement(s) included. If any 
 - NEVER use `--no-verify` to skip hooks
 - NEVER commit secrets (.env, credentials, API keys)
 - NEVER commit binary/JSON evidence to git — upload to META-COMPLY instead
-- NEVER create a PR to main without UAT verification passing first
+- NEVER create a PR to main without UAT verification passing first (if UAT configured)
 - NEVER push directly to main — always develop → PR → main
 - NEVER skip Co-Authored-By when AI generates code
+- NEVER proceed past a WAIT CHECKPOINT without developer confirmation
 - ALWAYS commit compliance markdown to git (RTM, test-scope, implementation-plan, security-summary, release tickets)
 - ALWAYS use merge commits (not squash) for develop → main

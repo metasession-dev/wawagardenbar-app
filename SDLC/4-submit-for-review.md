@@ -1,9 +1,6 @@
 ---
 description: Create a PR from develop to main — triggers CI independent verification and human review
 ---
-<!-- SDLC source: META-COMPLY/sdlc/files/4-submit-for-review.md -->
-<!-- SDLC version: sdlc-v1.0.0 -->
-<!-- Last synced: 2026-03-25 -->
 
 # Submit for Review
 
@@ -37,6 +34,35 @@ If a PR contains requirements at multiple risk levels, the highest risk level de
 - **Know the risk level** of the requirement(s) — this determines whether a second reviewer is required
 
 ## Steps
+
+### Step 0: Pre-Flight Verification
+
+Before creating a PR, verify all prerequisites are met. **Do NOT skip this checklist.**
+
+**Pipeline state:**
+
+- [ ] Latest CI run on `develop` is green: `gh run list --branch develop --limit 1`
+- [ ] CI is not stale (ran against the latest commit): compare CI commit SHA with `git rev-parse develop`
+- [ ] Working tree is clean: `git status`
+- [ ] UAT verification passed (if UAT configured)
+
+**For tracked requirements (REQ-XXX):**
+
+- [ ] `compliance/evidence/REQ-XXX/test-scope.md` exists and all items addressed
+- [ ] `compliance/evidence/REQ-XXX/implementation-plan.md` exists (MEDIUM/HIGH risk)
+- [ ] `compliance/evidence/REQ-XXX/ai-prompts.md` exists (if AI was used on MEDIUM/HIGH risk)
+- [ ] RTM status is `TESTED - PENDING SIGN-OFF`: `grep 'REQ-XXX' compliance/RTM.md`
+- [ ] Release ticket exists: `ls compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md`
+- [ ] Evidence uploaded to META-COMPLY (or saved locally if git-based)
+
+**Risk-tier reminder:**
+
+- LOW risk → self-merge permitted after CI passes
+- MEDIUM/HIGH risk → second human reviewer required, self-merge NOT permitted
+
+If any item fails, resolve it before proceeding. Do NOT create a PR with incomplete prerequisites.
+
+---
 
 ### Step 1: Verify Develop Is Ready
 
@@ -86,7 +112,7 @@ gh pr create --base main --head develop --title "type: description" --body "$(ca
 - UAT Health check: PASS
 - UAT Smoke test: PASS
 - UAT Feature verification: PASS — [what was verified]
-- UAT URL: https://wawagardenbar-app-uat.up.railway.app
+- UAT URL: [UAT_URL]
 
 ## CI Results (Independent Verification)
 CI runs automatically on this PR. The following gates must pass before merge:
@@ -100,7 +126,7 @@ CI runs automatically on this PR. The following gates must pass before merge:
 |--------|----------|---------------|
 | **CI status** | Green/red icons on PR commits | Pass/fail for each gate (independent, tamper-resistant) |
 | **CI E2E comment** | PR comments (automated) | E2E pass/fail with commit SHA |
-| **META-COMPLY evidence** | [View evidence on META-COMPLY](https://meta-comply-production.up.railway.app/projects/wawagardenbar-app/requirements/REQ-XXX) | Playwright report, SAST results, dependency audit |
+| **META-COMPLY evidence** | [View evidence on META-COMPLY](https://[META-COMPLY-URL]/projects/[PROJECT_SLUG]/requirements/REQ-XXX) | Playwright report, SAST results, dependency audit |
 | **Security summary** | `compliance/evidence/REQ-XXX/security-summary.md` (in PR files) | Developer's local gate results + UAT verification |
 | **Test scope** | `compliance/evidence/REQ-XXX/test-scope.md` (in PR files) | What was planned to be tested (cross-reference with results) |
 | **Test changes** | PR description ("Test Changes" section) + PR files | Which test files were added/modified and what they cover |
@@ -158,7 +184,7 @@ CI runs automatically on this PR. The following gates must pass before merge:
 - [ ] No hardcoded credentials or test data
 - [ ] Regenerated components fully retested
 
-**UAT**
+**UAT** (if UAT configured)
 - [ ] UAT verification results recorded in evidence
 - [ ] Feature works correctly on UAT environment
 
@@ -198,7 +224,7 @@ gh pr create --base main --head develop --title "type: description" --body "$(ca
 - [ ] Dependency audit (CI)
 - [ ] E2E tests (CI)
 
-CI pass/fail visible on PR commit status icons. Full test evidence available on [META-COMPLY](https://meta-comply-production.up.railway.app/projects/wawagardenbar-app).
+CI pass/fail visible on PR commit status icons. Full test evidence available on [META-COMPLY](https://[META-COMPLY-URL]/projects/[PROJECT_SLUG]).
 
 ## Reviewer Checklist
 - [ ] Code correct, no sensitive data, no regressions
@@ -230,7 +256,7 @@ git add <fixed-files>
 git commit -m "fix: resolve CI failure - [description]"
 
 # Re-run local gates to confirm
-npx tsc --noEmit && semgrep scan --config auto app/ lib/ services/ models/ --severity ERROR --severity WARNING && npm audit --audit-level=high && npx playwright test
+npx tsc --noEmit && semgrep scan --config auto [SOURCE_DIR]/ --severity ERROR --severity WARNING && npm audit --audit-level=high && npx playwright test
 
 # Push — CI re-runs automatically
 git push origin develop
@@ -243,6 +269,7 @@ gh pr list --head develop --json number --jq '.[0].number'
 ```
 
 Add to release ticket and push:
+
 ```bash
 # Edit RELEASE-TICKET-REQ-XXX.md to add PR link
 git add compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md
@@ -255,6 +282,7 @@ git push origin develop
 **For LOW risk (self-merge permitted):**
 
 ```bash
+# Watch CI status
 gh pr checks
 # Once all checks pass, merge
 gh pr merge [PR-NUMBER] --merge --delete-branch=false
@@ -263,6 +291,7 @@ gh pr merge [PR-NUMBER] --merge --delete-branch=false
 **For MEDIUM/HIGH risk (second reviewer required):**
 
 The reviewer sees:
+
 1. **CI results** — independent pass/fail from GitHub (green checks)
 2. **Code changes** — in the Files changed tab
 3. **Test changes** — in the PR description ("Test Changes" section) and in the Files changed tab (look for `e2e/`, `__tests__/`, `*.spec.ts`, `*.test.ts` files)
@@ -288,16 +317,18 @@ git push origin develop
 The verification model is risk-tiered to satisfy separation of duties (ISO 27001 A.5.3, SOC 2 CC6.1/CC8.1) where it matters:
 
 **LOW risk — CI-verified self-merge:**
+
 1. **CI** — GitHub confirms gates passed (tamper-resistant, independent)
 2. **Developer** — Confirms code quality and compliance (author verification)
 
 CI provides the independent verification source. The developer's self-merge is acceptable because the risk classification is LOW and the automated gates provide objective verification.
 
 **MEDIUM/HIGH risk — second human reviewer required:**
+
 1. **CI** — GitHub confirms gates passed (tamper-resistant, independent)
 2. **Human reviewer** — Confirms code quality, security, compliance, test scope (judgment-based, independent)
 
-Both are recorded immutably in GitHub.
+Both are recorded immutably in GitHub. The second reviewer satisfies separation of duties for changes that affect security, PII, payments, RBAC, or user-facing features.
 
 ## Output
 

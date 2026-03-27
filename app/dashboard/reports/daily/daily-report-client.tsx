@@ -268,7 +268,7 @@ export function DailyReportClient() {
           </div>
 
           {/* Payment Breakdown */}
-          {report.paymentBreakdown && report.metrics.orderCount > 0 && (
+          {report.paymentBreakdown && (report.metrics.orderCount > 0 || report.paymentBreakdown.total > 0) && (
             <div className="space-y-3">
               <h3 className="text-lg font-semibold">Revenue by Payment Method</h3>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

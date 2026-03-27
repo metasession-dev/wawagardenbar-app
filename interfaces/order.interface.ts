@@ -124,6 +124,9 @@ export interface IOrder {
     pointsUsed: number;
   }>;
   appliedRewards: Types.ObjectId[];
+  reconciled?: boolean;
+  reconciledAt?: Date;
+  reconciledBy?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }

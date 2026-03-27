@@ -1,9 +1,6 @@
 ---
 description: One-time project setup — configure repository, CI pipeline, compliance structure, and tooling before workflows can run
 ---
-<!-- SDLC source: META-COMPLY/sdlc/files/0-project-setup.md -->
-<!-- SDLC version: sdlc-v1.0.0 -->
-<!-- Last synced: 2026-03-25 -->
 
 # Project Setup Guide
 
@@ -15,7 +12,7 @@ description: One-time project setup — configure repository, CI pipeline, compl
 
 ## Purpose
 
-This guide configures the Wawa Garden Bar project so that the five pipeline workflows can run correctly. It sets up the repository structure, branch protection, CI pipeline (the independent verification gate), compliance directories, and local tooling.
+This guide configures a new project so that the five pipeline workflows can run correctly. It sets up the repository structure, branch protection, CI pipeline (the independent verification gate), compliance directories, and local tooling.
 
 **Run this guide once when starting a new project.** The pipeline workflows (1-5) assume this setup is complete.
 
@@ -23,15 +20,18 @@ This guide configures the Wawa Garden Bar project so that the five pipeline work
 
 ## Prerequisites
 
-- GitHub repository created (`metasession-dev/wawagardenbar-app`)
-- Railway configured (metasession-dev Pro account) with auto-deploy from `main` (production) and `develop` (UAT)
+- GitHub repository created
+- Hosting platform configured (Railway, Vercel, AWS, etc.) with auto-deploy from `main` (production)
+- UAT environment configured (recommended) with auto-deploy from `develop`
 - Local development environment working (app builds and runs)
-- Node.js 20+ and npm installed
+- Node.js and npm installed
 - GitHub CLI (`gh`) installed and authenticated
 
 ---
 
 ## Step 1: Branch Structure
+
+Create the permanent working branch:
 
 ```bash
 # Ensure main exists and is up to date
@@ -44,10 +44,9 @@ git push origin develop
 ```
 
 **Branch roles:**
-- `main` — Production. Auto-deploys to Railway. Never commit directly.
-- `develop` — All work happens here. Permanent, never deleted.
 
-**Status:** Already configured. Both branches exist.
+- `main` — Production. Auto-deploys. Never commit directly.
+- `develop` — All work happens here. Permanent, never deleted.
 
 ---
 
@@ -56,14 +55,20 @@ git push origin develop
 Configure in GitHub → Settings → Branches → Branch protection rules:
 
 **`main` branch:**
+
 - [x] Require a pull request before merging
-- [x] Require approvals: 1
+- [x] Require approvals: 1 (adjust if team size requires more)
 - [x] Require status checks to pass before merging
-  - Required checks: `typecheck`, `sast`, `dependency-audit`, `e2e-tests`
+  - Add these required checks after CI is configured (Step 4):
+    - `typecheck`
+    - `sast`
+    - `dependency-audit`
+    - `e2e-tests`
 - [x] Require branches to be up to date before merging
 - [x] Do not allow bypassing the above settings
 
 **`develop` branch (optional but recommended):**
+
 - [x] Require status checks to pass (push-to-develop checks)
 
 ---
@@ -76,41 +81,262 @@ mkdir -p compliance/evidence/periodic/{sast-quarterly,dependency-audit,access-co
 mkdir -p compliance/pending-releases
 mkdir -p compliance/approved-releases
 
+# Create initial RTM
+cat > compliance/RTM.md << 'EOF'
+# Requirements Traceability Matrix
+
+**Project:** [PROJECT NAME]
+**Standard:** ISO/IEC/IEEE 29119-3:2021
+
+## Part A: Baseline Requirements
+
+| ID | Requirement | Source | Status |
+|---|---|---|---|
+
+## Part B: Change Request Traceability
+
+| REQ-ID | Issue | Risk | Evidence | Status | Approver | Date |
+|---|---|---|---|---|---|---|
+EOF
+
 # Commit
 git add compliance/
 git commit -m "compliance: initialize compliance directory structure"
 git push origin develop
 ```
 
-**Status:** Partially configured. `compliance/` exists with RTM, test-plan, test-cases, and evidence directories for REQ-001 through REQ-008.
-
 ---
 
 ## Step 4: CI Pipeline Configuration
 
-This is the **independent verification gate**. Tests run locally during development (comprehensive, all tests). Tests run in CI during PR review (independent, tamper-resistant evidence produced by GitHub).
+This is the **independent verification gate**. Tests run locally during development (comprehensive, all tests). Tests run in CI during PR review (independent, tamper-resistant evidence produced by GitHub, not the developer).
 
 ### What CI Must Run
 
-| Pipeline | Trigger | Jobs | Purpose |
-|---|---|---|---|
-| Develop CI | Push to `develop` | TypeScript + SAST + dep audit + E2E + build | Full gates + evidence upload to META-COMPLY |
-| PR CI | PR to `main` | TypeScript + SAST + dep audit + E2E + build | Independent re-verification |
-| UAT Approval | PR to `main` | META-COMPLY UAT approval check | Hard gate — release must be UAT-approved |
-| Post-Deploy | Push to `main` | Smoke tests + E2E + evidence upload | Production evidence capture |
-| Deploy | Merge to `main` | Auto-deploy to Railway | Production release |
+| Pipeline   | Trigger           | Jobs                                       | Purpose                  |
+| ---------- | ----------------- | ------------------------------------------ | ------------------------ |
+| Develop CI | Push to `develop` | TypeScript check + build                   | Fast feedback            |
+| PR CI      | PR to `main`      | TypeScript + SAST + dependency audit + E2E | Independent verification |
+| Deploy     | Merge to `main`   | Auto-deploy to hosting platform            | Production release       |
 
-### Workflow Files
+### GitHub Actions Workflow File
 
-| File | Trigger | Purpose |
-|---|---|---|
-| `.github/workflows/test-on-pr.yml` | PR to main, push to develop | TypeScript check, SAST scan, dependency audit, E2E tests, build check |
-| `.github/workflows/check-uat-approval.yml` | PR to main | META-COMPLY UAT approval gate |
-| `.github/workflows/post-deploy-prod.yml` | Push to main | Post-production evidence capture |
+Create `.github/workflows/ci.yml`:
 
-**Status:** All gates now run on both develop push and PR to main. Evidence auto-uploads to META-COMPLY on develop push with release/environment=uat tagging. UAT approval gate and post-deploy production evidence workflows added.
+```yaml
+name: CI Pipeline
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ──────────────────────────────────────────────
+  # JOB 1: TypeScript Compilation
+  # Runs on: push to develop + PR to main
+  # ──────────────────────────────────────────────
+  typecheck:
+    name: TypeScript Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20' # UPDATE: match your project's Node version
+          cache: 'npm'
+      - run: npm ci
+      - run: npx tsc --noEmit
+
+  # ──────────────────────────────────────────────
+  # JOB 2: SAST Scan (Semgrep)
+  # Runs on: PR to main only
+  # Independent security evidence
+  # ──────────────────────────────────────────────
+  sast:
+    name: SAST Scan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install semgrep
+      - run: semgrep scan --config auto src/ --severity ERROR --severity WARNING --error
+        # --error flag makes semgrep exit with non-zero if findings exist
+      # Optional: upload results as artifact for audit evidence
+      - name: Save SAST results
+        if: always()
+        run: semgrep scan --config auto src/ --json > sast-results.json || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sast-results
+          path: sast-results.json
+          retention-days: 90
+
+  # ──────────────────────────────────────────────
+  # JOB 3: Dependency Audit
+  # Runs on: PR to main only
+  # Independent supply chain evidence
+  # ──────────────────────────────────────────────
+  dependency-audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20' # UPDATE: match your project's Node version
+          cache: 'npm'
+      - run: npm ci
+      - run: npm audit --audit-level=high
+      # Optional: save results for audit evidence
+      - name: Save audit results
+        if: always()
+        run: npm audit --json > dependency-audit.json || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-audit
+          path: dependency-audit.json
+          retention-days: 90
+
+  # ──────────────────────────────────────────────
+  # JOB 4: E2E Tests (Playwright)
+  # Runs on: PR to main only
+  # Independent functional test evidence
+  # ──────────────────────────────────────────────
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    # UPDATE: Configure your database service
+    # Option A: MongoDB service container
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ping:1})'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    # Option B: If using Docker Compose, remove the services block above
+    # and add a step: run: docker compose -f docker-compose.test.yml up -d
+
+    env:
+      # UPDATE: Set your project's required environment variables
+      MONGODB_URI: mongodb://localhost:27017
+      MONGODB_DB_NAME: testdb # UPDATE: your test database name
+      NODE_ENV: test
+      # Add other env vars your app needs to start
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20' # UPDATE: match your project's Node version
+          cache: 'npm'
+      - run: npm ci
+      - run: npx playwright install chromium --with-deps
+
+      # Seed test data — required before running tests
+      - name: Seed test data
+        run: npx tsx scripts/seed-e2e-admins.ts # UPDATE: your seed script path
+
+      # Run unauthenticated E2E tests only
+      # UPDATE: adjust the command to match your test configuration
+      # Options:
+      #   npx playwright test                        # all tests
+      #   npx playwright test --project=unauthenticated  # if using named projects
+      #   npx playwright test --grep-invert="@auth"  # exclude by tag
+      - name: Run E2E tests
+        run: npx playwright test
+
+      # Save test results for audit evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 90
+
+  # ──────────────────────────────────────────────
+  # JOB 5: Compliance Validation
+  # Runs on: PR to main only
+  # Validates compliance artifacts and commit conventions
+  # ──────────────────────────────────────────────
+  compliance-validation:
+    name: Compliance Validation
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history needed for commit and diff analysis
+      - name: Validate compliance artifacts
+        run: bash scripts/validate-compliance-artifacts.sh origin/main
+      - name: Validate commit conventions
+        run: bash scripts/validate-commits.sh origin/main
+
+  # ──────────────────────────────────────────────
+  # Build verification (push to develop only)
+  # ──────────────────────────────────────────────
+  build:
+    name: Build Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20' # UPDATE: match your project's Node version
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build # UPDATE: your build command
+```
+
+### Customization Checklist
+
+After creating the workflow file, update every line marked `# UPDATE`:
+
+- [ ] Node.js version matches your project
+- [ ] `src/` path in SAST scan matches your source directory
+- [ ] Database service matches your database (MongoDB, PostgreSQL, etc.)
+- [ ] Environment variables set for your app to start
+- [ ] Seed script path is correct
+- [ ] E2E test command runs the correct subset (unauthenticated for CI)
+- [ ] Build command is correct
+
+### Verify CI Works
+
+```bash
+# Commit the workflow file
+git add .github/workflows/ci.yml
+git commit -m "ci: configure CI pipeline with independent verification gates"
+git push origin develop
+
+# Create a test PR to verify all jobs pass
+gh pr create --base main --head develop --title "ci: verify pipeline configuration" --body "Testing CI pipeline setup"
+
+# Watch the checks run
+gh pr checks
+```
+
+Once all checks pass, go back to GitHub → Settings → Branches → `main` protection rules and add the job names as required status checks: `typecheck`, `sast`, `dependency-audit`, `e2e-tests`, `compliance-validation`.
+
+Now the PR **cannot be merged** unless all four independent verification gates pass. This is enforced by GitHub, not by the developer.
 
 ### After CI Is Configured
+
+The relationship between local testing and CI testing:
 
 ```
 Developer Machine (comprehensive)          GitHub Actions (independent)
@@ -118,7 +344,7 @@ Developer Machine (comprehensive)          GitHub Actions (independent)
 TypeScript check ──────────────────────→   TypeScript check
 SAST scan (Semgrep) ───────────────────→   SAST scan (Semgrep)
 Dependency audit ──────────────────────→   Dependency audit
-E2E tests (ALL — 183) ────────────────→   E2E tests (unauthenticated — 142)
+E2E tests (ALL — e.g., 183) ──────────→   E2E tests (unauthenticated subset)
 E2E tests (authenticated — local only)     ✗ (credentials not in CI)
 Post-deploy verification (local only)      ✗ (runs after merge)
 
@@ -126,40 +352,133 @@ Evidence → compliance/evidence/REQ-XXX/    Evidence → GitHub Actions logs + 
 (comprehensive, developer-produced)        (independent, tamper-resistant)
 ```
 
+Both are required. Local evidence proves comprehensive testing. CI evidence proves it independently.
+
+### Additional Workflows
+
+Copy these template workflows from `sdlc/files/ci/` into your project's `.github/workflows/`:
+
+**`check-uat-approval.yml`** — UAT approval gate:
+
+- Runs on PRs to `main` and `workflow_dispatch`
+- Queries META-COMPLY for release approval status
+- Blocks merge unless release is `uat_approved`
+- Add `Check UAT Approval` as a required status check on `main`
+
+**`post-deploy-prod.yml`** — Production evidence capture:
+
+- Runs on push to `main` (after merge)
+- Waits for deployment, runs production smoke tests
+- Uploads production evidence to META-COMPLY (`environment: production`)
+- Marks the release as `released` in META-COMPLY
+
+**Versioning convention:** Releases use date-based versions by default (`v2026.03.27`). CI auto-creates releases in META-COMPLY when uploading evidence. Update `PROJECT_SLUG` and `PRODUCTION_URL` in each template.
+
 ---
 
-## Step 5: Local Tooling Setup
+## Step 5: Local Tooling Setup (Required)
+
+### 5a. Security scanning tools
 
 ```bash
 # SAST
 pip install semgrep
+# or: npm install --save-dev semgrep
 
 # Verify
 semgrep --version
 npm audit --help
+```
 
-# Playwright
+### 5b. Playwright
+
+```bash
 npx playwright install chromium
+```
 
-# Seed test data
-npx tsx scripts/seed-e2e-admins.ts
+### 5c. Git hooks (required — enforces commit conventions and pre-push gates)
+
+Install husky, commitlint, and lint-staged:
+
+```bash
+npm install --save-dev husky @commitlint/cli @commitlint/config-conventional lint-staged
+npx husky init
+```
+
+Copy hook templates from META-COMPLY SDLC:
+
+```bash
+# From your project root (adjust path to META-COMPLY)
+cp path/to/META-COMPLY/sdlc/files/hooks/commit-msg .husky/commit-msg
+cp path/to/META-COMPLY/sdlc/files/hooks/pre-commit .husky/pre-commit
+cp path/to/META-COMPLY/sdlc/files/hooks/pre-push .husky/pre-push
+chmod +x .husky/commit-msg .husky/pre-commit .husky/pre-push
+
+# Copy commitlint config
+cp path/to/META-COMPLY/sdlc/files/hooks/commitlint.config.mjs commitlint.config.mjs
+```
+
+Add lint-staged configuration to `package.json`:
+
+```json
+{
+  "lint-staged": {
+    "*.{ts,tsx}": ["eslint --fix"],
+    "*.{ts,tsx,js,jsx,json,md}": ["prettier --write"]
+  }
+}
+```
+
+Add the prepare script so hooks install automatically for new clones:
+
+```bash
+npm pkg set scripts.prepare="husky"
+```
+
+### 5d. JSDoc requirement check script (optional — for CI enforcement)
+
+```bash
+cp path/to/META-COMPLY/sdlc/files/scripts/check-requirement-jsdoc.sh scripts/check-requirement-jsdoc.sh
+chmod +x scripts/check-requirement-jsdoc.sh
+```
+
+### 5e. Verify hooks work
+
+```bash
+# Test commitlint (should fail — missing type prefix)
+echo "bad commit message" | npx commitlint
+# Expected: error
+
+# Test commitlint (should pass)
+echo "feat: test commit message" | npx commitlint
+# Expected: no errors (warnings about missing Ref/Co-Authored-By are OK)
+
+# Test pre-push hook
+npx tsc --noEmit
+# Expected: passes (or shows real errors to fix)
 ```
 
 ---
 
 ## Step 6: Create Project Test Plan
 
-The Test Plan (`SDLC/Test_Plan.md`) is already created with:
+Copy `Test_Plan_TEMPLATE.md` from META-COMPLY (`sdlc/files/Test_Plan_TEMPLATE.md`) to `compliance/test-plan.md` and fill in:
 
-- [x] Project name and repository
-- [x] Stack and hosting details
-- [x] Production URL and health endpoint
-- [x] Database configuration
-- [x] Test suite counts and framework
-- [x] Entry/exit criteria with actual thresholds
-- [x] AI tool permissions
-- [x] Disaster recovery targets (RTO/RPO)
-- [x] Penetration test scope
+- [ ] Project name and repository
+- [ ] Stack and hosting details
+- [ ] Production URL and health endpoint
+- [ ] Database configuration
+- [ ] Test suite counts and framework
+- [ ] Entry/exit criteria with actual thresholds
+- [ ] AI tool permissions for this project
+- [ ] Disaster recovery targets (RTO/RPO)
+- [ ] Penetration test scope
+
+```bash
+git add compliance/test-plan.md
+git commit -m "compliance: project test plan"
+git push origin develop
+```
 
 ---
 
@@ -184,32 +503,31 @@ Run through the complete pipeline once with a small test change:
 # Merge, verify deployment, finalize compliance
 ```
 
+If any step fails, fix the configuration before starting real work.
+
 ---
 
 ## Setup Checklist
 
-| Step | Status |
-|---|---|
-| Repository created (`metasession-dev/wawagardenbar-app`) | [x] |
-| `develop` branch created | [x] |
-| Railway project created (metasession-dev Pro account) | [x] |
-| Production environment configured (auto-deploy from `main`) | [x] |
-| UAT environment configured (auto-deploy from `develop`) | [x] |
-| Production MongoDB populated from backup | [x] |
-| UAT MongoDB populated from backup | [x] |
-| Compliance directories created | [x] Complete — including periodic evidence subdirs |
-| RTM initialized | [x] REQ-001 through REQ-008 |
-| CI workflow files created | [x] test-on-pr.yml, check-uat-approval.yml, post-deploy-prod.yml |
-| CI: SAST + dep audit jobs added to test-on-pr.yml | [x] Added typecheck, sast, dependency-audit, e2e-tests jobs |
-| **Branch protection configured on `main`** | **[ ] REQUIRED — not yet configured** |
-| **Required status checks added to branch protection** | **[ ] REQUIRED — depends on CI jobs** |
-| Local tooling installed (Semgrep, Playwright, Husky, Commitlint) | [x] Semgrep 1.155.0, Playwright, Husky + commitlint installed |
-| CLAUDE.md with SDLC enforcement rules | [x] AI assistant enforces SDLC process |
-| META-COMPLY evidence upload in CI | [x] upload-evidence job in test-on-pr.yml |
-| UAT approval gate configured (`check-uat-approval.yml`) | [x] |
-| Post-deploy production evidence configured (`post-deploy-prod.yml`) | [x] |
-| Project Test Plan created | [x] |
-| End-to-end pipeline verified with test change | [x] PR #1 — all 4 CI gates passed, merged, deployed |
+| Step                                                                           | Status |
+| ------------------------------------------------------------------------------ | ------ |
+| Repository created                                                             | [ ]    |
+| `develop` branch created                                                       | [ ]    |
+| Production environment configured (auto-deploy from `main`)                    | [ ]    |
+| UAT environment configured (auto-deploy from `develop`)                        | [ ]    |
+| Branch protection configured                                                   | [ ]    |
+| Compliance directories created (including `periodic/` subdirs)                 | [ ]    |
+| RTM initialized                                                                | [ ]    |
+| CI workflow file created (`.github/workflows/ci.yml`)                          | [ ]    |
+| CI verified — all jobs pass on test PR                                         | [ ]    |
+| Required status checks added to branch protection                              | [ ]    |
+| Local tooling installed (Semgrep, Playwright)                                  | [ ]    |
+| Git hooks configured (Husky, Commitlint, lint-staged)                          | [ ]    |
+| Hook verification passed (commitlint, pre-push tsc)                            | [ ]    |
+| AI assistant SDLC rules configured (CLAUDE.md / .windsurfrules / .cursorrules) | [ ]    |
+| META-COMPLY evidence upload configured in CI                                   | [ ]    |
+| Project Test Plan created                                                      | [ ]    |
+| End-to-end pipeline verified with test change                                  | [ ]    |
 
 ---
 
@@ -222,5 +540,7 @@ With setup complete, all development follows the five pipeline workflows:
 2-implement-and-test.md     → Code, commit, run all local gates, auto-deploy to UAT
 3-compile-evidence.md       → Gather evidence, verify on UAT, create release ticket
 4-submit-for-review.md      → Create PR (CI runs independent verification)
-5-deploy-main.md            → Merge, deploy, verify, finalize
+5-deploy-main.md            → Merge, verify production deployment, finalize
 ```
+
+The CI pipeline runs automatically on every PR. The developer doesn't need to trigger it — GitHub handles it. The branch protection rules prevent merging if CI fails. The human reviewer sees both local evidence (in the compliance directory) and CI evidence (in the PR checks) before approving.

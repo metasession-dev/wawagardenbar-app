@@ -21,7 +21,7 @@ export default defineConfig({
     ['list'],
   ],
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: process.env.BASE_URL || 'http://localhost:3000',
     trace: 'on-first-retry',
     screenshot: 'on', // Capture screenshot for every test
     video: 'on-first-retry', // Also capture video on retry for evidence
@@ -53,12 +53,35 @@ export default defineConfig({
       testMatch: /csr-uat\.spec\.ts/,
       dependencies: ['auth-setup'],
     },
+    // Partial payment tests (REQ-012)
+    {
+      name: 'partial-payments',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /partial-payments\.spec\.ts/,
+      dependencies: ['auth-setup'],
+    },
+    // Daily report payment accuracy (REQ-013)
+    {
+      name: 'daily-report-payments',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /daily-report-payments\.spec\.ts/,
+      dependencies: ['auth-setup'],
+    },
+    // Reconciliation checkbox (REQ-014)
+    {
+      name: 'reconciliation',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /reconciliation\.spec\.ts/,
+      dependencies: ['auth-setup'],
+    },
   ],
-  /* Start dev server before tests */
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
-    reuseExistingServer: true,
-    timeout: 120_000,
-  },
+  /* Start dev server before tests (skipped when BASE_URL is set) */
+  webServer: process.env.BASE_URL
+    ? undefined
+    : {
+        command: 'npm run dev',
+        url: 'http://localhost:3000',
+        reuseExistingServer: true,
+        timeout: 120_000,
+      },
 });

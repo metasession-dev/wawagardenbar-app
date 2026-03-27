@@ -2,6 +2,18 @@ import { Types } from 'mongoose';
 
 export type TabStatus = 'open' | 'settling' | 'closed';
 
+/**
+ * @requirement REQ-012 - Partial payment record for tabs
+ */
+export interface IPartialPayment {
+  amount: number;
+  note: string;
+  paymentType: 'cash' | 'transfer' | 'card';
+  paymentReference?: string;
+  processedBy: Types.ObjectId;
+  paidAt: Date;
+}
+
 export interface ITab {
   _id: Types.ObjectId;
   tabNumber: string;
@@ -27,9 +39,13 @@ export interface ITab {
   paymentStatus: 'pending' | 'paid' | 'failed';
   paymentReference?: string;
   transactionReference?: string;
+  partialPayments: IPartialPayment[];
   paidAt?: Date;
   openedAt: Date;
   closedAt?: Date;
+  reconciled?: boolean;
+  reconciledAt?: Date;
+  reconciledBy?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }

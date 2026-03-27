@@ -2,6 +2,11 @@
   "name": "wawa-garden-bar",
   "version": "0.1.0",
   "private": true,
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json,md}": [
+      "prettier --write"
+    ]
+  },
   "scripts": {
     "dev": "NODE_OPTIONS='--max-old-space-size=4096' tsx watch server.ts",
     "build": "next build",
@@ -102,6 +107,7 @@
     "eslint-plugin-react": "^7.37.1",
     "eslint-plugin-react-hooks": "^4.6.2",
     "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "postcss": "^8.5.6",
     "prettier": "^3.3.3",
     "tailwindcss": "^3.4.18",

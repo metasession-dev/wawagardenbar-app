@@ -1,3 +1,6 @@
+/**
+ * @requirement REQ-012 - Pass outstanding balance to payment dialog
+ */
 'use client';
 
 import { useState } from 'react';
@@ -10,6 +13,7 @@ interface DashboardTabActionsProps {
   tabNumber: string;
   tableNumber: string;
   total: number;
+  outstandingBalance: number;
   status: string;
 }
 
@@ -21,6 +25,7 @@ export function DashboardTabActions({
   tabNumber,
   tableNumber,
   total,
+  outstandingBalance,
   status,
 }: DashboardTabActionsProps) {
   const [showPayDialog, setShowPayDialog] = useState(false);
@@ -59,6 +64,7 @@ export function DashboardTabActions({
         tabNumber={tabNumber}
         tableNumber={tableNumber}
         total={total}
+        outstandingBalance={outstandingBalance}
         open={showPayDialog}
         onOpenChange={setShowPayDialog}
       />

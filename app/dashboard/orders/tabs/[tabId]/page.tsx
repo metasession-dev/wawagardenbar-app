@@ -1,3 +1,6 @@
+/**
+ * @requirement REQ-012 - Display partial payments on tab details page
+ */
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
@@ -7,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Receipt, Plus } from 'lucide-react';
+import { ArrowLeft, Receipt, Plus, SplitSquareHorizontal } from 'lucide-react';
 import Link from 'next/link';
 import { DashboardTabActions } from '@/components/features/admin/tabs/dashboard-tab-actions';
 import { DeleteTabDialog } from '@/components/features/admin/tabs/delete-tab-dialog';
@@ -69,6 +72,15 @@ async function getTabDetails(tabId: string) {
     openedAt: plainTab.openedAt,
     closedAt: plainTab.closedAt,
     paidAt: plainTab.paidAt,
+    partialPayments: Array.isArray(plainTab.partialPayments)
+      ? plainTab.partialPayments.map((pp: any) => ({
+          amount: pp.amount,
+          note: pp.note,
+          paymentType: pp.paymentType,
+          paymentReference: pp.paymentReference,
+          paidAt: pp.paidAt,
+        }))
+      : [],
   };
 
   const serializedOrders: SerializedOrder[] = plainOrders.map((order: any): SerializedOrder => ({
@@ -95,6 +107,13 @@ export default async function DashboardTabDetailsPage({ params }: DashboardTabDe
 
   // Count non-cancelled orders
   const nonCancelledOrderCount = orders.filter(order => order.status !== 'cancelled').length;
+
+  // Calculate outstanding balance after partial payments
+  const totalPartialPayments = (tab.partialPayments || []).reduce(
+    (sum: number, pp: { amount: number }) => sum + pp.amount,
+    0
+  );
+  const outstandingBalance = tab.total - totalPartialPayments;
 
   return (
     <div className="space-y-6">
@@ -214,6 +233,57 @@ export default async function DashboardTabDetailsPage({ params }: DashboardTabDe
             </CardContent>
           </Card>
 
+          {/* Partial Payments History */}
+          {tab.partialPayments && tab.partialPayments.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <SplitSquareHorizontal className="h-5 w-5" />
+                  Partial Payments ({tab.partialPayments.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {tab.partialPayments.map((pp: any, index: number) => (
+                    <div key={index}>
+                      {index > 0 && <Separator className="my-4" />}
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <span className="font-semibold text-green-600">
+                              ₦{pp.amount.toLocaleString()}
+                            </span>
+                            <Badge variant="outline" className="ml-2 text-xs">
+                              {pp.paymentType}
+                            </Badge>
+                          </div>
+                          <span className="text-sm text-muted-foreground">
+                            {new Date(pp.paidAt).toLocaleString()}
+                          </span>
+                        </div>
+                        <p className="text-sm">{pp.note}</p>
+                        {pp.paymentReference && (
+                          <p className="text-xs text-muted-foreground">
+                            Ref: {pp.paymentReference}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  <Separator />
+                  <div className="flex justify-between font-semibold">
+                    <span>Total Partial Payments:</span>
+                    <span className="text-green-600">₦{totalPartialPayments.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between font-bold">
+                    <span>Outstanding Balance:</span>
+                    <span>₦{outstandingBalance.toLocaleString()}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Create Order Button */}
           {tab.status === 'open' && (
             <Link href={`/menu?tableNumber=${tab.tableNumber}`}>
@@ -262,6 +332,19 @@ export default async function DashboardTabDetailsPage({ params }: DashboardTabDe
                   <span>Total:</span>
                   <span>₦{tab.total.toLocaleString()}</span>
                 </div>
+                {totalPartialPayments > 0 && (
+                  <>
+                    <div className="flex justify-between text-sm text-green-600">
+                      <span>Partial Payments:</span>
+                      <span className="font-medium">-₦{totalPartialPayments.toLocaleString()}</span>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between font-bold text-lg">
+                      <span>Outstanding:</span>
+                      <span>₦{outstandingBalance.toLocaleString()}</span>
+                    </div>
+                  </>
+                )}
               </div>
 
               {tab.status === 'closed' && (
@@ -283,6 +366,7 @@ export default async function DashboardTabDetailsPage({ params }: DashboardTabDe
                     tabNumber={tab.tabNumber}
                     tableNumber={tab.tableNumber}
                     total={tab.total}
+                    outstandingBalance={outstandingBalance}
                     status={tab.status}
                   />
                 </div>

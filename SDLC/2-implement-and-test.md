@@ -1,9 +1,6 @@
 ---
 description: Implement changes on develop, run all local gates (tests + security scans), commit with compliance-aware conventions
 ---
-<!-- SDLC source: META-COMPLY/sdlc/files/2-implement-and-test.md -->
-<!-- SDLC version: sdlc-v1.0.0 -->
-<!-- Last synced: 2026-03-25 -->
 
 # Implement & Test
 
@@ -17,13 +14,33 @@ description: Implement changes on develop, run all local gates (tests + security
 ## Prerequisites
 
 - On the `develop` branch
-- Dev server starts (`npm run dev`)
-- MongoDB running locally
-- Playwright browsers installed (`npx playwright install chromium`)
-- Test data seeded (`npx tsx scripts/seed-e2e-admins.ts`)
-- Semgrep installed (`pip install semgrep`)
+- Dev server starts
+- Database running locally
+- Playwright browsers installed
+- Test data seeded
+- Semgrep installed
 
 ## Steps
+
+### Step 0: Validate Planning Artifacts (Tracked Requirements)
+
+Before writing any code, verify that the planning stage is complete:
+
+```bash
+# For tracked requirements — test scope MUST exist
+ls compliance/evidence/REQ-XXX/test-scope.md
+```
+
+**If the file does not exist:** STOP. Run `1-plan-requirement.md` first. Do NOT proceed to implementation without a committed test scope.
+
+For MEDIUM/HIGH risk, also verify:
+
+```bash
+# Risk classification and RTM entry exist
+grep 'REQ-XXX' compliance/RTM.md
+```
+
+---
 
 ### Step 1: Verify Branch
 
@@ -41,6 +58,7 @@ For MEDIUM and HIGH risk requirements, create an implementation plan before writ
 **Skip this step** for LOW risk requirements — proceed directly to Step 3.
 
 **2a. Explore the codebase:**
+
 - Understand existing patterns, models, services, and API routes relevant to the change
 - Identify files that will be created, modified, or affected
 
@@ -57,28 +75,41 @@ Create `compliance/evidence/REQ-XXX/implementation-plan.md`:
 **Date:** [YYYY-MM-DD]
 
 ## Approach
+
 [1-3 sentences describing the overall approach]
 
 ## Files to Create
+
 - `path/to/new-file.ts` — [purpose]
 
 ## Files to Modify
+
 - `path/to/existing-file.ts` — [what changes and why]
 
 ## Architecture Decisions
+
 - [Key decision 1 and rationale]
 - [Key decision 2 and rationale]
 
 ## Dependencies
+
 - [New packages needed, or "None"]
 
 ## Risks / Considerations
+
 - [Anything that could go wrong or needs special attention]
 ```
 
-**2c. Review with the developer:**
+**2c. WAIT CHECKPOINT: Implementation Plan Review**
 
-The developer confirms the plan before implementation begins. For HIGH risk, this review is especially important — it's cheaper to change the plan than to refactor the code.
+**Present the implementation plan to the developer.** Summarize:
+
+- Approach and rationale
+- Files to create/modify
+- Architecture decisions
+- Risks and dependencies
+
+**Do NOT proceed to Step 3** until the developer explicitly approves the plan. If the developer requests changes, update `implementation-plan.md` and re-present. For HIGH risk, this review is especially important — it's cheaper to change the plan than to refactor the code.
 
 **2d. Commit the plan:**
 
@@ -117,11 +148,14 @@ echo "REGENERATION: [component] regenerated on $(date -I). Full retest required.
 
 Per Test Strategy: regeneration triggers full retest.
 
+**MEDIUM/HIGH risk — AI prompt logging checkpoint:** Before committing AI-generated code, verify that `ai-prompts.md` has been updated with the prompt summary and files generated. If missing, create it now — this is a required artifact for MEDIUM/HIGH risk requirements with AI involvement.
+
 ### Step 4: Review and Update Tests
 
 Before staging, review the test suite to ensure it covers the changes made:
 
 **4a. Check if existing tests need updating:**
+
 ```bash
 # List test files that may be affected by your changes
 git diff --name-only | grep -iE 'spec|test|e2e'
@@ -132,18 +166,21 @@ grep -rn 'protectedRoutes\|const routes' e2e/ __tests__/ --include='*.ts' --incl
 ```
 
 **4b. Update existing tests if needed:**
+
 - New routes added? → Add them to route protection test arrays
 - API response shape changed? → Update assertions
 - UI components changed? → Update selectors and expected content
 - Business logic changed? → Update unit test expectations
 
 **4c. Write new tests for new functionality:**
+
 - New pages → route protection tests (unauthenticated redirect)
 - New API endpoints → auth enforcement tests, response format tests
 - New user flows → E2E tests for critical paths
 - New business logic → unit tests
 
 **4d. Verify test scope alignment:**
+
 ```bash
 cat compliance/evidence/REQ-XXX/test-scope.md
 # Check: does the test scope list testing items that aren't yet covered?
@@ -156,7 +193,7 @@ The goal is that gates (Step 7) run against a test suite that actually covers th
 
 ```bash
 git diff --name-only
-git add app/path/to/file.ts
+git add src/path/to/file.ts
 
 # Safety check — no secrets staged
 git diff --cached --name-only | grep -iE '\.env|secret|credential|\.auth|\.pem'
@@ -184,17 +221,20 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`, `compliance`, `securi
 ### Step 7: Run All Local Gates (Mandatory)
 
 #### Gate 1: TypeScript
+
 ```bash
 npx tsc --noEmit
 ```
 
 #### Gate 2: Security (SAST + Dependencies)
+
 ```bash
-semgrep scan --config auto app/ lib/ services/ models/ --severity ERROR --severity WARNING
+semgrep scan --config auto [SOURCE_DIR]/ --severity ERROR --severity WARNING
 npm audit --audit-level=high
 ```
 
 If new dependencies added:
+
 ```bash
 git diff origin/main -- package.json package-lock.json | grep '^\+'
 npm audit
@@ -202,23 +242,25 @@ npm audit
 ```
 
 #### Gate 3: E2E Tests
+
 ```bash
 npx playwright test
 ```
 
 #### Exit Criteria
 
-| Gate | Threshold |
-|---|---|
-| TypeScript | 0 errors |
-| SAST (high/critical) | 0 findings |
+| Gate                         | Threshold         |
+| ---------------------------- | ----------------- |
+| TypeScript                   | 0 errors          |
+| SAST (high/critical)         | 0 findings        |
 | Dependencies (high/critical) | 0 vulnerabilities |
-| E2E tests | All 183 pass |
-| Severity-1 defects | 0 open |
+| E2E tests                    | All pass          |
+| Severity-1 defects           | 0 open            |
 
 For Medium/High risk, also verify access control and audit log tests pass (see Test Plan and test-scope.md).
 
 **If SAST finds issues:**
+
 ```bash
 echo "SAST finding: [rule-id] in [file] — [fixed/false-positive: reason]" >> compliance/evidence/REQ-XXX/sast-review.md
 ```
@@ -230,6 +272,7 @@ git push origin develop
 ```
 
 If rejected:
+
 ```bash
 git pull --rebase origin develop
 # Re-run ALL local gates after rebase
@@ -237,6 +280,18 @@ git push origin develop
 ```
 
 Pushing to `develop` triggers the full CI pipeline (TypeScript, SAST, dependency audit, E2E, build). All gate results are automatically uploaded to META-COMPLY tagged with the release version and `environment=uat`. The develop branch auto-deploys to the UAT environment (Railway staging). UAT will be formally reviewed and approved in META-COMPLY before a PR to main can be created.
+
+### WAIT CHECKPOINT: Confirm CI Green
+
+After pushing, wait for CI to complete before proceeding:
+
+```bash
+gh run list --branch develop --limit 1
+# Or watch in real time:
+gh run watch
+```
+
+**Do NOT proceed** until CI is green. If CI fails, diagnose the failure, fix locally, re-run all local gates, and push again. Do not push repeatedly hoping CI will pass — fix the root cause.
 
 ### Step 9: Update Evidence
 

@@ -30,6 +30,9 @@ export interface Order {
   statusHistory?: any[];
   estimatedCompletionTime?: string;
   preparationStartedAt?: string;
+  tabId?: string;
+  reconciled?: boolean;
+  reconciledAt?: string;
 }
 
 interface OrderStore {
@@ -37,7 +40,7 @@ interface OrderStore {
   selectedOrders: string[];
   filters: OrderFilters;
   isConnected: boolean;
-  
+
   // Actions
   setOrders: (orders: Order[]) => void;
   addOrder: (order: Order) => void;
@@ -60,41 +63,47 @@ export const useOrderStore = create<OrderStore>((set) => ({
   selectedOrders: [],
   filters: {},
   isConnected: false,
-  
+
   setOrders: (orders) => set({ orders }),
-  
-  addOrder: (order) => set((state) => ({
-    orders: [order, ...state.orders],
-  })),
-  
-  updateOrder: (orderId, updates) => set((state) => ({
-    orders: state.orders.map((o) =>
-      o._id === orderId ? { ...o, ...updates } : o
-    ),
-  })),
-  
-  removeOrder: (orderId) => set((state) => ({
-    orders: state.orders.filter((o) => o._id !== orderId),
-    selectedOrders: state.selectedOrders.filter((id) => id !== orderId),
-  })),
-  
-  toggleSelectOrder: (orderId) => set((state) => ({
-    selectedOrders: state.selectedOrders.includes(orderId)
-      ? state.selectedOrders.filter((id) => id !== orderId)
-      : [...state.selectedOrders, orderId],
-  })),
-  
-  selectAllOrders: () => set((state) => ({
-    selectedOrders: state.orders.map((o) => o._id),
-  })),
-  
+
+  addOrder: (order) =>
+    set((state) => ({
+      orders: [order, ...state.orders],
+    })),
+
+  updateOrder: (orderId, updates) =>
+    set((state) => ({
+      orders: state.orders.map((o) =>
+        o._id === orderId ? { ...o, ...updates } : o
+      ),
+    })),
+
+  removeOrder: (orderId) =>
+    set((state) => ({
+      orders: state.orders.filter((o) => o._id !== orderId),
+      selectedOrders: state.selectedOrders.filter((id) => id !== orderId),
+    })),
+
+  toggleSelectOrder: (orderId) =>
+    set((state) => ({
+      selectedOrders: state.selectedOrders.includes(orderId)
+        ? state.selectedOrders.filter((id) => id !== orderId)
+        : [...state.selectedOrders, orderId],
+    })),
+
+  selectAllOrders: () =>
+    set((state) => ({
+      selectedOrders: state.orders.map((o) => o._id),
+    })),
+
   clearSelection: () => set({ selectedOrders: [] }),
-  
-  setFilters: (filters) => set((state) => ({
-    filters: { ...state.filters, ...filters },
-  })),
-  
+
+  setFilters: (filters) =>
+    set((state) => ({
+      filters: { ...state.filters, ...filters },
+    })),
+
   clearFilters: () => set({ filters: {} }),
-  
+
   setConnected: (connected) => set({ isConnected: connected }),
 }));

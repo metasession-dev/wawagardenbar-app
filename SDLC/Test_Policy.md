@@ -1,20 +1,16 @@
-<!-- SDLC source: META-COMPLY/sdlc/files/Test_Policy.md -->
-<!-- SDLC version: sdlc-v1.0.0 -->
-<!-- Last synced: 2026-03-25 -->
-
 # Test Policy
 
 **Document Type:** Policy | **Version:** 3.0 | **Effective Date:** March 2026 | **Review Cycle:** Annual
 
-**Owner:** Engineering Leadership | **Approved By:** Ade Thompson (Super Admin)
+**Owner:** Engineering Leadership | **Approved By:** Executive Team
 
 ---
 
 ## Purpose
 
-This Test Policy establishes the organizational commitment to quality assurance and testing excellence for the Wawa Garden Bar platform. It defines our philosophy, principles, accountability standards, and governance for all testing activities — including AI-assisted development.
+This Test Policy establishes Metasession's organizational commitment to quality assurance and testing excellence. It defines our philosophy, principles, accountability standards, and governance for all testing activities — including AI-assisted development.
 
-This policy answers **"why we test"** and **"what we commit to."** For how we approach testing methodically, see the Test Strategy. For what tools and patterns we use, see the Test Architecture.
+This policy answers **"why we test"** and **"what we commit to."** For how we approach testing methodically, see the Test Strategy (`sdlc/files/Test_Strategy.md` in META-COMPLY). For what tools and patterns we use, see the Test Architecture.
 
 ---
 
@@ -22,7 +18,8 @@ This policy answers **"why we test"** and **"what we commit to."** For how we ap
 
 This policy applies to:
 
-- The Wawa Garden Bar ordering platform and all associated services
+- All Metasession products and client service delivery engagements
+- Internal systems and infrastructure
 - All team members involved in software development, quality assurance, and product delivery
 - All code regardless of authorship — human-written, AI-generated, or AI-assisted
 
@@ -30,24 +27,28 @@ This policy applies to:
 
 ## Testing Philosophy
 
-**Core Principle:** We test to ensure zero critical defects reach production and to maintain the trust of our customers, staff, and business partners.
+**Core Principle:** We test to ensure zero critical defects reach production and to maintain the trust of our customers, partners, and end users.
 
-- **Quality is non-negotiable** — Testing is an integral part of our definition of done
-- **Prevention over detection** — We invest in early testing, automation, and continuous quality practices
+Metasession believes that:
+
+- **Quality is non-negotiable** — Testing is not optional; it is an integral part of our definition of done
+- **Prevention over detection** — We invest in early testing, automation, and continuous quality practices to prevent defects rather than finding them late
 - **Risk-based approach** — Testing resources are allocated based on business risk, compliance requirements, and customer impact
-- **Continuous improvement** — We regularly review and enhance our testing practices
-- **Compliance-first mindset** — All testing activities support ISO 27001, GDPR, and regulatory compliance objectives
-- **Accountability regardless of authorship** — The human who commits code is responsible for it, whether they wrote it manually or generated it with AI
+- **Continuous improvement** — We regularly review and enhance our testing practices based on metrics, retrospectives, and industry best practices
+- **Compliance-first mindset** — All testing activities support our ISO 27001, GDPR, and other regulatory compliance objectives
+- **Accountability regardless of authorship** — The human who commits code is responsible for it, whether they wrote it manually, generated it with AI, or received it from a third party
 
 ---
 
 ## Strategic Alignment
 
-**Operational Excellence & Compliance** — Testing provides documented evidence for audits, demonstrates adherence to secure SDLC practices, and produces automated audit trails.
+This policy directly supports Metasession's strategic plan:
 
-**Customer Trust** — The platform handles payments (Monnify), personal data, and real-time ordering. Rigorous testing ensures the ordering experience is reliable and secure.
+**Operational Excellence & Compliance** — Testing provides documented evidence for ISO 27001 certification audits, demonstrates adherence to secure SDLC practices, and produces automated audit trails.
 
-**Business Continuity** — Wawa Garden Bar depends on the platform for daily operations (dine-in, pickup, delivery, bar tabs). Downtime directly impacts revenue.
+**Service Market Development** — Our testing expertise differentiates Metasession as a premium QA partner and builds credibility with clients in regulated industries.
+
+**Product Portfolio Growth** — Consistent testing standards ensure quality across all products while automation enables rapid iteration without sacrificing reliability.
 
 ---
 
@@ -64,16 +65,16 @@ This policy applies to:
 
 ### Compliance Framework
 
-Testing practices conform to:
+Metasession's testing practices conform to:
 
 - **ISO/IEC 29119-3** — Software testing documentation
 - **ISO 27001** — Information security management
-- **GDPR** — Data protection and privacy (customer PII, order history)
+- **GDPR** — Data protection and privacy
 - Industry best practices for agile testing and DevOps
 
 ### Periodic Security Commitments
 
-Beyond per-change scanning:
+Beyond per-change scanning, Metasession commits to:
 
 - **Quarterly:** Full codebase security review, dependency deep audit, access control review, audit log integrity check
 - **Annually:** Penetration testing by qualified third party, disaster recovery testing, third-party security assessment, AI use policy review
@@ -86,7 +87,7 @@ Specific schedules and procedures are defined in the Periodic Security Review Sc
 
 ### Policy Statement
 
-We embrace AI as a development tool while recognizing that AI-generated code introduces specific compliance risks requiring explicit controls. AI assistance does not reduce testing requirements — it increases them.
+Metasession embraces AI as a development tool while recognizing that AI-generated code introduces specific compliance risks requiring explicit controls. AI assistance does not reduce testing requirements — it increases them.
 
 ### The Risk Profile
 
@@ -100,83 +101,105 @@ AI-generated code presents risks distinct from human-authored code:
 
 ### Mandatory Controls
 
-1. **Human review as a formal compliance gate** — Every AI-generated piece of code must be reviewed by a qualified human before entering the test pipeline
-2. **Automated security scanning on every commit** — AI-generated code must pass the same SAST and dependency scanning gates as human-authored code
-3. **Dependency and supply chain verification** — All dependencies in AI-assisted changes must be verified as real, current, and vulnerability-free
-4. **Regeneration triggers full retest** — If a developer regenerates a component from scratch, that triggers full retest of the component and dependents
-5. **Documentation proportional to risk** — AI tool permissions, review requirements, and prompt/output retention based on risk level
+1. **Human review as a formal compliance gate** — Every AI-generated piece of code must be reviewed by a qualified human before entering the test pipeline. The review must be logged with reviewer identity, date, and scope.
+
+2. **Automated security scanning on every commit** — AI-generated code must pass the same SAST and dependency scanning gates as human-authored code. These are mandatory, not optional.
+
+3. **Dependency and supply chain verification** — All dependencies in AI-assisted changes must be verified as real, current, and vulnerability-free.
+
+4. **Regeneration triggers full retest** — If a developer regenerates a component from scratch (not incremental editing), that triggers full retest of the component and dependents. Functional equivalence cannot be assumed.
+
+5. **Documentation proportional to risk** — Each project's Test Plan defines AI tool permissions, review requirements, and prompt/output retention based on risk level.
 
 ### Permitted AI Tools
 
-| Tool | Permitted Use | Restrictions |
-|---|---|---|
-| Claude (Anthropic) — Opus 4.6, Sonnet 4.6 | Code generation, test generation, documentation, review assistance | No deployment without human review |
-| GitHub Copilot | Inline code suggestions | Same review requirements as any AI-generated code |
+| Tool               | Permitted Use                                                      | Restrictions                                      |
+| ------------------ | ------------------------------------------------------------------ | ------------------------------------------------- |
+| Claude (Anthropic) | Code generation, test generation, documentation, review assistance | No deployment without human review                |
+| GitHub Copilot     | Inline code suggestions                                            | Same review requirements as any AI-generated code |
 
-Adding a new tool requires Engineering Leadership approval.
+Adding a new tool requires Engineering Leadership approval and updates to this policy, the Test Strategy, and relevant project Test Plans.
 
 ### What AI May and May Not Generate
 
 **Permitted (with mandatory human review):** Application logic, UI components, test code, database queries, migration scripts, documentation, configuration, utility functions.
 
-**Requires elevated review (senior developer + security):** Authentication/authorization logic (iron-session, RBAC), payment processing (Monnify webhooks, transaction handling), data validation for user input, API security middleware, database schema changes affecting PII.
+**Requires elevated review (senior developer + security):** Authentication/authorization logic, cryptographic operations, payment processing, data validation for user input, API security middleware, database schema changes affecting PII.
 
 **Prohibited (must be human-authored):** Security credentials or secrets, production environment configuration values, compliance policy documents.
 
 ### Accountability
 
-The human who commits AI-generated code is accountable for its correctness, security, and compliance. The PR reviewer who approves it shares accountability. "The AI wrote it" is not an acceptable explanation.
+The human who commits AI-generated code is accountable for its correctness, security, and compliance. The PR reviewer who approves it shares accountability for having verified its quality. "The AI wrote it" is not an acceptable explanation.
+
+### EU AI Act Preparedness
+
+Metasession monitors evolving AI regulation. For projects under high-risk classification (healthcare, employment, critical infrastructure), using AI to build the system may require disclosure and conformity assessment. Project Test Plans must address this where applicable.
 
 ---
 
 ## Risk-Based Testing
 
-Testing effort is prioritized by risk level:
+Testing effort is prioritized by risk level, determined at planning time:
 
-**High Priority** — Payment processing (Monnify), authentication (iron-session, passwordless PIN), RBAC (admin/super-admin/customer), customer PII, audit logging, order financial calculations, API security middleware.
+**High Priority** — Sensitive data handling, security-critical functionality, regulatory compliance features, core revenue capabilities, production infrastructure changes, AI-generated code in any of these categories.
 
-**Medium Priority** — New features (menu management, inventory, rewards), Socket.IO real-time updates, third-party integrations (Africa's Talking SMS, WhatsApp Cloud API, Zoho email), kitchen display system.
+**Medium Priority** — New feature development, significant refactoring, third-party integrations, performance optimizations, AI-generated code for non-security features.
 
-**Low Priority** — Minor UI updates, configuration changes, documentation, internal dashboard styling.
+**Low Priority** — Minor UI updates, configuration changes, documentation, internal tools with limited impact.
 
-AI involvement in Medium or High categories raises risk by one level.
+AI involvement in Medium or High categories raises risk by one level. The Test Strategy defines specific testing depth requirements per level.
 
 ---
 
 ## Roles & Responsibilities
 
 ### Engineering Leadership
+
 - Approve and maintain this policy
 - Allocate testing resources
 - Review metrics and drive improvement
 - Approve AI tool additions
 
+### QA Team / Test Engineers
+
+- Design and execute strategies and plans
+- Develop and maintain automated suites
+- Report defects and verify fixes
+- Generate reports and maintain evidence repositories
+- Verify security scan results
+
 ### Developers
+
 - Write unit tests for all changes
 - Execute local testing before committing (including security scans)
 - Fix identified defects
 - Review and take accountability for all AI-generated code committed
 - Document AI use per project requirements
 
-### Business Stakeholders (Ade Thompson)
+### Product Managers / Business Analysts
+
 - Define clear acceptance criteria
 - Participate in test planning and risk assessment
+- Review and approve completion reports
 - Sign off on release readiness
 
 ---
 
 ## Metrics & Continuous Improvement
 
-Tracked metrics:
+Metasession tracks:
 
 - **Test coverage** — Percentage of requirements with associated tests
 - **Automation rate** — Automated vs. manual tests
+- **Defect detection rate** — Defects found per testing phase
 - **Defect escape rate** — Production defects not caught during testing
+- **Test execution rate** — Planned tests executed
 - **Pass/fail trends** — Historical results over time
 - **Security findings** — SAST and dependency findings per release
 - **AI code review rate** — AI-generated code formally reviewed before merge
 
-Quarterly reviews assess trends and identify improvements.
+Quarterly reviews assess trends and identify improvements. Findings feed into retrospectives and annual planning.
 
 ---
 
@@ -186,8 +209,10 @@ All test artifacts must be:
 
 - **Traceable** — Linked to requirements, user stories, or risk assessments
 - **Timestamped** — With date, time, and responsible party
-- **Retained** — Minimum 3 years for compliance reviews
+- **Retained** — Minimum 3 years for ISO audits and compliance reviews
 - **Accessible** — Retrievable within 24 hours for audit requests
+
+AI use documentation is retained alongside other evidence for the same period.
 
 ---
 
@@ -200,7 +225,21 @@ Exceptions require:
 3. Compensating controls to mitigate risk
 4. Time-bound with defined remediation date
 
-Exceptions to AI governance controls are not permitted for High risk changes.
+All exceptions logged and reviewed quarterly. Exceptions to AI governance controls are not permitted for High risk changes.
+
+---
+
+## Training & Awareness
+
+All team members receive:
+
+- **Onboarding** — Testing standards and tools
+- **Annual refresher** — Policy changes, new tools, compliance updates
+- **Role-specific** — Specialized training for QA, developers, PMs
+- **Compliance** — ISO 27001, GDPR, secure testing practices
+- **AI-assisted development** — Responsible use, review requirements, recognizing AI failure modes
+
+Training completion is tracked as ISO 27001 evidence.
 
 ---
 
@@ -219,23 +258,23 @@ Test Architecture
 Periodic Security Review Schedule
   → WHEN periodic security activities happen
 
-Test Plan (project-specific)
-  → WHERE and WHEN for Wawa Garden Bar specifically
+Project Test Plans (per product)
+  → WHERE and WHEN for specific products
 ```
 
 ---
 
 ## Document Control
 
-| Version | Date | Author | Changes |
-|---|---|---|---|
-| 1.0 | March 2026 | Engineering Leadership | Initial creation for Wawa Garden Bar |
-| 2.0 | March 2026 | Engineering Leadership | Added AI governance, security commitments |
-| 3.0 | March 2026 | Engineering Leadership | Clean boundary split — removed content now owned by Test Strategy (methodology) and Test Architecture (tooling) |
+| Version | Date         | Author                 | Changes                                                                                                         |
+| ------- | ------------ | ---------------------- | --------------------------------------------------------------------------------------------------------------- |
+| 1.0     | January 2026 | Engineering Leadership | Initial creation                                                                                                |
+| 2.0     | March 2026   | Engineering Leadership | Added AI governance, security commitments                                                                       |
+| 3.0     | March 2026   | Engineering Leadership | Clean boundary split — removed content now owned by Test Strategy (methodology) and Test Architecture (tooling) |
 
 **Next Review Date:** March 2027
 
-**Related Documents:** Test Strategy, Test Architecture, Periodic Security Review Schedule, Test Plan
+**Related Documents:** Test Strategy, Test Architecture, Periodic Security Review Schedule, Project Test Plans (in META-COMPLY/sdlc/files/)
 
 ---
 

@@ -1,9 +1,6 @@
 ---
 description: Compile test, security, and AI evidence, update RTM, create release ticket for review
 ---
-<!-- SDLC source: META-COMPLY/sdlc/files/3-compile-evidence.md -->
-<!-- SDLC version: sdlc-v1.0.0 -->
-<!-- Last synced: 2026-03-25 -->
 
 # Compile Evidence
 
@@ -26,29 +23,48 @@ description: Compile test, security, and AI evidence, update RTM, create release
 
 **Markdown stays in git. Binary and JSON evidence goes to META-COMPLY.**
 
-| Artifact | Store in | Why |
-|----------|----------|-----|
-| `compliance/RTM.md` | Git | Source of truth, version history, PR-reviewable |
-| `compliance/evidence/REQ-XXX/test-scope.md` | Git | Planning artifact, reviewed in PRs |
-| `compliance/evidence/REQ-XXX/implementation-plan.md` | Git | Design decisions artifact (MEDIUM/HIGH risk), reviewed in PRs |
-| `compliance/evidence/REQ-XXX/ai-use-note.md` | Git | Small markdown, needs PR review |
-| `compliance/evidence/REQ-XXX/ai-prompts.md` | Git | Small markdown, needs PR review |
-| `compliance/evidence/REQ-XXX/security-summary.md` | Git | Small markdown, needs PR review |
-| `compliance/pending-releases/RELEASE-TICKET-*.md` | Git | Reviewed and moved to approved-releases |
-| E2E results (JSON) | META-COMPLY | Large, bloats git history |
-| Screenshots (PNG/JPG) | META-COMPLY | Binary, bloats git history |
-| SAST results (JSON) | META-COMPLY | Large JSON, bloats git history |
-| Dependency audit (JSON) | META-COMPLY | Large JSON, bloats git history |
-| Unit test output (TXT) | META-COMPLY | Verbose output, bloats git history |
-| Test reports (HTML) | META-COMPLY | Binary, bloats git history |
+| Artifact                                             | Store in    | Why                                                           |
+| ---------------------------------------------------- | ----------- | ------------------------------------------------------------- |
+| `compliance/RTM.md`                                  | Git         | Source of truth, version history, PR-reviewable               |
+| `compliance/evidence/REQ-XXX/test-scope.md`          | Git         | Planning artifact, reviewed in PRs                            |
+| `compliance/evidence/REQ-XXX/implementation-plan.md` | Git         | Design decisions artifact (MEDIUM/HIGH risk), reviewed in PRs |
+| `compliance/evidence/REQ-XXX/ai-use-note.md`         | Git         | Small markdown, needs PR review                               |
+| `compliance/evidence/REQ-XXX/ai-prompts.md`          | Git         | Small markdown, needs PR review                               |
+| `compliance/evidence/REQ-XXX/security-summary.md`    | Git         | Small markdown, needs PR review                               |
+| `compliance/pending-releases/RELEASE-TICKET-*.md`    | Git         | Reviewed and moved to approved-releases                       |
+| E2E results (JSON)                                   | META-COMPLY | Large, bloats git history                                     |
+| Screenshots (PNG/JPG)                                | META-COMPLY | Binary, bloats git history                                    |
+| SAST results (JSON)                                  | META-COMPLY | Large JSON, bloats git history                                |
+| Dependency audit (JSON)                              | META-COMPLY | Large JSON, bloats git history                                |
+| Unit test output (TXT)                               | META-COMPLY | Verbose output, bloats git history                            |
+| Test reports (HTML)                                  | META-COMPLY | Binary, bloats git history                                    |
 
 ## Steps
+
+### Step 0: Confirm CI Is Green
+
+Before compiling evidence, verify the latest CI run on `develop` passed:
+
+```bash
+gh run list --branch develop --limit 1
+```
+
+**Do NOT proceed** if CI is failing or was cancelled. Evidence must reflect a green pipeline. If CI failed, return to `2-implement-and-test.md` and fix the issue first.
+
+For MEDIUM/HIGH risk with AI involvement, also verify:
+
+```bash
+# AI prompt log must exist and be non-empty
+test -s compliance/evidence/REQ-XXX/ai-prompts.md && echo "OK" || echo "MISSING — create ai-prompts.md before proceeding"
+```
+
+---
 
 ### Step 1: Verify All Local Gates Pass
 
 ```bash
 npx tsc --noEmit
-semgrep scan --config auto app/ lib/ services/ models/ --severity ERROR --severity WARNING
+semgrep scan --config auto [SOURCE_DIR]/ --severity ERROR --severity WARNING
 npm audit --audit-level=high
 npx playwright test
 ```
@@ -67,38 +83,46 @@ Each modified file should have `@requirement REQ-XXX` header.
 
 Upload evidence to META-COMPLY so reviewers can access full test results (Playwright reports, SAST scans, dependency audits) without needing GitHub Checks tab access. This is the primary way reviewers verify test evidence.
 
+The upload script is available in the META-COMPLY repository at `scripts/upload-evidence.sh`.
+
 ```bash
 # Ensure META-COMPLY environment variables are set
 # SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY
 
 # Upload E2E results
-./scripts/upload-evidence.sh wawagardenbar-app REQ-XXX e2e_result playwright-report/ \
+./scripts/upload-evidence.sh [PROJECT_SLUG] REQ-XXX e2e_result [E2E_RESULTS_PATH] \
   --git-sha "$(git rev-parse HEAD)" \
   --branch "$(git branch --show-current)"
 
-# Upload unit test results (if applicable)
-npx vitest run --reporter=verbose 2>&1 | tee /tmp/unit-test-results.txt
-./scripts/upload-evidence.sh wawagardenbar-app REQ-XXX test_report /tmp/unit-test-results.txt \
+# Upload unit test results
+npm test -- --verbose 2>&1 | tee /tmp/unit-test-results.txt
+./scripts/upload-evidence.sh [PROJECT_SLUG] REQ-XXX test_report /tmp/unit-test-results.txt \
   --git-sha "$(git rev-parse HEAD)"
 ```
 
-**Do NOT commit JSON/binary evidence to git.** It goes to META-COMPLY only.
-
-### Step 4: Upload Security Evidence to META-COMPLY
+**Alternative (git-based):** If not using META-COMPLY, save evidence locally:
 
 ```bash
-# Generate and upload SAST results
-semgrep scan --config auto app/ lib/ services/ models/ --json > /tmp/sast-results.json 2>&1
-./scripts/upload-evidence.sh wawagardenbar-app REQ-XXX audit_log /tmp/sast-results.json \
-  --git-sha "$(git rev-parse HEAD)"
+cp [E2E_RESULTS_PATH] compliance/evidence/REQ-XXX/
+npm test -- --verbose 2>&1 | tee compliance/evidence/REQ-XXX/unit-test-results.txt
+```
 
-# Generate and upload dependency audit
+### Step 4: Upload Security Evidence
+
+```bash
+# Generate evidence files
+semgrep scan --config auto [SOURCE_DIR]/ --json > /tmp/sast-results.json 2>&1
 npm audit --json > /tmp/dependency-audit.json 2>&1
-./scripts/upload-evidence.sh wawagardenbar-app REQ-XXX audit_log /tmp/dependency-audit.json \
+
+# Upload to META-COMPLY
+./scripts/upload-evidence.sh [PROJECT_SLUG] REQ-XXX audit_log /tmp/sast-results.json \
+  --git-sha "$(git rev-parse HEAD)"
+./scripts/upload-evidence.sh [PROJECT_SLUG] REQ-XXX audit_log /tmp/dependency-audit.json \
   --git-sha "$(git rev-parse HEAD)"
 ```
 
 Create a security summary (keep in git — this is a compliance document, not binary evidence):
+
 ```bash
 cat > compliance/evidence/REQ-XXX/security-summary.md << EOF
 ## Security Evidence Summary — REQ-XXX
@@ -106,7 +130,7 @@ cat > compliance/evidence/REQ-XXX/security-summary.md << EOF
 **SAST Tool:** Semgrep (auto config)
 **SAST High/Critical Findings:** 0
 **Dependency Audit High/Critical:** 0
-Evidence uploaded to META-COMPLY project: wawagardenbar-app
+Evidence uploaded to META-COMPLY project: [PROJECT_SLUG]
 EOF
 ```
 
@@ -169,51 +193,61 @@ Create `compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md`:
 ---
 
 ## Summary
+
 [1-3 sentences]
 
 ## AI Involvement
+
 - **AI Tool Used:** [tool / none]
 - **AI-Generated Files:** [list, or "none"]
 - **Human Reviewer of AI Code:** [name]
 - **Components Regenerated:** [none / list]
 
 ## Implementation Details
+
 **Files Modified:**
-- `app/path/to/file.ts` — [what changed]
+
+- `path/to/file1.ts` — [what changed]
 
 **Dependencies Added/Changed:**
+
 - [package@version — purpose — vulnerability status]
 - [or "No dependency changes"]
 
 ## Test Evidence
-| Test Type | Count | Passed | Failed | Evidence |
-|-----------|-------|--------|--------|----------|
-| E2E (Playwright) | [N] | [N] | 0 | META-COMPLY portal: wawagardenbar-app/REQ-XXX |
-| Unit (Vitest) | [N] | [N] | 0 | META-COMPLY portal: wawagardenbar-app/REQ-XXX |
+
+| Test Type        | Count | Passed | Failed | Evidence Location                          |
+| ---------------- | ----- | ------ | ------ | ------------------------------------------ |
+| E2E (Playwright) | [N]   | [N]    | 0      | META-COMPLY portal: [PROJECT_SLUG]/REQ-XXX |
+| Unit             | [N]   | [N]    | 0      | META-COMPLY portal: [PROJECT_SLUG]/REQ-XXX |
 
 ## Security Evidence
-| Check | Result | Evidence |
-|-------|--------|----------|
-| SAST | 0 high/critical | META-COMPLY portal: wawagardenbar-app/REQ-XXX |
-| Dependency Audit | 0 high/critical | META-COMPLY portal: wawagardenbar-app/REQ-XXX |
-| Access Control | [PASS/N/A] | Git: `compliance/evidence/REQ-XXX/security-summary.md` |
-| Audit Log | [PASS/N/A] | Git: `compliance/evidence/REQ-XXX/security-summary.md` |
+
+| Check            | Result          | Evidence Location                                      |
+| ---------------- | --------------- | ------------------------------------------------------ |
+| SAST             | 0 high/critical | META-COMPLY portal: [PROJECT_SLUG]/REQ-XXX             |
+| Dependency Audit | 0 high/critical | META-COMPLY portal: [PROJECT_SLUG]/REQ-XXX             |
+| Access Control   | [PASS/N/A]      | Git: `compliance/evidence/REQ-XXX/security-summary.md` |
+| Audit Log        | [PASS/N/A]      | Git: `compliance/evidence/REQ-XXX/security-summary.md` |
 
 ## Acceptance Criteria
+
 - [x] [From test-scope.md]
-- [x] All E2E tests passing (183/183)
+- [x] All E2E tests passing
 - [x] TypeScript clean
 - [x] SAST clean
 - [x] Dependencies clean
 - [x] AI use documented (if applicable)
 
 ## Risk Assessment
+
 - [Any risks introduced]
 - [New dependencies and trust assessment]
 
 ---
 
 ## Reviewer Checklist
+
 - [ ] Code matches requirement
 - [ ] Test evidence present and all-pass
 - [ ] Security evidence present and clean
@@ -227,68 +261,84 @@ Create `compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md`:
 ---
 
 ## Audit Trail
-| Date | Action | Actor | Notes |
-|------|--------|-------|-------|
-| [date] | Requirement created | [who] | Risk: [level] |
-| [date] | Implementation completed | [who] | [details] |
-| [date] | AI code reviewed | [reviewer] | [files] |
-| [date] | Tests passed | [who] | E2E + SAST: clean |
-| [date] | UAT verification passed | [who] | Health + smoke + feature verified |
-| [date] | Submitted for review | [who] | PR #[number] |
+
+| Date   | Action                   | Actor      | Notes                             |
+| ------ | ------------------------ | ---------- | --------------------------------- |
+| [date] | Requirement created      | [who]      | Risk: [level]                     |
+| [date] | Implementation completed | [who]      | [details]                         |
+| [date] | AI code reviewed         | [reviewer] | [files]                           |
+| [date] | Tests passed             | [who]      | E2E + SAST: clean                 |
+| [date] | UAT verification passed  | [who]      | Health + smoke + feature verified |
+| [date] | Submitted for review     | [who]      | PR #[number]                      |
 ```
 
-### Step 9: Commit
+### Step 9: Commit Compliance Docs (do NOT push yet)
+
+Commit compliance documents locally but **do not push**. UAT verification (Step 10) runs against the deployment from the prior push. Pushing here would trigger a redundant CI run. We batch everything into a single push after UAT verification.
 
 If using META-COMPLY, commit only compliance documents (RTM, release ticket, test scope, AI notes, security summary). Binary evidence (JSON results, screenshots) is stored in META-COMPLY, not git.
 
 ```bash
-# META-COMPLY projects — commit compliance docs only
+# META-COMPLY projects — commit compliance docs only (no push)
 git add compliance/RTM.md compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md \
   compliance/evidence/REQ-XXX/test-scope.md \
   compliance/evidence/REQ-XXX/implementation-plan.md \
   compliance/evidence/REQ-XXX/ai-use-note.md \
   compliance/evidence/REQ-XXX/security-summary.md
 git commit -m "compliance: [REQ-XXX] evidence compiled - awaiting review"
-git push origin develop
 ```
 
 If NOT using META-COMPLY (git-based evidence):
+
 ```bash
 git add compliance/RTM.md compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md compliance/evidence/REQ-XXX/
 git commit -m "compliance: [REQ-XXX] evidence compiled - awaiting review"
-git push origin develop
 ```
 
 ### Step 10: UAT Verification and META-COMPLY Approval (MANDATORY)
 
 The develop branch auto-deploys to UAT. CI has already uploaded all gate evidence to META-COMPLY. **Wait for the deployment to complete**, then verify the change works in the UAT environment before creating a PR.
 
+#### WAIT CHECKPOINT: Confirm CI + Deployment Complete
+
+Before UAT verification, confirm BOTH CI and deployment are complete:
+
+```bash
+# Confirm CI passed
+gh run list --branch develop --limit 1
+
+# Confirm UAT deployment is live (check hosting platform dashboard)
+curl -s [UAT_URL]/[HEALTH_ENDPOINT]
+# Expected: success response
+```
+
+**Do NOT proceed** with UAT verification until both CI is green and the deployment is live. Testing against a stale deployment produces invalid evidence.
+
 #### 10a. Wait for UAT deployment
 
-Monitor in Railway dashboard or wait ~2-3 minutes for the build to complete.
+Monitor in the hosting platform dashboard or wait for the build to complete.
 
 #### 10b. Health check
 
 ```bash
-curl -s https://wawagardenbar-app-uat.up.railway.app/api/health
-# Expected: {"status":"ok", ...}
+curl -s [UAT_URL]/[HEALTH_ENDPOINT]
+# Expected: success response
 ```
 
 #### 10c. Smoke test
 
 ```bash
 # Homepage loads
-curl -s -o /dev/null -w "%{http_code}" https://wawagardenbar-app-uat.up.railway.app/
+curl -s -o /dev/null -w "%{http_code}" [UAT_URL]/
 # Expected: 200
 
-# Public menu endpoint
-curl -s -o /dev/null -w "%{http_code}" https://wawagardenbar-app-uat.up.railway.app/api/public/menu
-# Expected: 401 (requires API key)
+# A key endpoint responds correctly
+curl -s -o /dev/null -w "%{http_code}" [UAT_URL]/[PUBLIC_ENDPOINT]
 ```
 
 #### 10d. Feature-specific verification
 
-Manually verify the specific feature or fix you implemented works on UAT. This catches environment-specific issues (env vars, database differences, Railway build behavior) that local testing cannot.
+Manually verify the specific feature or fix you implemented works on UAT. This catches environment-specific issues (env vars, database differences, build behavior) that local testing cannot.
 
 #### 10e. Record UAT results
 
@@ -299,21 +349,50 @@ cat >> compliance/evidence/REQ-XXX/security-summary.md << EOF
 - UAT Health check: PASS
 - UAT Smoke test: PASS
 - Feature verification: PASS — [brief description of what was verified]
-- UAT URL: https://wawagardenbar-app-uat.up.railway.app
+- UAT URL: [UAT_URL]
 EOF
 
 git add compliance/evidence/REQ-XXX/security-summary.md
 git commit -m "compliance: [REQ-XXX] UAT verification passed"
-git push origin develop
 ```
 
 **If UAT verification fails:** Fix the issue on `develop`, re-run local gates, push again, and repeat UAT verification. Do NOT proceed to creating a PR until UAT is green.
 
-**If no UAT environment:** Skip this step and proceed to `4-submit-for-review.md`.
+**If no UAT environment:** Skip Step 10 entirely.
+
+### Step 11: Push All Compliance Commits
+
+Now push all batched commits (evidence + UAT results) in a single push. This triggers one CI run instead of multiple.
+
+```bash
+git push origin develop
+```
+
+Wait for CI to pass before proceeding to `4-submit-for-review.md`.
 
 ## META-COMPLY CI Integration
 
 Projects using META-COMPLY can automate evidence upload via the reusable GitHub Actions workflow. After CI tests pass, evidence is uploaded to the centralized portal where auditors can browse it.
+
+### Versioning Convention
+
+Releases use **date-based versioning** by default:
+
+```
+v{YYYY}.{MM}.{DD}         — e.g. v2026.03.27
+v{YYYY}.{MM}.{DD}.{N}     — e.g. v2026.03.27.2 (second release same day)
+```
+
+The version is auto-generated by CI from the current date. Projects may override with semantic versioning (v1.2.0) if preferred by setting a `RELEASE_VERSION` variable.
+
+### How Releases Are Created
+
+CI **auto-creates releases** in META-COMPLY when uploading evidence. The workflow passes `--create-release-if-missing` to the upload script, which creates a `draft` release if one doesn't exist for the given version. This means:
+
+- You don't need to manually create releases in META-COMPLY
+- Evidence is always linked to a release (never orphaned)
+- The release dashboard shows evidence immediately after CI runs
+- Requirements are auto-synced from `compliance/RTM.md` to enable completeness tracking
 
 ### CI Workflow Setup
 
@@ -322,19 +401,37 @@ Add this job to your CI pipeline (after E2E tests pass):
 ```yaml
 upload-evidence:
   needs: [e2e-tests]
-  uses: metasession-dev/META-COMPLY/.github/workflows/upload-evidence.yml@sdlc-v1.0.0
+  uses: metasession-dev/META-COMPLY/.github/workflows/upload-evidence.yml@main
   with:
     project-slug: your-project-slug
-    release-version: v1.0.0
+    release-version: v2026.03.27 # or use date-based auto-generation
     environment: uat
   secrets:
     SUPABASE_URL: ${{ secrets.META_COMPLY_SUPABASE_URL }}
     SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.META_COMPLY_SERVICE_ROLE_KEY }}
 ```
 
-This automatically uploads:
-- Compliance source documents (RTM, test plan, test cases, test summary report) as read-only snapshots
-- Each upload tagged with git SHA and CI run ID for traceability
+This automatically:
+
+- Creates the release in META-COMPLY if it doesn't exist (status: `draft`)
+- Uploads compliance source documents (RTM, test plan, test cases, test summary report)
+- Syncs `known_requirements` from RTM.md for completeness tracking
+- Tags each upload with git SHA and CI run ID for traceability
+
+### Additional Template Workflows
+
+Copy these from `sdlc/files/ci/` into your project's `.github/workflows/`:
+
+**`check-uat-approval.yml`** — UAT approval gate on PRs to main:
+
+- Blocks merge until the release is `uat_approved` in META-COMPLY
+- Add as a required status check on the `main` branch protection rule
+
+**`post-deploy-prod.yml`** — Production evidence capture after merge to main:
+
+- Runs production smoke tests
+- Uploads production evidence to META-COMPLY (environment: production)
+- Marks the release as `released`
 
 The source of truth for compliance documents remains in git. META-COMPLY holds read-only snapshots so auditors see the full compliance picture in one place.
 

@@ -1,3 +1,6 @@
+/**
+ * @requirement REQ-012 - Pass partial payments data to tabs list
+ */
 import { TabService } from '@/services';
 import { DashboardTabsListClient } from '@/components/features/admin/tabs/dashboard-tabs-list-client';
 
@@ -10,7 +13,9 @@ async function getAllTabs() {
     tabNumber: tab.tabNumber,
     tableNumber: tab.tableNumber,
     status: tab.status,
-    orders: Array.isArray(tab.orders) ? tab.orders.map((o: any) => o.toString()) : [],
+    orders: Array.isArray(tab.orders)
+      ? tab.orders.map((o: any) => o.toString())
+      : [],
     subtotal: tab.subtotal,
     serviceFee: tab.serviceFee,
     tax: tab.tax,
@@ -19,7 +24,22 @@ async function getAllTabs() {
     tipAmount: tab.tipAmount,
     total: tab.total,
     paymentStatus: tab.paymentStatus,
-    openedAt: typeof tab.openedAt === 'string' ? tab.openedAt : tab.openedAt.toISOString(),
+    openedAt:
+      typeof tab.openedAt === 'string'
+        ? tab.openedAt
+        : tab.openedAt.toISOString(),
+    partialPayments: Array.isArray(tab.partialPayments)
+      ? tab.partialPayments.map((pp: any) => ({
+          amount: pp.amount,
+          note: pp.note,
+          paymentType: pp.paymentType,
+          paidAt:
+            typeof pp.paidAt === 'string'
+              ? pp.paidAt
+              : pp.paidAt?.toISOString?.() || '',
+        }))
+      : [],
+    reconciled: tab.reconciled || false,
   }));
 
   return { tabs: serializedTabs };

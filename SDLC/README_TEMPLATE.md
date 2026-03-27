@@ -1,7 +1,3 @@
-<!-- SDLC source: META-COMPLY/sdlc/files/README_TEMPLATE.md -->
-<!-- SDLC version: sdlc-v1.0.0 -->
-<!-- Last synced: 2026-03-25 -->
-
 # [PROJECT NAME] — Development & Compliance Workflow System
 
 **Standard:** ISO/IEC/IEEE 29119-3:2021 | **Version:** 1.0 | **Date:** [DATE]
@@ -12,20 +8,20 @@
 
 ### Tier 1 — Universal (Metasession-wide)
 
-| Document | Owns |
-|----------|------|
-| **Test Policy** | Why we test, commitments, AI governance, roles, accountability |
-| **Test Strategy** | How we approach testing — methodology, risk classification, security, AI protocol |
-| **Test Architecture** | What we build with — tools, patterns, code standards, CI config |
-| **Periodic Security Review** | When periodic security activities happen |
+| Document                     | Owns                                                                              |
+| ---------------------------- | --------------------------------------------------------------------------------- |
+| **Test Policy**              | Why we test, commitments, AI governance, roles, accountability                    |
+| **Test Strategy**            | How we approach testing — methodology, risk classification, security, AI protocol |
+| **Test Architecture**        | What we build with — tools, patterns, code standards, CI config                   |
+| **Periodic Security Review** | When periodic security activities happen                                          |
 
 ### Tier 2 — Project-Specific
 
-| Document | Purpose |
-|----------|---------|
-| **Project Setup** | One-time: repository, CI, compliance configuration |
-| **Test Plan** | Environment, test suites, exit criteria, AI config, evidence |
-| **Workflows 0-5** | Operational pipeline procedures |
+| Document          | Purpose                                                      |
+| ----------------- | ------------------------------------------------------------ |
+| **Project Setup** | One-time: repository, CI, compliance configuration           |
+| **Test Plan**     | Environment, test suites, exit criteria, AI config, evidence |
+| **Workflows 0-5** | Operational pipeline procedures                              |
 
 ---
 
@@ -46,39 +42,39 @@
 
 ## Quick Reference
 
-| Scenario | Workflows |
-|----------|-----------|
-| New project setup | 0 (once) |
-| New feature (tracked) | 1 → 2 → 3 → 4 → (CI + review) → 5 |
-| Bug fix / docs / config | 2 → 4 → (CI + review) → 5 |
+| Scenario                | Workflows                         |
+| ----------------------- | --------------------------------- |
+| New project setup       | 0 (once)                          |
+| New feature (tracked)   | 1 → 2 → 3 → 4 → (CI + review) → 5 |
+| Bug fix / docs / config | 2 → 4 → (CI + review) → 5         |
 
 ## Mandatory Gates
 
-| Gate | Local | CI (PR) | Threshold |
-|------|-------|---------|-----------|
-| TypeScript | Yes | Yes | 0 errors |
-| SAST | Yes | Yes | 0 high/critical |
-| Dependencies | Yes | Yes | 0 high/critical |
-| E2E (Playwright) | All | Unauthenticated subset | All pass |
-| Human review | — | PR approved | Approved |
+| Gate             | Local | CI (PR)                | Threshold       |
+| ---------------- | ----- | ---------------------- | --------------- |
+| TypeScript       | Yes   | Yes                    | 0 errors        |
+| SAST             | Yes   | Yes                    | 0 high/critical |
+| Dependencies     | Yes   | Yes                    | 0 high/critical |
+| E2E (Playwright) | All   | Unauthenticated subset | All pass        |
+| Human review     | —     | PR approved            | Approved        |
 
 ## Risk Levels
 
-| Level | Extra Requirements |
-|-------|-------------------|
-| Low | Standard gates |
-| Medium | + access control + audit log testing |
-| High | + pen test consideration + independent review |
+| Level  | Extra Requirements                            |
+| ------ | --------------------------------------------- |
+| Low    | Standard gates                                |
+| Medium | + access control + audit log testing          |
+| High   | + pen test consideration + independent review |
 
 AI in Medium/High categories raises risk one level.
 
 ## CI/CD
 
-| Trigger | What Runs |
-|---------|-----------|
-| Push to `develop` | TypeScript + build |
-| PR to `main` | TypeScript + SAST + deps + E2E (unauthenticated) |
-| Merge to `main` | Auto-deploy |
+| Trigger           | What Runs                                        |
+| ----------------- | ------------------------------------------------ |
+| Push to `develop` | TypeScript + build                               |
+| PR to `main`      | TypeScript + SAST + deps + E2E (unauthenticated) |
+| Merge to `main`   | Auto-deploy                                      |
 
 CI is the independent verification gate — evidence produced by GitHub, not the developer. See Test Plan for details.
 
@@ -292,14 +288,15 @@ META-COMPLY is the centralised compliance evidence portal for all Metasession pr
 
 Evidence artifacts are uploaded to META-COMPLY instead of being committed to git.
 
-| Before (git-based) | After (META-COMPLY) |
-|---------------------|---------------------|
-| `cp e2e-results.json compliance/evidence/REQ-XXX/` | CLI script or CI uploads to META-COMPLY |
-| `git add compliance/evidence/REQ-XXX/` | Binary artifacts excluded via `.gitignore` |
-| Evidence only visible to repo collaborators | Evidence visible to anyone with an access grant |
-| Screenshots bloat git history permanently | Files stored in Supabase Storage, not git |
+| Before (git-based)                                 | After (META-COMPLY)                             |
+| -------------------------------------------------- | ----------------------------------------------- |
+| `cp e2e-results.json compliance/evidence/REQ-XXX/` | CLI script or CI uploads to META-COMPLY         |
+| `git add compliance/evidence/REQ-XXX/`             | Binary artifacts excluded via `.gitignore`      |
+| Evidence only visible to repo collaborators        | Evidence visible to anyone with an access grant |
+| Screenshots bloat git history permanently          | Files stored in Supabase Storage, not git       |
 
 **What stays in git:**
+
 - `compliance/RTM.md` — source of truth for requirement tracking
 - `compliance/test-plan.md` — project test plan
 - `compliance/test-cases.md` — test case specifications
@@ -310,6 +307,7 @@ Evidence artifacts are uploaded to META-COMPLY instead of being committed to git
 - Release tickets in `compliance/pending-releases/` and `compliance/approved-releases/`
 
 **What moves to META-COMPLY:**
+
 - Screenshots (PNG, JPEG) from E2E test runs
 - `e2e-results.json` and other generated test result files
 - `sast-results.json` and `dependency-audit.json`
@@ -429,9 +427,9 @@ For one-off reviews, generate a time-limited share link instead of creating an a
 
 Add these to your GitHub repository secrets (Settings → Secrets → Actions):
 
-| Secret | Value | Source |
-|--------|-------|--------|
-| `SUPABASE_URL` | Your Supabase project URL | Supabase dashboard → Settings → API |
+| Secret                      | Value                               | Source                              |
+| --------------------------- | ----------------------------------- | ----------------------------------- |
+| `SUPABASE_URL`              | Your Supabase project URL           | Supabase dashboard → Settings → API |
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role key (server-side only) | Supabase dashboard → Settings → API |
 
 ### Project Registration

@@ -47,7 +47,11 @@ const orderItemSchema = new Schema<IOrderItem>(
     originalPrice: { type: Number, required: false },
     priceOverridden: { type: Boolean, default: false },
     priceOverrideReason: { type: String, required: false },
-    priceOverriddenBy: { type: Schema.Types.ObjectId, ref: 'User', required: false },
+    priceOverriddenBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: false,
+    },
     priceOverriddenAt: { type: Date, required: false },
   },
   { _id: false }
@@ -205,6 +209,17 @@ const orderSchema = new Schema<IOrder>(
       },
     ],
     appliedRewards: [{ type: Schema.Types.ObjectId, ref: 'Reward' }],
+    reconciled: {
+      type: Boolean,
+      default: false,
+    },
+    reconciledAt: {
+      type: Date,
+    },
+    reconciledBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
   },
   {
     timestamps: true,
@@ -225,7 +240,7 @@ orderSchema.pre('save', function preSave(next) {
       const randomString = randomBytes(8).toString('hex');
       this.idempotencyKey = `checkout-${timestamp}-${randomString}`;
     }
-    
+
     this.statusHistory = [
       {
         status: this.status,

@@ -1,7 +1,3 @@
-<!-- SDLC source: META-COMPLY/sdlc/files/Test_Plan_TEMPLATE.md -->
-<!-- SDLC version: sdlc-v1.0.0 -->
-<!-- Last synced: 2026-03-25 -->
-
 # Test Plan — [PROJECT NAME]
 
 **Document Type:** Test Plan (Project-Specific) | **Version:** 1.0 | **Effective Date:** [DATE]
@@ -24,16 +20,16 @@ For tools, patterns, and code standards: Test Architecture.
 
 ## Project Overview
 
-| Attribute | Value |
-|---|---|
-| Application | [PROJECT NAME — brief description] |
-| Stack | [e.g., TypeScript, Next.js, MongoDB, Socket.IO] |
-| Hosting | [e.g., Railway, Vercel, AWS] (auto-deploy from `main`) |
-| Production URL | [URL] |
-| Health Endpoint | [e.g., /api/health] |
-| Database | [e.g., MongoDB — connection details] |
-| Runtime | [e.g., node_modules/.bin/tsx server.ts] |
-| Build | [e.g., Multi-stage Dockerfile, 3-5 min] |
+| Attribute       | Value                                                  |
+| --------------- | ------------------------------------------------------ |
+| Application     | [PROJECT NAME — brief description]                     |
+| Stack           | [e.g., TypeScript, Next.js, MongoDB, Socket.IO]        |
+| Hosting         | [e.g., Railway, Vercel, AWS] (auto-deploy from `main`) |
+| Production URL  | [URL]                                                  |
+| Health Endpoint | [e.g., /api/health]                                    |
+| Database        | [e.g., MongoDB — connection details]                   |
+| Runtime         | [e.g., node_modules/.bin/tsx server.ts]                |
+| Build           | [e.g., Multi-stage Dockerfile, 3-5 min]                |
 
 ---
 
@@ -51,22 +47,22 @@ Trunk-based with develop branch (per Test Strategy branching patterns):
 
 ### E2E Tests (Playwright)
 
-| Attribute | Value |
-|---|---|
-| Framework | Playwright (per Test Architecture standard) |
-| Test count | [TOTAL] tests across [N] projects |
-| Unauthenticated (CI) | [COUNT] (run in CI on PR to main) |
-| Authenticated (local only) | [COUNT] (require credentials) |
-| Browser | Chromium |
-| Prerequisite | [e.g., npx tsx scripts/seed-e2e-admins.ts] |
+| Attribute                  | Value                                       |
+| -------------------------- | ------------------------------------------- |
+| Framework                  | Playwright (per Test Architecture standard) |
+| Test count                 | [TOTAL] tests across [N] projects           |
+| Unauthenticated (CI)       | [COUNT] (run in CI on PR to main)           |
+| Authenticated (local only) | [COUNT] (require credentials)               |
+| Browser                    | Chromium                                    |
+| Prerequisite               | [e.g., npx tsx scripts/seed-e2e-admins.ts]  |
 
 ### Unit Tests
 
-| Attribute | Value |
-|---|---|
-| Framework | [Jest / Vitest] |
+| Attribute       | Value                    |
+| --------------- | ------------------------ |
+| Framework       | [Jest / Vitest]          |
 | Coverage target | 70% for critical modules |
-| Run command | [e.g., npx vitest run] |
+| Run command     | [e.g., npx vitest run]   |
 
 ### TypeScript Compilation
 
@@ -76,11 +72,11 @@ npx tsc --noEmit   # 0 errors required
 
 ### SAST Scanning
 
-| Attribute | Value |
-|---|---|
-| Tool | Semgrep (per Test Architecture) |
-| Config | auto |
-| Scan scope | [e.g., src/] |
+| Attribute  | Value                           |
+| ---------- | ------------------------------- |
+| Tool       | Semgrep (per Test Architecture) |
+| Config     | auto                            |
+| Scan scope | [e.g., src/]                    |
 
 ```bash
 npx semgrep scan --config auto [SOURCE_DIR]/ --severity ERROR --severity WARNING
@@ -106,21 +102,21 @@ npm audit --audit-level=high
 
 ### Exit (Before PR)
 
-| Gate | Local | CI (PR) | Threshold |
-|---|---|---|---|
-| TypeScript | Yes | Yes | 0 errors |
-| SAST (high/critical) | Yes | Yes | 0 findings |
-| Dependencies (high/critical) | Yes | Yes | 0 vulnerabilities |
-| E2E tests | [TOTAL]/[TOTAL] | [UNAUTH]/[UNAUTH] | All pass |
-| Severity-1 defects | — | — | 0 open |
-| Human review | — | PR approved | Approved |
+| Gate                         | Local           | CI (PR)           | Threshold         |
+| ---------------------------- | --------------- | ----------------- | ----------------- |
+| TypeScript                   | Yes             | Yes               | 0 errors          |
+| SAST (high/critical)         | Yes             | Yes               | 0 findings        |
+| Dependencies (high/critical) | Yes             | Yes               | 0 vulnerabilities |
+| E2E tests                    | [TOTAL]/[TOTAL] | [UNAUTH]/[UNAUTH] | All pass          |
+| Severity-1 defects           | —               | —                 | 0 open            |
+| Human review                 | —               | PR approved       | Approved          |
 
 Additional for Medium/High risk (per Test Strategy risk matrix):
 
-| Gate | Threshold |
-|---|---|
+| Gate                 | Threshold                             |
+| -------------------- | ------------------------------------- |
 | Access control tests | RBAC endpoints return correct 401/403 |
-| Audit log tests | Auditable actions produce log entries |
+| Audit log tests      | Auditable actions produce log entries |
 
 ---
 
@@ -128,11 +124,11 @@ Additional for Medium/High risk (per Test Strategy risk matrix):
 
 ### Pipeline Configuration
 
-| Trigger | What Runs | Independent Evidence |
-|---|---|---|
-| Push to `develop` | TypeScript check + build | Compilation clean |
-| PR to `main` | TypeScript + SAST + dependency audit + E2E (unauthenticated) | All gates independently verified by GitHub |
-| Merge to `main` | Auto-deploy to hosting platform | Deployment triggered |
+| Trigger           | What Runs                                                    | Independent Evidence                       |
+| ----------------- | ------------------------------------------------------------ | ------------------------------------------ |
+| Push to `develop` | TypeScript check + build                                     | Compilation clean                          |
+| PR to `main`      | TypeScript + SAST + dependency audit + E2E (unauthenticated) | All gates independently verified by GitHub |
+| Merge to `main`   | Auto-deploy to hosting platform                              | Deployment triggered                       |
 
 CI workflow file: `.github/workflows/ci.yml` (created during project setup — see `0-project-setup.md`)
 
@@ -162,17 +158,17 @@ Both required. Local proves comprehensive testing. CI proves it independently.
 
 Per Test Policy AI governance:
 
-| Tool | Permitted Use |
-|---|---|
+| Tool                                              | Permitted Use                                                   |
+| ------------------------------------------------- | --------------------------------------------------------------- |
 | [e.g., Claude (Anthropic) — Opus 4.6, Sonnet 4.6] | [e.g., Code generation, test generation, documentation, review] |
 
 Documentation requirements (per Test Strategy AI methodology):
 
-| Risk | Commit | Evidence | Prompts |
-|---|---|---|---|
-| Low | `Co-Authored-By` tag | Not required | Not required |
-| Medium | Same | Summary in evidence dir | Summary |
-| High | Same | Detailed record | Detailed |
+| Risk   | Commit               | Evidence                | Prompts      |
+| ------ | -------------------- | ----------------------- | ------------ |
+| Low    | `Co-Authored-By` tag | Not required            | Not required |
+| Medium | Same                 | Summary in evidence dir | Summary      |
+| High   | Same                 | Detailed record         | Detailed     |
 
 Elevated review required for: [list security-sensitive code categories for this project, e.g., authentication, payment processing, user data/PII, API security, database schema changes]
 
@@ -227,11 +223,11 @@ compliance/
 
 Every tracked requirement gets a `test-scope.md` created during the PLAN stage **before implementation**. Scope scales with risk:
 
-| Risk | Content |
-|---|---|
-| Low | Standard gates + acceptance criteria. A few lines. |
-| Medium | Above + targeted testing (access control, audit logging, dependency review), validation approach. Half a page. |
-| High | Above + security testing detail, independent review plan, pen test consideration, business validation, AI detail. One page. |
+| Risk   | Content                                                                                                                     |
+| ------ | --------------------------------------------------------------------------------------------------------------------------- |
+| Low    | Standard gates + acceptance criteria. A few lines.                                                                          |
+| Medium | Above + targeted testing (access control, audit logging, dependency review), validation approach. Half a page.              |
+| High   | Above + security testing detail, independent review plan, pen test consideration, business validation, AI detail. One page. |
 
 Templates in workflow 1 (`1-plan-requirement.md`).
 
@@ -261,12 +257,13 @@ curl -s [PRODUCTION_URL]/[NONEXISTENT_ENDPOINT]
 
 ## Disaster Recovery
 
-| Metric | Target |
-|---|---|
-| RTO | [e.g., 4 hours] |
-| RPO | [e.g., 24 hours] |
+| Metric | Target           |
+| ------ | ---------------- |
+| RTO    | [e.g., 4 hours]  |
+| RPO    | [e.g., 24 hours] |
 
 Recovery procedures:
+
 1. **Application failure:** [e.g., Redeploy previous version from hosting dashboard]
 2. **Database recovery:** [e.g., Restore from backup]
 3. **Full rebuild:** [e.g., Deploy from main to fresh environment]
@@ -295,21 +292,21 @@ Annual pen test scope: [PRODUCTION_URL], API endpoints, auth mechanism, [databas
 
 ## Workflow Files
 
-| # | File | Purpose |
-|---|---|---|
-| 0 | `0-project-setup.md` | One-time: repository, CI, compliance setup |
-| 1 | `1-plan-requirement.md` | Create REQ, classify risk, generate test scope |
-| 2 | `2-implement-and-test.md` | Code, commit, run all local gates |
-| 3 | `3-compile-evidence.md` | Gather test + security + AI evidence |
-| 4 | `4-submit-for-review.md` | Create PR (triggers CI independent verification) |
-| 5 | `5-deploy-main.md` | Merge, deploy, verify, finalize |
+| #   | File                      | Purpose                                          |
+| --- | ------------------------- | ------------------------------------------------ |
+| 0   | `0-project-setup.md`      | One-time: repository, CI, compliance setup       |
+| 1   | `1-plan-requirement.md`   | Create REQ, classify risk, generate test scope   |
+| 2   | `2-implement-and-test.md` | Code, commit, run all local gates                |
+| 3   | `3-compile-evidence.md`   | Gather test + security + AI evidence             |
+| 4   | `4-submit-for-review.md`  | Create PR (triggers CI independent verification) |
+| 5   | `5-deploy-main.md`        | Merge, deploy, verify, finalize                  |
 
 ---
 
 ## Document Control
 
-| Version | Date | Author | Changes |
-|---|---|---|---|
-| 1.0 | [DATE] | [AUTHOR] | Initial plan |
+| Version | Date   | Author   | Changes      |
+| ------- | ------ | -------- | ------------ |
+| 1.0     | [DATE] | [AUTHOR] | Initial plan |
 
 **Parent Documents:** Test Policy, Test Strategy, Test Architecture, Periodic Security Review Schedule (in META-COMPLY/sdlc/files/)

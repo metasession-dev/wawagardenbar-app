@@ -13,22 +13,42 @@ export interface DailySummaryReport {
   date: Date;
   revenue: {
     food: {
-      items: Array<{ name: string; quantity: number; price: number; total: number }>;
+      items: Array<{
+        name: string;
+        quantity: number;
+        price: number;
+        total: number;
+      }>;
       totalRevenue: number;
     };
     drink: {
-      items: Array<{ name: string; quantity: number; price: number; total: number }>;
+      items: Array<{
+        name: string;
+        quantity: number;
+        price: number;
+        total: number;
+      }>;
       totalRevenue: number;
     };
     totalRevenue: number;
   };
   costs: {
     food: {
-      items: Array<{ name: string; quantity: number; costPerUnit: number; total: number }>;
+      items: Array<{
+        name: string;
+        quantity: number;
+        costPerUnit: number;
+        total: number;
+      }>;
       totalCost: number;
     };
     drink: {
-      items: Array<{ name: string; quantity: number; costPerUnit: number; total: number }>;
+      items: Array<{
+        name: string;
+        quantity: number;
+        costPerUnit: number;
+        total: number;
+      }>;
       totalCost: number;
     };
     totalDirectCosts: number;
@@ -39,8 +59,16 @@ export interface DailySummaryReport {
     total: number;
   };
   operatingExpenses: {
-    directCosts: Array<{ category: string; description: string; amount: number }>;
-    operatingCosts: Array<{ category: string; description: string; amount: number }>;
+    directCosts: Array<{
+      category: string;
+      description: string;
+      amount: number;
+    }>;
+    operatingCosts: Array<{
+      category: string;
+      description: string;
+      amount: number;
+    }>;
     totalDirectCosts: number;
     totalOperatingExpenses: number;
     totalExpenses: number;
@@ -74,7 +102,10 @@ export class FinancialReportService {
     startDate: Date,
     endDate: Date,
     paymentBreakdown: Record<string, number>
-  ): Promise<{ tabPartialTotals: Map<string, number>; totalPartialPayments: number }> {
+  ): Promise<{
+    tabPartialTotals: Map<string, number>;
+    totalPartialPayments: number;
+  }> {
     const validMethods = ['cash', 'card', 'transfer', 'ussd', 'phone'];
     const tabPartialTotals = new Map<string, number>();
     let totalPartialPayments = 0;
@@ -84,22 +115,8 @@ export class FinancialReportService {
       'partialPayments.paidAt': { $gte: startDate, $lte: endDate },
     }).lean();
 
-    console.log(`📊 [aggregatePartialPayments] date range: ${startDate.toISOString()} - ${endDate.toISOString()}`);
-    console.log(`📊 [aggregatePartialPayments] tabs with partials in range: ${tabsWithPartials.length}`);
-
-    // Debug: also check how many tabs have ANY partial payments
-    const allTabsWithPartials = await TabModel.find({
-      'partialPayments.0': { $exists: true },
-    }).select('_id tabNumber partialPayments').lean();
-    console.log(`📊 [aggregatePartialPayments] tabs with ANY partial payments: ${allTabsWithPartials.length}`);
-    for (const t of allTabsWithPartials) {
-      for (const pp of (t.partialPayments || [])) {
-        console.log(`📊   tab=${t.tabNumber} amount=${pp.amount} type=${pp.paymentType} paidAt=${new Date(pp.paidAt).toISOString()}`);
-      }
-    }
-
     for (const tab of tabsWithPartials) {
-      for (const pp of (tab.partialPayments || [])) {
+      for (const pp of tab.partialPayments || []) {
         const paidAt = new Date(pp.paidAt);
         if (paidAt >= startDate && paidAt <= endDate) {
           const method = pp.paymentType as string;
@@ -115,7 +132,10 @@ export class FinancialReportService {
 
           // Track total partial payments per tab for double-counting prevention
           const tabId = tab._id.toString();
-          tabPartialTotals.set(tabId, (tabPartialTotals.get(tabId) || 0) + amount);
+          tabPartialTotals.set(
+            tabId,
+            (tabPartialTotals.get(tabId) || 0) + amount
+          );
         }
       }
     }
@@ -143,12 +163,15 @@ export class FinancialReportService {
       .lean();
     console.log(`📊 Total paid orders in database: ${allPaidOrders.length}`);
     if (allPaidOrders.length > 0) {
-      console.log('Sample paid orders:', allPaidOrders.slice(0, 3).map(o => ({
-        id: o._id,
-        total: o.total,
-        paidAt: o.paidAt,
-        createdAt: o.createdAt,
-      })));
+      console.log(
+        'Sample paid orders:',
+        allPaidOrders.slice(0, 3).map((o) => ({
+          id: o._id,
+          total: o.total,
+          paidAt: o.paidAt,
+          createdAt: o.createdAt,
+        }))
+      );
     }
 
     // Fetch all paid orders for the date (based on payment date, not creation date)
@@ -214,7 +237,7 @@ export class FinancialReportService {
      * then aggregate order payments, subtracting partial payment amounts
      * from tab orders to avoid double-counting.
      */
-    const { } = await FinancialReportService.aggregatePartialPayments(
+    const {} = await FinancialReportService.aggregatePartialPayments(
       startDate,
       endDate,
       report.paymentBreakdown as Record<string, number>
@@ -307,7 +330,7 @@ export class FinancialReportService {
         } else {
           // Fetch menu item to get category
           const menuItem = await MenuItemModel.findById(item.menuItemId).lean();
-          
+
           if (!menuItem) continue;
 
           // Get cost from inventory
@@ -371,7 +394,8 @@ export class FinancialReportService {
       report.revenue.food.totalRevenue - report.costs.food.totalCost;
     report.grossProfit.drink =
       report.revenue.drink.totalRevenue - report.costs.drink.totalCost;
-    report.grossProfit.total = report.grossProfit.food + report.grossProfit.drink;
+    report.grossProfit.total =
+      report.grossProfit.food + report.grossProfit.drink;
 
     // Fetch expenses for the date
     const expenses = await ExpenseModel.find({
@@ -404,7 +428,9 @@ export class FinancialReportService {
     // Calculate net profit
     // Net Profit = Gross Profit - Operating Expenses (Overhead)
     // We exclude Direct Costs (Purchases) because COGS is already subtracted from Revenue to get Gross Profit
-    report.netProfit = report.grossProfit.total - report.operatingExpenses.totalOperatingExpenses;
+    report.netProfit =
+      report.grossProfit.total -
+      report.operatingExpenses.totalOperatingExpenses;
 
     // Calculate metrics
     if (report.revenue.totalRevenue > 0) {
@@ -480,7 +506,7 @@ export class FinancialReportService {
     /**
      * @requirement REQ-013 - Same partial payment logic as generateDailySummary
      */
-    const { } = await FinancialReportService.aggregatePartialPayments(
+    const {} = await FinancialReportService.aggregatePartialPayments(
       start,
       end,
       report.paymentBreakdown as Record<string, number>
@@ -560,7 +586,7 @@ export class FinancialReportService {
         } else {
           // Fetch menu item to get category
           const menuItem = await MenuItemModel.findById(item.menuItemId).lean();
-          
+
           if (!menuItem) continue;
 
           const inventory = await InventoryModel.findOne({
@@ -620,7 +646,8 @@ export class FinancialReportService {
       report.revenue.food.totalRevenue - report.costs.food.totalCost;
     report.grossProfit.drink =
       report.revenue.drink.totalRevenue - report.costs.drink.totalCost;
-    report.grossProfit.total = report.grossProfit.food + report.grossProfit.drink;
+    report.grossProfit.total =
+      report.grossProfit.food + report.grossProfit.drink;
 
     // Fetch expenses
     const expenses = await ExpenseModel.find({
@@ -647,7 +674,9 @@ export class FinancialReportService {
       report.operatingExpenses.totalDirectCosts +
       report.operatingExpenses.totalOperatingExpenses;
 
-    report.netProfit = report.grossProfit.total - report.operatingExpenses.totalOperatingExpenses;
+    report.netProfit =
+      report.grossProfit.total -
+      report.operatingExpenses.totalOperatingExpenses;
 
     if (report.revenue.totalRevenue > 0) {
       report.metrics.grossProfitMargin =

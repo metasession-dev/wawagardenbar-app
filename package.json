@@ -3,9 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "lint-staged": {
-    "*.{ts,tsx}": [
-      "eslint --fix"
-    ],
     "*.{ts,tsx,js,jsx,json,md}": [
       "prettier --write"
     ]

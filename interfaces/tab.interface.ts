@@ -43,6 +43,9 @@ export interface ITab {
   paidAt?: Date;
   openedAt: Date;
   closedAt?: Date;
+  reconciled?: boolean;
+  reconciledAt?: Date;
+  reconciledBy?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }

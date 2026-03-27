@@ -43,7 +43,9 @@ export class TabService {
       tabNumber,
       tableNumber: params.tableNumber,
       userId: params.userId ? new Types.ObjectId(params.userId) : undefined,
-      createdBy: params.createdBy ? new Types.ObjectId(params.createdBy) : undefined,
+      createdBy: params.createdBy
+        ? new Types.ObjectId(params.createdBy)
+        : undefined,
       createdByRole: params.createdByRole || 'customer',
       openedByStaffId: params.openedByStaffId
         ? new Types.ObjectId(params.openedByStaffId)
@@ -187,11 +189,8 @@ export class TabService {
     // Get all orders for this tab (both from orders array and by tabId)
     // Exclude cancelled orders from calculation
     const orders = await OrderModel.find({
-      $or: [
-        { _id: { $in: tab.orders } },
-        { tabId: new Types.ObjectId(tabId) }
-      ],
-      status: { $ne: 'cancelled' } // Exclude cancelled orders
+      $or: [{ _id: { $in: tab.orders } }, { tabId: new Types.ObjectId(tabId) }],
+      status: { $ne: 'cancelled' }, // Exclude cancelled orders
     }).lean();
 
     // Calculate subtotal from all non-cancelled orders
@@ -256,10 +255,12 @@ export class TabService {
     // This will be implemented when rewards service is extended
     const eligibleRewards: any[] = [];
 
-    return JSON.parse(JSON.stringify({
-      tab: updatedTab!,
-      eligibleRewards,
-    }));
+    return JSON.parse(
+      JSON.stringify({
+        tab: updatedTab!,
+        eligibleRewards,
+      })
+    );
   }
 
   /**
@@ -346,7 +347,11 @@ export class TabService {
           console.log('Inventory deducted for tab order:', orderId);
         }
       } catch (error) {
-        console.error('Error deducting inventory for tab order:', orderId, error);
+        console.error(
+          'Error deducting inventory for tab order:',
+          orderId,
+          error
+        );
         // Continue processing other orders even if one fails
       }
     }
@@ -384,9 +389,7 @@ export class TabService {
       query.openedByStaffId = new Types.ObjectId(filters.openedByStaffId);
     }
 
-    const tabs = await TabModel.find(query)
-      .sort({ openedAt: -1 })
-      .lean();
+    const tabs = await TabModel.find(query).sort({ openedAt: -1 }).lean();
 
     // Ensure complete serialization to prevent client component errors
     return JSON.parse(JSON.stringify(tabs));
@@ -444,9 +447,7 @@ export class TabService {
       }
     }
 
-    const tabs = await TabModel.find(query)
-      .sort({ openedAt: -1 })
-      .lean();
+    const tabs = await TabModel.find(query).sort({ openedAt: -1 }).lean();
 
     // Ensure complete serialization to prevent client component errors
     return JSON.parse(JSON.stringify(tabs));
@@ -459,6 +460,7 @@ export class TabService {
     statuses?: string[];
     startDate?: Date;
     endDate?: Date;
+    reconciled?: 'all' | 'reconciled' | 'not-reconciled';
   }): Promise<ITab[]> {
     await connectDB();
 
@@ -483,9 +485,14 @@ export class TabService {
       }
     }
 
-    const tabs = await TabModel.find(query)
-      .sort({ openedAt: -1 })
-      .lean();
+    // Filter by reconciliation status
+    if (filters.reconciled === 'reconciled') {
+      query.reconciled = true;
+    } else if (filters.reconciled === 'not-reconciled') {
+      query.reconciled = { $ne: true };
+    }
+
+    const tabs = await TabModel.find(query).sort({ openedAt: -1 }).lean();
 
     // Ensure complete serialization to prevent client component errors
     return JSON.parse(JSON.stringify(tabs));
@@ -513,21 +520,18 @@ export class TabService {
     // Get orders either from the orders array OR by tabId
     // This handles both old orders (with tabId but not in array) and new orders (in array)
     const orders = await OrderModel.find({
-      $or: [
-        { _id: { $in: tab.orders } },
-        { tabId: new Types.ObjectId(tabId) }
-      ]
+      $or: [{ _id: { $in: tab.orders } }, { tabId: new Types.ObjectId(tabId) }],
     })
       .sort({ createdAt: 1 })
       .lean();
 
     // Sync orders array if needed (for legacy data)
-    const orderIds = orders.map(o => o._id.toString());
-    const tabOrderIds = tab.orders.map(o => o.toString());
-    const needsSync = orderIds.some(id => !tabOrderIds.includes(id));
-    
+    const orderIds = orders.map((o) => o._id.toString());
+    const tabOrderIds = tab.orders.map((o) => o.toString());
+    const needsSync = orderIds.some((id) => !tabOrderIds.includes(id));
+
     if (needsSync) {
-      tab.orders = orders.map(o => new Types.ObjectId(o._id.toString()));
+      tab.orders = orders.map((o) => new Types.ObjectId(o._id.toString()));
       await tab.save();
       // Recalculate totals with the synced orders
       await this.recalculateTabTotals(tabId);
@@ -540,7 +544,7 @@ export class TabService {
       tab: tab!.toObject(),
       orders,
     };
-    
+
     return JSON.parse(JSON.stringify(result));
   }
 
@@ -604,7 +608,8 @@ export class TabService {
     await tab.save();
 
     // Create audit log
-    const AuditLogService = (await import('./audit-log-service')).AuditLogService;
+    const AuditLogService = (await import('./audit-log-service'))
+      .AuditLogService;
     await AuditLogService.createLog({
       userId: params.processedBy,
       userEmail: tab.customerEmail || 'guest@wawagardenbar.com',
@@ -639,7 +644,10 @@ export class TabService {
   }): Promise<ITab> {
     await connectDB();
 
-    const tab = await TabModel.findById(params.tabId).populate('userId', 'email');
+    const tab = await TabModel.findById(params.tabId).populate(
+      'userId',
+      'email'
+    );
     if (!tab) {
       throw new Error('Tab not found');
     }
@@ -702,7 +710,8 @@ export class TabService {
     }
 
     // Create audit log for manual payment
-    const AuditLogService = (await import('./audit-log-service')).AuditLogService;
+    const AuditLogService = (await import('./audit-log-service'))
+      .AuditLogService;
     await AuditLogService.createLog({
       userId: params.processedBy,
       userEmail: customerEmail || 'guest@wawagardenbar.com',
@@ -748,10 +757,10 @@ export class TabService {
     await connectDB();
 
     const trimmedName = customName.trim();
-    
+
     const tab = await TabModel.findByIdAndUpdate(
       tabId,
-      { 
+      {
         customName: trimmedName || undefined,
         tableNumber: trimmedName || undefined,
       },
@@ -781,11 +790,17 @@ export class TabService {
       throw new Error('Tab not found');
     }
 
-    console.log('Tab found:', { status: tab.status, paymentStatus: tab.paymentStatus, orderCount: tab.orders.length });
+    console.log('Tab found:', {
+      status: tab.status,
+      paymentStatus: tab.paymentStatus,
+      orderCount: tab.orders.length,
+    });
 
     // Check if tab is already closed/paid
     if (tab.status === 'closed' && tab.paymentStatus === 'paid') {
-      throw new Error('Cannot delete a closed/paid tab. Only open or unpaid tabs can be deleted.');
+      throw new Error(
+        'Cannot delete a closed/paid tab. Only open or unpaid tabs can be deleted.'
+      );
     }
 
     // Get all orders on this tab
@@ -793,12 +808,20 @@ export class TabService {
       _id: { $in: tab.orders },
     });
 
-    console.log('Orders found:', orders.map(o => ({ id: o._id, status: o.status })));
+    console.log(
+      'Orders found:',
+      orders.map((o) => ({ id: o._id, status: o.status }))
+    );
 
     // Check if any orders are not cancelled
-    const nonCancelledOrders = orders.filter(order => order.status !== 'cancelled');
+    const nonCancelledOrders = orders.filter(
+      (order) => order.status !== 'cancelled'
+    );
     if (nonCancelledOrders.length > 0) {
-      console.log('Non-cancelled orders found:', nonCancelledOrders.map(o => ({ id: o._id, status: o.status })));
+      console.log(
+        'Non-cancelled orders found:',
+        nonCancelledOrders.map((o) => ({ id: o._id, status: o.status }))
+      );
       throw new Error(
         `Cannot delete tab. Please cancel all ${nonCancelledOrders.length} order(s) on this tab first.`
       );
@@ -808,7 +831,8 @@ export class TabService {
 
     // Create audit log before deletion
     try {
-      const AuditLogService = (await import('./audit-log-service')).AuditLogService;
+      const AuditLogService = (await import('./audit-log-service'))
+        .AuditLogService;
       console.log('Creating audit log with userId:', deletedBy);
       await AuditLogService.createLog({
         userId: deletedBy,
@@ -827,7 +851,9 @@ export class TabService {
       console.log('Audit log created successfully');
     } catch (auditError) {
       console.error('Error creating audit log:', auditError);
-      throw new Error(`Failed to create audit log: ${auditError instanceof Error ? auditError.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to create audit log: ${auditError instanceof Error ? auditError.message : 'Unknown error'}`
+      );
     }
 
     // Delete the tab

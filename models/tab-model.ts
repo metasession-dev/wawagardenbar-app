@@ -98,9 +98,17 @@ const tabSchema = new Schema<ITab>(
       {
         amount: { type: Number, required: true, min: 0 },
         note: { type: String, required: true },
-        paymentType: { type: String, enum: ['cash', 'transfer', 'card'], required: true },
+        paymentType: {
+          type: String,
+          enum: ['cash', 'transfer', 'card'],
+          required: true,
+        },
         paymentReference: { type: String },
-        processedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+        processedBy: {
+          type: Schema.Types.ObjectId,
+          ref: 'User',
+          required: true,
+        },
         paidAt: { type: Date, default: Date.now },
       },
     ],
@@ -124,6 +132,17 @@ const tabSchema = new Schema<ITab>(
     },
     closedAt: {
       type: Date,
+    },
+    reconciled: {
+      type: Boolean,
+      default: false,
+    },
+    reconciledAt: {
+      type: Date,
+    },
+    reconciledBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
     },
   },
   {

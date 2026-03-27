@@ -24,12 +24,8 @@ interface OrderQueueProps {
  */
 export function OrderQueue({ initialOrders }: OrderQueueProps) {
   const router = useRouter();
-  const {
-    orders,
-    setOrders,
-    selectedOrders,
-    toggleSelectOrder,
-  } = useOrderStore();
+  const { orders, setOrders, selectedOrders, toggleSelectOrder } =
+    useOrderStore();
 
   const [activeTab, setActiveTab] = useState('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -47,7 +43,11 @@ export function OrderQueue({ initialOrders }: OrderQueueProps) {
       // Tab filter
       if (activeTab !== 'all') {
         if (activeTab === 'active') {
-          if (!['pending', 'confirmed', 'preparing', 'ready'].includes(order.status)) {
+          if (
+            !['pending', 'confirmed', 'preparing', 'ready'].includes(
+              order.status
+            )
+          ) {
             return false;
           }
         } else if (order.status !== activeTab) {
@@ -80,22 +80,42 @@ export function OrderQueue({ initialOrders }: OrderQueueProps) {
       if (filters.dateRange?.from) {
         const orderDate = new Date(order.createdAt);
         const from = startOfDay(filters.dateRange.from);
-        const to = filters.dateRange.to ? endOfDay(filters.dateRange.to) : endOfDay(filters.dateRange.from);
-        
+        const to = filters.dateRange.to
+          ? endOfDay(filters.dateRange.to)
+          : endOfDay(filters.dateRange.from);
+
         if (!isWithinInterval(orderDate, { start: from, end: to })) {
           return false;
         }
       }
 
+      // Reconciliation filter
+      if (filters.reconciled === 'reconciled') {
+        if (!order.reconciled) return false;
+      } else if (filters.reconciled === 'not-reconciled') {
+        if (order.reconciled) return false;
+      }
+
       // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        const matchesOrderNumber = order.orderNumber.toLowerCase().includes(query);
-        const matchesCustomerName = order.customer.name.toLowerCase().includes(query);
-        const matchesEmail = order.customer.email?.toLowerCase().includes(query);
+        const matchesOrderNumber = order.orderNumber
+          .toLowerCase()
+          .includes(query);
+        const matchesCustomerName = order.customer.name
+          .toLowerCase()
+          .includes(query);
+        const matchesEmail = order.customer.email
+          ?.toLowerCase()
+          .includes(query);
         const matchesPhone = order.customer.phone?.includes(query);
 
-        if (!matchesOrderNumber && !matchesCustomerName && !matchesEmail && !matchesPhone) {
+        if (
+          !matchesOrderNumber &&
+          !matchesCustomerName &&
+          !matchesEmail &&
+          !matchesPhone
+        ) {
           return false;
         }
       }
@@ -136,7 +156,9 @@ export function OrderQueue({ initialOrders }: OrderQueueProps) {
               onClick={handleRefresh}
               disabled={isRefreshing}
             >
-              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`}
+              />
             </Button>
           </div>
         </div>
@@ -144,7 +166,10 @@ export function OrderQueue({ initialOrders }: OrderQueueProps) {
         {/* Search and Filters */}
         <div className="space-y-4">
           <OrderSearch onSearch={handleSearch} />
-          <OrderFilters onFilterChange={handleFilterChange} activeFilters={filters} />
+          <OrderFilters
+            onFilterChange={handleFilterChange}
+            activeFilters={filters}
+          />
         </div>
       </CardHeader>
 
@@ -152,26 +177,35 @@ export function OrderQueue({ initialOrders }: OrderQueueProps) {
         {/* Tabs for filtering */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
           <TabsList className="grid w-full grid-cols-7">
-            <TabsTrigger value="all">
-              All ({orders.length})
-            </TabsTrigger>
+            <TabsTrigger value="all">All ({orders.length})</TabsTrigger>
             <TabsTrigger value="active">
-              Active ({orders.filter((o) => ['pending', 'confirmed', 'preparing', 'ready'].includes(o.status)).length})
+              Active (
+              {
+                orders.filter((o) =>
+                  ['pending', 'confirmed', 'preparing', 'ready'].includes(
+                    o.status
+                  )
+                ).length
+              }
+              )
             </TabsTrigger>
             <TabsTrigger value="pending">
               Pending ({orders.filter((o) => o.status === 'pending').length})
             </TabsTrigger>
             <TabsTrigger value="confirmed">
-              Confirmed ({orders.filter((o) => o.status === 'confirmed').length})
+              Confirmed ({orders.filter((o) => o.status === 'confirmed').length}
+              )
             </TabsTrigger>
             <TabsTrigger value="preparing">
-              Preparing ({orders.filter((o) => o.status === 'preparing').length})
+              Preparing ({orders.filter((o) => o.status === 'preparing').length}
+              )
             </TabsTrigger>
             <TabsTrigger value="ready">
               Ready ({orders.filter((o) => o.status === 'ready').length})
             </TabsTrigger>
             <TabsTrigger value="completed">
-              Completed ({orders.filter((o) => o.status === 'completed').length})
+              Completed ({orders.filter((o) => o.status === 'completed').length}
+              )
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -190,6 +224,11 @@ export function OrderQueue({ initialOrders }: OrderQueueProps) {
                 isSelected={selectedOrders.includes(order._id)}
                 onSelect={toggleSelectOrder}
                 showCheckbox={true}
+                showReconciliation={!order.tabId}
+                onReconciliationChange={(orderId, reconciled) => {
+                  const { updateOrder } = useOrderStore.getState();
+                  updateOrder(orderId, { reconciled });
+                }}
               />
             ))}
           </div>

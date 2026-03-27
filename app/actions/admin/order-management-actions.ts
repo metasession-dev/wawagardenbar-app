@@ -11,7 +11,11 @@ import { AuditLogService } from '@/services/audit-log-service';
 import { TabService, OrderService } from '@/services';
 import InventoryService from '@/services/inventory-service';
 import { completeOrderAndDeductStockAction } from '@/app/actions/order/complete-order-action';
-import { emitBatchUpdateEvent, emitOrderUpdatedEvent, emitOrderCancelledEvent } from '@/lib/socket-emit-helper';
+import {
+  emitBatchUpdateEvent,
+  emitOrderUpdatedEvent,
+  emitOrderCancelledEvent,
+} from '@/lib/socket-emit-helper';
 
 export interface ActionResult<T = unknown> {
   success: boolean;
@@ -27,6 +31,7 @@ export interface OrderFilters {
   endDate?: string;
   search?: string;
   paymentStatus?: string;
+  reconciled?: 'all' | 'reconciled' | 'not-reconciled';
 }
 
 /**
@@ -39,9 +44,16 @@ export async function getOrdersAction(
 ): Promise<ActionResult> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
-    if (!session.userId || !session.role || !['admin', 'super-admin', 'kitchen-staff'].includes(session.role)) {
+    if (
+      !session.userId ||
+      !session.role ||
+      !['admin', 'super-admin', 'kitchen-staff'].includes(session.role)
+    ) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -52,20 +64,25 @@ export async function getOrdersAction(
 
     if (filters.status) {
       // Handle comma-separated statuses
-      const statuses = filters.status.split(',').map(s => s.trim());
+      const statuses = filters.status.split(',').map((s) => s.trim());
       query.status = statuses.length > 1 ? { $in: statuses } : filters.status;
     }
 
     if (filters.type) {
       // Handle comma-separated types
-      const types = filters.type.split(',').map(t => t.trim());
+      const types = filters.type.split(',').map((t) => t.trim());
       query.orderType = types.length > 1 ? { $in: types } : filters.type;
     }
 
     if (filters.paymentStatus) {
       // Handle comma-separated payment statuses
-      const paymentStatuses = filters.paymentStatus.split(',').map(p => p.trim());
-      query.paymentStatus = paymentStatuses.length > 1 ? { $in: paymentStatuses } : filters.paymentStatus;
+      const paymentStatuses = filters.paymentStatus
+        .split(',')
+        .map((p) => p.trim());
+      query.paymentStatus =
+        paymentStatuses.length > 1
+          ? { $in: paymentStatuses }
+          : filters.paymentStatus;
     }
 
     if (filters.startDate || filters.endDate) {
@@ -85,6 +102,12 @@ export async function getOrdersAction(
         { 'customer.email': { $regex: filters.search, $options: 'i' } },
         { 'customer.phone': { $regex: filters.search, $options: 'i' } },
       ];
+    }
+
+    if (filters.reconciled === 'reconciled') {
+      query.reconciled = true;
+    } else if (filters.reconciled === 'not-reconciled') {
+      query.reconciled = { $ne: true };
     }
 
     // Get total count
@@ -133,6 +156,8 @@ export async function getOrdersAction(
       })),
       estimatedCompletionTime: order.estimatedCompletionTime?.toISOString(),
       preparationStartedAt: order.preparationStartedAt?.toISOString(),
+      reconciled: order.reconciled || false,
+      reconciledAt: order.reconciledAt?.toISOString(),
     }));
 
     return {
@@ -156,12 +181,21 @@ export async function getOrdersAction(
 /**
  * Get single order details
  */
-export async function getOrderDetailsAction(orderId: string): Promise<ActionResult> {
+export async function getOrderDetailsAction(
+  orderId: string
+): Promise<ActionResult> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
-    if (!session.userId || !session.role || !['admin', 'super-admin', 'kitchen-staff'].includes(session.role)) {
+    if (
+      !session.userId ||
+      !session.role ||
+      !['admin', 'super-admin', 'kitchen-staff'].includes(session.role)
+    ) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -240,9 +274,16 @@ export async function updateOrderStatusAction(
 ): Promise<ActionResult> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
-    if (!session.userId || !session.role || !['admin', 'super-admin', 'kitchen-staff'].includes(session.role)) {
+    if (
+      !session.userId ||
+      !session.role ||
+      !['admin', 'super-admin', 'kitchen-staff'].includes(session.role)
+    ) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -352,9 +393,16 @@ export async function batchUpdateOrdersAction(
 ): Promise<ActionResult> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
-    if (!session.userId || !session.role || !['admin', 'super-admin'].includes(session.role)) {
+    if (
+      !session.userId ||
+      !session.role ||
+      !['admin', 'super-admin'].includes(session.role)
+    ) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -378,7 +426,11 @@ export async function batchUpdateOrdersAction(
           }
         } else if (action === 'cancel') {
           const order = await OrderModel.findById(orderId);
-          if (order && order.status !== 'completed' && order.status !== 'cancelled') {
+          if (
+            order &&
+            order.status !== 'completed' &&
+            order.status !== 'cancelled'
+          ) {
             order.status = 'cancelled';
             order.statusHistory.push({
               status: 'cancelled',
@@ -443,9 +495,16 @@ export async function cancelOrderAction(
 ): Promise<ActionResult> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
-    if (!session.userId || !session.role || !['admin', 'super-admin'].includes(session.role)) {
+    if (
+      !session.userId ||
+      !session.role ||
+      !['admin', 'super-admin'].includes(session.role)
+    ) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -467,16 +526,20 @@ export async function cancelOrderAction(
 
     // Only allow cancellation of unpaid orders
     if (order.paymentStatus === 'paid') {
-      return { success: false, error: 'Cannot cancel paid orders. Please process a refund instead.' };
+      return {
+        success: false,
+        error: 'Cannot cancel paid orders. Please process a refund instead.',
+      };
     }
 
     // Check if order is part of a tab in settling status
     if (order.tabId) {
       const tab = await TabModel.findById(order.tabId);
       if (tab && tab.status === 'settling') {
-        return { 
-          success: false, 
-          error: 'Cannot cancel orders from tabs that are currently settling. Please wait until the tab is closed or reopen it.' 
+        return {
+          success: false,
+          error:
+            'Cannot cancel orders from tabs that are currently settling. Please wait until the tab is closed or reopen it.',
         };
       }
     }
@@ -554,9 +617,16 @@ export async function addOrderNoteAction(
 ): Promise<ActionResult> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
-    if (!session.userId || !session.role || !['admin', 'super-admin', 'kitchen-staff'].includes(session.role)) {
+    if (
+      !session.userId ||
+      !session.role ||
+      !['admin', 'super-admin', 'kitchen-staff'].includes(session.role)
+    ) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -579,7 +649,7 @@ export async function addOrderNoteAction(
     } else {
       // Get the last status history entry
       const lastEntry = order.statusHistory[order.statusHistory.length - 1];
-      
+
       // If the last entry is for the current status, append the note
       if (lastEntry.status === order.status) {
         const existingNote = lastEntry.note || '';
@@ -623,6 +693,61 @@ export async function addOrderNoteAction(
     return {
       success: false,
       error: 'Failed to add note',
+    };
+  }
+}
+
+/**
+ * @requirement REQ-014 - Toggle reconciliation status on a standalone order
+ */
+export async function toggleOrderReconciliationAction(
+  orderId: string
+): Promise<ActionResult> {
+  try {
+    const cookieStore = await cookies();
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
+
+    if (
+      !session.userId ||
+      !session.role ||
+      !['admin', 'super-admin'].includes(session.role)
+    ) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    await connectDB();
+    const order = await OrderModel.findById(orderId);
+    if (!order) {
+      return { success: false, error: 'Order not found' };
+    }
+
+    const newState = !order.reconciled;
+    order.reconciled = newState;
+    order.reconciledAt = newState ? new Date() : (undefined as any);
+    order.reconciledBy = newState
+      ? (session.userId as any)
+      : (undefined as any);
+    await order.save();
+
+    revalidatePath('/dashboard/orders');
+
+    return {
+      success: true,
+      message: newState
+        ? 'Order marked as reconciled'
+        : 'Order marked as not reconciled',
+    };
+  } catch (error) {
+    console.error('Error toggling order reconciliation:', error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to toggle reconciliation',
     };
   }
 }

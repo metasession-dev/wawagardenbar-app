@@ -13,7 +13,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
-import { updateOrderStatusAction } from '@/app/actions/admin/order-management-actions';
+import {
+  updateOrderStatusAction,
+  toggleOrderReconciliationAction,
+} from '@/app/actions/admin/order-management-actions';
 import {
   Clock,
   User,
@@ -32,15 +35,28 @@ interface OrderCardProps {
   isSelected?: boolean;
   onSelect?: (orderId: string) => void;
   showCheckbox?: boolean;
+  showReconciliation?: boolean;
+  onReconciliationChange?: (orderId: string, reconciled: boolean) => void;
 }
 
 /**
  * Order card component
  * Displays individual order with status and actions
  */
-export function OrderCard({ order, isSelected, onSelect, showCheckbox }: OrderCardProps) {
+export function OrderCard({
+  order,
+  isSelected,
+  onSelect,
+  showCheckbox,
+  showReconciliation,
+  onReconciliationChange,
+}: OrderCardProps) {
   const [isUpdating, setIsUpdating] = useState(false);
-  const [pickupInfo, setPickupInfo] = useState<{ pickupLabel: string; countdownLabel: string; isOverdue: boolean } | null>(null);
+  const [pickupInfo, setPickupInfo] = useState<{
+    pickupLabel: string;
+    countdownLabel: string;
+    isOverdue: boolean;
+  } | null>(null);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -55,7 +71,11 @@ export function OrderCard({ order, isSelected, onSelect, showCheckbox }: OrderCa
       const isOverdue = diffMinutes < 0;
       const absoluteMinutes = Math.abs(diffMinutes);
       const countdownLabel =
-        absoluteMinutes < 1 ? 'due now' : isOverdue ? `${absoluteMinutes} min overdue` : `${absoluteMinutes} min left`;
+        absoluteMinutes < 1
+          ? 'due now'
+          : isOverdue
+            ? `${absoluteMinutes} min overdue`
+            : `${absoluteMinutes} min left`;
       setPickupInfo({
         pickupLabel: format(pickupDate, 'h:mm a'),
         countdownLabel,
@@ -164,9 +184,11 @@ export function OrderCard({ order, isSelected, onSelect, showCheckbox }: OrderCa
       <CardHeader className={showCheckbox ? 'pl-12' : ''}>
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
-            <div className={`w-3 h-3 rounded-full ${getStatusColor(order.status)}`} />
+            <div
+              className={`w-3 h-3 rounded-full ${getStatusColor(order.status)}`}
+            />
             <div>
-              <Link 
+              <Link
                 href={`/dashboard/orders/${order._id}`}
                 className="font-semibold text-lg hover:text-primary hover:underline transition-colors"
               >
@@ -178,7 +200,9 @@ export function OrderCard({ order, isSelected, onSelect, showCheckbox }: OrderCa
                   <>
                     <span>•</span>
                     <span>{pickupInfo.pickupLabel}</span>
-                    <span className={`text-xs font-semibold ${pickupInfo.isOverdue ? 'text-red-600' : 'text-emerald-600'}`}>
+                    <span
+                      className={`text-xs font-semibold ${pickupInfo.isOverdue ? 'text-red-600' : 'text-emerald-600'}`}
+                    >
                       {pickupInfo.countdownLabel}
                     </span>
                   </>
@@ -192,7 +216,7 @@ export function OrderCard({ order, isSelected, onSelect, showCheckbox }: OrderCa
                 {order.tabId && (
                   <>
                     <span>•</span>
-                    <Link 
+                    <Link
                       href={`/dashboard/orders/tabs/${order.tabId}`}
                       className="flex items-center gap-1 text-primary hover:underline font-medium"
                       onClick={(e) => e.stopPropagation()}
@@ -207,6 +231,38 @@ export function OrderCard({ order, isSelected, onSelect, showCheckbox }: OrderCa
           </div>
 
           <div className="flex items-center gap-2">
+            {showReconciliation && (
+              <div
+                className="flex items-center gap-1.5"
+                title={
+                  order.reconciled
+                    ? `Reconciled${order.reconciledAt ? ` on ${new Date(order.reconciledAt).toLocaleDateString()}` : ''}`
+                    : 'Not reconciled'
+                }
+              >
+                <Checkbox
+                  checked={order.reconciled || false}
+                  onCheckedChange={async () => {
+                    onReconciliationChange?.(order._id, !order.reconciled);
+                    const result = await toggleOrderReconciliationAction(
+                      order._id
+                    );
+                    if (!result.success) {
+                      onReconciliationChange?.(order._id, order.reconciled);
+                      toast({
+                        title: 'Error',
+                        description: result.error,
+                        variant: 'destructive',
+                      });
+                    }
+                  }}
+                  aria-label={`Mark order ${order.orderNumber} as reconciled`}
+                />
+                <span className="text-xs text-muted-foreground">
+                  Reconciled
+                </span>
+              </div>
+            )}
             <Badge
               variant={getStatusBadgeVariant(order.status)}
               className="capitalize"
@@ -221,11 +277,15 @@ export function OrderCard({ order, isSelected, onSelect, showCheckbox }: OrderCa
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => router.push(`/dashboard/orders/${order._id}`)}>
+                <DropdownMenuItem
+                  onClick={() => router.push(`/dashboard/orders/${order._id}`)}
+                >
                   View Details
                 </DropdownMenuItem>
                 {canTransitionTo(order.status, 'preparing') && (
-                  <DropdownMenuItem onClick={() => handleStatusUpdate('preparing')}>
+                  <DropdownMenuItem
+                    onClick={() => handleStatusUpdate('preparing')}
+                  >
                     Mark as Preparing
                   </DropdownMenuItem>
                 )}
@@ -235,7 +295,9 @@ export function OrderCard({ order, isSelected, onSelect, showCheckbox }: OrderCa
                   </DropdownMenuItem>
                 )}
                 {canTransitionTo(order.status, 'completed') && (
-                  <DropdownMenuItem onClick={() => handleStatusUpdate('completed')}>
+                  <DropdownMenuItem
+                    onClick={() => handleStatusUpdate('completed')}
+                  >
                     Mark as Completed
                   </DropdownMenuItem>
                 )}
@@ -275,10 +337,11 @@ export function OrderCard({ order, isSelected, onSelect, showCheckbox }: OrderCa
             } else if (item.portionSize === 'quarter') {
               quantityDisplay = `${item.quantity} × 1/4x`;
             }
-            
+
             return (
               <div key={index} className="text-sm">
-                <span className="font-medium">{quantityDisplay}</span> {item.name}
+                <span className="font-medium">{quantityDisplay}</span>{' '}
+                {item.name}
               </div>
             );
           })}
@@ -292,7 +355,8 @@ export function OrderCard({ order, isSelected, onSelect, showCheckbox }: OrderCa
         {/* Special Instructions */}
         {order.specialInstructions && (
           <div className="mb-4 p-2 bg-muted rounded text-sm">
-            <span className="font-medium">Note:</span> {order.specialInstructions}
+            <span className="font-medium">Note:</span>{' '}
+            {order.specialInstructions}
           </div>
         )}
 
@@ -300,29 +364,36 @@ export function OrderCard({ order, isSelected, onSelect, showCheckbox }: OrderCa
         <div className="flex items-center justify-between pt-4 border-t">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Clock className="h-4 w-4" />
-            <span>{formatDistanceToNow(new Date(order.createdAt), { addSuffix: true })}</span>
+            <span>
+              {formatDistanceToNow(new Date(order.createdAt), {
+                addSuffix: true,
+              })}
+            </span>
           </div>
-          <div className="text-lg font-bold">₦{order.total.toLocaleString()}</div>
+          <div className="text-lg font-bold">
+            ₦{order.total.toLocaleString()}
+          </div>
         </div>
 
         {/* Quick Actions */}
         {order.status !== 'completed' && order.status !== 'cancelled' && (
           <div className="flex gap-2 mt-4">
-            {(order.status === 'pending' || order.status === 'confirmed') && canTransitionTo(order.status, 'preparing') && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleStatusUpdate('preparing')}
-                disabled={isUpdating}
-                className="flex-1"
-              >
-                {isUpdating ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  'Start Preparing'
-                )}
-              </Button>
-            )}
+            {(order.status === 'pending' || order.status === 'confirmed') &&
+              canTransitionTo(order.status, 'preparing') && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleStatusUpdate('preparing')}
+                  disabled={isUpdating}
+                  className="flex-1"
+                >
+                  {isUpdating ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    'Start Preparing'
+                  )}
+                </Button>
+              )}
             {canTransitionTo(order.status, 'ready') && (
               <Button
                 size="sm"

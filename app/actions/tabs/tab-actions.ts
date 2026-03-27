@@ -4,6 +4,8 @@ import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
 import { revalidatePath } from 'next/cache';
 import { TabService } from '@/services';
+import TabModel from '@/models/tab-model';
+import { connectDB } from '@/lib/mongodb';
 import { ITab, IOrder } from '@/interfaces';
 import { sessionOptions, SessionData } from '@/lib/session';
 
@@ -25,7 +27,10 @@ export async function createTabAction(params: {
 }): Promise<ActionResult<{ tab: ITab }>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
     const userId = session.userId;
     const guestId = session.isGuest ? session.guestId : undefined;
 
@@ -81,7 +86,10 @@ export async function getOpenTabForUserAction(): Promise<
 > {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
     const userId = session.userId;
 
     if (userId) {
@@ -99,10 +107,12 @@ export async function getOpenTabForUserAction(): Promise<
         data: { tab },
       };
     }
-    
+
     // Legacy guest support (email only)
     if (session.isGuest && session.email) {
-      const tabs = await TabService.listOpenTabs({ customerEmail: session.email });
+      const tabs = await TabService.listOpenTabs({
+        customerEmail: session.email,
+      });
       const tab = tabs.length > 0 ? tabs[0] : null;
       return {
         success: true,
@@ -148,7 +158,9 @@ export async function getOpenTabForTableAction(
     return {
       success: false,
       error:
-        error instanceof Error ? error.message : 'Failed to get open tab for table',
+        error instanceof Error
+          ? error.message
+          : 'Failed to get open tab for table',
     };
   }
 }
@@ -177,7 +189,8 @@ export async function getTabDetailsAction(
     console.error('Error getting tab details:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get tab details',
+      error:
+        error instanceof Error ? error.message : 'Failed to get tab details',
     };
   }
 }
@@ -190,10 +203,16 @@ export async function listOpenTabsAction(filters?: {
 }): Promise<ActionResult<{ tabs: ITab[] }>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     // Check if user is staff/admin
-    if (!session.userId || (session.role !== 'admin' && session.role !== 'super-admin')) {
+    if (
+      !session.userId ||
+      (session.role !== 'admin' && session.role !== 'super-admin')
+    ) {
       return {
         success: false,
         error: 'Unauthorized',
@@ -210,7 +229,8 @@ export async function listOpenTabsAction(filters?: {
     console.error('Error listing open tabs:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to list open tabs',
+      error:
+        error instanceof Error ? error.message : 'Failed to list open tabs',
     };
   }
 }
@@ -244,7 +264,9 @@ export async function prepareTabForCheckoutAction(params: {
     return {
       success: false,
       error:
-        error instanceof Error ? error.message : 'Failed to prepare tab for checkout',
+        error instanceof Error
+          ? error.message
+          : 'Failed to prepare tab for checkout',
     };
   }
 }
@@ -259,7 +281,10 @@ export async function getFilteredTabsAction(filters: {
 }): Promise<ActionResult<{ tabs: ITab[] }>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
     const userId = session.userId;
 
     if (!userId) {
@@ -295,12 +320,19 @@ export async function getDashboardFilteredTabsAction(filters: {
   statuses?: string[];
   startDate?: string;
   endDate?: string;
+  reconciled?: 'all' | 'reconciled' | 'not-reconciled';
 }): Promise<ActionResult<{ tabs: ITab[] }>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
-    if (!session.userId || (session.role !== 'admin' && session.role !== 'super-admin')) {
+    if (
+      !session.userId ||
+      (session.role !== 'admin' && session.role !== 'super-admin')
+    ) {
       return {
         success: false,
         error: 'Unauthorized',
@@ -311,6 +343,7 @@ export async function getDashboardFilteredTabsAction(filters: {
       statuses: filters.statuses,
       startDate: filters.startDate ? new Date(filters.startDate) : undefined,
       endDate: filters.endDate ? new Date(filters.endDate) : undefined,
+      reconciled: filters.reconciled,
     });
 
     return {
@@ -338,9 +371,15 @@ export async function recordPartialPaymentAction(params: {
 }): Promise<ActionResult<{ tab: ITab }>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
-    if (!session.userId || (session.role !== 'admin' && session.role !== 'super-admin')) {
+    if (
+      !session.userId ||
+      (session.role !== 'admin' && session.role !== 'super-admin')
+    ) {
       return {
         success: false,
         error: 'Unauthorized. Only admins can process partial payments.',
@@ -356,7 +395,10 @@ export async function recordPartialPaymentAction(params: {
     }
 
     if (!params.note || !params.note.trim()) {
-      return { success: false, error: 'A note is required for partial payments' };
+      return {
+        success: false,
+        error: 'A note is required for partial payments',
+      };
     }
 
     const tab = await TabService.recordPartialPayment({
@@ -380,7 +422,10 @@ export async function recordPartialPaymentAction(params: {
     console.error('Error recording partial payment:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to record partial payment',
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to record partial payment',
     };
   }
 }
@@ -397,10 +442,16 @@ export async function completeTabPaymentManuallyAction(params: {
 }): Promise<ActionResult<{ tab: ITab }>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     // Check if user is staff/admin
-    if (!session.userId || (session.role !== 'admin' && session.role !== 'super-admin')) {
+    if (
+      !session.userId ||
+      (session.role !== 'admin' && session.role !== 'super-admin')
+    ) {
       return {
         success: false,
         error: 'Unauthorized. Only admins can process manual payments.',
@@ -441,7 +492,8 @@ export async function completeTabPaymentManuallyAction(params: {
     console.error('Error completing tab payment:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to complete payment',
+      error:
+        error instanceof Error ? error.message : 'Failed to complete payment',
     };
   }
 }
@@ -454,10 +506,16 @@ export async function closeTabAction(
 ): Promise<ActionResult<{ tab: ITab }>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     // Check if user is staff/admin
-    if (!session.userId || (session.role !== 'admin' && session.role !== 'super-admin')) {
+    if (
+      !session.userId ||
+      (session.role !== 'admin' && session.role !== 'super-admin')
+    ) {
       return {
         success: false,
         error: 'Unauthorized',
@@ -498,10 +556,16 @@ export async function createAdminTabAction(params: {
 }): Promise<ActionResult<{ tab: ITab }>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     // Check if user is staff/admin
-    if (!session.userId || (session.role !== 'admin' && session.role !== 'super-admin')) {
+    if (
+      !session.userId ||
+      (session.role !== 'admin' && session.role !== 'super-admin')
+    ) {
       return {
         success: false,
         error: 'Unauthorized',
@@ -557,7 +621,10 @@ export async function createAdminTabAction(params: {
 export async function deleteTabAction(tabId: string): Promise<ActionResult> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     if (!session.isLoggedIn || !session.userId) {
       return {
@@ -587,7 +654,10 @@ export async function deleteTabAction(tabId: string): Promise<ActionResult> {
     };
   } catch (error) {
     console.error('Error deleting tab:', error);
-    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error(
+      'Error stack:',
+      error instanceof Error ? error.stack : 'No stack trace'
+    );
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to delete tab',
@@ -604,7 +674,10 @@ export async function updateTabNameAction(
 ): Promise<ActionResult> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     if (!session.isLoggedIn || !session.userId) {
       return {
@@ -634,7 +707,61 @@ export async function updateTabNameAction(
     console.error('Error updating tab name:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update tab name',
+      error:
+        error instanceof Error ? error.message : 'Failed to update tab name',
+    };
+  }
+}
+
+/**
+ * @requirement REQ-014 - Toggle reconciliation status on a tab
+ */
+export async function toggleTabReconciliationAction(
+  tabId: string
+): Promise<ActionResult> {
+  try {
+    const cookieStore = await cookies();
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
+
+    if (
+      !session.isLoggedIn ||
+      !session.userId ||
+      (session.role !== 'admin' && session.role !== 'super-admin')
+    ) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    await connectDB();
+    const tab = await TabModel.findById(tabId);
+    if (!tab) {
+      return { success: false, error: 'Tab not found' };
+    }
+
+    const newState = !tab.reconciled;
+    tab.reconciled = newState;
+    tab.reconciledAt = newState ? new Date() : (undefined as any);
+    tab.reconciledBy = newState ? (session.userId as any) : (undefined as any);
+    await tab.save();
+
+    revalidatePath('/dashboard/orders/tabs');
+
+    return {
+      success: true,
+      message: newState
+        ? 'Tab marked as reconciled'
+        : 'Tab marked as not reconciled',
+    };
+  } catch (error) {
+    console.error('Error toggling tab reconciliation:', error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to toggle reconciliation',
     };
   }
 }

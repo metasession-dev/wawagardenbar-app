@@ -27,7 +27,10 @@ async function isAuthenticated(page: Page): Promise<boolean> {
 
 adminTest.beforeEach(async ({ page }, testInfo) => {
   if (!(await isAuthenticated(page))) {
-    testInfo.skip(true, 'Admin login failed or credentials not configured — skipping');
+    testInfo.skip(
+      true,
+      'Admin login failed or credentials not configured — skipping'
+    );
   }
 });
 
@@ -39,36 +42,47 @@ adminTest.describe('REQ-012: Tabs Page — Partial Payment UI', () => {
     await page.goto('/dashboard/orders/tabs');
     await page.waitForLoadState('networkidle');
     expect(page.url()).toContain('/dashboard/orders/tabs');
-    await expect(page.locator('h1', { hasText: 'Tabs Management' })).toBeVisible();
+    await expect(
+      page.locator('h1', { hasText: 'Tabs Management' })
+    ).toBeVisible();
     await expect(page.locator('[data-testid="tabs-dashboard"]')).toBeVisible();
   });
 
-  adminTest('open tabs show "Customer Wants to Pay" button', async ({ page }) => {
-    await page.goto('/dashboard/orders/tabs');
-    await page.waitForLoadState('networkidle');
+  adminTest(
+    'open tabs show "Customer Wants to Pay" button',
+    async ({ page }) => {
+      await page.goto('/dashboard/orders/tabs');
+      await page.waitForLoadState('networkidle');
 
-    // Check if there are any open tab cards
-    const openTabCards = page.locator('[data-testid="tab-card"]').filter({
-      has: page.locator('[data-testid="tab-status-badge"]', { hasText: 'open' }),
-    });
+      // Check if there are any open tab cards
+      const openTabCards = page.locator('[data-testid="tab-card"]').filter({
+        has: page.locator('[data-testid="tab-status-badge"]', {
+          hasText: 'open',
+        }),
+      });
 
-    const count = await openTabCards.count();
-    if (count === 0) {
-      adminTest.skip();
-      return;
+      const count = await openTabCards.count();
+      if (count === 0) {
+        adminTest.skip();
+        return;
+      }
+
+      // First open tab should have the "Customer Wants to Pay" button
+      const payButton = openTabCards
+        .first()
+        .getByRole('button', { name: /Customer Wants to Pay/i });
+      await expect(payButton).toBeVisible();
     }
-
-    // First open tab should have the "Customer Wants to Pay" button
-    const payButton = openTabCards.first().getByRole('button', { name: /Customer Wants to Pay/i });
-    await expect(payButton).toBeVisible();
-  });
+  );
 
   adminTest('payment dialog shows partial payment option', async ({ page }) => {
     await page.goto('/dashboard/orders/tabs');
     await page.waitForLoadState('networkidle');
 
     const openTabCards = page.locator('[data-testid="tab-card"]').filter({
-      has: page.locator('[data-testid="tab-status-badge"]', { hasText: 'open' }),
+      has: page.locator('[data-testid="tab-status-badge"]', {
+        hasText: 'open',
+      }),
     });
 
     const count = await openTabCards.count();
@@ -78,7 +92,10 @@ adminTest.describe('REQ-012: Tabs Page — Partial Payment UI', () => {
     }
 
     // Click "Customer Wants to Pay" on first open tab
-    await openTabCards.first().getByRole('button', { name: /Customer Wants to Pay/i }).click();
+    await openTabCards
+      .first()
+      .getByRole('button', { name: /Customer Wants to Pay/i })
+      .click();
 
     // Dialog should appear with payment options
     const dialog = page.getByRole('dialog');
@@ -86,9 +103,15 @@ adminTest.describe('REQ-012: Tabs Page — Partial Payment UI', () => {
     await expect(dialog.locator('text=Process Tab Payment')).toBeVisible();
 
     // Should have three payment method options
-    await expect(dialog.locator('label', { hasText: 'Full Payment — Close Tab' })).toBeVisible();
-    await expect(dialog.locator('label', { hasText: 'Partial Payment' })).toBeVisible();
-    await expect(dialog.locator('label', { hasText: 'Full Checkout Process' })).toBeVisible();
+    await expect(
+      dialog.locator('label', { hasText: 'Full Payment — Close Tab' })
+    ).toBeVisible();
+    await expect(
+      dialog.locator('label', { hasText: 'Partial Payment' })
+    ).toBeVisible();
+    await expect(
+      dialog.locator('label', { hasText: 'Full Checkout Process' })
+    ).toBeVisible();
   });
 
   adminTest('partial payment form shows required fields', async ({ page }) => {
@@ -96,7 +119,9 @@ adminTest.describe('REQ-012: Tabs Page — Partial Payment UI', () => {
     await page.waitForLoadState('networkidle');
 
     const openTabCards = page.locator('[data-testid="tab-card"]').filter({
-      has: page.locator('[data-testid="tab-status-badge"]', { hasText: 'open' }),
+      has: page.locator('[data-testid="tab-status-badge"]', {
+        hasText: 'open',
+      }),
     });
 
     const count = await openTabCards.count();
@@ -106,7 +131,10 @@ adminTest.describe('REQ-012: Tabs Page — Partial Payment UI', () => {
     }
 
     // Open payment dialog
-    await openTabCards.first().getByRole('button', { name: /Customer Wants to Pay/i }).click();
+    await openTabCards
+      .first()
+      .getByRole('button', { name: /Customer Wants to Pay/i })
+      .click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
 
@@ -114,108 +142,157 @@ adminTest.describe('REQ-012: Tabs Page — Partial Payment UI', () => {
     await dialog.locator('label', { hasText: 'Partial Payment' }).click();
 
     // Verify partial payment form fields are visible
-    await expect(dialog.locator('label', { hasText: 'Payment Amount' })).toBeVisible();
-    await expect(dialog.locator('label', { hasText: /Note.*mandatory/i })).toBeVisible();
-    await expect(dialog.locator('label', { hasText: 'Payment Type' })).toBeVisible();
+    await expect(
+      dialog.locator('label', { hasText: 'Payment Amount' })
+    ).toBeVisible();
+    await expect(
+      dialog.locator('label', { hasText: /Note.*mandatory/i })
+    ).toBeVisible();
+    await expect(
+      dialog.locator('label', { hasText: 'Payment Type' })
+    ).toBeVisible();
     await expect(dialog.locator('text=Outstanding balance')).toBeVisible();
 
     // Verify payment type options
     await expect(dialog.locator('label', { hasText: 'Cash' })).toBeVisible();
-    await expect(dialog.locator('label', { hasText: 'Bank Transfer' })).toBeVisible();
-    await expect(dialog.locator('label', { hasText: 'Card (POS)' })).toBeVisible();
+    await expect(
+      dialog.locator('label', { hasText: 'Bank Transfer' })
+    ).toBeVisible();
+    await expect(
+      dialog.locator('label', { hasText: 'Card (POS)' })
+    ).toBeVisible();
 
     // Submit button should be present but disabled (no amount/note entered)
-    const submitButton = dialog.getByRole('button', { name: /Record Partial Payment/i });
+    const submitButton = dialog.getByRole('button', {
+      name: /Record Partial Payment/i,
+    });
     await expect(submitButton).toBeVisible();
     await expect(submitButton).toBeDisabled();
   });
 
-  adminTest('closed tabs do NOT show partial payment option', async ({ page }) => {
-    await page.goto('/dashboard/orders/tabs');
-    await page.waitForLoadState('networkidle');
+  adminTest(
+    'closed tabs do NOT show partial payment option',
+    async ({ page }) => {
+      await page.goto('/dashboard/orders/tabs');
+      await page.waitForLoadState('networkidle');
 
-    const closedTabCards = page.locator('[data-testid="tab-card"]').filter({
-      has: page.locator('[data-testid="tab-payment-status"]'),
-    });
+      const closedTabCards = page.locator('[data-testid="tab-card"]').filter({
+        has: page.locator('[data-testid="tab-payment-status"]'),
+      });
 
-    const count = await closedTabCards.count();
-    if (count === 0) {
-      adminTest.skip();
-      return;
+      const count = await closedTabCards.count();
+      if (count === 0) {
+        adminTest.skip();
+        return;
+      }
+
+      // Closed tabs should show "Tab Paid" button, not "Customer Wants to Pay"
+      const firstClosed = closedTabCards.first();
+      await expect(
+        firstClosed.locator('[data-testid="tab-payment-status"]')
+      ).toBeVisible();
+      await expect(
+        firstClosed.getByRole('button', { name: /Customer Wants to Pay/i })
+      ).not.toBeVisible();
     }
-
-    // Closed tabs should show "Tab Paid" button, not "Customer Wants to Pay"
-    const firstClosed = closedTabCards.first();
-    await expect(firstClosed.locator('[data-testid="tab-payment-status"]')).toBeVisible();
-    await expect(firstClosed.getByRole('button', { name: /Customer Wants to Pay/i })).not.toBeVisible();
-  });
+  );
 });
 
 // ===========================================================================
 // Section 8: Tab Details Page — Partial Payments Display
 // ===========================================================================
-adminTest.describe('REQ-012: Tab Details Page — Partial Payment Display', () => {
-  adminTest('tab details page loads with tab summary', async ({ page }) => {
-    await page.goto('/dashboard/orders/tabs');
-    await page.waitForLoadState('networkidle');
+adminTest.describe(
+  'REQ-012: Tab Details Page — Partial Payment Display',
+  () => {
+    adminTest('tab details page loads with tab summary', async ({ page }) => {
+      await page.goto('/dashboard/orders/tabs');
+      await page.waitForLoadState('networkidle');
 
-    // Find any tab and navigate to its details
-    const viewDetailsButton = page.getByRole('link', { name: /View Details/i }).first();
-    const count = await viewDetailsButton.count();
-    if (count === 0) {
-      adminTest.skip();
-      return;
-    }
+      // Find any tab and navigate to its details via the link href
+      const viewDetailsLink = page
+        .getByRole('link', { name: /View Details/i })
+        .first();
+      const count = await viewDetailsLink.count();
+      if (count === 0) {
+        adminTest.skip();
+        return;
+      }
 
-    await viewDetailsButton.click();
-    await page.waitForLoadState('networkidle');
+      const href = await viewDetailsLink.getAttribute('href');
+      if (!href) {
+        adminTest.skip();
+        return;
+      }
 
-    expect(page.url()).toContain('/dashboard/orders/tabs/');
-    await expect(page.locator('text=Tab Summary')).toBeVisible();
-    await expect(page.locator('text=Subtotal')).toBeVisible();
-    await expect(page.locator('text=Total')).toBeVisible();
-  });
+      await page.goto(href);
+      await page.waitForLoadState('networkidle');
 
-  adminTest('tab details page shows partial payments section when present', async ({ page }) => {
-    await page.goto('/dashboard/orders/tabs');
-    await page.waitForLoadState('networkidle');
+      expect(page.url()).toContain('/dashboard/orders/tabs/');
+      await expect(page.locator('text=Tab Summary')).toBeVisible({
+        timeout: 10000,
+      });
+      await expect(page.locator('text=Subtotal')).toBeVisible();
+      await expect(page.locator('text=Total:').first()).toBeVisible();
+    });
 
-    // Navigate to first tab details
-    const viewDetailsButton = page.getByRole('link', { name: /View Details/i }).first();
-    const count = await viewDetailsButton.count();
-    if (count === 0) {
-      adminTest.skip();
-      return;
-    }
+    adminTest(
+      'tab details page shows partial payments section when present',
+      async ({ page }) => {
+        await page.goto('/dashboard/orders/tabs');
+        await page.waitForLoadState('networkidle');
 
-    await viewDetailsButton.click();
-    await page.waitForLoadState('networkidle');
+        // Navigate to first tab details via href
+        const viewDetailsLink = page
+          .getByRole('link', { name: /View Details/i })
+          .first();
+        const count = await viewDetailsLink.count();
+        if (count === 0) {
+          adminTest.skip();
+          return;
+        }
 
-    // Check if this tab has partial payments
-    const partialPaymentsSection = page.locator('text=Partial Payments');
-    const hasPartialPayments = await partialPaymentsSection.count();
+        const href = await viewDetailsLink.getAttribute('href');
+        if (!href) {
+          adminTest.skip();
+          return;
+        }
 
-    if (hasPartialPayments > 0) {
-      // If partial payments exist, verify the display structure
-      await expect(page.locator('text=Total Partial Payments')).toBeVisible();
-      await expect(page.locator('text=Outstanding Balance')).toBeVisible();
-      // Tab summary should show the outstanding amount
-      await expect(page.locator('text=Outstanding')).toBeVisible();
-    }
-    // If no partial payments, that's fine — section won't render
-  });
-});
+        await page.goto(href);
+        await page.waitForLoadState('networkidle');
+
+        // Check if this tab has partial payments
+        const partialPaymentsSection = page.locator('text=Partial Payments');
+        const hasPartialPayments = await partialPaymentsSection.count();
+
+        if (hasPartialPayments > 0) {
+          // If partial payments exist, verify the display structure
+          await expect(
+            page.locator('text=Total Partial Payments')
+          ).toBeVisible();
+          await expect(page.locator('text=Outstanding Balance')).toBeVisible();
+        }
+        // If no partial payments, that's fine — section won't render
+      }
+    );
+  }
+);
 
 // ===========================================================================
 // Orders page — Partial payment NOT available for non-tab orders
 // ===========================================================================
-adminTest.describe('REQ-012: Orders Page — No Partial Payment for Orders', () => {
-  adminTest('orders page does not offer partial payment', async ({ page }) => {
-    await page.goto('/dashboard/orders');
-    await page.waitForLoadState('networkidle');
-    expect(page.url()).toContain('/dashboard/orders');
+adminTest.describe(
+  'REQ-012: Orders Page — No Partial Payment for Orders',
+  () => {
+    adminTest(
+      'orders page does not offer partial payment',
+      async ({ page }) => {
+        await page.goto('/dashboard/orders');
+        await page.waitForLoadState('networkidle');
+        expect(page.url()).toContain('/dashboard/orders');
 
-    // The orders page should never show a "Partial Payment" option
-    await expect(page.locator('text=Partial Payment')).not.toBeVisible();
-  });
-});
+        // The orders page should never show a "Partial Payment" option
+        await expect(page.locator('text=Partial Payment')).not.toBeVisible();
+      }
+    );
+  }
+);

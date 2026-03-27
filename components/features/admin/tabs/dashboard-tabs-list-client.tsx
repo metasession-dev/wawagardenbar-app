@@ -8,11 +8,23 @@ import { DateRange } from 'react-day-picker';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Receipt, Eye, CreditCard, Loader2, CheckCircle2, FolderOpen, Plus } from 'lucide-react';
+import {
+  Receipt,
+  Eye,
+  CreditCard,
+  Loader2,
+  CheckCircle2,
+  FolderOpen,
+  Plus,
+} from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import Link from 'next/link';
 import { DashboardTabsFilter } from './dashboard-tabs-filter';
 import { AdminPayTabDialog } from './admin-pay-tab-dialog';
-import { getDashboardFilteredTabsAction } from '@/app/actions/tabs/tab-actions';
+import {
+  getDashboardFilteredTabsAction,
+  toggleTabReconciliationAction,
+} from '@/app/actions/tabs/tab-actions';
 import { useToast } from '@/hooks/use-toast';
 
 interface PartialPayment {
@@ -38,6 +50,7 @@ interface Tab {
   paymentStatus: string;
   openedAt: string;
   partialPayments: PartialPayment[];
+  reconciled?: boolean;
 }
 
 interface DashboardTabsListClientProps {
@@ -47,7 +60,9 @@ interface DashboardTabsListClientProps {
 /**
  * Client component for dashboard tabs list with filtering
  */
-export function DashboardTabsListClient({ initialTabs }: DashboardTabsListClientProps) {
+export function DashboardTabsListClient({
+  initialTabs,
+}: DashboardTabsListClientProps) {
   const { toast } = useToast();
   const [tabs, setTabs] = useState<Tab[]>(initialTabs);
   const [isLoading, setIsLoading] = useState(false);
@@ -56,23 +71,27 @@ export function DashboardTabsListClient({ initialTabs }: DashboardTabsListClient
   const [currentFilters, setCurrentFilters] = useState<{
     statuses: string[];
     dateRange?: DateRange;
+    reconciled?: 'all' | 'reconciled' | 'not-reconciled';
   }>({
     statuses: [],
-    dateRange: undefined
+    dateRange: undefined,
+    reconciled: undefined,
   });
 
   const handleFilterChange = async (filters: {
     statuses: string[];
     dateRange?: DateRange;
+    reconciled?: 'all' | 'reconciled' | 'not-reconciled';
   }) => {
     setCurrentFilters(filters);
     setIsLoading(true);
-    
+
     try {
       const result = await getDashboardFilteredTabsAction({
         statuses: filters.statuses.length > 0 ? filters.statuses : undefined,
         startDate: filters.dateRange?.from?.toISOString(),
         endDate: filters.dateRange?.to?.toISOString(),
+        reconciled: filters.reconciled,
       });
 
       if (result.success && result.data) {
@@ -82,7 +101,9 @@ export function DashboardTabsListClient({ initialTabs }: DashboardTabsListClient
           tabNumber: tab.tabNumber,
           tableNumber: tab.tableNumber,
           status: tab.status,
-          orders: Array.isArray(tab.orders) ? tab.orders.map((o: any) => o.toString()) : [],
+          orders: Array.isArray(tab.orders)
+            ? tab.orders.map((o: any) => o.toString())
+            : [],
           subtotal: tab.subtotal,
           serviceFee: tab.serviceFee,
           tax: tab.tax,
@@ -92,7 +113,10 @@ export function DashboardTabsListClient({ initialTabs }: DashboardTabsListClient
           total: tab.total,
           paymentStatus: tab.paymentStatus,
           openedAt: tab.openedAt,
-          partialPayments: Array.isArray(tab.partialPayments) ? tab.partialPayments : [],
+          partialPayments: Array.isArray(tab.partialPayments)
+            ? tab.partialPayments
+            : [],
+          reconciled: tab.reconciled || false,
         }));
         setTabs(serializedTabs);
       } else {
@@ -114,14 +138,20 @@ export function DashboardTabsListClient({ initialTabs }: DashboardTabsListClient
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+    const variants: Record<
+      string,
+      'default' | 'secondary' | 'destructive' | 'outline'
+    > = {
       open: 'default',
       settling: 'secondary',
       closed: 'outline',
     };
 
     return (
-      <Badge variant={variants[status] || 'default'} data-testid="tab-status-badge">
+      <Badge
+        variant={variants[status] || 'default'}
+        data-testid="tab-status-badge"
+      >
         {status}
       </Badge>
     );
@@ -129,7 +159,7 @@ export function DashboardTabsListClient({ initialTabs }: DashboardTabsListClient
 
   const totalTabsAmount = tabs.reduce((sum, tab) => sum + tab.total, 0);
   const totalOrders = tabs.reduce((sum, tab) => sum + tab.orders.length, 0);
-  const totalOpenTabs = tabs.filter(tab => tab.status === 'open').length;
+  const totalOpenTabs = tabs.filter((tab) => tab.status === 'open').length;
 
   return (
     <div className="space-y-6" data-testid="tabs-dashboard">
@@ -157,12 +187,16 @@ export function DashboardTabsListClient({ initialTabs }: DashboardTabsListClient
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Open Tabs</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Open Tabs
+            </CardTitle>
             <FolderOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalOpenTabs}</div>
-            <p className="text-xs text-muted-foreground mt-1">Currently active</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Currently active
+            </p>
           </CardContent>
         </Card>
 
@@ -172,7 +206,9 @@ export function DashboardTabsListClient({ initialTabs }: DashboardTabsListClient
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₦{totalTabsAmount.toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              ₦{totalTabsAmount.toLocaleString()}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -194,7 +230,8 @@ export function DashboardTabsListClient({ initialTabs }: DashboardTabsListClient
             <Receipt className="h-16 w-16 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No Tabs Found</h3>
             <p className="text-sm text-muted-foreground text-center">
-              No tabs match your current filters. Try adjusting your search criteria.
+              No tabs match your current filters. Try adjusting your search
+              criteria.
             </p>
           </CardContent>
         </Card>
@@ -212,6 +249,37 @@ export function DashboardTabsListClient({ initialTabs }: DashboardTabsListClient
                   data-testid="tab-card"
                   data-tab-number={tab.tabNumber}
                 >
+                  <div className="flex items-center gap-3 mr-3">
+                    <Checkbox
+                      checked={tab.reconciled || false}
+                      onCheckedChange={async () => {
+                        const prev = tab.reconciled;
+                        setTabs((current) =>
+                          current.map((t) =>
+                            t._id === tab._id
+                              ? { ...t, reconciled: !t.reconciled }
+                              : t
+                          )
+                        );
+                        const result = await toggleTabReconciliationAction(
+                          tab._id
+                        );
+                        if (!result.success) {
+                          setTabs((current) =>
+                            current.map((t) =>
+                              t._id === tab._id ? { ...t, reconciled: prev } : t
+                            )
+                          );
+                          toast({
+                            title: 'Error',
+                            description: result.error,
+                            variant: 'destructive',
+                          });
+                        }
+                      }}
+                      aria-label={`Mark tab ${tab.tabNumber} as reconciled`}
+                    />
+                  </div>
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-3">
                       <h3 className="font-semibold">Table {tab.tableNumber}</h3>
@@ -221,9 +289,14 @@ export function DashboardTabsListClient({ initialTabs }: DashboardTabsListClient
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span>{tab.orders.length} order(s)</span>
                       <span>•</span>
-                      <span>Opened {new Date(tab.openedAt).toLocaleString()}</span>
+                      <span>
+                        Opened {new Date(tab.openedAt).toLocaleString()}
+                      </span>
                       <span>•</span>
-                      <span className="font-semibold text-foreground" data-testid="tab-total">
+                      <span
+                        className="font-semibold text-foreground"
+                        data-testid="tab-total"
+                      >
                         ₦{tab.total.toLocaleString()}
                       </span>
                     </div>
@@ -232,11 +305,10 @@ export function DashboardTabsListClient({ initialTabs }: DashboardTabsListClient
                   <div className="flex items-center gap-2">
                     {tab.status === 'open' ? (
                       <>
-                        <Link href={`/menu?tableNumber=${tab.tableNumber}&tabId=${tab._id}`}>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                          >
+                        <Link
+                          href={`/menu?tableNumber=${tab.tableNumber}&tabId=${tab._id}`}
+                        >
+                          <Button variant="outline" size="sm">
                             <Plus className="mr-2 h-4 w-4" />
                             Add to Tab
                           </Button>
@@ -253,7 +325,8 @@ export function DashboardTabsListClient({ initialTabs }: DashboardTabsListClient
                           Customer Wants to Pay
                         </Button>
                       </>
-                    ) : tab.status === 'closed' || tab.paymentStatus === 'paid' ? (
+                    ) : tab.status === 'closed' ||
+                      tab.paymentStatus === 'paid' ? (
                       <Button
                         variant="secondary"
                         size="sm"
@@ -286,7 +359,13 @@ export function DashboardTabsListClient({ initialTabs }: DashboardTabsListClient
           tabNumber={selectedTab.tabNumber}
           tableNumber={selectedTab.tableNumber}
           total={selectedTab.total}
-          outstandingBalance={selectedTab.total - (selectedTab.partialPayments || []).reduce((sum, pp) => sum + pp.amount, 0)}
+          outstandingBalance={
+            selectedTab.total -
+            (selectedTab.partialPayments || []).reduce(
+              (sum, pp) => sum + pp.amount,
+              0
+            )
+          }
           open={showPayDialog}
           onOpenChange={setShowPayDialog}
           onSuccess={() => handleFilterChange(currentFilters)}

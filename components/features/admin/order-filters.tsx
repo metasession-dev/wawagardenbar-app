@@ -31,13 +31,17 @@ export interface FilterValues {
   orderType?: string[];
   paymentStatus?: string;
   dateRange?: DateRange;
+  reconciled?: 'all' | 'reconciled' | 'not-reconciled';
 }
 
 /**
  * Advanced order filters component
  * Multi-select filters with date range
  */
-export function OrderFilters({ onFilterChange, activeFilters }: OrderFiltersProps) {
+export function OrderFilters({
+  onFilterChange,
+  activeFilters,
+}: OrderFiltersProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [localFilters, setLocalFilters] = useState<FilterValues>(activeFilters);
 
@@ -67,8 +71,11 @@ export function OrderFilters({ onFilterChange, activeFilters }: OrderFiltersProp
     const updated = current.includes(status)
       ? current.filter((s) => s !== status)
       : [...current, status];
-    
-    setLocalFilters({ ...localFilters, status: updated.length > 0 ? updated : undefined });
+
+    setLocalFilters({
+      ...localFilters,
+      status: updated.length > 0 ? updated : undefined,
+    });
   }
 
   function toggleOrderType(type: string) {
@@ -76,12 +83,18 @@ export function OrderFilters({ onFilterChange, activeFilters }: OrderFiltersProp
     const updated = current.includes(type)
       ? current.filter((t) => t !== type)
       : [...current, type];
-    
-    setLocalFilters({ ...localFilters, orderType: updated.length > 0 ? updated : undefined });
+
+    setLocalFilters({
+      ...localFilters,
+      orderType: updated.length > 0 ? updated : undefined,
+    });
   }
 
   function handlePaymentStatusChange(value: string) {
-    setLocalFilters({ ...localFilters, paymentStatus: value === 'all' ? undefined : value });
+    setLocalFilters({
+      ...localFilters,
+      paymentStatus: value === 'all' ? undefined : value,
+    });
   }
 
   function handleDateRangeChange(range: DateRange | undefined) {
@@ -111,6 +124,7 @@ export function OrderFilters({ onFilterChange, activeFilters }: OrderFiltersProp
     localFilters.orderType?.length || 0,
     localFilters.paymentStatus ? 1 : 0,
     localFilters.dateRange?.from ? 1 : 0,
+    localFilters.reconciled ? 1 : 0,
   ].reduce((a, b) => a + b, 0);
 
   return (
@@ -146,7 +160,11 @@ export function OrderFilters({ onFilterChange, activeFilters }: OrderFiltersProp
                   {statusOptions.map((option) => (
                     <Badge
                       key={option.value}
-                      variant={localFilters.status?.includes(option.value) ? 'default' : 'outline'}
+                      variant={
+                        localFilters.status?.includes(option.value)
+                          ? 'default'
+                          : 'outline'
+                      }
                       className="cursor-pointer"
                       onClick={() => toggleStatus(option.value)}
                     >
@@ -163,7 +181,11 @@ export function OrderFilters({ onFilterChange, activeFilters }: OrderFiltersProp
                   {orderTypeOptions.map((option) => (
                     <Badge
                       key={option.value}
-                      variant={localFilters.orderType?.includes(option.value) ? 'default' : 'outline'}
+                      variant={
+                        localFilters.orderType?.includes(option.value)
+                          ? 'default'
+                          : 'outline'
+                      }
                       className="cursor-pointer"
                       onClick={() => toggleOrderType(option.value)}
                     >
@@ -194,12 +216,43 @@ export function OrderFilters({ onFilterChange, activeFilters }: OrderFiltersProp
                 </Select>
               </div>
 
+              {/* Reconciliation Filter */}
+              <div className="space-y-2">
+                <Label>Reconciliation</Label>
+                <Select
+                  value={localFilters.reconciled || 'all'}
+                  onValueChange={(value) =>
+                    setLocalFilters({
+                      ...localFilters,
+                      reconciled:
+                        value === 'all'
+                          ? undefined
+                          : (value as 'reconciled' | 'not-reconciled'),
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="reconciled">Reconciled</SelectItem>
+                    <SelectItem value="not-reconciled">
+                      Not Reconciled
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Date Range Filter */}
               <div className="space-y-2">
                 <Label>Date Range</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                    >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {localFilters.dateRange?.from ? (
                         localFilters.dateRange.to ? (
@@ -278,9 +331,17 @@ export function OrderFilters({ onFilterChange, activeFilters }: OrderFiltersProp
               <X
                 className="h-3 w-3 cursor-pointer"
                 onClick={() => {
-                  const updated = localFilters.status?.filter((s) => s !== status);
-                  setLocalFilters({ ...localFilters, status: updated?.length ? updated : undefined });
-                  onFilterChange({ ...localFilters, status: updated?.length ? updated : undefined });
+                  const updated = localFilters.status?.filter(
+                    (s) => s !== status
+                  );
+                  setLocalFilters({
+                    ...localFilters,
+                    status: updated?.length ? updated : undefined,
+                  });
+                  onFilterChange({
+                    ...localFilters,
+                    status: updated?.length ? updated : undefined,
+                  });
                 }}
               />
             </Badge>
@@ -291,9 +352,17 @@ export function OrderFilters({ onFilterChange, activeFilters }: OrderFiltersProp
               <X
                 className="h-3 w-3 cursor-pointer"
                 onClick={() => {
-                  const updated = localFilters.orderType?.filter((t) => t !== type);
-                  setLocalFilters({ ...localFilters, orderType: updated?.length ? updated : undefined });
-                  onFilterChange({ ...localFilters, orderType: updated?.length ? updated : undefined });
+                  const updated = localFilters.orderType?.filter(
+                    (t) => t !== type
+                  );
+                  setLocalFilters({
+                    ...localFilters,
+                    orderType: updated?.length ? updated : undefined,
+                  });
+                  onFilterChange({
+                    ...localFilters,
+                    orderType: updated?.length ? updated : undefined,
+                  });
                 }}
               />
             </Badge>
@@ -310,10 +379,22 @@ export function OrderFilters({ onFilterChange, activeFilters }: OrderFiltersProp
           {localFilters.dateRange?.from && (
             <Badge variant="secondary" className="gap-1">
               Date: {format(localFilters.dateRange.from, 'MMM dd')}
-              {localFilters.dateRange.to && ` - ${format(localFilters.dateRange.to, 'MMM dd')}`}
+              {localFilters.dateRange.to &&
+                ` - ${format(localFilters.dateRange.to, 'MMM dd')}`}
               <X
                 className="h-3 w-3 cursor-pointer"
                 onClick={() => clearFilter('dateRange')}
+              />
+            </Badge>
+          )}
+          {localFilters.reconciled && (
+            <Badge variant="secondary" className="gap-1">
+              {localFilters.reconciled === 'reconciled'
+                ? 'Reconciled'
+                : 'Not Reconciled'}
+              <X
+                className="h-3 w-3 cursor-pointer"
+                onClick={() => clearFilter('reconciled')}
               />
             </Badge>
           )}

@@ -732,6 +732,20 @@ export async function toggleOrderReconciliationAction(
       : (undefined as any);
     await order.save();
 
+    await AuditLogService.createLog({
+      userId: session.userId,
+      userEmail: session.email || '',
+      userRole: session.role || 'admin',
+      action: 'order.update' as any,
+      resource: 'order',
+      resourceId: orderId,
+      details: {
+        field: 'reconciled',
+        newValue: newState,
+        reconciledAt: newState ? order.reconciledAt : null,
+      },
+    });
+
     revalidatePath('/dashboard/orders');
 
     return {

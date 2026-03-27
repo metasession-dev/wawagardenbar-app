@@ -8,6 +8,7 @@ import TabModel from '@/models/tab-model';
 import { connectDB } from '@/lib/mongodb';
 import { ITab, IOrder } from '@/interfaces';
 import { sessionOptions, SessionData } from '@/lib/session';
+import { AuditLogService } from '@/services/audit-log-service';
 
 export interface ActionResult<T = unknown> {
   success: boolean;
@@ -745,6 +746,21 @@ export async function toggleTabReconciliationAction(
     tab.reconciledAt = newState ? new Date() : (undefined as any);
     tab.reconciledBy = newState ? (session.userId as any) : (undefined as any);
     await tab.save();
+
+    await AuditLogService.createLog({
+      userId: session.userId,
+      userEmail: session.email || '',
+      userRole: session.role || 'admin',
+      action: 'tab.manual_payment' as any,
+      resource: 'tab',
+      resourceId: tabId,
+      details: {
+        field: 'reconciled',
+        newValue: newState,
+        tabNumber: tab.tabNumber,
+        reconciledAt: newState ? tab.reconciledAt : null,
+      },
+    });
 
     revalidatePath('/dashboard/orders/tabs');
 

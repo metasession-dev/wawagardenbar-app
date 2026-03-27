@@ -249,7 +249,7 @@ export function DashboardTabsListClient({
                   data-testid="tab-card"
                   data-tab-number={tab.tabNumber}
                 >
-                  <div className="flex items-center gap-3 mr-3">
+                  <label className="flex items-center gap-1.5 mr-3 cursor-pointer">
                     <Checkbox
                       checked={tab.reconciled || false}
                       onCheckedChange={async () => {
@@ -279,7 +279,10 @@ export function DashboardTabsListClient({
                       }}
                       aria-label={`Mark tab ${tab.tabNumber} as reconciled`}
                     />
-                  </div>
+                    <span className="text-xs text-muted-foreground">
+                      Reconciled
+                    </span>
+                  </label>
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-3">
                       <h3 className="font-semibold">Table {tab.tableNumber}</h3>

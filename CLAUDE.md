@@ -87,10 +87,10 @@ Tier 1 reference documents (policy, strategy, architecture) are also in `SDLC/` 
 Run ALL gates — every one must pass:
 
 ```bash
-npx tsc --noEmit                                      # 0 errors
-semgrep scan --config auto app/ lib/ services/ models/ # 0 new findings above baseline
-npm audit --audit-level=high                           # 0 unaccepted vulnerabilities
-npx playwright test                                    # all pass
+npx tsc --noEmit                    # 0 errors
+semgrep scan --config auto src/     # 0 high/critical
+npm audit --audit-level=high        # 0 vulnerabilities
+npx playwright test                 # all pass
 ```
 
 ### After Pushing: WAIT — Confirm CI Green
@@ -110,7 +110,7 @@ Upload to META-COMPLY (NEVER commit to git):
 - E2E results (JSON), screenshots (PNG/JPG), SAST results (JSON), dependency audit (JSON), unit test output (TXT), test reports (HTML)
 
 ```bash
-./scripts/upload-evidence.sh wawagardenbar-app REQ-XXX [type] [file]
+./scripts/upload-evidence.sh [PROJECT_SLUG] REQ-XXX [type] [file]
 ```
 
 Keep in git (small markdown, needs PR review):
@@ -137,16 +137,22 @@ git add compliance/RTM.md compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md 
 git commit -m "compliance: [REQ-XXX] evidence compiled - awaiting review"
 ```
 
-8. **Verify on UAT** (if configured) — health check, smoke test, feature verification. Record in `security-summary.md`. Commit locally. Do NOT create a PR until UAT is green.
-9. **Push all compliance commits** in a single push: `git push origin develop`
+8. **WAIT CHECKPOINT:** Confirm CI + UAT deployment complete before UAT verification. Do NOT test against a stale deployment.
+9. **Verify on UAT** (if configured) — health check, smoke test, feature verification. Record in `security-summary.md`. Commit locally. Do NOT create a PR until UAT is green.
+10. **Push all compliance commits** in a single push: `git push origin develop`
+11. **Verify release in META-COMPLY** — CI auto-creates releases and links evidence. Check that a release exists with the current version (date-based: `v{YYYY}.{MM}.{DD}`) and evidence is linked.
 
 ### Pre-Flight Checklist (Before Creating PR)
 
+**Do NOT create the PR until ready to merge.** Every push to `develop` while a PR is open triggers duplicate CI runs. The PR is the merge request, not the development workspace.
+
 Before creating a PR, verify ALL of the following:
 
+- [ ] All development and iteration is complete
 - [ ] CI green on develop (not stale): `gh run list --branch develop --limit 1`
 - [ ] Working tree clean: `git status`
 - [ ] UAT verification passed (if configured)
+- [ ] META-COMPLY UAT approval granted
 - [ ] For tracked requirements: test-scope.md complete, implementation-plan.md exists (MEDIUM/HIGH), RTM is `TESTED - PENDING SIGN-OFF`, release ticket created, evidence uploaded
 
 If any item fails, resolve it before proceeding. Read `SDLC/4-submit-for-review.md` for full PR creation steps.

@@ -354,6 +354,26 @@ Evidence → compliance/evidence/REQ-XXX/    Evidence → GitHub Actions logs + 
 
 Both are required. Local evidence proves comprehensive testing. CI evidence proves it independently.
 
+### Additional Workflows
+
+Copy these template workflows from `sdlc/files/ci/` into your project's `.github/workflows/`:
+
+**`check-uat-approval.yml`** — UAT approval gate:
+
+- Runs on PRs to `main` and `workflow_dispatch`
+- Queries META-COMPLY for release approval status
+- Blocks merge unless release is `uat_approved`
+- Add `Check UAT Approval` as a required status check on `main`
+
+**`post-deploy-prod.yml`** — Production evidence capture:
+
+- Runs on push to `main` (after merge)
+- Waits for deployment, runs production smoke tests
+- Uploads production evidence to META-COMPLY (`environment: production`)
+- Marks the release as `released` in META-COMPLY
+
+**Versioning convention:** Releases use date-based versions by default (`v2026.03.27`). CI auto-creates releases in META-COMPLY when uploading evidence. Update `PROJECT_SLUG` and `PRODUCTION_URL` in each template.
+
 ---
 
 ## Step 5: Local Tooling Setup (Required)

@@ -11,6 +11,18 @@ description: Create a PR from develop to main — triggers CI independent verifi
 
 ---
 
+## IMPORTANT: Do NOT Create the PR Until Ready to Merge
+
+**Do NOT create the PR prematurely.** Every push to `develop` while a PR is open triggers additional CI runs on the PR (quality gates + UAT approval check), creating unnecessary duplicate runs. Only create the PR when:
+
+- All development and iteration is complete
+- CI on `develop` is green
+- UAT verification has passed
+- Evidence is compiled and uploaded
+- META-COMPLY UAT approval is granted
+
+The PR is the **merge request**, not the development workspace. Develop on `develop`, iterate until ready, then create the PR as the final step before merge.
+
 ## What Happens at This Stage
 
 When you create the PR, CI runs automatically — GitHub Actions re-executes the verification gates (TypeScript, SAST, dependency audit, E2E) independently. The META-COMPLY UAT approval check also runs, verifying the release has been approved for UAT in META-COMPLY. This produces tamper-resistant evidence verified by GitHub's infrastructure.

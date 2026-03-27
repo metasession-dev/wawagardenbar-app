@@ -153,7 +153,18 @@ If the project uses separate UAT and Production environments:
 | UAT         | `develop` | Yes         | Pre-PR verification — CI evidence uploaded to META-COMPLY, reviewed and approved before PR    |
 | Production  | `main`    | Yes         | Live deployment after PR approval — post-deploy evidence captured and uploaded to META-COMPLY |
 
-UAT verification and META-COMPLY approval are completed in workflow 3 before the PR is created. After merge to main, the post-deploy workflow runs smoke tests against production, uploads evidence to META-COMPLY (environment=production), and submits the release for production review.
+UAT verification and META-COMPLY approval are completed in workflow 3 before the PR is created. After merge to main, the post-deploy workflow runs smoke tests against production, uploads evidence to META-COMPLY (environment=production), and marks the release as `released`.
+
+### Automated Post-Deploy Workflow
+
+If your project has `post-deploy-prod.yml` (template in `sdlc/files/ci/`), Steps 3-5 are handled automatically by CI after merge. The workflow:
+
+1. Waits for deployment to propagate
+2. Runs production smoke tests (health check, key endpoints)
+3. Uploads production evidence to META-COMPLY with `--environment production`
+4. Marks the release as `released` in META-COMPLY
+
+Manual verification (Step 5: security checks) is still recommended for MEDIUM/HIGH risk releases.
 
 ---
 

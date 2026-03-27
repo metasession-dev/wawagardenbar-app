@@ -89,13 +89,18 @@ Read `SDLC/3-compile-evidence.md` for full details, including release ticket tem
 8. **WAIT CHECKPOINT:** Confirm CI + UAT deployment complete before UAT verification.
 9. **Verify on UAT** (if configured) — health check, smoke test, feature verification. Record in `security-summary.md`. Commit locally. Do NOT create a PR until UAT is green.
 10. **Push all compliance commits** in a single push: `git push origin develop`
+11. **Verify release in META-COMPLY** — CI auto-creates releases and links evidence. Check that a release exists with the current version (date-based: `v{YYYY}.{MM}.{DD}`) and evidence is linked.
 
 ### Pre-Flight Checklist (Before Creating PR)
 
+**Do NOT create the PR until ready to merge.** Every push to `develop` while a PR is open triggers duplicate CI runs. The PR is the merge request, not the development workspace.
+
 Before creating a PR, verify ALL of the following:
+- [ ] All development and iteration is complete
 - [ ] CI green on develop (not stale): `gh run list --branch develop --limit 1`
 - [ ] Working tree clean: `git status`
 - [ ] UAT verification passed (if configured)
+- [ ] META-COMPLY UAT approval granted
 - [ ] For tracked requirements: test-scope.md complete, implementation-plan.md exists (MEDIUM/HIGH), RTM is `TESTED - PENDING SIGN-OFF`, release ticket created, evidence uploaded
 
 If any item fails, resolve it before proceeding.

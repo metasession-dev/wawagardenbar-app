@@ -240,20 +240,90 @@ jobs:
 
   # ──────────────────────────────────────────────
   # JOB 6: Upload Evidence to META-COMPLY
-  # Uses META-COMPLY's reusable workflow with date-based versioning.
+  # Uses locally copied upload-evidence.sh with date-based versioning.
   # Auto-creates release, uploads compliance docs, syncs requirements.
   # ──────────────────────────────────────────────
   upload-evidence:
+    name: Upload Evidence
+    runs-on: self-hosted
     needs: [typecheck, sast, dependency-audit, e2e-tests, build]
     if: ${{ !failure() && !cancelled() }}
-    uses: metasession-dev/META-COMPLY/.github/workflows/upload-evidence.yml@main
-    with:
-      project-slug: wawagardenbar-app
-      release-version: v${{ github.run_number }}
-      environment: uat
-    secrets:
+    env:
       SUPABASE_URL: ${{ secrets.META_COMPLY_SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.META_COMPLY_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine release version
+        id: version
+        run: |
+          VERSION="v$(date +%Y.%m.%d)"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Release version: ${VERSION}"
+
+      - name: Sync known requirements from RTM
+        if: env.SUPABASE_URL != ''
+        run: |
+          if [ -f "compliance/RTM.md" ]; then
+            REQS=$(grep -oP 'REQ-\d+' compliance/RTM.md | sort -t- -k2 -n -u)
+            if [ -n "$REQS" ]; then
+              JSON_ARRAY="["
+              FIRST=true
+              for REQ in $REQS; do
+                [ "$FIRST" = true ] && FIRST=false || JSON_ARRAY="${JSON_ARRAY},"
+                JSON_ARRAY="${JSON_ARRAY}\"${REQ}\""
+              done
+              JSON_ARRAY="${JSON_ARRAY}]"
+
+              PROJ_ID=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_projects?slug=eq.wawagardenbar-app&select=id" \
+                -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+                -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+                | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+
+              if [ -n "$PROJ_ID" ]; then
+                curl -s -o /dev/null -w "known_requirements sync: HTTP %{http_code}\n" \
+                  -X PATCH "${SUPABASE_URL}/rest/v1/compliance_projects?id=eq.${PROJ_ID}" \
+                  -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+                  -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+                  -H "Content-Type: application/json" \
+                  -d "{\"known_requirements\": ${JSON_ARRAY}}"
+                echo "Synced $(echo "$REQS" | wc -w) requirements from RTM.md"
+              fi
+            fi
+          fi
+
+      - name: Upload compliance documents
+        if: env.SUPABASE_URL != ''
+        run: |
+          chmod +x scripts/upload-evidence.sh 2>/dev/null || true
+          FLAGS="--git-sha ${{ github.sha }} --ci-run-id ${{ github.run_id }} --branch ${{ github.ref_name }}"
+          FLAGS="${FLAGS} --release ${{ steps.version.outputs.version }} --create-release-if-missing"
+          FLAGS="${FLAGS} --environment uat"
+
+          for DOC in compliance/RTM.md compliance/test-plan.md compliance/test-cases.md compliance/test-summary-report.md; do
+            if [ -f "$DOC" ]; then
+              echo "Uploading: $(basename "$DOC")"
+              bash scripts/upload-evidence.sh \
+                wawagardenbar-app _compliance-docs compliance_document "$DOC" \
+                --category planning ${FLAGS} || echo "Warning: Failed to upload $(basename "$DOC")"
+            fi
+          done
+
+          # Upload release tickets
+          for DIR in compliance/pending-releases compliance/approved-releases; do
+            if [ -d "$DIR" ]; then
+              for TICKET in "$DIR"/*.md; do
+                [ -f "$TICKET" ] || continue
+                echo "Uploading: $(basename "$TICKET")"
+                bash scripts/upload-evidence.sh \
+                  wawagardenbar-app _compliance-docs compliance_document "$TICKET" \
+                  --category release_artifact ${FLAGS} || echo "Warning: Failed to upload $(basename "$TICKET")"
+              done
+            fi
+          done
+
+      - name: Summary
+        run: echo "Evidence uploaded for ${{ steps.version.outputs.version }} (UAT)"
 
   # ──────────────────────────────────────────────
   # JOB 7: Compliance Validation (PRs to main only)

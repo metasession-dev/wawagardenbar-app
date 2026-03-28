@@ -150,44 +150,42 @@ Per Test Strategy: regeneration triggers full retest.
 
 **MEDIUM/HIGH risk — AI prompt logging checkpoint:** Before committing AI-generated code, verify that `ai-prompts.md` has been updated with the prompt summary and files generated. If missing, create it now — this is a required artifact for MEDIUM/HIGH risk requirements with AI involvement.
 
-### Step 4: Review and Update Tests
+### Step 4: Implement Test Plan
 
-Before staging, review the test suite to ensure it covers the changes made:
+Follow the test plan (`compliance/evidence/REQ-XXX/test-plan.md`) created during Stage 1:
 
-**4a. Check if existing tests need updating:**
+**4a. Review the test plan:**
 
 ```bash
-# List test files that may be affected by your changes
-git diff --name-only | grep -iE 'spec|test|e2e'
-
-# Check for hardcoded values, route lists, or assertions that reference changed areas
-# Example: if you added new routes, check protected route arrays
-grep -rn 'protectedRoutes\|const routes' e2e/ __tests__/ --include='*.ts' --include='*.tsx'
+cat compliance/evidence/REQ-XXX/test-plan.md
 ```
 
-**4b. Update existing tests if needed:**
-
-- New routes added? → Add them to route protection test arrays
-- API response shape changed? → Update assertions
-- UI components changed? → Update selectors and expected content
-- Business logic changed? → Update unit test expectations
-
-**4c. Write new tests for new functionality:**
+**4b. Add new tests** listed in the "Tests to Add" section:
 
 - New pages → route protection tests (unauthenticated redirect)
 - New API endpoints → auth enforcement tests, response format tests
 - New user flows → E2E tests for critical paths
 - New business logic → unit tests
 
-**4d. Verify test scope alignment:**
+**4c. Update existing tests** listed in the "Tests to Update" section:
+
+- New routes added? → Add them to route protection test arrays
+- API response shape changed? → Update assertions
+- UI components changed? → Update selectors and expected content
+- Business logic changed? → Update unit test expectations
+
+**4d. Remove obsolete tests** listed in the "Tests to Remove" section (if any). Each removal must have a justification in the test plan.
+
+**4e. Verify test plan coverage:**
 
 ```bash
-cat compliance/evidence/REQ-XXX/test-scope.md
-# Check: does the test scope list testing items that aren't yet covered?
-# If so, write the tests now before proceeding.
+cat compliance/evidence/REQ-XXX/test-plan.md
+# Check: have all items in "Tests to Add" been implemented?
+# Check: have all items in "Tests to Update" been addressed?
+# Check: does the functional test mapping cover all acceptance criteria?
 ```
 
-The goal is that gates (Step 7) run against a test suite that actually covers the changes, not just the pre-existing code.
+The goal is that gates (Step 7) run against a test suite that covers the test plan, not just the pre-existing code.
 
 ### Step 5: Stage Selectively
 

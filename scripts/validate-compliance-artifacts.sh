@@ -50,6 +50,20 @@ for REQ in $REQUIREMENTS; do
     echo "  OK: test-scope.md exists"
   fi
 
+  # Check test-plan.md exists
+  if [ ! -f "compliance/evidence/$REQ/test-plan.md" ]; then
+    echo "  WARNING: Test plan missing: compliance/evidence/$REQ/test-plan.md"
+  else
+    echo "  OK: test-plan.md exists"
+  fi
+
+  # Check test-execution-summary.md exists
+  if [ ! -f "compliance/evidence/$REQ/test-execution-summary.md" ]; then
+    echo "  WARNING: Test execution summary missing: compliance/evidence/$REQ/test-execution-summary.md"
+  else
+    echo "  OK: test-execution-summary.md exists"
+  fi
+
   # Check RTM entry exists and has correct status
   if grep -q "$REQ" compliance/RTM.md 2>/dev/null; then
     if grep "$REQ" compliance/RTM.md | grep -q "TESTED - PENDING SIGN-OFF"; then

@@ -34,9 +34,9 @@ jobs:
       - name: Determine release version
         id: version
         run: |
-          VERSION=$(node -p "require('./package.json').version")
-          echo "version=v${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "Release version: v${VERSION}"
+          VERSION="v$(date +%Y.%m.%d)"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Release version: ${VERSION}"
 
       - name: Wait for production deployment
         run: |
@@ -102,46 +102,28 @@ jobs:
           BASE_URL="${PROD_URL}" npx playwright test --project=chromium --reporter=json > prod-e2e-results.json 2>/dev/null || true
         continue-on-error: true
 
-      - name: Download META-COMPLY upload script
-        run: |
-          curl -sL "https://raw.githubusercontent.com/metasession-dev/META-COMPLY/sdlc-v1.3.0/scripts/upload-evidence.sh" -o /tmp/upload-evidence.sh
-          chmod +x /tmp/upload-evidence.sh
-
       - name: Upload production evidence to META-COMPLY
         if: env.SUPABASE_URL != ''
         run: |
+          chmod +x scripts/upload-evidence.sh 2>/dev/null || true
           VERSION="${{ steps.version.outputs.version }}"
+          FLAGS="--release ${VERSION} --create-release-if-missing --environment production --category ci_pipeline"
+          FLAGS="${FLAGS} --git-sha ${GIT_SHA} --ci-run-id ${CI_RUN} --branch ${GIT_BRANCH}"
 
           # Upload smoke test results
           if [ -f prod-smoke-results.json ]; then
             echo "Uploading smoke test results..."
-            /tmp/upload-evidence.sh \
-              "${PROJECT_SLUG}" \
-              "_compliance-docs" \
-              "test_report" \
-              prod-smoke-results.json \
-              --release "${VERSION}" \
-              --environment "production" \
-              --category "ci_pipeline" \
-              --git-sha "${GIT_SHA}" \
-              --ci-run-id "${CI_RUN}" \
-              --branch "${GIT_BRANCH}" || echo "Warning: Failed to upload smoke results"
+            bash scripts/upload-evidence.sh \
+              "${PROJECT_SLUG}" "_compliance-docs" "test_report" prod-smoke-results.json \
+              ${FLAGS} || echo "Warning: Failed to upload smoke results"
           fi
 
           # Upload E2E results
           if [ -f prod-e2e-results.json ]; then
             echo "Uploading E2E results..."
-            /tmp/upload-evidence.sh \
-              "${PROJECT_SLUG}" \
-              "_compliance-docs" \
-              "e2e_result" \
-              prod-e2e-results.json \
-              --release "${VERSION}" \
-              --environment "production" \
-              --category "ci_pipeline" \
-              --git-sha "${GIT_SHA}" \
-              --ci-run-id "${CI_RUN}" \
-              --branch "${GIT_BRANCH}" || echo "Warning: Failed to upload E2E results"
+            bash scripts/upload-evidence.sh \
+              "${PROJECT_SLUG}" "_compliance-docs" "e2e_result" prod-e2e-results.json \
+              ${FLAGS} || echo "Warning: Failed to upload E2E results"
           fi
 
       - name: Submit release for production review

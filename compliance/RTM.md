@@ -626,23 +626,23 @@ This section maps every section in `docs/REQUIREMENTS.md` to the specific test c
 
 This section tracks discrete change requests (REQ-001 through REQ-008) that represent implementation work items. Each entry maps to implementation artefacts, test evidence, and approval status.
 
-| REQ-ID  | Issue | Risk   | Evidence                     | Status              | Approver | Date       |
-| ------- | ----- | ------ | ---------------------------- | ------------------- | -------- | ---------- |
-| REQ-001 | --    | LOW    | compliance/evidence/REQ-001/ | APPROVED - DEPLOYED | William  | 2026-03-20 |
-| REQ-002 | --    | MEDIUM | compliance/evidence/REQ-002/ | APPROVED - DEPLOYED | William  | 2026-03-20 |
-| REQ-003 | --    | LOW    | compliance/evidence/REQ-003/ | APPROVED - DEPLOYED | William  | 2026-03-20 |
-| REQ-004 | --    | MEDIUM | compliance/evidence/REQ-004/ | APPROVED - DEPLOYED | William  | 2026-03-20 |
-| REQ-005 | --    | MEDIUM | compliance/evidence/REQ-005/ | APPROVED - DEPLOYED | William  | 2026-03-05 |
-| REQ-006 | --    | MEDIUM | compliance/evidence/REQ-006/ | APPROVED - DEPLOYED | William  | 2026-03-06 |
-| REQ-007 | --    | LOW    | compliance/evidence/REQ-007/ | APPROVED - DEPLOYED | William  | 2026-03-20 |
-| REQ-008 | --    | LOW    | compliance/evidence/REQ-008/ | APPROVED - DEPLOYED | William  | 2026-03-20 |
-| REQ-009 | #2    | HIGH   | compliance/evidence/REQ-009/ | APPROVED - DEPLOYED | William  | 2026-03-22 |
-| REQ-010 | #4    | MEDIUM | compliance/evidence/REQ-010/ | APPROVED - DEPLOYED | William  | 2026-03-23 |
-| REQ-011 | #6    | LOW    | compliance/evidence/REQ-011/ | APPROVED - DEPLOYED | William  | 2026-03-25 |
-| REQ-012 | #9    | HIGH   | compliance/evidence/REQ-012/ | APPROVED - DEPLOYED | William  | 2026-03-28 |
-| REQ-013 | #10   | HIGH   | compliance/evidence/REQ-013/ | APPROVED - DEPLOYED | William  | 2026-03-28 |
-| REQ-014 | #11   | MEDIUM | compliance/evidence/REQ-014/ | APPROVED - DEPLOYED | William  | 2026-03-28 |
-| REQ-015 | #15   | MEDIUM | compliance/evidence/REQ-015/ | DRAFT               | --       | --         |
+| REQ-ID  | Issue | Risk   | Evidence                     | Status                    | Approver | Date       |
+| ------- | ----- | ------ | ---------------------------- | ------------------------- | -------- | ---------- |
+| REQ-001 | --    | LOW    | compliance/evidence/REQ-001/ | APPROVED - DEPLOYED       | William  | 2026-03-20 |
+| REQ-002 | --    | MEDIUM | compliance/evidence/REQ-002/ | APPROVED - DEPLOYED       | William  | 2026-03-20 |
+| REQ-003 | --    | LOW    | compliance/evidence/REQ-003/ | APPROVED - DEPLOYED       | William  | 2026-03-20 |
+| REQ-004 | --    | MEDIUM | compliance/evidence/REQ-004/ | APPROVED - DEPLOYED       | William  | 2026-03-20 |
+| REQ-005 | --    | MEDIUM | compliance/evidence/REQ-005/ | APPROVED - DEPLOYED       | William  | 2026-03-05 |
+| REQ-006 | --    | MEDIUM | compliance/evidence/REQ-006/ | APPROVED - DEPLOYED       | William  | 2026-03-06 |
+| REQ-007 | --    | LOW    | compliance/evidence/REQ-007/ | APPROVED - DEPLOYED       | William  | 2026-03-20 |
+| REQ-008 | --    | LOW    | compliance/evidence/REQ-008/ | APPROVED - DEPLOYED       | William  | 2026-03-20 |
+| REQ-009 | #2    | HIGH   | compliance/evidence/REQ-009/ | APPROVED - DEPLOYED       | William  | 2026-03-22 |
+| REQ-010 | #4    | MEDIUM | compliance/evidence/REQ-010/ | APPROVED - DEPLOYED       | William  | 2026-03-23 |
+| REQ-011 | #6    | LOW    | compliance/evidence/REQ-011/ | APPROVED - DEPLOYED       | William  | 2026-03-25 |
+| REQ-012 | #9    | HIGH   | compliance/evidence/REQ-012/ | APPROVED - DEPLOYED       | William  | 2026-03-28 |
+| REQ-013 | #10   | HIGH   | compliance/evidence/REQ-013/ | APPROVED - DEPLOYED       | William  | 2026-03-28 |
+| REQ-014 | #11   | MEDIUM | compliance/evidence/REQ-014/ | APPROVED - DEPLOYED       | William  | 2026-03-28 |
+| REQ-015 | #15   | MEDIUM | compliance/evidence/REQ-015/ | TESTED - PENDING SIGN-OFF | Pending  | --         |
 
 ### Change Request Dependencies
 

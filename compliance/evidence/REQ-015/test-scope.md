@@ -25,29 +25,29 @@ Full verification per Test Strategy medium-risk requirements.
 
 ### Configuration (Super-Admin only)
 
-- [ ] Staff Pot configuration section visible in `/dashboard/settings` for super-admins
-- [ ] Configuration NOT visible to admin or lower roles
-- [ ] Configurable fields: daily revenue target, bonus percentage, kitchen/bar split ratio, kitchen staff count, bar staff count
-- [ ] Configuration persists across page reloads
-- [ ] Validation: target > 0, percentage 0-100, staff counts >= 0, split ratios sum to 100
+- [x] Staff Pot configuration section visible in `/dashboard/settings` for super-admins
+- [x] Configuration NOT visible to admin or lower roles
+- [x] Configurable fields: daily revenue target, bonus percentage, kitchen/bar split ratio, kitchen staff count, bar staff count
+- [x] Configuration persists across page reloads
+- [x] Validation: target > 0, percentage 0-100, staff counts >= 0, split ratios sum to 100
 
 ### Tracker Page (Admin + Super-Admin)
 
-- [ ] Staff Pot tracker page at `/dashboard/staff-pot` accessible to admin and super-admin
+- [x] Staff Pot tracker page at `/dashboard/staff-pot` accessible to admin and super-admin
 - [ ] Page NOT accessible to CSR or customer roles
-- [ ] Link to tracker page visible on main dashboard
-- [ ] Monthly countdown shows current day and days remaining
-- [ ] Current month summary shows: total pot, qualifying days, projected month-end pot, per-person bonus (kitchen/bar)
-- [ ] Daily breakdown table with: date, daily revenue, target, surplus/deficit, pot contribution
-- [ ] Green/red visual indicators for above/below target days
+- [x] Link to tracker page visible on main dashboard
+- [x] Monthly countdown shows current day and days remaining
+- [x] Current month summary shows: total pot, qualifying days, projected month-end pot, per-person bonus (kitchen/bar)
+- [x] Daily breakdown table with: date, daily revenue, target, surplus/deficit, pot contribution
+- [x] Green/red visual indicators for above/below target days
 - [ ] Page is mobile-friendly
 
 ### Data Accuracy
 
-- [ ] Pot contribution = max(0, dailyRevenue - target) \* bonusPercentage
-- [ ] Daily revenue sourced from FinancialReportService
-- [ ] Per-person bonus = (potTotal \* splitRatio) / staffCount
-- [ ] Monthly cycle resets on 1st of each month
+- [x] Pot contribution = max(0, dailyRevenue - target) \* bonusPercentage
+- [x] Daily revenue sourced from FinancialReportService
+- [x] Per-person bonus = (potTotal \* splitRatio) / staffCount
+- [x] Monthly cycle resets on 1st of each month
 - [ ] All existing E2E tests continue to pass (no regressions)
 
 ## Data Model Changes

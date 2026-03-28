@@ -1,13 +1,20 @@
 import { SettingsService } from '@/services';
 import { SystemSettingsService } from '@/services/system-settings-service';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { SettingsForm } from '@/components/features/admin/settings-form';
 import { PaymentSettingsForm } from '@/components/features/admin/payment-settings-form';
 import { ExpenseCategoriesForm } from '@/components/features/admin/expense-categories-form';
 import { MenuCategoriesForm } from '@/components/features/admin/menu-categories-form';
+import { StaffPotConfigForm } from '@/components/features/admin/staff-pot/staff-pot-config-form';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Key, UserX, Users } from 'lucide-react';
+import { Key, UserX, Users, PiggyBank } from 'lucide-react';
 
 export const metadata = {
   title: 'Settings | Admin Dashboard',
@@ -20,18 +27,27 @@ export const metadata = {
  */
 export default async function SettingsPage() {
   // Get current settings
-  const [settings, notificationSettings, paymentSettings, expenseCategories, menuSettings, inventoryLocationsSettings] = await Promise.all([
+  const [
+    settings,
+    notificationSettings,
+    paymentSettings,
+    expenseCategories,
+    menuSettings,
+    inventoryLocationsSettings,
+    staffPotConfig,
+  ] = await Promise.all([
     SettingsService.getSettings(),
     SystemSettingsService.getNotificationSettings(),
     SystemSettingsService.getPaymentSettings(),
     SystemSettingsService.getExpenseCategories(),
     SystemSettingsService.getMenuCategories(),
     SystemSettingsService.getInventoryLocations(),
+    SystemSettingsService.getStaffPotConfig(),
   ]);
 
   // Serialize for client - use JSON.parse(JSON.stringify()) to remove Mongoose metadata
   const plainSettings = JSON.parse(JSON.stringify(settings));
-  
+
   const serializedSettings = {
     serviceFeePercentage: plainSettings.serviceFeePercentage,
     deliveryFeeBase: plainSettings.deliveryFeeBase,
@@ -76,9 +92,7 @@ export default async function SettingsPage() {
         </CardHeader>
         <CardContent>
           <Button asChild variant="outline" className="w-full sm:w-auto">
-            <Link href="/dashboard/settings/admins">
-              Manage Admins
-            </Link>
+            <Link href="/dashboard/settings/admins">Manage Admins</Link>
           </Button>
         </CardContent>
       </Card>
@@ -96,9 +110,7 @@ export default async function SettingsPage() {
         </CardHeader>
         <CardContent>
           <Button asChild variant="outline" className="w-full sm:w-auto">
-            <Link href="/dashboard/settings/api-keys">
-              Manage API Keys
-            </Link>
+            <Link href="/dashboard/settings/api-keys">Manage API Keys</Link>
           </Button>
         </CardContent>
       </Card>
@@ -132,6 +144,25 @@ export default async function SettingsPage() {
       {/* Menu Categories */}
       <MenuCategoriesForm initialSettings={menuSettings} />
 
+      {/* Staff Pot Configuration */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <div className="space-y-1">
+            <CardTitle className="flex items-center gap-2">
+              <PiggyBank className="h-5 w-5" />
+              Staff Pot (Team Bonus)
+            </CardTitle>
+            <CardDescription>
+              Configure daily revenue target, bonus percentage, and team split
+              for the staff pot incentive
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <StaffPotConfigForm initialConfig={staffPotConfig} />
+        </CardContent>
+      </Card>
+
       {/* Settings Form */}
       <Card>
         <CardHeader>
@@ -141,8 +172,8 @@ export default async function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <SettingsForm 
-            initialSettings={serializedSettings} 
+          <SettingsForm
+            initialSettings={serializedSettings}
             notificationSettings={notificationSettings}
             inventoryLocationsSettings={inventoryLocationsSettings}
           />

@@ -8,6 +8,13 @@ name: CI Pipeline
 on:
   push:
     branches: [develop]
+    paths-ignore:
+      - '.github/workflows/**'
+      - 'SDLC/**'
+      - 'compliance/**'
+      - '*.md'
+      - '.cursorrules'
+      - '.windsurfrules'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

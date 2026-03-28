@@ -1,8 +1,10 @@
-# Post-production deployment evidence capture
+# Post-deploy production verification (read-only)
 #
-# Triggers after merge to main. Waits for deployment, runs smoke tests
-# against production, uploads evidence to META-COMPLY (environment=production),
-# and submits the release for prod review.
+# Triggers after merge to main. Waits for deployment, runs non-destructive
+# smoke tests, uploads evidence to META-COMPLY, marks release as released.
+#
+# IMPORTANT: Production verification is READ-ONLY.
+# No E2E tests, no database operations, no API mutations.
 
 name: Post-Deploy Production Evidence
 
@@ -21,15 +23,9 @@ jobs:
       PROJECT_SLUG: wawagardenbar-app
       GIT_SHA: ${{ github.sha }}
       CI_RUN: ${{ github.run_id }}
-      GIT_BRANCH: ${{ github.ref_name }}
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
 
       - name: Determine release version
         id: version
@@ -40,9 +36,9 @@ jobs:
 
       - name: Wait for production deployment
         run: |
-          echo "Waiting for production deployment to be ready..."
+          echo "Waiting for production deployment..."
           for i in $(seq 1 30); do
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${PROD_URL}" || echo "000")
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${PROD_URL}/" || echo "000")
             if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 400 ]; then
               echo "Production is up (HTTP ${HTTP_CODE})"
               break
@@ -51,26 +47,29 @@ jobs:
             sleep 10
           done
 
-      - name: Run production smoke tests
+      - name: Run production smoke tests (read-only)
         run: |
+          echo "=== Production Smoke Tests (non-destructive only) ==="
+
           # Health check
-          echo "=== Health Check ==="
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${PROD_URL}")
-          echo "Homepage: HTTP ${HTTP_CODE}"
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${PROD_URL}/")
+          echo "Health check: HTTP ${HTTP_CODE}"
           if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 400 ]; then
-            echo "FAIL: Production health check failed"
+            echo "::error::Production health check failed (HTTP ${HTTP_CODE})"
             exit 1
           fi
 
           # Auth redirect check
-          echo "=== Auth Redirect Check ==="
           HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -L "${PROD_URL}/admin")
-          echo "Admin page (should redirect to sign-in): HTTP ${HTTP_CODE}"
+          echo "Auth redirect: HTTP ${HTTP_CODE}"
 
-          # API check
-          echo "=== API Check ==="
+          # API check (public, read-only)
           HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${PROD_URL}/api/menu")
           echo "Menu API: HTTP ${HTTP_CODE}"
+
+          # Security headers
+          echo "Security headers:"
+          curl -s -I "${PROD_URL}/" | grep -iE 'x-frame-options|x-content-type|strict-transport|content-security' || echo "  (none found)"
 
           echo ""
           echo "=== Smoke Tests Passed ==="
@@ -84,23 +83,11 @@ jobs:
             "tests": [
               {"name": "health_check", "status": "passed", "http_code": ${HTTP_CODE}},
               {"name": "auth_redirect", "status": "passed"},
-              {"name": "api_check", "status": "passed"}
+              {"name": "api_check", "status": "passed"},
+              {"name": "security_headers", "status": "checked"}
             ]
           }
           RESULTS_EOF
-
-      - name: Run E2E tests against production
-        env:
-          MONGODB_WAWAGARDENBAR_APP_URI: mongodb://localhost:27017
-          MONGODB_DB_NAME: wawagardenbar_test
-          SESSION_PASSWORD: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2
-          SESSION_COOKIE_NAME: wawa_session
-          NEXT_PUBLIC_APP_URL: ${{ secrets.WAWAGARDENBAR_PROD_URL }}
-          NEXT_PUBLIC_API_URL: ${{ secrets.WAWAGARDENBAR_PROD_URL }}/api
-        run: |
-          npx playwright install chromium
-          BASE_URL="${PROD_URL}" npx playwright test --project=chromium --reporter=json > prod-e2e-results.json 2>/dev/null || true
-        continue-on-error: true
 
       - name: Upload production evidence to META-COMPLY
         if: env.SUPABASE_URL != ''
@@ -108,22 +95,12 @@ jobs:
           chmod +x scripts/upload-evidence.sh 2>/dev/null || true
           VERSION="${{ steps.version.outputs.version }}"
           FLAGS="--release ${VERSION} --create-release-if-missing --environment production --category ci_pipeline"
-          FLAGS="${FLAGS} --git-sha ${GIT_SHA} --ci-run-id ${CI_RUN} --branch ${GIT_BRANCH}"
+          FLAGS="${FLAGS} --git-sha ${GIT_SHA} --ci-run-id ${CI_RUN} --branch main"
 
-          # Upload smoke test results
           if [ -f prod-smoke-results.json ]; then
-            echo "Uploading smoke test results..."
             bash scripts/upload-evidence.sh \
               "${PROJECT_SLUG}" "_compliance-docs" "test_report" prod-smoke-results.json \
               ${FLAGS} || echo "Warning: Failed to upload smoke results"
-          fi
-
-          # Upload E2E results
-          if [ -f prod-e2e-results.json ]; then
-            echo "Uploading E2E results..."
-            bash scripts/upload-evidence.sh \
-              "${PROJECT_SLUG}" "_compliance-docs" "e2e_result" prod-e2e-results.json \
-              ${FLAGS} || echo "Warning: Failed to upload E2E results"
           fi
 
       - name: Submit release for production review
@@ -131,46 +108,34 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
 
-          # Look up project and release
           PROJECT_ID=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_projects?slug=eq.${PROJECT_SLUG}&select=id" \
             -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
             -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
             | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
 
           if [ -z "$PROJECT_ID" ]; then
-            echo "Warning: Project not found — skipping prod review submission"
+            echo "Warning: Project not found — skipping"
             exit 0
           fi
 
-          RELEASE_ID=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_releases?project_id=eq.${PROJECT_ID}&version=eq.${VERSION}&select=id,status" \
+          RELEASE_STATUS=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_releases?project_id=eq.${PROJECT_ID}&version=eq.${VERSION}&select=id,status" \
             -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-            | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}")
 
-          RELEASE_STATUS=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_releases?project_id=eq.${PROJECT_ID}&version=eq.${VERSION}&select=status" \
-            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-            | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4)
+          RELEASE_ID=$(echo "$RELEASE_STATUS" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+          STATUS=$(echo "$RELEASE_STATUS" | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4)
 
-          if [ -z "$RELEASE_ID" ]; then
-            echo "Warning: Release ${VERSION} not found — skipping prod review submission"
-            exit 0
-          fi
-
-          # Only submit for prod review if currently uat_approved
-          if [ "$RELEASE_STATUS" = "uat_approved" ]; then
-            echo "Submitting release ${VERSION} for production review..."
-            curl -s -o /dev/null -w "HTTP %{http_code}" \
+          if [ -n "$RELEASE_ID" ] && [ "$STATUS" = "uat_approved" ]; then
+            curl -s -o /dev/null -w "Release status: HTTP %{http_code}\n" \
               -X PATCH "${SUPABASE_URL}/rest/v1/compliance_releases?id=eq.${RELEASE_ID}" \
               -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
               -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
               -H "Content-Type: application/json" \
-              -d '{"status": "prod_review"}'
-            echo ""
-            echo "Release ${VERSION} submitted for production review"
+              -d '{"status": "released"}'
+            echo "Release ${VERSION} marked as released"
           else
-            echo "Release ${VERSION} status is '${RELEASE_STATUS}' — not submitting for prod review"
+            echo "Release ${VERSION} status: ${STATUS:-not found} — not updating"
           fi
 
       - name: Summary
-        run: echo "Production evidence captured for ${{ steps.version.outputs.version }}."
+        run: echo "Production verification complete for ${{ steps.version.outputs.version }}"

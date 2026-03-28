@@ -246,7 +246,7 @@ jobs:
   upload-evidence:
     needs: [typecheck, sast, dependency-audit, e2e-tests, build]
     if: ${{ !failure() && !cancelled() }}
-    uses: metasession-dev/META-COMPLY/.github/workflows/upload-evidence.yml@sdlc-v1.3.0
+    uses: metasession-dev/META-COMPLY/.github/workflows/upload-evidence.yml@main
     with:
       project-slug: wawagardenbar-app
       release-version: v${{ github.run_number }}

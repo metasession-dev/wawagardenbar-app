@@ -193,7 +193,7 @@ jobs:
           retention-days: 90
 
       - name: Comment PR with test results
-        if: always() && github.event_name == 'pull_request'
+        if: false # PR commenting disabled — CI triggers on push only, no PR context available
         continue-on-error: true
         uses: actions/github-script@v7
         with:

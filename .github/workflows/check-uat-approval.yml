@@ -32,9 +32,9 @@ jobs:
       - name: Determine release version
         id: version
         run: |
-          VERSION=$(node -p "require('./package.json').version")
-          echo "version=v${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "Checking UAT approval for version: v${VERSION}"
+          VERSION="v$(date +%Y.%m.%d)"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Checking UAT approval for version: ${VERSION}"
 
       - name: Look up project
         id: project

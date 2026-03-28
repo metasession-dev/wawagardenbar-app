@@ -72,6 +72,10 @@ const MONTH_NAMES = [
   'December',
 ];
 
+interface StaffPotClientProps {
+  isSuperAdmin: boolean;
+}
+
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-NG', {
     style: 'currency',
@@ -81,7 +85,7 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-export function StaffPotClient() {
+export function StaffPotClient({ isSuperAdmin }: StaffPotClientProps) {
   const [data, setData] = useState<StaffPotData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -299,7 +303,7 @@ export function StaffPotClient() {
         </Card>
       </div>
 
-      {/* Config Info */}
+      {/* How It Works — simplified for admins, full details for super-admins */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -308,36 +312,48 @@ export function StaffPotClient() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-2 md:grid-cols-3 text-sm">
-            <div>
-              <span className="text-muted-foreground">Daily Target:</span>{' '}
-              <span className="font-medium">
-                {formatCurrency(data.config.dailyTarget)}
-              </span>
+          {isSuperAdmin ? (
+            <div className="grid gap-2 md:grid-cols-3 text-sm">
+              <div>
+                <span className="text-muted-foreground">Daily Target:</span>{' '}
+                <span className="font-medium">
+                  {formatCurrency(data.config.dailyTarget)}
+                </span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Bonus Rate:</span>{' '}
+                <span className="font-medium">
+                  {data.config.bonusPercentage}% of surplus
+                </span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Split:</span>{' '}
+                <span className="font-medium">
+                  {data.config.kitchenSplitRatio}% Kitchen /{' '}
+                  {data.config.barSplitRatio}% Bar
+                </span>
+              </div>
             </div>
-            <div>
-              <span className="text-muted-foreground">Bonus Rate:</span>{' '}
-              <span className="font-medium">
-                {data.config.bonusPercentage}% of surplus
-              </span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Split:</span>{' '}
-              <span className="font-medium">
-                {data.config.kitchenSplitRatio}% Kitchen /{' '}
-                {data.config.barSplitRatio}% Bar
-              </span>
-            </div>
-          </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              When the business exceeds its daily target, a bonus goes into the
+              Staff Pot. The pot is split between Kitchen and Bar teams at the
+              end of the month. Hit more qualifying days to grow the pot!
+            </p>
+          )}
         </CardContent>
       </Card>
 
-      {/* Daily Breakdown Table */}
+      {/* Daily view — admins see simple calendar, super-admins see full table */}
       <Card>
         <CardHeader>
-          <CardTitle>Daily Breakdown</CardTitle>
+          <CardTitle>
+            {isSuperAdmin ? 'Daily Breakdown' : 'Qualifying Days'}
+          </CardTitle>
           <CardDescription>
-            Revenue performance against daily target
+            {isSuperAdmin
+              ? 'Revenue performance against daily target'
+              : 'Days the business exceeded the daily target'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -345,7 +361,7 @@ export function StaffPotClient() {
             <p className="text-center text-muted-foreground py-8">
               No data yet for this month
             </p>
-          ) : (
+          ) : isSuperAdmin ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -418,6 +434,32 @@ export function StaffPotClient() {
                   </tr>
                 </tfoot>
               </table>
+            </div>
+          ) : (
+            /* Admin view: simple grid of qualifying day indicators */
+            <div className="grid grid-cols-7 gap-2">
+              {data.dailyEntries.map((entry, i) => {
+                const isAbove = entry.surplus > 0;
+                const dayNum = new Date(entry.date).getDate();
+                return (
+                  <div
+                    key={i}
+                    className={`flex flex-col items-center justify-center rounded-lg p-2 text-xs ${
+                      isAbove
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                        : 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
+                    }`}
+                    title={
+                      isAbove
+                        ? `Day ${dayNum}: Qualifying day — ${formatCurrency(entry.contribution)} added`
+                        : `Day ${dayNum}: Below target`
+                    }
+                  >
+                    <span className="font-semibold">{dayNum}</span>
+                    <span>{isAbove ? '✓' : '✗'}</span>
+                  </div>
+                );
+              })}
             </div>
           )}
         </CardContent>

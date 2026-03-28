@@ -2,6 +2,9 @@
  * @requirement REQ-015 - Staff Pot tracker page
  */
 import { Metadata } from 'next';
+import { cookies } from 'next/headers';
+import { getIronSession } from 'iron-session';
+import { sessionOptions, SessionData } from '@/lib/session';
 import { StaffPotClient } from './staff-pot-client';
 
 export const metadata: Metadata = {
@@ -9,7 +12,14 @@ export const metadata: Metadata = {
   description: 'Track team bonus progress',
 };
 
-export default function StaffPotPage() {
+export default async function StaffPotPage() {
+  const cookieStore = await cookies();
+  const session = await getIronSession<SessionData>(
+    cookieStore,
+    sessionOptions
+  );
+  const isSuperAdmin = session.role === 'super-admin';
+
   return (
     <div className="space-y-6">
       <div>
@@ -18,7 +28,7 @@ export default function StaffPotPage() {
           Track your team bonus — earn more when the business does well
         </p>
       </div>
-      <StaffPotClient />
+      <StaffPotClient isSuperAdmin={isSuperAdmin} />
     </div>
   );
 }

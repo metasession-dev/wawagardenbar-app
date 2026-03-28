@@ -24,6 +24,7 @@ export interface StaffPotConfig {
   barSplitRatio: number;
   kitchenStaffCount: number;
   barStaffCount: number;
+  startDate?: string;
 }
 
 export interface StaffPotMonthData {
@@ -77,7 +78,38 @@ export class StaffPotService {
     const today = startOfDay(now);
     const lastDay = isCurrentMonth ? today : monthEnd;
 
-    const days = eachDayOfInterval({ start: monthStart, end: lastDay });
+    // Respect start date — only compute from the configured start date onward
+    let effectiveStart = monthStart;
+    if (config.startDate) {
+      const configStart = startOfDay(new Date(config.startDate));
+      if (
+        isBefore(monthStart, configStart) &&
+        !isBefore(lastDay, configStart)
+      ) {
+        effectiveStart = configStart;
+      } else if (isBefore(lastDay, configStart)) {
+        // Entire month is before start date — return empty data
+        const totalDaysInMonth = getDaysInMonth(monthStart);
+        return {
+          month,
+          year,
+          totalPot: 0,
+          qualifyingDays: 0,
+          totalDaysInMonth,
+          daysPassed: 0,
+          daysRemaining: totalDaysInMonth,
+          projectedMonthEndPot: 0,
+          kitchenPayout: 0,
+          barPayout: 0,
+          kitchenPerPerson: 0,
+          barPerPerson: 0,
+          dailyEntries: [],
+          config,
+        };
+      }
+    }
+
+    const days = eachDayOfInterval({ start: effectiveStart, end: lastDay });
     const dailyEntries: IStaffPotDailyEntry[] = [];
     let totalPot = 0;
     let qualifyingDays = 0;

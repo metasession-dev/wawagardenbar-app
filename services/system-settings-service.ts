@@ -549,6 +549,7 @@ export class SystemSettingsService {
     barSplitRatio: number;
     kitchenStaffCount: number;
     barStaffCount: number;
+    startDate?: string;
   }> {
     await connectDB();
 
@@ -579,6 +580,7 @@ export class SystemSettingsService {
       barSplitRatio: number;
       kitchenStaffCount: number;
       barStaffCount: number;
+      startDate?: string;
     },
     adminUserId: string
   ): Promise<boolean> {

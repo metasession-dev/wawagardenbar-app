@@ -18,6 +18,7 @@ interface StaffPotConfig {
   barSplitRatio: number;
   kitchenStaffCount: number;
   barStaffCount: number;
+  startDate?: string;
 }
 
 interface StaffPotConfigFormProps {
@@ -159,6 +160,27 @@ export function StaffPotConfigForm({ initialConfig }: StaffPotConfigFormProps) {
               })
             }
           />
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="startDate">Incentive Start Date</Label>
+          <Input
+            id="startDate"
+            type="date"
+            value={config.startDate || ''}
+            onChange={(e) =>
+              setConfig({
+                ...config,
+                startDate: e.target.value || undefined,
+              })
+            }
+          />
+          <p className="text-xs text-muted-foreground">
+            Only days from this date onward count toward the pot. Leave empty to
+            start from the 1st of each month.
+          </p>
         </div>
       </div>
 

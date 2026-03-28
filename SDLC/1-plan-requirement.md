@@ -210,11 +210,67 @@ EOF
 
 ---
 
-### Step 7: Update Requirements Document (If Applicable)
+### Step 7: Create Test Plan
+
+Create a test plan that maps acceptance criteria to specific tests. This documents what tests to add, update, or remove — evidence that testing was planned, not ad hoc.
+
+The test plan is proportional to risk. For LOW risk, a brief plan is sufficient. For MEDIUM/HIGH, include non-functional testing and test data requirements.
+
+```bash
+cat > compliance/evidence/REQ-XXX/test-plan.md << 'EOF'
+# Test Plan — REQ-XXX
+
+**Requirement:** REQ-XXX
+**Risk Level:** [LOW / MEDIUM / HIGH]
+**GitHub Issue:** #NNN
+**Date:** [YYYY-MM-DD]
+
+## Tests to Add
+- [ ] `e2e/[spec-file].spec.ts` — [what it tests]
+- [ ] `__tests__/[test-file].test.ts` — [what it tests]
+
+## Tests to Update
+- [ ] `e2e/[existing-spec].spec.ts` — [what changes and why]
+
+## Tests to Remove
+- [ ] `e2e/[obsolete-spec].spec.ts` — [justification for removal]
+- [or "None"]
+
+## Functional Test Mapping
+| Acceptance Criterion | Test File | Test Name |
+|---------------------|-----------|-----------|
+| [From test-scope.md] | [spec file] | [test name] |
+
+## Non-Functional Tests (MEDIUM/HIGH)
+- [ ] Security: [access control, input validation tests needed]
+- [ ] Performance: [load/performance concerns]
+- [ ] Accessibility: [if applicable]
+- [or "Standard gates sufficient for LOW risk"]
+
+## Test Data Requirements
+- [Database seeding needed?]
+- [Test fixtures to create?]
+- [or "Existing test data sufficient"]
+EOF
+```
+
+### WAIT CHECKPOINT: Test Plan Review
+
+**Present the test plan to the developer.** Summarize:
+
+- Tests to add, update, and remove
+- How acceptance criteria map to specific tests
+- Any non-functional testing required
+
+**Do NOT proceed** until the developer confirms the test plan is complete and correct. If the developer requests changes, update `test-plan.md` and re-present.
+
+---
+
+### Step 8: Update Requirements Document (If Applicable)
 
 If the requirement modifies a documented feature, update the requirements document to reflect the intended change.
 
-### Step 8: Document AI Use Intent (If Applicable)
+### Step 9: Document AI Use Intent (If Applicable)
 
 If AI will generate code (Medium/High risk):
 
@@ -230,7 +286,7 @@ EOF
 
 For Low risk, the `Co-Authored-By` commit tag is sufficient.
 
-### Step 9: Commit
+### Step 10: Commit
 
 ```bash
 git add compliance/RTM.md compliance/evidence/REQ-XXX docs/REQUIREMENTS.md
@@ -244,7 +300,7 @@ Closes: #NNN"
 
 - GitHub Issue `#NNN` identified or created as the origin of the change
 - REQ-XXX in RTM with `DRAFT`, risk classification, and issue reference
-- Evidence directory with test scope (exists before implementation)
+- Evidence directory with test scope and test plan (exists before implementation)
 - AI use note (if applicable)
 
 ## Next Step

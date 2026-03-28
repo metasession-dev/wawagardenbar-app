@@ -68,8 +68,10 @@ Tier 1 reference documents (policy, strategy, architecture) are also in `SDLC/` 
 4. Add to `compliance/RTM.md` Part B: `| REQ-XXX | #NNN | [RISK] | compliance/evidence/REQ-XXX/ | DRAFT | -- | -- |`
 5. Create `compliance/evidence/REQ-XXX/test-scope.md` with acceptance criteria.
 6. **WAIT CHECKPOINT:** Present the test scope to the developer. Do NOT proceed until confirmed.
-7. Create `compliance/evidence/REQ-XXX/ai-use-note.md` if AI is involved.
-8. Commit plan: `compliance: [REQ-XXX] define requirement and test scope`
+7. Create `compliance/evidence/REQ-XXX/test-plan.md` — map acceptance criteria to specific tests, list tests to add/update/remove.
+8. **WAIT CHECKPOINT:** Present the test plan to the developer. Do NOT proceed until confirmed.
+9. Create `compliance/evidence/REQ-XXX/ai-use-note.md` if AI is involved.
+10. Commit plan: `compliance: [REQ-XXX] define requirement, test scope, and test plan`
 
 ### During Implementation
 
@@ -80,7 +82,7 @@ Tier 1 reference documents (policy, strategy, architecture) are also in `SDLC/` 
 - Every commit: conventional format with `Ref: REQ-XXX` and `Co-Authored-By` for AI.
 - Add `@requirement REQ-XXX` JSDoc headers to modified files.
 - Log AI prompts in `compliance/evidence/REQ-XXX/ai-prompts.md` for MEDIUM/HIGH risk. Verify `ai-prompts.md` is updated before committing AI-generated code.
-- **Before staging:** review and update existing tests, write new tests for new functionality, verify test scope coverage. Gates must run against a test suite that covers the changes.
+- **Before staging:** follow `test-plan.md` — add, update, remove tests as documented. Verify all acceptance criteria have corresponding tests. Gates must run against a test suite that covers the test plan.
 
 ### Before Pushing
 
@@ -122,16 +124,18 @@ Keep in git (small markdown, needs PR review):
 **Read `SDLC/3-compile-evidence.md` for full details, including release ticket template.** Summary:
 
 1. Confirm CI is green before compiling evidence: `gh run list --branch develop --limit 1`
-2. Upload binary/JSON evidence to META-COMPLY portal
-3. Create `compliance/evidence/REQ-XXX/security-summary.md` (in git)
-4. Update RTM status to `TESTED - PENDING SIGN-OFF`
-5. Create `compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md` (use template from workflow file)
-6. **WAIT CHECKPOINT:** Confirm CI + UAT deployment complete before UAT verification. Do NOT test against a stale deployment.
+2. Generate `compliance/evidence/REQ-XXX/test-execution-summary.md` — gate results, test changes, coverage against test plan, links to evidence in META-COMPLY
+3. Upload binary/JSON evidence to META-COMPLY portal
+4. Create `compliance/evidence/REQ-XXX/security-summary.md` (in git)
+5. Update RTM status to `TESTED - PENDING SIGN-OFF`
+6. Create `compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md` (use template from workflow file)
 7. Commit compliance markdown locally (do NOT push yet — batch with UAT results):
 
 ```bash
 git add compliance/RTM.md compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md \
   compliance/evidence/REQ-XXX/test-scope.md \
+  compliance/evidence/REQ-XXX/test-plan.md \
+  compliance/evidence/REQ-XXX/test-execution-summary.md \
   compliance/evidence/REQ-XXX/security-summary.md \
   compliance/evidence/REQ-XXX/ai-use-note.md
 git commit -m "compliance: [REQ-XXX] evidence compiled - awaiting review"

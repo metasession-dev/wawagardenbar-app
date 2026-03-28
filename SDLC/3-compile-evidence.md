@@ -23,21 +23,23 @@ description: Compile test, security, and AI evidence, update RTM, create release
 
 **Markdown stays in git. Binary and JSON evidence goes to META-COMPLY.**
 
-| Artifact                                             | Store in    | Why                                                           |
-| ---------------------------------------------------- | ----------- | ------------------------------------------------------------- |
-| `compliance/RTM.md`                                  | Git         | Source of truth, version history, PR-reviewable               |
-| `compliance/evidence/REQ-XXX/test-scope.md`          | Git         | Planning artifact, reviewed in PRs                            |
-| `compliance/evidence/REQ-XXX/implementation-plan.md` | Git         | Design decisions artifact (MEDIUM/HIGH risk), reviewed in PRs |
-| `compliance/evidence/REQ-XXX/ai-use-note.md`         | Git         | Small markdown, needs PR review                               |
-| `compliance/evidence/REQ-XXX/ai-prompts.md`          | Git         | Small markdown, needs PR review                               |
-| `compliance/evidence/REQ-XXX/security-summary.md`    | Git         | Small markdown, needs PR review                               |
-| `compliance/pending-releases/RELEASE-TICKET-*.md`    | Git         | Reviewed and moved to approved-releases                       |
-| E2E results (JSON)                                   | META-COMPLY | Large, bloats git history                                     |
-| Screenshots (PNG/JPG)                                | META-COMPLY | Binary, bloats git history                                    |
-| SAST results (JSON)                                  | META-COMPLY | Large JSON, bloats git history                                |
-| Dependency audit (JSON)                              | META-COMPLY | Large JSON, bloats git history                                |
-| Unit test output (TXT)                               | META-COMPLY | Verbose output, bloats git history                            |
-| Test reports (HTML)                                  | META-COMPLY | Binary, bloats git history                                    |
+| Artifact                                                | Store in    | Why                                                            |
+| ------------------------------------------------------- | ----------- | -------------------------------------------------------------- |
+| `compliance/RTM.md`                                     | Git         | Source of truth, version history, PR-reviewable                |
+| `compliance/evidence/REQ-XXX/test-scope.md`             | Git         | Planning artifact, reviewed in PRs                             |
+| `compliance/evidence/REQ-XXX/implementation-plan.md`    | Git         | Design decisions artifact (MEDIUM/HIGH risk), reviewed in PRs  |
+| `compliance/evidence/REQ-XXX/test-plan.md`              | Git         | Test strategy — tests to add/update/remove, mapped to criteria |
+| `compliance/evidence/REQ-XXX/test-execution-summary.md` | Git         | Gate results, test changes, coverage against test plan         |
+| `compliance/evidence/REQ-XXX/ai-use-note.md`            | Git         | Small markdown, needs PR review                                |
+| `compliance/evidence/REQ-XXX/ai-prompts.md`             | Git         | Small markdown, needs PR review                                |
+| `compliance/evidence/REQ-XXX/security-summary.md`       | Git         | Small markdown, needs PR review                                |
+| `compliance/pending-releases/RELEASE-TICKET-*.md`       | Git         | Reviewed and moved to approved-releases                        |
+| E2E results (JSON)                                      | META-COMPLY | Large, bloats git history                                      |
+| Screenshots (PNG/JPG)                                   | META-COMPLY | Binary, bloats git history                                     |
+| SAST results (JSON)                                     | META-COMPLY | Large JSON, bloats git history                                 |
+| Dependency audit (JSON)                                 | META-COMPLY | Large JSON, bloats git history                                 |
+| Unit test output (TXT)                                  | META-COMPLY | Verbose output, bloats git history                             |
+| Test reports (HTML)                                     | META-COMPLY | Binary, bloats git history                                     |
 
 ## Steps
 
@@ -70,6 +72,60 @@ npx playwright test
 ```
 
 All must pass. Evidence must reflect a green suite.
+
+### Step 1a: Generate Test Execution Summary
+
+After confirming all gates pass, generate the test execution summary. This documents what ran, the results, and maps back to the test plan.
+
+```bash
+cat > compliance/evidence/REQ-XXX/test-execution-summary.md << 'EOF'
+# Test Execution Summary — REQ-XXX
+
+**Date:** [YYYY-MM-DD]
+**Git SHA:** [short SHA]
+**CI Run:** [run ID or "local"]
+
+## Gate Results
+
+| Gate | Result | Details |
+|------|--------|---------|
+| TypeScript | PASS | 0 errors |
+| SAST | PASS | [N] findings ([N] baseline) |
+| Dependency Audit | PASS | [N] unaccepted high/critical |
+| E2E Tests | PASS | [N]/[N] passed |
+| Build | PASS | Production build succeeded |
+
+## Test Changes in This Release
+
+**Added:**
+- `e2e/[spec-file].spec.ts` — [N] tests ([description])
+
+**Updated:**
+- `e2e/[spec-file].spec.ts` — [what changed]
+
+**Removed:**
+- [none, or file + justification]
+
+## Test Plan Coverage
+
+| Acceptance Criterion | Status | Test |
+|---------------------|--------|------|
+| [From test-plan.md] | PASS | `[spec-file]::[test-name]` |
+
+## Evidence Locations
+
+| Evidence | Location |
+|----------|----------|
+| E2E results | META-COMPLY: [project]/REQ-XXX/e2e-results.json |
+| SAST results | META-COMPLY: [project]/REQ-XXX/sast-results.json |
+| Dependency audit | META-COMPLY: [project]/REQ-XXX/dependency-audit.json |
+| Playwright report | CI artifact: playwright-report/ |
+EOF
+```
+
+This summary is committed to git (small markdown) and uploaded to META-COMPLY where reviewers can see it inline on the release dashboard.
+
+---
 
 ### Step 2: Verify JSDoc Headers
 
@@ -282,7 +338,9 @@ If using META-COMPLY, commit only compliance documents (RTM, release ticket, tes
 # META-COMPLY projects — commit compliance docs only (no push)
 git add compliance/RTM.md compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md \
   compliance/evidence/REQ-XXX/test-scope.md \
+  compliance/evidence/REQ-XXX/test-plan.md \
   compliance/evidence/REQ-XXX/implementation-plan.md \
+  compliance/evidence/REQ-XXX/test-execution-summary.md \
   compliance/evidence/REQ-XXX/ai-use-note.md \
   compliance/evidence/REQ-XXX/security-summary.md
 git commit -m "compliance: [REQ-XXX] evidence compiled - awaiting review"

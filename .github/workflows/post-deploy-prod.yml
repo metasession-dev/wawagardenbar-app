@@ -104,7 +104,7 @@ jobs:
 
       - name: Download META-COMPLY upload script
         run: |
-          curl -sL "https://raw.githubusercontent.com/metasession-dev/META-COMPLY/sdlc-v1.2.0/scripts/upload-evidence.sh" -o /tmp/upload-evidence.sh
+          curl -sL "https://raw.githubusercontent.com/metasession-dev/META-COMPLY/sdlc-v1.3.0/scripts/upload-evidence.sh" -o /tmp/upload-evidence.sh
           chmod +x /tmp/upload-evidence.sh
 
       - name: Upload production evidence to META-COMPLY

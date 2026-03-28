@@ -209,6 +209,7 @@ superAdminTest.describe('REQ-015: Staff Pot — Configuration', () => {
       await expect(page.getByLabel('Bar Split')).toBeVisible();
       await expect(page.getByLabel('Kitchen Staff Count')).toBeVisible();
       await expect(page.getByLabel('Bar Staff Count')).toBeVisible();
+      await expect(page.getByLabel('Incentive Start Date')).toBeVisible();
     }
   );
 
@@ -240,6 +241,175 @@ superAdminTest.describe('REQ-015: Staff Pot — Configuration', () => {
     // Restore default
     await page.getByLabel('Daily Revenue Target').clear();
     await page.getByLabel('Daily Revenue Target').fill('50000');
+    await page.locator('button', { hasText: 'Save Configuration' }).click();
+    await expect(
+      page.getByText('Staff Pot configuration updated').first()
+    ).toBeVisible({ timeout: 10000 });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Role-based view split (#20)
+// ═══════════════════════════════════════════════════════════════════════════
+adminTest.describe('REQ-015: Staff Pot — Admin View (no revenue)', () => {
+  adminTest.beforeEach(async ({ page }, testInfo) => {
+    if (!(await isAuthenticated(page, 'admin'))) {
+      testInfo.skip(true, 'Admin login failed');
+    }
+  });
+
+  adminTest(
+    'admin does NOT see revenue/target/surplus columns',
+    async ({ page }) => {
+      await page.goto('/dashboard/staff-pot');
+      await page.waitForLoadState('networkidle');
+
+      await expect(page.getByText('Calculating staff pot...'))
+        .toBeHidden({ timeout: 30000 })
+        .catch(() => {});
+
+      // Should NOT see "Daily Breakdown" heading (that's super-admin)
+      await expect(page.getByText('Daily Breakdown')).toHaveCount(0);
+
+      // Should NOT see revenue table headers
+      await expect(page.locator('th', { hasText: 'Revenue' })).toHaveCount(0);
+      await expect(page.locator('th', { hasText: 'Surplus' })).toHaveCount(0);
+    }
+  );
+
+  adminTest('admin sees qualifying days calendar grid', async ({ page }) => {
+    await page.goto('/dashboard/staff-pot');
+    await page.waitForLoadState('networkidle');
+
+    await expect(page.getByText('Calculating staff pot...'))
+      .toBeHidden({ timeout: 30000 })
+      .catch(() => {});
+
+    // Should see the grid of day indicators (grid-cols-7)
+    const grid = page.locator('.grid-cols-7');
+    await expect(grid).toBeVisible({ timeout: 15000 });
+
+    // Grid should contain day numbers
+    const dayItems = grid.locator('div');
+    expect(await dayItems.count()).toBeGreaterThan(0);
+  });
+
+  adminTest('admin sees simplified How It Works', async ({ page }) => {
+    await page.goto('/dashboard/staff-pot');
+    await page.waitForLoadState('networkidle');
+
+    await expect(page.getByText('Calculating staff pot...'))
+      .toBeHidden({ timeout: 30000 })
+      .catch(() => {});
+
+    await expect(page.getByText('How It Works')).toBeVisible({
+      timeout: 15000,
+    });
+
+    // Should NOT see "Daily Target:" label (that's super-admin only)
+    await expect(page.getByText('Daily Target:')).toHaveCount(0);
+
+    // Should see motivational text instead
+    await expect(page.getByText(/Hit more qualifying days/i)).toBeVisible();
+  });
+});
+
+superAdminTest.describe(
+  'REQ-015: Staff Pot — Super-Admin View (full details)',
+  () => {
+    superAdminTest.beforeEach(async ({ page }, testInfo) => {
+      if (!(await isAuthenticated(page, 'super-admin'))) {
+        testInfo.skip(true, 'Super-admin login failed');
+      }
+    });
+
+    superAdminTest(
+      'super-admin sees full daily breakdown with revenue columns',
+      async ({ page }) => {
+        await page.goto('/dashboard/staff-pot');
+        await page.waitForLoadState('networkidle');
+
+        await expect(page.getByText('Calculating staff pot...'))
+          .toBeHidden({ timeout: 30000 })
+          .catch(() => {});
+
+        // Should see "Daily Breakdown" heading
+        await expect(page.getByText('Daily Breakdown')).toBeVisible({
+          timeout: 15000,
+        });
+
+        // Should see revenue table headers
+        await expect(page.locator('th', { hasText: 'Revenue' })).toBeVisible();
+        await expect(page.locator('th', { hasText: 'Target' })).toBeVisible();
+        await expect(
+          page.locator('th', { hasText: 'Surplus / Deficit' })
+        ).toBeVisible();
+      }
+    );
+
+    superAdminTest(
+      'super-admin sees detailed How It Works with config values',
+      async ({ page }) => {
+        await page.goto('/dashboard/staff-pot');
+        await page.waitForLoadState('networkidle');
+
+        await expect(page.getByText('Calculating staff pot...'))
+          .toBeHidden({ timeout: 30000 })
+          .catch(() => {});
+
+        await expect(page.getByText('Daily Target:')).toBeVisible({
+          timeout: 15000,
+        });
+        await expect(page.getByText('Bonus Rate:')).toBeVisible();
+        await expect(page.getByText('Split:')).toBeVisible();
+      }
+    );
+  }
+);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Start Date Configuration (#21)
+// ═══════════════════════════════════════════════════════════════════════════
+superAdminTest.describe('REQ-015: Staff Pot — Start Date', () => {
+  superAdminTest.beforeEach(async ({ page }, testInfo) => {
+    if (!(await isAuthenticated(page, 'super-admin'))) {
+      testInfo.skip(true, 'Super-admin login failed');
+    }
+  });
+
+  superAdminTest('start date field visible in config', async ({ page }) => {
+    await page.goto('/dashboard/settings');
+    await page.waitForLoadState('networkidle');
+
+    await expect(page.getByLabel('Incentive Start Date')).toBeVisible();
+
+    await expect(
+      page.getByText(/Only days from this date onward count toward the pot/i)
+    ).toBeVisible();
+  });
+
+  superAdminTest('start date saves and persists', async ({ page }) => {
+    await page.goto('/dashboard/settings');
+    await page.waitForLoadState('networkidle');
+
+    // Set start date
+    const startDateInput = page.getByLabel('Incentive Start Date');
+    await startDateInput.fill('2026-03-15');
+
+    await page.locator('button', { hasText: 'Save Configuration' }).click();
+    await expect(
+      page.getByText('Staff Pot configuration updated').first()
+    ).toBeVisible({ timeout: 10000 });
+
+    // Reload and verify
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+
+    const value = await page.getByLabel('Incentive Start Date').inputValue();
+    expect(value).toBe('2026-03-15');
+
+    // Clear start date to restore default
+    await page.getByLabel('Incentive Start Date').fill('');
     await page.locator('button', { hasText: 'Save Configuration' }).click();
     await expect(
       page.getByText('Staff Pot configuration updated').first()

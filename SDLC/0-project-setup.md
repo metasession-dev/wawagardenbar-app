@@ -113,11 +113,12 @@ This is the **independent verification gate**. Tests run locally during developm
 
 ### What CI Must Run
 
-| Pipeline   | Trigger           | Jobs                                       | Purpose                  |
-| ---------- | ----------------- | ------------------------------------------ | ------------------------ |
-| Develop CI | Push to `develop` | TypeScript check + build                   | Fast feedback            |
-| PR CI      | PR to `main`      | TypeScript + SAST + dependency audit + E2E | Independent verification |
-| Deploy     | Merge to `main`   | Auto-deploy to hosting platform            | Production release       |
+| Pipeline | Trigger           | Jobs                                               | Purpose                                  |
+| -------- | ----------------- | -------------------------------------------------- | ---------------------------------------- |
+| CI       | Push to `develop` | TypeScript + SAST + dependency audit + E2E + build | Quality gates + independent verification |
+| Deploy   | Merge to `main`   | Auto-deploy to hosting platform                    | Production release                       |
+
+PRs to `main` do not trigger a separate CI run. Branch protection required status checks ensure the commit already passed Quality Gates on the develop push. This avoids duplicate CI runs.
 
 ### GitHub Actions Workflow File
 
@@ -129,13 +130,12 @@ name: CI Pipeline
 on:
   push:
     branches: [develop]
-  pull_request:
-    branches: [main]
+# PRs to main inherit commit status via branch protection required status checks.
+# No pull_request trigger needed — avoids duplicate CI runs.
 
 jobs:
   # ──────────────────────────────────────────────
   # JOB 1: TypeScript Compilation
-  # Runs on: push to develop + PR to main
   # ──────────────────────────────────────────────
   typecheck:
     name: TypeScript Check

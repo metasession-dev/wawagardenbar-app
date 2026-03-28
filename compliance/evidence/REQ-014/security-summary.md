@@ -25,3 +25,10 @@
 - reconciledBy set from authenticated session, not user input
 
 Evidence uploaded to META-COMPLY project: wawagardenbar-app/REQ-014
+
+## UAT Verification — 2026-03-28
+
+- UAT Health check: PASS
+- UAT Smoke test: PASS
+- Feature verification: PASS — reconciliation checkboxes visible on tabs page (right side), toggle persists, filter works. Standalone orders show checkbox, tab orders do not.
+- UAT URL: https://wawagardenbar-app-uat.up.railway.app

@@ -15,6 +15,7 @@ import {
   Gift,
   DollarSign,
   BarChart3,
+  PiggyBank,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -91,6 +92,12 @@ const navItems: NavItem[] = [
     permission: 'reportsAndAnalytics',
   },
   {
+    title: 'Staff Pot',
+    href: '/dashboard/staff-pot',
+    icon: PiggyBank,
+    roles: ['admin', 'super-admin'],
+  },
+  {
     title: 'Audit Logs',
     href: '/dashboard/audit-logs',
     icon: FileText,
@@ -115,48 +122,61 @@ interface DashboardNavProps {
  * Dashboard sidebar navigation with role-based and permission-based filtering
  * Only shows navigation items that the user has permission to access
  */
-export function DashboardNav({ userEmail, userRole, permissions }: DashboardNavProps) {
+export function DashboardNav({
+  userEmail,
+  userRole,
+  permissions,
+}: DashboardNavProps) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Filter navigation items based on user role and permissions
   const filteredNavItems = navItems.filter((item) => {
     if (!userRole) return false;
-    
+
     // Check role access
     if (!item.roles.includes(userRole)) return false;
-    
+
     // Super-admin has access to everything
     if (userRole === 'super-admin') return true;
-    
+
     // For csr/admin role, check permissions if specified
     if (item.permission) {
       if (!permissions) return false;
       return permissions[item.permission] === true;
     }
-    
+
     // If no permission specified, allow access (for items like Overview)
     return true;
   });
 
   return (
-    <div className={cn(
-      "flex h-full flex-col border-r bg-card transition-all duration-300 ease-in-out",
-      isCollapsed ? "w-16" : "w-64"
-    )}>
+    <div
+      className={cn(
+        'flex h-full flex-col border-r bg-card transition-all duration-300 ease-in-out',
+        isCollapsed ? 'w-16' : 'w-64'
+      )}
+    >
       {/* Logo/Brand */}
       <div className="flex h-16 items-center justify-between border-b px-3">
         {!isCollapsed && (
           <Link href="/dashboard" className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-lg bg-primary flex-shrink-0" />
             <div className="overflow-hidden">
-              <h1 className="text-lg font-bold whitespace-nowrap">Wawa Garden Bar</h1>
-              <p className="text-xs text-muted-foreground whitespace-nowrap">Admin Dashboard</p>
+              <h1 className="text-lg font-bold whitespace-nowrap">
+                Wawa Garden Bar
+              </h1>
+              <p className="text-xs text-muted-foreground whitespace-nowrap">
+                Admin Dashboard
+              </p>
             </div>
           </Link>
         )}
         {isCollapsed && (
-          <Link href="/dashboard" className="flex items-center justify-center w-full">
+          <Link
+            href="/dashboard"
+            className="flex items-center justify-center w-full"
+          >
             <div className="h-8 w-8 rounded-lg bg-primary flex-shrink-0" />
           </Link>
         )}
@@ -169,8 +189,8 @@ export function DashboardNav({ userEmail, userRole, permissions }: DashboardNavP
           size="sm"
           onClick={() => setIsCollapsed(!isCollapsed)}
           className={cn(
-            "w-full transition-all",
-            isCollapsed ? "justify-center px-2" : "justify-start"
+            'w-full transition-all',
+            isCollapsed ? 'justify-center px-2' : 'justify-start'
           )}
         >
           {isCollapsed ? (
@@ -190,7 +210,8 @@ export function DashboardNav({ userEmail, userRole, permissions }: DashboardNavP
           {filteredNavItems.map((item) => {
             const Icon = item.icon;
             const isActive =
-              pathname === item.href || (pathname?.startsWith(`${item.href}/`) ?? false);
+              pathname === item.href ||
+              (pathname?.startsWith(`${item.href}/`) ?? false);
 
             return (
               <Link
@@ -237,17 +258,17 @@ export function DashboardNav({ userEmail, userRole, permissions }: DashboardNavP
           </div>
         )}
         <form action={logoutAction}>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className={cn(
-              "w-full",
-              isCollapsed ? "justify-center px-2" : "justify-start"
-            )} 
+              'w-full',
+              isCollapsed ? 'justify-center px-2' : 'justify-start'
+            )}
             type="submit"
-            title={isCollapsed ? "Logout" : undefined}
+            title={isCollapsed ? 'Logout' : undefined}
           >
-            <LogOut className={cn("h-4 w-4", !isCollapsed && "mr-2")} />
-            {!isCollapsed && "Logout"}
+            <LogOut className={cn('h-4 w-4', !isCollapsed && 'mr-2')} />
+            {!isCollapsed && 'Logout'}
           </Button>
         </form>
       </div>

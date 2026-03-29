@@ -74,6 +74,13 @@ export default defineConfig({
       testMatch: /reconciliation\.spec\.ts/,
       dependencies: ['auth-setup'],
     },
+    // Staff Pot (REQ-015)
+    {
+      name: 'staff-pot',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /staff-pot\.spec\.ts/,
+      dependencies: ['auth-setup'],
+    },
   ],
   /* Start dev server before tests (skipped when BASE_URL is set) */
   webServer: process.env.BASE_URL

@@ -55,6 +55,20 @@ curl -s [PRODUCTION_URL]/[HEALTH_ENDPOINT]
 
 If it fails, check hosting platform logs. See deployment reference doc for troubleshooting.
 
+### Production Verification Policy
+
+Production verification is **read-only and non-destructive**. It confirms the deployment succeeded and the application is accessible. It does NOT exercise application logic.
+
+| Allowed (read-only)          | NOT allowed (destructive)       |
+| ---------------------------- | ------------------------------- |
+| Health checks (HTTP GET)     | E2E tests (Playwright)          |
+| Public endpoint status codes | Database operations             |
+| Security header inspection   | API mutations (POST/PUT/DELETE) |
+| Auth redirect verification   | Test data creation              |
+| Smoke test (homepage loads)  | Authenticated flows             |
+
+E2E tests run on `develop` (CI) and UAT — never production. The `post-deploy-prod.yml` workflow automates the read-only checks below.
+
 ### Step 4: Production Smoke Test
 
 ```bash

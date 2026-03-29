@@ -16,10 +16,7 @@
     "NEXT_PUBLIC_APP_URL": "http://localhost:3000",
     "NEXT_PUBLIC_API_URL": "http://localhost:3000/api"
   },
-  "app_env": {
-    "NEXT_PUBLIC_APP_URL": "http://localhost:3000",
-    "NEXT_PUBLIC_API_URL": "http://localhost:3000/api"
-  },
+  "app_env": {},
   "build_env": {
     "MONGODB_WAWAGARDENBAR_APP_URI": "mongodb://localhost:27017",
     "MONGODB_DB_NAME": "wawagardenbar_placeholder",

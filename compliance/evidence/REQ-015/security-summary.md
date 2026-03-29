@@ -25,3 +25,9 @@
 - Read-only financial data: pot calculations use existing FinancialReportService (no write operations)
 
 Evidence uploaded to META-COMPLY project: wawagardenbar-app/REQ-015
+
+## UAT Verification — 2026-03-29
+
+- UAT Health check: PASS
+- Feature verification: PASS — tracker page loads with countdown, summary cards, daily breakdown (super-admin) / qualifying days grid (admin). Config form with start date saves and persists. Role split working correctly.
+- UAT URL: https://wawagardenbar-app-uat.up.railway.app

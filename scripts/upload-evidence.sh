@@ -114,7 +114,7 @@ if [ -n "$RELEASE_VERSION" ]; then
   RELEASE_ID=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_releases?project_id=eq.${PROJECT_ID}&version=eq.${RELEASE_VERSION}&select=id" \
     -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
     -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-    | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+    | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4 || true)
 
   if [ -z "$RELEASE_ID" ]; then
     if [ "$CREATE_RELEASE_IF_MISSING" = true ]; then

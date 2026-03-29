@@ -130,6 +130,13 @@ name: CI Pipeline
 on:
   push:
     branches: [develop]
+    paths-ignore: # Skip full CI for non-code changes
+      - '.github/workflows/**'
+      - 'SDLC/**'
+      - 'compliance/**'
+      - '*.md'
+      - '.cursorrules'
+      - '.windsurfrules'
 # PRs to main inherit commit status via branch protection required status checks.
 # No pull_request trigger needed — avoids duplicate CI runs.
 

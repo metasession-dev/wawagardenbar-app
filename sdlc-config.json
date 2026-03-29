@@ -33,6 +33,11 @@
     "compliance/**",
     "*.md",
     ".cursorrules",
-    ".windsurfrules"
+    ".windsurfrules",
+    "sdlc-config.json",
+    "scripts/upload-evidence.sh",
+    "scripts/validate-compliance-artifacts.sh",
+    "scripts/validate-commits.sh",
+    "scripts/check-requirement-jsdoc.sh"
   ]
 }

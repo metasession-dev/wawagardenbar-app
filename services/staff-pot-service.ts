@@ -291,36 +291,59 @@ export class StaffPotService {
 
     if (snapshots.length === 0) return result;
 
-    // Aggregate loss by category
+    // Aggregate loss by category and calculate inventory values per item
     let foodSystemTotal = 0;
     let foodLossUnits = 0;
     let drinkSystemTotal = 0;
     let drinkLossUnits = 0;
 
-    // Collect inventory IDs for cost lookup
+    // Collect all inventory IDs upfront for a single batch cost lookup
     const inventoryIds = new Set<string>();
-
     for (const snapshot of snapshots) {
       for (const item of snapshot.items || []) {
-        // Only count negative discrepancies (loss/waste)
-        if (item.discrepancy < 0) {
-          if (item.mainCategory === 'food') {
-            foodSystemTotal += item.systemInventoryCount || 0;
-            foodLossUnits += Math.abs(item.discrepancy);
-          } else if (item.mainCategory === 'drinks') {
-            drinkSystemTotal += item.systemInventoryCount || 0;
-            drinkLossUnits += Math.abs(item.discrepancy);
-          }
-        } else {
-          // Still count system total for percentage denominator
-          if (item.mainCategory === 'food') {
-            foodSystemTotal += item.systemInventoryCount || 0;
-          } else if (item.mainCategory === 'drinks') {
-            drinkSystemTotal += item.systemInventoryCount || 0;
-          }
-        }
         if (item.inventoryId) {
           inventoryIds.add(item.inventoryId.toString());
+        }
+      }
+    }
+
+    // Batch lookup costs: inventoryId → costPerUnit
+    const costMap = new Map<string, number>();
+    if (inventoryIds.size > 0) {
+      const inventories = await InventoryModel.find({
+        _id: { $in: Array.from(inventoryIds) },
+      })
+        .select('_id costPerUnit menuItemId')
+        .populate('menuItemId', 'price')
+        .lean();
+
+      for (const inv of inventories) {
+        const cost = inv.costPerUnit || (inv.menuItemId as any)?.price || 0;
+        costMap.set(inv._id.toString(), cost);
+      }
+    }
+
+    // Iterate snapshot items: aggregate units and calculate per-item inventory value
+    for (const snapshot of snapshots) {
+      for (const item of snapshot.items || []) {
+        const systemCount = item.systemInventoryCount || 0;
+        const costPerUnit = item.inventoryId
+          ? costMap.get(item.inventoryId.toString()) || 0
+          : 0;
+        const itemValue = costPerUnit * systemCount;
+
+        if (item.mainCategory === 'food') {
+          foodSystemTotal += systemCount;
+          result.foodInventoryValue += itemValue;
+          if (item.discrepancy < 0) {
+            foodLossUnits += Math.abs(item.discrepancy);
+          }
+        } else if (item.mainCategory === 'drinks') {
+          drinkSystemTotal += systemCount;
+          result.drinkInventoryValue += itemValue;
+          if (item.discrepancy < 0) {
+            drinkLossUnits += Math.abs(item.discrepancy);
+          }
         }
       }
     }
@@ -333,26 +356,6 @@ export class StaffPotService {
     if (drinkSystemTotal > 0) {
       result.drinkLossPercent =
         Math.round((drinkLossUnits / drinkSystemTotal) * 10000) / 100;
-    }
-
-    // Get inventory values for deduction calculation
-    if (inventoryIds.size > 0) {
-      const inventories = await InventoryModel.find({
-        _id: { $in: Array.from(inventoryIds) },
-      })
-        .select('_id costPerUnit menuItemId')
-        .populate('menuItemId', 'price mainCategory')
-        .lean();
-
-      for (const inv of inventories) {
-        const cost = inv.costPerUnit || (inv.menuItemId as any)?.price || 0;
-        const category = (inv.menuItemId as any)?.mainCategory;
-        if (category === 'food') {
-          result.foodInventoryValue += cost * foodSystemTotal;
-        } else if (category === 'drinks') {
-          result.drinkInventoryValue += cost * drinkSystemTotal;
-        }
-      }
     }
 
     // Calculate deductions: excess loss % * inventory value

@@ -32,15 +32,17 @@ Full verification per Test Strategy medium-risk requirements. This is a retroact
 
 ## Acceptance Criteria
 
-- [ ] Total Revenue = paymentBreakdown.total (Cash + POS + Transfer + USSD + Phone)
-- [ ] Total Revenue on a partial-payment-only day = partial payment amount (not ₦0)
-- [ ] Total Revenue on a tab-close day = final payment amount (not full tab total)
-- [ ] Total Revenue across multiple days = sum of all payments (no double-counting)
-- [ ] Food/drink item breakdown remains item-based (unchanged)
-- [ ] Gross profit margins use item revenue (not payment total) for COGS relationship
-- [ ] Staff Pot daily revenue matches daily report Total Revenue
-- [ ] Old debug logging removed from generateDailySummary
-- [ ] All existing E2E tests pass (no regressions)
+- [x] Total Revenue = paymentBreakdown.total (Cash + POS + Transfer + USSD + Phone)
+- [x] Total Revenue on a partial-payment-only day = partial payment amount (not ₦0)
+- [x] Total Revenue on a tab-close day = final payment amount (not full tab total)
+- [x] Total Revenue across multiple days = sum of all payments (no double-counting)
+- [x] Food/drink item breakdown remains item-based (unchanged)
+- [x] Gross profit margins use item revenue (not payment total) for COGS relationship
+- [x] Staff Pot daily revenue matches daily report Total Revenue
+- [x] Old debug logging removed from generateDailySummary
+- [x] All existing E2E tests pass (no regressions)
+- [ ] Independent review: second human reviewer required before merge
+- [ ] UAT verification
 
 ## AI Involvement
 

@@ -8,6 +8,8 @@ import StaffPotSnapshotModel, {
   IStaffPotDailyEntry,
   IStaffPotSnapshot,
 } from '@/models/staff-pot-snapshot-model';
+import { InventorySnapshotModel } from '@/models/inventory-snapshot-model';
+import InventoryModel from '@/models/inventory-model';
 import { SystemSettingsService } from './system-settings-service';
 import {
   startOfMonth,
@@ -26,6 +28,18 @@ export interface StaffPotConfig {
   kitchenStaffCount: number;
   barStaffCount: number;
   startDate?: string;
+  inventoryLossEnabled: boolean;
+  foodLossThreshold: number;
+  drinkLossThreshold: number;
+}
+
+export interface InventoryLossData {
+  foodLossPercent: number;
+  drinkLossPercent: number;
+  foodInventoryValue: number;
+  drinkInventoryValue: number;
+  foodDeduction: number;
+  drinkDeduction: number;
 }
 
 export interface StaffPotMonthData {
@@ -43,6 +57,9 @@ export interface StaffPotMonthData {
   barPerPerson: number;
   dailyEntries: IStaffPotDailyEntry[];
   config: StaffPotConfig;
+  inventoryLoss?: InventoryLossData;
+  kitchenDeduction: number;
+  barDeduction: number;
 }
 
 export class StaffPotService {
@@ -106,6 +123,8 @@ export class StaffPotService {
           barPerPerson: 0,
           dailyEntries: [],
           config,
+          kitchenDeduction: 0,
+          barDeduction: 0,
         };
       }
     }
@@ -158,10 +177,28 @@ export class StaffPotService {
       ? totalPot + avgDailyContribution * daysRemaining
       : totalPot;
 
-    const kitchenPayout =
+    let kitchenPayout =
       Math.round(totalPot * (config.kitchenSplitRatio / 100) * 100) / 100;
-    const barPayout =
+    let barPayout =
       Math.round(totalPot * (config.barSplitRatio / 100) * 100) / 100;
+
+    // Calculate inventory loss deductions
+    let inventoryLoss: InventoryLossData | undefined;
+    let kitchenDeduction = 0;
+    let barDeduction = 0;
+
+    if (config.inventoryLossEnabled) {
+      inventoryLoss = await StaffPotService.calculateInventoryLoss(
+        effectiveStart,
+        lastDay,
+        config
+      );
+      kitchenDeduction = Math.min(inventoryLoss.foodDeduction, kitchenPayout);
+      barDeduction = Math.min(inventoryLoss.drinkDeduction, barPayout);
+      kitchenPayout =
+        Math.round((kitchenPayout - kitchenDeduction) * 100) / 100;
+      barPayout = Math.round((barPayout - barDeduction) * 100) / 100;
+    }
 
     return {
       month,
@@ -184,6 +221,9 @@ export class StaffPotService {
           : 0,
       dailyEntries,
       config,
+      inventoryLoss,
+      kitchenDeduction: Math.round(kitchenDeduction * 100) / 100,
+      barDeduction: Math.round(barDeduction * 100) / 100,
     };
   }
 
@@ -221,7 +261,116 @@ export class StaffPotService {
           : 0,
       dailyEntries: snapshot.dailyEntries,
       config,
+      kitchenDeduction: 0,
+      barDeduction: 0,
     };
+  }
+
+  /**
+   * @requirement REQ-018 - Calculate inventory loss from approved snapshots
+   */
+  static async calculateInventoryLoss(
+    startDate: Date,
+    endDate: Date,
+    config: StaffPotConfig
+  ): Promise<InventoryLossData> {
+    const result: InventoryLossData = {
+      foodLossPercent: 0,
+      drinkLossPercent: 0,
+      foodInventoryValue: 0,
+      drinkInventoryValue: 0,
+      foodDeduction: 0,
+      drinkDeduction: 0,
+    };
+
+    // Query approved inventory snapshots in the date range
+    const snapshots = await InventorySnapshotModel.find({
+      status: 'approved',
+      snapshotDate: { $gte: startDate, $lte: endDate },
+    }).lean();
+
+    if (snapshots.length === 0) return result;
+
+    // Aggregate loss by category
+    let foodSystemTotal = 0;
+    let foodLossUnits = 0;
+    let drinkSystemTotal = 0;
+    let drinkLossUnits = 0;
+
+    // Collect inventory IDs for cost lookup
+    const inventoryIds = new Set<string>();
+
+    for (const snapshot of snapshots) {
+      for (const item of snapshot.items || []) {
+        // Only count negative discrepancies (loss/waste)
+        if (item.discrepancy < 0) {
+          if (item.mainCategory === 'food') {
+            foodSystemTotal += item.systemInventoryCount || 0;
+            foodLossUnits += Math.abs(item.discrepancy);
+          } else if (item.mainCategory === 'drinks') {
+            drinkSystemTotal += item.systemInventoryCount || 0;
+            drinkLossUnits += Math.abs(item.discrepancy);
+          }
+        } else {
+          // Still count system total for percentage denominator
+          if (item.mainCategory === 'food') {
+            foodSystemTotal += item.systemInventoryCount || 0;
+          } else if (item.mainCategory === 'drinks') {
+            drinkSystemTotal += item.systemInventoryCount || 0;
+          }
+        }
+        if (item.inventoryId) {
+          inventoryIds.add(item.inventoryId.toString());
+        }
+      }
+    }
+
+    // Calculate loss percentages
+    if (foodSystemTotal > 0) {
+      result.foodLossPercent =
+        Math.round((foodLossUnits / foodSystemTotal) * 10000) / 100;
+    }
+    if (drinkSystemTotal > 0) {
+      result.drinkLossPercent =
+        Math.round((drinkLossUnits / drinkSystemTotal) * 10000) / 100;
+    }
+
+    // Get inventory values for deduction calculation
+    if (inventoryIds.size > 0) {
+      const inventories = await InventoryModel.find({
+        _id: { $in: Array.from(inventoryIds) },
+      })
+        .select('_id costPerUnit menuItemId')
+        .populate('menuItemId', 'price mainCategory')
+        .lean();
+
+      for (const inv of inventories) {
+        const cost = inv.costPerUnit || (inv.menuItemId as any)?.price || 0;
+        const category = (inv.menuItemId as any)?.mainCategory;
+        if (category === 'food') {
+          result.foodInventoryValue += cost * foodSystemTotal;
+        } else if (category === 'drinks') {
+          result.drinkInventoryValue += cost * drinkSystemTotal;
+        }
+      }
+    }
+
+    // Calculate deductions: excess loss % * inventory value
+    const foodExcess = Math.max(
+      0,
+      result.foodLossPercent - config.foodLossThreshold
+    );
+    const drinkExcess = Math.max(
+      0,
+      result.drinkLossPercent - config.drinkLossThreshold
+    );
+
+    result.foodDeduction =
+      Math.round((foodExcess / 100) * result.foodInventoryValue * 100) / 100;
+    result.drinkDeduction =
+      Math.round((drinkExcess / 100) * result.drinkInventoryValue * 100) / 100;
+
+    return result;
   }
 
   /**

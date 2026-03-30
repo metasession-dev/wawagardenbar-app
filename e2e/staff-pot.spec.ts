@@ -210,6 +210,11 @@ superAdminTest.describe('REQ-015: Staff Pot — Configuration', () => {
       await expect(page.getByLabel('Kitchen Staff Count')).toBeVisible();
       await expect(page.getByLabel('Bar Staff Count')).toBeVisible();
       await expect(page.getByLabel('Incentive Start Date')).toBeVisible();
+
+      // Inventory loss deduction fields
+      await expect(
+        page.getByLabel('Enable Inventory Loss Deduction')
+      ).toBeVisible();
     }
   );
 

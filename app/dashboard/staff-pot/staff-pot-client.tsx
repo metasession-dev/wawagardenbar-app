@@ -54,7 +54,20 @@ interface StaffPotData {
     barSplitRatio: number;
     kitchenStaffCount: number;
     barStaffCount: number;
+    inventoryLossEnabled: boolean;
+    foodLossThreshold: number;
+    drinkLossThreshold: number;
   };
+  inventoryLoss?: {
+    foodLossPercent: number;
+    drinkLossPercent: number;
+    foodInventoryValue: number;
+    drinkInventoryValue: number;
+    foodDeduction: number;
+    drinkDeduction: number;
+  };
+  kitchenDeduction: number;
+  barDeduction: number;
 }
 
 const MONTH_NAMES = [
@@ -283,6 +296,11 @@ export function StaffPotClient({ isSuperAdmin }: StaffPotClientProps) {
               per person ({data.config.kitchenStaffCount} staff) —{' '}
               {formatCurrency(data.kitchenPayout)} total
             </p>
+            {data.kitchenDeduction > 0 && (
+              <p className="text-xs text-red-600 mt-1">
+                Inventory adjustment: -{formatCurrency(data.kitchenDeduction)}
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -299,6 +317,11 @@ export function StaffPotClient({ isSuperAdmin }: StaffPotClientProps) {
               per person ({data.config.barStaffCount} staff) —{' '}
               {formatCurrency(data.barPayout)} total
             </p>
+            {data.barDeduction > 0 && (
+              <p className="text-xs text-red-600 mt-1">
+                Inventory adjustment: -{formatCurrency(data.barDeduction)}
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -335,14 +358,117 @@ export function StaffPotClient({ isSuperAdmin }: StaffPotClientProps) {
               </div>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">
-              When the business exceeds its daily target, a bonus goes into the
-              Staff Pot. The pot is split between Kitchen and Bar teams at the
-              end of the month. Hit more qualifying days to grow the pot!
-            </p>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                When the business exceeds its daily target, a bonus goes into
+                the Staff Pot. The pot is split between Kitchen and Bar teams at
+                the end of the month. Hit more qualifying days to grow the pot!
+              </p>
+              {(data.kitchenDeduction > 0 || data.barDeduction > 0) && (
+                <p className="text-sm text-muted-foreground">
+                  💡 Keep waste low to protect your bonus.
+                </p>
+              )}
+            </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Inventory Loss Breakdown — super-admin only */}
+      {isSuperAdmin &&
+        data.inventoryLoss &&
+        data.config.inventoryLossEnabled && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                Inventory Loss Deductions
+              </CardTitle>
+              <CardDescription>
+                Losses above acceptable thresholds are deducted from team pots
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-2 px-3 font-medium">
+                        Category
+                      </th>
+                      <th className="text-right py-2 px-3 font-medium">
+                        Loss %
+                      </th>
+                      <th className="text-right py-2 px-3 font-medium">
+                        Threshold
+                      </th>
+                      <th className="text-right py-2 px-3 font-medium">
+                        Excess
+                      </th>
+                      <th className="text-right py-2 px-3 font-medium">
+                        Inventory Value
+                      </th>
+                      <th className="text-right py-2 px-3 font-medium">
+                        Deduction
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b">
+                      <td className="py-2 px-3">Food → Kitchen</td>
+                      <td className="text-right py-2 px-3">
+                        {data.inventoryLoss.foodLossPercent.toFixed(1)}%
+                      </td>
+                      <td className="text-right py-2 px-3 text-muted-foreground">
+                        {data.config.foodLossThreshold}%
+                      </td>
+                      <td className="text-right py-2 px-3">
+                        {Math.max(
+                          0,
+                          data.inventoryLoss.foodLossPercent -
+                            data.config.foodLossThreshold
+                        ).toFixed(1)}
+                        %
+                      </td>
+                      <td className="text-right py-2 px-3">
+                        {formatCurrency(data.inventoryLoss.foodInventoryValue)}
+                      </td>
+                      <td className="text-right py-2 px-3 font-medium text-red-600">
+                        {data.kitchenDeduction > 0
+                          ? `-${formatCurrency(data.kitchenDeduction)}`
+                          : '—'}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-2 px-3">Drinks → Bar</td>
+                      <td className="text-right py-2 px-3">
+                        {data.inventoryLoss.drinkLossPercent.toFixed(1)}%
+                      </td>
+                      <td className="text-right py-2 px-3 text-muted-foreground">
+                        {data.config.drinkLossThreshold}%
+                      </td>
+                      <td className="text-right py-2 px-3">
+                        {Math.max(
+                          0,
+                          data.inventoryLoss.drinkLossPercent -
+                            data.config.drinkLossThreshold
+                        ).toFixed(1)}
+                        %
+                      </td>
+                      <td className="text-right py-2 px-3">
+                        {formatCurrency(data.inventoryLoss.drinkInventoryValue)}
+                      </td>
+                      <td className="text-right py-2 px-3 font-medium text-red-600">
+                        {data.barDeduction > 0
+                          ? `-${formatCurrency(data.barDeduction)}`
+                          : '—'}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
       {/* Daily view — admins see simple calendar, super-admins see full table */}
       <Card>

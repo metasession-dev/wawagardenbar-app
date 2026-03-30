@@ -550,6 +550,9 @@ export class SystemSettingsService {
     kitchenStaffCount: number;
     barStaffCount: number;
     startDate?: string;
+    inventoryLossEnabled: boolean;
+    foodLossThreshold: number;
+    drinkLossThreshold: number;
   }> {
     await connectDB();
 
@@ -557,20 +560,23 @@ export class SystemSettingsService {
       key: 'staff-pot-config',
     });
 
-    return (
-      setting?.value ?? {
-        dailyTarget: 50000,
-        bonusPercentage: 5,
-        kitchenSplitRatio: 50,
-        barSplitRatio: 50,
-        kitchenStaffCount: 2,
-        barStaffCount: 2,
-      }
-    );
+    return {
+      dailyTarget: 50000,
+      bonusPercentage: 5,
+      kitchenSplitRatio: 50,
+      barSplitRatio: 50,
+      kitchenStaffCount: 2,
+      barStaffCount: 2,
+      inventoryLossEnabled: false,
+      foodLossThreshold: 2,
+      drinkLossThreshold: 3,
+      ...(setting?.value ?? {}),
+    };
   }
 
   /**
    * @requirement REQ-015 - Update Staff Pot configuration
+   * @requirement REQ-018 - Inventory loss deduction settings
    */
   static async updateStaffPotConfig(
     config: {
@@ -581,6 +587,9 @@ export class SystemSettingsService {
       kitchenStaffCount: number;
       barStaffCount: number;
       startDate?: string;
+      inventoryLossEnabled?: boolean;
+      foodLossThreshold?: number;
+      drinkLossThreshold?: number;
     },
     adminUserId: string
   ): Promise<boolean> {

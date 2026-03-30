@@ -77,7 +77,7 @@ Tier 1 reference documents (policy, strategy, architecture) are also in `SDLC/` 
 
 **Read `SDLC/2-implement-and-test.md` for full details.** Summary:
 
-- **Before coding:** Verify `compliance/evidence/REQ-XXX/test-scope.md` exists. If missing, STOP and run planning workflow first.
+- **Before coding:** Verify BOTH exist: `ls compliance/evidence/REQ-XXX/test-scope.md` AND `ls compliance/evidence/REQ-XXX/test-plan.md`. If either is missing, STOP and run planning workflow first. For MEDIUM/HIGH also verify `implementation-plan.md` exists.
 - **MEDIUM/HIGH risk:** Create `compliance/evidence/REQ-XXX/implementation-plan.md` before coding — document approach, files, architecture decisions. **WAIT CHECKPOINT:** Present the plan to the developer. Do NOT code until approved. Commit the plan first.
 - Every commit: conventional format with `Ref: REQ-XXX` and `Co-Authored-By` for AI.
 - Add `@requirement REQ-XXX` JSDoc headers to modified files.

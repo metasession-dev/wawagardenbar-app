@@ -30,3 +30,8 @@
 - Fallback to item revenue when paymentBreakdown is 0 (backward compatibility)
 
 Evidence uploaded to META-COMPLY project: wawagardenbar-app/REQ-017
+
+## UAT Verification — 2026-03-30
+
+- Feature verification: PASS — Total Revenue matches payment breakdown total. Partial payment days show correct revenue. No double-counting.
+- UAT URL: https://wawagardenbar-app-uat.up.railway.app

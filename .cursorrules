@@ -18,10 +18,31 @@ When a workflow step requires detailed commands or templates, read the full work
 ### Before ANY Code Change
 
 1. Ask: "Which GitHub Issue is this for?" before writing code. Fetch it with `gh issue view NNN`.
-2. If no issue exists: ask if one should be created. Create with `gh issue create` if needed.
+2. If no issue exists: ask if one should be created. When creating via `gh issue create`, ALWAYS append the SDLC checklist to the body (see below).
 3. If new requirement needed: read `SDLC/1-plan-requirement.md` and follow it BEFORE implementing.
 4. If trivial (typo/formatting): proceed without requirement but use conventional commit format.
 5. Verify `develop` branch: `git branch --show-current` — never implement on `main`.
+
+### For ALL Code Changes (including bug fixes)
+
+Even if a change doesn't need a REQ entry:
+1. Review existing tests that cover the changed code
+2. Update or add tests BEFORE committing
+3. Run all gates locally — do not push without verifying no regressions
+4. If the change affects financial calculations, user-facing data, or access control — it needs a REQ entry regardless of size
+
+What needs a REQ entry: New features → always. Bug fixes affecting financial data, user-facing behaviour, access control → always. Internal logic → only if MEDIUM/HIGH risk. Typos, formatting, dependency bumps → never.
+
+### Creating GitHub Issues
+
+When creating an issue via `gh issue create`, ALWAYS append this to the body:
+
+## SDLC Checklist
+- [ ] Requirement: RTM entry created (or confirmed trivial)
+- [ ] Planning: test-scope.md and test-plan.md created (or confirmed trivial)
+- [ ] Tests: existing tests reviewed, tests updated/added
+- [ ] Gates: all pass locally (tsc, semgrep, audit, playwright)
+- [ ] Evidence: compiled and uploaded (if tracked requirement)
 
 ### Requirement Planning (do this BEFORE coding)
 

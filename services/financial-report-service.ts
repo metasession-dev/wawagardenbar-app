@@ -1,5 +1,6 @@
 /**
  * @requirement REQ-013 - Include partial payments in daily report aggregation
+ * @requirement REQ-017 - Total Revenue reflects money received (paymentBreakdown.total)
  */
 import { startOfDay, endOfDay } from 'date-fns';
 import { connectDB } from '@/lib/mongodb';

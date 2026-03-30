@@ -1,5 +1,6 @@
 /**
  * @requirement REQ-015 - Staff Pot bonus calculation service
+ * @requirement REQ-017 - Uses revenue.totalRevenue (money received) for pot calculation
  */
 import { connectDB } from '@/lib/mongodb';
 import { FinancialReportService } from './financial-report-service';

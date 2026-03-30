@@ -152,43 +152,11 @@ export class FinancialReportService {
     const startDate = startOfDay(date);
     const endDate = endOfDay(date);
 
-    console.log('📊 Generating report for date range:', {
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-    });
-
-    // Debug: Check all paid orders in database
-    const allPaidOrders = await OrderModel.find({ paymentStatus: 'paid' })
-      .select('_id total paidAt createdAt paymentStatus')
-      .lean();
-    console.log(`📊 Total paid orders in database: ${allPaidOrders.length}`);
-    if (allPaidOrders.length > 0) {
-      console.log(
-        'Sample paid orders:',
-        allPaidOrders.slice(0, 3).map((o) => ({
-          id: o._id,
-          total: o.total,
-          paidAt: o.paidAt,
-          createdAt: o.createdAt,
-        }))
-      );
-    }
-
     // Fetch all paid orders for the date (based on payment date, not creation date)
     const orders = await OrderModel.find({
       paymentStatus: 'paid',
       paidAt: { $gte: startDate, $lte: endDate },
     }).lean();
-
-    console.log(`📊 Found ${orders.length} paid orders for this date range`);
-    if (orders.length > 0) {
-      console.log('First order sample:', {
-        id: orders[0]._id,
-        total: orders[0].total,
-        paidAt: orders[0].paidAt,
-        paymentStatus: orders[0].paymentStatus,
-      });
-    }
 
     // Initialize report structure
     const report: DailySummaryReport = {
@@ -384,12 +352,15 @@ export class FinancialReportService {
     }
 
     // Calculate totals
-    report.revenue.totalRevenue =
+    // totalRevenue = money actually received (payment breakdown total)
+    // food/drink totals remain item-based for the detailed breakdown
+    const itemRevenue =
       report.revenue.food.totalRevenue + report.revenue.drink.totalRevenue;
+    report.revenue.totalRevenue = report.paymentBreakdown.total || itemRevenue;
     report.costs.totalDirectCosts =
       report.costs.food.totalCost + report.costs.drink.totalCost;
 
-    // Calculate gross profit
+    // Calculate gross profit (based on item revenue vs COGS)
     report.grossProfit.food =
       report.revenue.food.totalRevenue - report.costs.food.totalCost;
     report.grossProfit.drink =
@@ -432,12 +403,11 @@ export class FinancialReportService {
       report.grossProfit.total -
       report.operatingExpenses.totalOperatingExpenses;
 
-    // Calculate metrics
-    if (report.revenue.totalRevenue > 0) {
+    // Calculate metrics (margins based on item revenue, not payment total)
+    if (itemRevenue > 0) {
       report.metrics.grossProfitMargin =
-        (report.grossProfit.total / report.revenue.totalRevenue) * 100;
-      report.metrics.netProfitMargin =
-        (report.netProfit / report.revenue.totalRevenue) * 100;
+        (report.grossProfit.total / itemRevenue) * 100;
+      report.metrics.netProfitMargin = (report.netProfit / itemRevenue) * 100;
     }
 
     return report;
@@ -637,8 +607,10 @@ export class FinancialReportService {
       }
     }
 
-    report.revenue.totalRevenue =
+    const rangeItemRevenue =
       report.revenue.food.totalRevenue + report.revenue.drink.totalRevenue;
+    report.revenue.totalRevenue =
+      report.paymentBreakdown.total || rangeItemRevenue;
     report.costs.totalDirectCosts =
       report.costs.food.totalCost + report.costs.drink.totalCost;
 
@@ -678,11 +650,11 @@ export class FinancialReportService {
       report.grossProfit.total -
       report.operatingExpenses.totalOperatingExpenses;
 
-    if (report.revenue.totalRevenue > 0) {
+    if (rangeItemRevenue > 0) {
       report.metrics.grossProfitMargin =
-        (report.grossProfit.total / report.revenue.totalRevenue) * 100;
+        (report.grossProfit.total / rangeItemRevenue) * 100;
       report.metrics.netProfitMargin =
-        (report.netProfit / report.revenue.totalRevenue) * 100;
+        (report.netProfit / rangeItemRevenue) * 100;
     }
 
     return report;

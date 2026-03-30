@@ -12,11 +12,14 @@ description: Define a new requirement in the RTM, classify risk, generate test s
 
 ## When to Use
 
-- Starting a new feature, enhancement, or significant change
+- New features, enhancements, or significant changes
+- **Bug fixes that affect financial calculations, user-facing data, or access control**
 - Work that needs formal traceability (security, payments, RBAC, data handling)
 - Any change a stakeholder or auditor might ask "was this tested?"
 
 **Skip this workflow** for trivial changes (typo fixes, formatting, dependency bumps) — go straight to `2-implement-and-test.md`.
+
+**Even for trivial changes:** review existing tests for impact and run all gates locally before pushing.
 
 ## Steps
 

@@ -34,41 +34,42 @@ Full verification per Test Strategy medium-risk requirements.
 
 ### Configuration
 
-- [ ] Enable/disable toggle for inventory loss deduction in Staff Pot settings (super-admin only)
-- [ ] Separate food loss threshold (%) configurable
-- [ ] Separate drink loss threshold (%) configurable
-- [ ] Feature disabled by default
-- [ ] Config persists across page reloads
+- [x] Enable/disable toggle for inventory loss deduction in Staff Pot settings (super-admin only)
+- [x] Separate food loss threshold (%) configurable
+- [x] Separate drink loss threshold (%) configurable
+- [x] Feature disabled by default
+- [x] Config persists across page reloads
 
 ### Loss Calculation
 
-- [ ] Loss % = (systemInventoryCount - staffAdjustedCount) / systemInventoryCount \* 100 per snapshot item
-- [ ] Only approved snapshots count toward loss calculation
-- [ ] Food and drink losses calculated separately using `mainCategory`
-- [ ] Excess loss = actual loss % - threshold %. No deduction if at or below threshold
-- [ ] Deduction amount = excess loss % \* total inventory value for that category
-- [ ] Food excess → deducted from Kitchen pot. Drink excess → deducted from Bar pot
-- [ ] No deduction when feature is disabled
+- [x] Loss % = (systemInventoryCount - staffAdjustedCount) / systemInventoryCount \* 100 per snapshot item
+- [x] Only approved snapshots count toward loss calculation
+- [x] Food and drink losses calculated separately using `mainCategory`
+- [x] Excess loss = actual loss % - threshold %. No deduction if at or below threshold
+- [ ] Deduction amount = excess loss % \* total inventory value for that category (known issue #35 — value calculation incorrect)
+- [x] Food excess → deducted from Kitchen pot. Drink excess → deducted from Bar pot
+- [x] No deduction when feature is disabled
 
 ### Staff Pot Display — Admin View
 
-- [ ] Shows "Inventory adjustment: -₦X,XXX" on Kitchen/Bar card if deduction applies
-- [ ] Shows adjusted per-person bonus after deduction
-- [ ] Does NOT show loss percentages, inventory values, or threshold details
-- [ ] Shows motivational text: "Keep waste low to protect your bonus"
+- [x] Shows "Inventory adjustment: -₦X,XXX" on Kitchen/Bar card if deduction applies
+- [x] Shows adjusted per-person bonus after deduction
+- [x] Does NOT show loss percentages, inventory values, or threshold details
+- [x] Shows motivational text: "Keep waste low to protect your bonus"
 
 ### Staff Pot Display — Super-Admin View
 
-- [ ] Shows everything in admin view, plus:
-- [ ] Loss % vs threshold for food and drink
-- [ ] Inventory value and excess loss amount
-- [ ] Deduction calculation breakdown
+- [x] Shows everything in admin view, plus:
+- [x] Loss % vs threshold for food and drink
+- [x] Inventory value and excess loss amount
+- [x] Deduction calculation breakdown
 
 ### Regression
 
-- [ ] All existing E2E tests pass
-- [ ] All existing unit tests pass
-- [ ] Staff Pot calculations without deduction feature enabled remain unchanged
+- [x] All existing E2E tests pass
+- [x] All existing unit tests pass
+- [x] Staff Pot calculations without deduction feature enabled remain unchanged
+- [ ] Independent review: second human reviewer required before merge
 
 ## Data Model Changes
 

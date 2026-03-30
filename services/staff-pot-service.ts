@@ -120,7 +120,7 @@ export class StaffPotService {
 
       try {
         const report = await FinancialReportService.generateDailySummary(day);
-        const revenue = report.paymentBreakdown?.total || 0;
+        const revenue = report.revenue.totalRevenue || 0;
         const surplus = Math.max(0, revenue - config.dailyTarget);
         const contribution =
           Math.round(surplus * (config.bonusPercentage / 100) * 100) / 100;

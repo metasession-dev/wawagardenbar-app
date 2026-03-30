@@ -27,17 +27,20 @@ description: Implement changes on develop, run all local gates (tests + security
 Before writing any code, verify that the planning stage is complete:
 
 ```bash
-# For tracked requirements — test scope MUST exist
+# For tracked requirements — BOTH test scope AND test plan MUST exist
 ls compliance/evidence/REQ-XXX/test-scope.md
+ls compliance/evidence/REQ-XXX/test-plan.md
 ```
 
-**If the file does not exist:** STOP. Run `1-plan-requirement.md` first. Do NOT proceed to implementation without a committed test scope.
+**If either file does not exist:** STOP. Run `1-plan-requirement.md` first. Do NOT proceed to implementation without a committed test scope and test plan.
 
 For MEDIUM/HIGH risk, also verify:
 
 ```bash
 # Risk classification and RTM entry exist
 grep 'REQ-XXX' compliance/RTM.md
+# Implementation plan must exist
+ls compliance/evidence/REQ-XXX/implementation-plan.md
 ```
 
 ---

@@ -32,7 +32,10 @@ import {
   checkExistingSnapshotAction,
   resubmitSnapshotAction,
 } from '@/app/actions/inventory/snapshot-actions';
-import type { IInventorySnapshotItem, IInventorySnapshot } from '@/interfaces/inventory-snapshot.interface';
+import type {
+  IInventorySnapshotItem,
+  IInventorySnapshot,
+} from '@/interfaces/inventory-snapshot.interface';
 
 interface InventoryItemRow extends IInventorySnapshotItem {
   notes?: string;
@@ -45,7 +48,8 @@ export function InventorySummaryClient() {
   const [category, setCategory] = useState<'food' | 'drinks'>('food');
   const [items, setItems] = useState<InventoryItemRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [existingSnapshot, setExistingSnapshot] = useState<IInventorySnapshot | null>(null);
+  const [existingSnapshot, setExistingSnapshot] =
+    useState<IInventorySnapshot | null>(null);
 
   useEffect(() => {
     checkExistingSnapshot();
@@ -86,10 +90,7 @@ export function InventorySummaryClient() {
   async function loadSnapshotData() {
     setIsLoading(true);
     try {
-      const result = await generateSnapshotDataAction(
-        date,
-        category
-      );
+      const result = await generateSnapshotDataAction(date, category);
 
       if (result.success && result.data) {
         setItems(result.data);
@@ -116,7 +117,11 @@ export function InventorySummaryClient() {
     }
   }
 
-  function handleConfirmToggle(itemId: string, confirmed: boolean, locationId?: string) {
+  function handleConfirmToggle(
+    itemId: string,
+    confirmed: boolean,
+    locationId?: string
+  ) {
     setItems((prev) =>
       prev.map((item) => {
         if (item.menuItemId !== itemId) return item;
@@ -127,7 +132,9 @@ export function InventorySummaryClient() {
               return {
                 ...loc,
                 staffConfirmed: confirmed,
-                staffAdjustedCount: confirmed ? undefined : loc.staffAdjustedCount,
+                staffAdjustedCount: confirmed
+                  ? undefined
+                  : loc.staffAdjustedCount,
               };
             }
             return loc;
@@ -139,13 +146,18 @@ export function InventorySummaryClient() {
           let allConfirmed = true;
 
           newBreakdown.forEach((loc) => {
-            const finalCount = loc.staffAdjustedCount !== undefined ? loc.staffAdjustedCount : loc.currentStock;
+            const finalCount =
+              loc.staffAdjustedCount !== undefined
+                ? loc.staffAdjustedCount
+                : loc.currentStock;
             totalAdjusted += finalCount;
             if (loc.staffAdjustedCount !== undefined) hasAdjustments = true;
             if (!loc.staffConfirmed) allConfirmed = false;
           });
 
-          const discrepancy = hasAdjustments ? totalAdjusted - item.systemInventoryCount : 0;
+          const discrepancy = hasAdjustments
+            ? totalAdjusted - item.systemInventoryCount
+            : 0;
 
           return {
             ...item,
@@ -168,9 +180,13 @@ export function InventorySummaryClient() {
     );
   }
 
-  function handleAdjustedCountChange(itemId: string, value: string, locationId?: string) {
+  function handleAdjustedCountChange(
+    itemId: string,
+    value: string,
+    locationId?: string
+  ) {
     const numValue = value === '' ? undefined : parseInt(value);
-    
+
     setItems((prev) =>
       prev.map((item) => {
         if (item.menuItemId !== itemId) return item;
@@ -192,12 +208,17 @@ export function InventorySummaryClient() {
           let hasAdjustments = false;
 
           newBreakdown.forEach((loc) => {
-            const finalCount = loc.staffAdjustedCount !== undefined ? loc.staffAdjustedCount : loc.currentStock;
+            const finalCount =
+              loc.staffAdjustedCount !== undefined
+                ? loc.staffAdjustedCount
+                : loc.currentStock;
             totalAdjusted += finalCount;
             if (loc.staffAdjustedCount !== undefined) hasAdjustments = true;
           });
 
-          const discrepancy = hasAdjustments ? totalAdjusted - item.systemInventoryCount : 0;
+          const discrepancy = hasAdjustments
+            ? totalAdjusted - item.systemInventoryCount
+            : 0;
 
           return {
             ...item,
@@ -232,9 +253,9 @@ export function InventorySummaryClient() {
 
   async function handleSubmit() {
     const unprocessedItemsWithSales = items.filter(
-      (item) => 
-        item.todaySalesCount > 0 && 
-        !item.staffConfirmed && 
+      (item) =>
+        item.todaySalesCount > 0 &&
+        !item.staffConfirmed &&
         item.staffAdjustedCount === undefined
     );
 
@@ -254,6 +275,7 @@ export function InventorySummaryClient() {
         items: items.map((item) => ({
           menuItemId: item.menuItemId,
           menuItemName: item.menuItemName,
+          inventoryId: item.inventoryId,
           mainCategory: item.mainCategory,
           category: item.category,
           systemInventoryCount: item.systemInventoryCount,
@@ -267,16 +289,18 @@ export function InventorySummaryClient() {
         })),
       };
 
-      const result = existingSnapshot?.status === 'rejected'
-        ? await resubmitSnapshotAction(existingSnapshot._id, snapshotData)
-        : await submitSnapshotAction(snapshotData, category);
+      const result =
+        existingSnapshot?.status === 'rejected'
+          ? await resubmitSnapshotAction(existingSnapshot._id, snapshotData)
+          : await submitSnapshotAction(snapshotData, category);
 
       if (result.success) {
         toast({
           title: 'Success',
-          description: existingSnapshot?.status === 'rejected' 
-            ? 'Inventory snapshot resubmitted for review'
-            : 'Inventory snapshot submitted for review',
+          description:
+            existingSnapshot?.status === 'rejected'
+              ? 'Inventory snapshot resubmitted for review'
+              : 'Inventory snapshot submitted for review',
         });
         router.push('/dashboard/orders');
         router.refresh();
@@ -300,20 +324,24 @@ export function InventorySummaryClient() {
   }
 
   // Group items by subcategory for display
-  const groupedItems = items.reduce((acc, item) => {
-    const subcategory = item.category || 'Uncategorized';
-    if (!acc[subcategory]) {
-      acc[subcategory] = [];
-    }
-    acc[subcategory].push(item);
-    return acc;
-  }, {} as Record<string, InventoryItemRow[]>);
+  const groupedItems = items.reduce(
+    (acc, item) => {
+      const subcategory = item.category || 'Uncategorized';
+      if (!acc[subcategory]) {
+        acc[subcategory] = [];
+      }
+      acc[subcategory].push(item);
+      return acc;
+    },
+    {} as Record<string, InventoryItemRow[]>
+  );
 
   const itemsWithSales = items.filter((item) => item.todaySalesCount > 0);
   const processedItemsWithSales = itemsWithSales.filter(
     (item) => item.staffConfirmed || item.staffAdjustedCount !== undefined
   ).length;
-  const requiredItemsRemaining = itemsWithSales.length - processedItemsWithSales;
+  const requiredItemsRemaining =
+    itemsWithSales.length - processedItemsWithSales;
 
   return (
     <div className="space-y-6">
@@ -331,12 +359,18 @@ export function InventorySummaryClient() {
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 max={format(new Date(), 'yyyy-MM-dd')}
-                min={format(new Date(Date.now() - 24 * 60 * 60 * 1000), 'yyyy-MM-dd')}
+                min={format(
+                  new Date(Date.now() - 24 * 60 * 60 * 1000),
+                  'yyyy-MM-dd'
+                )}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="category">Snapshot Category</Label>
-              <Select value={category} onValueChange={(value: any) => setCategory(value)}>
+              <Select
+                value={category}
+                onValueChange={(value: any) => setCategory(value)}
+              >
                 <SelectTrigger id="category">
                   <SelectValue />
                 </SelectTrigger>
@@ -346,81 +380,111 @@ export function InventorySummaryClient() {
                 </SelectContent>
               </Select>
               <p className="text-sm text-muted-foreground">
-                Food and drinks are reviewed separately. You can submit both on the same day.
+                Food and drinks are reviewed separately. You can submit both on
+                the same day.
               </p>
             </div>
           </div>
 
           {existingSnapshot && (
             <div className="space-y-3">
-              <div className={`flex items-center gap-2 p-3 rounded-md ${
-                existingSnapshot.status === 'rejected' 
-                  ? 'bg-red-50 border border-red-200' 
-                  : existingSnapshot.status === 'pending'
-                  ? 'bg-blue-50 border border-blue-200'
-                  : 'bg-green-50 border border-green-200'
-              }`}>
-                <AlertCircle className={`h-5 w-5 ${
-                  existingSnapshot.status === 'rejected' 
-                    ? 'text-red-600' 
+              <div
+                className={`flex items-center gap-2 p-3 rounded-md ${
+                  existingSnapshot.status === 'rejected'
+                    ? 'bg-red-50 border border-red-200'
                     : existingSnapshot.status === 'pending'
-                    ? 'text-blue-600'
-                    : 'text-green-600'
-                }`} />
-                <div className="flex-1">
-                  <p className={`text-sm font-medium ${
-                    existingSnapshot.status === 'rejected' 
-                      ? 'text-red-800' 
+                      ? 'bg-blue-50 border border-blue-200'
+                      : 'bg-green-50 border border-green-200'
+                }`}
+              >
+                <AlertCircle
+                  className={`h-5 w-5 ${
+                    existingSnapshot.status === 'rejected'
+                      ? 'text-red-600'
                       : existingSnapshot.status === 'pending'
-                      ? 'text-blue-800'
-                      : 'text-green-800'
-                  }`}>
-                    {existingSnapshot.status === 'rejected' && 'Snapshot Rejected'}
-                    {existingSnapshot.status === 'pending' && 'Snapshot Pending Review'}
-                    {existingSnapshot.status === 'approved' && 'Snapshot Approved'}
+                        ? 'text-blue-600'
+                        : 'text-green-600'
+                  }`}
+                />
+                <div className="flex-1">
+                  <p
+                    className={`text-sm font-medium ${
+                      existingSnapshot.status === 'rejected'
+                        ? 'text-red-800'
+                        : existingSnapshot.status === 'pending'
+                          ? 'text-blue-800'
+                          : 'text-green-800'
+                    }`}
+                  >
+                    {existingSnapshot.status === 'rejected' &&
+                      'Snapshot Rejected'}
+                    {existingSnapshot.status === 'pending' &&
+                      'Snapshot Pending Review'}
+                    {existingSnapshot.status === 'approved' &&
+                      'Snapshot Approved'}
                   </p>
                   {existingSnapshot.reviewNotes && (
-                    <p className={`text-sm mt-1 ${
-                      existingSnapshot.status === 'rejected' 
-                        ? 'text-red-700' 
-                        : existingSnapshot.status === 'pending'
-                        ? 'text-blue-700'
-                        : 'text-green-700'
-                    }`}>
-                      <strong>Reviewer Notes:</strong> {existingSnapshot.reviewNotes}
+                    <p
+                      className={`text-sm mt-1 ${
+                        existingSnapshot.status === 'rejected'
+                          ? 'text-red-700'
+                          : existingSnapshot.status === 'pending'
+                            ? 'text-blue-700'
+                            : 'text-green-700'
+                      }`}
+                    >
+                      <strong>Reviewer Notes:</strong>{' '}
+                      {existingSnapshot.reviewNotes}
                     </p>
                   )}
                   {existingSnapshot.reviewedByName && (
-                    <p className={`text-xs mt-1 ${
-                      existingSnapshot.status === 'rejected' 
-                        ? 'text-red-600' 
-                        : existingSnapshot.status === 'pending'
-                        ? 'text-blue-600'
-                        : 'text-green-600'
-                    }`}>
-                      Reviewed by {existingSnapshot.reviewedByName} on {format(new Date(existingSnapshot.reviewedAt!), 'MMM dd, yyyy HH:mm')}
+                    <p
+                      className={`text-xs mt-1 ${
+                        existingSnapshot.status === 'rejected'
+                          ? 'text-red-600'
+                          : existingSnapshot.status === 'pending'
+                            ? 'text-blue-600'
+                            : 'text-green-600'
+                      }`}
+                    >
+                      Reviewed by {existingSnapshot.reviewedByName} on{' '}
+                      {format(
+                        new Date(existingSnapshot.reviewedAt!),
+                        'MMM dd, yyyy HH:mm'
+                      )}
                     </p>
                   )}
                 </div>
-                <Badge variant="outline" className={`${
-                  existingSnapshot.status === 'rejected' 
-                    ? 'bg-red-100 text-red-700 border-red-300' 
-                    : existingSnapshot.status === 'pending'
-                    ? 'bg-blue-100 text-blue-700 border-blue-300'
-                    : 'bg-green-100 text-green-700 border-green-300'
-                }`}>
+                <Badge
+                  variant="outline"
+                  className={`${
+                    existingSnapshot.status === 'rejected'
+                      ? 'bg-red-100 text-red-700 border-red-300'
+                      : existingSnapshot.status === 'pending'
+                        ? 'bg-blue-100 text-blue-700 border-blue-300'
+                        : 'bg-green-100 text-green-700 border-green-300'
+                  }`}
+                >
                   {existingSnapshot.status.toUpperCase()}
                 </Badge>
               </div>
             </div>
           )}
 
-          <Button 
-            onClick={loadSnapshotData} 
-            disabled={isLoading || (existingSnapshot !== null && existingSnapshot.status !== 'rejected')}
+          <Button
+            onClick={loadSnapshotData}
+            disabled={
+              isLoading ||
+              (existingSnapshot !== null &&
+                existingSnapshot.status !== 'rejected')
+            }
           >
-            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            {existingSnapshot?.status === 'rejected' ? 'Reload Data' : 'Load Inventory Data'}
+            <RefreshCw
+              className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`}
+            />
+            {existingSnapshot?.status === 'rejected'
+              ? 'Reload Data'
+              : 'Load Inventory Data'}
           </Button>
         </CardContent>
       </Card>
@@ -438,16 +502,28 @@ export function InventorySummaryClient() {
                   <p className="text-2xl font-bold">{items.length}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Items with Sales</p>
-                  <p className="text-2xl font-bold text-blue-600">{itemsWithSales.length}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Items with Sales
+                  </p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {itemsWithSales.length}
+                  </p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Processed (Required)</p>
-                  <p className="text-2xl font-bold text-green-600">{processedItemsWithSales}/{itemsWithSales.length}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Processed (Required)
+                  </p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {processedItemsWithSales}/{itemsWithSales.length}
+                  </p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Remaining (Required)</p>
-                  <p className={`text-2xl font-bold ${requiredItemsRemaining > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                  <p className="text-sm text-muted-foreground">
+                    Remaining (Required)
+                  </p>
+                  <p
+                    className={`text-2xl font-bold ${requiredItemsRemaining > 0 ? 'text-red-600' : 'text-green-600'}`}
+                  >
                     {requiredItemsRemaining}
                   </p>
                 </div>
@@ -455,7 +531,9 @@ export function InventorySummaryClient() {
               {requiredItemsRemaining > 0 && (
                 <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
                   <p className="text-sm text-blue-800">
-                    <strong>Note:</strong> Only items with sales today are required. Items without sales are optional but can be updated if needed.
+                    <strong>Note:</strong> Only items with sales today are
+                    required. Items without sales are optional but can be
+                    updated if needed.
                   </p>
                 </div>
               )}
@@ -473,172 +551,279 @@ export function InventorySummaryClient() {
                     <TableRow>
                       <TableHead className="w-[30%]">Menu Item</TableHead>
                       <TableHead className="w-[15%]">Category</TableHead>
-                      <TableHead className="text-right w-[10%]">Today&apos;s Sales</TableHead>
-                      <TableHead className="text-right w-[10%]">Current Inventory</TableHead>
-                      <TableHead className="text-center w-[10%]">Confirmed</TableHead>
-                      <TableHead className="text-right w-[15%]">Adjusted Count</TableHead>
+                      <TableHead className="text-right w-[10%]">
+                        Today&apos;s Sales
+                      </TableHead>
+                      <TableHead className="text-right w-[10%]">
+                        Current Inventory
+                      </TableHead>
+                      <TableHead className="text-center w-[10%]">
+                        Confirmed
+                      </TableHead>
+                      <TableHead className="text-right w-[15%]">
+                        Adjusted Count
+                      </TableHead>
                       <TableHead className="w-[10%]">Notes</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {Object.entries(groupedItems).map(([subcategory, subcategoryItems]) => (
-                      <>
-                        <TableRow key={`header-${subcategory}`} className="bg-muted/50">
-                          <TableCell colSpan={7} className="font-semibold">
-                            {subcategory}
-                          </TableCell>
-                        </TableRow>
-                        {subcategoryItems.map((item) => (
-                          <>
-                            <TableRow key={item.menuItemId} className={item.todaySalesCount > 0 ? 'bg-blue-50/30' : ''}>
-                              <TableCell>
-                                <div>
-                                  <p className="font-medium">{item.menuItemName}</p>
-                                  {item.todaySalesCount > 0 && (
-                                    <Badge variant="outline" className="mt-1 bg-blue-100 text-blue-700 border-blue-300">
-                                      Required
-                                    </Badge>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell>{item.category}</TableCell>
-                              <TableCell className="text-right">
-                                <span className={item.todaySalesCount > 0 ? 'font-semibold text-blue-600' : ''}>
-                                  {item.todaySalesCount}
-                                </span>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <span className="font-medium">{item.systemInventoryCount}</span>
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <Checkbox
-                                  checked={item.staffConfirmed}
-                                  onCheckedChange={(checked) =>
-                                    handleConfirmToggle(item.menuItemId, checked as boolean)
-                                  }
-                                  disabled={
-                                    existingSnapshot?.status === 'approved' || 
-                                    existingSnapshot?.status === 'pending' || 
-                                    !!(item.locationBreakdown && item.locationBreakdown.length > 0)
-                                  }
-                                />
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex items-center justify-end gap-2">
-                                  {item.locationBreakdown && item.locationBreakdown.length > 0 ? (
-                                    <Input
-                                      type="text"
-                                      value={item.staffAdjustedCount !== undefined ? item.staffAdjustedCount : ''}
-                                      readOnly
-                                      className="w-24 bg-muted text-right h-9"
-                                      placeholder="Sum"
-                                    />
-                                  ) : (
-                                    <div className="flex items-center justify-end gap-2 w-full">
-                                      <Input
-                                        type="number"
-                                        value={item.staffAdjustedCount ?? ''}
-                                        onChange={(e) =>
-                                          handleAdjustedCountChange(item.menuItemId, e.target.value)
-                                        }
-                                        placeholder="Adjust"
-                                        className="w-24 text-right h-9"
-                                        disabled={item.staffConfirmed || existingSnapshot?.status === 'approved' || existingSnapshot?.status === 'pending'}
-                                      />
-                                      {item.discrepancy !== 0 && item.staffAdjustedCount !== undefined ? (
-                                        <span
-                                          className={`text-xs font-medium w-8 text-right ${
-                                            item.discrepancy > 0 ? 'text-green-600' : 'text-red-600'
-                                          }`}
-                                        >
-                                          {item.discrepancy > 0 ? '+' : ''}
-                                          {item.discrepancy}
-                                        </span>
-                                      ) : (
-                                        <span className="w-8"></span>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <Input
-                                  type="text"
-                                  value={item.staffNotes ?? ''}
-                                  onChange={(e) =>
-                                    handleNotesChange(item.menuItemId, e.target.value)
-                                  }
-                                  placeholder="Add notes..."
-                                  disabled={existingSnapshot?.status === 'approved' || existingSnapshot?.status === 'pending'}
-                                />
-                              </TableCell>
-                            </TableRow>
-                            {/* Location Breakdown Rows */}
-                            {item.locationBreakdown && item.locationBreakdown.map((loc) => (
-                              <TableRow key={`${item.menuItemId}-${loc.location}`} className="bg-muted/10">
+                    {Object.entries(groupedItems).map(
+                      ([subcategory, subcategoryItems]) => (
+                        <>
+                          <TableRow
+                            key={`header-${subcategory}`}
+                            className="bg-muted/50"
+                          >
+                            <TableCell colSpan={7} className="font-semibold">
+                              {subcategory}
+                            </TableCell>
+                          </TableRow>
+                          {subcategoryItems.map((item) => (
+                            <>
+                              <TableRow
+                                key={item.menuItemId}
+                                className={
+                                  item.todaySalesCount > 0
+                                    ? 'bg-blue-50/30'
+                                    : ''
+                                }
+                              >
                                 <TableCell>
-                                  <div className="pl-6 flex items-center gap-2">
-                                    <div className="w-4 border-l-2 border-b-2 border-muted-foreground/30 h-3 rounded-bl-sm"></div>
-                                    <span className="text-sm text-muted-foreground">{loc.locationName}</span>
-                                  </div>
-                                </TableCell>
-                                <TableCell></TableCell>
-                                <TableCell></TableCell>
-                                <TableCell className="text-right">
-                                  <span className="text-sm text-muted-foreground">{loc.currentStock}</span>
-                                </TableCell>
-                                <TableCell className="text-center">
-                                  <Checkbox
-                                    checked={loc.staffConfirmed}
-                                    onCheckedChange={(checked) =>
-                                      handleConfirmToggle(item.menuItemId, checked as boolean, loc.location)
-                                    }
-                                    disabled={existingSnapshot?.status === 'approved' || existingSnapshot?.status === 'pending'}
-                                  />
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  <div className="flex items-center justify-end gap-2 w-full">
-                                    <Input
-                                      type="number"
-                                      value={loc.staffAdjustedCount ?? ''}
-                                      onChange={(e) =>
-                                        handleAdjustedCountChange(item.menuItemId, e.target.value, loc.location)
-                                      }
-                                      placeholder="Adjust"
-                                      className="w-24 h-8 text-sm text-right"
-                                      disabled={loc.staffConfirmed || existingSnapshot?.status === 'approved' || existingSnapshot?.status === 'pending'}
-                                    />
-                                    {loc.staffAdjustedCount !== undefined && loc.staffAdjustedCount !== loc.currentStock ? (
-                                      <span
-                                        className={`text-xs font-medium w-8 text-right ${
-                                          (loc.staffAdjustedCount - loc.currentStock) > 0 ? 'text-green-600' : 'text-red-600'
-                                        }`}
+                                  <div>
+                                    <p className="font-medium">
+                                      {item.menuItemName}
+                                    </p>
+                                    {item.todaySalesCount > 0 && (
+                                      <Badge
+                                        variant="outline"
+                                        className="mt-1 bg-blue-100 text-blue-700 border-blue-300"
                                       >
-                                        {(loc.staffAdjustedCount - loc.currentStock) > 0 ? '+' : ''}
-                                        {loc.staffAdjustedCount - loc.currentStock}
-                                      </span>
-                                    ) : (
-                                      <span className="w-8"></span>
+                                        Required
+                                      </Badge>
                                     )}
                                   </div>
                                 </TableCell>
-                                <TableCell></TableCell>
+                                <TableCell>{item.category}</TableCell>
+                                <TableCell className="text-right">
+                                  <span
+                                    className={
+                                      item.todaySalesCount > 0
+                                        ? 'font-semibold text-blue-600'
+                                        : ''
+                                    }
+                                  >
+                                    {item.todaySalesCount}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <span className="font-medium">
+                                    {item.systemInventoryCount}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <Checkbox
+                                    checked={item.staffConfirmed}
+                                    onCheckedChange={(checked) =>
+                                      handleConfirmToggle(
+                                        item.menuItemId,
+                                        checked as boolean
+                                      )
+                                    }
+                                    disabled={
+                                      existingSnapshot?.status === 'approved' ||
+                                      existingSnapshot?.status === 'pending' ||
+                                      !!(
+                                        item.locationBreakdown &&
+                                        item.locationBreakdown.length > 0
+                                      )
+                                    }
+                                  />
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex items-center justify-end gap-2">
+                                    {item.locationBreakdown &&
+                                    item.locationBreakdown.length > 0 ? (
+                                      <Input
+                                        type="text"
+                                        value={
+                                          item.staffAdjustedCount !== undefined
+                                            ? item.staffAdjustedCount
+                                            : ''
+                                        }
+                                        readOnly
+                                        className="w-24 bg-muted text-right h-9"
+                                        placeholder="Sum"
+                                      />
+                                    ) : (
+                                      <div className="flex items-center justify-end gap-2 w-full">
+                                        <Input
+                                          type="number"
+                                          value={item.staffAdjustedCount ?? ''}
+                                          onChange={(e) =>
+                                            handleAdjustedCountChange(
+                                              item.menuItemId,
+                                              e.target.value
+                                            )
+                                          }
+                                          placeholder="Adjust"
+                                          className="w-24 text-right h-9"
+                                          disabled={
+                                            item.staffConfirmed ||
+                                            existingSnapshot?.status ===
+                                              'approved' ||
+                                            existingSnapshot?.status ===
+                                              'pending'
+                                          }
+                                        />
+                                        {item.discrepancy !== 0 &&
+                                        item.staffAdjustedCount !==
+                                          undefined ? (
+                                          <span
+                                            className={`text-xs font-medium w-8 text-right ${
+                                              item.discrepancy > 0
+                                                ? 'text-green-600'
+                                                : 'text-red-600'
+                                            }`}
+                                          >
+                                            {item.discrepancy > 0 ? '+' : ''}
+                                            {item.discrepancy}
+                                          </span>
+                                        ) : (
+                                          <span className="w-8"></span>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Input
+                                    type="text"
+                                    value={item.staffNotes ?? ''}
+                                    onChange={(e) =>
+                                      handleNotesChange(
+                                        item.menuItemId,
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="Add notes..."
+                                    disabled={
+                                      existingSnapshot?.status === 'approved' ||
+                                      existingSnapshot?.status === 'pending'
+                                    }
+                                  />
+                                </TableCell>
                               </TableRow>
-                            ))}
-                          </>
-                        ))}
-                      </>
-                    ))}
+                              {/* Location Breakdown Rows */}
+                              {item.locationBreakdown &&
+                                item.locationBreakdown.map((loc) => (
+                                  <TableRow
+                                    key={`${item.menuItemId}-${loc.location}`}
+                                    className="bg-muted/10"
+                                  >
+                                    <TableCell>
+                                      <div className="pl-6 flex items-center gap-2">
+                                        <div className="w-4 border-l-2 border-b-2 border-muted-foreground/30 h-3 rounded-bl-sm"></div>
+                                        <span className="text-sm text-muted-foreground">
+                                          {loc.locationName}
+                                        </span>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell></TableCell>
+                                    <TableCell></TableCell>
+                                    <TableCell className="text-right">
+                                      <span className="text-sm text-muted-foreground">
+                                        {loc.currentStock}
+                                      </span>
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                      <Checkbox
+                                        checked={loc.staffConfirmed}
+                                        onCheckedChange={(checked) =>
+                                          handleConfirmToggle(
+                                            item.menuItemId,
+                                            checked as boolean,
+                                            loc.location
+                                          )
+                                        }
+                                        disabled={
+                                          existingSnapshot?.status ===
+                                            'approved' ||
+                                          existingSnapshot?.status === 'pending'
+                                        }
+                                      />
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      <div className="flex items-center justify-end gap-2 w-full">
+                                        <Input
+                                          type="number"
+                                          value={loc.staffAdjustedCount ?? ''}
+                                          onChange={(e) =>
+                                            handleAdjustedCountChange(
+                                              item.menuItemId,
+                                              e.target.value,
+                                              loc.location
+                                            )
+                                          }
+                                          placeholder="Adjust"
+                                          className="w-24 h-8 text-sm text-right"
+                                          disabled={
+                                            loc.staffConfirmed ||
+                                            existingSnapshot?.status ===
+                                              'approved' ||
+                                            existingSnapshot?.status ===
+                                              'pending'
+                                          }
+                                        />
+                                        {loc.staffAdjustedCount !== undefined &&
+                                        loc.staffAdjustedCount !==
+                                          loc.currentStock ? (
+                                          <span
+                                            className={`text-xs font-medium w-8 text-right ${
+                                              loc.staffAdjustedCount -
+                                                loc.currentStock >
+                                              0
+                                                ? 'text-green-600'
+                                                : 'text-red-600'
+                                            }`}
+                                          >
+                                            {loc.staffAdjustedCount -
+                                              loc.currentStock >
+                                            0
+                                              ? '+'
+                                              : ''}
+                                            {loc.staffAdjustedCount -
+                                              loc.currentStock}
+                                          </span>
+                                        ) : (
+                                          <span className="w-8"></span>
+                                        )}
+                                      </div>
+                                    </TableCell>
+                                    <TableCell></TableCell>
+                                  </TableRow>
+                                ))}
+                            </>
+                          ))}
+                        </>
+                      )
+                    )}
                   </TableBody>
                 </Table>
               </div>
               <div className="mt-6 flex justify-end">
-                <Button 
-                  onClick={handleSubmit} 
-                  disabled={isLoading || items.length === 0 || existingSnapshot?.status === 'approved' || existingSnapshot?.status === 'pending'}
+                <Button
+                  onClick={handleSubmit}
+                  disabled={
+                    isLoading ||
+                    items.length === 0 ||
+                    existingSnapshot?.status === 'approved' ||
+                    existingSnapshot?.status === 'pending'
+                  }
                 >
                   <CheckCircle className="mr-2 h-4 w-4" />
-                  {existingSnapshot?.status === 'rejected' ? 'Resubmit for Review' : 'Submit for Review'}
+                  {existingSnapshot?.status === 'rejected'
+                    ? 'Resubmit for Review'
+                    : 'Submit for Review'}
                 </Button>
               </div>
             </CardContent>

@@ -81,6 +81,13 @@ export default defineConfig({
       testMatch: /staff-pot\.spec\.ts/,
       dependencies: ['auth-setup'],
     },
+    // Inventory Snapshots (REQ-018)
+    {
+      name: 'inventory-snapshots',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /inventory-snapshots\.spec\.ts/,
+      dependencies: ['auth-setup'],
+    },
   ],
   /* Start dev server before tests (skipped when BASE_URL is set) */
   webServer: process.env.BASE_URL

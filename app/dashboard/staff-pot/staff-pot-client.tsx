@@ -436,7 +436,7 @@ export function StaffPotClient({ isSuperAdmin }: StaffPotClientProps) {
                     <tr className="border-b">
                       <td className="py-2 px-3">Food → Kitchen</td>
                       <td className="text-right py-2 px-3">
-                        {data.inventoryLoss.foodLossPercent.toFixed(1)}%
+                        {data.inventoryLoss.foodLossPercent.toFixed(2)}%
                       </td>
                       <td className="text-right py-2 px-3 text-muted-foreground">
                         {data.config.foodLossThreshold}%
@@ -446,22 +446,21 @@ export function StaffPotClient({ isSuperAdmin }: StaffPotClientProps) {
                           0,
                           data.inventoryLoss.foodLossPercent -
                             data.config.foodLossThreshold
-                        ).toFixed(1)}
+                        ).toFixed(2)}
                         %
                       </td>
                       <td className="text-right py-2 px-3">
                         {formatCurrency(data.inventoryLoss.foodInventoryValue)}
                       </td>
-                      <td className="text-right py-2 px-3 font-medium text-red-600">
-                        {data.kitchenDeduction > 0
-                          ? `-${formatCurrency(data.kitchenDeduction)}`
-                          : '—'}
-                      </td>
+                      <DeductionCell
+                        rawDeduction={data.inventoryLoss.foodDeduction}
+                        cappedDeduction={data.kitchenDeduction}
+                      />
                     </tr>
                     <tr>
                       <td className="py-2 px-3">Drinks → Bar</td>
                       <td className="text-right py-2 px-3">
-                        {data.inventoryLoss.drinkLossPercent.toFixed(1)}%
+                        {data.inventoryLoss.drinkLossPercent.toFixed(2)}%
                       </td>
                       <td className="text-right py-2 px-3 text-muted-foreground">
                         {data.config.drinkLossThreshold}%
@@ -471,17 +470,16 @@ export function StaffPotClient({ isSuperAdmin }: StaffPotClientProps) {
                           0,
                           data.inventoryLoss.drinkLossPercent -
                             data.config.drinkLossThreshold
-                        ).toFixed(1)}
+                        ).toFixed(2)}
                         %
                       </td>
                       <td className="text-right py-2 px-3">
                         {formatCurrency(data.inventoryLoss.drinkInventoryValue)}
                       </td>
-                      <td className="text-right py-2 px-3 font-medium text-red-600">
-                        {data.barDeduction > 0
-                          ? `-${formatCurrency(data.barDeduction)}`
-                          : '—'}
-                      </td>
+                      <DeductionCell
+                        rawDeduction={data.inventoryLoss.drinkDeduction}
+                        cappedDeduction={data.barDeduction}
+                      />
                     </tr>
                   </tbody>
                 </table>
@@ -543,10 +541,14 @@ export function StaffPotClient({ isSuperAdmin }: StaffPotClientProps) {
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Allowed: up to {data.config.foodLossThreshold}%
-                      {data.kitchenDeduction > 0 && (
+                      {data.inventoryLoss.foodDeduction > 0 && (
                         <span className="text-red-600 font-medium">
                           {' '}
-                          — deduction: -{formatCurrency(data.kitchenDeduction)}
+                          — deduction: -
+                          {formatCurrency(data.inventoryLoss.foodDeduction)}
+                          {data.kitchenDeduction <
+                            data.inventoryLoss.foodDeduction &&
+                            ` (capped at ${formatCurrency(data.kitchenDeduction)})`}
                         </span>
                       )}
                     </p>
@@ -589,10 +591,14 @@ export function StaffPotClient({ isSuperAdmin }: StaffPotClientProps) {
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Allowed: up to {data.config.drinkLossThreshold}%
-                      {data.barDeduction > 0 && (
+                      {data.inventoryLoss.drinkDeduction > 0 && (
                         <span className="text-red-600 font-medium">
                           {' '}
-                          — deduction: -{formatCurrency(data.barDeduction)}
+                          — deduction: -
+                          {formatCurrency(data.inventoryLoss.drinkDeduction)}
+                          {data.barDeduction <
+                            data.inventoryLoss.drinkDeduction &&
+                            ` (capped at ${formatCurrency(data.barDeduction)})`}
                         </span>
                       )}
                     </p>
@@ -972,5 +978,32 @@ function FinalizeButton({
         Finalize Month
       </Button>
     </div>
+  );
+}
+
+function DeductionCell({
+  rawDeduction,
+  cappedDeduction,
+}: {
+  rawDeduction: number;
+  cappedDeduction: number;
+}) {
+  if (rawDeduction <= 0) {
+    return <td className="text-right py-2 px-3 text-muted-foreground">—</td>;
+  }
+
+  const isCapped = cappedDeduction < rawDeduction;
+
+  return (
+    <td className="text-right py-2 px-3">
+      <span className="font-medium text-red-600">
+        -{formatCurrency(rawDeduction)}
+      </span>
+      {isCapped && (
+        <p className="text-xs text-muted-foreground mt-0.5">
+          capped at {formatCurrency(cappedDeduction)}
+        </p>
+      )}
+    </td>
   );
 }

@@ -64,6 +64,7 @@ Configure in GitHub → Settings → Branches → Branch protection rules:
     - `sast`
     - `dependency-audit`
     - `e2e-tests`
+    - `META-COMPLY UAT Approval` (from `check-uat-approval.yml` — blocks merge until release is approved in META-COMPLY. Re-run the workflow after approving in META-COMPLY to turn the check green)
 - [x] Require branches to be up to date before merging
 - [x] Do not allow bypassing the above settings
 
@@ -379,7 +380,7 @@ Copy these template workflows from `sdlc/files/ci/` into your project's `.github
 - Uploads production evidence to META-COMPLY (`environment: production`)
 - Marks the release as `released` in META-COMPLY
 
-**Versioning convention:** Releases use date-based versions by default (`v2026.03.27`). CI auto-creates releases in META-COMPLY when uploading evidence. Update `PROJECT_SLUG` and `PRODUCTION_URL` in each template.
+**Versioning convention:** Releases use date-based versions by default (`v2026.03.27`, or `v2026.03.27.2` for the second release on the same day). CI auto-creates releases in META-COMPLY when uploading evidence and auto-increments the sequence number if a release already exists for today. Update `PROJECT_SLUG` and `PRODUCTION_URL` in each template.
 
 ---
 

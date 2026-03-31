@@ -101,6 +101,11 @@ Create `compliance/evidence/REQ-XXX/implementation-plan.md`:
 ## Risks / Considerations
 
 - [Anything that could go wrong or needs special attention]
+
+## Post-Deploy Actions
+
+- [Data migrations, backfill scripts, schema changes — or "None"]
+- [If any: create script in `scripts/`, document exact command and target environment]
 ```
 
 **2c. WAIT CHECKPOINT: Implementation Plan Review**

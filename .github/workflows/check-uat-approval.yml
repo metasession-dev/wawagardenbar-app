@@ -22,13 +22,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Determine release version
-        id: version
-        run: |
-          VERSION="v$(date +%Y.%m.%d)"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "Checking UAT approval for version: ${VERSION}"
-
       - name: Look up project
         id: project
         run: |
@@ -41,6 +34,22 @@ jobs:
             exit 1
           fi
           echo "project_id=${PROJECT_ID}" >> "$GITHUB_OUTPUT"
+
+      - name: Determine release version
+        id: version
+        run: |
+          DATE_PREFIX="v$(date +%Y.%m.%d)"
+          PROJECT_ID="${{ steps.project.outputs.project_id }}"
+          # Find the latest release for today (supports multiple releases per day)
+          EXISTING=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_releases?project_id=eq.${PROJECT_ID}&version=like.${DATE_PREFIX}%25&select=version&order=created_at.desc&limit=1" \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}")
+          VERSION=$(echo "$EXISTING" | grep -o '"version":"[^"]*"' | head -1 | cut -d'"' -f4)
+          if [ -z "$VERSION" ]; then
+            VERSION="${DATE_PREFIX}"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Checking UAT approval for version: ${VERSION}"
 
       - name: Check release UAT approval status
         run: |

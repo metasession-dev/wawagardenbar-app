@@ -30,8 +30,23 @@ jobs:
       - name: Determine release version
         id: version
         run: |
-          VERSION="v$(date +%Y.%m.%d)"
+          DATE_PREFIX="v$(date +%Y.%m.%d)"
+          # Find the latest release for today (supports multiple releases per day)
+          PROJECT_ID=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_projects?slug=eq.${PROJECT_SLUG}&select=id" \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+          if [ -n "$PROJECT_ID" ]; then
+            EXISTING=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_releases?project_id=eq.${PROJECT_ID}&version=like.${DATE_PREFIX}%25&select=version&order=created_at.desc&limit=1" \
+              -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+              -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}")
+            VERSION=$(echo "$EXISTING" | grep -o '"version":"[^"]*"' | head -1 | cut -d'"' -f4)
+          fi
+          if [ -z "$VERSION" ]; then
+            VERSION="${DATE_PREFIX}"
+          fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Release version: ${VERSION}"
 
       - name: Wait for production deployment
         run: |

@@ -152,7 +152,7 @@ Keep in git (small markdown, needs PR review):
 3. Upload binary/JSON evidence to META-COMPLY portal
 4. Create `compliance/evidence/REQ-XXX/security-summary.md` (in git)
 5. Update RTM status to `TESTED - PENDING SIGN-OFF`
-6. Create `compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md` (use template from workflow file)
+6. Create `compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md` (use template from workflow file). If the change requires post-deploy actions (data migrations, backfill scripts), document them in the release ticket's Post-Deploy Actions section with exact commands
 7. Commit compliance markdown locally (do NOT push yet — batch with UAT results):
 
 ```bash
@@ -168,7 +168,7 @@ git commit -m "compliance: [REQ-XXX] evidence compiled - awaiting review"
 8. **WAIT CHECKPOINT:** Confirm CI + UAT deployment complete before UAT verification. Do NOT test against a stale deployment.
 9. **Verify on UAT** (if configured) — health check, smoke test, feature verification. Record in `security-summary.md`. Commit locally. Do NOT create a PR until UAT is green.
 10. **Push all compliance commits** in a single push: `git push origin develop`
-11. **Verify release in META-COMPLY** — CI auto-creates releases and links evidence. Check that a release exists with the current version (date-based: `v{YYYY}.{MM}.{DD}`) and evidence is linked.
+11. **Verify release in META-COMPLY** — CI auto-creates releases and links evidence. Check that a release exists with the current version (date-based: `v{YYYY}.{MM}.{DD}` or `v{YYYY}.{MM}.{DD}.{N}` for multiple releases on the same day) and evidence is linked.
 
 ### Pre-Flight Checklist (Before Creating PR)
 

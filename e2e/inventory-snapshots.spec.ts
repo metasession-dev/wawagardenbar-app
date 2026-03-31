@@ -309,7 +309,9 @@ superAdminTest.describe(
           .catch(() => {});
 
         // The inventory loss deductions section is only visible when enabled in config
-        const section = page.getByText('Inventory Loss Deductions');
+        const section = page.getByText('Inventory Loss Deductions', {
+          exact: true,
+        });
         if (await section.isVisible({ timeout: 5000 }).catch(() => false)) {
           // Should show the category rows
           await expect(page.getByText('Food → Kitchen')).toBeVisible();
@@ -329,7 +331,9 @@ superAdminTest.describe(
           .toBeHidden({ timeout: 30000 })
           .catch(() => {});
 
-        const section = page.getByText('Inventory Loss Deductions');
+        const section = page.getByText('Inventory Loss Deductions', {
+          exact: true,
+        });
         if (!(await section.isVisible({ timeout: 5000 }).catch(() => false))) {
           // Feature not enabled in this env — skip
           return;

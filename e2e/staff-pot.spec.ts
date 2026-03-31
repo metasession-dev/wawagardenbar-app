@@ -81,18 +81,22 @@ superAdminTest.describe('REQ-015: Staff Pot — Tracker Page', () => {
       .toBeHidden({ timeout: 30000 })
       .catch(() => {});
 
-    // Current month name should be visible
+    // Current month heading should be visible (e.g. "March 2026")
     const now = new Date();
     const monthName = now.toLocaleString('en', { month: 'long' });
-    await expect(page.getByText(monthName, { exact: false })).toBeVisible({
+    await expect(
+      page.getByRole('heading', { name: new RegExp(`${monthName}\\s+\\d{4}`) })
+    ).toBeVisible({ timeout: 15000 });
+
+    // Countdown text: "Day X of Y"
+    await expect(page.getByText(/Day \d+ of \d+/i)).toBeVisible({
       timeout: 15000,
     });
 
-    // Countdown text: "Day X of Y"
-    await expect(page.getByText(/Day \d+ of \d+/i)).toBeVisible();
-
     // "days remaining" text
-    await expect(page.getByText(/\d+ days remaining/i)).toBeVisible();
+    await expect(page.getByText(/\d+ days remaining/i)).toBeVisible({
+      timeout: 15000,
+    });
   });
 
   superAdminTest('tracker page shows summary cards', async ({ page }) => {

@@ -792,6 +792,40 @@ export function StaffPotClient({ isSuperAdmin }: StaffPotClientProps) {
                 />
               </div>
 
+              {/* Last-day readiness */}
+              <div className="space-y-2 pt-2 border-t">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Month-end readiness ({checklist.lastDayLabel})
+                </p>
+                <ChecklistItem
+                  done={checklist.lastDayFoodSnapshotApproved}
+                  label={`Food snapshot for ${checklist.lastDayLabel} approved`}
+                  hint={
+                    !checklist.lastDayFoodSnapshotApproved
+                      ? `Submit and approve a food inventory count dated ${checklist.lastDayLabel}`
+                      : undefined
+                  }
+                />
+                <ChecklistItem
+                  done={checklist.lastDayDrinkSnapshotApproved}
+                  label={`Drinks snapshot for ${checklist.lastDayLabel} approved`}
+                  hint={
+                    !checklist.lastDayDrinkSnapshotApproved
+                      ? `Submit and approve a drinks inventory count dated ${checklist.lastDayLabel}`
+                      : undefined
+                  }
+                />
+                <ChecklistItem
+                  done={checklist.salesCutoffComplete}
+                  label="Sales cutoff complete"
+                  hint={
+                    !checklist.salesCutoffComplete
+                      ? 'All sales must be entered before midnight on the last day of the month'
+                      : undefined
+                  }
+                />
+              </div>
+
               {/* Config / setup tasks */}
               {isSuperAdmin && (
                 <div className="space-y-2 pt-2 border-t">
@@ -827,7 +861,7 @@ export function StaffPotClient({ isSuperAdmin }: StaffPotClientProps) {
               {isSuperAdmin && !isCurrentMonth && (
                 <div className="space-y-2 pt-2 border-t">
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Month-end
+                    Finalization
                   </p>
                   <ChecklistItem
                     done={checklist.monthFinalized}
@@ -841,6 +875,7 @@ export function StaffPotClient({ isSuperAdmin }: StaffPotClientProps) {
                     <FinalizeButton
                       month={selectedMonth}
                       year={selectedYear}
+                      readyToFinalize={checklist.readyToFinalize}
                       onFinalized={loadData}
                     />
                   )}
@@ -855,7 +890,11 @@ export function StaffPotClient({ isSuperAdmin }: StaffPotClientProps) {
                   checklist.staffCountsSet ? (
                     <div className="flex items-center gap-2 rounded-md bg-green-50 p-3 text-sm text-green-800">
                       <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
-                      <span>Everything looks good for this month.</span>
+                      <span>
+                        Looking good so far. Remember to submit last-day
+                        inventory snapshots and enter all sales before midnight
+                        on {checklist.lastDayLabel}.
+                      </span>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
@@ -921,13 +960,16 @@ function ChecklistItem({
 function FinalizeButton({
   month,
   year,
+  readyToFinalize,
   onFinalized,
 }: {
   month: number;
   year: number;
+  readyToFinalize: boolean;
   onFinalized: () => void;
 }) {
   const [confirming, setConfirming] = useState(false);
+  const [overriding, setOverriding] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleFinalize() {
@@ -935,47 +977,73 @@ function FinalizeButton({
     const result = await finalizeStaffPotMonthAction(month, year);
     setLoading(false);
     setConfirming(false);
+    setOverriding(false);
     if (result.success) {
       onFinalized();
     }
   }
 
-  if (confirming) {
+  if (confirming || overriding) {
     return (
-      <div className="flex items-center gap-2 ml-6">
+      <div className="ml-6 space-y-2">
         <p className="text-xs text-muted-foreground">
-          This locks the month&apos;s data permanently. Continue?
+          {overriding
+            ? 'Some readiness checks have not passed. Are you sure you want to finalize anyway? This cannot be undone.'
+            : 'This locks the month\u2019s data permanently. Continue?'}
         </p>
-        <Button
-          size="sm"
-          variant="default"
-          onClick={handleFinalize}
-          disabled={loading}
-        >
-          {loading ? (
-            <Loader2 className="h-3 w-3 animate-spin mr-1" />
-          ) : (
-            <Lock className="h-3 w-3 mr-1" />
-          )}
-          Confirm
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => setConfirming(false)}
-          disabled={loading}
-        >
-          Cancel
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant={overriding ? 'destructive' : 'default'}
+            onClick={handleFinalize}
+            disabled={loading}
+          >
+            {loading ? (
+              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+            ) : (
+              <Lock className="h-3 w-3 mr-1" />
+            )}
+            {overriding ? 'Override & Finalize' : 'Confirm'}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setConfirming(false);
+              setOverriding(false);
+            }}
+            disabled={loading}
+          >
+            Cancel
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (readyToFinalize) {
+    return (
+      <div className="ml-6">
+        <Button size="sm" variant="outline" onClick={() => setConfirming(true)}>
+          <Lock className="h-3 w-3 mr-1" />
+          Finalize Month
         </Button>
       </div>
     );
   }
 
   return (
-    <div className="ml-6">
-      <Button size="sm" variant="outline" onClick={() => setConfirming(true)}>
-        <Lock className="h-3 w-3 mr-1" />
-        Finalize Month
+    <div className="ml-6 space-y-1">
+      <p className="text-xs text-muted-foreground">
+        Cannot finalize — readiness checks above are incomplete.
+      </p>
+      <Button
+        size="sm"
+        variant="ghost"
+        className="text-xs"
+        onClick={() => setOverriding(true)}
+      >
+        Override and finalize anyway
       </Button>
     </div>
   );

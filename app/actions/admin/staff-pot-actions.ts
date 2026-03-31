@@ -12,7 +12,13 @@ import { StaffPotService, StaffPotConfig } from '@/services/staff-pot-service';
 import { InventorySnapshotModel } from '@/models/inventory-snapshot-model';
 import StaffPotSnapshotModel from '@/models/staff-pot-snapshot-model';
 import { connectDB } from '@/lib/mongodb';
-import { startOfMonth, endOfMonth } from 'date-fns';
+import {
+  startOfMonth,
+  endOfMonth,
+  startOfDay,
+  endOfDay,
+  getDaysInMonth,
+} from 'date-fns';
 
 interface ActionResult<T = unknown> {
   success: boolean;
@@ -124,10 +130,15 @@ export interface StaffPotChecklist {
   foodSnapshotApproved: boolean;
   drinkSnapshotSubmitted: boolean;
   drinkSnapshotApproved: boolean;
+  lastDayFoodSnapshotApproved: boolean;
+  lastDayDrinkSnapshotApproved: boolean;
+  salesCutoffComplete: boolean;
   configReviewed: boolean;
   inventoryLossEnabled: boolean;
   staffCountsSet: boolean;
   monthFinalized: boolean;
+  lastDayLabel: string;
+  readyToFinalize: boolean;
 }
 
 export async function getStaffPotChecklistAction(
@@ -157,6 +168,10 @@ export async function getStaffPotChecklistAction(
 
     const monthStart = startOfMonth(new Date(y, m, 1));
     const monthEnd = endOfMonth(monthStart);
+    const lastDay = getDaysInMonth(new Date(y, m, 1));
+    const lastDayStart = startOfDay(new Date(y, m, lastDay));
+    const lastDayEnd = endOfDay(lastDayStart);
+    const lastDayLabel = `${lastDay} ${MONTH_NAMES[m]}`;
 
     const config = await SystemSettingsService.getStaffPotConfig();
 
@@ -164,11 +179,31 @@ export async function getStaffPotChecklistAction(
     const snapshots = await InventorySnapshotModel.find({
       snapshotDate: { $gte: monthStart, $lte: monthEnd },
     })
-      .select('mainCategory status')
+      .select('mainCategory status snapshotDate')
       .lean();
 
     const foodSnapshots = snapshots.filter((s) => s.mainCategory === 'food');
     const drinkSnapshots = snapshots.filter((s) => s.mainCategory === 'drinks');
+
+    // Check last-day snapshots specifically
+    const lastDayFoodSnapshotApproved = foodSnapshots.some(
+      (s) =>
+        s.status === 'approved' &&
+        new Date(s.snapshotDate) >= lastDayStart &&
+        new Date(s.snapshotDate) <= lastDayEnd
+    );
+    const lastDayDrinkSnapshotApproved = drinkSnapshots.some(
+      (s) =>
+        s.status === 'approved' &&
+        new Date(s.snapshotDate) >= lastDayStart &&
+        new Date(s.snapshotDate) <= lastDayEnd
+    );
+
+    // Sales cutoff: month must have ended (we're now in a later month)
+    const isCurrentMonth = now.getMonth() === m && now.getFullYear() === y;
+    const isFutureMonth =
+      y > now.getFullYear() || (y === now.getFullYear() && m > now.getMonth());
+    const salesCutoffComplete = !isCurrentMonth && !isFutureMonth;
 
     // Check if month is finalized
     const potSnapshot = await StaffPotSnapshotModel.findOne({
@@ -177,6 +212,18 @@ export async function getStaffPotChecklistAction(
     })
       .select('finalized')
       .lean();
+
+    const staffCountsSet =
+      config.kitchenStaffCount > 0 && config.barStaffCount > 0;
+    const configReviewed = config.dailyTarget > 0 && config.bonusPercentage > 0;
+
+    // Ready to finalize when all readiness checks pass
+    const readyToFinalize =
+      lastDayFoodSnapshotApproved &&
+      lastDayDrinkSnapshotApproved &&
+      salesCutoffComplete &&
+      staffCountsSet &&
+      configReviewed;
 
     return {
       success: true,
@@ -189,11 +236,15 @@ export async function getStaffPotChecklistAction(
         drinkSnapshotApproved: drinkSnapshots.some(
           (s) => s.status === 'approved'
         ),
-        configReviewed: config.dailyTarget > 0 && config.bonusPercentage > 0,
+        lastDayFoodSnapshotApproved,
+        lastDayDrinkSnapshotApproved,
+        salesCutoffComplete,
+        configReviewed,
         inventoryLossEnabled: config.inventoryLossEnabled,
-        staffCountsSet:
-          config.kitchenStaffCount > 0 && config.barStaffCount > 0,
+        staffCountsSet,
         monthFinalized: potSnapshot?.finalized === true,
+        lastDayLabel,
+        readyToFinalize,
       },
     };
   } catch (error) {

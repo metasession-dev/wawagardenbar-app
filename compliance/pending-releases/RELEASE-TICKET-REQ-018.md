@@ -45,16 +45,38 @@ Extends the Staff Pot with inventory loss deductions. When enabled, inventory lo
 - [x] 12 unit tests + E2E updates
 - [x] Inventory value calculation fix (#35)
 - [x] E2E: inventory snapshot submission/approval flow (13 tests)
+- [x] Month-end finalization with config freezing (#36)
+- [x] menuItemId cost fallback for snapshot items missing inventoryId
+- [x] Admin "Inventory Care" view with progress bars
+- [x] Monthly checklist with finalization status
 - [ ] Independent review
+
+---
+
+## Post-Deploy Migration (REQUIRED)
+
+After merging to main and deploying, run the backfill script against the **production database** to patch existing approved snapshots missing `inventoryId`:
+
+```bash
+npx tsx scripts/backfill-snapshot-inventory-ids.ts "mongodb://[PROD_CONNECTION_STRING]"
+```
+
+**Why:** Snapshots created before commit `24936a3` omitted `inventoryId` on all items. Without the backfill, those snapshots rely on the `menuItemId` fallback for cost lookup — which works, but the backfill ensures data is clean.
+
+**Impact if skipped:** Food inventory values for old snapshots will still calculate correctly via the fallback. New snapshots are unaffected. The backfill is recommended but not blocking.
+
+**Already run on UAT:** 2026-03-31 — 9 snapshots updated, 442 items fixed.
 
 ---
 
 ## Audit Trail
 
-| Date       | Action              | Actor            | Notes                           |
-| ---------- | ------------------- | ---------------- | ------------------------------- |
-| 2026-03-30 | Requirement created | William + Claude | Risk: MEDIUM                    |
-| 2026-03-30 | Implementation done | Claude Code      | Feature + 12 unit + E2E update  |
-| 2026-03-30 | UAT verified        | William          | Known issue #35 noted           |
-| 2026-03-31 | #35 fix complete    | Claude Code      | inventoryId in snapshot payload |
-| 2026-03-31 | E2E tests added     | Claude Code      | 13 snapshot + regression tests  |
+| Date       | Action              | Actor            | Notes                            |
+| ---------- | ------------------- | ---------------- | -------------------------------- |
+| 2026-03-30 | Requirement created | William + Claude | Risk: MEDIUM                     |
+| 2026-03-30 | Implementation done | Claude Code      | Feature + 12 unit + E2E update   |
+| 2026-03-30 | UAT verified        | William          | Known issue #35 noted            |
+| 2026-03-31 | #35 fix complete    | Claude Code      | inventoryId in snapshot payload  |
+| 2026-03-31 | E2E tests added     | Claude Code      | 13 snapshot + regression tests   |
+| 2026-03-31 | #36 implemented     | Claude Code      | Finalization, fallback, admin UI |
+| 2026-03-31 | UAT backfill run    | Claude Code      | 9 snapshots, 442 items fixed     |

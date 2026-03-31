@@ -8,6 +8,8 @@ import StaffPotSnapshotModel, {
   IStaffPotDailyEntry,
   IStaffPotSnapshot,
 } from '@/models/staff-pot-snapshot-model';
+import { InventorySnapshotModel } from '@/models/inventory-snapshot-model';
+import InventoryModel from '@/models/inventory-model';
 import { SystemSettingsService } from './system-settings-service';
 import {
   startOfMonth,
@@ -26,6 +28,18 @@ export interface StaffPotConfig {
   kitchenStaffCount: number;
   barStaffCount: number;
   startDate?: string;
+  inventoryLossEnabled: boolean;
+  foodLossThreshold: number;
+  drinkLossThreshold: number;
+}
+
+export interface InventoryLossData {
+  foodLossPercent: number;
+  drinkLossPercent: number;
+  foodInventoryValue: number;
+  drinkInventoryValue: number;
+  foodDeduction: number;
+  drinkDeduction: number;
 }
 
 export interface StaffPotMonthData {
@@ -43,6 +57,9 @@ export interface StaffPotMonthData {
   barPerPerson: number;
   dailyEntries: IStaffPotDailyEntry[];
   config: StaffPotConfig;
+  inventoryLoss?: InventoryLossData;
+  kitchenDeduction: number;
+  barDeduction: number;
 }
 
 export class StaffPotService {
@@ -106,6 +123,8 @@ export class StaffPotService {
           barPerPerson: 0,
           dailyEntries: [],
           config,
+          kitchenDeduction: 0,
+          barDeduction: 0,
         };
       }
     }
@@ -158,10 +177,28 @@ export class StaffPotService {
       ? totalPot + avgDailyContribution * daysRemaining
       : totalPot;
 
-    const kitchenPayout =
+    let kitchenPayout =
       Math.round(totalPot * (config.kitchenSplitRatio / 100) * 100) / 100;
-    const barPayout =
+    let barPayout =
       Math.round(totalPot * (config.barSplitRatio / 100) * 100) / 100;
+
+    // Calculate inventory loss deductions
+    let inventoryLoss: InventoryLossData | undefined;
+    let kitchenDeduction = 0;
+    let barDeduction = 0;
+
+    if (config.inventoryLossEnabled) {
+      inventoryLoss = await StaffPotService.calculateInventoryLoss(
+        effectiveStart,
+        lastDay,
+        config
+      );
+      kitchenDeduction = Math.min(inventoryLoss.foodDeduction, kitchenPayout);
+      barDeduction = Math.min(inventoryLoss.drinkDeduction, barPayout);
+      kitchenPayout =
+        Math.round((kitchenPayout - kitchenDeduction) * 100) / 100;
+      barPayout = Math.round((barPayout - barDeduction) * 100) / 100;
+    }
 
     return {
       month,
@@ -184,6 +221,9 @@ export class StaffPotService {
           : 0,
       dailyEntries,
       config,
+      inventoryLoss,
+      kitchenDeduction: Math.round(kitchenDeduction * 100) / 100,
+      barDeduction: Math.round(barDeduction * 100) / 100,
     };
   }
 
@@ -198,6 +238,29 @@ export class StaffPotService {
       new Date(snapshot.year, snapshot.month, 1)
     );
 
+    // Use config from snapshot if available (frozen at finalization), fall back to current
+    const snapshotConfig = snapshot.config;
+    const effectiveConfig: StaffPotConfig = {
+      ...config,
+      dailyTarget: snapshotConfig.dailyTarget ?? config.dailyTarget,
+      bonusPercentage: snapshotConfig.bonusPercentage ?? config.bonusPercentage,
+      kitchenSplitRatio:
+        snapshotConfig.kitchenSplitRatio ?? config.kitchenSplitRatio,
+      barSplitRatio: snapshotConfig.barSplitRatio ?? config.barSplitRatio,
+      kitchenStaffCount:
+        snapshotConfig.kitchenStaffCount ?? config.kitchenStaffCount,
+      barStaffCount: snapshotConfig.barStaffCount ?? config.barStaffCount,
+      inventoryLossEnabled:
+        snapshotConfig.inventoryLossEnabled ?? config.inventoryLossEnabled,
+      foodLossThreshold:
+        snapshotConfig.foodLossThreshold ?? config.foodLossThreshold,
+      drinkLossThreshold:
+        snapshotConfig.drinkLossThreshold ?? config.drinkLossThreshold,
+    };
+
+    const staffCount = effectiveConfig.kitchenStaffCount;
+    const barStaff = effectiveConfig.barStaffCount;
+
     return {
       month: snapshot.month,
       year: snapshot.year,
@@ -210,18 +273,161 @@ export class StaffPotService {
       kitchenPayout: snapshot.kitchenPayout,
       barPayout: snapshot.barPayout,
       kitchenPerPerson:
-        config.kitchenStaffCount > 0
-          ? Math.round(
-              (snapshot.kitchenPayout / config.kitchenStaffCount) * 100
-            ) / 100
+        staffCount > 0
+          ? Math.round((snapshot.kitchenPayout / staffCount) * 100) / 100
           : 0,
       barPerPerson:
-        config.barStaffCount > 0
-          ? Math.round((snapshot.barPayout / config.barStaffCount) * 100) / 100
+        barStaff > 0
+          ? Math.round((snapshot.barPayout / barStaff) * 100) / 100
           : 0,
       dailyEntries: snapshot.dailyEntries,
-      config,
+      config: effectiveConfig,
+      inventoryLoss: snapshot.inventoryLoss,
+      kitchenDeduction: snapshot.kitchenDeduction || 0,
+      barDeduction: snapshot.barDeduction || 0,
     };
+  }
+
+  /**
+   * @requirement REQ-018 - Calculate inventory loss from approved snapshots
+   */
+  static async calculateInventoryLoss(
+    startDate: Date,
+    endDate: Date,
+    config: StaffPotConfig
+  ): Promise<InventoryLossData> {
+    const result: InventoryLossData = {
+      foodLossPercent: 0,
+      drinkLossPercent: 0,
+      foodInventoryValue: 0,
+      drinkInventoryValue: 0,
+      foodDeduction: 0,
+      drinkDeduction: 0,
+    };
+
+    // Query approved inventory snapshots in the date range
+    const snapshots = await InventorySnapshotModel.find({
+      status: 'approved',
+      snapshotDate: { $gte: startDate, $lte: endDate },
+    }).lean();
+
+    if (snapshots.length === 0) return result;
+
+    // Aggregate loss by category and calculate inventory values per item
+    let foodSystemTotal = 0;
+    let foodLossUnits = 0;
+    let drinkSystemTotal = 0;
+    let drinkLossUnits = 0;
+
+    // Collect all inventory IDs and menu item IDs for batch cost lookup
+    const inventoryIds = new Set<string>();
+    const menuItemIds = new Set<string>();
+    for (const snapshot of snapshots) {
+      for (const item of snapshot.items || []) {
+        if (item.inventoryId) {
+          inventoryIds.add(item.inventoryId.toString());
+        }
+        if (item.menuItemId) {
+          menuItemIds.add(item.menuItemId.toString());
+        }
+      }
+    }
+
+    // Batch lookup costs: inventoryId → cost, menuItemId → cost
+    const costByInventoryId = new Map<string, number>();
+    const costByMenuItemId = new Map<string, number>();
+
+    if (inventoryIds.size > 0) {
+      const inventories = await InventoryModel.find({
+        _id: { $in: Array.from(inventoryIds) },
+      })
+        .select('_id costPerUnit menuItemId')
+        .populate('menuItemId', 'price')
+        .lean();
+
+      for (const inv of inventories) {
+        const cost = inv.costPerUnit || (inv.menuItemId as any)?.price || 0;
+        costByInventoryId.set(inv._id.toString(), cost);
+        if (inv.menuItemId) {
+          const menuId =
+            (inv.menuItemId as any)._id?.toString() ||
+            inv.menuItemId.toString();
+          costByMenuItemId.set(menuId, cost);
+        }
+      }
+    }
+
+    // Fallback: look up inventory cost by menuItemId for items missing inventoryId
+    const missingMenuItemIds = Array.from(menuItemIds).filter(
+      (id) => !costByMenuItemId.has(id)
+    );
+    if (missingMenuItemIds.length > 0) {
+      const fallbackInventories = await InventoryModel.find({
+        menuItemId: { $in: missingMenuItemIds },
+      })
+        .select('costPerUnit menuItemId')
+        .populate('menuItemId', 'price')
+        .lean();
+
+      for (const inv of fallbackInventories) {
+        const cost = inv.costPerUnit || (inv.menuItemId as any)?.price || 0;
+        const menuId =
+          (inv.menuItemId as any)._id?.toString() || inv.menuItemId.toString();
+        costByMenuItemId.set(menuId, cost);
+      }
+    }
+
+    // Iterate snapshot items: aggregate units and calculate per-item inventory value
+    for (const snapshot of snapshots) {
+      for (const item of snapshot.items || []) {
+        const systemCount = item.systemInventoryCount || 0;
+        const costPerUnit = item.inventoryId
+          ? costByInventoryId.get(item.inventoryId.toString()) || 0
+          : costByMenuItemId.get(item.menuItemId?.toString()) || 0;
+        const itemValue = costPerUnit * systemCount;
+
+        if (item.mainCategory === 'food') {
+          foodSystemTotal += systemCount;
+          result.foodInventoryValue += itemValue;
+          if (item.discrepancy < 0) {
+            foodLossUnits += Math.abs(item.discrepancy);
+          }
+        } else if (item.mainCategory === 'drinks') {
+          drinkSystemTotal += systemCount;
+          result.drinkInventoryValue += itemValue;
+          if (item.discrepancy < 0) {
+            drinkLossUnits += Math.abs(item.discrepancy);
+          }
+        }
+      }
+    }
+
+    // Calculate loss percentages
+    if (foodSystemTotal > 0) {
+      result.foodLossPercent =
+        Math.round((foodLossUnits / foodSystemTotal) * 10000) / 100;
+    }
+    if (drinkSystemTotal > 0) {
+      result.drinkLossPercent =
+        Math.round((drinkLossUnits / drinkSystemTotal) * 10000) / 100;
+    }
+
+    // Calculate deductions: excess loss % * inventory value
+    const foodExcess = Math.max(
+      0,
+      result.foodLossPercent - config.foodLossThreshold
+    );
+    const drinkExcess = Math.max(
+      0,
+      result.drinkLossPercent - config.drinkLossThreshold
+    );
+
+    result.foodDeduction =
+      Math.round((foodExcess / 100) * result.foodInventoryValue * 100) / 100;
+    result.drinkDeduction =
+      Math.round((drinkExcess / 100) * result.drinkInventoryValue * 100) / 100;
+
+    return result;
   }
 
   /**
@@ -245,6 +451,9 @@ export class StaffPotService {
           dailyEntries: data.dailyEntries,
           kitchenPayout: data.kitchenPayout,
           barPayout: data.barPayout,
+          kitchenDeduction: data.kitchenDeduction,
+          barDeduction: data.barDeduction,
+          inventoryLoss: data.inventoryLoss,
           config: data.config,
           finalized: true,
         },

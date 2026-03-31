@@ -20,6 +20,16 @@ export interface IStaffPotSnapshot {
   dailyEntries: IStaffPotDailyEntry[];
   kitchenPayout: number;
   barPayout: number;
+  kitchenDeduction: number;
+  barDeduction: number;
+  inventoryLoss?: {
+    foodLossPercent: number;
+    drinkLossPercent: number;
+    foodInventoryValue: number;
+    drinkInventoryValue: number;
+    foodDeduction: number;
+    drinkDeduction: number;
+  };
   config: {
     dailyTarget: number;
     bonusPercentage: number;
@@ -27,6 +37,9 @@ export interface IStaffPotSnapshot {
     barSplitRatio: number;
     kitchenStaffCount: number;
     barStaffCount: number;
+    inventoryLossEnabled?: boolean;
+    foodLossThreshold?: number;
+    drinkLossThreshold?: number;
   };
   finalized: boolean;
   createdAt: Date;
@@ -51,6 +64,19 @@ const staffPotSnapshotSchema = new Schema<IStaffPotSnapshot>(
     ],
     kitchenPayout: { type: Number, default: 0 },
     barPayout: { type: Number, default: 0 },
+    kitchenDeduction: { type: Number, default: 0 },
+    barDeduction: { type: Number, default: 0 },
+    inventoryLoss: {
+      type: {
+        foodLossPercent: { type: Number },
+        drinkLossPercent: { type: Number },
+        foodInventoryValue: { type: Number },
+        drinkInventoryValue: { type: Number },
+        foodDeduction: { type: Number },
+        drinkDeduction: { type: Number },
+      },
+      default: undefined,
+    },
     config: {
       dailyTarget: { type: Number },
       bonusPercentage: { type: Number },
@@ -58,6 +84,9 @@ const staffPotSnapshotSchema = new Schema<IStaffPotSnapshot>(
       barSplitRatio: { type: Number },
       kitchenStaffCount: { type: Number },
       barStaffCount: { type: Number },
+      inventoryLossEnabled: { type: Boolean },
+      foodLossThreshold: { type: Number },
+      drinkLossThreshold: { type: Number },
     },
     finalized: { type: Boolean, default: false },
   },

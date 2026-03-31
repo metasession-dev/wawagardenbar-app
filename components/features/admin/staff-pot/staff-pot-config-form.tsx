@@ -19,6 +19,9 @@ interface StaffPotConfig {
   kitchenStaffCount: number;
   barStaffCount: number;
   startDate?: string;
+  inventoryLossEnabled: boolean;
+  foodLossThreshold: number;
+  drinkLossThreshold: number;
 }
 
 interface StaffPotConfigFormProps {
@@ -182,6 +185,80 @@ export function StaffPotConfigForm({ initialConfig }: StaffPotConfigFormProps) {
             start from the 1st of each month.
           </p>
         </div>
+      </div>
+
+      {/* Inventory Loss Deduction */}
+      <div className="border-t pt-4 mt-4">
+        <div className="flex items-center gap-3 mb-4">
+          <input
+            id="inventoryLossEnabled"
+            type="checkbox"
+            checked={config.inventoryLossEnabled || false}
+            onChange={(e) =>
+              setConfig({
+                ...config,
+                inventoryLossEnabled: e.target.checked,
+              })
+            }
+            className="h-4 w-4"
+          />
+          <Label htmlFor="inventoryLossEnabled" className="font-medium">
+            Enable Inventory Loss Deduction
+          </Label>
+        </div>
+        <p className="text-xs text-muted-foreground mb-4">
+          When enabled, inventory losses above the acceptable threshold are
+          deducted from the relevant team's pot (food → kitchen, drinks → bar).
+        </p>
+
+        {config.inventoryLossEnabled && (
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="foodLossThreshold">Food Loss Threshold (%)</Label>
+              <Input
+                id="foodLossThreshold"
+                type="number"
+                min="0"
+                max="100"
+                step="0.5"
+                value={config.foodLossThreshold ?? 2}
+                onChange={(e) =>
+                  setConfig({
+                    ...config,
+                    foodLossThreshold: Number(e.target.value),
+                  })
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                Acceptable food inventory loss. Losses above this are deducted
+                from the Kitchen pot.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="drinkLossThreshold">
+                Drink Loss Threshold (%)
+              </Label>
+              <Input
+                id="drinkLossThreshold"
+                type="number"
+                min="0"
+                max="100"
+                step="0.5"
+                value={config.drinkLossThreshold ?? 3}
+                onChange={(e) =>
+                  setConfig({
+                    ...config,
+                    drinkLossThreshold: Number(e.target.value),
+                  })
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                Acceptable drink inventory loss. Losses above this are deducted
+                from the Bar pot.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       <Button onClick={handleSave} disabled={saving}>

@@ -23,7 +23,19 @@ import {
   Loader2,
   Target,
 } from 'lucide-react';
-import { getStaffPotDataAction } from '@/app/actions/admin/staff-pot-actions';
+import {
+  getStaffPotDataAction,
+  getStaffPotChecklistAction,
+  finalizeStaffPotMonthAction,
+  type StaffPotChecklist,
+} from '@/app/actions/admin/staff-pot-actions';
+import {
+  CheckCircle2,
+  Circle,
+  ClipboardList,
+  AlertTriangle,
+  Lock,
+} from 'lucide-react';
 
 interface DailyEntry {
   date: string;
@@ -54,7 +66,20 @@ interface StaffPotData {
     barSplitRatio: number;
     kitchenStaffCount: number;
     barStaffCount: number;
+    inventoryLossEnabled: boolean;
+    foodLossThreshold: number;
+    drinkLossThreshold: number;
   };
+  inventoryLoss?: {
+    foodLossPercent: number;
+    drinkLossPercent: number;
+    foodInventoryValue: number;
+    drinkInventoryValue: number;
+    foodDeduction: number;
+    drinkDeduction: number;
+  };
+  kitchenDeduction: number;
+  barDeduction: number;
 }
 
 const MONTH_NAMES = [
@@ -87,6 +112,7 @@ function formatCurrency(amount: number): string {
 
 export function StaffPotClient({ isSuperAdmin }: StaffPotClientProps) {
   const [data, setData] = useState<StaffPotData | null>(null);
+  const [checklist, setChecklist] = useState<StaffPotChecklist | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -104,11 +130,17 @@ export function StaffPotClient({ isSuperAdmin }: StaffPotClientProps) {
     setLoading(true);
     setError(null);
     try {
-      const result = await getStaffPotDataAction(selectedMonth, selectedYear);
+      const [result, checklistResult] = await Promise.all([
+        getStaffPotDataAction(selectedMonth, selectedYear),
+        getStaffPotChecklistAction(selectedMonth, selectedYear),
+      ]);
       if (result.success && result.data) {
         setData(result.data as unknown as StaffPotData);
       } else {
         setError(result.error || 'Failed to load data');
+      }
+      if (checklistResult.success && checklistResult.data) {
+        setChecklist(checklistResult.data);
       }
     } catch {
       setError('An unexpected error occurred');
@@ -283,6 +315,11 @@ export function StaffPotClient({ isSuperAdmin }: StaffPotClientProps) {
               per person ({data.config.kitchenStaffCount} staff) —{' '}
               {formatCurrency(data.kitchenPayout)} total
             </p>
+            {data.kitchenDeduction > 0 && (
+              <p className="text-xs text-red-600 mt-1">
+                Inventory adjustment: -{formatCurrency(data.kitchenDeduction)}
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -299,6 +336,11 @@ export function StaffPotClient({ isSuperAdmin }: StaffPotClientProps) {
               per person ({data.config.barStaffCount} staff) —{' '}
               {formatCurrency(data.barPayout)} total
             </p>
+            {data.barDeduction > 0 && (
+              <p className="text-xs text-red-600 mt-1">
+                Inventory adjustment: -{formatCurrency(data.barDeduction)}
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -335,14 +377,238 @@ export function StaffPotClient({ isSuperAdmin }: StaffPotClientProps) {
               </div>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">
-              When the business exceeds its daily target, a bonus goes into the
-              Staff Pot. The pot is split between Kitchen and Bar teams at the
-              end of the month. Hit more qualifying days to grow the pot!
-            </p>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                When the business exceeds its daily target, a bonus goes into
+                the Staff Pot. The pot is split between Kitchen and Bar teams at
+                the end of the month. Hit more qualifying days to grow the pot!
+              </p>
+              {(data.kitchenDeduction > 0 || data.barDeduction > 0) && (
+                <p className="text-sm text-muted-foreground">
+                  💡 Keep waste low to protect your bonus.
+                </p>
+              )}
+            </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Inventory Loss Breakdown */}
+      {data.inventoryLoss && data.config.inventoryLossEnabled && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {isSuperAdmin ? 'Inventory Loss Deductions' : 'Inventory Care'}
+            </CardTitle>
+            <CardDescription>
+              {isSuperAdmin
+                ? 'Losses above acceptable thresholds are deducted from team pots'
+                : 'Looking after stock helps protect your bonus'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isSuperAdmin ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-2 px-3 font-medium">
+                        Category
+                      </th>
+                      <th className="text-right py-2 px-3 font-medium">
+                        Loss %
+                      </th>
+                      <th className="text-right py-2 px-3 font-medium">
+                        Threshold
+                      </th>
+                      <th className="text-right py-2 px-3 font-medium">
+                        Excess
+                      </th>
+                      <th className="text-right py-2 px-3 font-medium">
+                        Inventory Value
+                      </th>
+                      <th className="text-right py-2 px-3 font-medium">
+                        Deduction
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b">
+                      <td className="py-2 px-3">Food → Kitchen</td>
+                      <td className="text-right py-2 px-3">
+                        {data.inventoryLoss.foodLossPercent.toFixed(2)}%
+                      </td>
+                      <td className="text-right py-2 px-3 text-muted-foreground">
+                        {data.config.foodLossThreshold}%
+                      </td>
+                      <td className="text-right py-2 px-3">
+                        {Math.max(
+                          0,
+                          data.inventoryLoss.foodLossPercent -
+                            data.config.foodLossThreshold
+                        ).toFixed(2)}
+                        %
+                      </td>
+                      <td className="text-right py-2 px-3">
+                        {formatCurrency(data.inventoryLoss.foodInventoryValue)}
+                      </td>
+                      <DeductionCell
+                        rawDeduction={data.inventoryLoss.foodDeduction}
+                        cappedDeduction={data.kitchenDeduction}
+                      />
+                    </tr>
+                    <tr>
+                      <td className="py-2 px-3">Drinks → Bar</td>
+                      <td className="text-right py-2 px-3">
+                        {data.inventoryLoss.drinkLossPercent.toFixed(2)}%
+                      </td>
+                      <td className="text-right py-2 px-3 text-muted-foreground">
+                        {data.config.drinkLossThreshold}%
+                      </td>
+                      <td className="text-right py-2 px-3">
+                        {Math.max(
+                          0,
+                          data.inventoryLoss.drinkLossPercent -
+                            data.config.drinkLossThreshold
+                        ).toFixed(2)}
+                        %
+                      </td>
+                      <td className="text-right py-2 px-3">
+                        {formatCurrency(data.inventoryLoss.drinkInventoryValue)}
+                      </td>
+                      <DeductionCell
+                        rawDeduction={data.inventoryLoss.drinkDeduction}
+                        cappedDeduction={data.barDeduction}
+                      />
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="rounded-lg bg-muted/50 p-4 space-y-3">
+                  <p className="text-sm">
+                    Every month, we check how much stock went missing. A little
+                    bit of loss is normal — but if it goes over the allowed
+                    limit, the extra amount gets taken off the team&apos;s
+                    bonus.
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Think of it like a bucket with a small hole. A few drops
+                    leaking out is fine, but if the hole gets bigger, you lose
+                    more water. The goal is to keep the hole as small as
+                    possible so more bonus stays in the pot!
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Food / Kitchen card */}
+                  <div className="rounded-lg border p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">
+                        Food (Kitchen)
+                      </span>
+                      {data.kitchenDeduction > 0 ? (
+                        <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                          Over limit
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                          Looking good
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-end gap-1">
+                      <span className="text-2xl font-bold">
+                        {data.inventoryLoss.foodLossPercent.toFixed(1)}%
+                      </span>
+                      <span className="text-sm text-muted-foreground mb-0.5">
+                        lost this month
+                      </span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2.5">
+                      <div
+                        className={`h-2.5 rounded-full ${
+                          data.inventoryLoss.foodLossPercent >
+                          data.config.foodLossThreshold
+                            ? 'bg-red-500'
+                            : 'bg-green-500'
+                        }`}
+                        style={{
+                          width: `${Math.min(100, (data.inventoryLoss.foodLossPercent / Math.max(data.config.foodLossThreshold * 3, 1)) * 100)}%`,
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Allowed: up to {data.config.foodLossThreshold}%
+                      {data.inventoryLoss.foodDeduction > 0 && (
+                        <span className="text-red-600 font-medium">
+                          {' '}
+                          — deduction: -
+                          {formatCurrency(data.inventoryLoss.foodDeduction)}
+                          {data.kitchenDeduction <
+                            data.inventoryLoss.foodDeduction &&
+                            ` (capped at ${formatCurrency(data.kitchenDeduction)})`}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+
+                  {/* Drinks / Bar card */}
+                  <div className="rounded-lg border p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Drinks (Bar)</span>
+                      {data.barDeduction > 0 ? (
+                        <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                          Over limit
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                          Looking good
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-end gap-1">
+                      <span className="text-2xl font-bold">
+                        {data.inventoryLoss.drinkLossPercent.toFixed(1)}%
+                      </span>
+                      <span className="text-sm text-muted-foreground mb-0.5">
+                        lost this month
+                      </span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2.5">
+                      <div
+                        className={`h-2.5 rounded-full ${
+                          data.inventoryLoss.drinkLossPercent >
+                          data.config.drinkLossThreshold
+                            ? 'bg-red-500'
+                            : 'bg-green-500'
+                        }`}
+                        style={{
+                          width: `${Math.min(100, (data.inventoryLoss.drinkLossPercent / Math.max(data.config.drinkLossThreshold * 3, 1)) * 100)}%`,
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Allowed: up to {data.config.drinkLossThreshold}%
+                      {data.inventoryLoss.drinkDeduction > 0 && (
+                        <span className="text-red-600 font-medium">
+                          {' '}
+                          — deduction: -
+                          {formatCurrency(data.inventoryLoss.drinkDeduction)}
+                          {data.barDeduction <
+                            data.inventoryLoss.drinkDeduction &&
+                            ` (capped at ${formatCurrency(data.barDeduction)})`}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Daily view — admins see simple calendar, super-admins see full table */}
       <Card>
@@ -464,6 +730,348 @@ export function StaffPotClient({ isSuperAdmin }: StaffPotClientProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Monthly Checklist */}
+      {checklist && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ClipboardList className="h-5 w-5" />
+              {isCurrentMonth ? 'Monthly Checklist' : 'Month Status'}
+            </CardTitle>
+            <CardDescription>
+              {isCurrentMonth
+                ? 'Complete these before the month ends to ensure accurate payouts'
+                : 'Status of data for this month'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {/* Recurring monthly tasks */}
+              <div className="space-y-2">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Every month
+                </p>
+                <ChecklistItem
+                  done={checklist.foodSnapshotSubmitted}
+                  label="Food inventory snapshot submitted"
+                  hint={
+                    checklist.foodSnapshotSubmitted
+                      ? undefined
+                      : 'Go to Inventory Summary and submit a food count'
+                  }
+                />
+                <ChecklistItem
+                  done={checklist.foodSnapshotApproved}
+                  label="Food inventory snapshot approved"
+                  hint={
+                    checklist.foodSnapshotSubmitted &&
+                    !checklist.foodSnapshotApproved
+                      ? 'A super-admin needs to review and approve the food snapshot'
+                      : undefined
+                  }
+                />
+                <ChecklistItem
+                  done={checklist.drinkSnapshotSubmitted}
+                  label="Drinks inventory snapshot submitted"
+                  hint={
+                    checklist.drinkSnapshotSubmitted
+                      ? undefined
+                      : 'Go to Inventory Summary and submit a drinks count'
+                  }
+                />
+                <ChecklistItem
+                  done={checklist.drinkSnapshotApproved}
+                  label="Drinks inventory snapshot approved"
+                  hint={
+                    checklist.drinkSnapshotSubmitted &&
+                    !checklist.drinkSnapshotApproved
+                      ? 'A super-admin needs to review and approve the drinks snapshot'
+                      : undefined
+                  }
+                />
+              </div>
+
+              {/* Last-day readiness */}
+              <div className="space-y-2 pt-2 border-t">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Month-end readiness ({checklist.lastDayLabel})
+                </p>
+                <ChecklistItem
+                  done={checklist.lastDayFoodSnapshotApproved}
+                  label={`Food snapshot for ${checklist.lastDayLabel} approved`}
+                  hint={
+                    !checklist.lastDayFoodSnapshotApproved
+                      ? `Submit and approve a food inventory count dated ${checklist.lastDayLabel}`
+                      : undefined
+                  }
+                />
+                <ChecklistItem
+                  done={checklist.lastDayDrinkSnapshotApproved}
+                  label={`Drinks snapshot for ${checklist.lastDayLabel} approved`}
+                  hint={
+                    !checklist.lastDayDrinkSnapshotApproved
+                      ? `Submit and approve a drinks inventory count dated ${checklist.lastDayLabel}`
+                      : undefined
+                  }
+                />
+                <ChecklistItem
+                  done={checklist.salesCutoffComplete}
+                  label="Sales cutoff complete"
+                  hint={
+                    !checklist.salesCutoffComplete
+                      ? 'All sales must be entered before midnight on the last day of the month'
+                      : undefined
+                  }
+                />
+              </div>
+
+              {/* Config / setup tasks */}
+              {isSuperAdmin && (
+                <div className="space-y-2 pt-2 border-t">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Setup (check once, update when things change)
+                  </p>
+                  <ChecklistItem
+                    done={checklist.staffCountsSet}
+                    label="Staff counts are set for Kitchen and Bar"
+                    hint={
+                      !checklist.staffCountsSet
+                        ? 'Go to Settings and set the staff counts'
+                        : undefined
+                    }
+                  />
+                  <ChecklistItem
+                    done={checklist.configReviewed}
+                    label="Daily target and bonus percentage configured"
+                  />
+                  <ChecklistItem
+                    done={checklist.inventoryLossEnabled}
+                    label="Inventory loss deductions enabled"
+                    hint={
+                      !checklist.inventoryLossEnabled
+                        ? 'Enable in Settings if you want stock losses to affect the pot'
+                        : undefined
+                    }
+                  />
+                </div>
+              )}
+
+              {/* Finalization — super-admin, past months only */}
+              {isSuperAdmin && !isCurrentMonth && (
+                <div className="space-y-2 pt-2 border-t">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Finalization
+                  </p>
+                  <ChecklistItem
+                    done={checklist.monthFinalized}
+                    label={
+                      checklist.monthFinalized
+                        ? 'Month finalized — data is locked'
+                        : 'Month not finalized — data may change if config is updated'
+                    }
+                  />
+                  {!checklist.monthFinalized && (
+                    <FinalizeButton
+                      month={selectedMonth}
+                      year={selectedYear}
+                      readyToFinalize={checklist.readyToFinalize}
+                      onFinalized={loadData}
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* Summary nudge */}
+              {isCurrentMonth && (
+                <div className="pt-2">
+                  {checklist.foodSnapshotApproved &&
+                  checklist.drinkSnapshotApproved &&
+                  checklist.staffCountsSet ? (
+                    <div className="flex items-center gap-2 rounded-md bg-green-50 p-3 text-sm text-green-800">
+                      <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+                      <span>
+                        Looking good so far. Remember to submit last-day
+                        inventory snapshots and enter all sales before midnight
+                        on {checklist.lastDayLabel}.
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
+                      <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                      <span>
+                        Some items are incomplete — the final payout may not
+                        reflect inventory losses until snapshots are submitted
+                        and approved.
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Finalized badge for past months */}
+              {!isCurrentMonth && checklist.monthFinalized && (
+                <div className="pt-2">
+                  <div className="flex items-center gap-2 rounded-md bg-blue-50 p-3 text-sm text-blue-800">
+                    <Lock className="h-4 w-4 flex-shrink-0" />
+                    <span>
+                      This month has been finalized. The data shown is a locked
+                      snapshot and won&apos;t change if settings are updated.
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
+  );
+}
+
+function ChecklistItem({
+  done,
+  label,
+  hint,
+}: {
+  done: boolean;
+  label: string;
+  hint?: string;
+}) {
+  return (
+    <div className="flex items-start gap-2">
+      {done ? (
+        <CheckCircle2 className="h-4 w-4 mt-0.5 text-green-600 flex-shrink-0" />
+      ) : (
+        <Circle className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+      )}
+      <div>
+        <span
+          className={`text-sm ${done ? 'text-foreground' : 'text-muted-foreground'}`}
+        >
+          {label}
+        </span>
+        {hint && <p className="text-xs text-muted-foreground mt-0.5">{hint}</p>}
+      </div>
+    </div>
+  );
+}
+
+function FinalizeButton({
+  month,
+  year,
+  readyToFinalize,
+  onFinalized,
+}: {
+  month: number;
+  year: number;
+  readyToFinalize: boolean;
+  onFinalized: () => void;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const [overriding, setOverriding] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  async function handleFinalize() {
+    setLoading(true);
+    const result = await finalizeStaffPotMonthAction(month, year);
+    setLoading(false);
+    setConfirming(false);
+    setOverriding(false);
+    if (result.success) {
+      onFinalized();
+    }
+  }
+
+  if (confirming || overriding) {
+    return (
+      <div className="ml-6 space-y-2">
+        <p className="text-xs text-muted-foreground">
+          {overriding
+            ? 'Some readiness checks have not passed. Are you sure you want to finalize anyway? This cannot be undone.'
+            : 'This locks the month\u2019s data permanently. Continue?'}
+        </p>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant={overriding ? 'destructive' : 'default'}
+            onClick={handleFinalize}
+            disabled={loading}
+          >
+            {loading ? (
+              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+            ) : (
+              <Lock className="h-3 w-3 mr-1" />
+            )}
+            {overriding ? 'Override & Finalize' : 'Confirm'}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setConfirming(false);
+              setOverriding(false);
+            }}
+            disabled={loading}
+          >
+            Cancel
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (readyToFinalize) {
+    return (
+      <div className="ml-6">
+        <Button size="sm" variant="outline" onClick={() => setConfirming(true)}>
+          <Lock className="h-3 w-3 mr-1" />
+          Finalize Month
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="ml-6 space-y-1">
+      <p className="text-xs text-muted-foreground">
+        Cannot finalize — readiness checks above are incomplete.
+      </p>
+      <Button
+        size="sm"
+        variant="ghost"
+        className="text-xs"
+        onClick={() => setOverriding(true)}
+      >
+        Override and finalize anyway
+      </Button>
+    </div>
+  );
+}
+
+function DeductionCell({
+  rawDeduction,
+  cappedDeduction,
+}: {
+  rawDeduction: number;
+  cappedDeduction: number;
+}) {
+  if (rawDeduction <= 0) {
+    return <td className="text-right py-2 px-3 text-muted-foreground">—</td>;
+  }
+
+  const isCapped = cappedDeduction < rawDeduction;
+
+  return (
+    <td className="text-right py-2 px-3">
+      <span className="font-medium text-red-600">
+        -{formatCurrency(rawDeduction)}
+      </span>
+      {isCapped && (
+        <p className="text-xs text-muted-foreground mt-0.5">
+          capped at {formatCurrency(cappedDeduction)}
+        </p>
+      )}
+    </td>
   );
 }

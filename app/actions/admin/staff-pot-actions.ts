@@ -9,6 +9,16 @@ import { revalidatePath } from 'next/cache';
 import { sessionOptions, SessionData } from '@/lib/session';
 import { SystemSettingsService } from '@/services/system-settings-service';
 import { StaffPotService, StaffPotConfig } from '@/services/staff-pot-service';
+import { InventorySnapshotModel } from '@/models/inventory-snapshot-model';
+import StaffPotSnapshotModel from '@/models/staff-pot-snapshot-model';
+import { connectDB } from '@/lib/mongodb';
+import {
+  startOfMonth,
+  endOfMonth,
+  startOfDay,
+  endOfDay,
+  getDaysInMonth,
+} from 'date-fns';
 
 interface ActionResult<T = unknown> {
   success: boolean;
@@ -114,3 +124,200 @@ export async function getStaffPotDataAction(
     };
   }
 }
+
+export interface StaffPotChecklist {
+  foodSnapshotSubmitted: boolean;
+  foodSnapshotApproved: boolean;
+  drinkSnapshotSubmitted: boolean;
+  drinkSnapshotApproved: boolean;
+  lastDayFoodSnapshotApproved: boolean;
+  lastDayDrinkSnapshotApproved: boolean;
+  salesCutoffComplete: boolean;
+  configReviewed: boolean;
+  inventoryLossEnabled: boolean;
+  staffCountsSet: boolean;
+  monthFinalized: boolean;
+  lastDayLabel: string;
+  readyToFinalize: boolean;
+}
+
+export async function getStaffPotChecklistAction(
+  month?: number,
+  year?: number
+): Promise<ActionResult<StaffPotChecklist>> {
+  try {
+    const cookieStore = await cookies();
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
+
+    if (
+      !session.userId ||
+      !session.role ||
+      !['admin', 'super-admin'].includes(session.role)
+    ) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    await connectDB();
+
+    const now = new Date();
+    const m = month ?? now.getMonth();
+    const y = year ?? now.getFullYear();
+
+    const monthStart = startOfMonth(new Date(y, m, 1));
+    const monthEnd = endOfMonth(monthStart);
+    const lastDay = getDaysInMonth(new Date(y, m, 1));
+    const lastDayStart = startOfDay(new Date(y, m, lastDay));
+    const lastDayEnd = endOfDay(lastDayStart);
+    const lastDayLabel = `${lastDay} ${MONTH_NAMES[m]}`;
+
+    const config = await SystemSettingsService.getStaffPotConfig();
+
+    // Check inventory snapshots for this month
+    const snapshots = await InventorySnapshotModel.find({
+      snapshotDate: { $gte: monthStart, $lte: monthEnd },
+    })
+      .select('mainCategory status snapshotDate')
+      .lean();
+
+    const foodSnapshots = snapshots.filter((s) => s.mainCategory === 'food');
+    const drinkSnapshots = snapshots.filter((s) => s.mainCategory === 'drinks');
+
+    // Check last-day snapshots specifically
+    const lastDayFoodSnapshotApproved = foodSnapshots.some(
+      (s) =>
+        s.status === 'approved' &&
+        new Date(s.snapshotDate) >= lastDayStart &&
+        new Date(s.snapshotDate) <= lastDayEnd
+    );
+    const lastDayDrinkSnapshotApproved = drinkSnapshots.some(
+      (s) =>
+        s.status === 'approved' &&
+        new Date(s.snapshotDate) >= lastDayStart &&
+        new Date(s.snapshotDate) <= lastDayEnd
+    );
+
+    // Sales cutoff: month must have ended (we're now in a later month)
+    const isCurrentMonth = now.getMonth() === m && now.getFullYear() === y;
+    const isFutureMonth =
+      y > now.getFullYear() || (y === now.getFullYear() && m > now.getMonth());
+    const salesCutoffComplete = !isCurrentMonth && !isFutureMonth;
+
+    // Check if month is finalized
+    const potSnapshot = await StaffPotSnapshotModel.findOne({
+      month: m,
+      year: y,
+    })
+      .select('finalized')
+      .lean();
+
+    const staffCountsSet =
+      config.kitchenStaffCount > 0 && config.barStaffCount > 0;
+    const configReviewed = config.dailyTarget > 0 && config.bonusPercentage > 0;
+
+    // Ready to finalize when all readiness checks pass
+    const readyToFinalize =
+      lastDayFoodSnapshotApproved &&
+      lastDayDrinkSnapshotApproved &&
+      salesCutoffComplete &&
+      staffCountsSet &&
+      configReviewed;
+
+    return {
+      success: true,
+      data: {
+        foodSnapshotSubmitted: foodSnapshots.length > 0,
+        foodSnapshotApproved: foodSnapshots.some(
+          (s) => s.status === 'approved'
+        ),
+        drinkSnapshotSubmitted: drinkSnapshots.length > 0,
+        drinkSnapshotApproved: drinkSnapshots.some(
+          (s) => s.status === 'approved'
+        ),
+        lastDayFoodSnapshotApproved,
+        lastDayDrinkSnapshotApproved,
+        salesCutoffComplete,
+        configReviewed,
+        inventoryLossEnabled: config.inventoryLossEnabled,
+        staffCountsSet,
+        monthFinalized: potSnapshot?.finalized === true,
+        lastDayLabel,
+        readyToFinalize,
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : 'Failed to get checklist data',
+    };
+  }
+}
+
+/**
+ * @requirement REQ-018 - Finalize a month's staff pot data
+ * Creates an immutable snapshot so past months are not affected by config changes.
+ */
+export async function finalizeStaffPotMonthAction(
+  month: number,
+  year: number
+): Promise<ActionResult> {
+  try {
+    const cookieStore = await cookies();
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
+
+    if (!session.userId || session.role !== 'super-admin') {
+      return { success: false, error: 'Unauthorized — super-admin only' };
+    }
+
+    // Prevent finalizing future or current month
+    const now = new Date();
+    if (
+      year > now.getFullYear() ||
+      (year === now.getFullYear() && month >= now.getMonth())
+    ) {
+      return {
+        success: false,
+        error: 'Cannot finalize the current or a future month',
+      };
+    }
+
+    await connectDB();
+
+    const snapshot = await StaffPotService.finalizeMonth(month, year);
+
+    revalidatePath('/dashboard/staff-pot');
+
+    return {
+      success: true,
+      message: `Staff Pot for ${MONTH_NAMES[month]} ${year} has been finalized`,
+      data: { id: (snapshot as any)._id?.toString() },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : 'Failed to finalize month',
+    };
+  }
+}
+
+const MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];

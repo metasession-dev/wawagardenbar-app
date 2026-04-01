@@ -30,20 +30,23 @@ export default async function DashboardLayout({
   console.log(`[DashboardLayout] Access granted to user: ${session.email}`);
   console.log(`[DashboardLayout] User Role: ${session.role}`);
   if (session.permissions) {
-    console.log(`[DashboardLayout] Permissions:`, JSON.stringify(session.permissions, null, 2));
+    console.log(
+      `[DashboardLayout] Permissions:`,
+      JSON.stringify(session.permissions, null, 2)
+    );
   }
 
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar */}
-      <DashboardNav 
-        userEmail={session.email} 
+      <DashboardNav
+        userEmail={session.email}
         userRole={session.role}
         permissions={session.permissions}
       />
 
       {/* Main Content */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col min-h-0">
         {/* Top Bar */}
         <header className="flex h-16 items-center border-b bg-card px-6">
           <div className="flex flex-1 items-center justify-between">
@@ -55,13 +58,13 @@ export default async function DashboardLayout({
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto bg-background">
+        <main className="flex-1 min-h-0 overflow-y-auto bg-background">
           <div className="p-6">
             {/* Breadcrumb Navigation */}
             <div className="mb-6">
               <Breadcrumb />
             </div>
-            
+
             {children}
           </div>
         </main>

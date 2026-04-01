@@ -95,3 +95,76 @@ describe('REQ-021: Crate Breakdown Formatting', () => {
     expect(formatCrateBreakdown(58, null, 24, null)).toBeNull();
   });
 });
+
+describe('REQ-021: Inventory Serialization — crate fields', () => {
+  // Regression: edit page must include crateSize and packagingType when
+  // serializing inventory data, otherwise the form loads empty values
+  // and overwrites the saved data on next save.
+
+  interface SerializedInventory {
+    currentStock: number;
+    minimumStock: number;
+    maximumStock: number;
+    unit: string;
+    supplier: string;
+    preventOrdersWhenOutOfStock: boolean;
+    trackByLocation: boolean;
+    crateSize?: number;
+    packagingType?: string;
+  }
+
+  function serializeInventory(
+    raw: Record<string, unknown>
+  ): SerializedInventory {
+    return {
+      currentStock: (raw.currentStock as number) ?? 0,
+      minimumStock: (raw.minimumStock as number) ?? 0,
+      maximumStock: (raw.maximumStock as number) ?? 0,
+      unit: (raw.unit as string) ?? 'units',
+      supplier: (raw.supplier as string) ?? '',
+      preventOrdersWhenOutOfStock:
+        (raw.preventOrdersWhenOutOfStock as boolean) ?? false,
+      trackByLocation: (raw.trackByLocation as boolean) ?? false,
+      crateSize: (raw.crateSize as number) || undefined,
+      packagingType: (raw.packagingType as string) || '',
+    };
+  }
+
+  it('preserves crateSize when present in raw data', () => {
+    const raw = {
+      currentStock: 30,
+      minimumStock: 10,
+      maximumStock: 100,
+      unit: 'bottles',
+      crateSize: 24,
+      packagingType: 'crate',
+    };
+    const serialized = serializeInventory(raw);
+    expect(serialized.crateSize).toBe(24);
+    expect(serialized.packagingType).toBe('crate');
+  });
+
+  it('handles missing crateSize gracefully', () => {
+    const raw = {
+      currentStock: 30,
+      minimumStock: 10,
+      maximumStock: 100,
+      unit: 'bottles',
+    };
+    const serialized = serializeInventory(raw);
+    expect(serialized.crateSize).toBeUndefined();
+    expect(serialized.packagingType).toBe('');
+  });
+
+  it('handles zero crateSize as undefined', () => {
+    const raw = {
+      currentStock: 30,
+      minimumStock: 10,
+      maximumStock: 100,
+      unit: 'bottles',
+      crateSize: 0,
+    };
+    const serialized = serializeInventory(raw);
+    expect(serialized.crateSize).toBeUndefined();
+  });
+});

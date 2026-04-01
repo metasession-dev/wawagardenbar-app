@@ -15,3 +15,10 @@ Evidence uploaded to META-COMPLY project: wawagardenbar-app
 ## Audit Log
 
 - This feature is read-only (no data mutations) — no audit log entries required
+
+## UAT Verification — 2026-04-01
+
+- UAT Health check: PASS — `{"status":"healthy"}`
+- UAT Smoke test: PASS — homepage returns 200
+- Feature verification: PASS — `/dashboard/inventory/restock-recommendations` returns 307 (redirect to login, correct auth behaviour for unauthenticated request)
+- UAT URL: https://wawagardenbar-app-uat.up.railway.app

@@ -2,8 +2,6 @@
  * @requirement REQ-019
  */
 import { Suspense } from 'react';
-import Link from 'next/link';
-import { ChevronRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RestockRecommendationsClient } from '@/components/features/inventory/restock-recommendations-client';
 
@@ -24,18 +22,6 @@ function DashboardSkeleton() {
 export default async function RestockRecommendationsPage() {
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Link href="/dashboard" className="hover:text-foreground">
-          Dashboard
-        </Link>
-        <ChevronRight className="h-4 w-4" />
-        <Link href="/dashboard/inventory" className="hover:text-foreground">
-          Inventory
-        </Link>
-        <ChevronRight className="h-4 w-4" />
-        <span className="text-foreground">Restock Recommendations</span>
-      </div>
-
       <div>
         <h1 className="text-3xl font-bold tracking-tight">
           Restock Recommendations

@@ -1,7 +1,5 @@
 import { Suspense } from 'react';
-import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronRight } from 'lucide-react';
 import { ProfitabilityDashboardClient } from '@/components/features/admin/profitability-dashboard-client';
 
 /**
@@ -27,22 +25,11 @@ function DashboardSkeleton() {
 export default async function ProfitabilityReportPage() {
   return (
     <div className="space-y-6">
-      {/* Breadcrumb Navigation */}
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Link href="/dashboard" className="hover:text-foreground">
-          Dashboard
-        </Link>
-        <ChevronRight className="h-4 w-4" />
-        <Link href="/dashboard/reports" className="hover:text-foreground">
-          Reports
-        </Link>
-        <ChevronRight className="h-4 w-4" />
-        <span className="text-foreground">Profitability Report</span>
-      </div>
-
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Profitability Report</h1>
+        <h1 className="text-3xl font-bold tracking-tight">
+          Profitability Report
+        </h1>
         <p className="text-muted-foreground">
           Track revenue, costs, and profit margins across your menu items
         </p>

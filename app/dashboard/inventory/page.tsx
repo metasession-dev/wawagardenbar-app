@@ -6,7 +6,12 @@ import '@/models/menu-item-model'; // Import to ensure MenuItem model is registe
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InventoryItemsClient } from '@/components/features/admin/inventory-items-client';
-import { AlertTriangle, ArrowRightLeft, ClipboardCheck } from 'lucide-react';
+import {
+  AlertTriangle,
+  ArrowRightLeft,
+  ClipboardCheck,
+  PackageCheck,
+} from 'lucide-react';
 
 /**
  * Get inventory items
@@ -22,25 +27,30 @@ async function getInventory() {
   // Serialize data for Client Component
   return inventory.map((item: any) => ({
     _id: item._id.toString(),
-    menuItemId: item.menuItemId ? {
-      _id: item.menuItemId._id.toString(),
-      name: item.menuItemId.name,
-      mainCategory: item.menuItemId.mainCategory,
-      category: item.menuItemId.category,
-    } : null,
+    menuItemId: item.menuItemId
+      ? {
+          _id: item.menuItemId._id.toString(),
+          name: item.menuItemId.name,
+          mainCategory: item.menuItemId.mainCategory,
+          category: item.menuItemId.category,
+        }
+      : null,
     currentStock: item.currentStock,
     minStock: item.minimumStock,
     maxStock: item.maximumStock,
     unit: item.unit,
-    lastRestocked: item.lastRestocked ? new Date(item.lastRestocked).toISOString() : undefined,
+    lastRestocked: item.lastRestocked
+      ? new Date(item.lastRestocked).toISOString()
+      : undefined,
     trackByLocation: item.trackByLocation ?? false,
-    locations: item.trackByLocation && Array.isArray(item.locations)
-      ? item.locations.map((loc: any) => ({
-          location: loc.location,
-          locationName: loc.locationName,
-          currentStock: loc.currentStock ?? 0,
-        }))
-      : [],
+    locations:
+      item.trackByLocation && Array.isArray(item.locations)
+        ? item.locations.map((loc: any) => ({
+            location: loc.location,
+            locationName: loc.locationName,
+            currentStock: loc.currentStock ?? 0,
+          }))
+        : [],
   }));
 }
 
@@ -92,10 +102,15 @@ async function InventoryStats() {
   return (
     <div className="grid gap-4 md:grid-cols-3">
       {cards.map((card) => (
-        <Card key={card.title} className={card.alert ? 'border-destructive' : ''}>
+        <Card
+          key={card.title}
+          className={card.alert ? 'border-destructive' : ''}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
-            {card.alert && <AlertTriangle className="h-4 w-4 text-destructive" />}
+            {card.alert && (
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+            )}
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{card.value}</div>
@@ -163,12 +178,21 @@ export default async function InventoryPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Inventory Management</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Inventory Management
+          </h1>
           <p className="text-muted-foreground">
             Track stock levels and manage inventory
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard/inventory/restock-recommendations"
+            className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+          >
+            <PackageCheck className="h-4 w-4" />
+            Restock Recommendations
+          </Link>
           <Link
             href="/dashboard/inventory/transfer"
             className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
@@ -176,7 +200,7 @@ export default async function InventoryPage() {
             <ArrowRightLeft className="h-4 w-4" />
             Transfer Stock
           </Link>
-          <Link 
+          <Link
             href="/dashboard/inventory/snapshots"
             className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >

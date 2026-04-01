@@ -46,7 +46,7 @@ export default async function DashboardLayout({
       />
 
       {/* Main Content */}
-      <div className="flex flex-1 flex-col min-h-0">
+      <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
         {/* Top Bar */}
         <header className="flex h-16 items-center border-b bg-card px-6">
           <div className="flex flex-1 items-center justify-between">

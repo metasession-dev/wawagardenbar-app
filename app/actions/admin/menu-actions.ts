@@ -25,12 +25,21 @@ export interface ActionResult<T = unknown> {
  * Create menu item (admin only)
  * Supports optional inventory initialization
  */
-export async function createMenuItemAction(formData: FormData): Promise<ActionResult> {
+export async function createMenuItemAction(
+  formData: FormData
+): Promise<ActionResult> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
-    if (!session.userId || !session.role || !['admin', 'super-admin'].includes(session.role)) {
+    if (
+      !session.userId ||
+      !session.role ||
+      !['admin', 'super-admin'].includes(session.role)
+    ) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -45,30 +54,62 @@ export async function createMenuItemAction(formData: FormData): Promise<ActionRe
     const preparationTime = parseInt(formData.get('preparationTime') as string);
     const isAvailable = formData.get('isAvailable') === 'true';
     const halfPortionEnabled = formData.get('halfPortionEnabled') === 'true';
-    const halfPortionSurcharge = parseFloat(formData.get('halfPortionSurcharge') as string) || 0;
-    const quarterPortionEnabled = formData.get('quarterPortionEnabled') === 'true';
-    const quarterPortionSurcharge = parseFloat(formData.get('quarterPortionSurcharge') as string) || 0;
-    const allowManualPriceOverride = formData.get('allowManualPriceOverride') === 'true';
-    const tags = (formData.get('tags') as string)?.split(',').map(t => t.trim()).filter(Boolean) || [];
+    const halfPortionSurcharge =
+      parseFloat(formData.get('halfPortionSurcharge') as string) || 0;
+    const quarterPortionEnabled =
+      formData.get('quarterPortionEnabled') === 'true';
+    const quarterPortionSurcharge =
+      parseFloat(formData.get('quarterPortionSurcharge') as string) || 0;
+    const allowManualPriceOverride =
+      formData.get('allowManualPriceOverride') === 'true';
+    const tags =
+      (formData.get('tags') as string)
+        ?.split(',')
+        .map((t) => t.trim())
+        .filter(Boolean) || [];
 
     // Extract inventory tracking data
     const trackInventory = formData.get('trackInventory') === 'true';
-    const currentStock = formData.get('currentStock') ? parseFloat(formData.get('currentStock') as string) : undefined;
-    const minimumStock = formData.get('minimumStock') ? parseFloat(formData.get('minimumStock') as string) : 10;
-    const maximumStock = formData.get('maximumStock') ? parseFloat(formData.get('maximumStock') as string) : 100;
+    const currentStock = formData.get('currentStock')
+      ? parseFloat(formData.get('currentStock') as string)
+      : undefined;
+    const minimumStock = formData.get('minimumStock')
+      ? parseFloat(formData.get('minimumStock') as string)
+      : 10;
+    const maximumStock = formData.get('maximumStock')
+      ? parseFloat(formData.get('maximumStock') as string)
+      : 100;
     const unit = (formData.get('unit') as string) || 'units';
-    const costPerUnit = formData.get('costPerUnit') ? parseFloat(formData.get('costPerUnit') as string) : 0;
+    const costPerUnit = formData.get('costPerUnit')
+      ? parseFloat(formData.get('costPerUnit') as string)
+      : 0;
     const supplier = formData.get('supplier') as string;
-    const preventOrdersWhenOutOfStock = formData.get('preventOrdersWhenOutOfStock') === 'true';
+    const preventOrdersWhenOutOfStock =
+      formData.get('preventOrdersWhenOutOfStock') === 'true';
+    const crateSize = formData.get('crateSize')
+      ? parseInt(formData.get('crateSize') as string)
+      : undefined;
+    const packagingType =
+      (formData.get('packagingType') as string) || undefined;
 
     // Validate required fields
-    if (!name || !mainCategory || !category || price === undefined || price === null || isNaN(price)) {
+    if (
+      !name ||
+      !mainCategory ||
+      !category ||
+      price === undefined ||
+      price === null ||
+      isNaN(price)
+    ) {
       return { success: false, error: 'Missing required fields' };
     }
 
     // Validate inventory data if tracking is enabled
     if (trackInventory && currentStock === undefined) {
-      return { success: false, error: 'Initial stock is required when tracking inventory' };
+      return {
+        success: false,
+        error: 'Initial stock is required when tracking inventory',
+      };
     }
 
     // Create menu item
@@ -103,6 +144,8 @@ export async function createMenuItemAction(formData: FormData): Promise<ActionRe
         costPerUnit,
         supplier: supplier || undefined,
         preventOrdersWhenOutOfStock,
+        crateSize: crateSize || undefined,
+        packagingType: packagingType || undefined,
         autoReorderEnabled: false,
         reorderQuantity: maximumStock - minimumStock,
         totalSales: 0,
@@ -130,7 +173,12 @@ export async function createMenuItemAction(formData: FormData): Promise<ActionRe
         action: 'inventory.update',
         resource: 'inventory',
         resourceId: inventory._id.toString(),
-        details: { menuItemId: menuItem._id.toString(), currentStock, unit, action: 'initial_stock' },
+        details: {
+          menuItemId: menuItem._id.toString(),
+          currentStock,
+          unit,
+          action: 'initial_stock',
+        },
       });
     }
 
@@ -150,8 +198,8 @@ export async function createMenuItemAction(formData: FormData): Promise<ActionRe
 
     return {
       success: true,
-      message: trackInventory 
-        ? 'Menu item created with inventory tracking' 
+      message: trackInventory
+        ? 'Menu item created with inventory tracking'
         : 'Menu item created successfully',
       data: { id: menuItem._id.toString() },
     };
@@ -173,9 +221,16 @@ export async function updateMenuItemAction(
 ): Promise<ActionResult> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
-    if (!session.userId || !session.role || !['admin', 'super-admin'].includes(session.role)) {
+    if (
+      !session.userId ||
+      !session.role ||
+      !['admin', 'super-admin'].includes(session.role)
+    ) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -200,40 +255,73 @@ export async function updateMenuItemAction(
     const servingSize = formData.get('servingSize') as string;
     const isAvailable = formData.get('isAvailable') === 'true';
     const halfPortionEnabled = formData.get('halfPortionEnabled') === 'true';
-    const halfPortionSurcharge = parseFloat(formData.get('halfPortionSurcharge') as string) || 0;
-    const quarterPortionEnabled = formData.get('quarterPortionEnabled') === 'true';
-    const quarterPortionSurcharge = parseFloat(formData.get('quarterPortionSurcharge') as string) || 0;
-    const allowManualPriceOverride = formData.get('allowManualPriceOverride') === 'true';
-    console.log('🔍 allowManualPriceOverride from form:', formData.get('allowManualPriceOverride'), '-> parsed:', allowManualPriceOverride);
-    const tags = (formData.get('tags') as string)?.split(',').map(t => t.trim()).filter(Boolean) || [];
+    const halfPortionSurcharge =
+      parseFloat(formData.get('halfPortionSurcharge') as string) || 0;
+    const quarterPortionEnabled =
+      formData.get('quarterPortionEnabled') === 'true';
+    const quarterPortionSurcharge =
+      parseFloat(formData.get('quarterPortionSurcharge') as string) || 0;
+    const allowManualPriceOverride =
+      formData.get('allowManualPriceOverride') === 'true';
+    console.log(
+      '🔍 allowManualPriceOverride from form:',
+      formData.get('allowManualPriceOverride'),
+      '-> parsed:',
+      allowManualPriceOverride
+    );
+    const tags =
+      (formData.get('tags') as string)
+        ?.split(',')
+        .map((t) => t.trim())
+        .filter(Boolean) || [];
     const slug = formData.get('slug') as string;
     const metaDescription = formData.get('metaDescription') as string;
-    
+
     // Customizations
     const customizationsStr = formData.get('customizations') as string;
-    const customizations = customizationsStr ? JSON.parse(customizationsStr) : [];
-    
+    const customizations = customizationsStr
+      ? JSON.parse(customizationsStr)
+      : [];
+
     // Allergens and nutritional info
     const allergensStr = formData.get('allergens') as string;
     const allergens = allergensStr ? JSON.parse(allergensStr) : [];
     const spiceLevel = formData.get('spiceLevel') as string;
-    const calories = formData.get('calories') ? parseInt(formData.get('calories') as string) : undefined;
-    
+    const calories = formData.get('calories')
+      ? parseInt(formData.get('calories') as string)
+      : undefined;
+
     // Inventory tracking
     const trackInventory = formData.get('trackInventory') === 'true';
     const trackByLocation = formData.get('trackByLocation') === 'true';
     const initialLocation = formData.get('initialLocation') as string;
-    const currentStock = formData.get('currentStock') ? parseFloat(formData.get('currentStock') as string) : undefined;
-    const minimumStock = formData.get('minimumStock') ? parseFloat(formData.get('minimumStock') as string) : undefined;
-    const maximumStock = formData.get('maximumStock') ? parseFloat(formData.get('maximumStock') as string) : undefined;
+    const currentStock = formData.get('currentStock')
+      ? parseFloat(formData.get('currentStock') as string)
+      : undefined;
+    const minimumStock = formData.get('minimumStock')
+      ? parseFloat(formData.get('minimumStock') as string)
+      : undefined;
+    const maximumStock = formData.get('maximumStock')
+      ? parseFloat(formData.get('maximumStock') as string)
+      : undefined;
     const unit = formData.get('unit') as string;
-    const costPerUnit = formData.get('costPerUnit') ? parseFloat(formData.get('costPerUnit') as string) : undefined;
+    const costPerUnit = formData.get('costPerUnit')
+      ? parseFloat(formData.get('costPerUnit') as string)
+      : undefined;
     const supplier = formData.get('supplier') as string;
-    const preventOrdersWhenOutOfStock = formData.get('preventOrdersWhenOutOfStock') === 'true';
-    
+    const preventOrdersWhenOutOfStock =
+      formData.get('preventOrdersWhenOutOfStock') === 'true';
+    const crateSize = formData.get('crateSize')
+      ? parseInt(formData.get('crateSize') as string)
+      : undefined;
+    const packagingType =
+      (formData.get('packagingType') as string) || undefined;
+
     // Points redemption
     const pointsRedeemable = formData.get('pointsRedeemable') === 'true';
-    const pointsValue = formData.get('pointsValue') ? parseFloat(formData.get('pointsValue') as string) : undefined;
+    const pointsValue = formData.get('pointsValue')
+      ? parseFloat(formData.get('pointsValue') as string)
+      : undefined;
 
     // Update basic fields
     if (name) menuItem.name = name;
@@ -250,25 +338,34 @@ export async function updateMenuItemAction(
       quarterPortionEnabled,
       quarterPortionSurcharge,
     };
-    console.log('🔍 Before save - menuItem.allowManualPriceOverride:', menuItem.allowManualPriceOverride, '-> setting to:', allowManualPriceOverride);
+    console.log(
+      '🔍 Before save - menuItem.allowManualPriceOverride:',
+      menuItem.allowManualPriceOverride,
+      '-> setting to:',
+      allowManualPriceOverride
+    );
     menuItem.allowManualPriceOverride = allowManualPriceOverride;
-    console.log('🔍 After assignment - menuItem.allowManualPriceOverride:', menuItem.allowManualPriceOverride);
+    console.log(
+      '🔍 After assignment - menuItem.allowManualPriceOverride:',
+      menuItem.allowManualPriceOverride
+    );
     if (tags.length > 0) menuItem.tags = tags;
     if (slug) menuItem.slug = slug;
-    if (metaDescription !== undefined) menuItem.metaDescription = metaDescription;
+    if (metaDescription !== undefined)
+      menuItem.metaDescription = metaDescription;
     if (customizations) menuItem.customizations = customizations;
     if (allergens) menuItem.allergens = allergens;
-    
+
     // Update nutritional info
     if (!menuItem.nutritionalInfo) {
       menuItem.nutritionalInfo = {};
     }
     if (spiceLevel) menuItem.nutritionalInfo.spiceLevel = spiceLevel as any;
     if (calories !== undefined) menuItem.nutritionalInfo.calories = calories;
-    
+
     // Update inventory tracking
     menuItem.trackInventory = trackInventory;
-    
+
     // Update points redemption
     menuItem.pointsRedeemable = pointsRedeemable;
     if (pointsRedeemable && pointsValue !== undefined) {
@@ -276,12 +373,14 @@ export async function updateMenuItemAction(
     } else if (!pointsRedeemable) {
       menuItem.pointsValue = undefined;
     }
-    
+
     // Handle inventory record
     if (trackInventory) {
       // Canonical lookup: always use findOne({ menuItemId })
-      let inventory = await InventoryModel.findOne({ menuItemId: menuItem._id });
-      
+      let inventory = await InventoryModel.findOne({
+        menuItemId: menuItem._id,
+      });
+
       if (inventory) {
         // Update existing inventory
         if (currentStock !== undefined) inventory.currentStock = currentStock;
@@ -291,25 +390,39 @@ export async function updateMenuItemAction(
         if (costPerUnit !== undefined) inventory.costPerUnit = costPerUnit;
         if (supplier !== undefined) inventory.supplier = supplier;
         inventory.preventOrdersWhenOutOfStock = preventOrdersWhenOutOfStock;
+        if (crateSize !== undefined) inventory.crateSize = crateSize;
+        if (packagingType !== undefined)
+          inventory.packagingType = packagingType;
         inventory.trackByLocation = trackByLocation;
-        
+
         // Initialize location tracking if enabled and initial location is provided
-        if (trackByLocation && initialLocation && inventory.locations.length === 0) {
+        if (
+          trackByLocation &&
+          initialLocation &&
+          inventory.locations.length === 0
+        ) {
           // Resolve location name from system config
           let locationName = initialLocation;
           try {
-            const locConfig = await SystemSettingsService.getInventoryLocations();
-            const cfg = locConfig.locations.find((c: { id: string; name: string }) => c.id === initialLocation);
+            const locConfig =
+              await SystemSettingsService.getInventoryLocations();
+            const cfg = locConfig.locations.find(
+              (c: { id: string; name: string }) => c.id === initialLocation
+            );
             if (cfg) locationName = cfg.name;
-          } catch { /* fallback to ID */ }
-          inventory.locations = [{
-            location: initialLocation,
-            locationName,
-            currentStock: inventory.currentStock,
-            lastUpdated: new Date(),
-          }];
+          } catch {
+            /* fallback to ID */
+          }
+          inventory.locations = [
+            {
+              location: initialLocation,
+              locationName,
+              currentStock: inventory.currentStock,
+              lastUpdated: new Date(),
+            },
+          ];
         }
-        
+
         await inventory.save();
       } else {
         // Create new inventory record only if none exists
@@ -322,29 +435,38 @@ export async function updateMenuItemAction(
           costPerUnit: costPerUnit || 0,
           supplier: supplier || '',
           preventOrdersWhenOutOfStock: preventOrdersWhenOutOfStock || false,
+          crateSize: crateSize || undefined,
+          packagingType: packagingType || undefined,
           trackByLocation: trackByLocation || false,
           totalSales: 0,
           totalWaste: 0,
           totalRestocked: 0,
         };
-        
+
         // Initialize location tracking if enabled
         if (trackByLocation && initialLocation) {
           // Resolve location name from system config
           let locationName = initialLocation;
           try {
-            const locConfig = await SystemSettingsService.getInventoryLocations();
-            const cfg = locConfig.locations.find((c: { id: string; name: string }) => c.id === initialLocation);
+            const locConfig =
+              await SystemSettingsService.getInventoryLocations();
+            const cfg = locConfig.locations.find(
+              (c: { id: string; name: string }) => c.id === initialLocation
+            );
             if (cfg) locationName = cfg.name;
-          } catch { /* fallback to ID */ }
-          inventoryData.locations = [{
-            location: initialLocation,
-            locationName,
-            currentStock: currentStock || 0,
-            lastUpdated: new Date(),
-          }];
+          } catch {
+            /* fallback to ID */
+          }
+          inventoryData.locations = [
+            {
+              location: initialLocation,
+              locationName,
+              currentStock: currentStock || 0,
+              lastUpdated: new Date(),
+            },
+          ];
         }
-        
+
         await InventoryModel.create(inventoryData);
       }
     }
@@ -384,9 +506,16 @@ export async function updateMenuItemAction(
 export async function deleteMenuItemAction(id: string): Promise<ActionResult> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
-    if (!session.userId || !session.role || !['admin', 'super-admin'].includes(session.role)) {
+    if (
+      !session.userId ||
+      !session.role ||
+      !['admin', 'super-admin'].includes(session.role)
+    ) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -439,9 +568,16 @@ export async function uploadMenuImageAction(
 ): Promise<ActionResult<{ imageUrl: string }>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
-    if (!session.userId || !session.role || !['admin', 'super-admin'].includes(session.role)) {
+    if (
+      !session.userId ||
+      !session.role ||
+      !['admin', 'super-admin'].includes(session.role)
+    ) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -453,7 +589,10 @@ export async function uploadMenuImageAction(
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
-      return { success: false, error: 'Invalid file type. Only JPEG, PNG, and WebP are allowed' };
+      return {
+        success: false,
+        error: 'Invalid file type. Only JPEG, PNG, and WebP are allowed',
+      };
     }
 
     // Validate file size (max 5MB)
@@ -528,9 +667,16 @@ export async function toggleMenuItemAvailabilityAction(
 ): Promise<ActionResult> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
-    if (!session.userId || !session.role || !['admin', 'super-admin'].includes(session.role)) {
+    if (
+      !session.userId ||
+      !session.role ||
+      !['admin', 'super-admin'].includes(session.role)
+    ) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -586,9 +732,16 @@ export async function deleteMenuItemImageAction(
 ): Promise<ActionResult> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
-    if (!session.userId || !session.role || !['admin', 'super-admin'].includes(session.role)) {
+    if (
+      !session.userId ||
+      !session.role ||
+      !['admin', 'super-admin'].includes(session.role)
+    ) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -646,9 +799,16 @@ export async function duplicateMenuItemAction(
 ): Promise<ActionResult<{ itemId: string }>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
-    if (!session.userId || !session.role || !['admin', 'super-admin'].includes(session.role)) {
+    if (
+      !session.userId ||
+      !session.role ||
+      !['admin', 'super-admin'].includes(session.role)
+    ) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -664,10 +824,15 @@ export async function duplicateMenuItemAction(
     }
 
     // Create duplicate with modified name
-    const { _id: _itemId, createdAt: _itemCreatedAt, updatedAt: _itemUpdatedAt, ...duplicateData } = originalItem.toObject();
+    const {
+      _id: _itemId,
+      createdAt: _itemCreatedAt,
+      updatedAt: _itemUpdatedAt,
+      ...duplicateData
+    } = originalItem.toObject();
     duplicateData.name = `${duplicateData.name} (Copy)`;
     duplicateData.isAvailable = false; // Set to unavailable by default
-    
+
     // Generate unique slug for the duplicate
     if (duplicateData.slug) {
       const timestamp = Date.now();
@@ -678,9 +843,16 @@ export async function duplicateMenuItemAction(
 
     // If original has inventory tracking, create new inventory record
     if (originalItem.trackInventory) {
-      const originalInventory = await InventoryModel.findOne({ menuItemId: originalItem._id });
+      const originalInventory = await InventoryModel.findOne({
+        menuItemId: originalItem._id,
+      });
       if (originalInventory) {
-        const { _id: _invId, createdAt: _invCreatedAt, updatedAt: _invUpdatedAt, ...inventoryData } = originalInventory.toObject();
+        const {
+          _id: _invId,
+          createdAt: _invCreatedAt,
+          updatedAt: _invUpdatedAt,
+          ...inventoryData
+        } = originalInventory.toObject();
         inventoryData.menuItemId = newItem._id as unknown as Types.ObjectId;
         inventoryData.currentStock = 0; // Start with 0 stock
         inventoryData.totalSales = 0;

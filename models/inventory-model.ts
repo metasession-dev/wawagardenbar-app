@@ -1,9 +1,5 @@
 import mongoose, { Schema, Model } from 'mongoose';
-import {
-  IInventory,
-  IInventoryLocation,
-  StockStatus,
-} from '../interfaces';
+import { IInventory, IInventoryLocation, StockStatus } from '../interfaces';
 
 const inventoryLocationSchema = new Schema<IInventoryLocation>(
   {
@@ -51,6 +47,8 @@ const inventorySchema = new Schema<IInventory>(
     locations: { type: [inventoryLocationSchema], default: [] },
     defaultReceivingLocation: { type: String },
     defaultSalesLocation: { type: String },
+    crateSize: { type: Number, min: 1 },
+    packagingType: { type: String },
   },
   {
     timestamps: true,
@@ -66,9 +64,12 @@ inventorySchema.index({ 'locations.location': 1 });
 inventorySchema.pre('save', function preSave(next) {
   // Sync currentStock with location totals if tracking by location
   if (this.trackByLocation && this.locations.length > 0) {
-    this.currentStock = this.locations.reduce((sum, loc) => sum + loc.currentStock, 0);
+    this.currentStock = this.locations.reduce(
+      (sum, loc) => sum + loc.currentStock,
+      0
+    );
   }
-  
+
   // Update status based on total stock
   if (this.currentStock <= 0) {
     this.status = 'out-of-stock';

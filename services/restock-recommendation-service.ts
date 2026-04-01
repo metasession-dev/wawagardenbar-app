@@ -31,6 +31,9 @@ export interface RestockRecommendationItem {
   reorderQuantity: number;
   score: number;
   diversityGuaranteed: boolean;
+  crateSize: number | null;
+  packagingType: string | null;
+  cratesToOrder: number | null;
 }
 
 export interface RestockCategoryGroup {
@@ -291,6 +294,9 @@ export class RestockRecommendationService {
         reorderQuantity: inventory.reorderQuantity,
         score: 0,
         diversityGuaranteed: false,
+        crateSize: inventory.crateSize || null,
+        packagingType: inventory.packagingType || null,
+        cratesToOrder: null,
       });
     }
 
@@ -382,6 +388,19 @@ export class RestockRecommendationService {
         const bMax = b.items[0]?.score ?? 0;
         return bMax - aMax || a.categoryLabel.localeCompare(b.categoryLabel);
       });
+
+    // Compute crate order quantities
+    for (const item of filteredItems) {
+      if (
+        item.crateSize &&
+        item.crateSize > 0 &&
+        item.suggestedReorderQty > 0
+      ) {
+        item.cratesToOrder = Math.ceil(
+          item.suggestedReorderQty / item.crateSize
+        );
+      }
+    }
 
     // Summary counts
     const urgentItems = filteredItems.filter(

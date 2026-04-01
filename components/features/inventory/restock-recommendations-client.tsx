@@ -81,6 +81,8 @@ function exportToCsv(report: RestockRecommendationReport) {
     'Unit',
     'Avg Daily Sales',
     'Suggested Reorder Qty',
+    'Crate Size',
+    'Crates to Order',
     'Supplier',
     'Priority',
     'Cost Per Unit',
@@ -97,6 +99,8 @@ function exportToCsv(report: RestockRecommendationReport) {
         item.unit,
         String(item.avgDailySales),
         String(item.suggestedReorderQty),
+        item.crateSize ? String(item.crateSize) : '',
+        item.cratesToOrder ? String(item.cratesToOrder) : '',
         item.supplier || '',
         item.priority,
         String(item.costPerUnit),
@@ -291,9 +295,21 @@ function CategoryGroupTable({
                         )}
                       </TableCell>
                       <TableCell className="text-right font-semibold">
-                        {item.suggestedReorderQty > 0
-                          ? item.suggestedReorderQty
-                          : '--'}
+                        {item.suggestedReorderQty > 0 ? (
+                          <div>
+                            <span>{item.suggestedReorderQty}</span>
+                            {item.cratesToOrder && item.crateSize ? (
+                              <span className="block text-xs font-normal text-muted-foreground">
+                                {item.cratesToOrder}{' '}
+                                {item.packagingType || 'crate'}
+                                {item.cratesToOrder !== 1 ? 's' : ''} (
+                                {item.cratesToOrder * item.crateSize})
+                              </span>
+                            ) : null}
+                          </div>
+                        ) : (
+                          '--'
+                        )}
                       </TableCell>
                       <TableCell>
                         {item.supplier || (

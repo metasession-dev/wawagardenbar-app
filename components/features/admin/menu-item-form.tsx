@@ -28,7 +28,9 @@ const menuItemSchema = z.object({
   mainCategory: z.enum(['food', 'drinks']),
   category: z.string().min(1, 'Category is required'),
   price: z.number().min(0, 'Price must be 0 or greater'),
-  preparationTime: z.number().min(1, 'Preparation time must be at least 1 minute'),
+  preparationTime: z
+    .number()
+    .min(1, 'Preparation time must be at least 1 minute'),
   isAvailable: z.boolean(),
   halfPortionEnabled: z.boolean(),
   halfPortionSurcharge: z.number().min(0, 'Surcharge must be 0 or greater'),
@@ -44,6 +46,8 @@ const menuItemSchema = z.object({
   costPerUnit: z.number().min(0).optional(),
   supplier: z.string().optional(),
   preventOrdersWhenOutOfStock: z.boolean().optional(),
+  crateSize: z.number().min(1).optional(),
+  packagingType: z.string().optional(),
 });
 
 type MenuItemFormData = z.infer<typeof menuItemSchema>;
@@ -104,7 +108,7 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
 
   async function onSubmit(data: MenuItemFormData) {
     if (isLoading) return;
-    
+
     setIsLoading(true);
     try {
       const formData = new FormData();
@@ -116,10 +120,22 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
       formData.append('preparationTime', data.preparationTime.toString());
       formData.append('isAvailable', data.isAvailable.toString());
       formData.append('halfPortionEnabled', data.halfPortionEnabled.toString());
-      formData.append('halfPortionSurcharge', data.halfPortionSurcharge.toString());
-      formData.append('quarterPortionEnabled', data.quarterPortionEnabled.toString());
-      formData.append('quarterPortionSurcharge', data.quarterPortionSurcharge.toString());
-      formData.append('allowManualPriceOverride', data.allowManualPriceOverride.toString());
+      formData.append(
+        'halfPortionSurcharge',
+        data.halfPortionSurcharge.toString()
+      );
+      formData.append(
+        'quarterPortionEnabled',
+        data.quarterPortionEnabled.toString()
+      );
+      formData.append(
+        'quarterPortionSurcharge',
+        data.quarterPortionSurcharge.toString()
+      );
+      formData.append(
+        'allowManualPriceOverride',
+        data.allowManualPriceOverride.toString()
+      );
       formData.append('tags', data.tags || '');
 
       // Add inventory fields
@@ -131,7 +147,14 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
         formData.append('unit', data.unit || 'units');
         formData.append('costPerUnit', (data.costPerUnit || 0).toString());
         formData.append('supplier', data.supplier || '');
-        formData.append('preventOrdersWhenOutOfStock', (data.preventOrdersWhenOutOfStock || false).toString());
+        formData.append(
+          'preventOrdersWhenOutOfStock',
+          (data.preventOrdersWhenOutOfStock || false).toString()
+        );
+        if (data.crateSize)
+          formData.append('crateSize', data.crateSize.toString());
+        if (data.packagingType)
+          formData.append('packagingType', data.packagingType);
       }
 
       const result = await createMenuItemAction(formData);
@@ -163,7 +186,7 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
   }
 
   const foodCategories = availableCategories?.food
-    .filter(c => c.isEnabled)
+    .filter((c) => c.isEnabled)
     .sort((a, b) => a.order - b.order) || [
     { value: 'main-courses', label: 'Main Courses' },
     { value: 'starters', label: 'Starters' },
@@ -172,7 +195,7 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
   ];
 
   const drinkCategories = availableCategories?.drinks
-    .filter(c => c.isEnabled)
+    .filter((c) => c.isEnabled)
     .sort((a, b) => a.order - b.order) || [
     { value: 'beer-local', label: 'Beer (Local)' },
     { value: 'beer-imported', label: 'Beer (Imported)' },
@@ -211,7 +234,9 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
           disabled={isLoading}
         />
         {errors.description && (
-          <p className="text-sm text-destructive">{errors.description.message}</p>
+          <p className="text-sm text-destructive">
+            {errors.description.message}
+          </p>
         )}
       </div>
 
@@ -221,7 +246,9 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
           <Label htmlFor="mainCategory">Main Category *</Label>
           <Select
             value={mainCategory}
-            onValueChange={(value) => setValue('mainCategory', value as 'food' | 'drinks')}
+            onValueChange={(value) =>
+              setValue('mainCategory', value as 'food' | 'drinks')
+            }
             disabled={isLoading}
           >
             <SelectTrigger>
@@ -233,7 +260,9 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
             </SelectContent>
           </Select>
           {errors.mainCategory && (
-            <p className="text-sm text-destructive">{errors.mainCategory.message}</p>
+            <p className="text-sm text-destructive">
+              {errors.mainCategory.message}
+            </p>
           )}
         </div>
 
@@ -255,7 +284,9 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
             </SelectContent>
           </Select>
           {errors.category && (
-            <p className="text-sm text-destructive">{errors.category.message}</p>
+            <p className="text-sm text-destructive">
+              {errors.category.message}
+            </p>
           )}
         </div>
       </div>
@@ -287,7 +318,9 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
             disabled={isLoading}
           />
           {errors.preparationTime && (
-            <p className="text-sm text-destructive">{errors.preparationTime.message}</p>
+            <p className="text-sm text-destructive">
+              {errors.preparationTime.message}
+            </p>
           )}
         </div>
       </div>
@@ -324,15 +357,20 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
       <div className="space-y-2">
         <div className="flex items-center justify-between rounded-lg border p-4">
           <div className="space-y-0.5">
-            <Label htmlFor="allowManualPriceOverride" className="font-medium">Allow Manual Price Override</Label>
+            <Label htmlFor="allowManualPriceOverride" className="font-medium">
+              Allow Manual Price Override
+            </Label>
             <p className="text-sm text-muted-foreground">
-              Enable staff to enter custom prices for this item when creating orders
+              Enable staff to enter custom prices for this item when creating
+              orders
             </p>
           </div>
           <Switch
             id="allowManualPriceOverride"
             checked={watch('allowManualPriceOverride')}
-            onCheckedChange={(checked) => setValue('allowManualPriceOverride', checked)}
+            onCheckedChange={(checked) =>
+              setValue('allowManualPriceOverride', checked)
+            }
             disabled={isLoading}
           />
         </div>
@@ -343,11 +381,13 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
         <div className="space-y-4 rounded-lg border p-4">
           <div>
             <h3 className="text-lg font-semibold mb-4">Portion Options</h3>
-            
+
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label htmlFor="halfPortionEnabled" className="font-medium">Half Portion (50%)</Label>
+                  <Label htmlFor="halfPortionEnabled" className="font-medium">
+                    Half Portion (50%)
+                  </Label>
                   <p className="text-sm text-muted-foreground">
                     Allow customers to order half portions at 50% price
                   </p>
@@ -355,7 +395,9 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
                 <Switch
                   id="halfPortionEnabled"
                   checked={halfPortionEnabled}
-                  onCheckedChange={(checked) => setValue('halfPortionEnabled', checked)}
+                  onCheckedChange={(checked) =>
+                    setValue('halfPortionEnabled', checked)
+                  }
                   disabled={isLoading}
                 />
               </div>
@@ -363,13 +405,17 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
               {halfPortionEnabled && (
                 <div className="space-y-3">
                   <div>
-                    <Label htmlFor="halfPortionSurcharge">Surcharge (optional)</Label>
+                    <Label htmlFor="halfPortionSurcharge">
+                      Surcharge (optional)
+                    </Label>
                     <Input
                       id="halfPortionSurcharge"
                       type="number"
                       min="0"
                       step="50"
-                      {...register('halfPortionSurcharge', { valueAsNumber: true })}
+                      {...register('halfPortionSurcharge', {
+                        valueAsNumber: true,
+                      })}
                       disabled={isLoading}
                       placeholder="0"
                     />
@@ -385,10 +431,15 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
                           style: 'currency',
                           currency: 'NGN',
                           minimumFractionDigits: 0,
-                        }).format(Math.round(price * 0.5) + (halfPortionSurcharge || 0))}
+                        }).format(
+                          Math.round(price * 0.5) + (halfPortionSurcharge || 0)
+                        )}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        50% of full price{halfPortionSurcharge > 0 ? ` + ₦${halfPortionSurcharge.toLocaleString()} surcharge` : ''}
+                        50% of full price
+                        {halfPortionSurcharge > 0
+                          ? ` + ₦${halfPortionSurcharge.toLocaleString()} surcharge`
+                          : ''}
                       </p>
                     </div>
                   )}
@@ -397,7 +448,12 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <Label htmlFor="quarterPortionEnabled" className="font-medium">Quarter Portion (25%)</Label>
+                  <Label
+                    htmlFor="quarterPortionEnabled"
+                    className="font-medium"
+                  >
+                    Quarter Portion (25%)
+                  </Label>
                   <p className="text-sm text-muted-foreground">
                     Allow customers to order quarter portions at 25% price
                   </p>
@@ -405,7 +461,9 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
                 <Switch
                   id="quarterPortionEnabled"
                   checked={quarterPortionEnabled}
-                  onCheckedChange={(checked) => setValue('quarterPortionEnabled', checked)}
+                  onCheckedChange={(checked) =>
+                    setValue('quarterPortionEnabled', checked)
+                  }
                   disabled={isLoading}
                 />
               </div>
@@ -413,13 +471,17 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
               {quarterPortionEnabled && (
                 <div className="space-y-3">
                   <div>
-                    <Label htmlFor="quarterPortionSurcharge">Surcharge (optional)</Label>
+                    <Label htmlFor="quarterPortionSurcharge">
+                      Surcharge (optional)
+                    </Label>
                     <Input
                       id="quarterPortionSurcharge"
                       type="number"
                       min="0"
                       step="50"
-                      {...register('quarterPortionSurcharge', { valueAsNumber: true })}
+                      {...register('quarterPortionSurcharge', {
+                        valueAsNumber: true,
+                      })}
                       disabled={isLoading}
                       placeholder="0"
                     />
@@ -430,15 +492,23 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
                   {price > 0 && (
                     <div className="rounded-md bg-muted p-3">
                       <p className="text-sm">
-                        <span className="font-medium">Quarter Portion Price:</span>{' '}
+                        <span className="font-medium">
+                          Quarter Portion Price:
+                        </span>{' '}
                         {new Intl.NumberFormat('en-NG', {
                           style: 'currency',
                           currency: 'NGN',
                           minimumFractionDigits: 0,
-                        }).format(Math.round(price * 0.25) + (quarterPortionSurcharge || 0))}
+                        }).format(
+                          Math.round(price * 0.25) +
+                            (quarterPortionSurcharge || 0)
+                        )}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        25% of full price{quarterPortionSurcharge > 0 ? ` + ₦${quarterPortionSurcharge.toLocaleString()} surcharge` : ''}
+                        25% of full price
+                        {quarterPortionSurcharge > 0
+                          ? ` + ₦${quarterPortionSurcharge.toLocaleString()} surcharge`
+                          : ''}
                       </p>
                     </div>
                   )}
@@ -479,7 +549,9 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
                   disabled={isLoading}
                 />
                 {errors.currentStock && (
-                  <p className="text-sm text-destructive">{errors.currentStock.message}</p>
+                  <p className="text-sm text-destructive">
+                    {errors.currentStock.message}
+                  </p>
                 )}
               </div>
 
@@ -562,11 +634,40 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
               </div>
             </div>
 
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="crateSize">Units Per Crate</Label>
+                <Input
+                  id="crateSize"
+                  type="number"
+                  min="1"
+                  {...register('crateSize', { valueAsNumber: true })}
+                  placeholder="e.g., 24"
+                  disabled={isLoading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  How many units in one crate/case (leave empty if N/A)
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="packagingType">Packaging Type</Label>
+                <Input
+                  id="packagingType"
+                  {...register('packagingType')}
+                  placeholder="e.g., crate, case, pack"
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+
             <div className="flex items-center space-x-2">
               <Switch
                 id="preventOrdersWhenOutOfStock"
                 checked={watch('preventOrdersWhenOutOfStock')}
-                onCheckedChange={(checked) => setValue('preventOrdersWhenOutOfStock', checked)}
+                onCheckedChange={(checked) =>
+                  setValue('preventOrdersWhenOutOfStock', checked)
+                }
                 disabled={isLoading}
               />
               <Label htmlFor="preventOrdersWhenOutOfStock">

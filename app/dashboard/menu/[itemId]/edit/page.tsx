@@ -33,7 +33,9 @@ async function getMenuItem(itemId: string) {
   // Get inventory data if tracking is enabled (canonical lookup via menuItemId)
   let inventory = null;
   if (menuItem.trackInventory) {
-    inventory = await InventoryModel.findOne({ menuItemId: menuItem._id }).lean();
+    inventory = await InventoryModel.findOne({
+      menuItemId: menuItem._id,
+    }).lean();
   }
 
   // Serialize data
@@ -73,6 +75,8 @@ async function getMenuItem(itemId: string) {
           supplier: inventory.supplier,
           preventOrdersWhenOutOfStock: inventory.preventOrdersWhenOutOfStock,
           trackByLocation: inventory.trackByLocation || false,
+          crateSize: inventory.crateSize || undefined,
+          packagingType: inventory.packagingType || '',
         }
       : null,
     createdAt: menuItem.createdAt?.toString(),
@@ -96,7 +100,9 @@ function EditFormSkeleton() {
 /**
  * Edit menu item page
  */
-export default async function EditMenuItemPage({ params }: EditMenuItemPageProps) {
+export default async function EditMenuItemPage({
+  params,
+}: EditMenuItemPageProps) {
   const { itemId } = await params;
   const [menuItem, menuSettings] = await Promise.all([
     getMenuItem(itemId),
@@ -135,12 +141,17 @@ export default async function EditMenuItemPage({ params }: EditMenuItemPageProps
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Edit Menu Item</h1>
-        <p className="text-muted-foreground">Update menu item details and settings</p>
+        <p className="text-muted-foreground">
+          Update menu item details and settings
+        </p>
       </div>
 
       {/* Edit Form */}
       <Suspense fallback={<EditFormSkeleton />}>
-        <MenuItemEditForm menuItem={menuItem} availableCategories={menuSettings} />
+        <MenuItemEditForm
+          menuItem={menuItem}
+          availableCategories={menuSettings}
+        />
       </Suspense>
 
       {/* Price Management Section */}
@@ -158,9 +169,7 @@ export default async function EditMenuItemPage({ params }: EditMenuItemPageProps
             <CardTitle className="text-sm">Audit Trail</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground space-y-1">
-            <p>
-              Created: {new Date(menuItem.createdAt).toLocaleString()}
-            </p>
+            <p>Created: {new Date(menuItem.createdAt).toLocaleString()}</p>
             {menuItem.updatedAt && (
               <p>
                 Last Modified: {new Date(menuItem.updatedAt).toLocaleString()}

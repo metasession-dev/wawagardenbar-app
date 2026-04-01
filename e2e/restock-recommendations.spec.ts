@@ -1,5 +1,6 @@
 /**
  * @requirement REQ-019 - E2E: Restock recommendations page access and navigation
+ * @requirement REQ-020 - E2E: Strategy selector and CSV export
  *
  * Verifies:
  * - Page loads for authenticated admin/super-admin
@@ -119,3 +120,66 @@ superAdminTest.describe('REQ-019: Restock Recommendations — Navigation', () =>
     );
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// REQ-020: Strategy Selector and CSV Export
+// ═══════════════════════════════════════════════════════════════════════════
+superAdminTest.describe(
+  'REQ-020: Restock Recommendations — Strategy & Export',
+  () => {
+    superAdminTest.beforeEach(async ({ page }, testInfo) => {
+      if (!(await isAuthenticated(page, 'super-admin'))) {
+        testInfo.skip(true, 'Super-admin login failed');
+      }
+    });
+
+    superAdminTest(
+      'should show strategy selector with three options',
+      async ({ page }) => {
+        await page.goto('/dashboard/inventory/restock-recommendations');
+        await page.waitForLoadState('networkidle');
+
+        await expect(
+          page.getByRole('button', { name: 'Popularity' })
+        ).toBeVisible();
+        await expect(
+          page.getByRole('button', { name: 'Profitability' })
+        ).toBeVisible();
+        await expect(
+          page.getByRole('button', { name: 'Stock Urgency' })
+        ).toBeVisible();
+      }
+    );
+
+    superAdminTest('should show export CSV button', async ({ page }) => {
+      await page.goto('/dashboard/inventory/restock-recommendations');
+      await page.waitForLoadState('networkidle');
+
+      await expect(
+        page.getByRole('button', { name: /Export CSV/i })
+      ).toBeVisible();
+    });
+
+    superAdminTest('should switch strategies', async ({ page }) => {
+      await page.goto('/dashboard/inventory/restock-recommendations');
+      await page.waitForLoadState('networkidle');
+
+      // Default is Popularity
+      const popularityBtn = page.getByRole('button', { name: 'Popularity' });
+      await expect(popularityBtn).toBeVisible();
+
+      // Switch to Stock Urgency
+      await page.getByRole('button', { name: 'Stock Urgency' }).click();
+      await page.waitForLoadState('networkidle');
+
+      // Switch to Profitability
+      await page.getByRole('button', { name: 'Profitability' }).click();
+      await page.waitForLoadState('networkidle');
+
+      // Page should still be functional
+      await expect(
+        page.locator('h1', { hasText: 'Restock Recommendations' })
+      ).toBeVisible();
+    });
+  }
+);

@@ -1,5 +1,6 @@
 /**
  * @requirement REQ-019
+ * @requirement REQ-020
  */
 'use server';
 
@@ -9,6 +10,7 @@ import { sessionOptions, SessionData } from '@/lib/session';
 import {
   RestockRecommendationService,
   type RestockRecommendationReport,
+  type RestockStrategy,
 } from '@/services/restock-recommendation-service';
 import { CategoryService } from '@/services/category-service';
 
@@ -19,6 +21,7 @@ interface GetRestockRecommendationsParams {
   priceMin?: number;
   priceMax?: number;
   priorityFilter?: 'urgent' | 'medium' | 'low' | 'all';
+  strategy?: RestockStrategy;
 }
 
 export async function getRestockRecommendationsAction(
@@ -55,6 +58,7 @@ export async function getRestockRecommendationsAction(
         days: params.days,
         priceBracket,
         priorityFilter: params.priorityFilter,
+        strategy: params.strategy,
       }
     );
 

@@ -1,5 +1,6 @@
 /**
  * @requirement REQ-019
+ * @requirement REQ-020
  */
 import { Types } from 'mongoose';
 import { connectDB } from '@/lib/mongodb';
@@ -28,6 +29,8 @@ export interface RestockRecommendationItem {
   lastRestockDate: string | null;
   autoReorderEnabled: boolean;
   reorderQuantity: number;
+  score: number;
+  diversityGuaranteed: boolean;
 }
 
 export interface RestockCategoryGroup {
@@ -38,9 +41,12 @@ export interface RestockCategoryGroup {
   items: RestockRecommendationItem[];
 }
 
+export type RestockStrategy = 'urgency' | 'popularity' | 'profitability';
+
 export interface RestockRecommendationReport {
   generatedAt: string;
   lookbackDays: number;
+  strategy: RestockStrategy;
   totalItems: number;
   urgentItems: number;
   mediumItems: number;
@@ -55,7 +61,10 @@ export interface RestockRecommendationParams {
   days: number;
   priceBracket?: { min?: number; max?: number };
   priorityFilter?: 'urgent' | 'medium' | 'low' | 'all';
+  strategy?: RestockStrategy;
 }
+
+const MIN_DIVERSITY_PER_CATEGORY = 2;
 
 function formatCategoryLabel(slug: string): string {
   return slug
@@ -113,10 +122,13 @@ export class RestockRecommendationService {
       .select('_id name mainCategory category price costPerUnit')
       .lean();
 
+    const strategy = params.strategy || 'urgency';
+
     if (menuItems.length === 0) {
       return {
         generatedAt: new Date().toISOString(),
         lookbackDays: params.days,
+        strategy,
         totalItems: 0,
         urgentItems: 0,
         mediumItems: 0,
@@ -138,6 +150,7 @@ export class RestockRecommendationService {
       return {
         generatedAt: new Date().toISOString(),
         lookbackDays: params.days,
+        strategy,
         totalItems: 0,
         urgentItems: 0,
         mediumItems: 0,
@@ -250,6 +263,8 @@ export class RestockRecommendationService {
 
       const lastRestock = lastRestockMap.get(invId);
 
+      const sellingPrice = (menuItem as { price: number }).price;
+
       items.push({
         inventoryId: invId,
         menuItemId,
@@ -261,7 +276,7 @@ export class RestockRecommendationService {
         minimumStock: inventory.minimumStock,
         maximumStock: inventory.maximumStock,
         unit: inventory.unit,
-        sellingPrice: (menuItem as { price: number }).price,
+        sellingPrice,
         costPerUnit,
         supplier: inventory.supplier || '',
         avgDailySales: Math.round(velocity * 100) / 100,
@@ -274,7 +289,45 @@ export class RestockRecommendationService {
         lastRestockDate: lastRestock ? lastRestock.toISOString() : null,
         autoReorderEnabled: inventory.autoReorderEnabled,
         reorderQuantity: inventory.reorderQuantity,
+        score: 0,
+        diversityGuaranteed: false,
       });
+    }
+
+    // Apply strategy-specific scoring
+    for (const item of items) {
+      if (strategy === 'popularity') {
+        item.score = item.avgDailySales;
+      } else if (strategy === 'profitability') {
+        item.score =
+          Math.round(
+            (item.sellingPrice - item.costPerUnit) * item.avgDailySales * 100
+          ) / 100;
+      }
+    }
+
+    // Apply diversity guarantee for popularity/profitability strategies
+    if (strategy !== 'urgency') {
+      const categoryItems = new Map<string, RestockRecommendationItem[]>();
+      for (const item of items) {
+        const existing = categoryItems.get(item.category) || [];
+        existing.push(item);
+        categoryItems.set(item.category, existing);
+      }
+
+      for (const [, catItems] of categoryItems) {
+        catItems.sort((a, b) => b.score - a.score);
+        const guaranteed = catItems.slice(0, MIN_DIVERSITY_PER_CATEGORY);
+        for (const item of guaranteed) {
+          if (item.score === 0) {
+            item.diversityGuaranteed = true;
+            item.suggestedReorderQty = Math.max(
+              0,
+              item.minimumStock - item.currentStock
+            );
+          }
+        }
+      }
     }
 
     // Apply priority filter
@@ -291,19 +344,23 @@ export class RestockRecommendationService {
       groupMap.set(item.category, existing);
     }
 
-    // Sort items within groups: priority first, then daysUntilStockout ascending
+    // Sort items within groups based on strategy
     const groups: RestockCategoryGroup[] = Array.from(groupMap.entries())
       .map(([category, groupItems]) => {
-        groupItems.sort((a, b) => {
-          const priorityDiff =
-            PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
-          if (priorityDiff !== 0) return priorityDiff;
-          const aDays =
-            a.daysUntilStockout === -1 ? Infinity : a.daysUntilStockout;
-          const bDays =
-            b.daysUntilStockout === -1 ? Infinity : b.daysUntilStockout;
-          return aDays - bDays;
-        });
+        if (strategy === 'urgency') {
+          groupItems.sort((a, b) => {
+            const priorityDiff =
+              PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
+            if (priorityDiff !== 0) return priorityDiff;
+            const aDays =
+              a.daysUntilStockout === -1 ? Infinity : a.daysUntilStockout;
+            const bDays =
+              b.daysUntilStockout === -1 ? Infinity : b.daysUntilStockout;
+            return aDays - bDays;
+          });
+        } else {
+          groupItems.sort((a, b) => b.score - a.score);
+        }
 
         return {
           category,
@@ -313,11 +370,18 @@ export class RestockRecommendationService {
           items: groupItems,
         };
       })
-      .sort(
-        (a, b) =>
-          b.urgentCount - a.urgentCount ||
-          a.categoryLabel.localeCompare(b.categoryLabel)
-      );
+      .sort((a, b) => {
+        if (strategy === 'urgency') {
+          return (
+            b.urgentCount - a.urgentCount ||
+            a.categoryLabel.localeCompare(b.categoryLabel)
+          );
+        }
+        // For popularity/profitability, sort groups by highest-scoring item
+        const aMax = a.items[0]?.score ?? 0;
+        const bMax = b.items[0]?.score ?? 0;
+        return bMax - aMax || a.categoryLabel.localeCompare(b.categoryLabel);
+      });
 
     // Summary counts
     const urgentItems = filteredItems.filter(
@@ -335,6 +399,7 @@ export class RestockRecommendationService {
     return {
       generatedAt: new Date().toISOString(),
       lookbackDays: params.days,
+      strategy,
       totalItems: filteredItems.length,
       urgentItems,
       mediumItems,

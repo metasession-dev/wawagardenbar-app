@@ -1,10 +1,12 @@
 /**
  * @requirement REQ-019
+ * @requirement REQ-020
  */
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -36,6 +38,7 @@ import {
   TrendingDown,
   Clock,
   DollarSign,
+  Download,
 } from 'lucide-react';
 import {
   getRestockRecommendationsAction,
@@ -45,6 +48,7 @@ import type {
   RestockRecommendationReport,
   RestockCategoryGroup,
   RestockRecommendationItem,
+  RestockStrategy,
 } from '@/services/restock-recommendation-service';
 
 function formatCurrency(value: number): string {
@@ -61,6 +65,61 @@ function formatCategoryLabel(slug: string): string {
     .split('-')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
+}
+
+const STRATEGY_LABELS: Record<RestockStrategy, string> = {
+  urgency: 'Stock Urgency',
+  popularity: 'Popularity',
+  profitability: 'Profitability',
+};
+
+function exportToCsv(report: RestockRecommendationReport) {
+  const headers = [
+    'Item Name',
+    'Category',
+    'Current Stock',
+    'Unit',
+    'Avg Daily Sales',
+    'Suggested Reorder Qty',
+    'Supplier',
+    'Priority',
+    'Cost Per Unit',
+    'Selling Price',
+  ];
+
+  const rows: string[][] = [];
+  for (const group of report.groups) {
+    for (const item of group.items) {
+      rows.push([
+        item.itemName,
+        group.categoryLabel,
+        String(item.currentStock),
+        item.unit,
+        String(item.avgDailySales),
+        String(item.suggestedReorderQty),
+        item.supplier || '',
+        item.priority,
+        String(item.costPerUnit),
+        String(item.sellingPrice),
+      ]);
+    }
+  }
+
+  const csvContent = [
+    headers.join(','),
+    ...rows.map((row) =>
+      row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(',')
+    ),
+  ].join('\n');
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  const date = new Date().toISOString().split('T')[0];
+  link.href = url;
+  link.download = `restock-recommendations-${report.strategy}-${date}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 function PriorityBadge({
@@ -274,6 +333,7 @@ export function RestockRecommendationsClient() {
     food: string[];
   }>({ drinks: [], food: [] });
 
+  const [strategy, setStrategy] = useState<RestockStrategy>('popularity');
   const [mainCategory, setMainCategory] = useState<string>('all');
   const [days, setDays] = useState<number>(30);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -323,6 +383,7 @@ export function RestockRecommendationsClient() {
           priorityFilter !== 'all'
             ? (priorityFilter as 'urgent' | 'medium' | 'low')
             : undefined,
+        strategy,
       });
 
       if (result.success && result.data) {
@@ -337,7 +398,14 @@ export function RestockRecommendationsClient() {
     } finally {
       setIsLoading(false);
     }
-  }, [mainCategory, days, selectedCategory, priceBracket, priorityFilter]);
+  }, [
+    strategy,
+    mainCategory,
+    days,
+    selectedCategory,
+    priceBracket,
+    priorityFilter,
+  ]);
 
   useEffect(() => {
     fetchReport();
@@ -365,6 +433,36 @@ export function RestockRecommendationsClient() {
 
   return (
     <div className="space-y-6">
+      {/* Strategy Tabs */}
+      <div className="flex items-center justify-between">
+        <div className="inline-flex rounded-lg border p-1 bg-muted">
+          {(
+            ['popularity', 'profitability', 'urgency'] as RestockStrategy[]
+          ).map((s) => (
+            <button
+              key={s}
+              onClick={() => setStrategy(s)}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                strategy === s
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+              disabled={isLoading}
+            >
+              {STRATEGY_LABELS[s]}
+            </button>
+          ))}
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => report && exportToCsv(report)}
+          disabled={isLoading || !report || report.totalItems === 0}
+        >
+          <Download className="mr-2 h-4 w-4" />
+          Export CSV
+        </Button>
+      </div>
+
       {/* Filters */}
       <Card>
         <CardContent className="pt-6">

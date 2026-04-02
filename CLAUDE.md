@@ -119,6 +119,8 @@ npm audit --audit-level=high        # 0 vulnerabilities
 npx playwright test                 # all pass
 ```
 
+**Verify test plan tests are written:** For tracked requirements, check that every test file referenced in `compliance/evidence/REQ-XXX/test-plan.md` exists and passes. If `test-plan.md` lists tests that haven't been written yet, **STOP** — write and run the tests before pushing.
+
 ### After Pushing: WAIT — Confirm CI Green
 
 ```bash

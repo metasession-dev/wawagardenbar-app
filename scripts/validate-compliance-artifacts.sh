@@ -52,9 +52,30 @@ for REQ in $REQUIREMENTS; do
 
   # Check test-plan.md exists
   if [ ! -f "compliance/evidence/$REQ/test-plan.md" ]; then
-    echo "  WARNING: Test plan missing: compliance/evidence/$REQ/test-plan.md"
+    echo "  ERROR: Test plan missing: compliance/evidence/$REQ/test-plan.md"
+    EXIT_CODE=1
   else
     echo "  OK: test-plan.md exists"
+
+    # Verify test files referenced in test-plan.md exist in the tree
+    TEST_FILES=$(grep -oP '(?:__tests__/|tests?/|e2e/|spec/|\.test\.|\.spec\.)\S+' "compliance/evidence/$REQ/test-plan.md" 2>/dev/null \
+      | sed 's/[`),.;:]*$//' | sort -u || true)
+    if [ -n "$TEST_FILES" ]; then
+      MISSING_TESTS=0
+      for TF in $TEST_FILES; do
+        # Try exact path, then search from repo root
+        if [ ! -f "$TF" ] && ! compgen -G "**/$TF" > /dev/null 2>&1; then
+          echo "  ERROR: Test file referenced in test-plan.md not found: $TF"
+          MISSING_TESTS=$((MISSING_TESTS + 1))
+        fi
+      done
+      if [ "$MISSING_TESTS" -gt 0 ]; then
+        echo "  ERROR: $MISSING_TESTS test file(s) from test-plan.md missing — tests must be written before merge"
+        EXIT_CODE=1
+      else
+        echo "  OK: All test files referenced in test-plan.md exist"
+      fi
+    fi
   fi
 
   # Check test-execution-summary.md exists

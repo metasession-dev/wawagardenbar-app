@@ -2,7 +2,12 @@ import { Types } from 'mongoose';
 
 export type StockStatus = 'in-stock' | 'low-stock' | 'out-of-stock';
 
-export type LocationType = 'store' | 'chiller-1' | 'chiller-2' | 'chiller-3' | 'other';
+export type LocationType =
+  | 'store'
+  | 'chiller-1'
+  | 'chiller-2'
+  | 'chiller-3'
+  | 'other';
 
 export interface IInventoryLocation {
   location: LocationType | string;
@@ -38,6 +43,8 @@ export interface IInventory {
   locations: IInventoryLocation[];
   defaultReceivingLocation?: string;
   defaultSalesLocation?: string;
+  crateSize?: number;
+  packagingType?: string;
   createdAt: Date;
   updatedAt: Date;
 }

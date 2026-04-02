@@ -21,7 +21,10 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { updateMenuItemAction, duplicateMenuItemAction } from '@/app/actions/admin/menu-actions';
+import {
+  updateMenuItemAction,
+  duplicateMenuItemAction,
+} from '@/app/actions/admin/menu-actions';
 import { getInventoryLocationsConfigAction } from '@/app/actions/inventory/location-actions';
 import { MenuImageUpload } from './menu-image-upload';
 import { CustomizationOptionsBuilder } from './customization-options-builder';
@@ -31,12 +34,17 @@ import { IMenuSettings } from '@/interfaces/menu-settings.interface';
 import { IInventoryLocationConfig } from '@/interfaces';
 
 const menuItemSchema = z.object({
-  name: z.string().min(3, 'Name must be at least 3 characters').max(100, 'Name must be less than 100 characters'),
+  name: z
+    .string()
+    .min(3, 'Name must be at least 3 characters')
+    .max(100, 'Name must be less than 100 characters'),
   description: z.string().optional(),
   mainCategory: z.enum(['food', 'drinks']),
   category: z.string().min(1, 'Category is required'),
   price: z.number().min(0, 'Price must be 0 or greater'),
-  preparationTime: z.number().min(1, 'Preparation time must be at least 1 minute'),
+  preparationTime: z
+    .number()
+    .min(1, 'Preparation time must be at least 1 minute'),
   servingSize: z.string().optional(),
   isAvailable: z.boolean(),
   halfPortionEnabled: z.boolean(),
@@ -59,6 +67,8 @@ const menuItemSchema = z.object({
   costPerUnit: z.number().min(0).optional(),
   supplier: z.string().optional(),
   preventOrdersWhenOutOfStock: z.boolean().optional(),
+  crateSize: z.number().min(1).optional(),
+  packagingType: z.string().optional(),
   pointsRedeemable: z.boolean(),
   pointsValue: z.number().min(0).optional(),
 });
@@ -73,13 +83,20 @@ interface MenuItemEditFormProps {
 /**
  * Menu item edit form component
  */
-export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEditFormProps) {
+export function MenuItemEditForm({
+  menuItem,
+  availableCategories,
+}: MenuItemEditFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [customizations, setCustomizations] = useState(menuItem.customizations || []);
+  const [customizations, setCustomizations] = useState(
+    menuItem.customizations || []
+  );
   const [conversionRate, setConversionRate] = useState(100);
-  const [availableLocations, setAvailableLocations] = useState<IInventoryLocationConfig[]>([]);
+  const [availableLocations, setAvailableLocations] = useState<
+    IInventoryLocationConfig[]
+  >([]);
   const [initialLocation, setInitialLocation] = useState<string>('');
   const router = useRouter();
   const { toast } = useToast();
@@ -95,12 +112,14 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
         console.error('Failed to fetch conversion rate:', error);
       }
     }
-    
+
     async function fetchLocations() {
       try {
         const result = await getInventoryLocationsConfigAction();
         if (result.success && result.data) {
-          const activeLocations = result.data.locations.filter(l => l.isActive);
+          const activeLocations = result.data.locations.filter(
+            (l) => l.isActive
+          );
           setAvailableLocations(activeLocations);
           // Set default to defaultReceivingLocation if available
           if (result.data.defaultReceivingLocation && !initialLocation) {
@@ -111,7 +130,7 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
         console.error('Failed to fetch locations:', error);
       }
     }
-    
+
     fetchConversionRate();
     fetchLocations();
   }, []);
@@ -135,8 +154,10 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
       isAvailable: menuItem.isAvailable,
       halfPortionEnabled: menuItem.portionOptions?.halfPortionEnabled || false,
       halfPortionSurcharge: menuItem.portionOptions?.halfPortionSurcharge || 0,
-      quarterPortionEnabled: menuItem.portionOptions?.quarterPortionEnabled || false,
-      quarterPortionSurcharge: menuItem.portionOptions?.quarterPortionSurcharge || 0,
+      quarterPortionEnabled:
+        menuItem.portionOptions?.quarterPortionEnabled || false,
+      quarterPortionSurcharge:
+        menuItem.portionOptions?.quarterPortionSurcharge || 0,
       allowManualPriceOverride: menuItem.allowManualPriceOverride || false,
       tags: menuItem.tags?.join(', ') || '',
       allergens: menuItem.allergens || [],
@@ -152,7 +173,10 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
       unit: menuItem.inventory?.unit || 'units',
       costPerUnit: menuItem.inventory?.costPerUnit || 0,
       supplier: menuItem.inventory?.supplier || '',
-      preventOrdersWhenOutOfStock: menuItem.inventory?.preventOrdersWhenOutOfStock || false,
+      preventOrdersWhenOutOfStock:
+        menuItem.inventory?.preventOrdersWhenOutOfStock || false,
+      crateSize: menuItem.inventory?.crateSize || undefined,
+      packagingType: menuItem.inventory?.packagingType || '',
       pointsRedeemable: menuItem.pointsRedeemable || false,
       pointsValue: menuItem.pointsValue || 0,
     },
@@ -214,10 +238,22 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
       formData.append('servingSize', data.servingSize || '');
       formData.append('isAvailable', data.isAvailable.toString());
       formData.append('halfPortionEnabled', data.halfPortionEnabled.toString());
-      formData.append('halfPortionSurcharge', data.halfPortionSurcharge.toString());
-      formData.append('quarterPortionEnabled', data.quarterPortionEnabled.toString());
-      formData.append('quarterPortionSurcharge', data.quarterPortionSurcharge.toString());
-      formData.append('allowManualPriceOverride', data.allowManualPriceOverride.toString());
+      formData.append(
+        'halfPortionSurcharge',
+        data.halfPortionSurcharge.toString()
+      );
+      formData.append(
+        'quarterPortionEnabled',
+        data.quarterPortionEnabled.toString()
+      );
+      formData.append(
+        'quarterPortionSurcharge',
+        data.quarterPortionSurcharge.toString()
+      );
+      formData.append(
+        'allowManualPriceOverride',
+        data.allowManualPriceOverride.toString()
+      );
       formData.append('tags', data.tags || '');
       formData.append('allergens', JSON.stringify(data.allergens || []));
       formData.append('spiceLevel', data.spiceLevel || 'none');
@@ -229,7 +265,10 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
       // Add inventory tracking data
       formData.append('trackInventory', data.trackInventory.toString());
       if (data.trackInventory) {
-        formData.append('trackByLocation', (data.trackByLocation || false).toString());
+        formData.append(
+          'trackByLocation',
+          (data.trackByLocation || false).toString()
+        );
         if (data.trackByLocation && initialLocation) {
           formData.append('initialLocation', initialLocation);
         }
@@ -239,7 +278,14 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
         formData.append('unit', data.unit || 'units');
         formData.append('costPerUnit', (data.costPerUnit || 0).toString());
         formData.append('supplier', data.supplier || '');
-        formData.append('preventOrdersWhenOutOfStock', (data.preventOrdersWhenOutOfStock || false).toString());
+        formData.append(
+          'preventOrdersWhenOutOfStock',
+          (data.preventOrdersWhenOutOfStock || false).toString()
+        );
+        if (data.crateSize)
+          formData.append('crateSize', data.crateSize.toString());
+        if (data.packagingType)
+          formData.append('packagingType', data.packagingType);
       }
 
       // Add points redemption data
@@ -313,7 +359,9 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
 
   function handleCancel() {
     if (isDirty) {
-      if (confirm('You have unsaved changes. Are you sure you want to leave?')) {
+      if (
+        confirm('You have unsaved changes. Are you sure you want to leave?')
+      ) {
         router.push('/dashboard/menu');
       }
     } else {
@@ -322,7 +370,7 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
   }
 
   const foodCategories = availableCategories?.food
-    .filter(c => c.isEnabled)
+    .filter((c) => c.isEnabled)
     .sort((a, b) => a.order - b.order) || [
     { value: 'main-courses', label: 'Main Courses' },
     { value: 'starters', label: 'Starters' },
@@ -330,7 +378,7 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
   ];
 
   const drinkCategories = availableCategories?.drinks
-    .filter(c => c.isEnabled)
+    .filter((c) => c.isEnabled)
     .sort((a, b) => a.order - b.order) || [
     { value: 'beer-local', label: 'Beer (Local)' },
     { value: 'beer-imported', label: 'Beer (Imported)' },
@@ -360,7 +408,9 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
                 disabled={isLoading}
               />
               {errors.name && (
-                <p className="text-sm text-destructive">{errors.name.message}</p>
+                <p className="text-sm text-destructive">
+                  {errors.name.message}
+                </p>
               )}
             </div>
 
@@ -375,7 +425,9 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
                 disabled={isLoading}
               />
               {errors.description && (
-                <p className="text-sm text-destructive">{errors.description.message}</p>
+                <p className="text-sm text-destructive">
+                  {errors.description.message}
+                </p>
               )}
             </div>
 
@@ -385,7 +437,9 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
                 <Label htmlFor="mainCategory">Main Category *</Label>
                 <Select
                   value={mainCategory}
-                  onValueChange={(value) => setValue('mainCategory', value as 'food' | 'drinks')}
+                  onValueChange={(value) =>
+                    setValue('mainCategory', value as 'food' | 'drinks')
+                  }
                   disabled={isLoading}
                 >
                   <SelectTrigger>
@@ -397,7 +451,9 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
                   </SelectContent>
                 </Select>
                 {errors.mainCategory && (
-                  <p className="text-sm text-destructive">{errors.mainCategory.message}</p>
+                  <p className="text-sm text-destructive">
+                    {errors.mainCategory.message}
+                  </p>
                 )}
               </div>
 
@@ -420,7 +476,9 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
                   </SelectContent>
                 </Select>
                 {errors.category && (
-                  <p className="text-sm text-destructive">{errors.category.message}</p>
+                  <p className="text-sm text-destructive">
+                    {errors.category.message}
+                  </p>
                 )}
               </div>
             </div>
@@ -438,7 +496,9 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
                   disabled={isLoading}
                 />
                 {errors.price && (
-                  <p className="text-sm text-destructive">{errors.price.message}</p>
+                  <p className="text-sm text-destructive">
+                    {errors.price.message}
+                  </p>
                 )}
               </div>
 
@@ -452,7 +512,9 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
                   disabled={isLoading}
                 />
                 {errors.preparationTime && (
-                  <p className="text-sm text-destructive">{errors.preparationTime.message}</p>
+                  <p className="text-sm text-destructive">
+                    {errors.preparationTime.message}
+                  </p>
                 )}
               </div>
 
@@ -500,15 +562,23 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
 
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label htmlFor="allowManualPriceOverride" className="font-medium">Allow Manual Price Override</Label>
+                <Label
+                  htmlFor="allowManualPriceOverride"
+                  className="font-medium"
+                >
+                  Allow Manual Price Override
+                </Label>
                 <p className="text-sm text-muted-foreground">
-                  Enable staff to enter custom prices for this item when creating orders
+                  Enable staff to enter custom prices for this item when
+                  creating orders
                 </p>
               </div>
               <Switch
                 id="allowManualPriceOverride"
                 checked={watch('allowManualPriceOverride')}
-                onCheckedChange={(checked) => setValue('allowManualPriceOverride', checked)}
+                onCheckedChange={(checked) =>
+                  setValue('allowManualPriceOverride', checked)
+                }
                 disabled={isLoading}
               />
             </div>
@@ -532,7 +602,9 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
                 <Switch
                   id="halfPortionEnabled"
                   checked={halfPortionEnabled}
-                  onCheckedChange={(checked) => setValue('halfPortionEnabled', checked)}
+                  onCheckedChange={(checked) =>
+                    setValue('halfPortionEnabled', checked)
+                  }
                   disabled={isLoading}
                 />
               </div>
@@ -540,13 +612,17 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
               {halfPortionEnabled && (
                 <div className="space-y-3">
                   <div>
-                    <Label htmlFor="halfPortionSurcharge">Surcharge (optional)</Label>
+                    <Label htmlFor="halfPortionSurcharge">
+                      Surcharge (optional)
+                    </Label>
                     <Input
                       id="halfPortionSurcharge"
                       type="number"
                       min="0"
                       step="50"
-                      {...register('halfPortionSurcharge', { valueAsNumber: true })}
+                      {...register('halfPortionSurcharge', {
+                        valueAsNumber: true,
+                      })}
                       disabled={isLoading}
                       placeholder="0"
                     />
@@ -562,10 +638,15 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
                           style: 'currency',
                           currency: 'NGN',
                           minimumFractionDigits: 0,
-                        }).format(Math.round(price * 0.5) + (halfPortionSurcharge || 0))}
+                        }).format(
+                          Math.round(price * 0.5) + (halfPortionSurcharge || 0)
+                        )}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        50% of full price{halfPortionSurcharge > 0 ? ` + ₦${halfPortionSurcharge.toLocaleString()} surcharge` : ''}
+                        50% of full price
+                        {halfPortionSurcharge > 0
+                          ? ` + ₦${halfPortionSurcharge.toLocaleString()} surcharge`
+                          : ''}
                       </p>
                     </div>
                   )}
@@ -574,7 +655,9 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label htmlFor="quarterPortionEnabled">Quarter Portion (25%)</Label>
+                  <Label htmlFor="quarterPortionEnabled">
+                    Quarter Portion (25%)
+                  </Label>
                   <p className="text-sm text-muted-foreground">
                     Allow customers to order quarter portions at 25% price
                   </p>
@@ -582,7 +665,9 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
                 <Switch
                   id="quarterPortionEnabled"
                   checked={quarterPortionEnabled}
-                  onCheckedChange={(checked) => setValue('quarterPortionEnabled', checked)}
+                  onCheckedChange={(checked) =>
+                    setValue('quarterPortionEnabled', checked)
+                  }
                   disabled={isLoading}
                 />
               </div>
@@ -590,13 +675,17 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
               {quarterPortionEnabled && (
                 <div className="space-y-3">
                   <div>
-                    <Label htmlFor="quarterPortionSurcharge">Surcharge (optional)</Label>
+                    <Label htmlFor="quarterPortionSurcharge">
+                      Surcharge (optional)
+                    </Label>
                     <Input
                       id="quarterPortionSurcharge"
                       type="number"
                       min="0"
                       step="50"
-                      {...register('quarterPortionSurcharge', { valueAsNumber: true })}
+                      {...register('quarterPortionSurcharge', {
+                        valueAsNumber: true,
+                      })}
                       disabled={isLoading}
                       placeholder="0"
                     />
@@ -607,15 +696,23 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
                   {price > 0 && (
                     <div className="rounded-md bg-muted p-3">
                       <p className="text-sm">
-                        <span className="font-medium">Quarter Portion Price:</span>{' '}
+                        <span className="font-medium">
+                          Quarter Portion Price:
+                        </span>{' '}
                         {new Intl.NumberFormat('en-NG', {
                           style: 'currency',
                           currency: 'NGN',
                           minimumFractionDigits: 0,
-                        }).format(Math.round(price * 0.25) + (quarterPortionSurcharge || 0))}
+                        }).format(
+                          Math.round(price * 0.25) +
+                            (quarterPortionSurcharge || 0)
+                        )}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        25% of full price{quarterPortionSurcharge > 0 ? ` + ₦${quarterPortionSurcharge.toLocaleString()} surcharge` : ''}
+                        25% of full price
+                        {quarterPortionSurcharge > 0
+                          ? ` + ₦${quarterPortionSurcharge.toLocaleString()} surcharge`
+                          : ''}
                       </p>
                     </div>
                   )}
@@ -649,7 +746,9 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
               <Switch
                 id="trackInventory"
                 checked={trackInventory}
-                onCheckedChange={(checked) => setValue('trackInventory', checked)}
+                onCheckedChange={(checked) =>
+                  setValue('trackInventory', checked)
+                }
                 disabled={isLoading}
               />
             </div>
@@ -668,11 +767,13 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
                   <Switch
                     id="trackByLocation"
                     checked={trackByLocation || false}
-                    onCheckedChange={(checked) => setValue('trackByLocation', checked)}
+                    onCheckedChange={(checked) =>
+                      setValue('trackByLocation', checked)
+                    }
                     disabled={isLoading}
                   />
                 </div>
-                
+
                 {/* Initial Location Selection (shown when track by location is enabled) */}
                 {trackByLocation && availableLocations.length > 0 && (
                   <div className="space-y-2 pt-4">
@@ -703,11 +804,12 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
                     )}
                   </div>
                 )}
-                
+
                 {trackByLocation && availableLocations.length === 0 && (
                   <div className="pt-4">
                     <p className="text-sm text-destructive">
-                      No locations configured. Please configure locations in Settings → Locations first.
+                      No locations configured. Please configure locations in
+                      Settings → Locations first.
                     </p>
                   </div>
                 )}
@@ -730,7 +832,9 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
                       disabled={isLoading}
                     />
                     {errors.currentStock && (
-                      <p className="text-sm text-destructive">{errors.currentStock.message}</p>
+                      <p className="text-sm text-destructive">
+                        {errors.currentStock.message}
+                      </p>
                     )}
                   </div>
 
@@ -795,14 +899,46 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
                   </div>
                 </div>
 
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="crateSize">Units Per Crate</Label>
+                    <Input
+                      id="crateSize"
+                      type="number"
+                      min="1"
+                      {...register('crateSize', { valueAsNumber: true })}
+                      placeholder="e.g., 24"
+                      disabled={isLoading}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      How many units in one crate/case (leave empty if N/A)
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="packagingType">Packaging Type</Label>
+                    <Input
+                      id="packagingType"
+                      {...register('packagingType')}
+                      placeholder="e.g., crate, case, pack"
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
+
                 <div className="flex items-center space-x-2">
                   <Switch
                     id="preventOrdersWhenOutOfStock"
                     checked={watch('preventOrdersWhenOutOfStock')}
-                    onCheckedChange={(checked) => setValue('preventOrdersWhenOutOfStock', checked)}
+                    onCheckedChange={(checked) =>
+                      setValue('preventOrdersWhenOutOfStock', checked)
+                    }
                     disabled={isLoading}
                   />
-                  <Label htmlFor="preventOrdersWhenOutOfStock" className="text-sm font-normal">
+                  <Label
+                    htmlFor="preventOrdersWhenOutOfStock"
+                    className="text-sm font-normal"
+                  >
                     Prevent orders when out of stock
                   </Label>
                 </div>
@@ -831,7 +967,9 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
             {/* Points Redeemable Toggle */}
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label htmlFor="pointsRedeemable">Allow Points Redemption</Label>
+                <Label htmlFor="pointsRedeemable">
+                  Allow Points Redemption
+                </Label>
                 <p className="text-sm text-muted-foreground">
                   Enable customers to purchase this item using loyalty points
                 </p>
@@ -839,7 +977,9 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
               <Switch
                 id="pointsRedeemable"
                 checked={pointsRedeemable}
-                onCheckedChange={(checked) => setValue('pointsRedeemable', checked)}
+                onCheckedChange={(checked) =>
+                  setValue('pointsRedeemable', checked)
+                }
                 disabled={isLoading}
               />
             </div>
@@ -858,10 +998,13 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
                     disabled={isLoading}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Points required to redeem this item. Current rate: {conversionRate} points = ₦1
+                    Points required to redeem this item. Current rate:{' '}
+                    {conversionRate} points = ₦1
                   </p>
                   {errors.pointsValue && (
-                    <p className="text-sm text-destructive">{errors.pointsValue.message}</p>
+                    <p className="text-sm text-destructive">
+                      {errors.pointsValue.message}
+                    </p>
                   )}
                 </div>
 
@@ -888,7 +1031,8 @@ export function MenuItemEditForm({ menuItem, availableCategories }: MenuItemEdit
                   <div className="rounded-md bg-muted p-3 text-sm">
                     <p className="font-medium">Conversion Preview:</p>
                     <p className="text-muted-foreground">
-                      ₦{price.toLocaleString()} = {pointsValue.toLocaleString()} points
+                      ₦{price.toLocaleString()} = {pointsValue.toLocaleString()}{' '}
+                      points
                     </p>
                     <p className="text-muted-foreground">
                       ({conversionRate} points per ₦1)

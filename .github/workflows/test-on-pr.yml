@@ -197,7 +197,34 @@ jobs:
       - name: Determine release version
         id: version
         run: |
-          VERSION="v$(date +%Y.%m.%d)"
+          DATE_PREFIX="v$(date +%Y.%m.%d)"
+          # Check for existing releases today to support multiple releases per day
+          if [ -n "${SUPABASE_URL}" ] && [ -n "${SUPABASE_SERVICE_ROLE_KEY}" ]; then
+            PROJ_ID=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_projects?slug=eq.wawagardenbar-app&select=id" \
+              -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+              -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+              | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+            if [ -n "$PROJ_ID" ]; then
+              EXISTING=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_releases?project_id=eq.${PROJ_ID}&version=like.${DATE_PREFIX}%25&select=version&order=created_at.desc&limit=1" \
+                -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+                -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}")
+              LATEST=$(echo "$EXISTING" | grep -o '"version":"[^"]*"' | head -1 | cut -d'"' -f4)
+              if [ -n "$LATEST" ]; then
+                # Extract sequence number: v2026.03.31 → 1, v2026.03.31.3 → 3
+                SEQ=$(echo "$LATEST" | sed -n "s/^${DATE_PREFIX}\.//p")
+                if [ -z "$SEQ" ]; then
+                  SEQ=1
+                fi
+                VERSION="${DATE_PREFIX}.$((SEQ + 1))"
+              else
+                VERSION="${DATE_PREFIX}"
+              fi
+            else
+              VERSION="${DATE_PREFIX}"
+            fi
+          else
+            VERSION="${DATE_PREFIX}"
+          fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "Release version: ${VERSION}"
 

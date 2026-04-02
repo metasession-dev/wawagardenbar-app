@@ -55,6 +55,24 @@ curl -s [PRODUCTION_URL]/[HEALTH_ENDPOINT]
 
 If it fails, check hosting platform logs. See deployment reference doc for troubleshooting.
 
+### Step 3a: Run Post-Deploy Actions (if any)
+
+Check the release ticket's **Post-Deploy Actions** section. If actions are listed:
+
+1. Run each action in order against the **production** environment
+2. Verify each completes successfully before proceeding
+3. Record results in the release ticket's Audit Trail
+
+```bash
+# Example: data migration
+npx tsx scripts/backfill-x.ts "[PROD_CONNECTION_STRING]"
+# Verify: check output for success, record row counts
+```
+
+If the release ticket says "No post-deploy actions required", skip to Step 4.
+
+> **Important:** Run post-deploy actions BEFORE smoke tests. Smoke tests should verify the application works with the migration applied.
+
 ### Production Verification Policy
 
 Production verification is **read-only and non-destructive**. It confirms the deployment succeeded and the application is accessible. It does NOT exercise application logic.

@@ -300,6 +300,19 @@ Create `compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md`:
 - [Any risks introduced]
 - [New dependencies and trust assessment]
 
+## Post-Deploy Actions
+
+| Type | Script / Command | Target | Required | Notes                           |
+| ---- | ---------------- | ------ | -------- | ------------------------------- |
+| —    | None             | —      | —        | No post-deploy actions required |
+
+<!-- Replace the "None" row above with actual actions if this release requires them:
+| Data migration | `npx tsx scripts/backfill-x.ts "[CONN_STRING]"` | Prod DB | Yes | [description] |
+| Schema migration | `npx prisma migrate deploy` | Prod DB | Yes | [description] |
+-->
+
+**Run these after deployment, before production verification.**
+
 ---
 
 ## Reviewer Checklist
@@ -313,6 +326,7 @@ Create `compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md`:
 - [ ] No regressions
 - [ ] AI code reviewed (if applicable)
 - [ ] No hallucinated dependencies
+- [ ] Post-deploy actions documented (or confirmed none required)
 
 ---
 
@@ -325,6 +339,7 @@ Create `compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md`:
 | [date] | AI code reviewed         | [reviewer] | [files]                           |
 | [date] | Tests passed             | [who]      | E2E + SAST: clean                 |
 | [date] | UAT verification passed  | [who]      | Health + smoke + feature verified |
+| [date] | Post-deploy actions      | [who]      | [Completed / None required]       |
 | [date] | Submitted for review     | [who]      | PR #[number]                      |
 ```
 

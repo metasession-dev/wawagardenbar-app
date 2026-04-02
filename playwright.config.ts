@@ -88,6 +88,13 @@ export default defineConfig({
       testMatch: /inventory-snapshots\.spec\.ts/,
       dependencies: ['auth-setup'],
     },
+    // Restock Recommendations (REQ-019)
+    {
+      name: 'restock-recommendations',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /restock-recommendations\.spec\.ts/,
+      dependencies: ['auth-setup'],
+    },
   ],
   /* Start dev server before tests (skipped when BASE_URL is set) */
   webServer: process.env.BASE_URL

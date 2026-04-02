@@ -27,6 +27,8 @@ The PR is the **merge request**, not the development workspace. Develop on `deve
 
 When you create the PR, CI runs automatically — GitHub Actions re-executes the verification gates (TypeScript, SAST, dependency audit, E2E) independently. The META-COMPLY UAT approval check also runs, verifying the release has been approved for UAT in META-COMPLY. This produces tamper-resistant evidence verified by GitHub's infrastructure.
 
+> **Note:** The UAT approval check will fail initially if the release hasn't been approved in META-COMPLY yet. This is expected. After approving the release in META-COMPLY, re-run the `UAT Approval Gate` workflow from GitHub Actions (or use `workflow_dispatch`) to update the check status. The PR cannot be merged until this check passes — it is a required status check.
+
 What happens next depends on the risk level of the requirements in the PR:
 
 - **LOW risk:** CI provides independent verification. After CI passes, the developer may self-merge.

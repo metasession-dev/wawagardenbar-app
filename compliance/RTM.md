@@ -649,6 +649,7 @@ This section tracks discrete change requests (REQ-001 through REQ-008) that repr
 | REQ-019 | #41   | MEDIUM | compliance/evidence/REQ-019/ | APPROVED - DEPLOYED | William  | 2026-04-02 |
 | REQ-020 | #43   | MEDIUM | compliance/evidence/REQ-020/ | APPROVED - DEPLOYED | William  | 2026-04-02 |
 | REQ-021 | #44   | MEDIUM | compliance/evidence/REQ-021/ | APPROVED - DEPLOYED | William  | 2026-04-02 |
+| REQ-022 | #46   | MEDIUM | compliance/evidence/REQ-022/ | DRAFT               | --       | --         |
 
 ### Change Request Dependencies
 

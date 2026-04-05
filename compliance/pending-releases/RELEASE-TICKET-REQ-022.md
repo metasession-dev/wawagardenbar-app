@@ -25,9 +25,9 @@ Financial reports were using current `inventory.costPerUnit` instead of the orde
 
 - `services/financial-report-service.ts` — Removed 2 inventory lookups, use `item.costPerUnit` from orders for daily and custom reports; removed unused InventoryModel import
 - `app/api/public/sales/summary/route.ts` — Removed inventory lookup, use `item.costPerUnit` from orders for COGS; removed unused InventoryModel import
-- `components/features/admin/menu-item-edit-form.tsx` — Removed Cost Per Unit field from inventory section (schema, defaults, FormData, UI)
+- `components/features/admin/menu-item-edit-form.tsx` — Removed Cost Per Unit field from inventory section; made Price field read-only with pointer to Price Management
 - `components/features/admin/menu-item-form.tsx` — Same removal from create form
-- `app/actions/admin/menu-actions.ts` — Removed `costPerUnit` write from `updateMenuItemAction()` inventory update path
+- `app/actions/admin/menu-actions.ts` — Removed `costPerUnit` write and `price` write from `updateMenuItemAction()`; price now only set via PriceHistoryService
 - `services/price-history-service.ts` — Added `Inventory.costPerUnit` sync after price update via `InventoryModel.findOneAndUpdate()`
 - `playwright.config.ts` — Added cost-snapshot project
 

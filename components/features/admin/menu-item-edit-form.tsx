@@ -64,7 +64,6 @@ const menuItemSchema = z.object({
   minimumStock: z.number().min(0).optional(),
   maximumStock: z.number().min(0).optional(),
   unit: z.string().optional(),
-  costPerUnit: z.number().min(0).optional(),
   supplier: z.string().optional(),
   preventOrdersWhenOutOfStock: z.boolean().optional(),
   crateSize: z.number().min(1).optional(),
@@ -171,7 +170,6 @@ export function MenuItemEditForm({
       minimumStock: menuItem.inventory?.minimumStock || 10,
       maximumStock: menuItem.inventory?.maximumStock || 100,
       unit: menuItem.inventory?.unit || 'units',
-      costPerUnit: menuItem.inventory?.costPerUnit || 0,
       supplier: menuItem.inventory?.supplier || '',
       preventOrdersWhenOutOfStock:
         menuItem.inventory?.preventOrdersWhenOutOfStock || false,
@@ -276,7 +274,6 @@ export function MenuItemEditForm({
         formData.append('minimumStock', (data.minimumStock || 10).toString());
         formData.append('maximumStock', (data.maximumStock || 100).toString());
         formData.append('unit', data.unit || 'units');
-        formData.append('costPerUnit', (data.costPerUnit || 0).toString());
         formData.append('supplier', data.supplier || '');
         formData.append(
           'preventOrdersWhenOutOfStock',
@@ -486,20 +483,17 @@ export function MenuItemEditForm({
             {/* Price, Prep Time, Serving Size */}
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="price">Price (₦) *</Label>
+                <Label htmlFor="price">Price (₦)</Label>
                 <Input
                   id="price"
                   type="number"
-                  step="0.01"
-                  {...register('price', { valueAsNumber: true })}
-                  placeholder="0.00"
-                  disabled={isLoading}
+                  value={menuItem.price}
+                  readOnly
+                  className="bg-muted cursor-not-allowed"
                 />
-                {errors.price && (
-                  <p className="text-sm text-destructive">
-                    {errors.price.message}
-                  </p>
-                )}
+                <p className="text-xs text-muted-foreground">
+                  Use Price Management below to update
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -876,18 +870,6 @@ export function MenuItemEditForm({
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="costPerUnit">Cost Per Unit (₦)</Label>
-                    <Input
-                      id="costPerUnit"
-                      type="number"
-                      step="0.01"
-                      {...register('costPerUnit', { valueAsNumber: true })}
-                      placeholder="0.00"
-                      disabled={isLoading}
-                    />
-                  </div>
-
                   <div className="space-y-2">
                     <Label htmlFor="supplier">Supplier</Label>
                     <Input

@@ -2,6 +2,7 @@ import { Types } from 'mongoose';
 import { connectDB } from '@/lib/mongodb';
 import MenuItemPriceHistory from '@/models/menu-item-price-history-model';
 import MenuItem from '@/models/menu-item-model';
+import InventoryModel from '@/models/inventory-model';
 import { IMenuItemPriceHistory, PriceChangeReason } from '@/interfaces';
 
 export class PriceHistoryService {
@@ -13,12 +14,12 @@ export class PriceHistoryService {
   ): Promise<{ price: number; costPerUnit: number } | null> {
     await connectDB();
 
-    const priceHistory = await MenuItemPriceHistory.findOne({
+    const priceHistory = (await MenuItemPriceHistory.findOne({
       menuItemId: new Types.ObjectId(menuItemId),
       effectiveTo: null,
     })
       .sort({ effectiveFrom: -1 })
-      .lean() as IMenuItemPriceHistory | null;
+      .lean()) as IMenuItemPriceHistory | null;
 
     if (priceHistory) {
       return {
@@ -48,13 +49,13 @@ export class PriceHistoryService {
   ): Promise<{ price: number; costPerUnit: number } | null> {
     await connectDB();
 
-    const priceHistory = await MenuItemPriceHistory.findOne({
+    const priceHistory = (await MenuItemPriceHistory.findOne({
       menuItemId: new Types.ObjectId(menuItemId),
       effectiveFrom: { $lte: date },
       $or: [{ effectiveTo: null }, { effectiveTo: { $gt: date } }],
     })
       .sort({ effectiveFrom: -1 })
-      .lean() as IMenuItemPriceHistory | null;
+      .lean()) as IMenuItemPriceHistory | null;
 
     if (priceHistory) {
       return {
@@ -107,6 +108,12 @@ export class PriceHistoryService {
       price: newPrice,
       costPerUnit: newCostPerUnit,
     });
+
+    // Sync inventory cost to keep waste/stock valuation accurate
+    await InventoryModel.findOneAndUpdate(
+      { menuItemId: new Types.ObjectId(menuItemId) },
+      { costPerUnit: newCostPerUnit }
+    );
   }
 
   /**

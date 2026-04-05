@@ -1,10 +1,14 @@
 import { NextRequest } from 'next/server';
 import { startOfDay, endOfDay, eachDayOfInterval, format } from 'date-fns';
 import OrderModel from '@/models/order-model';
-import InventoryModel from '@/models/inventory-model';
 import MenuItemModel from '@/models/menu-item-model';
 import { ExpenseModel } from '@/models/expense-model';
-import { withApiAuth, apiSuccess, apiError, serialize } from '@/lib/api-response';
+import {
+  withApiAuth,
+  apiSuccess,
+  apiError,
+  serialize,
+} from '@/lib/api-response';
 import { parsePeriodParams } from '@/lib/date-periods';
 
 interface SalesDaySeries {
@@ -68,14 +72,17 @@ export async function GET(request: NextRequest): Promise<Response> {
       let totalTips = 0;
       let totalDiscounts = 0;
 
-      const itemAgg = new Map<string, {
-        name: string;
-        category: string;
-        mainCategory: string;
-        quantity: number;
-        revenue: number;
-        costPerUnit: number;
-      }>();
+      const itemAgg = new Map<
+        string,
+        {
+          name: string;
+          category: string;
+          mainCategory: string;
+          quantity: number;
+          revenue: number;
+          costPerUnit: number;
+        }
+      >();
 
       for (const order of paidOrders) {
         totalServiceFees += order.serviceFee || 0;
@@ -90,15 +97,16 @@ export async function GET(request: NextRequest): Promise<Response> {
             existing.quantity += item.quantity;
             existing.revenue += item.subtotal;
           } else {
-            const menuItem = await MenuItemModel.findById(item.menuItemId).select('mainCategory category').lean();
-            const inventory = await InventoryModel.findOne({ menuItemId: item.menuItemId }).select('costPerUnit').lean();
+            const menuItem = await MenuItemModel.findById(item.menuItemId)
+              .select('mainCategory category')
+              .lean();
             itemAgg.set(itemId, {
               name: item.name,
               category: menuItem?.category || 'unknown',
               mainCategory: menuItem?.mainCategory || 'food',
               quantity: item.quantity,
               revenue: item.subtotal,
-              costPerUnit: inventory?.costPerUnit || 0,
+              costPerUnit: item.costPerUnit || 0,
             });
           }
         }
@@ -146,17 +154,26 @@ export async function GET(request: NextRequest): Promise<Response> {
         byPaymentStatus[ps] = (byPaymentStatus[ps] || 0) + 1;
       }
 
-      const completedCount = (byStatus['completed'] || 0) + (byStatus['delivered'] || 0);
+      const completedCount =
+        (byStatus['completed'] || 0) + (byStatus['delivered'] || 0);
       const cancelledCount = byStatus['cancelled'] || 0;
-      const avgValue = paidOrders.length > 0
-        ? Math.round(paidOrders.reduce((s, o) => s + o.total, 0) / paidOrders.length)
-        : 0;
+      const avgValue =
+        paidOrders.length > 0
+          ? Math.round(
+              paidOrders.reduce((s, o) => s + o.total, 0) / paidOrders.length
+            )
+          : 0;
 
       // ── Top items by revenue ──
       const topItems = Array.from(itemAgg.values())
         .sort((a, b) => b.revenue - a.revenue)
         .slice(0, 10)
-        .map(({ name, category, quantity, revenue }) => ({ name, category, quantity, revenue }));
+        .map(({ name, category, quantity, revenue }) => ({
+          name,
+          category,
+          quantity,
+          revenue,
+        }));
 
       // ── Daily time-series ──
       const days = eachDayOfInterval({ start: startDate, end: endDate });
@@ -172,43 +189,61 @@ export async function GET(request: NextRequest): Promise<Response> {
           date: format(day, 'yyyy-MM-dd'),
           revenue: dayRevenue,
           orderCount: dayOrders.length,
-          averageOrderValue: dayOrders.length > 0 ? Math.round(dayRevenue / dayOrders.length) : 0,
+          averageOrderValue:
+            dayOrders.length > 0
+              ? Math.round(dayRevenue / dayOrders.length)
+              : 0,
         };
       });
 
-      return apiSuccess(serialize({
-        period: { label, startDate: startDate.toISOString(), endDate: endDate.toISOString() },
-        revenue: {
-          total: totalRevenue,
-          food: foodRevenue,
-          drinks: drinksRevenue,
-          serviceFees: totalServiceFees,
-          tax: totalTax,
-          tips: totalTips,
-          discounts: totalDiscounts,
-        },
-        costs: { totalCOGS, foodCOGS, drinksCOGS },
-        profit: {
-          grossProfit,
-          grossMargin: totalRevenue > 0 ? Math.round((grossProfit / totalRevenue) * 10000) / 100 : 0,
-          operatingExpenses,
-          netProfit,
-          netMargin: totalRevenue > 0 ? Math.round((netProfit / totalRevenue) * 10000) / 100 : 0,
-        },
-        orders: {
-          total: allOrders.length,
-          completed: completedCount,
-          cancelled: cancelledCount,
-          averageValue: avgValue,
-          byType,
-          byStatus,
-        },
-        payments: { byMethod: byPaymentMethod, byStatus: byPaymentStatus },
-        topItems,
-        dailySeries,
-      }));
+      return apiSuccess(
+        serialize({
+          period: {
+            label,
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+          },
+          revenue: {
+            total: totalRevenue,
+            food: foodRevenue,
+            drinks: drinksRevenue,
+            serviceFees: totalServiceFees,
+            tax: totalTax,
+            tips: totalTips,
+            discounts: totalDiscounts,
+          },
+          costs: { totalCOGS, foodCOGS, drinksCOGS },
+          profit: {
+            grossProfit,
+            grossMargin:
+              totalRevenue > 0
+                ? Math.round((grossProfit / totalRevenue) * 10000) / 100
+                : 0,
+            operatingExpenses,
+            netProfit,
+            netMargin:
+              totalRevenue > 0
+                ? Math.round((netProfit / totalRevenue) * 10000) / 100
+                : 0,
+          },
+          orders: {
+            total: allOrders.length,
+            completed: completedCount,
+            cancelled: cancelledCount,
+            averageValue: avgValue,
+            byType,
+            byStatus,
+          },
+          payments: { byMethod: byPaymentMethod, byStatus: byPaymentStatus },
+          topItems,
+          dailySeries,
+        })
+      );
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Failed to generate sales summary';
+      const msg =
+        error instanceof Error
+          ? error.message
+          : 'Failed to generate sales summary';
       console.error('[PUBLIC API] GET /api/public/sales/summary', error);
       return apiError(msg, 500);
     }

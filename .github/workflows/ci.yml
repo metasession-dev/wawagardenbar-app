@@ -7,7 +7,7 @@
 # sequentially anyway. One checkout + one cached npm ci = fast.
 #
 # PRs to main inherit commit status via branch protection.
-# No pull_request trigger — avoids duplicate CI runs.
+# Compliance validation runs separately on PRs (compliance-validation.yml).
 
 name: CI Pipeline
 
@@ -322,18 +322,3 @@ jobs:
 
       - name: Summary
         run: echo "Evidence uploaded for ${{ steps.version.outputs.version }} (UAT)"
-
-  # ──────────────────────────────────────────────
-  # Compliance Validation
-  # ──────────────────────────────────────────────
-  compliance-validation:
-    name: Compliance Validation
-    runs-on: self-hosted
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Validate compliance artifacts
-        run: bash scripts/validate-compliance-artifacts.sh origin/main
-      - name: Validate commit conventions
-        run: bash scripts/validate-commits.sh origin/main

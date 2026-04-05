@@ -95,6 +95,13 @@ export default defineConfig({
       testMatch: /restock-recommendations\.spec\.ts/,
       dependencies: ['auth-setup'],
     },
+    // Cost Snapshot integrity (REQ-022)
+    {
+      name: 'cost-snapshot',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /cost-snapshot\.spec\.ts/,
+      dependencies: ['auth-setup'],
+    },
   ],
   /* Start dev server before tests (skipped when BASE_URL is set) */
   webServer: process.env.BASE_URL

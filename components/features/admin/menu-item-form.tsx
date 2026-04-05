@@ -43,7 +43,6 @@ const menuItemSchema = z.object({
   minimumStock: z.number().min(0).optional(),
   maximumStock: z.number().min(0).optional(),
   unit: z.string().optional(),
-  costPerUnit: z.number().min(0).optional(),
   supplier: z.string().optional(),
   preventOrdersWhenOutOfStock: z.boolean().optional(),
   crateSize: z.number().min(1).optional(),
@@ -91,7 +90,6 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
       minimumStock: 10,
       maximumStock: 100,
       unit: 'units',
-      costPerUnit: 0,
       supplier: '',
       preventOrdersWhenOutOfStock: false,
     },
@@ -145,7 +143,6 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
         formData.append('minimumStock', (data.minimumStock || 10).toString());
         formData.append('maximumStock', (data.maximumStock || 100).toString());
         formData.append('unit', data.unit || 'units');
-        formData.append('costPerUnit', (data.costPerUnit || 0).toString());
         formData.append('supplier', data.supplier || '');
         formData.append(
           'preventOrdersWhenOutOfStock',
@@ -608,21 +605,6 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="costPerUnit">Cost Per Unit (₦)</Label>
-                <Input
-                  id="costPerUnit"
-                  type="number"
-                  step="0.01"
-                  {...register('costPerUnit', { valueAsNumber: true })}
-                  placeholder="0.00"
-                  disabled={isLoading}
-                />
-                <p className="text-xs text-muted-foreground">
-                  For profit margin tracking
-                </p>
-              </div>
-
               <div className="space-y-2">
                 <Label htmlFor="supplier">Supplier</Label>
                 <Input

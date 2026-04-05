@@ -7,9 +7,10 @@
 
 ## Tests to Add
 
-- [ ] `__tests__/reports/report-cost-snapshot.test.ts` — verify daily and custom reports use order-snapshotted `item.costPerUnit`, not current inventory cost
-- [ ] `__tests__/reports/public-sales-summary-cost.test.ts` — verify public sales summary COGS uses order-snapshotted cost
-- [ ] `__tests__/inventory/price-update-inventory-sync.test.ts` — verify `PriceHistoryService.updatePrice()` syncs `Inventory.costPerUnit`
+- [x] `__tests__/reports/report-cost-snapshot.test.ts` — verify daily and custom reports use order-snapshotted `item.costPerUnit`, not current inventory cost
+- [x] `__tests__/reports/public-sales-summary-cost.test.ts` — verify public sales summary COGS uses order-snapshotted cost
+- [x] `__tests__/inventory/price-update-inventory-sync.test.ts` — verify `PriceHistoryService.updatePrice()` syncs `Inventory.costPerUnit`
+- [ ] `e2e/cost-snapshot.spec.ts` — verify price field is read-only in edit form Basic Information section
 
 ## Tests to Update
 
@@ -29,6 +30,7 @@
 | Price update syncs inventory cost            | `__tests__/inventory/price-update-inventory-sync.test.ts` | `updatePrice syncs Inventory.costPerUnit`                              |
 | Inventory cost not synced leaves stale value | `__tests__/inventory/price-update-inventory-sync.test.ts` | `inventory costPerUnit matches MenuItem after price update`            |
 | Menu item save does not write inventory cost | `__tests__/inventory/price-update-inventory-sync.test.ts` | `updateMenuItemAction does not update Inventory.costPerUnit`           |
+| Price field read-only in edit form           | `e2e/cost-snapshot.spec.ts`                               | `price field in Basic Information is read-only`                        |
 
 ## Non-Functional Tests (MEDIUM)
 

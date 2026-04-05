@@ -107,6 +107,30 @@ test.describe('REQ-022: Cost Per Unit field removed from inventory section', () 
       expect(body).toMatch(/New Cost Per Unit|Cost Per Unit.*₦|Update Price/i);
     }
   });
+
+  test('price field in Basic Information is read-only', async ({ page }) => {
+    await page.goto('/dashboard/menu');
+    await page.waitForLoadState('networkidle');
+
+    const editLink = page.locator('a[href*="/menu/"][href*="/edit"]').first();
+    const editExists = await editLink.count();
+
+    if (editExists === 0) {
+      test.skip(true, 'No menu items to edit');
+      return;
+    }
+
+    await editLink.click();
+    await page.waitForLoadState('networkidle');
+
+    // Price field should be read-only in the edit form
+    const priceInput = page.locator('#price');
+    await expect(priceInput).toHaveAttribute('readonly', '');
+
+    // Should show helper text pointing to Price Management
+    const helperText = page.getByText('Use Price Management below to update');
+    await expect(helperText).toBeVisible();
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════

@@ -40,4 +40,7 @@ Standard gates plus targeted verification.
 - [x] Cost Per Unit field removed from Inventory section of both `menu-item-edit-form.tsx` and `menu-item-form.tsx`
 - [x] `costPerUnit` no longer submitted as part of inventory form data in `updateMenuItemAction()`
 - [x] Inventory analytics (waste cost, stock valuation) still function correctly via synced value
+- [x] `Price (₦)` field in Basic Information section of edit form is read-only
+- [x] `updateMenuItemAction()` no longer writes `MenuItem.price` directly
+- [x] Create form still allows setting initial price
 - [x] All additional testing items above pass

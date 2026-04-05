@@ -328,7 +328,7 @@ export async function updateMenuItemAction(
     if (description !== undefined) menuItem.description = description;
     if (mainCategory) menuItem.mainCategory = mainCategory as 'food' | 'drinks';
     if (category) menuItem.category = category as any;
-    if (!isNaN(price)) menuItem.price = price;
+    // Price is updated exclusively via PriceHistoryService.updatePrice()
     if (!isNaN(preparationTime)) menuItem.preparationTime = preparationTime;
     if (servingSize !== undefined) menuItem.servingSize = servingSize;
     menuItem.isAvailable = isAvailable;

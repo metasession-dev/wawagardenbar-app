@@ -483,20 +483,17 @@ export function MenuItemEditForm({
             {/* Price, Prep Time, Serving Size */}
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="price">Price (₦) *</Label>
+                <Label htmlFor="price">Price (₦)</Label>
                 <Input
                   id="price"
                   type="number"
-                  step="0.01"
-                  {...register('price', { valueAsNumber: true })}
-                  placeholder="0.00"
-                  disabled={isLoading}
+                  value={menuItem.price}
+                  readOnly
+                  className="bg-muted cursor-not-allowed"
                 />
-                {errors.price && (
-                  <p className="text-sm text-destructive">
-                    {errors.price.message}
-                  </p>
-                )}
+                <p className="text-xs text-muted-foreground">
+                  Use Price Management below to update
+                </p>
               </div>
 
               <div className="space-y-2">

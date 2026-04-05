@@ -13,7 +13,7 @@
 
 ## Tests to Update
 
-- [ ] `__tests__/reports/total-revenue-consistency.test.ts` — ensure cost assertions use snapshotted values if any cost checks exist
+- None — `total-revenue-consistency.test.ts` reviewed, contains no cost assertions
 
 ## Tests to Remove
 
@@ -28,6 +28,7 @@
 | Public sales API uses snapshotted cost       | `__tests__/reports/public-sales-summary-cost.test.ts`     | `COGS calculated from order item cost, not inventory`                  |
 | Price update syncs inventory cost            | `__tests__/inventory/price-update-inventory-sync.test.ts` | `updatePrice syncs Inventory.costPerUnit`                              |
 | Inventory cost not synced leaves stale value | `__tests__/inventory/price-update-inventory-sync.test.ts` | `inventory costPerUnit matches MenuItem after price update`            |
+| Menu item save does not write inventory cost | `__tests__/inventory/price-update-inventory-sync.test.ts` | `updateMenuItemAction does not update Inventory.costPerUnit`           |
 
 ## Non-Functional Tests (MEDIUM)
 

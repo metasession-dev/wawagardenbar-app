@@ -387,7 +387,6 @@ export async function updateMenuItemAction(
         if (minimumStock !== undefined) inventory.minimumStock = minimumStock;
         if (maximumStock !== undefined) inventory.maximumStock = maximumStock;
         if (unit) inventory.unit = unit;
-        if (costPerUnit !== undefined) inventory.costPerUnit = costPerUnit;
         if (supplier !== undefined) inventory.supplier = supplier;
         inventory.preventOrdersWhenOutOfStock = preventOrdersWhenOutOfStock;
         if (crateSize !== undefined) inventory.crateSize = crateSize;

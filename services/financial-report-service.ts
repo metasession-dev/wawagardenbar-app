@@ -7,7 +7,6 @@ import { connectDB } from '@/lib/mongodb';
 import OrderModel from '@/models/order-model';
 import TabModel from '@/models/tab-model';
 import { ExpenseModel } from '@/models/expense-model';
-import InventoryModel from '@/models/inventory-model';
 import MenuItemModel from '@/models/menu-item-model';
 
 export interface DailySummaryReport {
@@ -302,18 +301,13 @@ export class FinancialReportService {
 
           if (!menuItem) continue;
 
-          // Get cost from inventory
-          const inventory = await InventoryModel.findOne({
-            menuItemId: item.menuItemId,
-          }).lean();
-
           itemMap.set(itemId, {
             name: item.name,
             category: menuItem.category,
             mainCategory: menuItem.mainCategory,
             quantity: item.quantity,
             price: item.price,
-            costPerUnit: inventory?.costPerUnit || 0,
+            costPerUnit: item.costPerUnit || 0,
           });
         }
       }
@@ -560,17 +554,13 @@ export class FinancialReportService {
 
           if (!menuItem) continue;
 
-          const inventory = await InventoryModel.findOne({
-            menuItemId: item.menuItemId,
-          }).lean();
-
           itemMap.set(itemId, {
             name: item.name,
             category: menuItem.category,
             mainCategory: menuItem.mainCategory,
             quantity: item.quantity,
             price: item.price,
-            costPerUnit: inventory?.costPerUnit || 0,
+            costPerUnit: item.costPerUnit || 0,
           });
         }
       }

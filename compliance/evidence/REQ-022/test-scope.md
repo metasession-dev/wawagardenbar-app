@@ -19,12 +19,12 @@ Standard gates plus targeted verification.
 
 **Additional testing required by risk level:**
 
-- [ ] Historical report accuracy: verify daily/custom reports use snapshotted `item.costPerUnit` from orders, not current inventory cost
-- [ ] Public sales summary: verify COGS calculation uses order-snapshotted cost
-- [ ] Price update sync: verify `PriceHistoryService.updatePrice()` syncs `Inventory.costPerUnit` alongside `MenuItem.costPerUnit`
-- [ ] Inventory analytics: verify waste cost, stock valuation, profitability still work after sync change
-- [ ] Form field removal: verify Cost Per Unit no longer appears in Inventory section of menu item edit form
-- [ ] No regression: existing report tests continue to pass
+- [x] Historical report accuracy: verify daily/custom reports use snapshotted `item.costPerUnit` from orders, not current inventory cost
+- [x] Public sales summary: verify COGS calculation uses order-snapshotted cost
+- [x] Price update sync: verify `PriceHistoryService.updatePrice()` syncs `Inventory.costPerUnit` alongside `MenuItem.costPerUnit`
+- [x] Inventory analytics: verify waste cost, stock valuation, profitability still work after sync change
+- [x] Form field removal: verify Cost Per Unit no longer appears in Inventory section of menu item edit form
+- [x] No regression: existing report tests continue to pass
 
 ## Validation Approach
 
@@ -34,10 +34,10 @@ Standard gates plus targeted verification.
 
 ## Acceptance Criteria
 
-- [ ] `financial-report-service.ts` uses `item.costPerUnit` from order records (not `inventory.costPerUnit`) in both daily and custom report generation
-- [ ] `app/api/public/sales/summary/route.ts` uses `item.costPerUnit` from order records
-- [ ] `PriceHistoryService.updatePrice()` syncs `Inventory.costPerUnit` when updating price/cost
-- [ ] Cost Per Unit field removed from Inventory section of `menu-item-edit-form.tsx`
-- [ ] `costPerUnit` no longer submitted as part of inventory form data in `updateMenuItemAction()`
-- [ ] Inventory analytics (waste cost, stock valuation) still function correctly via synced value
-- [ ] All additional testing items above pass
+- [x] `financial-report-service.ts` uses `item.costPerUnit` from order records (not `inventory.costPerUnit`) in both daily and custom report generation
+- [x] `app/api/public/sales/summary/route.ts` uses `item.costPerUnit` from order records
+- [x] `PriceHistoryService.updatePrice()` syncs `Inventory.costPerUnit` when updating price/cost
+- [x] Cost Per Unit field removed from Inventory section of both `menu-item-edit-form.tsx` and `menu-item-form.tsx`
+- [x] `costPerUnit` no longer submitted as part of inventory form data in `updateMenuItemAction()`
+- [x] Inventory analytics (waste cost, stock valuation) still function correctly via synced value
+- [x] All additional testing items above pass

@@ -257,6 +257,13 @@ jobs:
             fi
           fi
 
+      - name: Download CI gate artifacts
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: ci-results
+          path: ci-evidence/
+
       - name: Generate and upload gate evidence
         if: env.SUPABASE_URL != ''
         run: |
@@ -265,27 +272,54 @@ jobs:
           FLAGS="${FLAGS} --release ${{ steps.version.outputs.version }} --create-release-if-missing"
           FLAGS="${FLAGS} --environment uat"
 
-          # Generate gate evidence
+          # Re-generate gate evidence as fallback if artifact download failed
           mkdir -p ci-evidence
-          VENV="$HOME/.semgrep-venv"
-          if [ -x "$VENV/bin/semgrep" ]; then
-            "$VENV/bin/semgrep" scan --config auto app/ lib/ services/ models/ --json > ci-evidence/sast-results.json 2>/dev/null || echo '{"results":[]}' > ci-evidence/sast-results.json
-          else
-            echo '{"results":[]}' > ci-evidence/sast-results.json
+          if [ ! -f ci-evidence/sast-results.json ]; then
+            VENV="$HOME/.semgrep-venv"
+            if [ -x "$VENV/bin/semgrep" ]; then
+              "$VENV/bin/semgrep" scan --config auto app/ lib/ services/ models/ --json > ci-evidence/sast-results.json 2>/dev/null || echo '{"results":[]}' > ci-evidence/sast-results.json
+            else
+              echo '{"results":[]}' > ci-evidence/sast-results.json
+            fi
           fi
-          npm audit --json > ci-evidence/dependency-audit.json 2>/dev/null || echo '{"vulnerabilities":{}}' > ci-evidence/dependency-audit.json
+          if [ ! -f ci-evidence/dependency-audit.json ]; then
+            npm audit --json > ci-evidence/dependency-audit.json 2>/dev/null || echo '{"vulnerabilities":{}}' > ci-evidence/dependency-audit.json
+          fi
 
-          # Upload gate evidence
-          for FILE in ci-evidence/*; do
-            [ -f "$FILE" ] || continue
-            echo "Uploading gate evidence: $(basename "$FILE")"
+          # Upload SAST results (security_scan category)
+          if [ -f ci-evidence/sast-results.json ]; then
+            echo "Uploading: sast-results.json"
             bash scripts/upload-evidence.sh \
-              wawagardenbar-app _compliance-docs audit_log "$FILE" \
-              --category ci_pipeline ${FLAGS} || echo "Warning: Failed to upload $(basename "$FILE")"
-          done
+              wawagardenbar-app _compliance-docs audit_log ci-evidence/sast-results.json \
+              --category security_scan ${FLAGS} || echo "Warning: Failed to upload sast-results.json"
+          fi
 
-          # Upload compliance docs
-          for DOC in compliance/RTM.md compliance/test-plan.md compliance/test-cases.md compliance/test-summary-report.md; do
+          # Upload dependency audit (security_scan category)
+          if [ -f ci-evidence/dependency-audit.json ]; then
+            echo "Uploading: dependency-audit.json"
+            bash scripts/upload-evidence.sh \
+              wawagardenbar-app _compliance-docs audit_log ci-evidence/dependency-audit.json \
+              --category security_scan ${FLAGS} || echo "Warning: Failed to upload dependency-audit.json"
+          fi
+
+          # Upload E2E test results (ci_pipeline category)
+          if [ -f ci-evidence/e2e-results.json ]; then
+            echo "Uploading: e2e-results.json"
+            bash scripts/upload-evidence.sh \
+              wawagardenbar-app _compliance-docs e2e_result ci-evidence/e2e-results.json \
+              --category ci_pipeline ${FLAGS} || echo "Warning: Failed to upload e2e-results.json"
+          fi
+
+          # Upload test summary report (test_report category)
+          if [ -f "compliance/test-summary-report.md" ]; then
+            echo "Uploading: test-summary-report.md"
+            bash scripts/upload-evidence.sh \
+              wawagardenbar-app _compliance-docs compliance_document compliance/test-summary-report.md \
+              --category test_report ${FLAGS} || echo "Warning: Failed to upload test-summary-report.md"
+          fi
+
+          # Upload compliance docs (planning category)
+          for DOC in compliance/RTM.md compliance/test-plan.md compliance/test-cases.md; do
             if [ -f "$DOC" ]; then
               echo "Uploading: $(basename "$DOC")"
               bash scripts/upload-evidence.sh \

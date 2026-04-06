@@ -88,7 +88,7 @@ jobs:
         run: |
           chmod +x scripts/upload-evidence.sh 2>/dev/null || true
           VERSION="${{ steps.version.outputs.version }}"
-          FLAGS="--release ${VERSION} --create-release-if-missing --environment production --category ci_pipeline"
+          FLAGS="--release ${VERSION} --create-release-if-missing --environment production --category test_report"
           FLAGS="${FLAGS} --git-sha ${GIT_SHA} --ci-run-id ${CI_RUN} --branch main"
           if [ -f prod-smoke-results.json ]; then
             bash scripts/upload-evidence.sh \

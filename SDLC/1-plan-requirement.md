@@ -1,5 +1,5 @@
 ---
-description: Define a new requirement in the RTM, classify risk, generate test scope, and prepare for implementation
+description: Define a new requirement in the RTM, classify risk, create implementation plan, generate test scope, and prepare for implementation
 ---
 
 # Plan Requirement
@@ -66,11 +66,91 @@ The auditor reads one row and follows the links: Issue for context and rationale
 mkdir -p compliance/evidence/REQ-XXX
 ```
 
-### Step 6: Generate Test Scope
+### Step 6: Implementation Plan (MEDIUM/HIGH Risk — Required)
 
-Create a test scope document proportional to the assessed risk level. This must exist **before implementation begins** — it is the evidence that testing was planned, not retroactively documented.
+For MEDIUM and HIGH risk requirements, create an implementation plan before defining test scope. The implementation plan defines _what code changes are needed_ — the test scope is then derived from it.
 
-The AI generates this based on the risk classification and the Test Strategy's risk-based testing depth matrix.
+**Skip this step** for LOW risk requirements — proceed directly to Step 7.
+
+**6a. Explore the codebase:**
+
+- Understand existing patterns, models, services, and API routes relevant to the change
+- Identify files that will be created, modified, or affected
+
+**6b. Create the implementation plan:**
+
+Create `compliance/evidence/REQ-XXX/implementation-plan.md`:
+
+```markdown
+# Implementation Plan — REQ-XXX
+
+**Requirement:** REQ-XXX
+**GitHub Issue:** #NNN
+**Risk Level:** [MEDIUM / HIGH]
+**Date:** [YYYY-MM-DD]
+
+## Approach
+
+[1-3 sentences describing the overall approach]
+
+## Files to Create
+
+- `path/to/new-file.ts` — [purpose]
+
+## Files to Modify
+
+- `path/to/existing-file.ts` — [what changes and why]
+
+## Architecture Decisions
+
+- [Key decision 1 and rationale]
+- [Key decision 2 and rationale]
+
+## Dependencies
+
+- [New packages needed, or "None"]
+
+## Risks / Considerations
+
+- [Anything that could go wrong or needs special attention]
+
+## Post-Deploy Actions
+
+- [Data migrations, backfill scripts, schema changes — or "None"]
+- [If any: create script in `scripts/`, document exact command and target environment]
+```
+
+### WAIT CHECKPOINT: Implementation Plan Review
+
+**Present the implementation plan to the developer.** Summarize:
+
+- Approach and rationale
+- Files to create/modify
+- Architecture decisions
+- Risks and dependencies
+
+**Do NOT proceed** until the developer explicitly approves the plan. If the developer requests changes, update `implementation-plan.md` and re-present. For HIGH risk, this review is especially important — it's cheaper to change the plan than to refactor the code.
+
+**6c. Commit the plan:**
+
+```bash
+git add compliance/evidence/REQ-XXX/implementation-plan.md
+git commit -m "chore(compliance): [REQ-XXX] implementation plan
+
+Ref: REQ-XXX
+
+Co-Authored-By: [AI tool tag]"
+```
+
+---
+
+### Step 7: Generate Test Scope
+
+Create a test scope document proportional to the assessed risk level. For MEDIUM/HIGH risk, this is derived from the implementation plan — you now know what code is changing and can define what tests are needed.
+
+This must exist **before implementation begins** — it is the evidence that testing was planned, not retroactively documented.
+
+The AI generates this based on the risk classification, the implementation plan (if applicable), and the Test Strategy's risk-based testing depth matrix.
 
 **For LOW risk:**
 
@@ -213,7 +293,7 @@ EOF
 
 ---
 
-### Step 7: Create Test Plan
+### Step 8: Create Test Plan
 
 Create a test plan that maps acceptance criteria to specific tests. This documents what tests to add, update, or remove — evidence that testing was planned, not ad hoc.
 
@@ -269,11 +349,11 @@ EOF
 
 ---
 
-### Step 8: Update Requirements Document (If Applicable)
+### Step 9: Update Requirements Document (If Applicable)
 
 If the requirement modifies a documented feature, update the requirements document to reflect the intended change.
 
-### Step 9: Document AI Use Intent (If Applicable)
+### Step 10: Document AI Use Intent (If Applicable)
 
 If AI will generate code (Medium/High risk):
 
@@ -289,7 +369,7 @@ EOF
 
 For Low risk, the `Co-Authored-By` commit tag is sufficient.
 
-### Step 10: Commit
+### Step 11: Commit
 
 ```bash
 git add compliance/RTM.md compliance/evidence/REQ-XXX docs/REQUIREMENTS.md
@@ -303,7 +383,8 @@ Closes: #NNN"
 
 - GitHub Issue `#NNN` identified or created as the origin of the change
 - REQ-XXX in RTM with `DRAFT`, risk classification, and issue reference
-- Evidence directory with test scope and test plan (exists before implementation)
+- Implementation plan (MEDIUM/HIGH risk — approved by developer before test scope)
+- Evidence directory with test scope and test plan (derived from implementation plan)
 - AI use note (if applicable)
 
 ## Next Step

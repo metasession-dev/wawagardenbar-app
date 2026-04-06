@@ -90,23 +90,26 @@ When creating an issue via `gh issue create`, ALWAYS append this to the body:
 2. Get next REQ ID: `grep -oP 'REQ-\d+' compliance/RTM.md | sort -t- -k2 -n | tail -1`
 3. Classify risk (use issue labels as input): LOW (internal, no auth) / MEDIUM (PII, user-facing, APIs) / HIGH (security, payments, RBAC). AI involvement raises risk by one level.
 4. Add to `compliance/RTM.md` Part B: `| REQ-XXX | #NNN | [RISK] | compliance/evidence/REQ-XXX/ | DRAFT | -- | -- |`
-5. Create `compliance/evidence/REQ-XXX/test-scope.md` with acceptance criteria.
-6. **WAIT CHECKPOINT:** Present the test scope to the developer. Do NOT proceed until confirmed.
-7. Create `compliance/evidence/REQ-XXX/test-plan.md` — map acceptance criteria to specific tests, list tests to add/update/remove.
-8. **WAIT CHECKPOINT:** Present the test plan to the developer. Do NOT proceed until confirmed.
-9. Create `compliance/evidence/REQ-XXX/ai-use-note.md` if AI is involved.
-10. Commit plan: `compliance: [REQ-XXX] define requirement, test scope, and test plan`
+5. **MEDIUM/HIGH risk:** Create `compliance/evidence/REQ-XXX/implementation-plan.md` — document approach, files, architecture decisions. **WAIT CHECKPOINT:** Present the plan to the developer. Do NOT proceed until approved.
+6. Create `compliance/evidence/REQ-XXX/test-scope.md` with acceptance criteria (derived from the implementation plan for MEDIUM/HIGH).
+7. **WAIT CHECKPOINT:** Present the test scope to the developer. Do NOT proceed until confirmed.
+8. Create `compliance/evidence/REQ-XXX/test-plan.md` — map acceptance criteria to specific tests, list tests to add/update/remove. Distinguish unit tests (TDD, before implementation) from E2E tests (after implementation).
+9. **WAIT CHECKPOINT:** Present the test plan to the developer. Do NOT proceed until confirmed.
+10. Create `compliance/evidence/REQ-XXX/ai-use-note.md` if AI is involved.
+11. Commit plan: `compliance: [REQ-XXX] define requirement, test scope, and test plan`
 
 ### During Implementation
 
 **Read `SDLC/2-implement-and-test.md` for full details.** Summary:
 
-- **Before coding:** Verify BOTH exist: `ls compliance/evidence/REQ-XXX/test-scope.md` AND `ls compliance/evidence/REQ-XXX/test-plan.md`. If either is missing, STOP and run planning workflow first. For MEDIUM/HIGH also verify `implementation-plan.md` exists.
-- **MEDIUM/HIGH risk:** Create `compliance/evidence/REQ-XXX/implementation-plan.md` before coding — document approach, files, architecture decisions. **WAIT CHECKPOINT:** Present the plan to the developer. Do NOT code until approved. Commit the plan first.
+- **Before coding:** Verify ALL exist: `ls compliance/evidence/REQ-XXX/test-scope.md` AND `ls compliance/evidence/REQ-XXX/test-plan.md`. If either is missing, STOP and run planning workflow first. For MEDIUM/HIGH also verify `implementation-plan.md` exists.
+- **Phase 1 — Unit tests (TDD):** Write unit tests before implementation. Tests should initially fail. **CHECKPOINT:** Unit test coverage matches test plan.
+- **Phase 2 — Implementation:** Write the code. Unit tests should now pass. **CHECKPOINT:** All unit tests green.
+- **Phase 3 — E2E tests:** Write E2E tests against the working implementation. **CHECKPOINT:** All E2E tests green.
+- **Phase 4 — All gates:** Run full gate suite (TypeScript, SAST, dep audit, all tests, build). **CHECKPOINT:** All gates green, push to develop.
 - Every commit: conventional format with `Ref: REQ-XXX` and `Co-Authored-By` for AI.
 - Add `@requirement REQ-XXX` JSDoc headers to modified files.
-- Log AI prompts in `compliance/evidence/REQ-XXX/ai-prompts.md` for MEDIUM/HIGH risk. Verify `ai-prompts.md` is updated before committing AI-generated code.
-- **Before staging:** follow `test-plan.md` — add, update, remove tests as documented. Verify all acceptance criteria have corresponding tests. Gates must run against a test suite that covers the test plan.
+- Log AI prompts in `compliance/evidence/REQ-XXX/ai-prompts.md` for MEDIUM/HIGH risk.
 
 ### Before Pushing
 

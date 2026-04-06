@@ -12,6 +12,7 @@
 name: CI Pipeline
 
 on:
+  workflow_dispatch:
   push:
     branches: [develop]
     paths-ignore:

@@ -52,17 +52,20 @@ jobs:
           echo "Checking UAT approval for version: ${VERSION}"
 
       - name: Check release UAT approval status
+        id: release
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           PROJECT_ID="${{ steps.project.outputs.project_id }}"
-          RELEASE_STATUS=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_releases?project_id=eq.${PROJECT_ID}&version=eq.${VERSION}&select=id,version,status" \
+          RELEASE_DATA=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_releases?project_id=eq.${PROJECT_ID}&version=eq.${VERSION}&select=id,version,status" \
             -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-            | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4)
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}")
+          RELEASE_STATUS=$(echo "$RELEASE_DATA" | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4)
+          RELEASE_ID=$(echo "$RELEASE_DATA" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
           if [ -z "$RELEASE_STATUS" ]; then
             echo "::error::Release ${VERSION} not found. Push to develop first to create the release."
             exit 1
           fi
+          echo "release_id=${RELEASE_ID}" >> "$GITHUB_OUTPUT"
           echo "Release ${VERSION} status: ${RELEASE_STATUS}"
           case "$RELEASE_STATUS" in
             uat_approved|prod_review|prod_approved|released)
@@ -73,3 +76,50 @@ jobs:
               exit 1
               ;;
           esac
+
+      - name: Link PR to release
+        if: github.event_name == 'pull_request'
+        run: |
+          RELEASE_ID="${{ steps.release.outputs.release_id }}"
+          PR_URL="${{ github.event.pull_request.html_url }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          if [ -n "$RELEASE_ID" ]; then
+            curl -s -o /dev/null -w "PR link: HTTP %{http_code}\n" \
+              -X PATCH "${SUPABASE_URL}/rest/v1/compliance_releases?id=eq.${RELEASE_ID}" \
+              -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+              -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+              -H "Content-Type: application/json" \
+              -d "{\"pr_url\": \"${PR_URL}\", \"pr_number\": ${PR_NUMBER}}"
+            echo "Linked PR #${PR_NUMBER} to release ${RELEASE_ID}"
+          fi
+
+      - name: Post release link on PR
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          RELEASE_ID="${{ steps.release.outputs.release_id }}"
+          COMPLY_URL="https://meta-comply-production.up.railway.app/projects/${PROJECT_SLUG}/releases/${RELEASE_ID}"
+          BODY="**META-COMPLY Release:** [${VERSION}](${COMPLY_URL})"
+          # Update existing comment or create new one
+          EXISTING=$(gh pr view ${{ github.event.pull_request.number }} --json comments --jq '.comments[] | select(.body | startswith("**META-COMPLY Release:**")) | .id' | head -1)
+          if [ -n "$EXISTING" ]; then
+            gh api repos/${{ github.repository }}/issues/comments/${EXISTING} -X PATCH -f body="${BODY}" || true
+          else
+            gh pr comment ${{ github.event.pull_request.number }} --body "${BODY}" || true
+          fi
+
+      - name: SHA comparison
+        if: github.event_name == 'pull_request'
+        run: |
+          RELEASE_ID="${{ steps.release.outputs.release_id }}"
+          PR_HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          # Get the approved SHA from the latest approval record
+          APPROVED_SHA=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_release_approvals?release_id=eq.${RELEASE_ID}&status=eq.approved&order=created_at.desc&limit=1&select=approved_sha" \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            | grep -o '"approved_sha":"[^"]*"' | head -1 | cut -d'"' -f4)
+          if [ -n "$APPROVED_SHA" ] && [ "$APPROVED_SHA" != "$PR_HEAD_SHA" ]; then
+            echo "::warning::Approved SHA (${APPROVED_SHA:0:8}) differs from PR HEAD (${PR_HEAD_SHA:0:8}). Code may have changed after approval."
+          fi

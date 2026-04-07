@@ -3,7 +3,7 @@
  * @requirement REQ-023 - Pass Staff Pot balance to tabs list
  */
 import { TabService } from '@/services';
-import { StaffPotService } from '@/services/staff-pot-service';
+import { getStaffPotDataAction } from '@/app/actions/admin/staff-pot-actions';
 import { DashboardTabsListClient } from '@/components/features/admin/tabs/dashboard-tabs-list-client';
 
 async function getAllTabs() {
@@ -48,15 +48,15 @@ async function getAllTabs() {
 }
 
 export default async function DashboardTabsPage() {
-  const now = new Date();
-  const [{ tabs }, staffPotData] = await Promise.all([
+  const [{ tabs }, staffPotResult] = await Promise.all([
     getAllTabs(),
-    StaffPotService.getMonthData(now.getMonth() + 1, now.getFullYear()).catch(
-      () => null
-    ),
+    getStaffPotDataAction().catch(() => ({ success: false as const })),
   ]);
 
-  const staffPotBalance = staffPotData?.totalPot ?? 0;
+  const staffPotBalance =
+    staffPotResult.success && staffPotResult.data
+      ? ((staffPotResult.data as any).totalPot ?? 0)
+      : 0;
 
   return (
     <div className="space-y-6">

@@ -14,7 +14,7 @@
 
 ## Tests to Update
 
-- None — `total-revenue-consistency.test.ts` reviewed, contains no cost assertions
+- None — total-revenue-consistency reviewed, contains no cost assertions
 
 ## Tests to Remove
 

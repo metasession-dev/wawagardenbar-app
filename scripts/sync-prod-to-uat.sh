@@ -3,9 +3,12 @@
 # sync-prod-to-uat.sh — Download production MongoDB and restore to UAT
 #
 # Prerequisites:
-#   - railway CLI installed and authenticated
 #   - mongodump and mongorestore installed (MongoDB Database Tools)
-#   - Railway project "Wawa Garden Bar" linked
+#   - Set in .env.local:
+#       MONGODB_PROD_EXTERNAL_URI=mongodb://...  (public proxy URL)
+#       MONGODB_UAT_EXTERNAL_URI=mongodb://...   (public proxy URL)
+#       MONGODB_PROD_DB_NAME=wawagardenbar       (optional, extracted from URI or defaults)
+#       MONGODB_UAT_DB_NAME=wawagardenbar_uat    (optional, extracted from URI or defaults)
 #
 # Usage:
 #   ./scripts/sync-prod-to-uat.sh
@@ -40,8 +43,16 @@ log()  { echo -e "${GREEN}[✓]${NC} $1"; }
 warn() { echo -e "${YELLOW}[!]${NC} $1"; }
 err()  { echo -e "${RED}[✗]${NC} $1"; exit 1; }
 
+# ── Load .env.local if present ───────────────────────────────────
+ENV_FILE="$(cd "$(dirname "$0")/.." && pwd)/.env.local"
+if [ -f "$ENV_FILE" ]; then
+  set -a
+  # shellcheck disable=SC1090
+  source <(grep -E '^MONGODB_(PROD|UAT)_(EXTERNAL_URI|DB_NAME)=' "$ENV_FILE")
+  set +a
+fi
+
 # ── Check prerequisites ──────────────────────────────────────────
-command -v railway   >/dev/null 2>&1 || err "railway CLI not found. Install: https://docs.railway.app/develop/cli"
 command -v mongodump >/dev/null 2>&1 || err "mongodump not found. Install MongoDB Database Tools."
 command -v mongorestore >/dev/null 2>&1 || err "mongorestore not found. Install MongoDB Database Tools."
 
@@ -52,48 +63,32 @@ echo "════════════════════════�
 echo ""
 
 # ── Step 1: Get production connection string ─────────────────────
-log "Fetching production MongoDB connection details..."
+log "Resolving production MongoDB URI..."
 
-railway link --project "$PROJECT" --environment "$PROD_ENV" --service wawagardenbar-app 2>/dev/null || true
+PROD_URI="${MONGODB_PROD_EXTERNAL_URI:-}"
 
-PROD_URI=$(railway variables --json 2>/dev/null | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-print(data.get('MONGODB_URI', data.get('MONGODB_WAWAGARDENBAR_APP_URI', '')))
-" 2>/dev/null || echo "")
-
-PROD_DB=$(railway variables --json 2>/dev/null | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-print(data.get('MONGODB_DB_NAME', ''))
-" 2>/dev/null || echo "")
-
-if [ -z "$PROD_URI" ] || [ -z "$PROD_DB" ]; then
-  warn "Could not auto-detect production MongoDB URI."
+if [ -z "$PROD_URI" ]; then
+  warn "MONGODB_PROD_EXTERNAL_URI not set in .env.local"
   echo ""
-  echo "The production MongoDB uses Railway's internal network."
-  echo "You need to get the PUBLIC connection string from Railway dashboard:"
+  echo "  Add to .env.local:"
+  echo "    MONGODB_PROD_EXTERNAL_URI=mongodb://mongo:<password>@<public-host>:<port>/wawagardenbar?authSource=admin"
   echo ""
-  echo "  1. Go to Railway dashboard → Wawa Garden Bar → production"
-  echo "  2. Click the MongoDB service"
-  echo "  3. Click 'Variables' tab"
-  echo "  4. Find MONGO_URL (the public/proxy URL, not the internal one)"
+  echo "  Get the public URL from Railway dashboard → MongoDB service → Connect → Public Networking"
   echo ""
-  read -p "Paste the production MongoDB PUBLIC URI: " PROD_URI
-  read -p "Enter the production database name [wawagardenbar_prod]: " PROD_DB
-  PROD_DB=${PROD_DB:-wawagardenbar_prod}
+  read -p "Or paste the production MongoDB PUBLIC URI now: " PROD_URI
 fi
 
-# Check if URI is internal (won't work from outside Railway)
+if [ -z "$PROD_URI" ]; then
+  err "No production MongoDB URI provided."
+fi
+
 if echo "$PROD_URI" | grep -q "railway.internal"; then
-  warn "The URI uses Railway's internal network (railway.internal)."
-  echo ""
-  echo "To connect from outside Railway, you need the PUBLIC proxy URL."
-  echo "Go to Railway dashboard → MongoDB service → Connect tab → Public Networking"
-  echo "Enable TCP Proxy if not already enabled, then copy the public URL."
-  echo ""
-  read -p "Paste the production MongoDB PUBLIC URI: " PROD_URI
+  err "URI uses railway.internal (internal only). Set the PUBLIC proxy URL in MONGODB_PROD_EXTERNAL_URI."
 fi
+
+# Extract DB name from URI path, env var, or default
+PROD_DB=$(echo "$PROD_URI" | sed -n 's|.*/\([^?]*\).*|\1|p')
+PROD_DB=${PROD_DB:-${MONGODB_PROD_DB_NAME:-wawagardenbar}}
 
 log "Production DB: $PROD_DB"
 
@@ -111,34 +106,30 @@ DUMP_SIZE=$(du -sh "$BACKUP_DIR" | cut -f1)
 log "Dump complete: $DUMP_SIZE"
 
 # ── Step 3: Get UAT connection string ────────────────────────────
-log "Fetching UAT MongoDB connection details..."
+log "Resolving UAT MongoDB URI..."
 
-railway link --project "$PROJECT" --environment "$UAT_ENV" --service wawagardenbar-app 2>/dev/null || true
+UAT_URI="${MONGODB_UAT_EXTERNAL_URI:-}"
 
-UAT_URI=$(railway variables --json 2>/dev/null | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-print(data.get('MONGODB_URI', data.get('MONGODB_WAWAGARDENBAR_APP_URI', '')))
-" 2>/dev/null || echo "")
+if [ -z "$UAT_URI" ]; then
+  warn "MONGODB_UAT_EXTERNAL_URI not set in .env.local"
+  echo ""
+  echo "  Add to .env.local:"
+  echo "    MONGODB_UAT_EXTERNAL_URI=mongodb://mongo:<password>@<public-host>:<port>/wawagardenbar?authSource=admin"
+  echo ""
+  read -p "Or paste the UAT MongoDB PUBLIC URI now: " UAT_URI
+fi
 
-UAT_DB=$(railway variables --json 2>/dev/null | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-print(data.get('MONGODB_DB_NAME', ''))
-" 2>/dev/null || echo "")
-
-if [ -z "$UAT_URI" ] || [ -z "$UAT_DB" ]; then
-  warn "Could not auto-detect UAT MongoDB URI."
-  read -p "Paste the UAT MongoDB PUBLIC URI: " UAT_URI
-  read -p "Enter the UAT database name [wawagardenbar_uat]: " UAT_DB
-  UAT_DB=${UAT_DB:-wawagardenbar_uat}
+if [ -z "$UAT_URI" ]; then
+  err "No UAT MongoDB URI provided."
 fi
 
 if echo "$UAT_URI" | grep -q "railway.internal"; then
-  warn "The URI uses Railway's internal network."
-  echo "You need the PUBLIC proxy URL for UAT MongoDB."
-  read -p "Paste the UAT MongoDB PUBLIC URI: " UAT_URI
+  err "URI uses railway.internal (internal only). Set the PUBLIC proxy URL in MONGODB_UAT_EXTERNAL_URI."
 fi
+
+# Extract DB name from URI path, env var, or default
+UAT_DB=$(echo "$UAT_URI" | sed -n 's|.*/\([^?]*\).*|\1|p')
+UAT_DB=${UAT_DB:-${MONGODB_UAT_DB_NAME:-wawagardenbar_uat}}
 
 log "UAT DB: $UAT_DB"
 

@@ -27,19 +27,18 @@ description: Implement changes on develop, run all local gates (tests + security
 Before writing any code, verify that the planning stage is complete:
 
 ```bash
-# For tracked requirements — BOTH test scope AND test plan MUST exist
+# For tracked requirements — ALL planning artifacts MUST exist
 ls compliance/evidence/REQ-XXX/test-scope.md
 ls compliance/evidence/REQ-XXX/test-plan.md
+grep 'REQ-XXX' compliance/RTM.md
 ```
 
-**If either file does not exist:** STOP. Run `1-plan-requirement.md` first. Do NOT proceed to implementation without a committed test scope and test plan.
+**If any file does not exist:** STOP. Run `1-plan-requirement.md` first. Do NOT proceed to implementation without a committed test scope and test plan.
 
 For MEDIUM/HIGH risk, also verify:
 
 ```bash
-# Risk classification and RTM entry exist
-grep 'REQ-XXX' compliance/RTM.md
-# Implementation plan must exist
+# Implementation plan must exist (created during planning stage)
 ls compliance/evidence/REQ-XXX/implementation-plan.md
 ```
 
@@ -54,81 +53,40 @@ git branch --show-current
 
 If not: `git checkout develop && git pull origin develop`
 
-### Step 2: Implementation Plan (MEDIUM/HIGH Risk — Required)
+### Step 2: Unit Tests (TDD)
 
-For MEDIUM and HIGH risk requirements, create an implementation plan before writing code. This documents the design decisions, file structure, and approach — evidence that architecture was deliberate, not accidental.
+Write or update unit tests **before** implementing the code. You know the expected interfaces and behaviour from the implementation plan and test plan.
 
-**Skip this step** for LOW risk requirements — proceed directly to Step 3.
-
-**2a. Explore the codebase:**
-
-- Understand existing patterns, models, services, and API routes relevant to the change
-- Identify files that will be created, modified, or affected
-
-**2b. Create the implementation plan:**
-
-Create `compliance/evidence/REQ-XXX/implementation-plan.md`:
-
-```markdown
-# Implementation Plan — REQ-XXX
-
-**Requirement:** REQ-XXX
-**GitHub Issue:** #NNN
-**Risk Level:** [MEDIUM / HIGH]
-**Date:** [YYYY-MM-DD]
-
-## Approach
-
-[1-3 sentences describing the overall approach]
-
-## Files to Create
-
-- `path/to/new-file.ts` — [purpose]
-
-## Files to Modify
-
-- `path/to/existing-file.ts` — [what changes and why]
-
-## Architecture Decisions
-
-- [Key decision 1 and rationale]
-- [Key decision 2 and rationale]
-
-## Dependencies
-
-- [New packages needed, or "None"]
-
-## Risks / Considerations
-
-- [Anything that could go wrong or needs special attention]
-
-## Post-Deploy Actions
-
-- [Data migrations, backfill scripts, schema changes — or "None"]
-- [If any: create script in `scripts/`, document exact command and target environment]
-```
-
-**2c. WAIT CHECKPOINT: Implementation Plan Review**
-
-**Present the implementation plan to the developer.** Summarize:
-
-- Approach and rationale
-- Files to create/modify
-- Architecture decisions
-- Risks and dependencies
-
-**Do NOT proceed to Step 3** until the developer explicitly approves the plan. If the developer requests changes, update `implementation-plan.md` and re-present. For HIGH risk, this review is especially important — it's cheaper to change the plan than to refactor the code.
-
-**2d. Commit the plan:**
+**2a. Review the test plan:**
 
 ```bash
-git add compliance/evidence/REQ-XXX/implementation-plan.md
-git commit -m "chore(compliance): [REQ-XXX] implementation plan
-
-Ref: REQ-XXX
-
-Co-Authored-By: [AI tool tag]"
+cat compliance/evidence/REQ-XXX/test-plan.md
 ```
+
+**2b. Write unit tests** listed in the "Tests to Add" section:
+
+- New business logic → unit tests for services, utilities, validators
+- New API endpoints → auth enforcement tests, response format tests
+- Tests should initially **fail** (the implementation doesn't exist yet)
+
+**2c. Update existing unit tests** listed in the "Tests to Update" section:
+
+- API response shape changed? → Update assertions
+- Business logic changed? → Update unit test expectations
+
+**2d. Remove obsolete tests** listed in the "Tests to Remove" section (if any). Each removal must have a justification in the test plan.
+
+### WAIT CHECKPOINT: Unit Test Coverage
+
+Verify the unit tests cover the test plan:
+
+```bash
+cat compliance/evidence/REQ-XXX/test-plan.md
+# Check: have all unit test items in "Tests to Add" been implemented?
+# Check: have all unit test items in "Tests to Update" been addressed?
+```
+
+**Do NOT proceed** until unit test coverage matches the test plan. Tests are expected to fail at this point — that's correct (TDD).
 
 ### Step 3: Implement the Change
 
@@ -158,42 +116,48 @@ Per Test Strategy: regeneration triggers full retest.
 
 **MEDIUM/HIGH risk — AI prompt logging checkpoint:** Before committing AI-generated code, verify that `ai-prompts.md` has been updated with the prompt summary and files generated. If missing, create it now — this is a required artifact for MEDIUM/HIGH risk requirements with AI involvement.
 
-### Step 4: Implement Test Plan
+### WAIT CHECKPOINT: Unit Tests Green
 
-Follow the test plan (`compliance/evidence/REQ-XXX/test-plan.md`) created during Stage 1:
+All unit tests must pass before proceeding:
 
-**4a. Review the test plan:**
+```bash
+npm test
+```
+
+**Do NOT proceed** until all unit tests are green.
+
+### Step 4: E2E Tests
+
+Write or update E2E tests **after** implementation. E2E tests need working UI/API to test against — writing Playwright tests against routes and selectors that don't exist is impractical.
+
+**4a. Review the test plan for E2E items:**
 
 ```bash
 cat compliance/evidence/REQ-XXX/test-plan.md
 ```
 
-**4b. Add new tests** listed in the "Tests to Add" section:
+**4b. Add new E2E tests** listed in the "Tests to Add" section:
 
 - New pages → route protection tests (unauthenticated redirect)
-- New API endpoints → auth enforcement tests, response format tests
-- New user flows → E2E tests for critical paths
-- New business logic → unit tests
+- New user flows → Playwright tests for critical paths
+- UI components changed? → Update selectors and expected content
 
-**4c. Update existing tests** listed in the "Tests to Update" section:
+**4c. Update existing E2E tests** listed in the "Tests to Update" section:
 
 - New routes added? → Add them to route protection test arrays
-- API response shape changed? → Update assertions
-- UI components changed? → Update selectors and expected content
-- Business logic changed? → Update unit test expectations
+- UI flow changed? → Update selectors and assertions
 
-**4d. Remove obsolete tests** listed in the "Tests to Remove" section (if any). Each removal must have a justification in the test plan.
+**4d. Remove obsolete E2E tests** listed in the "Tests to Remove" section (if any).
 
-**4e. Verify test plan coverage:**
+### WAIT CHECKPOINT: E2E Tests Green
+
+All E2E tests must pass:
 
 ```bash
-cat compliance/evidence/REQ-XXX/test-plan.md
-# Check: have all items in "Tests to Add" been implemented?
-# Check: have all items in "Tests to Update" been addressed?
-# Check: does the functional test mapping cover all acceptance criteria?
+npx playwright test
 ```
 
-The goal is that gates (Step 7) run against a test suite that covers the test plan, not just the pre-existing code.
+**Do NOT proceed** until all E2E tests are green.
 
 ### Step 5: Stage Selectively
 

@@ -12,6 +12,7 @@ import {
   Receipt,
   Eye,
   CreditCard,
+  PiggyBank,
   Loader2,
   CheckCircle2,
   FolderOpen,
@@ -55,6 +56,7 @@ interface Tab {
 
 interface DashboardTabsListClientProps {
   initialTabs: Tab[];
+  staffPotBalance: number;
 }
 
 /**
@@ -62,6 +64,7 @@ interface DashboardTabsListClientProps {
  */
 export function DashboardTabsListClient({
   initialTabs,
+  staffPotBalance,
 }: DashboardTabsListClientProps) {
   const { toast } = useToast();
   const [tabs, setTabs] = useState<Tab[]>(initialTabs);
@@ -157,7 +160,6 @@ export function DashboardTabsListClient({
     );
   };
 
-  const totalTabsAmount = tabs.reduce((sum, tab) => sum + tab.total, 0);
   const totalOrders = tabs.reduce((sum, tab) => sum + tab.orders.length, 0);
   const totalOpenTabs = tabs.filter((tab) => tab.status === 'open').length;
 
@@ -202,13 +204,16 @@ export function DashboardTabsListClient({
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Amount</CardTitle>
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">
+              Staff Pot Balance
+            </CardTitle>
+            <PiggyBank className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ₦{totalTabsAmount.toLocaleString()}
+              ₦{staffPotBalance.toLocaleString()}
             </div>
+            <p className="text-xs text-muted-foreground mt-1">This month</p>
           </CardContent>
         </Card>
       </div>

@@ -64,6 +64,12 @@ if [ -n "$ENVIRONMENT" ] && [ -z "$RELEASE_VERSION" ]; then
   exit 1
 fi
 
+# --- Validate: --category required with --release ---
+if [ -n "$RELEASE_VERSION" ] && [ -z "$EVIDENCE_CATEGORY" ]; then
+  echo "Error: --category is required when --release is specified (evidence must be categorised for gate validation)"
+  exit 1
+fi
+
 # --- Validate environment ---
 if [ -z "${SUPABASE_URL:-}" ]; then
   echo "Error: SUPABASE_URL environment variable is required"

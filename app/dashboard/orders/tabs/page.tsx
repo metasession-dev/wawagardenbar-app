@@ -1,7 +1,9 @@
 /**
  * @requirement REQ-012 - Pass partial payments data to tabs list
+ * @requirement REQ-023 - Pass Staff Pot balance to tabs list
  */
 import { TabService } from '@/services';
+import { getStaffPotDataAction } from '@/app/actions/admin/staff-pot-actions';
 import { DashboardTabsListClient } from '@/components/features/admin/tabs/dashboard-tabs-list-client';
 
 async function getAllTabs() {
@@ -46,7 +48,15 @@ async function getAllTabs() {
 }
 
 export default async function DashboardTabsPage() {
-  const { tabs } = await getAllTabs();
+  const [{ tabs }, staffPotResult] = await Promise.all([
+    getAllTabs(),
+    getStaffPotDataAction().catch(() => ({ success: false as const })),
+  ]);
+
+  const staffPotBalance =
+    staffPotResult.success && staffPotResult.data
+      ? ((staffPotResult.data as any).totalPot ?? 0)
+      : 0;
 
   return (
     <div className="space-y-6">
@@ -58,7 +68,10 @@ export default async function DashboardTabsPage() {
         </p>
       </div>
 
-      <DashboardTabsListClient initialTabs={tabs} />
+      <DashboardTabsListClient
+        initialTabs={tabs}
+        staffPotBalance={staffPotBalance}
+      />
     </div>
   );
 }

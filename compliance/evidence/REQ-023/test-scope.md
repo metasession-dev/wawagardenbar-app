@@ -18,6 +18,7 @@ Standard gates apply. No additional testing beyond universal exit criteria.
 ## Acceptance Criteria
 
 - [x] "Total Amount" card replaced with "Staff Pot Balance" card on Tabs Management page
-- [x] Staff Pot Balance shows current month's total pot from StaffPotService
-- [x] Card displays ₦ formatted value with appropriate icon
+- [x] Staff Pot Balance shows current month's total pot via getStaffPotDataAction
+- [x] Card displays ₦ formatted value with PiggyBank icon and "This month" subtitle
 - [x] No revenue figures visible to general admin staff on the Tabs page
+- [x] UAT verified — ₦16,360 displayed correctly

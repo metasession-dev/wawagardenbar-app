@@ -30,3 +30,9 @@ One `nosemgrep` for `path.resolve` with immediate containment validation:
 ### Access Control
 
 No changes to authentication or authorization. Existing auth checks remain intact in all modified files.
+
+## UAT Verification — 2026-04-08
+
+- UAT deployment: Railway auto-deploy from develop (CI green, run 24121771877)
+- Feature verification: N/A — code-level security fixes with no UI changes; validated by 17 unit tests + semgrep 0 findings
+- No manual UAT steps required for input sanitization changes

@@ -35,7 +35,9 @@ export class CategoryService {
 
     const itemsWithStock = await Promise.all(
       items.map(async (item) => {
-        const inventory = await Inventory.findOne({ menuItemId: item._id }).lean();
+        const inventory = await Inventory.findOne({
+          menuItemId: item._id,
+        }).lean();
         return serializeMenuItem({
           ...item,
           stockStatus: inventory?.status || 'in-stock',
@@ -64,7 +66,9 @@ export class CategoryService {
 
     const itemsWithStock = await Promise.all(
       items.map(async (item) => {
-        const inventory = await Inventory.findOne({ menuItemId: item._id }).lean();
+        const inventory = await Inventory.findOne({
+          menuItemId: item._id,
+        }).lean();
         return serializeMenuItem({
           ...item,
           stockStatus: inventory?.status || 'in-stock',
@@ -79,7 +83,9 @@ export class CategoryService {
   /**
    * Get menu items by category
    */
-  static async getItemsByCategory(category: string): Promise<MenuItemWithStock[]> {
+  static async getItemsByCategory(
+    category: string
+  ): Promise<MenuItemWithStock[]> {
     await connectDB();
 
     const items = await MenuItem.find({
@@ -91,7 +97,9 @@ export class CategoryService {
 
     const itemsWithStock = await Promise.all(
       items.map(async (item) => {
-        const inventory = await Inventory.findOne({ menuItemId: item._id }).lean();
+        const inventory = await Inventory.findOne({
+          menuItemId: item._id,
+        }).lean();
         return serializeMenuItem({
           ...item,
           stockStatus: inventory?.status || 'in-stock',
@@ -132,32 +140,38 @@ export class CategoryService {
 
     // Get categories from settings
     const menuSettings = await SystemSettingsService.getMenuCategories();
-    
+
     // Get enabled categories only, sorted by order
     const foodCategories = menuSettings.food
-      .filter(c => c.isEnabled)
+      .filter((c) => c.isEnabled)
       .sort((a, b) => a.order - b.order)
-      .map(c => c.value);
-      
+      .map((c) => c.value);
+
     const drinkCategories = menuSettings.drinks
-      .filter(c => c.isEnabled)
+      .filter((c) => c.isEnabled)
       .sort((a, b) => a.order - b.order)
-      .map(c => c.value);
+      .map((c) => c.value);
 
     // Also get distinct categories from DB to ensure we don't miss any that are in use
     // but might not be in settings (legacy support)
     const [dbDrinkCategories, dbFoodCategories] = await Promise.all([
-      MenuItem.distinct('category', { mainCategory: 'drinks', isAvailable: true }),
-      MenuItem.distinct('category', { mainCategory: 'food', isAvailable: true }),
+      MenuItem.distinct('category', {
+        mainCategory: 'drinks',
+        isAvailable: true,
+      }),
+      MenuItem.distinct('category', {
+        mainCategory: 'food',
+        isAvailable: true,
+      }),
     ]);
-    
+
     // Merge DB categories if they don't exist in settings
     for (const cat of dbFoodCategories) {
       if (!foodCategories.includes(cat)) {
         foodCategories.push(cat);
       }
     }
-    
+
     for (const cat of dbDrinkCategories) {
       if (!drinkCategories.includes(cat)) {
         drinkCategories.push(cat);
@@ -176,12 +190,14 @@ export class CategoryService {
   static async searchItems(query: string): Promise<MenuItemWithStock[]> {
     await connectDB();
 
+    // Escape regex special characters to prevent injection/ReDoS
+    const safeQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const items = await MenuItem.find({
       isAvailable: true,
       $or: [
-        { name: { $regex: query, $options: 'i' } },
-        { description: { $regex: query, $options: 'i' } },
-        { tags: { $in: [new RegExp(query, 'i')] } },
+        { name: { $regex: safeQuery, $options: 'i' } },
+        { description: { $regex: safeQuery, $options: 'i' } },
+        { tags: { $in: [new RegExp(safeQuery, 'i')] } },
       ],
     })
       .sort({ name: 1 })
@@ -189,7 +205,9 @@ export class CategoryService {
 
     const itemsWithStock = await Promise.all(
       items.map(async (item) => {
-        const inventory = await Inventory.findOne({ menuItemId: item._id }).lean();
+        const inventory = await Inventory.findOne({
+          menuItemId: item._id,
+        }).lean();
         return serializeMenuItem({
           ...item,
           stockStatus: inventory?.status || 'in-stock',

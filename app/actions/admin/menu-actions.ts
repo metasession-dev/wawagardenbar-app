@@ -12,7 +12,7 @@ import { AuditLogService } from '@/services/audit-log-service';
 import { SystemSettingsService } from '@/services/system-settings-service';
 import { Types } from 'mongoose';
 import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
+import { join, basename } from 'path';
 
 export interface ActionResult<T = unknown> {
   success: boolean;
@@ -615,9 +615,10 @@ export async function uploadMenuImageAction(
     const uploadsDir = join(process.cwd(), 'public', 'uploads', 'menu');
     await mkdir(uploadsDir, { recursive: true });
 
-    // Generate unique filename
+    // Generate unique filename — sanitize to prevent path traversal
     const timestamp = Date.now();
-    const extension = file.name.split('.').pop();
+    const safeName = basename(file.name);
+    const extension = safeName.split('.').pop();
     const filename = `${menuItemId}-${timestamp}.${extension}`;
     const filepath = join(uploadsDir, filename);
 

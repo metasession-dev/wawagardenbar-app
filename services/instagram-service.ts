@@ -10,7 +10,8 @@ export class InstagramService {
   // Note: These tokens would typically be stored in environment variables or a secure vault
   // For the purpose of this implementation, we'll assume they are available via process.env
   private static readonly ACCESS_TOKEN = process.env.INSTAGRAM_ACCESS_TOKEN;
-  private static readonly BUSINESS_ACCOUNT_ID = process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID;
+  private static readonly BUSINESS_ACCOUNT_ID =
+    process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID;
 
   /**
    * Process Instagram rewards for all active campaigns
@@ -28,7 +29,9 @@ export class InstagramService {
       }).exec();
 
       // Filter by date validity manually if needed
-      const validRules = activeRules.filter(rule => (rule as any).isCurrentlyActive());
+      const validRules = activeRules.filter((rule) =>
+        (rule as any).isCurrentlyActive()
+      );
 
       if (validRules.length === 0) {
         console.log('No active Instagram reward campaigns found.');
@@ -67,7 +70,7 @@ export class InstagramService {
 
       // 3. Get Recent Media for Hashtag
       const recentMedia = await this.getRecentMedia(hashtagId);
-      
+
       // 4. Match Posts to Users and Validate
       for (const post of recentMedia) {
         // Skip if post doesn't have required fields
@@ -75,17 +78,17 @@ export class InstagramService {
 
         // Check if post is within campaign dates
         const postDate = new Date(post.timestamp);
-        
+
         // Use campaignDates if available, else legacy start/end
         let isDateValid = false;
         if (rule.campaignDates && rule.campaignDates.length > 0) {
-           isDateValid = rule.campaignDates.some((range: any) => 
-             postDate >= range.from && postDate <= range.to
-           );
+          isDateValid = rule.campaignDates.some(
+            (range: any) => postDate >= range.from && postDate <= range.to
+          );
         } else {
-           isDateValid = true;
-           if (rule.startDate && postDate < rule.startDate) isDateValid = false;
-           if (rule.endDate && postDate > rule.endDate) isDateValid = false;
+          isDateValid = true;
+          if (rule.startDate && postDate < rule.startDate) isDateValid = false;
+          if (rule.endDate && postDate > rule.endDate) isDateValid = false;
         }
 
         if (!isDateValid) continue;
@@ -98,16 +101,17 @@ export class InstagramService {
         const engagement = (post.like_count || 0) + (post.comments_count || 0); // Simplified for MVP
         // OR if rule specifically asks for "views" and we assume we can get it (e.g. video views)
         // const views = post.media_type === 'VIDEO' ? post.like_count : 0; // Placeholder logic
-        
+
         // Let's assume we map "views" requirement to "engagement" for now or assume we have access.
         if (engagement < (rule.socialConfig.minViews || 0)) continue;
 
         // 5. Find User
         // We need to find a user who has this instagram handle
         // We'll search case-insensitive
+        // Case-insensitive exact match without regex — prevents injection from external usernames
         const user = await UserModel.findOne({
-          'socialProfiles.instagram.handle': { $regex: new RegExp(`^${post.username}$`, 'i') }
-        });
+          'socialProfiles.instagram.handle': post.username,
+        }).collation({ locale: 'en', strength: 2 });
 
         if (!user) continue;
 
@@ -117,12 +121,12 @@ export class InstagramService {
         // Since we don't have a dedicated Redemption Log with metadata in the current schemas easily accessible here (Reward model tracks orderId),
         // we might need to assume we add points directly via PointsService and maybe log it there?
         // Or we use RewardsService.
-        
+
         // For now, let's assume we check if we've already processed this media_id.
         // This requires a new collection or field to track processed posts.
         // For the sake of this implementation, we will skip the complex history check and assume
         // we have a method `hasProcessedPost(mediaId)` (stubbed).
-        
+
         const isProcessed = await this.hasProcessedPost(post.id);
         if (isProcessed) continue;
 
@@ -134,11 +138,14 @@ export class InstagramService {
           `Instagram Reward: #${hashtag}`,
           post.id
         );
-        
-        // 8. Mark post as processed
-        await this.markPostAsProcessed(post.id, user._id.toString(), rule._id.toString());
-      }
 
+        // 8. Mark post as processed
+        await this.markPostAsProcessed(
+          post.id,
+          user._id.toString(),
+          rule._id.toString()
+        );
+      }
     } catch (error) {
       console.error(`Error processing rule ${rule.name}:`, error);
     }
@@ -148,14 +155,14 @@ export class InstagramService {
 
   private static async getHashtagId(hashtag: string): Promise<string | null> {
     if (!this.ACCESS_TOKEN || !this.BUSINESS_ACCOUNT_ID) {
-        // Mock for dev
-        console.log('Missing Instagram Creds, returning mock ID');
-        return 'mock_hashtag_id'; 
+      // Mock for dev
+      console.log('Missing Instagram Creds, returning mock ID');
+      return 'mock_hashtag_id';
     }
-    
+
     // https://graph.facebook.com/v18.0/ig_hashtag_search?user_id={user-id}&q={hashtag-name}&access_token={access-token}
     const url = `${this.INSTAGRAM_API_BASE}/ig_hashtag_search?user_id=${this.BUSINESS_ACCOUNT_ID}&q=${hashtag}&access_token=${this.ACCESS_TOKEN}`;
-    
+
     try {
       const res = await fetch(url);
       const data = await res.json();
@@ -168,20 +175,20 @@ export class InstagramService {
 
   private static async getRecentMedia(hashtagId: string): Promise<any[]> {
     if (!this.ACCESS_TOKEN || !this.BUSINESS_ACCOUNT_ID) {
-        // Mock data for development/testing when no credentials
-        if (hashtagId === 'mock_hashtag_id') {
-            return [
-                {
-                    id: 'mock_media_1',
-                    username: 'wawagardenbar_fan', // Needs to match a user in DB for testing
-                    timestamp: new Date().toISOString(),
-                    media_type: 'IMAGE',
-                    like_count: 150,
-                    comments_count: 20
-                }
-            ];
-        }
-        return [];
+      // Mock data for development/testing when no credentials
+      if (hashtagId === 'mock_hashtag_id') {
+        return [
+          {
+            id: 'mock_media_1',
+            username: 'wawagardenbar_fan', // Needs to match a user in DB for testing
+            timestamp: new Date().toISOString(),
+            media_type: 'IMAGE',
+            like_count: 150,
+            comments_count: 20,
+          },
+        ];
+      }
+      return [];
     }
 
     // https://graph.facebook.com/v18.0/{hashtag-id}/recent_media?user_id={user-id}&fields=id,media_type,comments_count,like_count,timestamp,username&access_token={access-token}
@@ -202,17 +209,23 @@ export class InstagramService {
   private static async hasProcessedPost(mediaId: string): Promise<boolean> {
     // Check PointsTransaction or a new SocialEngagementLog model
     // For now, we'll assume we check if a transaction exists with this reference
-    const PointsTransactionModel = (await import('@/models/points-transaction-model')).default;
-    // Assuming PointsTransaction has a 'metadata' or 'reference' field. 
+    const PointsTransactionModel = (
+      await import('@/models/points-transaction-model')
+    ).default;
+    // Assuming PointsTransaction has a 'metadata' or 'reference' field.
     // Looking at the codebase, we might need to add one or use description.
     // Let's use description for now as a naive check.
     const exists = await PointsTransactionModel.findOne({
-      description: { $regex: mediaId }
+      description: { $regex: mediaId },
     });
     return !!exists;
   }
 
-  private static async markPostAsProcessed(_mediaId: string, _userId: string, _ruleId: string) {
+  private static async markPostAsProcessed(
+    _mediaId: string,
+    _userId: string,
+    _ruleId: string
+  ) {
     // This happens automatically when we create the PointsTransaction in `awardSocialPoints`
     // if we include the mediaId in the reason/metadata.
     // See hasProcessedPost above.

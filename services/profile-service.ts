@@ -94,9 +94,15 @@ export class ProfileService {
         return { success: false, message: 'File size must be less than 5MB' };
       }
 
-      // Create unique filename — sanitize to prevent path traversal
-      const safeName = path.basename(file.name);
-      const ext = safeName.split('.').pop();
+      // Create unique filename — derive extension from validated MIME type, not user input
+      const extMap: Record<string, string> = {
+        'image/jpeg': 'jpg',
+        'image/jpg': 'jpg',
+        'image/png': 'png',
+        'image/gif': 'gif',
+        'image/webp': 'webp',
+      };
+      const ext = extMap[file.type] || 'jpg';
       const filename = `profile-${userId}-${Date.now()}.${ext}`;
       const uploadDir = path.join(
         process.cwd(),
@@ -104,6 +110,7 @@ export class ProfileService {
         'uploads',
         'profiles'
       );
+      // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal — filename is userId + timestamp + MIME-derived extension; no user input
       const filepath = path.join(uploadDir, filename);
 
       // Convert File to Buffer
@@ -123,6 +130,7 @@ export class ProfileService {
       // Delete old profile picture if exists — validate path stays within public/
       if (user.profilePicture) {
         const publicDir = path.join(process.cwd(), 'public');
+        // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal — containment validated on next line
         const oldPath = path.resolve(publicDir, user.profilePicture);
         if (oldPath.startsWith(publicDir + path.sep)) {
           try {

@@ -197,7 +197,7 @@ export class CategoryService {
       $or: [
         { name: { $regex: safeQuery, $options: 'i' } },
         { description: { $regex: safeQuery, $options: 'i' } },
-        { tags: { $in: [new RegExp(safeQuery, 'i')] } },
+        { tags: { $regex: safeQuery, $options: 'i' } },
       ],
     })
       .sort({ name: 1 })

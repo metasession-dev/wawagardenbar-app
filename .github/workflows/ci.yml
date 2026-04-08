@@ -329,8 +329,8 @@ jobs:
             fi
           done
 
-          # Upload release tickets
-          for DIR in compliance/pending-releases compliance/approved-releases; do
+          # Upload release tickets (pending only — approved releases are historical)
+          for DIR in compliance/pending-releases; do
             if [ -d "$DIR" ]; then
               for TICKET in "$DIR"/*.md; do
                 [ -f "$TICKET" ] || continue

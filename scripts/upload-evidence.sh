@@ -200,7 +200,7 @@ for FILE in "${FILES[@]}"; do
     # Build JSON payload with optional release/environment/category fields
     JSON_PAYLOAD="{
         \"project_id\": \"${PROJECT_ID}\",
-        \"requirement_id\": \"$([ "$EVIDENCE_TYPE" = "compliance_document" ] && echo "_compliance-docs" || echo "$REQUIREMENT_ID")\",
+        \"requirement_id\": \"${REQUIREMENT_ID}\",
         \"evidence_type\": \"${EVIDENCE_TYPE}\",
         \"file_path\": \"${STORAGE_PATH}\",
         \"file_name\": \"${FILENAME}\",

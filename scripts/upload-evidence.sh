@@ -193,7 +193,7 @@ for FILE in "${FILES[@]}"; do
     -X POST "${SUPABASE_URL}/storage/v1/object/compliance-evidence/${STORAGE_PATH}" \
     -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
     -H "Content-Type: ${MIME_TYPE}" \
-    -H "x-upsert: $([ "$EVIDENCE_TYPE" = "compliance_document" ] && echo "true" || echo "false")" \
+    -H "x-upsert: true" \
     --data-binary "@${FILE}")
 
   if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then

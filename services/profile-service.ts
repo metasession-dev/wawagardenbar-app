@@ -43,13 +43,15 @@ export class ProfileService {
     if (data.firstName !== undefined) updateData.firstName = data.firstName;
     if (data.lastName !== undefined) updateData.lastName = data.lastName;
     if (data.phone !== undefined) updateData.phone = data.phone;
-    
+
     if (data.preferences) {
       if (data.preferences.dietaryRestrictions) {
-        updateData['preferences.dietaryRestrictions'] = data.preferences.dietaryRestrictions;
+        updateData['preferences.dietaryRestrictions'] =
+          data.preferences.dietaryRestrictions;
       }
       if (data.preferences.communicationPreferences) {
-        updateData['preferences.communicationPreferences'] = data.preferences.communicationPreferences;
+        updateData['preferences.communicationPreferences'] =
+          data.preferences.communicationPreferences;
       }
       if (data.preferences.language) {
         updateData['preferences.language'] = data.preferences.language;
@@ -92,10 +94,23 @@ export class ProfileService {
         return { success: false, message: 'File size must be less than 5MB' };
       }
 
-      // Create unique filename
-      const ext = file.name.split('.').pop();
+      // Create unique filename — derive extension from validated MIME type, not user input
+      const extMap: Record<string, string> = {
+        'image/jpeg': 'jpg',
+        'image/jpg': 'jpg',
+        'image/png': 'png',
+        'image/gif': 'gif',
+        'image/webp': 'webp',
+      };
+      const ext = extMap[file.type] || 'jpg';
       const filename = `profile-${userId}-${Date.now()}.${ext}`;
-      const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'profiles');
+      const uploadDir = path.join(
+        process.cwd(),
+        'public',
+        'uploads',
+        'profiles'
+      );
+      // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal — filename is userId + timestamp + MIME-derived extension; no user input
       const filepath = path.join(uploadDir, filename);
 
       // Convert File to Buffer
@@ -112,14 +127,18 @@ export class ProfileService {
         return { success: false, message: 'User not found' };
       }
 
-      // Delete old profile picture if exists
+      // Delete old profile picture if exists — validate path stays within public/
       if (user.profilePicture) {
-        const oldPath = path.join(process.cwd(), 'public', user.profilePicture);
-        try {
-          await unlink(oldPath);
-        } catch (error) {
-          // Ignore error if file doesn't exist
-          console.error('Error deleting old profile picture:', error);
+        const publicDir = path.join(process.cwd(), 'public');
+        // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal — containment validated on next line
+        const oldPath = path.resolve(publicDir, user.profilePicture);
+        if (oldPath.startsWith(publicDir + path.sep)) {
+          try {
+            await unlink(oldPath);
+          } catch (error) {
+            // Ignore error if file doesn't exist
+            console.error('Error deleting old profile picture:', error);
+          }
         }
       }
 
@@ -176,7 +195,7 @@ export class ProfileService {
     const addressIndex = user.addresses.findIndex(
       (addr) => addr._id?.toString() === addressId
     );
-    
+
     if (addressIndex === -1) return null;
 
     // If setting as default, remove default from others
@@ -211,7 +230,7 @@ export class ProfileService {
     const addressIndex = user.addresses.findIndex(
       (addr) => addr._id?.toString() === addressId
     );
-    
+
     if (addressIndex === -1) return null;
 
     const wasDefault = user.addresses[addressIndex].isDefault;

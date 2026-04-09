@@ -615,10 +615,17 @@ export async function uploadMenuImageAction(
     const uploadsDir = join(process.cwd(), 'public', 'uploads', 'menu');
     await mkdir(uploadsDir, { recursive: true });
 
-    // Generate unique filename
+    // Generate unique filename — derive extension from validated MIME type, not user input
     const timestamp = Date.now();
-    const extension = file.name.split('.').pop();
+    const extMap: Record<string, string> = {
+      'image/jpeg': 'jpg',
+      'image/jpg': 'jpg',
+      'image/png': 'png',
+      'image/webp': 'webp',
+    };
+    const extension = extMap[file.type] || 'jpg';
     const filename = `${menuItemId}-${timestamp}.${extension}`;
+    // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal — filename is menuItemId (validated ObjectId) + timestamp + MIME-derived extension; no user input
     const filepath = join(uploadsDir, filename);
 
     // Save file

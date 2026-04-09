@@ -1,6 +1,6 @@
 # Release Ticket: REQ-023 — Replace Total Amount with Staff Pot Balance
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** APPROVED - DEPLOYED
 **Date:** 2026-04-07
 **Requirement ID:** REQ-023
 **Risk Level:** LOW
@@ -39,3 +39,6 @@ Replaced the "Total Amount" card (showing cumulative tab revenue) on the Tabs Ma
 | 2026-04-07 | Implementation completed | Claude + William | Card swap + vite CVE fix    |
 | 2026-04-07 | UAT verified             | William          | ₦16,360 displayed correctly |
 | 2026-04-07 | Tests passed             | CI               | Run 24064646149             |
+| 2026-04-09 | PR approved & merged     | metasession-dev  | PR #51                      |
+| 2026-04-09 | Deployed to production   | System           | Auto-deploy from main       |
+| 2026-04-09 | PROD verification passed | CI               | Post-deploy run 24178326930 |

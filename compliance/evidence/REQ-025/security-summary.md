@@ -48,11 +48,19 @@
 
 ## UAT Verification
 
-- **Branch:** develop → Railway auto-deploy in progress
+- **Branch:** develop → Railway auto-deployed commit 54e8e49
 - **URL:** https://wawagardenbar-app-uat.up.railway.app
-- **Status:** Pending Railway deploy from commit 7492aaf
+- **Date:** 2026-04-12
 
-_Update this section after UAT smoke test before creating PR._
+| Check                                          | Result  | Notes                                                                                      |
+| ---------------------------------------------- | ------- | ------------------------------------------------------------------------------------------ |
+| Settings page renders Business Day Cutoff card | ✅ PASS | Visible on /dashboard/settings                                                             |
+| Daily financial report returns revenue         | ✅ PASS | After paidAt fallback fix; ₦1,258,750 visible                                              |
+| Express close tab page loads                   | ✅ PASS | No errors                                                                                  |
+| Admin payment dialogs load                     | ✅ PASS | No errors                                                                                  |
+| Hotfix: paidAt fallback added                  | ✅      | Reports broken until fallback added (54e8e49) — pre-migration records have no businessDate |
+
+**Note:** COGS showing ₦0.00 is a pre-existing unrelated bug (issue #54) — not introduced by REQ-025.
 
 ---
 

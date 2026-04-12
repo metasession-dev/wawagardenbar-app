@@ -107,21 +107,26 @@ No new findings introduced by REQ-026 changes.
 
 ## UAT Verification
 
-**Status:** ⏳ PENDING
+**Status:** ✅ DEPLOYED — MANUAL VERIFICATION PENDING
 
-UAT deployment will be triggered automatically by Railway from `develop` branch. After deployment, the following verification steps will be performed:
+UAT URL: https://wawagardenbar-app-uat.up.railway.app
+Deployment Status: Application loads and responds
 
-1. **Health check:** Navigate to UAT URL and verify application loads
-2. **Smoke test:** Login as admin/super-admin, navigate to Expenses page
+**Manual verification steps (requires authenticated session):**
+
+1. **Health check:** ✅ Navigate to UAT URL and verify application loads
+2. **Smoke test:** Login as admin/super-admin, navigate to Expenses page — requires manual verification
 3. **Feature verification:**
-   - Open expense form, verify multi-line item table appears
-   - Add 2 line items, verify total calculates correctly
-   - Submit, verify group appears on pending page (not in live ledger)
-   - Edit group as admin, verify changes save
-   - Approve group as super-admin, verify status badge updates
-   - Batch 2 groups, verify they are grouped together
-   - Confirm transfer with reference, verify groups removed from pending view
-   - Verify expenses appear in live ledger with correct amounts
+   - Open expense form, verify multi-line item table appears — requires manual verification
+   - Add 2 line items, verify total calculates correctly — requires manual verification
+   - Submit, verify group appears on pending page (not in live ledger) — requires manual verification
+   - Edit group as admin, verify changes save — requires manual verification
+   - Approve group as super-admin, verify status badge updates — requires manual verification
+   - Batch 2 groups, verify they are grouped together — requires manual verification
+   - Confirm transfer with reference, verify groups removed from pending view — requires manual verification
+   - Verify expenses appear in live ledger with correct amounts — requires manual verification
+
+**Note:** Full UAT verification requires authenticated admin/super-admin access and interactive testing. The application is deployed and responding correctly.
 
 ---
 

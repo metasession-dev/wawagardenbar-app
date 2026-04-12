@@ -102,6 +102,13 @@ export default defineConfig({
       testMatch: /cost-snapshot\.spec\.ts/,
       dependencies: ['auth-setup'],
     },
+    // Business Day Cutoff (REQ-025)
+    {
+      name: 'business-day-cutoff',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /business-day-cutoff\.spec\.ts/,
+      dependencies: ['auth-setup'],
+    },
   ],
   /* Start dev server before tests (skipped when BASE_URL is set) */
   webServer: process.env.BASE_URL

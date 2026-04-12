@@ -126,6 +126,9 @@ const tabSchema = new Schema<ITab>(
     paidAt: {
       type: Date,
     },
+    businessDate: {
+      type: Date,
+    },
     openedAt: {
       type: Date,
       default: Date.now,
@@ -156,6 +159,7 @@ const tabSchema = new Schema<ITab>(
 tabSchema.index({ status: 1, tableNumber: 1 });
 tabSchema.index({ userId: 1, status: 1 });
 tabSchema.index({ openedAt: -1 });
+tabSchema.index({ businessDate: 1 });
 tabSchema.index({ tableNumber: 1, status: 1 });
 
 const TabModel: Model<ITab> =

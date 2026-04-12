@@ -53,10 +53,10 @@ export async function GET(request: NextRequest): Promise<Response> {
       const dateRange = parsePeriodParams(searchParams);
       const { startDate, endDate, label } = dateRange;
 
-      // Fetch paid orders in range
+      // Fetch paid orders in business date range (REQ-025)
       const paidOrders = await OrderModel.find({
         paymentStatus: 'paid',
-        paidAt: { $gte: startDate, $lte: endDate },
+        businessDate: { $gte: startDate, $lte: endDate },
       }).lean();
 
       // Fetch ALL orders in range (for status/type breakdown)

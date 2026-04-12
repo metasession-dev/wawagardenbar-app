@@ -440,6 +440,7 @@ export async function completeTabPaymentManuallyAction(params: {
   paymentType: 'cash' | 'transfer' | 'card';
   paymentReference: string;
   comments?: string;
+  businessDate?: Date;
 }): Promise<ActionResult<{ tab: ITab }>> {
   try {
     const cookieStore = await cookies();
@@ -479,7 +480,8 @@ export async function completeTabPaymentManuallyAction(params: {
       paymentReference: params.paymentReference,
       comments: params.comments,
       processedBy: session.userId,
-    });
+      businessDate: params.businessDate,
+    } as any);
 
     revalidatePath('/dashboard/orders/tabs');
     revalidatePath(`/dashboard/orders/tabs/${params.tabId}`);

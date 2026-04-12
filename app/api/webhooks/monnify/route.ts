@@ -6,6 +6,8 @@ import { MonnifyService } from '@/services/monnify-service';
 import { PaymentService } from '@/services/payment-service';
 import { InventoryService, RewardsService, TabService } from '@/services';
 import { MonnifyWebhookPayload } from '@/interfaces/payment';
+import { deriveBusinessDate } from '@/lib/business-date';
+import { SystemSettingsService } from '@/services/system-settings-service';
 
 /**
  * Monnify Webhook Handler
@@ -21,15 +23,12 @@ export async function POST(request: NextRequest) {
     // Verify webhook signature
     if (!MonnifyService.validateWebhookSignature(rawBody, signature)) {
       console.error('Invalid webhook signature');
-      return NextResponse.json(
-        { error: 'Invalid signature' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
     // Parse webhook payload
     const webhookData = JSON.parse(rawBody);
-    
+
     // Monnify sends data in eventData wrapper
     const payload: MonnifyWebhookPayload = webhookData.eventData || webhookData;
 
@@ -49,12 +48,17 @@ export async function POST(request: NextRequest) {
     });
 
     // If no order found, try to find tab
-    const tab = !order ? await TabModel.findOne({
-      paymentReference: payload.paymentReference,
-    }) : null;
+    const tab = !order
+      ? await TabModel.findOne({
+          paymentReference: payload.paymentReference,
+        })
+      : null;
 
     if (!order && !tab) {
-      console.error('Order or Tab not found for payment reference:', payload.paymentReference);
+      console.error(
+        'Order or Tab not found for payment reference:',
+        payload.paymentReference
+      );
       return NextResponse.json(
         { error: 'Order or Tab not found' },
         { status: 404 }
@@ -62,14 +66,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Map Monnify status to order status
-    const statusMap: Record<string, 'pending' | 'paid' | 'failed' | 'cancelled' | 'refunded'> = {
-      'PAID': 'paid',
-      'OVERPAID': 'paid',
-      'FAILED': 'failed',
-      'CANCELLED': 'cancelled',
-      'PENDING': 'pending',
-      'PARTIALLY_PAID': 'pending',
-      'EXPIRED': 'failed',
+    const statusMap: Record<
+      string,
+      'pending' | 'paid' | 'failed' | 'cancelled' | 'refunded'
+    > = {
+      PAID: 'paid',
+      OVERPAID: 'paid',
+      FAILED: 'failed',
+      CANCELLED: 'cancelled',
+      PENDING: 'pending',
+      PARTIALLY_PAID: 'pending',
+      EXPIRED: 'failed',
     };
 
     // Handle order payment
@@ -82,7 +89,9 @@ export async function POST(request: NextRequest) {
       // Update order status based on payment
       if (PaymentService.isPaymentSuccessful(payload.paymentStatus)) {
         order.status = 'confirmed';
-        
+        const cutoff = await SystemSettingsService.getBusinessDayCutoff();
+        order.businessDate = deriveBusinessDate(new Date(), cutoff);
+
         // Add to status history
         order.statusHistory.push({
           status: 'confirmed',
@@ -100,7 +109,11 @@ export async function POST(request: NextRequest) {
             order.inventoryDeductedAt = new Date();
             console.log('Inventory deducted for order:', order._id);
           } catch (error) {
-            console.error('Error deducting inventory for order:', order._id, error);
+            console.error(
+              'Error deducting inventory for order:',
+              order._id,
+              error
+            );
             // Continue processing - don't fail webhook due to inventory issues
           }
         }
@@ -113,18 +126,27 @@ export async function POST(request: NextRequest) {
               order._id.toString(),
               order.total
             );
-            
+
             if (reward) {
-              console.log('Reward issued for order:', order._id, 'Reward code:', reward.code);
+              console.log(
+                'Reward issued for order:',
+                order._id,
+                'Reward code:',
+                reward.code
+              );
             }
           } catch (error) {
-            console.error('Error calculating reward for order:', order._id, error);
+            console.error(
+              'Error calculating reward for order:',
+              order._id,
+              error
+            );
             // Continue processing - don't fail webhook due to reward issues
           }
         }
       } else if (payload.paymentStatus === 'FAILED') {
         order.status = 'cancelled';
-        
+
         order.statusHistory.push({
           status: 'cancelled',
           timestamp: new Date(),
@@ -136,7 +158,7 @@ export async function POST(request: NextRequest) {
 
       await order.save();
     }
-    
+
     // Handle tab payment
     if (tab) {
       if (PaymentService.isPaymentSuccessful(payload.paymentStatus)) {
@@ -145,7 +167,7 @@ export async function POST(request: NextRequest) {
           payload.paymentReference,
           payload.transactionReference
         );
-        
+
         console.log('Tab closed and marked as paid:', tab._id);
 
         // Calculate and issue reward if user is logged in
@@ -156,9 +178,14 @@ export async function POST(request: NextRequest) {
               tab._id.toString(),
               tab.total
             );
-            
+
             if (reward) {
-              console.log('Reward issued for tab:', tab._id, 'Reward code:', reward.code);
+              console.log(
+                'Reward issued for tab:',
+                tab._id,
+                'Reward code:',
+                reward.code
+              );
             }
           } catch (error) {
             console.error('Error calculating reward for tab:', tab._id, error);
@@ -169,7 +196,7 @@ export async function POST(request: NextRequest) {
         tab.paymentStatus = 'failed';
         tab.status = 'open'; // Reopen tab if payment failed
         await tab.save();
-        
+
         console.log('Tab payment failed, reopened tab:', tab._id);
       }
     }

@@ -55,6 +55,11 @@ const ExpenseSchema = new Schema<IExpense>(
     notes: {
       type: String,
     },
+    pendingGroupId: {
+      type: String,
+      index: true,
+      sparse: true,
+    },
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',

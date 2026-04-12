@@ -652,6 +652,7 @@ This section tracks discrete change requests (REQ-001 through REQ-008) that repr
 | REQ-022 | #46   | MEDIUM | compliance/evidence/REQ-022/ | APPROVED - DEPLOYED | William         | 2026-04-06 |
 | REQ-023 | #48   | LOW    | compliance/evidence/REQ-023/ | APPROVED - DEPLOYED | metasession-dev | 2026-04-09 |
 | REQ-024 | #42   | HIGH   | compliance/evidence/REQ-024/ | APPROVED - DEPLOYED | metasession-dev | 2026-04-09 |
+| REQ-025 | #50   | HIGH   | compliance/evidence/REQ-025/ | DRAFT               | --              | --         |
 
 ### Change Request Dependencies
 

@@ -64,6 +64,19 @@
 
 ---
 
+## Production Post-Deploy Verification — 2026-04-12
+
+- PROD Health check (HTTP 200): ✅ PASS
+- PROD Admin auth gate (/dashboard → 307 redirect): ✅ PASS
+- PROD Content-Security-Policy: ✅ PASS
+- PROD Strict-Transport-Security: ✅ PASS
+- PROD X-Frame-Options (DENY): ✅ PASS
+- PROD X-Content-Type-Options (nosniff): ✅ PASS
+- PROD Post-deploy workflow (CI): ✅ PASS (run 24304544014)
+- PROD URL: https://wawagardenbar-app-production-45c8.up.railway.app
+
+---
+
 ## Residual Risks
 
 - **None introduced by this change.** The `businessDate` field is additive; existing queries using `paidAt` are unaffected outside of report services. Backfill script must be run once on production database after deployment.

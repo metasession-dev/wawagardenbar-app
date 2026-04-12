@@ -10,6 +10,7 @@ export interface CompleteOrderPaymentManuallyInput {
   paymentType: 'cash' | 'transfer' | 'card';
   paymentReference: string;
   comments?: string;
+  businessDate?: Date;
 }
 
 export async function completeOrderPaymentManuallyAction(
@@ -31,7 +32,8 @@ export async function completeOrderPaymentManuallyAction(
       paymentReference: input.paymentReference,
       comments: input.comments,
       processedByAdminId: session.userId,
-    });
+      businessDate: input.businessDate,
+    } as any);
 
     revalidatePath(`/dashboard/orders/${input.orderId}`);
     revalidatePath('/dashboard/orders');
@@ -58,7 +60,8 @@ export async function completeOrderPaymentManuallyAction(
     console.error('Error processing manual payment:', error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Failed to process payment',
+      message:
+        error instanceof Error ? error.message : 'Failed to process payment',
     };
   }
 }

@@ -628,6 +628,58 @@ export class SystemSettingsService {
   }
 
   /**
+   * @requirement REQ-025 - Get business day cutoff time (WAT HH:MM)
+   */
+  static async getBusinessDayCutoff(): Promise<string> {
+    await connectDB();
+
+    const setting = await SystemSettingsModel.findOne({
+      key: 'business-day-cutoff',
+    });
+
+    return (setting?.value as string) ?? '15:00';
+  }
+
+  /**
+   * @requirement REQ-025 - Update business day cutoff time
+   */
+  static async updateBusinessDayCutoff(
+    cutoffTime: string,
+    adminUserId: string
+  ): Promise<boolean> {
+    await connectDB();
+
+    const parts = cutoffTime.split(':');
+    const h = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    if (isNaN(h) || isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59) {
+      throw new Error('Invalid cutoff time — must be HH:MM (e.g. "15:00")');
+    }
+
+    await SystemSettingsModel.findOneAndUpdate(
+      { key: 'business-day-cutoff' },
+      {
+        $set: {
+          value: cutoffTime,
+          updatedBy: new Types.ObjectId(adminUserId),
+          updatedAt: new Date(),
+        },
+        $push: {
+          changeHistory: {
+            value: cutoffTime,
+            changedBy: new Types.ObjectId(adminUserId),
+            changedAt: new Date(),
+            reason: 'Business day cutoff updated',
+          },
+        },
+      },
+      { upsert: true, new: true }
+    );
+
+    return true;
+  }
+
+  /**
    * Initialize default settings
    */
   static async initializeDefaults(): Promise<void> {

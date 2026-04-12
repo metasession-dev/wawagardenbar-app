@@ -98,6 +98,7 @@ export interface IOrder {
   paymentMethod?: 'card' | 'transfer' | 'ussd' | 'phone' | 'cash';
   paymentStatus?: 'pending' | 'paid' | 'failed' | 'cancelled' | 'refunded';
   paidAt?: Date;
+  businessDate?: Date;
   deliveryDetails?: IDeliveryDetails;
   pickupDetails?: IPickupDetails;
   dineInDetails?: IDineInDetails;

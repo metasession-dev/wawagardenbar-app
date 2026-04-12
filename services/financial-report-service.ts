@@ -1,6 +1,7 @@
 /**
  * @requirement REQ-013 - Include partial payments in daily report aggregation
  * @requirement REQ-017 - Total Revenue reflects money received (paymentBreakdown.total)
+ * @requirement REQ-025 - Query by businessDate instead of paidAt for correct day attribution
  */
 import { startOfDay, endOfDay } from 'date-fns';
 import { connectDB } from '@/lib/mongodb';
@@ -110,33 +111,39 @@ export class FinancialReportService {
     const tabPartialTotals = new Map<string, number>();
     let totalPartialPayments = 0;
 
-    // Find all tabs that have partial payments in this date range
+    // Find all tabs with partial payments attributed to this business date range.
+    // Fall back to paidAt for records that pre-date the businessDate backfill.
     const tabsWithPartials = await TabModel.find({
-      'partialPayments.paidAt': { $gte: startDate, $lte: endDate },
+      partialPayments: { $exists: true, $not: { $size: 0 } },
+      $or: [
+        { businessDate: { $gte: startDate, $lte: endDate } },
+        {
+          businessDate: { $exists: false },
+          paidAt: { $gte: startDate, $lte: endDate },
+        },
+        { businessDate: null, paidAt: { $gte: startDate, $lte: endDate } },
+      ],
     }).lean();
 
     for (const tab of tabsWithPartials) {
       for (const pp of tab.partialPayments || []) {
-        const paidAt = new Date(pp.paidAt);
-        if (paidAt >= startDate && paidAt <= endDate) {
-          const method = pp.paymentType as string;
-          const amount = pp.amount || 0;
+        const method = pp.paymentType as string;
+        const amount = pp.amount || 0;
 
-          if (method && validMethods.includes(method)) {
-            paymentBreakdown[method] += amount;
-          } else {
-            paymentBreakdown.unspecified += amount;
-          }
-          paymentBreakdown.total += amount;
-          totalPartialPayments += amount;
-
-          // Track total partial payments per tab for double-counting prevention
-          const tabId = tab._id.toString();
-          tabPartialTotals.set(
-            tabId,
-            (tabPartialTotals.get(tabId) || 0) + amount
-          );
+        if (method && validMethods.includes(method)) {
+          paymentBreakdown[method] += amount;
+        } else {
+          paymentBreakdown.unspecified += amount;
         }
+        paymentBreakdown.total += amount;
+        totalPartialPayments += amount;
+
+        // Track total partial payments per tab for double-counting prevention
+        const tabId = tab._id.toString();
+        tabPartialTotals.set(
+          tabId,
+          (tabPartialTotals.get(tabId) || 0) + amount
+        );
       }
     }
 
@@ -152,10 +159,18 @@ export class FinancialReportService {
     const startDate = startOfDay(date);
     const endDate = endOfDay(date);
 
-    // Fetch all paid orders for the date (based on payment date, not creation date)
+    // Fetch all paid orders attributed to this business date.
+    // Fall back to paidAt for records that pre-date the businessDate backfill.
     const orders = await OrderModel.find({
       paymentStatus: 'paid',
-      paidAt: { $gte: startDate, $lte: endDate },
+      $or: [
+        { businessDate: { $gte: startDate, $lte: endDate } },
+        {
+          businessDate: { $exists: false },
+          paidAt: { $gte: startDate, $lte: endDate },
+        },
+        { businessDate: null, paidAt: { $gte: startDate, $lte: endDate } },
+      ],
     }).lean();
 
     // Initialize report structure
@@ -210,6 +225,7 @@ export class FinancialReportService {
       endDate,
       report.paymentBreakdown as Record<string, number>
     );
+    // Note: aggregatePartialPayments now uses Tab.businessDate for attribution
 
     // Build a map of tabId -> total partial payments (all time, not just this period)
     // to correctly subtract from order totals when the tab is closed in this period
@@ -420,10 +436,18 @@ export class FinancialReportService {
     const start = startOfDay(startDate);
     const end = endOfDay(endDate);
 
-    // Fetch all paid orders for the date range (based on payment date, not creation date)
+    // Fetch all paid orders attributed to this business date range.
+    // Fall back to paidAt for records that pre-date the businessDate backfill.
     const orders = await OrderModel.find({
       paymentStatus: 'paid',
-      paidAt: { $gte: start, $lte: end },
+      $or: [
+        { businessDate: { $gte: start, $lte: end } },
+        {
+          businessDate: { $exists: false },
+          paidAt: { $gte: start, $lte: end },
+        },
+        { businessDate: null, paidAt: { $gte: start, $lte: end } },
+      ],
     }).lean();
 
     // Similar logic to generateDailySummary but for date range

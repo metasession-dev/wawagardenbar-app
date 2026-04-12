@@ -41,6 +41,7 @@ export interface ITab {
   transactionReference?: string;
   partialPayments: IPartialPayment[];
   paidAt?: Date;
+  businessDate?: Date;
   openedAt: Date;
   closedAt?: Date;
   reconciled?: boolean;

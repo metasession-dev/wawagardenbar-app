@@ -162,6 +162,7 @@ const orderSchema = new Schema<IOrder>(
       default: 'pending',
     },
     paidAt: { type: Date },
+    businessDate: { type: Date },
     deliveryDetails: { type: deliveryDetailsSchema },
     pickupDetails: { type: pickupDetailsSchema },
     dineInDetails: { type: dineInDetailsSchema },
@@ -231,6 +232,7 @@ const orderSchema = new Schema<IOrder>(
 orderSchema.index({ userId: 1, createdAt: -1 });
 orderSchema.index({ status: 1, orderType: 1 });
 orderSchema.index({ createdAt: -1 });
+orderSchema.index({ businessDate: 1 });
 orderSchema.index({ guestEmail: 1 });
 
 orderSchema.pre('save', function preSave(next) {

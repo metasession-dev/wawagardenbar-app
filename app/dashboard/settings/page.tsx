@@ -12,9 +12,10 @@ import { PaymentSettingsForm } from '@/components/features/admin/payment-setting
 import { ExpenseCategoriesForm } from '@/components/features/admin/expense-categories-form';
 import { MenuCategoriesForm } from '@/components/features/admin/menu-categories-form';
 import { StaffPotConfigForm } from '@/components/features/admin/staff-pot/staff-pot-config-form';
+import { BusinessDayCutoffForm } from '@/components/features/admin/business-day-cutoff-form';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Key, UserX, Users, PiggyBank } from 'lucide-react';
+import { Key, UserX, Users, PiggyBank, CalendarClock } from 'lucide-react';
 
 export const metadata = {
   title: 'Settings | Admin Dashboard',
@@ -35,6 +36,7 @@ export default async function SettingsPage() {
     menuSettings,
     inventoryLocationsSettings,
     staffPotConfig,
+    businessDayCutoff,
   ] = await Promise.all([
     SettingsService.getSettings(),
     SystemSettingsService.getNotificationSettings(),
@@ -43,6 +45,7 @@ export default async function SettingsPage() {
     SystemSettingsService.getMenuCategories(),
     SystemSettingsService.getInventoryLocations(),
     SystemSettingsService.getStaffPotConfig(),
+    SystemSettingsService.getBusinessDayCutoff(),
   ]);
 
   // Serialize for client - use JSON.parse(JSON.stringify()) to remove Mongoose metadata
@@ -143,6 +146,26 @@ export default async function SettingsPage() {
 
       {/* Menu Categories */}
       <MenuCategoriesForm initialSettings={menuSettings} />
+
+      {/* Business Day Cutoff */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <div className="space-y-1">
+            <CardTitle className="flex items-center gap-2">
+              <CalendarClock className="h-5 w-5" />
+              Business Day Cutoff
+            </CardTitle>
+            <CardDescription>
+              Set the time after which orders and tabs belong to the current
+              calendar day. Before this time, admin staff will be prompted to
+              attribute them to the previous business day.
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <BusinessDayCutoffForm initialCutoff={businessDayCutoff} />
+        </CardContent>
+      </Card>
 
       {/* Staff Pot Configuration */}
       <Card>

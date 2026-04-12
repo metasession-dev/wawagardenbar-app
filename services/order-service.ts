@@ -3,6 +3,8 @@ import { connectDB } from '@/lib/mongodb';
 import Order from '@/models/order-model';
 import { IOrder, OrderType, OrderStatus } from '@/interfaces';
 import { PriceHistoryService } from './price-history-service';
+import { deriveBusinessDate } from '@/lib/business-date';
+import { SystemSettingsService } from './system-settings-service';
 
 /**
  * Service for order CRUD operations
@@ -16,14 +18,14 @@ export class OrderService {
     const year = date.getFullYear().toString().slice(-2);
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
-    
+
     const count = await Order.countDocuments({
       createdAt: {
         $gte: new Date(date.getFullYear(), date.getMonth(), date.getDate()),
         $lt: new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1),
       },
     });
-    
+
     const sequence = String(count + 1).padStart(4, '0');
     return `WG${year}${month}${day}${sequence}`;
   }
@@ -37,25 +39,25 @@ export class OrderService {
   ): Promise<number> {
     // Base preparation time per item (in minutes)
     const baseTimePerItem = 5;
-    
+
     // Get active orders count
     const activeOrders = await Order.countDocuments({
       status: { $in: ['confirmed', 'preparing'] },
     });
-    
+
     // Calculate base time
     let estimatedTime = itemCount * baseTimePerItem;
-    
+
     // Add queue time (2 minutes per active order)
     estimatedTime += activeOrders * 2;
-    
+
     // Add delivery time if applicable
     if (orderType === 'delivery') {
       estimatedTime += 30; // 30 minutes for delivery
     } else if (orderType === 'pickup') {
       estimatedTime += 5; // 5 minutes buffer for pickup
     }
-    
+
     // Minimum wait time
     return Math.max(estimatedTime, 15);
   }
@@ -159,7 +161,10 @@ export class OrderService {
     const enrichedItems = await this.enrichOrderItemsWithCosts(orderData.items);
 
     // Calculate total cost from items
-    const totalCost = enrichedItems.reduce((sum, item) => sum + item.totalCost, 0);
+    const totalCost = enrichedItems.reduce(
+      (sum, item) => sum + item.totalCost,
+      0
+    );
 
     // Calculate operational costs
     const operationalCosts = this.calculateOperationalCosts(
@@ -170,15 +175,22 @@ export class OrderService {
 
     // Calculate order-level profitability
     const totalOperationalCosts =
-      operationalCosts.delivery + operationalCosts.packaging + operationalCosts.processing;
+      operationalCosts.delivery +
+      operationalCosts.packaging +
+      operationalCosts.processing;
     const grossProfit = orderData.total - totalCost - totalOperationalCosts;
-    const profitMargin = orderData.total > 0 ? (grossProfit / orderData.total) * 100 : 0;
+    const profitMargin =
+      orderData.total > 0 ? (grossProfit / orderData.total) * 100 : 0;
 
     const order = await Order.create({
       ...orderData,
       items: enrichedItems,
-      userId: orderData.userId ? new Types.ObjectId(orderData.userId) : undefined,
-      createdBy: orderData.createdBy ? new Types.ObjectId(orderData.createdBy) : undefined,
+      userId: orderData.userId
+        ? new Types.ObjectId(orderData.userId)
+        : undefined,
+      createdBy: orderData.createdBy
+        ? new Types.ObjectId(orderData.createdBy)
+        : undefined,
       createdByRole: orderData.createdByRole || 'customer',
       orderNumber,
       estimatedWaitTime,
@@ -194,7 +206,7 @@ export class OrderService {
     try {
       const InventoryService = (await import('./inventory-service')).default;
       await InventoryService.deductStockForOrder(order._id.toString());
-      
+
       // Mark inventory as deducted
       order.inventoryDeducted = true;
       order.inventoryDeductedAt = new Date();
@@ -251,7 +263,9 @@ export class OrderService {
       return { orders: [], total: 0 };
     }
 
-    const query: Record<string, unknown> = { userId: new Types.ObjectId(userId) };
+    const query: Record<string, unknown> = {
+      userId: new Types.ObjectId(userId),
+    };
     if (options?.status) {
       query.status = options.status;
     }
@@ -329,6 +343,9 @@ export class OrderService {
   /**
    * Update payment status
    */
+  /**
+   * @requirement REQ-025 - Accept optional businessDate override; auto-derive if not supplied
+   */
   static async updatePaymentStatus(
     orderId: string,
     paymentData: {
@@ -336,6 +353,7 @@ export class OrderService {
       paymentReference?: string;
       transactionReference?: string;
       paidAt?: Date;
+      businessDate?: Date;
     }
   ): Promise<IOrder | null> {
     await connectDB();
@@ -357,6 +375,14 @@ export class OrderService {
     if (paymentData.paidAt) {
       updateData.paidAt = paymentData.paidAt;
     }
+    if (paymentData.paymentStatus === 'paid') {
+      if (paymentData.businessDate) {
+        updateData.businessDate = paymentData.businessDate;
+      } else {
+        const cutoff = await SystemSettingsService.getBusinessDayCutoff();
+        updateData.businessDate = deriveBusinessDate(new Date(), cutoff);
+      }
+    }
 
     // If payment is successful, update order status to confirmed
     if (paymentData.paymentStatus === 'paid') {
@@ -370,11 +396,9 @@ export class OrderService {
       };
     }
 
-    const order = await Order.findByIdAndUpdate(
-      orderId,
-      updateData,
-      { new: true }
-    ).lean();
+    const order = await Order.findByIdAndUpdate(orderId, updateData, {
+      new: true,
+    }).lean();
 
     return order;
   }
@@ -472,9 +496,7 @@ export class OrderService {
       query.orderType = orderType;
     }
 
-    const orders = await Order.find(query)
-      .sort({ createdAt: 1 })
-      .lean();
+    const orders = await Order.find(query).sort({ createdAt: 1 }).lean();
 
     return orders;
   }
@@ -496,7 +518,10 @@ export class OrderService {
   /**
    * Get order statistics
    */
-  static async getOrderStats(startDate?: Date, endDate?: Date): Promise<{
+  static async getOrderStats(
+    startDate?: Date,
+    endDate?: Date
+  ): Promise<{
     totalOrders: number;
     totalRevenue: number;
     averageOrderValue: number;
@@ -609,7 +634,9 @@ export class OrderService {
       const TabModel = (await import('@/models/tab-model')).default;
       const tab = await TabModel.findById(order.tabId);
       if (tab && tab.status === 'settling') {
-        throw new Error('Cannot process payment for orders in settling tabs. Please process payment through the tab.');
+        throw new Error(
+          'Cannot process payment for orders in settling tabs. Please process payment through the tab.'
+        );
       }
     }
 
@@ -623,6 +650,12 @@ export class OrderService {
     order.paymentMethod = params.paymentType;
     order.paymentReference = params.paymentReference;
     order.paidAt = new Date();
+    if ((params as any).businessDate) {
+      order.businessDate = (params as any).businessDate;
+    } else {
+      const cutoff = await SystemSettingsService.getBusinessDayCutoff();
+      order.businessDate = deriveBusinessDate(new Date(), cutoff);
+    }
 
     // Update order status to confirmed if still pending
     if (order.status === 'pending') {
@@ -668,7 +701,7 @@ export class OrderService {
       const { AuditLogService } = await import('./audit-log-service');
       const UserModel = (await import('@/models/user-model')).default;
       const admin = await UserModel.findById(params.processedByAdminId);
-      
+
       await AuditLogService.createLog({
         userId: params.processedByAdminId,
         userEmail: admin?.email || 'unknown',

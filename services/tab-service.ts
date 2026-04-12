@@ -7,6 +7,8 @@ import TabModel from '@/models/tab-model';
 import OrderModel from '@/models/order-model';
 import { ITab, IOrder } from '@/interfaces';
 import SettingsService from './settings-service';
+import { deriveBusinessDate } from '@/lib/business-date';
+import { SystemSettingsService } from './system-settings-service';
 
 /**
  * Tab Service
@@ -295,10 +297,14 @@ export class TabService {
   /**
    * Mark tab as paid
    */
+  /**
+   * @requirement REQ-025 - Accept optional businessDate override; auto-derive if not supplied
+   */
   static async markTabPaid(
     tabId: string,
     paymentReference: string,
-    transactionReference: string
+    transactionReference: string,
+    businessDate?: Date
   ): Promise<ITab> {
     await connectDB();
 
@@ -307,12 +313,19 @@ export class TabService {
       throw new Error('Tab not found');
     }
 
+    const resolvedBusinessDate =
+      businessDate ??
+      deriveBusinessDate(
+        new Date(),
+        await SystemSettingsService.getBusinessDayCutoff()
+      );
     tab.status = 'closed';
     tab.paymentStatus = 'paid';
     tab.paymentReference = paymentReference;
     tab.transactionReference = transactionReference;
     tab.paidAt = new Date();
     tab.closedAt = new Date();
+    tab.businessDate = resolvedBusinessDate;
 
     await tab.save();
 
@@ -330,6 +343,7 @@ export class TabService {
           paidAt: new Date(),
           status: 'confirmed',
           paymentMethod: 'card',
+          businessDate: resolvedBusinessDate,
         },
       }
     );
@@ -668,11 +682,18 @@ export class TabService {
     }
 
     // Update tab status and payment info
+    const resolvedBusinessDate =
+      (params as any).businessDate ??
+      deriveBusinessDate(
+        new Date(),
+        await SystemSettingsService.getBusinessDayCutoff()
+      );
     tab.status = 'closed';
     tab.paymentStatus = 'paid';
     tab.paymentReference = params.paymentReference;
     tab.paidAt = new Date();
     tab.closedAt = new Date();
+    tab.businessDate = resolvedBusinessDate;
 
     await tab.save();
 
@@ -687,6 +708,7 @@ export class TabService {
           paidAt: new Date(),
           status: 'confirmed',
           paymentMethod: params.paymentType,
+          businessDate: resolvedBusinessDate,
         },
       }
     );
@@ -742,8 +764,10 @@ export class TabService {
       throw new Error('Tab not found');
     }
 
+    const cutoff = await SystemSettingsService.getBusinessDayCutoff();
     tab.status = 'closed';
     tab.closedAt = new Date();
+    tab.businessDate = deriveBusinessDate(new Date(), cutoff);
 
     await tab.save();
 

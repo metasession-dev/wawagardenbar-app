@@ -5,7 +5,13 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,6 +23,7 @@ import {
   expressGetTabForCloseAction,
   expressCloseTabAction,
 } from '@/app/actions/admin/express-actions';
+import { BusinessDayCheckbox } from '@/components/features/admin/business-day-checkbox';
 import {
   ArrowLeft,
   Loader2,
@@ -41,7 +48,12 @@ interface TabDetails {
   orders: Array<{
     _id: string;
     orderNumber: string;
-    items: Array<{ name: string; quantity: number; price: number; subtotal: number }>;
+    items: Array<{
+      name: string;
+      quantity: number;
+      price: number;
+      subtotal: number;
+    }>;
     total: number;
     status: string;
   }>;
@@ -58,8 +70,11 @@ export default function ExpressCloseTabPage() {
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [closing, setClosing] = useState(false);
 
-  const [paymentType, setPaymentType] = useState<'cash' | 'transfer' | 'card'>('cash');
+  const [paymentType, setPaymentType] = useState<'cash' | 'transfer' | 'card'>(
+    'cash'
+  );
   const [paymentReference, setPaymentReference] = useState('');
+  const [businessDate, setBusinessDate] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     loadOpenTabs();
@@ -81,7 +96,11 @@ export default function ExpressCloseTabPage() {
       setTabDetails(result.data as unknown as TabDetails);
       setStep('confirm');
     } else {
-      toast({ title: 'Error', description: result.error, variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: result.error,
+        variant: 'destructive',
+      });
     }
     setLoadingDetails(false);
   }
@@ -94,13 +113,21 @@ export default function ExpressCloseTabPage() {
       tabId: tabDetails.tab._id,
       paymentType,
       paymentReference: paymentReference || undefined,
+      businessDate,
     });
 
     if (result.success) {
       setStep('done');
-      toast({ title: 'Tab Closed', description: `${tabDetails.tab.tabNumber} has been closed` });
+      toast({
+        title: 'Tab Closed',
+        description: `${tabDetails.tab.tabNumber} has been closed`,
+      });
     } else {
-      toast({ title: 'Error', description: result.error, variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: result.error,
+        variant: 'destructive',
+      });
     }
     setClosing(false);
   }
@@ -171,12 +198,18 @@ export default function ExpressCloseTabPage() {
                     <div>
                       <p className="font-medium">Table {tab.tableNumber}</p>
                       {tab.customerName && (
-                        <p className="text-sm text-muted-foreground">{tab.customerName}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {tab.customerName}
+                        </p>
                       )}
                     </div>
                     <div className="flex items-center gap-3">
-                      <Badge variant="secondary">{tab.orders.length} orders</Badge>
-                      <span className="font-bold text-lg">₦{tab.total.toLocaleString()}</span>
+                      <Badge variant="secondary">
+                        {tab.orders.length} orders
+                      </Badge>
+                      <span className="font-bold text-lg">
+                        ₦{tab.total.toLocaleString()}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -209,7 +242,9 @@ export default function ExpressCloseTabPage() {
               {tabDetails.orders.map((order) => (
                 <div key={order._id} className="space-y-1">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{order.orderNumber}</span>
+                    <span className="text-muted-foreground">
+                      {order.orderNumber}
+                    </span>
                     <Badge variant="outline" className="text-xs">
                       {order.status}
                     </Badge>
@@ -280,6 +315,8 @@ export default function ExpressCloseTabPage() {
             </Card>
           )}
 
+          <BusinessDayCheckbox onBusinessDateChange={setBusinessDate} />
+
           <Button
             className="w-full"
             size="lg"
@@ -291,7 +328,10 @@ export default function ExpressCloseTabPage() {
             ) : (
               <CheckCircle2 className="h-4 w-4 mr-2" />
             )}
-            Close Tab{tabDetails.tab.total > 0 ? ` — ₦${tabDetails.tab.total.toLocaleString()}` : ''}
+            Close Tab
+            {tabDetails.tab.total > 0
+              ? ` — ₦${tabDetails.tab.total.toLocaleString()}`
+              : ''}
           </Button>
         </>
       )}
@@ -304,7 +344,9 @@ export default function ExpressCloseTabPage() {
               <CheckCircle2 className="h-10 w-10 text-green-600" />
             </div>
             <h2 className="text-xl font-bold">Tab Closed</h2>
-            <p className="text-muted-foreground">Payment recorded successfully</p>
+            <p className="text-muted-foreground">
+              Payment recorded successfully
+            </p>
             <Button size="lg" onClick={() => router.push('/dashboard/orders')}>
               Back to Orders
             </Button>

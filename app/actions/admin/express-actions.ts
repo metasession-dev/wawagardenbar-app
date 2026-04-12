@@ -24,9 +24,15 @@ interface ActionResult<T = unknown> {
 
 async function requireAdminSession(): Promise<SessionData> {
   const cookieStore = await cookies();
-  const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+  const session = await getIronSession<SessionData>(
+    cookieStore,
+    sessionOptions
+  );
 
-  if (!session.userId || !['admin', 'super-admin'].includes(session.role as string)) {
+  if (
+    !session.userId ||
+    !['admin', 'super-admin'].includes(session.role as string)
+  ) {
     throw new Error('Unauthorized');
   }
 
@@ -36,7 +42,9 @@ async function requireAdminSession(): Promise<SessionData> {
 /**
  * List all open tabs for the express create-tab flow
  */
-export async function expressListOpenTabsAction(): Promise<ActionResult<{ tabs: ITab[] }>> {
+export async function expressListOpenTabsAction(): Promise<
+  ActionResult<{ tabs: ITab[] }>
+> {
   try {
     await requireAdminSession();
     await connectDB();
@@ -148,12 +156,16 @@ export async function expressSearchMenuAction(params: {
 /**
  * Get menu categories for filtering
  */
-export async function expressGetCategoriesAction(): Promise<ActionResult<{ categories: string[] }>> {
+export async function expressGetCategoriesAction(): Promise<
+  ActionResult<{ categories: string[] }>
+> {
   try {
     await requireAdminSession();
     await connectDB();
 
-    const categories = await MenuItemModel.distinct('category', { isAvailable: true });
+    const categories = await MenuItemModel.distinct('category', {
+      isAvailable: true,
+    });
 
     return {
       success: true,
@@ -162,7 +174,8 @@ export async function expressGetCategoriesAction(): Promise<ActionResult<{ categ
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get categories',
+      error:
+        error instanceof Error ? error.message : 'Failed to get categories',
     };
   }
 }
@@ -198,7 +211,9 @@ export async function expressCreateOrderAction(params: {
       0
     );
 
-    const orderType = params.tabId ? ('dine-in' as const) : ('pay-now' as const);
+    const orderType = params.tabId
+      ? ('dine-in' as const)
+      : ('pay-now' as const);
     const items = params.items.map((item) => ({
       menuItemId: item.menuItemId,
       name: item.name,
@@ -226,7 +241,9 @@ export async function expressCreateOrderAction(params: {
       createdBy: session.userId,
       createdByRole: session.role as 'admin' | 'super-admin',
       guestName: params.customerName || 'Walk-in Customer',
-      dineInDetails: params.tableNumber ? { tableNumber: params.tableNumber } as any : undefined,
+      dineInDetails: params.tableNumber
+        ? ({ tableNumber: params.tableNumber } as any)
+        : undefined,
     });
 
     let tab: ITab | undefined;
@@ -273,7 +290,8 @@ export async function expressGetTabForCloseAction(
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get tab details',
+      error:
+        error instanceof Error ? error.message : 'Failed to get tab details',
     };
   }
 }
@@ -285,6 +303,7 @@ export async function expressCloseTabAction(params: {
   tabId: string;
   paymentType: 'cash' | 'transfer' | 'card';
   paymentReference?: string;
+  businessDate?: Date;
 }): Promise<ActionResult<{ tab: ITab }>> {
   try {
     const session = await requireAdminSession();
@@ -299,7 +318,8 @@ export async function expressCloseTabAction(params: {
       paymentType: params.paymentType,
       paymentReference: params.paymentReference || `EXPRESS-${Date.now()}`,
       processedBy: session.userId!,
-    });
+      businessDate: params.businessDate,
+    } as any);
 
     revalidatePath('/dashboard/orders');
     revalidatePath('/dashboard/orders/tabs');

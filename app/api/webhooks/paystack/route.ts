@@ -4,6 +4,8 @@ import Order from '@/models/order-model';
 import TabModel from '@/models/tab-model';
 import { PaystackService } from '@/services/paystack-service';
 import { InventoryService, RewardsService, TabService } from '@/services';
+import { deriveBusinessDate } from '@/lib/business-date';
+import { SystemSettingsService } from '@/services/system-settings-service';
 
 /**
  * Paystack Webhook Handler
@@ -17,12 +19,14 @@ export async function POST(request: NextRequest) {
     const signature = request.headers.get('x-paystack-signature') || '';
 
     // Verify webhook signature
-    if (!await PaystackService.validateWebhookSignature(JSON.parse(rawBody), signature)) {
+    if (
+      !(await PaystackService.validateWebhookSignature(
+        JSON.parse(rawBody),
+        signature
+      ))
+    ) {
       console.error('Invalid Paystack webhook signature');
-      return NextResponse.json(
-        { error: 'Invalid signature' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
     // Parse webhook payload
@@ -50,12 +54,17 @@ export async function POST(request: NextRequest) {
     });
 
     // If no order found, try to find tab
-    const tab = !order ? await TabModel.findOne({
-      paymentReference: data.reference,
-    }) : null;
+    const tab = !order
+      ? await TabModel.findOne({
+          paymentReference: data.reference,
+        })
+      : null;
 
     if (!order && !tab) {
-      console.error('Order or Tab not found for payment reference:', data.reference);
+      console.error(
+        'Order or Tab not found for payment reference:',
+        data.reference
+      );
       return NextResponse.json(
         { error: 'Order or Tab not found' },
         { status: 404 }
@@ -69,10 +78,12 @@ export async function POST(request: NextRequest) {
         order.paymentStatus = 'paid';
         order.transactionReference = data.id.toString();
         order.paidAt = data.paid_at ? new Date(data.paid_at) : new Date();
+        const cutoff = await SystemSettingsService.getBusinessDayCutoff();
+        order.businessDate = deriveBusinessDate(new Date(), cutoff);
 
         // Update order status
         order.status = 'confirmed';
-        
+
         // Add to status history
         order.statusHistory.push({
           status: 'confirmed',
@@ -90,7 +101,11 @@ export async function POST(request: NextRequest) {
             order.inventoryDeductedAt = new Date();
             console.log('Inventory deducted for order:', order._id);
           } catch (error) {
-            console.error('Error deducting inventory for order:', order._id, error);
+            console.error(
+              'Error deducting inventory for order:',
+              order._id,
+              error
+            );
           }
         }
 
@@ -102,12 +117,21 @@ export async function POST(request: NextRequest) {
               order._id.toString(),
               order.total
             );
-            
+
             if (reward) {
-              console.log('Reward issued for order:', order._id, 'Reward code:', reward.code);
+              console.log(
+                'Reward issued for order:',
+                order._id,
+                'Reward code:',
+                reward.code
+              );
             }
           } catch (error) {
-            console.error('Error calculating reward for order:', order._id, error);
+            console.error(
+              'Error calculating reward for order:',
+              order._id,
+              error
+            );
           }
         }
       } else {
@@ -122,7 +146,7 @@ export async function POST(request: NextRequest) {
 
       await order.save();
     }
-    
+
     // Handle tab payment
     if (tab) {
       if (data.status === 'success') {
@@ -131,7 +155,7 @@ export async function POST(request: NextRequest) {
           data.reference,
           data.id.toString()
         );
-        
+
         console.log('Tab closed and marked as paid via Paystack:', tab._id);
 
         // Issue reward
@@ -142,9 +166,14 @@ export async function POST(request: NextRequest) {
               tab._id.toString(),
               tab.total
             );
-            
+
             if (reward) {
-              console.log('Reward issued for tab:', tab._id, 'Reward code:', reward.code);
+              console.log(
+                'Reward issued for tab:',
+                tab._id,
+                'Reward code:',
+                reward.code
+              );
             }
           } catch (error) {
             console.error('Error calculating reward for tab:', tab._id, error);
@@ -154,7 +183,7 @@ export async function POST(request: NextRequest) {
         tab.paymentStatus = 'failed';
         tab.status = 'open';
         await tab.save();
-        
+
         console.log('Tab payment failed via Paystack, reopened tab:', tab._id);
       }
     }

@@ -16,9 +16,16 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CreditCard, Banknote, Building2, ExternalLink, Info } from 'lucide-react';
+import {
+  CreditCard,
+  Banknote,
+  Building2,
+  ExternalLink,
+  Info,
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { completeOrderPaymentManuallyAction } from '@/app/actions/admin/order-payment-actions';
+import { BusinessDayCheckbox } from '@/components/features/admin/business-day-checkbox';
 
 interface AdminPayOrderDialogProps {
   orderId: string;
@@ -37,11 +44,16 @@ export function AdminPayOrderDialog({
   onOpenChange,
   onSuccess,
 }: AdminPayOrderDialogProps) {
-  const [paymentMethod, setPaymentMethod] = useState<'manual' | 'checkout'>('manual');
-  const [paymentType, setPaymentType] = useState<'cash' | 'transfer' | 'card'>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<'manual' | 'checkout'>(
+    'manual'
+  );
+  const [paymentType, setPaymentType] = useState<'cash' | 'transfer' | 'card'>(
+    'cash'
+  );
   const [paymentReference, setPaymentReference] = useState('');
   const [comments, setComments] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [businessDate, setBusinessDate] = useState<Date | undefined>(undefined);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -90,6 +102,7 @@ export function AdminPayOrderDialog({
         paymentType,
         paymentReference: paymentReference.trim(),
         comments: comments.trim() || undefined,
+        businessDate,
       });
 
       if (result.success) {
@@ -128,7 +141,8 @@ export function AdminPayOrderDialog({
         <DialogHeader>
           <DialogTitle>Process Order Payment</DialogTitle>
           <DialogDescription>
-            Complete payment for Order #{orderNumber} - {formatPrice(totalAmount)}
+            Complete payment for Order #{orderNumber} -{' '}
+            {formatPrice(totalAmount)}
           </DialogDescription>
         </DialogHeader>
 
@@ -136,29 +150,46 @@ export function AdminPayOrderDialog({
           {/* Payment Method Selection */}
           <div className="space-y-3">
             <Label>Payment Method</Label>
-            <RadioGroup value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as 'manual' | 'checkout')}>
+            <RadioGroup
+              value={paymentMethod}
+              onValueChange={(value) =>
+                setPaymentMethod(value as 'manual' | 'checkout')
+              }
+            >
               <div className="flex items-start space-x-3 rounded-lg border p-4">
                 <RadioGroupItem value="manual" id="manual" className="mt-1" />
                 <div className="flex-1 space-y-1">
-                  <Label htmlFor="manual" className="flex items-center gap-2 font-medium cursor-pointer">
+                  <Label
+                    htmlFor="manual"
+                    className="flex items-center gap-2 font-medium cursor-pointer"
+                  >
                     <CreditCard className="h-4 w-4" />
                     Manual Payment Entry
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    Enter payment details for cash, bank transfer, or POS card payments.
+                    Enter payment details for cash, bank transfer, or POS card
+                    payments.
                   </p>
                 </div>
               </div>
 
               <div className="flex items-start space-x-3 rounded-lg border p-4">
-                <RadioGroupItem value="checkout" id="checkout" className="mt-1" />
+                <RadioGroupItem
+                  value="checkout"
+                  id="checkout"
+                  className="mt-1"
+                />
                 <div className="flex-1 space-y-1">
-                  <Label htmlFor="checkout" className="flex items-center gap-2 font-medium cursor-pointer">
+                  <Label
+                    htmlFor="checkout"
+                    className="flex items-center gap-2 font-medium cursor-pointer"
+                  >
                     <ExternalLink className="h-4 w-4" />
                     Full Checkout Process
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    Complete checkout with payment gateway (Card, Transfer, USSD).
+                    Complete checkout with payment gateway (Card, Transfer,
+                    USSD).
                   </p>
                 </div>
               </div>
@@ -170,25 +201,39 @@ export function AdminPayOrderDialog({
             <>
               <div className="space-y-3">
                 <Label>Payment Type *</Label>
-                <RadioGroup value={paymentType} onValueChange={(value) => setPaymentType(value as 'cash' | 'transfer' | 'card')}>
+                <RadioGroup
+                  value={paymentType}
+                  onValueChange={(value) =>
+                    setPaymentType(value as 'cash' | 'transfer' | 'card')
+                  }
+                >
                   <div className="flex gap-4">
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="cash" id="cash" />
-                      <Label htmlFor="cash" className="flex items-center gap-2 cursor-pointer font-normal">
+                      <Label
+                        htmlFor="cash"
+                        className="flex items-center gap-2 cursor-pointer font-normal"
+                      >
                         <Banknote className="h-4 w-4" />
                         Cash
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="transfer" id="transfer" />
-                      <Label htmlFor="transfer" className="flex items-center gap-2 cursor-pointer font-normal">
+                      <Label
+                        htmlFor="transfer"
+                        className="flex items-center gap-2 cursor-pointer font-normal"
+                      >
                         <Building2 className="h-4 w-4" />
                         Bank Transfer
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="card" id="card" />
-                      <Label htmlFor="card" className="flex items-center gap-2 cursor-pointer font-normal">
+                      <Label
+                        htmlFor="card"
+                        className="flex items-center gap-2 cursor-pointer font-normal"
+                      >
                         <CreditCard className="h-4 w-4" />
                         Card (POS)
                       </Label>
@@ -228,10 +273,13 @@ export function AdminPayOrderDialog({
                 </p>
               </div>
 
+              <BusinessDayCheckbox onBusinessDateChange={setBusinessDate} />
+
               <Alert>
                 <Info className="h-4 w-4" />
                 <AlertDescription>
-                  This will mark the order as paid and trigger inventory deduction and reward calculation.
+                  This will mark the order as paid and trigger inventory
+                  deduction and reward calculation.
                 </AlertDescription>
               </Alert>
             </>
@@ -242,14 +290,19 @@ export function AdminPayOrderDialog({
             <Alert>
               <Info className="h-4 w-4" />
               <AlertDescription>
-                You will be redirected to the customer checkout flow to process payment via Monnify/Paystack gateway.
+                You will be redirected to the customer checkout flow to process
+                payment via Monnify/Paystack gateway.
               </AlertDescription>
             </Alert>
           )}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={isProcessing}>
+          <Button
+            variant="outline"
+            onClick={handleClose}
+            disabled={isProcessing}
+          >
             Cancel
           </Button>
           {paymentMethod === 'manual' ? (
@@ -257,9 +310,7 @@ export function AdminPayOrderDialog({
               {isProcessing ? 'Processing...' : 'Complete Payment'}
             </Button>
           ) : (
-            <Button onClick={handleFullCheckout}>
-              Proceed to Checkout
-            </Button>
+            <Button onClick={handleFullCheckout}>Proceed to Checkout</Button>
           )}
         </DialogFooter>
       </DialogContent>

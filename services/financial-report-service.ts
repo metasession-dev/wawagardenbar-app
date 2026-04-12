@@ -111,10 +111,18 @@ export class FinancialReportService {
     const tabPartialTotals = new Map<string, number>();
     let totalPartialPayments = 0;
 
-    // Find all tabs with partial payments attributed to this business date range
+    // Find all tabs with partial payments attributed to this business date range.
+    // Fall back to paidAt for records that pre-date the businessDate backfill.
     const tabsWithPartials = await TabModel.find({
-      businessDate: { $gte: startDate, $lte: endDate },
       partialPayments: { $exists: true, $not: { $size: 0 } },
+      $or: [
+        { businessDate: { $gte: startDate, $lte: endDate } },
+        {
+          businessDate: { $exists: false },
+          paidAt: { $gte: startDate, $lte: endDate },
+        },
+        { businessDate: null, paidAt: { $gte: startDate, $lte: endDate } },
+      ],
     }).lean();
 
     for (const tab of tabsWithPartials) {
@@ -151,10 +159,18 @@ export class FinancialReportService {
     const startDate = startOfDay(date);
     const endDate = endOfDay(date);
 
-    // Fetch all paid orders attributed to this business date
+    // Fetch all paid orders attributed to this business date.
+    // Fall back to paidAt for records that pre-date the businessDate backfill.
     const orders = await OrderModel.find({
       paymentStatus: 'paid',
-      businessDate: { $gte: startDate, $lte: endDate },
+      $or: [
+        { businessDate: { $gte: startDate, $lte: endDate } },
+        {
+          businessDate: { $exists: false },
+          paidAt: { $gte: startDate, $lte: endDate },
+        },
+        { businessDate: null, paidAt: { $gte: startDate, $lte: endDate } },
+      ],
     }).lean();
 
     // Initialize report structure
@@ -420,10 +436,18 @@ export class FinancialReportService {
     const start = startOfDay(startDate);
     const end = endOfDay(endDate);
 
-    // Fetch all paid orders attributed to this business date range
+    // Fetch all paid orders attributed to this business date range.
+    // Fall back to paidAt for records that pre-date the businessDate backfill.
     const orders = await OrderModel.find({
       paymentStatus: 'paid',
-      businessDate: { $gte: start, $lte: end },
+      $or: [
+        { businessDate: { $gte: start, $lte: end } },
+        {
+          businessDate: { $exists: false },
+          paidAt: { $gte: start, $lte: end },
+        },
+        { businessDate: null, paidAt: { $gte: start, $lte: end } },
+      ],
     }).lean();
 
     // Similar logic to generateDailySummary but for date range

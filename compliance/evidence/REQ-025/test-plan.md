@@ -41,6 +41,6 @@
 
 ## Test Data Requirements
 
-- Test orders need `businessDate` field populated — add to all existing order fixtures in the `__tests__/reports/` directory
+- Test orders need `businessDate` field populated — add to all existing order fixtures in the reports test directory
 - `__tests__/lib/business-date.test.ts` needs no DB — pure unit test, no seeding required
 - E2E test needs an admin-role session (already available in existing E2E auth helpers)

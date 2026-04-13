@@ -109,6 +109,20 @@ export default defineConfig({
       testMatch: /business-day-cutoff\.spec\.ts/,
       dependencies: ['auth-setup'],
     },
+    // Express order & tab flows — revenue reporting accuracy
+    {
+      name: 'express-order-report',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /express-order-report\.spec\.ts/,
+      dependencies: ['auth-setup'],
+    },
+    // Dashboard revenue consistency
+    {
+      name: 'dashboard-revenue',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /dashboard-revenue\.spec\.ts/,
+      dependencies: ['auth-setup'],
+    },
   ],
   /* Start dev server before tests (skipped when BASE_URL is set) */
   webServer: process.env.BASE_URL

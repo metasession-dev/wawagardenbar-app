@@ -246,6 +246,16 @@ export async function expressCreateOrderAction(params: {
         : undefined,
     });
 
+    // For pay-now orders, mark as paid immediately with the chosen payment method
+    if (!params.tabId && params.paymentMethod) {
+      await OrderService.completeOrderPaymentManually({
+        orderId: order._id.toString(),
+        paymentType: params.paymentMethod,
+        paymentReference: params.paymentReference || `EXPRESS-${Date.now()}`,
+        processedByAdminId: session.userId!,
+      });
+    }
+
     let tab: ITab | undefined;
     if (params.tabId) {
       tab = await TabService.addOrderToTab(params.tabId, order._id.toString());

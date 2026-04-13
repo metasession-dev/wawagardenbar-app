@@ -523,7 +523,6 @@ async function expressCloseTab(
 
 test.describe.serial('Express tab lifecycle — Cash close', () => {
   let baseline: Awaited<ReturnType<typeof getReportAmounts>>;
-  let tabId = '';
   let tabTotal = 0;
 
   test.beforeEach(async ({ page }, testInfo) => {
@@ -538,8 +537,8 @@ test.describe.serial('Express tab lifecycle — Cash close', () => {
   });
 
   test('create tab and add order', async ({ page }) => {
-    // Create tab — returns tabId and leaves us on create-order page
-    tabId = await expressCreateTab(page, TABLE_CASH, 'E2E Cash Tab');
+    // Create tab and navigate to create-order page
+    await expressCreateTab(page, TABLE_CASH, 'E2E Cash Tab');
 
     // Add order (already on the create-order page with tabId)
     tabTotal = await expressAddOrderToTab(page, TABLE_CASH);

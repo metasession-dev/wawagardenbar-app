@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { ExpenseForm } from '@/components/features/finance/expense-form';
 import { ExpenseList } from '@/components/features/finance/expense-list';
+import { EditExpenseDialog } from '@/components/features/finance/edit-expense-dialog';
 import { CSVImportButton } from '@/components/features/admin/expenses/csv-import-button';
 import {
   getExpensesAction,
@@ -36,6 +37,7 @@ export function ExpensesPageClient({ userRole }: ExpensesPageClientProps) {
   const [summary, setSummary] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showExpenseForm, setShowExpenseForm] = useState(false);
+  const [editExpense, setEditExpense] = useState<any | null>(null);
 
   useEffect(() => {
     if (dateRange?.from && dateRange?.to) {
@@ -226,7 +228,7 @@ export function ExpensesPageClient({ userRole }: ExpensesPageClientProps) {
           ) : (
             <ExpenseList
               expenses={expenses}
-              onEdit={() => {}}
+              onEdit={(expense) => setEditExpense(expense)}
               onRefresh={fetchData}
               userRole={userRole}
             />
@@ -239,6 +241,16 @@ export function ExpensesPageClient({ userRole }: ExpensesPageClientProps) {
         open={showExpenseForm}
         onOpenChange={handleFormClose}
         onSuccess={handleFormSuccess}
+      />
+
+      {/* Edit Expense Dialog */}
+      <EditExpenseDialog
+        expense={editExpense}
+        open={editExpense !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditExpense(null);
+        }}
+        onSuccess={fetchData}
       />
     </div>
   );

@@ -7,7 +7,7 @@
 
 ---
 
-## Risk Classification
+## Risk Classifications
 
 HIGH — affects financial data integrity (expense ledger), enforces RBAC (super-admin-only approval and transfer), and introduces a multi-step workflow where bypassing a step would corrupt the ledger.
 

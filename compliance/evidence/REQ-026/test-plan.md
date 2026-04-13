@@ -70,9 +70,9 @@ File: `e2e/pending-expenses.spec.ts`
 
 ## Tests to Update
 
-| File                                       | Change                                                                        |
-| ------------------------------------------ | ----------------------------------------------------------------------------- |
-| `__tests__/reports/` existing report tests | Verify no regression — reports should not include pre-transfer pending groups |
+| File                                                             | Change                                                                                                                  |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `__tests__/reports/total-revenue-consistency.test.ts` (existing) | Verify no regression — reports query ExpenseModel only (not PendingExpenseGroup); no pre-transfer amounts should appear |
 
 ## Tests to Remove
 

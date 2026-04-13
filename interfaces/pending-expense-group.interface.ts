@@ -8,6 +8,8 @@ import { ExpenseType } from './expense.interface';
  * A single line item within a pending expense group
  */
 export interface IExpenseLineItem {
+  expenseType: ExpenseType;
+  category: string;
   description: string;
   quantity: number;
   unit: string;
@@ -26,8 +28,6 @@ export type PendingExpenseGroupStatus = 'pending' | 'approved' | 'transferred';
 export interface IPendingExpenseGroup {
   _id: ObjectId;
   date: Date;
-  expenseType: ExpenseType;
-  category: string;
   items: IExpenseLineItem[];
   totalAmount: number;
 
@@ -54,8 +54,6 @@ export interface IPendingExpenseGroup {
  */
 export interface CreatePendingExpenseGroupDTO {
   date: Date;
-  expenseType: ExpenseType;
-  category: string;
   items: IExpenseLineItem[];
   notes?: string;
   submittedBy: string;
@@ -66,8 +64,6 @@ export interface CreatePendingExpenseGroupDTO {
  */
 export interface UpdatePendingExpenseGroupDTO {
   date?: Date;
-  expenseType?: ExpenseType;
-  category?: string;
   items?: IExpenseLineItem[];
   notes?: string;
 }

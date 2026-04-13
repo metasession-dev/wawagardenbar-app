@@ -46,10 +46,14 @@ import { toast } from '@/hooks/use-toast';
 import {
   DIRECT_COST_CATEGORIES,
   OPERATING_EXPENSE_CATEGORIES,
-  ExpenseType,
 } from '@/interfaces/expense.interface';
+import { ExpenseType } from '@/interfaces/expense.interface';
 
 const lineItemSchema = z.object({
+  expenseType: z.enum(['direct-cost', 'operating-expense'], {
+    required_error: 'Expense type is required',
+  }),
+  category: z.string().min(1, 'Category is required'),
   description: z.string().min(3, 'Description must be at least 3 characters'),
   quantity: z.number().min(0, 'Quantity must be 0 or more'),
   unit: z.string().min(1, 'Unit is required'),
@@ -59,10 +63,6 @@ const lineItemSchema = z.object({
 
 const expenseFormSchema = z.object({
   date: z.date({ required_error: 'Date is required' }),
-  expenseType: z.enum(['direct-cost', 'operating-expense'], {
-    required_error: 'Expense type is required',
-  }),
-  category: z.string().min(1, 'Category is required'),
   items: z.array(lineItemSchema).min(1, 'At least one line item is required'),
   notes: z.string().optional(),
 });
@@ -70,14 +70,22 @@ const expenseFormSchema = z.object({
 type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
 
 function makeDefaultItem() {
-  return { description: '', quantity: 1, unit: '', unitCost: 0, totalCost: 0 };
+  return {
+    expenseType: 'direct-cost' as ExpenseType,
+    category: '',
+    description: '',
+    quantity: 1,
+    unit: '',
+    unitCost: 0,
+    totalCost: 0,
+  };
 }
 
 interface ExpenseFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
-  prefill?: { date?: Date; expenseType?: ExpenseType; category?: string };
+  prefill?: { date?: Date };
 }
 
 export function ExpenseForm({
@@ -99,8 +107,6 @@ export function ExpenseForm({
     resolver: zodResolver(expenseFormSchema),
     defaultValues: {
       date: prefill?.date ?? new Date(),
-      expenseType: prefill?.expenseType ?? 'direct-cost',
-      category: prefill?.category ?? '',
       items: [makeDefaultItem()],
       notes: '',
     },
@@ -116,8 +122,6 @@ export function ExpenseForm({
       fetchCategories();
       form.reset({
         date: prefill?.date ?? new Date(),
-        expenseType: prefill?.expenseType ?? 'direct-cost',
-        category: prefill?.category ?? '',
         items: [makeDefaultItem()],
         notes: '',
       });
@@ -138,12 +142,13 @@ export function ExpenseForm({
     }
   }
 
-  const expenseType = form.watch('expenseType');
   const items = form.watch('items');
-  const categories =
-    expenseType === 'direct-cost'
+
+  function getItemCategories(expenseType: string): string[] {
+    return expenseType === 'direct-cost'
       ? directCostCategories
       : operatingExpenseCategories;
+  }
 
   function handleQtyOrCostChange(index: number) {
     const item = form.getValues(`items.${index}`);
@@ -165,8 +170,6 @@ export function ExpenseForm({
     try {
       const result = await createPendingExpenseGroupAction({
         date: data.date,
-        expenseType: data.expenseType,
-        category: data.category,
         items: data.items,
         notes: data.notes,
       });
@@ -180,8 +183,6 @@ export function ExpenseForm({
         if (saveAndAddAnother) {
           form.reset({
             date: data.date,
-            expenseType: data.expenseType,
-            category: data.category,
             items: [makeDefaultItem()],
             notes: '',
           });
@@ -221,105 +222,46 @@ export function ExpenseForm({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-            {/* ── Header: Date / Type / Category ── */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <FormField
-                control={form.control}
-                name="date"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              'w-full pl-3 text-left font-normal',
-                              !field.value && 'text-muted-foreground'
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, 'PPP')
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(d) => d > new Date()}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="expenseType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Expense Type</FormLabel>
-                    <Select
-                      onValueChange={(v) => {
-                        field.onChange(v);
-                        form.setValue('category', '');
-                      }}
-                      value={field.value}
-                    >
+            {/* ── Header: Date only ── */}
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem className="flex flex-col max-w-xs">
+                  <FormLabel>Date</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            'w-full pl-3 text-left font-normal',
+                            !field.value && 'text-muted-foreground'
+                          )}
+                        >
+                          {field.value ? (
+                            format(field.value, 'PPP')
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
                       </FormControl>
-                      <SelectContent>
-                        <SelectItem value="direct-cost">
-                          Direct Cost (COGS)
-                        </SelectItem>
-                        <SelectItem value="operating-expense">
-                          Operating Expense
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Category</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {categories.map((cat) => (
-                          <SelectItem key={cat} value={cat}>
-                            {cat}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(d) => d > new Date()}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <Separator />
 
@@ -339,128 +281,222 @@ export function ExpenseForm({
                 </Button>
               </div>
 
-              {/* Column headers */}
-              <div className="hidden sm:grid grid-cols-[2fr_1fr_1fr_1fr_1fr_auto] gap-2 text-xs text-muted-foreground px-1">
-                <span>Description</span>
-                <span>Qty</span>
-                <span>Unit</span>
-                <span>Unit Cost (₦)</span>
-                <span>Total (₦)</span>
-                <span />
-              </div>
-
-              {fields.map((field, index) => (
-                <div
-                  key={field.id}
-                  className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_auto] gap-2 items-start"
-                >
-                  <FormField
-                    control={form.control}
-                    name={`items.${index}.description`}
-                    render={({ field: f }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input placeholder="e.g., Goat" {...f} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name={`items.${index}.quantity`}
-                    render={({ field: f }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="1"
-                            {...f}
-                            onChange={(e) => {
-                              f.onChange(
-                                e.target.value ? parseFloat(e.target.value) : 0
-                              );
-                              handleQtyOrCostChange(index);
-                            }}
-                            value={f.value ?? ''}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name={`items.${index}.unit`}
-                    render={({ field: f }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input placeholder="kg" {...f} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name={`items.${index}.unitCost`}
-                    render={({ field: f }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="0.00"
-                            {...f}
-                            onChange={(e) => {
-                              f.onChange(
-                                e.target.value ? parseFloat(e.target.value) : 0
-                              );
-                              handleQtyOrCostChange(index);
-                            }}
-                            value={f.value ?? ''}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name={`items.${index}.totalCost`}
-                    render={({ field: f }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="0.00"
-                            {...f}
-                            onChange={(e) =>
-                              f.onChange(
-                                e.target.value ? parseFloat(e.target.value) : 0
-                              )
-                            }
-                            value={f.value ?? ''}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="mt-0.5 text-muted-foreground hover:text-destructive"
-                    disabled={fields.length === 1}
-                    onClick={() => remove(index)}
+              {fields.map((field, index) => {
+                const itemCategories = getItemCategories(
+                  items[index]?.expenseType ?? 'direct-cost'
+                );
+                return (
+                  <div
+                    key={field.id}
+                    className="rounded-md border p-3 space-y-2"
                   >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
+                    {/* Row 1: Type + Category */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <FormField
+                        control={form.control}
+                        name={`items.${index}.expenseType`}
+                        render={({ field: f }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs text-muted-foreground">
+                              Type
+                            </FormLabel>
+                            <Select
+                              onValueChange={(v) => {
+                                f.onChange(v);
+                                form.setValue(`items.${index}.category`, '');
+                              }}
+                              value={f.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="h-8 text-sm">
+                                  <SelectValue placeholder="Select type" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="direct-cost">
+                                  Direct Cost (COGS)
+                                </SelectItem>
+                                <SelectItem value="operating-expense">
+                                  Operating Expense
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`items.${index}.category`}
+                        render={({ field: f }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs text-muted-foreground">
+                              Category
+                            </FormLabel>
+                            <Select onValueChange={f.onChange} value={f.value}>
+                              <FormControl>
+                                <SelectTrigger className="h-8 text-sm">
+                                  <SelectValue placeholder="Select category" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {itemCategories.map((cat) => (
+                                  <SelectItem key={cat} value={cat}>
+                                    {cat}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    {/* Row 2: Description + numeric fields + delete */}
+                    <div className="grid grid-cols-[2fr_0.8fr_0.8fr_1.1fr_1.1fr_auto] gap-2 items-start">
+                      <FormField
+                        control={form.control}
+                        name={`items.${index}.description`}
+                        render={({ field: f }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs text-muted-foreground">
+                              Description
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                className="h-8 text-sm"
+                                placeholder="e.g., Goat"
+                                {...f}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`items.${index}.quantity`}
+                        render={({ field: f }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs text-muted-foreground">
+                              Qty
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                className="h-8 text-sm"
+                                type="number"
+                                step="0.01"
+                                placeholder="1"
+                                {...f}
+                                onChange={(e) => {
+                                  f.onChange(
+                                    e.target.value
+                                      ? parseFloat(e.target.value)
+                                      : 0
+                                  );
+                                  handleQtyOrCostChange(index);
+                                }}
+                                value={f.value ?? ''}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`items.${index}.unit`}
+                        render={({ field: f }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs text-muted-foreground">
+                              Unit
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                className="h-8 text-sm"
+                                placeholder="kg"
+                                {...f}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`items.${index}.unitCost`}
+                        render={({ field: f }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs text-muted-foreground">
+                              Unit Cost (₦)
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                className="h-8 text-sm"
+                                type="number"
+                                step="0.01"
+                                placeholder="0.00"
+                                {...f}
+                                onChange={(e) => {
+                                  f.onChange(
+                                    e.target.value
+                                      ? parseFloat(e.target.value)
+                                      : 0
+                                  );
+                                  handleQtyOrCostChange(index);
+                                }}
+                                value={f.value ?? ''}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`items.${index}.totalCost`}
+                        render={({ field: f }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs text-muted-foreground">
+                              Total (₦)
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                className="h-8 text-sm"
+                                type="number"
+                                step="0.01"
+                                placeholder="0.00"
+                                {...f}
+                                onChange={(e) =>
+                                  f.onChange(
+                                    e.target.value
+                                      ? parseFloat(e.target.value)
+                                      : 0
+                                  )
+                                }
+                                value={f.value ?? ''}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="pt-5">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          disabled={fields.length === 1}
+                          onClick={() => remove(index)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
 
               {form.formState.errors.items?.root && (
                 <p className="text-sm text-destructive">

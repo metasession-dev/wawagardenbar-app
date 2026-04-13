@@ -21,6 +21,8 @@ import { ObjectId } from 'mongodb';
 
 function makeItem(overrides: Partial<IExpenseLineItem> = {}): IExpenseLineItem {
   return {
+    expenseType: 'direct-cost',
+    category: 'Meat/Protein',
     description: 'Test item',
     quantity: 2,
     unit: 'kg',
@@ -37,8 +39,6 @@ function makeGroup(
   return {
     _id: new ObjectId(),
     date: now,
-    expenseType: 'direct-cost',
-    category: 'Meat/Protein',
     items: [makeItem()],
     totalAmount: 1000,
     status: 'pending',
@@ -140,12 +140,11 @@ describe('REQ-026: buildExpenseRecordsFromGroup', () => {
     expect(records).toHaveLength(2);
   });
 
-  it('maps group date, expenseType, category to each record', () => {
+  it('maps group date and per-item expenseType/category to each record', () => {
     const date = new Date('2026-04-12');
     const group = makeGroup({
       date,
-      expenseType: 'operating-expense',
-      category: 'Rent',
+      items: [makeItem({ expenseType: 'operating-expense', category: 'Rent' })],
     });
     const records = buildExpenseRecordsFromGroup(
       group,

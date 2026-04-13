@@ -66,7 +66,7 @@ export function validateStatusTransition(
  */
 export interface ExpenseRecordDTO {
   date: Date;
-  expenseType: IPendingExpenseGroup['expenseType'];
+  expenseType: IExpenseLineItem['expenseType'];
   category: string;
   description: string;
   quantity: number;
@@ -91,8 +91,8 @@ export function buildExpenseRecordsFromGroup(
   }
   return group.items.map((item) => ({
     date: group.date,
-    expenseType: group.expenseType,
-    category: group.category,
+    expenseType: item.expenseType,
+    category: item.category,
     description: item.description,
     quantity: item.quantity,
     unit: item.unit,
@@ -123,8 +123,6 @@ export class PendingExpenseGroupService {
     const now = new Date();
     const group = await PendingExpenseGroupModel.create({
       date: data.date,
-      expenseType: data.expenseType,
-      category: data.category,
       items: normalisedItems,
       totalAmount,
       status: 'pending',
@@ -150,8 +148,6 @@ export class PendingExpenseGroupService {
     }
     const updates: Record<string, unknown> = {};
     if (data.date !== undefined) updates.date = data.date;
-    if (data.expenseType !== undefined) updates.expenseType = data.expenseType;
-    if (data.category !== undefined) updates.category = data.category;
     if (data.notes !== undefined) updates.notes = data.notes;
     if (data.items !== undefined) {
       const normalisedItems = normaliseLineItems(data.items);

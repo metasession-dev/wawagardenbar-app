@@ -61,10 +61,10 @@ function mockSession(role: 'admin' | 'super-admin' | 'customer') {
 
 const validGroupPayload = {
   date: new Date('2026-04-12'),
-  expenseType: 'direct-cost' as const,
-  category: 'Meat/Protein',
   items: [
     {
+      expenseType: 'direct-cost' as const,
+      category: 'Meat/Protein',
       description: 'Goat',
       quantity: 1,
       unit: 'piece',

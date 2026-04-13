@@ -438,12 +438,22 @@ function GroupRow({
               <span className="text-sm font-medium">
                 {format(new Date(group.date), 'dd MMM yyyy')}
               </span>
-              <Badge variant="secondary" className="text-xs">
-                {group.expenseType === 'direct-cost' ? 'Direct Cost' : 'OpEx'}
-              </Badge>
-              <span className="text-sm text-muted-foreground">
-                {group.category}
-              </span>
+              {(() => {
+                const types = [
+                  ...new Set(group.items.map((i) => i.expenseType)),
+                ];
+                const label =
+                  types.length === 1
+                    ? types[0] === 'direct-cost'
+                      ? 'Direct Cost'
+                      : 'OpEx'
+                    : 'Mixed';
+                return (
+                  <Badge variant="secondary" className="text-xs">
+                    {label}
+                  </Badge>
+                );
+              })()}
               <span className="text-xs text-muted-foreground">
                 · {group.items.length} item{group.items.length !== 1 ? 's' : ''}
               </span>
@@ -478,6 +488,8 @@ function GroupRow({
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Category</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead className="text-right">Qty</TableHead>
                   <TableHead>Unit</TableHead>
@@ -488,6 +500,12 @@ function GroupRow({
               <TableBody>
                 {group.items.map((item, i) => (
                   <TableRow key={i}>
+                    <TableCell className="text-xs">
+                      {item.expenseType === 'direct-cost'
+                        ? 'Direct Cost'
+                        : 'OpEx'}
+                    </TableCell>
+                    <TableCell className="text-xs">{item.category}</TableCell>
                     <TableCell>{item.description}</TableCell>
                     <TableCell className="text-right">
                       {item.quantity}

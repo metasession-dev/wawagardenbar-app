@@ -6,6 +6,12 @@ import { IPendingExpenseGroup } from '@/interfaces/pending-expense-group.interfa
 
 const ExpenseLineItemSchema = new Schema(
   {
+    expenseType: {
+      type: String,
+      enum: ['direct-cost', 'operating-expense'],
+      required: true,
+    },
+    category: { type: String, required: true },
     description: { type: String, required: true, minlength: 3 },
     quantity: { type: Number, required: true, min: 0 },
     unit: { type: String, required: true },
@@ -18,13 +24,6 @@ const ExpenseLineItemSchema = new Schema(
 const PendingExpenseGroupSchema = new Schema<IPendingExpenseGroup>(
   {
     date: { type: Date, required: true, index: true },
-    expenseType: {
-      type: String,
-      enum: ['direct-cost', 'operating-expense'],
-      required: true,
-      index: true,
-    },
-    category: { type: String, required: true, index: true },
     items: { type: [ExpenseLineItemSchema], required: true },
     totalAmount: { type: Number, required: true, min: 0 },
 

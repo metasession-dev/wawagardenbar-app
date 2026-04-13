@@ -186,7 +186,7 @@ adminTest.describe('REQ-026: Expense Form — Multi-line submission', () => {
 
 adminTest.describe('REQ-026: Save & Add Another', () => {
   adminTest(
-    'Save & Add Another reopens form with same expense type and category',
+    'Save & Add Another reopens form with empty item row (type/category reset to defaults)',
     async ({ page }) => {
       await openExpenseForm(page);
       const dialog = page.locator('[role="dialog"]');
@@ -233,14 +233,89 @@ adminTest.describe('REQ-026: Edit pending group', () => {
       await page.waitForLoadState('networkidle');
       const body = await page.textContent('body');
       if (!body?.match(/Pending|Approved/)) {
-        // No groups to edit — skip gracefully
         return;
       }
-      // Click first edit (pencil) button
       await page.locator('button[title="Edit"]').first().click();
       await expect(page.locator('[role="dialog"]')).toBeVisible();
       await expect(
         page.locator('[role="dialog"] text=Edit Expense Group')
+      ).toBeVisible();
+    }
+  );
+
+  adminTest(
+    'edit dialog contains Delete Group button for pending/approved groups',
+    async ({ page }) => {
+      await page.goto('/dashboard/finance/expenses/pending');
+      await page.waitForLoadState('networkidle');
+      const body = await page.textContent('body');
+      if (!body?.match(/Pending|Approved/)) {
+        return;
+      }
+      await page.locator('button[title="Edit"]').first().click();
+      const dialog = page.locator('[role="dialog"]');
+      await expect(dialog).toBeVisible();
+      await expect(
+        dialog.locator('button', { hasText: /Delete Group/ })
+      ).toBeVisible();
+    }
+  );
+
+  adminTest(
+    'Delete Group shows two-step confirmation — Confirm Delete and Keep buttons',
+    async ({ page }) => {
+      await page.goto('/dashboard/finance/expenses/pending');
+      await page.waitForLoadState('networkidle');
+      const body = await page.textContent('body');
+      if (!body?.match(/Pending|Approved/)) {
+        return;
+      }
+      await page.locator('button[title="Edit"]').first().click();
+      const dialog = page.locator('[role="dialog"]');
+      await expect(dialog).toBeVisible();
+
+      // First click: Delete Group button transitions to confirmation state
+      await dialog.locator('button', { hasText: /Delete Group/ }).click();
+      await expect(
+        dialog.locator('button', { hasText: /Confirm Delete/ })
+      ).toBeVisible();
+      await expect(dialog.locator('button', { hasText: /Keep/ })).toBeVisible();
+
+      // Keep button cancels and restores normal state
+      await dialog.locator('button', { hasText: /Keep/ }).click();
+      await expect(
+        dialog.locator('button', { hasText: /Delete Group/ })
+      ).toBeVisible();
+    }
+  );
+});
+
+// ===========================================================================
+// AC-4b: Expanded group shows Type and Category columns
+// ===========================================================================
+
+adminTest.describe('REQ-026: Expanded group line items', () => {
+  adminTest(
+    'expanding a group row shows Type and Category columns',
+    async ({ page }) => {
+      await page.goto('/dashboard/finance/expenses/pending');
+      await page.waitForLoadState('networkidle');
+      const body = await page.textContent('body');
+      if (!body?.match(/Pending|Approved/)) {
+        return;
+      }
+      // Click the chevron/expand button on the first group row
+      await page
+        .locator('button')
+        .filter({ has: page.locator('svg.lucide-chevron-right') })
+        .first()
+        .click();
+      const expandedTable = page.locator('table').first();
+      await expect(
+        expandedTable.locator('th', { hasText: /Type/ })
+      ).toBeVisible();
+      await expect(
+        expandedTable.locator('th', { hasText: /Category/ })
       ).toBeVisible();
     }
   );

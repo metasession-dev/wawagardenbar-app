@@ -189,6 +189,21 @@ export class PendingExpenseGroupService {
   }
 
   /**
+   * Delete a pending expense group.
+   * Only groups with status 'pending' or 'approved' may be deleted.
+   * Transferred groups are part of the live ledger and cannot be deleted here.
+   */
+  static async deleteGroup(groupId: string): Promise<void> {
+    await connectDB();
+    const group = await PendingExpenseGroupModel.findById(groupId);
+    if (!group) throw new Error('Pending expense group not found');
+    if (group.status === 'transferred') {
+      throw new Error('Cannot delete a transferred expense group');
+    }
+    await PendingExpenseGroupModel.findByIdAndDelete(groupId);
+  }
+
+  /**
    * Assign a list of groups to a payment batch.
    */
   static async assignBatch({

@@ -90,6 +90,28 @@ export async function updatePendingExpenseGroupAction(
 }
 
 /**
+ * Delete a pending or approved expense group.
+ * Available to: admin, super-admin.
+ */
+export async function deletePendingExpenseGroupAction(groupId: string) {
+  try {
+    const session = await getSession();
+    requireAdminOrAbove(session);
+    await PendingExpenseGroupService.deleteGroup(groupId);
+    revalidatePath('/dashboard/finance/expenses/pending');
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to delete expense group',
+    };
+  }
+}
+
+/**
  * Approve a pending expense group.
  * Available to: super-admin only.
  */

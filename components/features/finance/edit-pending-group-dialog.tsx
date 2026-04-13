@@ -42,7 +42,10 @@ import {
 } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
-import { updatePendingExpenseGroupAction } from '@/app/actions/finance/pending-expense-actions';
+import {
+  updatePendingExpenseGroupAction,
+  deletePendingExpenseGroupAction,
+} from '@/app/actions/finance/pending-expense-actions';
 import { getExpenseCategoriesAction } from '@/app/actions/finance/expense-categories-actions';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -98,6 +101,8 @@ export function EditPendingGroupDialog({
   onSuccess,
 }: EditPendingGroupDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [directCostCategories, setDirectCostCategories] = useState<string[]>([
     ...DIRECT_COST_CATEGORIES,
   ]);
@@ -165,6 +170,36 @@ export function EditPendingGroupDialog({
       `items.${index}.totalCost`,
       parseFloat((qty * cost).toFixed(2))
     );
+  }
+
+  async function handleDelete() {
+    setIsDeleting(true);
+    try {
+      const result = await deletePendingExpenseGroupAction(
+        group._id.toString()
+      );
+      if (result.success) {
+        toast({ title: 'Deleted', description: 'Expense group deleted.' });
+        onOpenChange(false);
+        onSuccess();
+      } else {
+        toast({
+          title: 'Error',
+          description: result.error,
+          variant: 'destructive',
+        });
+        setConfirmDelete(false);
+      }
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+      setConfirmDelete(false);
+    } finally {
+      setIsDeleting(false);
+    }
   }
 
   async function onSubmit(data: EditFormValues) {
@@ -511,16 +546,56 @@ export function EditPendingGroupDialog({
               )}
             />
 
-            <DialogFooter className="gap-2">
+            <DialogFooter className="gap-2 flex-wrap sm:flex-nowrap">
+              {/* Delete group — two-step confirmation */}
+              {group.status !== 'transferred' &&
+                (confirmDelete ? (
+                  <>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={handleDelete}
+                      disabled={isDeleting}
+                      className="mr-auto"
+                    >
+                      {isDeleting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Deleting...
+                        </>
+                      ) : (
+                        'Confirm Delete'
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setConfirmDelete(false)}
+                      disabled={isDeleting}
+                    >
+                      Keep
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="mr-auto text-destructive hover:text-destructive border-destructive/30 hover:border-destructive"
+                    onClick={() => setConfirmDelete(true)}
+                    disabled={isSubmitting}
+                  >
+                    Delete Group
+                  </Button>
+                ))}
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isDeleting}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting || isDeleting}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

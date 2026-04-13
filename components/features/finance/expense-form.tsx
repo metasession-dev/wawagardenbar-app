@@ -326,7 +326,9 @@ export function ExpenseForm({
             {/* ── Line Items ── */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <FormLabel className="text-base">Line Items</FormLabel>
+                <label className="text-base font-medium leading-none">
+                  Line Items
+                </label>
                 <Button
                   type="button"
                   variant="outline"

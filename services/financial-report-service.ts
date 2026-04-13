@@ -3,12 +3,33 @@
  * @requirement REQ-017 - Total Revenue reflects money received (paymentBreakdown.total)
  * @requirement REQ-025 - Query by businessDate instead of paidAt for correct day attribution
  */
-import { startOfDay, endOfDay } from 'date-fns';
 import { connectDB } from '@/lib/mongodb';
 import OrderModel from '@/models/order-model';
 import TabModel from '@/models/tab-model';
 import { ExpenseModel } from '@/models/expense-model';
 import MenuItemModel from '@/models/menu-item-model';
+
+/**
+ * WAT (West Africa Time) is UTC+1.
+ * businessDate values are stored as "midnight WAT converted to UTC"
+ * (i.e. previous-day 23:00 UTC). Report date boundaries must use the
+ * same WAT-aware conversion so queries match on any server timezone.
+ */
+const WAT_OFFSET_MS = 60 * 60 * 1000;
+
+/** Start of the WAT calendar day containing `date`, returned as UTC. */
+function startOfDayWAT(date: Date): Date {
+  const watDate = new Date(date.getTime() + WAT_OFFSET_MS);
+  watDate.setUTCHours(0, 0, 0, 0);
+  return new Date(watDate.getTime() - WAT_OFFSET_MS);
+}
+
+/** End of the WAT calendar day containing `date`, returned as UTC. */
+function endOfDayWAT(date: Date): Date {
+  const watDate = new Date(date.getTime() + WAT_OFFSET_MS);
+  watDate.setUTCHours(23, 59, 59, 999);
+  return new Date(watDate.getTime() - WAT_OFFSET_MS);
+}
 
 export interface DailySummaryReport {
   date: Date;
@@ -156,8 +177,8 @@ export class FinancialReportService {
   static async generateDailySummary(date: Date): Promise<DailySummaryReport> {
     await connectDB();
 
-    const startDate = startOfDay(date);
-    const endDate = endOfDay(date);
+    const startDate = startOfDayWAT(date);
+    const endDate = endOfDayWAT(date);
 
     // Fetch all paid orders attributed to this business date.
     // Fall back to paidAt for records that pre-date the businessDate backfill.
@@ -323,7 +344,7 @@ export class FinancialReportService {
             mainCategory: menuItem.mainCategory,
             quantity: item.quantity,
             price: item.price,
-            costPerUnit: item.costPerUnit || 0,
+            costPerUnit: item.costPerUnit || menuItem.costPerUnit || 0,
           });
         }
       }
@@ -433,8 +454,8 @@ export class FinancialReportService {
   ): Promise<DailySummaryReport> {
     await connectDB();
 
-    const start = startOfDay(startDate);
-    const end = endOfDay(endDate);
+    const start = startOfDayWAT(startDate);
+    const end = endOfDayWAT(endDate);
 
     // Fetch all paid orders attributed to this business date range.
     // Fall back to paidAt for records that pre-date the businessDate backfill.
@@ -584,7 +605,7 @@ export class FinancialReportService {
             mainCategory: menuItem.mainCategory,
             quantity: item.quantity,
             price: item.price,
-            costPerUnit: item.costPerUnit || 0,
+            costPerUnit: item.costPerUnit || menuItem.costPerUnit || 0,
           });
         }
       }

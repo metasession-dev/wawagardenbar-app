@@ -31,7 +31,10 @@ const csrTest = base.extend({
 
 csrTest.beforeEach(async ({ page }, testInfo) => {
   if (!(await isAuthenticated(page))) {
-    testInfo.skip(true, 'CSR login failed or credentials not configured — skipping');
+    testInfo.skip(
+      true,
+      'CSR login failed or credentials not configured — skipping'
+    );
   }
 });
 
@@ -41,7 +44,10 @@ const superAdminTest = base.extend({
 
 superAdminTest.beforeEach(async ({ page }, testInfo) => {
   if (!(await isAuthenticated(page))) {
-    testInfo.skip(true, 'Super-admin login failed or credentials not configured — skipping');
+    testInfo.skip(
+      true,
+      'Super-admin login failed or credentials not configured — skipping'
+    );
   }
 });
 
@@ -49,17 +55,22 @@ superAdminTest.beforeEach(async ({ page }, testInfo) => {
 // UAT: CSR Login & Redirect
 // ===========================================================================
 csrTest.describe('UAT: CSR Login & Redirect', () => {
-  csrTest('CSR is redirected from /dashboard to /dashboard/orders', async ({ page }) => {
-    await page.goto('/dashboard');
-    await page.waitForURL(/\/dashboard\/orders/, { timeout: 10000 });
-    expect(page.url()).toContain('/dashboard/orders');
-  });
+  csrTest(
+    'CSR is redirected from /dashboard to /dashboard/orders',
+    async ({ page }) => {
+      await page.goto('/dashboard');
+      await page.waitForURL(/\/dashboard\/orders/, { timeout: 10000 });
+      expect(page.url()).toContain('/dashboard/orders');
+    }
+  );
 
   csrTest('CSR can access orders dashboard', async ({ page }) => {
     await page.goto('/dashboard/orders');
     await page.waitForLoadState('networkidle');
     expect(page.url()).toContain('/dashboard/orders');
-    await expect(page.locator('h1', { hasText: 'Orders Dashboard' })).toBeVisible();
+    await expect(
+      page.locator('h1', { hasText: 'Orders Dashboard' })
+    ).toBeVisible();
   });
 });
 
@@ -144,9 +155,23 @@ csrTest.describe('UAT: CSR Navigation — Restricted Items Hidden', () => {
   csrTest('CSR sidebar does NOT show Expenses link', async ({ page }) => {
     await page.goto('/dashboard/orders');
     await page.waitForLoadState('networkidle');
-    const expensesLink = page.locator('nav a[href="/dashboard/finance/expenses"]');
+    const expensesLink = page.locator(
+      'nav a[href="/dashboard/finance/expenses"]'
+    );
     await expect(expensesLink).toHaveCount(0);
   });
+
+  csrTest(
+    'CSR sidebar does NOT show Pending Expenses link',
+    async ({ page }) => {
+      await page.goto('/dashboard/orders');
+      await page.waitForLoadState('networkidle');
+      const pendingLink = page.locator(
+        'nav a[href="/dashboard/finance/expenses/pending"]'
+      );
+      await expect(pendingLink).toHaveCount(0);
+    }
+  );
 });
 
 // ===========================================================================
@@ -218,6 +243,12 @@ csrTest.describe('UAT: CSR Access — Restricted Pages', () => {
     await page.waitForLoadState('networkidle');
     expect(page.url()).toContain('/forbidden');
   });
+
+  csrTest('CSR cannot access pending expenses page', async ({ page }) => {
+    await page.goto('/dashboard/finance/expenses/pending');
+    await page.waitForLoadState('networkidle');
+    expect(page.url()).toMatch(/\/(login|forbidden)/);
+  });
 });
 
 // ===========================================================================
@@ -235,7 +266,9 @@ superAdminTest.describe('UAT: Admin List — CSR Role Visible', () => {
     await page.goto('/dashboard/settings/admins');
     await page.waitForLoadState('networkidle');
     // Open the role filter dropdown — it's a Radix Select trigger
-    await page.locator('button[role="combobox"]', { hasText: /All Roles/ }).click();
+    await page
+      .locator('button[role="combobox"]', { hasText: /All Roles/ })
+      .click();
     await page.locator('[role="option"]', { hasText: 'CSR' }).click();
     // Wait for the list to re-fetch
     await page.waitForTimeout(1000);
@@ -244,19 +277,24 @@ superAdminTest.describe('UAT: Admin List — CSR Role Visible', () => {
     expect(body).toContain('e2e-csr');
   });
 
-  superAdminTest('create admin dialog shows CSR role option', async ({ page }) => {
-    await page.goto('/dashboard/settings/admins');
-    await page.waitForLoadState('networkidle');
-    // Click the create admin button
-    await page.locator('button', { hasText: /Create Admin/ }).click();
-    // Wait for dialog to open
-    await expect(page.locator('[role="dialog"]')).toBeVisible();
-    // Scroll dialog to make role selector visible
-    const dialog = page.locator('[role="dialog"]');
-    await dialog.evaluate((el) => el.scrollTop = el.scrollHeight);
-    // Open role selector — it's inside the dialog
-    await dialog.locator('button[role="combobox"]').click();
-    // CSR option should be visible
-    await expect(page.locator('[role="option"]', { hasText: 'Customer Service Rep' })).toBeVisible();
-  });
+  superAdminTest(
+    'create admin dialog shows CSR role option',
+    async ({ page }) => {
+      await page.goto('/dashboard/settings/admins');
+      await page.waitForLoadState('networkidle');
+      // Click the create admin button
+      await page.locator('button', { hasText: /Create Admin/ }).click();
+      // Wait for dialog to open
+      await expect(page.locator('[role="dialog"]')).toBeVisible();
+      // Scroll dialog to make role selector visible
+      const dialog = page.locator('[role="dialog"]');
+      await dialog.evaluate((el) => (el.scrollTop = el.scrollHeight));
+      // Open role selector — it's inside the dialog
+      await dialog.locator('button[role="combobox"]').click();
+      // CSR option should be visible
+      await expect(
+        page.locator('[role="option"]', { hasText: 'Customer Service Rep' })
+      ).toBeVisible();
+    }
+  );
 });

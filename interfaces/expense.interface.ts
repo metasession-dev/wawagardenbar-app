@@ -59,6 +59,9 @@ export interface IExpense {
   referenceNumber?: string; // Unique transaction reference (for imported expenses)
   notes?: string;
 
+  // Traceability
+  pendingGroupId?: string;
+
   // Audit
   createdBy: ObjectId;
   createdAt: Date;
@@ -81,6 +84,7 @@ export interface CreateExpenseDTO {
   receiptReference?: string;
   referenceNumber?: string;
   notes?: string;
+  pendingGroupId?: string;
   createdBy: string;
 }
 

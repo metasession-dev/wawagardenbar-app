@@ -18,6 +18,7 @@ import {
   PiggyBank,
   ChevronLeft,
   ChevronRight,
+  Clock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -81,6 +82,13 @@ const navItems: NavItem[] = [
     title: 'Expenses',
     href: '/dashboard/finance/expenses',
     icon: DollarSign,
+    roles: ['admin', 'super-admin'],
+    permission: 'expensesManagement',
+  },
+  {
+    title: 'Pending Expenses',
+    href: '/dashboard/finance/expenses/pending',
+    icon: Clock,
     roles: ['admin', 'super-admin'],
     permission: 'expensesManagement',
   },

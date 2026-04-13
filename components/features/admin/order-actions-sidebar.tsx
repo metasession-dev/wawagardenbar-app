@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useOrderSocket } from '@/hooks/use-order-socket';
 import { updateOrderStatusAction } from '@/app/actions/admin/order-management-actions';
+import { completeOrderPaymentManuallyAction } from '@/app/actions/admin/order-payment-actions';
 import { AddOrderNoteDialog } from './add-order-note-dialog';
 import { CancelOrderDialog } from './cancel-order-dialog';
 import { AdminPayOrderDialog } from './orders/admin-pay-order-dialog';
@@ -23,6 +24,7 @@ import {
   XCircle,
   CreditCard,
   Edit,
+  Banknote,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -39,7 +41,9 @@ interface OrderActionsSidebarProps {
  * Order actions sidebar component
  * Displays action buttons for order management
  */
-export function OrderActionsSidebar({ order: initialOrder }: OrderActionsSidebarProps) {
+export function OrderActionsSidebar({
+  order: initialOrder,
+}: OrderActionsSidebarProps) {
   const [order, setOrder] = useState(initialOrder);
   const [isUpdating, setIsUpdating] = useState(false);
   const [showNoteDialog, setShowNoteDialog] = useState(false);
@@ -101,6 +105,39 @@ export function OrderActionsSidebar({ order: initialOrder }: OrderActionsSidebar
     }
   }
 
+  async function handleMarkCashPaid() {
+    setIsUpdating(true);
+    try {
+      const ref = `CASH-${Date.now()}`;
+      const result = await completeOrderPaymentManuallyAction({
+        orderId: order._id,
+        paymentType: 'cash',
+        paymentReference: ref,
+      });
+      if (result.success) {
+        toast({
+          title: 'Marked as Cash Paid',
+          description: `Order ${order.orderNumber} recorded as cash.`,
+        });
+        router.refresh();
+      } else {
+        toast({
+          title: 'Error',
+          description: result.message,
+          variant: 'destructive',
+        });
+      }
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to mark as cash paid',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  }
+
   function handlePrint() {
     window.print();
   }
@@ -120,15 +157,33 @@ export function OrderActionsSidebar({ order: initialOrder }: OrderActionsSidebar
         </CardHeader>
         <CardContent className="space-y-3">
           {/* Edit Order Button - Only for unpaid orders */}
-          {order.paymentStatus !== 'paid' && order.status !== 'cancelled' && order.status !== 'completed' && (
+          {order.paymentStatus !== 'paid' &&
+            order.status !== 'cancelled' &&
+            order.status !== 'completed' && (
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setShowEditDialog(true)}
+                disabled={isUpdating}
+              >
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Order Items
+              </Button>
+            )}
+
+          {/* Mark as Cash Paid - quick action for completed orders awaiting cash collection */}
+          {order.status === 'completed' && order.paymentStatus !== 'paid' && (
             <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => setShowEditDialog(true)}
+              className="w-full bg-emerald-600 hover:bg-emerald-700"
+              onClick={handleMarkCashPaid}
               disabled={isUpdating}
             >
-              <Edit className="mr-2 h-4 w-4" />
-              Edit Order Items
+              {isUpdating ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Banknote className="mr-2 h-4 w-4" />
+              )}
+              Mark as Cash Paid
             </Button>
           )}
 
@@ -195,40 +250,43 @@ export function OrderActionsSidebar({ order: initialOrder }: OrderActionsSidebar
             variant="outline"
             className="w-full"
             onClick={() => setShowNoteDialog(true)}
-            disabled={order.status === 'completed' || order.status === 'cancelled'}
+            disabled={
+              order.status === 'completed' || order.status === 'cancelled'
+            }
           >
             <MessageSquare className="mr-2 h-4 w-4" />
             Add Note
           </Button>
 
           {/* Cancel Order - Only for unpaid orders not in settling tabs */}
-          {canTransitionTo(order.status, 'cancelled') && order.paymentStatus !== 'paid' && (
-            <div className="space-y-2">
-              <Button
-                variant="destructive"
-                className="w-full"
-                onClick={() => setShowCancelDialog(true)}
-                disabled={isUpdating || isPartOfSettlingTab}
-                title={isPartOfSettlingTab ? 'Cannot cancel orders from settling tabs' : ''}
-              >
-                <XCircle className="mr-2 h-4 w-4" />
-                Cancel Order
-              </Button>
-              {isPartOfSettlingTab && (
-                <p className="text-xs text-muted-foreground text-center">
-                  Cannot cancel orders from tabs in settling status
-                </p>
-              )}
-            </div>
-          )}
+          {canTransitionTo(order.status, 'cancelled') &&
+            order.paymentStatus !== 'paid' && (
+              <div className="space-y-2">
+                <Button
+                  variant="destructive"
+                  className="w-full"
+                  onClick={() => setShowCancelDialog(true)}
+                  disabled={isUpdating || isPartOfSettlingTab}
+                  title={
+                    isPartOfSettlingTab
+                      ? 'Cannot cancel orders from settling tabs'
+                      : ''
+                  }
+                >
+                  <XCircle className="mr-2 h-4 w-4" />
+                  Cancel Order
+                </Button>
+                {isPartOfSettlingTab && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    Cannot cancel orders from tabs in settling status
+                  </p>
+                )}
+              </div>
+            )}
 
           {/* Utility Actions */}
           <div className="pt-3 border-t space-y-2">
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={handlePrint}
-            >
+            <Button variant="outline" className="w-full" onClick={handlePrint}>
               <Printer className="mr-2 h-4 w-4" />
               Print Receipt
             </Button>

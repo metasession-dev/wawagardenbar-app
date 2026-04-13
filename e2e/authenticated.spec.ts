@@ -39,7 +39,10 @@ const adminTest = base.extend({
 // Skip admin tests if login failed during setup
 adminTest.beforeEach(async ({ page }, testInfo) => {
   if (!(await isAuthenticated(page))) {
-    testInfo.skip(true, 'Admin login failed or credentials not configured — skipping');
+    testInfo.skip(
+      true,
+      'Admin login failed or credentials not configured — skipping'
+    );
   }
 });
 
@@ -49,7 +52,10 @@ const superAdminTest = base.extend({
 
 superAdminTest.beforeEach(async ({ page }, testInfo) => {
   if (!(await isAuthenticated(page))) {
-    testInfo.skip(true, 'Super-admin login failed or credentials not configured — skipping');
+    testInfo.skip(
+      true,
+      'Super-admin login failed or credentials not configured — skipping'
+    );
   }
 });
 
@@ -65,29 +71,35 @@ adminTest.describe('Section 4: Admin Session', () => {
 });
 
 superAdminTest.describe('Section 4: Super-Admin Session', () => {
-  superAdminTest('super-admin can access dashboard overview', async ({ page }) => {
-    await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
-    expect(page.url()).toContain('/dashboard');
-    // Super-admin stays on /dashboard (not redirected to /dashboard/orders)
-    await expect(page.locator('h1', { hasText: 'Dashboard' })).toBeVisible();
-  });
+  superAdminTest(
+    'super-admin can access dashboard overview',
+    async ({ page }) => {
+      await page.goto('/dashboard');
+      await page.waitForLoadState('networkidle');
+      expect(page.url()).toContain('/dashboard');
+      // Super-admin stays on /dashboard (not redirected to /dashboard/orders)
+      await expect(page.locator('h1', { hasText: 'Dashboard' })).toBeVisible();
+    }
+  );
 });
 
 // ===========================================================================
 // Section 11: Dashboard Overview (Super-Admin Only)
 // ===========================================================================
 superAdminTest.describe('Section 11: Dashboard Overview', () => {
-  superAdminTest('super-admin can access dashboard overview', async ({ page }) => {
-    await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
-    await expect(page.locator('h1', { hasText: 'Dashboard' })).toBeVisible();
-    const body = await page.textContent('body');
-    expect(body).toContain("Today's Revenue");
-    expect(body).toContain("Today's Orders");
-    expect(body).toContain('Monthly Revenue');
-    expect(body).toContain('Avg Order Value');
-  });
+  superAdminTest(
+    'super-admin can access dashboard overview',
+    async ({ page }) => {
+      await page.goto('/dashboard');
+      await page.waitForLoadState('networkidle');
+      await expect(page.locator('h1', { hasText: 'Dashboard' })).toBeVisible();
+      const body = await page.textContent('body');
+      expect(body).toContain("Today's Revenue");
+      expect(body).toContain("Today's Orders");
+      expect(body).toContain('Monthly Revenue');
+      expect(body).toContain('Avg Order Value');
+    }
+  );
 
   superAdminTest('dashboard shows quick stats cards', async ({ page }) => {
     await page.goto('/dashboard');
@@ -106,26 +118,32 @@ superAdminTest.describe('Section 11: Dashboard Overview', () => {
 });
 
 adminTest.describe('Section 11: Dashboard RBAC — Admin Redirect', () => {
-  adminTest('regular admin is redirected from /dashboard to /dashboard/orders', async ({
-    page,
-  }) => {
-    await page.goto('/dashboard');
-    await page.waitForURL(/\/dashboard\/orders/, { timeout: 10000 });
-    expect(page.url()).toContain('/dashboard/orders');
-  });
+  adminTest(
+    'regular admin is redirected from /dashboard to /dashboard/orders',
+    async ({ page }) => {
+      await page.goto('/dashboard');
+      await page.waitForURL(/\/dashboard\/orders/, { timeout: 10000 });
+      expect(page.url()).toContain('/dashboard/orders');
+    }
+  );
 });
 
 // ===========================================================================
 // Section 12: Order Management (Admin)
 // ===========================================================================
 adminTest.describe('Section 12: Order Management', () => {
-  adminTest('orders dashboard loads with title and controls', async ({ page }) => {
-    await page.goto('/dashboard/orders');
-    await page.waitForLoadState('networkidle');
-    await expect(page.locator('h1', { hasText: 'Orders Dashboard' })).toBeVisible();
-    const body = await page.textContent('body');
-    expect(body).toContain('Manage and track all restaurant orders');
-  });
+  adminTest(
+    'orders dashboard loads with title and controls',
+    async ({ page }) => {
+      await page.goto('/dashboard/orders');
+      await page.waitForLoadState('networkidle');
+      await expect(
+        page.locator('h1', { hasText: 'Orders Dashboard' })
+      ).toBeVisible();
+      const body = await page.textContent('body');
+      expect(body).toContain('Manage and track all restaurant orders');
+    }
+  );
 
   adminTest('orders page shows Tabs Display link', async ({ page }) => {
     await page.goto('/dashboard/orders');
@@ -151,15 +169,21 @@ adminTest.describe('Section 12: Order Management', () => {
   });
 });
 
-superAdminTest.describe('Section 12: Order Management — Super-Admin Extras', () => {
-  superAdminTest('super-admin sees Analytics card on orders page', async ({ page }) => {
-    await page.goto('/dashboard/orders');
-    await page.waitForLoadState('networkidle');
-    await expect(page.locator('text=Analytics')).toBeVisible();
-    const body = await page.textContent('body');
-    expect(body).toContain('sales performance');
-  });
-});
+superAdminTest.describe(
+  'Section 12: Order Management — Super-Admin Extras',
+  () => {
+    superAdminTest(
+      'super-admin sees Analytics card on orders page',
+      async ({ page }) => {
+        await page.goto('/dashboard/orders');
+        await page.waitForLoadState('networkidle');
+        await expect(page.locator('text=Analytics')).toBeVisible();
+        const body = await page.textContent('body');
+        expect(body).toContain('sales performance');
+      }
+    );
+  }
+);
 
 // ===========================================================================
 // Section 8: Tab Management (Admin)
@@ -233,6 +257,40 @@ superAdminTest.describe('Section 15: Financial Management', () => {
     const body = await page.textContent('body');
     expect(body).toMatch(/expense|cost|finance/i);
   });
+
+  superAdminTest('pending expenses page loads', async ({ page }) => {
+    await page.goto('/dashboard/finance/expenses/pending');
+    await page.waitForLoadState('networkidle');
+    expect(page.url()).toContain('/dashboard/finance/expenses/pending');
+    const body = await page.textContent('body');
+    expect(body).toMatch(/pending expense/i);
+  });
+
+  superAdminTest(
+    'expenses page has Pending Expenses button',
+    async ({ page }) => {
+      await page.goto('/dashboard/finance/expenses');
+      await page.waitForLoadState('networkidle');
+      const pendingBtn = page.locator(
+        'a[href="/dashboard/finance/expenses/pending"]'
+      );
+      await expect(pendingBtn).toBeVisible();
+    }
+  );
+
+  superAdminTest(
+    'expense form opens with multi-line item table',
+    async ({ page }) => {
+      await page.goto('/dashboard/finance/expenses');
+      await page.waitForLoadState('networkidle');
+      await page.locator('button', { hasText: /Add Expense/ }).click();
+      await expect(page.locator('[role="dialog"]')).toBeVisible();
+      await expect(page.locator('text=Line Items')).toBeVisible();
+      await expect(
+        page.locator('button', { hasText: /Add Item/ })
+      ).toBeVisible();
+    }
+  );
 });
 
 // ===========================================================================
@@ -280,7 +338,9 @@ adminTest.describe('Section 17: Kitchen Display System', () => {
     await page.goto('/dashboard/kitchen');
     await page.waitForLoadState('networkidle');
     expect(page.url()).toContain('/dashboard/kitchen');
-    await expect(page.locator('h1', { hasText: 'Kitchen Display' })).toBeVisible();
+    await expect(
+      page.locator('h1', { hasText: 'Kitchen Display' })
+    ).toBeVisible();
     // Kitchen uses dark theme (bg-gray-900)
     const container = page.locator('.bg-gray-900');
     await expect(container).toBeVisible();
@@ -296,7 +356,9 @@ adminTest.describe('Section 17: Kitchen Display System', () => {
   adminTest('kitchen display has back button to orders', async ({ page }) => {
     await page.goto('/dashboard/kitchen');
     await page.waitForLoadState('networkidle');
-    await expect(page.getByRole('link', { name: 'Back to Dashboard' })).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: 'Back to Dashboard' })
+    ).toBeVisible();
   });
 });
 
@@ -335,13 +397,16 @@ superAdminTest.describe('Section 18: Rewards Configuration', () => {
 // Section 19: Settings & Configuration (Super-Admin)
 // ===========================================================================
 superAdminTest.describe('Section 19: Settings & Configuration', () => {
-  superAdminTest('settings page loads with configuration sections', async ({ page }) => {
-    await page.goto('/dashboard/settings');
-    await page.waitForLoadState('networkidle');
-    expect(page.url()).toContain('/dashboard/settings');
-    const body = await page.textContent('body');
-    expect(body).toMatch(/setting|config|fee|delivery|payment/i);
-  });
+  superAdminTest(
+    'settings page loads with configuration sections',
+    async ({ page }) => {
+      await page.goto('/dashboard/settings');
+      await page.waitForLoadState('networkidle');
+      expect(page.url()).toContain('/dashboard/settings');
+      const body = await page.textContent('body');
+      expect(body).toMatch(/setting|config|fee|delivery|payment/i);
+    }
+  );
 
   superAdminTest('admin management page loads', async ({ page }) => {
     await page.goto('/dashboard/settings/admins');
@@ -383,21 +448,29 @@ superAdminTest.describe('Section 23: Audit Logs', () => {
 // Section 11: Dashboard Navigation (Super-Admin)
 // ===========================================================================
 superAdminTest.describe('Section 11: Dashboard Navigation', () => {
-  superAdminTest('dashboard sidebar shows navigation links', async ({ page }) => {
-    await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
-    // The dashboard layout has a sidebar nav with section links
-    await expect(page.getByRole('link', { name: 'Orders' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Menu' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Inventory' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Settings' })).toBeVisible();
-  });
+  superAdminTest(
+    'dashboard sidebar shows navigation links',
+    async ({ page }) => {
+      await page.goto('/dashboard');
+      await page.waitForLoadState('networkidle');
+      // The dashboard layout has a sidebar nav with section links
+      await expect(page.getByRole('link', { name: 'Orders' })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Menu' })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Inventory' })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Settings' })).toBeVisible();
+    }
+  );
 
-  superAdminTest('dashboard has header with "Dashboard" title', async ({ page }) => {
-    await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
-    await expect(page.locator('header').locator('text=Dashboard')).toBeVisible();
-  });
+  superAdminTest(
+    'dashboard has header with "Dashboard" title',
+    async ({ page }) => {
+      await page.goto('/dashboard');
+      await page.waitForLoadState('networkidle');
+      await expect(
+        page.locator('header').locator('text=Dashboard')
+      ).toBeVisible();
+    }
+  );
 });
 
 // ===========================================================================

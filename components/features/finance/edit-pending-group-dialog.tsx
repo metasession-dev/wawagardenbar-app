@@ -1,5 +1,8 @@
 'use client';
 
+/**
+ * @requirement REQ-026 - Pending expense group workflow
+ */
 import { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,7 +14,6 @@ import { Calendar } from '@/components/ui/calendar';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -40,14 +42,18 @@ import {
 } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
-import { createPendingExpenseGroupAction } from '@/app/actions/finance/pending-expense-actions';
+import {
+  updatePendingExpenseGroupAction,
+  deletePendingExpenseGroupAction,
+} from '@/app/actions/finance/pending-expense-actions';
 import { getExpenseCategoriesAction } from '@/app/actions/finance/expense-categories-actions';
 import { toast } from '@/hooks/use-toast';
 import {
   DIRECT_COST_CATEGORIES,
   OPERATING_EXPENSE_CATEGORIES,
+  ExpenseType,
 } from '@/interfaces/expense.interface';
-import { ExpenseType } from '@/interfaces/expense.interface';
+import { IPendingExpenseGroup } from '@/interfaces/pending-expense-group.interface';
 
 const lineItemSchema = z.object({
   expenseType: z.enum(['direct-cost', 'operating-expense'], {
@@ -55,19 +61,19 @@ const lineItemSchema = z.object({
   }),
   category: z.string().min(1, 'Category is required'),
   description: z.string().min(3, 'Description must be at least 3 characters'),
-  quantity: z.number().min(0, 'Quantity must be 0 or more'),
+  quantity: z.number().min(0),
   unit: z.string().min(1, 'Unit is required'),
-  unitCost: z.number().min(0, 'Unit cost must be 0 or more'),
-  totalCost: z.number().min(0, 'Total cost must be 0 or more'),
+  unitCost: z.number().min(0),
+  totalCost: z.number().min(0),
 });
 
-const expenseFormSchema = z.object({
+const editSchema = z.object({
   date: z.date({ required_error: 'Date is required' }),
-  items: z.array(lineItemSchema).min(1, 'At least one line item is required'),
+  items: z.array(lineItemSchema).min(1),
   notes: z.string().optional(),
 });
 
-type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
+type EditFormValues = z.infer<typeof editSchema>;
 
 function makeDefaultItem() {
   return {
@@ -81,21 +87,22 @@ function makeDefaultItem() {
   };
 }
 
-interface ExpenseFormProps {
+interface EditPendingGroupDialogProps {
+  group: IPendingExpenseGroup;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess?: () => void;
-  prefill?: { date?: Date };
+  onSuccess: () => void;
 }
 
-export function ExpenseForm({
+export function EditPendingGroupDialog({
+  group,
   open,
   onOpenChange,
   onSuccess,
-  prefill,
-}: ExpenseFormProps) {
+}: EditPendingGroupDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [saveAndAddAnother, setSaveAndAddAnother] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [directCostCategories, setDirectCostCategories] = useState<string[]>([
     ...DIRECT_COST_CATEGORIES,
   ]);
@@ -103,12 +110,12 @@ export function ExpenseForm({
     string[]
   >([...OPERATING_EXPENSE_CATEGORIES]);
 
-  const form = useForm<ExpenseFormValues>({
-    resolver: zodResolver(expenseFormSchema),
+  const form = useForm<EditFormValues>({
+    resolver: zodResolver(editSchema),
     defaultValues: {
-      date: prefill?.date ?? new Date(),
-      items: [makeDefaultItem()],
-      notes: '',
+      date: new Date(group.date),
+      items: group.items.map((i) => ({ ...i })),
+      notes: group.notes ?? '',
     },
   });
 
@@ -121,12 +128,12 @@ export function ExpenseForm({
     if (open) {
       fetchCategories();
       form.reset({
-        date: prefill?.date ?? new Date(),
-        items: [makeDefaultItem()],
-        notes: '',
+        date: new Date(group.date),
+        items: group.items.map((i) => ({ ...i })),
+        notes: group.notes ?? '',
       });
     }
-  }, [open]);
+  }, [open, group]);
 
   async function fetchCategories() {
     try {
@@ -150,6 +157,11 @@ export function ExpenseForm({
       : operatingExpenseCategories;
   }
 
+  const groupTotal = items.reduce(
+    (sum, item) => sum + (item.totalCost || 0),
+    0
+  );
+
   function handleQtyOrCostChange(index: number) {
     const item = form.getValues(`items.${index}`);
     const qty = item.quantity ?? 0;
@@ -160,41 +172,55 @@ export function ExpenseForm({
     );
   }
 
-  const groupTotal = items.reduce(
-    (sum, item) => sum + (item.totalCost || 0),
-    0
-  );
-
-  async function onSubmit(data: ExpenseFormValues) {
-    setIsSubmitting(true);
+  async function handleDelete() {
+    setIsDeleting(true);
     try {
-      const result = await createPendingExpenseGroupAction({
-        date: data.date,
-        items: data.items,
-        notes: data.notes,
-      });
-
+      const result = await deletePendingExpenseGroupAction(
+        group._id.toString()
+      );
       if (result.success) {
-        toast({
-          title: 'Expense submitted',
-          description: 'Added to pending expenses for approval.',
-        });
-
-        if (saveAndAddAnother) {
-          form.reset({
-            date: data.date,
-            items: [makeDefaultItem()],
-            notes: '',
-          });
-          setSaveAndAddAnother(false);
-        } else {
-          onOpenChange(false);
-        }
-        onSuccess?.();
+        toast({ title: 'Deleted', description: 'Expense group deleted.' });
+        onOpenChange(false);
+        onSuccess();
       } else {
         toast({
           title: 'Error',
-          description: result.error || 'Failed to submit expense',
+          description: result.error,
+          variant: 'destructive',
+        });
+        setConfirmDelete(false);
+      }
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+      setConfirmDelete(false);
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  async function onSubmit(data: EditFormValues) {
+    setIsSubmitting(true);
+    try {
+      const result = await updatePendingExpenseGroupAction(
+        group._id.toString(),
+        {
+          date: data.date,
+          items: data.items,
+          notes: data.notes,
+        }
+      );
+      if (result.success) {
+        toast({ title: 'Updated', description: 'Expense group updated.' });
+        onOpenChange(false);
+        onSuccess();
+      } else {
+        toast({
+          title: 'Error',
+          description: result.error,
           variant: 'destructive',
         });
       }
@@ -213,11 +239,7 @@ export function ExpenseForm({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add Expense</DialogTitle>
-          <DialogDescription>
-            Enter the expense details. All items will be submitted for approval
-            before being recorded.
-          </DialogDescription>
+          <DialogTitle>Edit Expense Group</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
@@ -265,7 +287,6 @@ export function ExpenseForm({
 
             <Separator />
 
-            {/* ── Line Items ── */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-base font-medium leading-none">
@@ -386,7 +407,6 @@ export function ExpenseForm({
                                 className="h-8 text-sm"
                                 type="number"
                                 step="0.01"
-                                placeholder="1"
                                 {...f}
                                 onChange={(e) => {
                                   f.onChange(
@@ -435,7 +455,6 @@ export function ExpenseForm({
                                 className="h-8 text-sm"
                                 type="number"
                                 step="0.01"
-                                placeholder="0.00"
                                 {...f}
                                 onChange={(e) => {
                                   f.onChange(
@@ -465,7 +484,6 @@ export function ExpenseForm({
                                 className="h-8 text-sm"
                                 type="number"
                                 step="0.01"
-                                placeholder="0.00"
                                 {...f}
                                 onChange={(e) =>
                                   f.onChange(
@@ -498,12 +516,6 @@ export function ExpenseForm({
                 );
               })}
 
-              {form.formState.errors.items?.root && (
-                <p className="text-sm text-destructive">
-                  {form.formState.errors.items.root.message}
-                </p>
-              )}
-
               <div className="flex justify-end pt-1">
                 <p className="text-sm font-semibold">
                   Group Total: ₦
@@ -516,7 +528,6 @@ export function ExpenseForm({
 
             <Separator />
 
-            {/* ── Notes ── */}
             <FormField
               control={form.control}
               name="notes"
@@ -535,38 +546,63 @@ export function ExpenseForm({
               )}
             />
 
-            <DialogFooter className="gap-2">
+            <DialogFooter className="gap-2 flex-wrap sm:flex-nowrap">
+              {/* Delete group — two-step confirmation */}
+              {group.status !== 'transferred' &&
+                (confirmDelete ? (
+                  <>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={handleDelete}
+                      disabled={isDeleting}
+                      className="mr-auto"
+                    >
+                      {isDeleting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Deleting...
+                        </>
+                      ) : (
+                        'Confirm Delete'
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setConfirmDelete(false)}
+                      disabled={isDeleting}
+                    >
+                      Keep
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="mr-auto text-destructive hover:text-destructive border-destructive/30 hover:border-destructive"
+                    onClick={() => setConfirmDelete(true)}
+                    disabled={isSubmitting}
+                  >
+                    Delete Group
+                  </Button>
+                ))}
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isDeleting}
               >
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                variant="secondary"
-                disabled={isSubmitting}
-                onClick={() => setSaveAndAddAnother(true)}
-              >
-                {isSubmitting && saveAndAddAnother ? (
+              <Button type="submit" disabled={isSubmitting || isDeleting}>
+                {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Saving...
                   </>
                 ) : (
-                  'Save & Add Another'
-                )}
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && !saveAndAddAnother ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  'Save Expense'
+                  'Save Changes'
                 )}
               </Button>
             </DialogFooter>

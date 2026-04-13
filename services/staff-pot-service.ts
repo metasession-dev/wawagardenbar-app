@@ -370,6 +370,7 @@ export class StaffPotService {
         .lean();
 
       for (const inv of fallbackInventories) {
+        if (!inv.menuItemId) continue;
         const cost = inv.costPerUnit || (inv.menuItemId as any)?.price || 0;
         const menuId =
           (inv.menuItemId as any)._id?.toString() || inv.menuItemId.toString();

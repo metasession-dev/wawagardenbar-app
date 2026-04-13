@@ -2,12 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import { startOfMonth, endOfMonth, subDays } from 'date-fns';
-import { Plus, Download, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import {
+  Plus,
+  Download,
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { ExpenseForm } from '@/components/features/finance/expense-form';
 import { ExpenseList } from '@/components/features/finance/expense-list';
+import { EditExpenseDialog } from '@/components/features/finance/edit-expense-dialog';
 import { CSVImportButton } from '@/components/features/admin/expenses/csv-import-button';
 import {
   getExpensesAction,
@@ -30,7 +37,7 @@ export function ExpensesPageClient({ userRole }: ExpensesPageClientProps) {
   const [summary, setSummary] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showExpenseForm, setShowExpenseForm] = useState(false);
-  const [editingExpense, setEditingExpense] = useState<any>(null);
+  const [editExpense, setEditExpense] = useState<any | null>(null);
 
   useEffect(() => {
     if (dateRange?.from && dateRange?.to) {
@@ -70,14 +77,8 @@ export function ExpensesPageClient({ userRole }: ExpensesPageClientProps) {
     }
   };
 
-  const handleEdit = (expense: any) => {
-    setEditingExpense(expense);
-    setShowExpenseForm(true);
-  };
-
   const handleFormClose = () => {
     setShowExpenseForm(false);
-    setEditingExpense(null);
   };
 
   const handleFormSuccess = () => {
@@ -96,12 +97,15 @@ export function ExpensesPageClient({ userRole }: ExpensesPageClientProps) {
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Direct Costs</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Direct Costs
+            </CardTitle>
             <TrendingDown className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ₦{summary?.totalDirectCosts?.toLocaleString('en-NG', {
+              ₦
+              {summary?.totalDirectCosts?.toLocaleString('en-NG', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               }) || '0.00'}
@@ -121,7 +125,8 @@ export function ExpensesPageClient({ userRole }: ExpensesPageClientProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ₦{summary?.totalOperatingExpenses?.toLocaleString('en-NG', {
+              ₦
+              {summary?.totalOperatingExpenses?.toLocaleString('en-NG', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               }) || '0.00'}
@@ -134,18 +139,22 @@ export function ExpensesPageClient({ userRole }: ExpensesPageClientProps) {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Expenses
+            </CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ₦{summary?.totalExpenses?.toLocaleString('en-NG', {
+              ₦
+              {summary?.totalExpenses?.toLocaleString('en-NG', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               }) || '0.00'}
             </div>
             <p className="text-xs text-muted-foreground">
-              {summary?.expenseCount || 0} expense{summary?.expenseCount !== 1 ? 's' : ''}
+              {summary?.expenseCount || 0} expense
+              {summary?.expenseCount !== 1 ? 's' : ''}
             </p>
           </CardContent>
         </Card>
@@ -188,8 +197,11 @@ export function ExpensesPageClient({ userRole }: ExpensesPageClientProps) {
         <div className="flex gap-2">
           <CSVImportButton />
           <Button variant="outline" size="sm" asChild>
-            <Link href="/dashboard/expenses/uploaded">
-              View Uploaded
+            <Link href="/dashboard/expenses/uploaded">View Uploaded</Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/dashboard/finance/expenses/pending">
+              Pending Expenses
             </Link>
           </Button>
           <Button variant="outline" size="sm" disabled>
@@ -216,7 +228,7 @@ export function ExpensesPageClient({ userRole }: ExpensesPageClientProps) {
           ) : (
             <ExpenseList
               expenses={expenses}
-              onEdit={handleEdit}
+              onEdit={(expense) => setEditExpense(expense)}
               onRefresh={fetchData}
               userRole={userRole}
             />
@@ -229,7 +241,16 @@ export function ExpensesPageClient({ userRole }: ExpensesPageClientProps) {
         open={showExpenseForm}
         onOpenChange={handleFormClose}
         onSuccess={handleFormSuccess}
-        expense={editingExpense}
+      />
+
+      {/* Edit Expense Dialog */}
+      <EditExpenseDialog
+        expense={editExpense}
+        open={editExpense !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditExpense(null);
+        }}
+        onSuccess={fetchData}
       />
     </div>
   );

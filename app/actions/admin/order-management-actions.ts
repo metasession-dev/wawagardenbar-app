@@ -11,6 +11,8 @@ import { AuditLogService } from '@/services/audit-log-service';
 import { TabService, OrderService } from '@/services';
 import InventoryService from '@/services/inventory-service';
 import { completeOrderAndDeductStockAction } from '@/app/actions/order/complete-order-action';
+import { deriveBusinessDate } from '@/lib/business-date';
+import { SystemSettingsService } from '@/services/system-settings-service';
 import {
   emitBatchUpdateEvent,
   emitOrderUpdatedEvent,
@@ -334,6 +336,26 @@ export async function updateOrderStatusAction(
       } catch (error) {
         console.error('Error deducting inventory:', error);
         // Continue with status update even if inventory fails
+      }
+    }
+
+    // Auto-mark non-tab orders as cash paid on completion.
+    // Tab orders are paid when the tab is closed — leave them alone.
+    if (
+      newStatus === 'completed' &&
+      !order.tabId &&
+      order.paymentStatus !== 'paid'
+    ) {
+      try {
+        const cutoff = await SystemSettingsService.getBusinessDayCutoff();
+        order.paymentStatus = 'paid';
+        order.paymentMethod = 'cash';
+        order.paymentReference = `CASH-${Date.now()}`;
+        order.paidAt = new Date();
+        order.businessDate = deriveBusinessDate(new Date(), cutoff);
+      } catch (error) {
+        console.error('Error auto-marking cash payment:', error);
+        // Non-fatal — order still completes, staff can use Process Payment
       }
     }
 

@@ -235,11 +235,16 @@ export class PendingExpenseGroupService {
       _id: { $in: groupIds.map((id) => new ObjectId(id)) },
     }).lean()) as IPendingExpenseGroup[];
 
+    // Validate ALL groups before writing anything — prevents partial transfer
+    for (const group of groups) {
+      validateStatusTransition(group.status, 'transferred');
+      buildExpenseRecordsFromGroup(group, transferReference, transferredBy); // throws if invalid
+    }
+
     const now = new Date();
     let transferred = 0;
 
     for (const group of groups) {
-      validateStatusTransition(group.status, 'transferred');
       const expenseRecords = buildExpenseRecordsFromGroup(
         group,
         transferReference,

@@ -165,10 +165,12 @@ export function PendingExpenseGroupList({
   }
 
   function openTransferForSelected() {
-    const ids = Array.from(selectedIds);
-    const total = groups
-      .filter((g) => ids.includes(g._id.toString()))
-      .reduce((sum, g) => sum + g.totalAmount, 0);
+    // Only pass approved groups — pending ones would fail server-side validation
+    const approvedGroups = groups.filter(
+      (g) => selectedIds.has(g._id.toString()) && g.status === 'approved'
+    );
+    const ids = approvedGroups.map((g) => g._id.toString());
+    const total = approvedGroups.reduce((sum, g) => sum + g.totalAmount, 0);
     setTransferGroupIds(ids);
     setTransferTotal(total);
     setTransferOpen(true);

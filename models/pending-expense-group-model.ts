@@ -6,7 +6,7 @@ import { IPendingExpenseGroup } from '@/interfaces/pending-expense-group.interfa
 
 const ExpenseLineItemSchema = new Schema(
   {
-    description: { type: String, required: true, minlength: 1 },
+    description: { type: String, required: true, minlength: 3 },
     quantity: { type: Number, required: true, min: 0 },
     unit: { type: String, required: true },
     unitCost: { type: Number, required: true, min: 0 },

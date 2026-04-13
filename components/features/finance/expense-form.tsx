@@ -50,7 +50,7 @@ import {
 } from '@/interfaces/expense.interface';
 
 const lineItemSchema = z.object({
-  description: z.string().min(1, 'Description is required'),
+  description: z.string().min(3, 'Description must be at least 3 characters'),
   quantity: z.number().min(0, 'Quantity must be 0 or more'),
   unit: z.string().min(1, 'Unit is required'),
   unitCost: z.number().min(0, 'Unit cost must be 0 or more'),
@@ -149,12 +149,10 @@ export function ExpenseForm({
     const item = form.getValues(`items.${index}`);
     const qty = item.quantity ?? 0;
     const cost = item.unitCost ?? 0;
-    if (item.totalCost === 0 || item.totalCost === qty * cost) {
-      form.setValue(
-        `items.${index}.totalCost`,
-        parseFloat((qty * cost).toFixed(2))
-      );
-    }
+    form.setValue(
+      `items.${index}.totalCost`,
+      parseFloat((qty * cost).toFixed(2))
+    );
   }
 
   const groupTotal = items.reduce(

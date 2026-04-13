@@ -323,7 +323,7 @@ export class FinancialReportService {
             mainCategory: menuItem.mainCategory,
             quantity: item.quantity,
             price: item.price,
-            costPerUnit: item.costPerUnit || 0,
+            costPerUnit: item.costPerUnit || menuItem.costPerUnit || 0,
           });
         }
       }
@@ -584,7 +584,7 @@ export class FinancialReportService {
             mainCategory: menuItem.mainCategory,
             quantity: item.quantity,
             price: item.price,
-            costPerUnit: item.costPerUnit || 0,
+            costPerUnit: item.costPerUnit || menuItem.costPerUnit || 0,
           });
         }
       }

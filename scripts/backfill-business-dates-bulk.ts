@@ -6,7 +6,7 @@
  *   npx tsx scripts/backfill-business-dates-bulk.ts <mongodb-uri/dbname>
  *   npx tsx scripts/backfill-business-dates-bulk.ts <mongodb-uri/dbname> --dry-run
  */
-import { MongoClient, ObjectId } from 'mongodb';
+import { MongoClient } from 'mongodb';
 import { config } from 'dotenv';
 import path from 'path';
 

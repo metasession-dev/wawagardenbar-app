@@ -349,6 +349,16 @@ Commit compliance documents locally but **do not push**. UAT verification (Step 
 
 If using META-COMPLY, commit only compliance documents (RTM, release ticket, test scope, AI notes, security summary). Binary evidence (JSON results, screenshots) is stored in META-COMPLY, not git.
 
+**Before committing, verify all required artifacts exist:**
+
+- [ ] `compliance/evidence/REQ-XXX/test-scope.md`
+- [ ] `compliance/evidence/REQ-XXX/test-plan.md`
+- [ ] `compliance/evidence/REQ-XXX/test-execution-summary.md`
+- [ ] `compliance/evidence/REQ-XXX/implementation-plan.md` (MEDIUM/HIGH risk only)
+- [ ] `compliance/evidence/REQ-XXX/ai-prompts.md` (if AI used on MEDIUM/HIGH risk)
+- [ ] `compliance/evidence/REQ-XXX/security-summary.md`
+- [ ] `compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md`
+
 ```bash
 # META-COMPLY projects — commit compliance docs only (no push)
 git add compliance/RTM.md compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md \
@@ -357,6 +367,7 @@ git add compliance/RTM.md compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md 
   compliance/evidence/REQ-XXX/implementation-plan.md \
   compliance/evidence/REQ-XXX/test-execution-summary.md \
   compliance/evidence/REQ-XXX/ai-use-note.md \
+  compliance/evidence/REQ-XXX/ai-prompts.md \
   compliance/evidence/REQ-XXX/security-summary.md
 git commit -m "compliance: [REQ-XXX] evidence compiled - awaiting review"
 ```

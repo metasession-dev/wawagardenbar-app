@@ -154,7 +154,9 @@ jobs:
         run: npx wait-on http://localhost:3000 --timeout 120000
 
       - name: E2E Tests
-        run: npx playwright test --project=chromium --reporter=json > e2e-results.json 2>/dev/null || npx playwright test --project=chromium
+        run: |
+          PLAYWRIGHT_HTML_REPORTER_OPEN=never npx playwright test --project=chromium --reporter=json,html > e2e-results.json 2>/dev/null \
+            || PLAYWRIGHT_HTML_REPORTER_OPEN=never npx playwright test --project=chromium --reporter=html
 
       # ── Gate 5: Build ──
 
@@ -179,16 +181,19 @@ jobs:
             sast-results.json
             dependency-audit.json
             e2e-results.json
+            playwright-report/
+            coverage/coverage-summary.json
           retention-days: 90
 
   # ──────────────────────────────────────────────
-  # Upload Evidence to META-COMPLY (after gates pass)
+  # Register release early (parallel with gates) so UAT gate can find it
   # ──────────────────────────────────────────────
-  upload-evidence:
-    name: Upload Evidence
+  register-release:
+    name: Register Release
     runs-on: self-hosted
-    needs: [quality-gates]
-    if: ${{ !failure() && !cancelled() }}
+    if: ${{ vars.META_COMPLY_SUPABASE_URL != '' || secrets.META_COMPLY_SUPABASE_URL != '' }}
+    outputs:
+      version: ${{ needs.register-release.outputs.version }}
     env:
       SUPABASE_URL: ${{ secrets.META_COMPLY_SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.META_COMPLY_SERVICE_ROLE_KEY }}
@@ -199,7 +204,6 @@ jobs:
         id: version
         run: |
           DATE_PREFIX="v$(date +%Y.%m.%d)"
-          # Check for existing releases today to support multiple releases per day
           if [ -n "${SUPABASE_URL}" ] && [ -n "${SUPABASE_SERVICE_ROLE_KEY}" ]; then
             PROJ_ID=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_projects?slug=eq.wawagardenbar-app&select=id" \
               -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
@@ -211,7 +215,6 @@ jobs:
                 -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}")
               LATEST=$(echo "$EXISTING" | grep -o '"version":"[^"]*"' | head -1 | cut -d'"' -f4)
               if [ -n "$LATEST" ]; then
-                # Extract sequence number: v2026.03.31 → 1, v2026.03.31.3 → 3
                 SEQ=$(echo "$LATEST" | sed -n "s/^${DATE_PREFIX}\.//p")
                 if [ -z "$SEQ" ]; then
                   SEQ=1
@@ -229,8 +232,17 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "Release version: ${VERSION}"
 
+      - name: Ensure release exists
+        run: |
+          chmod +x scripts/upload-evidence.sh 2>/dev/null || true
+          # Create the release in META-COMPLY (no evidence yet — just registration)
+          bash scripts/upload-evidence.sh \
+            wawagardenbar-app _compliance-docs compliance_document README.md \
+            --release ${{ needs.register-release.outputs.version }} --create-release-if-missing \
+            --environment uat --category planning \
+            --git-sha ${{ github.sha }} --branch ${{ github.ref_name }} || true
+
       - name: Sync known requirements from RTM
-        if: env.SUPABASE_URL != ''
         run: |
           if [ -f "compliance/RTM.md" ]; then
             REQS=$(grep -oP 'REQ-\d+' compliance/RTM.md | sort -t- -k2 -n -u)
@@ -258,6 +270,20 @@ jobs:
             fi
           fi
 
+  # ──────────────────────────────────────────────
+  # Upload Evidence to META-COMPLY (after gates pass)
+  # ──────────────────────────────────────────────
+  upload-evidence:
+    name: Upload Evidence
+    runs-on: self-hosted
+    needs: [quality-gates, register-release]
+    if: ${{ !failure() && !cancelled() }}
+    env:
+      SUPABASE_URL: ${{ secrets.META_COMPLY_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.META_COMPLY_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Download CI gate artifacts
         uses: actions/download-artifact@v4
         continue-on-error: true
@@ -270,7 +296,7 @@ jobs:
         run: |
           chmod +x scripts/upload-evidence.sh 2>/dev/null || true
           FLAGS="--git-sha ${{ github.sha }} --ci-run-id ${{ github.run_id }} --branch ${{ github.ref_name }}"
-          FLAGS="${FLAGS} --release ${{ steps.version.outputs.version }} --create-release-if-missing"
+          FLAGS="${FLAGS} --release ${{ needs.register-release.outputs.version }} --create-release-if-missing"
           FLAGS="${FLAGS} --environment uat"
 
           # Re-generate gate evidence as fallback if artifact download failed
@@ -309,6 +335,25 @@ jobs:
             bash scripts/upload-evidence.sh \
               wawagardenbar-app _compliance-docs e2e_result ci-evidence/e2e-results.json \
               --category ci_pipeline ${FLAGS} || echo "Warning: Failed to upload e2e-results.json"
+          fi
+
+          # Upload Playwright HTML report (test_report category)
+          if [ -d ci-evidence/playwright-report ]; then
+            (cd ci-evidence && zip -qr playwright-report.zip playwright-report/) 2>/dev/null || true
+            if [ -f ci-evidence/playwright-report.zip ]; then
+              echo "Uploading: playwright-report.zip"
+              bash scripts/upload-evidence.sh \
+                wawagardenbar-app _compliance-docs test_report ci-evidence/playwright-report.zip \
+                --category test_report ${FLAGS} || echo "Warning: Failed to upload playwright-report.zip"
+            fi
+          fi
+
+          # Upload Jest coverage summary (test_report category)
+          if [ -f ci-evidence/coverage/coverage-summary.json ]; then
+            echo "Uploading: coverage-summary.json"
+            bash scripts/upload-evidence.sh \
+              wawagardenbar-app _compliance-docs test_report ci-evidence/coverage/coverage-summary.json \
+              --category test_report ${FLAGS} || echo "Warning: Failed to upload coverage-summary.json"
           fi
 
           # Upload test summary report (test_report category)
@@ -356,4 +401,4 @@ jobs:
           done
 
       - name: Summary
-        run: echo "Evidence uploaded for ${{ steps.version.outputs.version }} (UAT)"
+        run: echo "Evidence uploaded for ${{ needs.register-release.outputs.version }} (UAT)"

@@ -88,8 +88,8 @@ const userSchema = new Schema<IUser>(
     emailVerified: { type: Boolean, default: false },
     phone: {
       type: String,
+      required: true,
       unique: true,
-      sparse: true,
       trim: true,
     },
     phoneVerified: { type: Boolean, default: false },

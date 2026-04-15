@@ -112,9 +112,10 @@ export class AdminService {
     createdBy: string;
     permissions?: IAdminPermissions;
   }) {
-    // Validate username uniqueness
+    // Validate username uniqueness (exclude soft-deleted users)
     const existingUser = await UserModel.findOne({
       username: data.username.toLowerCase(),
+      accountStatus: { $ne: 'deleted' },
     });
 
     if (existingUser) {
@@ -399,12 +400,14 @@ export class AdminService {
       }
     }
 
-    // Soft delete: set status and unset unique fields to free them for reuse
+    // Soft delete: set status and mangle unique fields to free them for reuse
+    // Replace values with a unique identifier to avoid duplicate key errors
+    const uid = admin._id.toString();
     admin.accountStatus = 'deleted';
     admin.sessionToken = undefined;
-    admin.set('email', null);
-    admin.set('phone', null);
-    admin.set('username', null);
+    if (admin.email) admin.email = `del_${uid}@deleted`;
+    if (admin.phone) admin.phone = `del_${uid}`;
+    if (admin.username) admin.username = `del_${uid}`;
     await admin.save();
 
     // Create audit log

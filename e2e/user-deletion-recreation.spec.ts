@@ -2,16 +2,35 @@ import { test as base, expect, Page } from '@playwright/test';
 import path from 'path';
 
 /**
- * E2E Tests — REQ-027: User Deletion and Re-creation
+ * E2E Tests — REQ-027: Admin User Deletion and Re-creation
  *
- * Validates that after an admin deletes a user, the system allows
- * creating a new user with the same credentials (email/phone).
- * Uses the super-admin session for deletion via the dashboard.
+ * Validates that after a super-admin deletes an admin user via the
+ * dashboard, the credentials (username, email) are freed and a new
+ * admin can be created with the same credentials without errors.
+ *
+ * Test data lifecycle:
+ *   Setup:    Create admin via "Create Admin" dialog
+ *   Test:     Delete admin via actions dropdown, then recreate via dialog
+ *   Teardown: Delete the recreated admin to leave clean state
  *
  * @requirement REQ-027 - User re-creation after admin deletion
  */
 
 const SUPER_ADMIN_FILE = path.join(__dirname, '../.auth/super-admin.json');
+const ADMINS_URL = '/dashboard/settings/admins';
+const TEST_USERNAME = `e2ereq027${Date.now().toString().slice(-6)}`;
+const TEST_PASSWORD = 'E2eTest1!pass';
+
+/**
+ * Dismiss the Next.js dev hydration error overlay if present.
+ * This overlay can intercept clicks on the underlying page.
+ */
+async function dismissErrorOverlay(page: Page): Promise<void> {
+  const closeButton = page.locator('[data-nextjs-dialog-close-button]');
+  if (await closeButton.isVisible({ timeout: 1000 }).catch(() => false)) {
+    await closeButton.click();
+  }
+}
 
 async function isAuthenticated(page: Page): Promise<boolean> {
   try {
@@ -23,6 +42,87 @@ async function isAuthenticated(page: Page): Promise<boolean> {
   }
 }
 
+/**
+ * Create an admin via the "Create Admin" dialog.
+ * Fills username, password, role=admin, then submits.
+ */
+async function createAdminViaUI(page: Page, username: string): Promise<void> {
+  await page.goto(ADMINS_URL);
+  await page.waitForLoadState('networkidle');
+  await dismissErrorOverlay(page);
+
+  // Click "Create Admin" button
+  await page.getByRole('button', { name: 'Create Admin' }).click();
+
+  // Wait for dialog — use title to distinguish from any error overlays
+  const dialog = page.getByRole('dialog', { name: 'Create Admin User' });
+  await expect(dialog).toBeVisible();
+
+  // Fill form
+  await dialog.getByLabel(/^Username/).fill(username);
+  await dialog
+    .getByLabel(/^Password \*/)
+    .first()
+    .fill(TEST_PASSWORD);
+  await dialog.getByLabel(/^Confirm Password/).fill(TEST_PASSWORD);
+
+  // Role defaults to "admin" — no change needed
+
+  // Submit
+  await dialog.getByRole('button', { name: 'Create Admin' }).click();
+
+  // Wait for page reload (CreateAdminDialog calls window.location.reload)
+  await page.waitForLoadState('networkidle');
+
+  // Verify admin appears in the list
+  await expect(page.getByText(username)).toBeVisible({ timeout: 10_000 });
+}
+
+/**
+ * Delete an admin via the actions dropdown on the admin list page.
+ */
+async function deleteAdminViaUI(page: Page, username: string): Promise<void> {
+  await page.goto(ADMINS_URL);
+  await page.waitForLoadState('networkidle');
+  await dismissErrorOverlay(page);
+
+  // Find the row with our admin's username
+  const adminRow = page.locator('tr', { hasText: username });
+  await expect(adminRow).toBeVisible({ timeout: 10_000 });
+
+  // Open actions dropdown (last cell has the button with MoreHorizontal icon)
+  const actionsButton = adminRow.locator('td').last().locator('button');
+  await actionsButton.click();
+
+  // Click "Delete Admin" in the dropdown menu
+  await page.getByRole('menuitem', { name: 'Delete Admin' }).click();
+
+  // Confirm in alert dialog — use title to distinguish from error overlays
+  const alertDialog = page.getByRole('alertdialog', {
+    name: 'Delete Admin User',
+  });
+  await expect(alertDialog).toBeVisible();
+  await expect(alertDialog.getByText(username)).toBeVisible();
+
+  await alertDialog.getByRole('button', { name: 'Delete Admin' }).click();
+
+  // AlertDialogAction auto-closes the dialog; wait for the async delete
+  await expect(alertDialog).not.toBeVisible({ timeout: 10_000 });
+
+  // Wait for the async delete + list refresh, then verify via page reload
+  await page.waitForTimeout(2000);
+  await page.goto(ADMINS_URL);
+  await page.waitForLoadState('networkidle');
+  await dismissErrorOverlay(page);
+  await expect(page.locator('tr', { hasText: username })).not.toBeVisible({
+    timeout: 10_000,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Test fixture with super-admin session
+// ---------------------------------------------------------------------------
+
 const superAdminTest = base.extend({
   storageState: SUPER_ADMIN_FILE,
 });
@@ -31,129 +131,30 @@ superAdminTest.beforeEach(async ({ page }, testInfo) => {
   if (!(await isAuthenticated(page))) {
     testInfo.skip(
       true,
-      'Super-admin login failed or credentials not configured — skipping'
+      'Super-admin login failed or credentials not configured'
     );
   }
 });
 
-// ===========================================================================
-// REQ-027: User Deletion produces soft-delete (not hard delete)
-// ===========================================================================
-superAdminTest.describe('REQ-027: User Deletion & Re-creation', () => {
+// ---------------------------------------------------------------------------
+// REQ-027: Admin Deletion & Re-creation
+// ---------------------------------------------------------------------------
+
+superAdminTest.describe('REQ-027: Admin Deletion & Re-creation', () => {
   superAdminTest(
-    'customers page loads and shows customer list',
+    'can delete admin and recreate with same username',
     async ({ page }) => {
-      await page.goto('/dashboard/customers');
-      await page.waitForLoadState('networkidle');
-      expect(page.url()).toContain('/dashboard/customers');
-    }
-  );
+      // Step 1: Create an admin
+      await createAdminViaUI(page, TEST_USERNAME);
 
-  superAdminTest(
-    'delete user action returns success via server action',
-    async ({ page }) => {
-      // Create a disposable test user directly in the database via the test API
-      const testEmail = `e2e-delete-test-${Date.now()}@test.com`;
-      const testPhone = `+234${Date.now().toString().slice(-10)}`;
+      // Step 2: Delete the admin via UI
+      await deleteAdminViaUI(page, TEST_USERNAME);
 
-      // Use the test login endpoint to create a user, then delete them
-      // First, navigate to customers page
-      await page.goto('/dashboard/customers');
-      await page.waitForLoadState('networkidle');
+      // Step 3: Recreate admin with the SAME username
+      await createAdminViaUI(page, TEST_USERNAME);
 
-      // Call deleteUserAction via page.evaluate to test the server action
-      // We create and delete via the app's internal mechanisms
-      const result = await page.evaluate(
-        async ({ email, phone }) => {
-          // Create a test user via fetch to the internal API
-          const createRes = await fetch('/api/test/create-user', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email,
-              phone,
-              firstName: 'E2E',
-              lastName: 'DeleteTest',
-            }),
-          });
-
-          if (!createRes.ok) {
-            // If test endpoint doesn't exist, skip gracefully
-            return {
-              skipped: true,
-              reason: 'test create-user endpoint not available',
-            };
-          }
-
-          const created = await createRes.json();
-          if (!created.success || !created.data?._id) {
-            return { skipped: true, reason: 'failed to create test user' };
-          }
-
-          // Now delete the user via the test API
-          const deleteRes = await fetch('/api/test/delete-user', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: created.data._id }),
-          });
-
-          if (!deleteRes.ok) {
-            return {
-              skipped: true,
-              reason: 'test delete-user endpoint not available',
-            };
-          }
-
-          const deleteResult = await deleteRes.json();
-
-          // Try creating another user with the same email
-          const recreateRes = await fetch('/api/test/create-user', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email,
-              phone: `+234${Date.now().toString().slice(-10)}`,
-              firstName: 'E2E',
-              lastName: 'RecreateTest',
-            }),
-          });
-
-          const recreateResult = recreateRes.ok
-            ? await recreateRes.json()
-            : null;
-
-          return {
-            skipped: false,
-            deleteSuccess: deleteResult.success,
-            recreateSuccess: recreateResult?.success ?? false,
-          };
-        },
-        { email: testEmail, phone: testPhone }
-      );
-
-      if (result.skipped) {
-        superAdminTest.skip();
-        return;
-      }
-
-      expect(result.deleteSuccess).toBe(true);
-      expect(result.recreateSuccess).toBe(true);
-    }
-  );
-
-  superAdminTest(
-    'soft-deleted users do not appear in active customer list',
-    async ({ page }) => {
-      await page.goto('/dashboard/customers');
-      await page.waitForLoadState('networkidle');
-
-      // The customer list filters by accountStatus: 'active' by default
-      // Verify the page loads and shows the customer table
-      const pageContent = await page.textContent('body');
-      // The page should load without errors
-      expect(page.url()).toContain('/dashboard/customers');
-      // Should not contain error messages about deleted users
-      expect(pageContent).not.toContain('Error loading customers');
+      // Step 4: Teardown — delete the recreated admin
+      await deleteAdminViaUI(page, TEST_USERNAME);
     }
   );
 });

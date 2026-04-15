@@ -45,9 +45,6 @@ function createMockUser(overrides: Record<string, unknown> = {}) {
     sessionToken: 'some-token',
     save: vi.fn().mockResolvedValue(undefined),
     deleteOne: vi.fn().mockResolvedValue(undefined),
-    set: vi.fn((key: string, value: unknown) => {
-      user[key] = value;
-    }),
     ...overrides,
   };
   return user;
@@ -99,7 +96,7 @@ describe('REQ-027: deleteUserAction soft-delete behaviour', () => {
     expect(mockUser.deleteOne).not.toHaveBeenCalled();
   });
 
-  it('nulls unique fields (email, phone, username) on deletion', async () => {
+  it('mangles unique fields (email, phone, username) on deletion', async () => {
     mockSuperAdminSession();
     const mockUser = createMockUser({
       email: 'reuse-me@example.com',
@@ -110,9 +107,9 @@ describe('REQ-027: deleteUserAction soft-delete behaviour', () => {
 
     await deleteUserAction(USER_OID);
 
-    expect(mockUser.email).toBeNull();
-    expect(mockUser.phone).toBeNull();
-    expect(mockUser.username).toBeNull();
+    expect(mockUser.email).toBe(`del_${USER_OID}@deleted`);
+    expect(mockUser.phone).toBe(`del_${USER_OID}`);
+    expect(mockUser.username).toBe(`del_${USER_OID}`);
   });
 
   it('clears sessionToken on deletion', async () => {

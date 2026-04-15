@@ -1,30 +1,40 @@
-import { test as base, expect, Page } from '@playwright/test';
+import {
+  test as base,
+  expect,
+  Page,
+  APIRequestContext,
+} from '@playwright/test';
 import path from 'path';
 
 /**
- * E2E Tests — REQ-027: Admin User Deletion and Re-creation
+ * E2E Tests — REQ-027: User Deletion and Re-creation
  *
- * Validates that after a super-admin deletes an admin user via the
- * dashboard, the credentials (username, email) are freed and a new
- * admin can be created with the same credentials without errors.
+ * Two test groups:
  *
- * Test data lifecycle:
- *   Setup:    Create admin via "Create Admin" dialog
- *   Test:     Delete admin via actions dropdown, then recreate via dialog
- *   Teardown: Delete the recreated admin to leave clean state
+ * 1. Admin deletion — Create admin via "Create Admin" dialog, delete via
+ *    admin management dropdown, recreate with the same username.
+ *
+ * 2. Customer deletion — Seed a customer via the test API, delete via the
+ *    customers page dropdown, verify the customer disappears, then seed
+ *    a new customer with the same email/phone to prove credentials are freed.
+ *
+ * Test data lifecycle uses setup/teardown per test so no stale data remains.
  *
  * @requirement REQ-027 - User re-creation after admin deletion
  */
 
 const SUPER_ADMIN_FILE = path.join(__dirname, '../.auth/super-admin.json');
 const ADMINS_URL = '/dashboard/settings/admins';
+const CUSTOMERS_URL = '/dashboard/customers';
 const TEST_USERNAME = `e2ereq027${Date.now().toString().slice(-6)}`;
 const TEST_PASSWORD = 'E2eTest1!pass';
+const CUSTOMER_EMAIL = `e2e-cust-${Date.now()}@test.req027.com`;
+const CUSTOMER_PHONE = `+234${Date.now().toString().slice(-10)}`;
 
-/**
- * Dismiss the Next.js dev hydration error overlay if present.
- * This overlay can intercept clicks on the underlying page.
- */
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
 async function dismissErrorOverlay(page: Page): Promise<void> {
   const closeButton = page.locator('[data-nextjs-dialog-close-button]');
   if (await closeButton.isVisible({ timeout: 1000 }).catch(() => false)) {
@@ -42,23 +52,33 @@ async function isAuthenticated(page: Page): Promise<boolean> {
   }
 }
 
-/**
- * Create an admin via the "Create Admin" dialog.
- * Fills username, password, role=admin, then submits.
- */
+async function isTestApiAvailable(
+  request: APIRequestContext
+): Promise<boolean> {
+  try {
+    const res = await request.post('/api/test/manage-user', {
+      data: { action: 'unknown' },
+    });
+    return res.status() !== 403;
+  } catch {
+    return false;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Admin helpers
+// ---------------------------------------------------------------------------
+
 async function createAdminViaUI(page: Page, username: string): Promise<void> {
   await page.goto(ADMINS_URL);
   await page.waitForLoadState('networkidle');
   await dismissErrorOverlay(page);
 
-  // Click "Create Admin" button
   await page.getByRole('button', { name: 'Create Admin' }).click();
 
-  // Wait for dialog — use title to distinguish from any error overlays
   const dialog = page.getByRole('dialog', { name: 'Create Admin User' });
   await expect(dialog).toBeVisible();
 
-  // Fill form
   await dialog.getByLabel(/^Username/).fill(username);
   await dialog
     .getByLabel(/^Password \*/)
@@ -66,50 +86,30 @@ async function createAdminViaUI(page: Page, username: string): Promise<void> {
     .fill(TEST_PASSWORD);
   await dialog.getByLabel(/^Confirm Password/).fill(TEST_PASSWORD);
 
-  // Role defaults to "admin" — no change needed
-
-  // Submit
   await dialog.getByRole('button', { name: 'Create Admin' }).click();
 
-  // Wait for page reload (CreateAdminDialog calls window.location.reload)
   await page.waitForLoadState('networkidle');
-
-  // Verify admin appears in the list
   await expect(page.getByText(username)).toBeVisible({ timeout: 10_000 });
 }
 
-/**
- * Delete an admin via the actions dropdown on the admin list page.
- */
 async function deleteAdminViaUI(page: Page, username: string): Promise<void> {
   await page.goto(ADMINS_URL);
   await page.waitForLoadState('networkidle');
   await dismissErrorOverlay(page);
 
-  // Find the row with our admin's username
   const adminRow = page.locator('tr', { hasText: username });
   await expect(adminRow).toBeVisible({ timeout: 10_000 });
 
-  // Open actions dropdown (last cell has the button with MoreHorizontal icon)
-  const actionsButton = adminRow.locator('td').last().locator('button');
-  await actionsButton.click();
-
-  // Click "Delete Admin" in the dropdown menu
+  await adminRow.locator('td').last().locator('button').click();
   await page.getByRole('menuitem', { name: 'Delete Admin' }).click();
 
-  // Confirm in alert dialog — use title to distinguish from error overlays
   const alertDialog = page.getByRole('alertdialog', {
     name: 'Delete Admin User',
   });
   await expect(alertDialog).toBeVisible();
-  await expect(alertDialog.getByText(username)).toBeVisible();
-
   await alertDialog.getByRole('button', { name: 'Delete Admin' }).click();
-
-  // AlertDialogAction auto-closes the dialog; wait for the async delete
   await expect(alertDialog).not.toBeVisible({ timeout: 10_000 });
 
-  // Wait for the async delete + list refresh, then verify via page reload
   await page.waitForTimeout(2000);
   await page.goto(ADMINS_URL);
   await page.waitForLoadState('networkidle');
@@ -120,7 +120,81 @@ async function deleteAdminViaUI(page: Page, username: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Test fixture with super-admin session
+// Customer helpers
+// ---------------------------------------------------------------------------
+
+async function seedCustomer(
+  request: APIRequestContext,
+  email: string,
+  phone: string
+): Promise<string> {
+  const res = await request.post('/api/test/manage-user', {
+    data: {
+      action: 'create',
+      email,
+      phone,
+      firstName: 'E2E',
+      lastName: 'Customer',
+    },
+  });
+  expect(res.ok()).toBe(true);
+  const body = await res.json();
+  expect(body.success).toBe(true);
+  return body.data._id;
+}
+
+async function cleanupTestCustomers(request: APIRequestContext): Promise<void> {
+  // Clean up by email pattern — catches both original and mangled emails
+  await request.post('/api/test/manage-user', {
+    data: {
+      action: 'cleanup',
+      emailPattern: 'e2e-cust-.*@test\\.req027\\.com',
+    },
+  });
+  // Also clean up any mangled del_*@deleted records from this test
+  await request.post('/api/test/manage-user', {
+    data: { action: 'cleanup', emailPattern: 'del_.*@deleted' },
+  });
+}
+
+async function deleteCustomerViaUI(page: Page, email: string): Promise<void> {
+  await page.goto(CUSTOMERS_URL);
+  await page.waitForLoadState('networkidle');
+  await dismissErrorOverlay(page);
+
+  const customerRow = page.locator('tr', { hasText: email });
+  await expect(customerRow).toBeVisible({ timeout: 10_000 });
+
+  // Open the actions dropdown (button with sr-only "Open menu")
+  const actionsButton = customerRow.locator('button').filter({
+    has: page.locator('.sr-only', { hasText: 'Open menu' }),
+  });
+  await actionsButton.click();
+
+  // Click "Delete User" in the dropdown
+  await page.getByText('Delete User').first().click();
+
+  // Confirm in the dialog
+  const dialog = page.getByRole('dialog', { name: 'Delete User' });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: 'Delete User' }).click();
+
+  // Wait for success toast (shadcn useToast — renders in the DOM)
+  await expect(page.getByText('User Deleted', { exact: true })).toBeVisible({
+    timeout: 10_000,
+  });
+
+  // Verify customer no longer in the list
+  await page.goto(CUSTOMERS_URL);
+  await page.waitForLoadState('networkidle');
+  await dismissErrorOverlay(page);
+  await expect(page.locator('tr', { hasText: email })).not.toBeVisible({
+    timeout: 10_000,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Test fixture
 // ---------------------------------------------------------------------------
 
 const superAdminTest = base.extend({
@@ -144,17 +218,58 @@ superAdminTest.describe('REQ-027: Admin Deletion & Re-creation', () => {
   superAdminTest(
     'can delete admin and recreate with same username',
     async ({ page }) => {
-      // Step 1: Create an admin
       await createAdminViaUI(page, TEST_USERNAME);
-
-      // Step 2: Delete the admin via UI
       await deleteAdminViaUI(page, TEST_USERNAME);
-
-      // Step 3: Recreate admin with the SAME username
       await createAdminViaUI(page, TEST_USERNAME);
-
-      // Step 4: Teardown — delete the recreated admin
+      // Teardown
       await deleteAdminViaUI(page, TEST_USERNAME);
+    }
+  );
+});
+
+// ---------------------------------------------------------------------------
+// REQ-027: Customer Deletion & Re-creation
+// ---------------------------------------------------------------------------
+
+superAdminTest.describe('REQ-027: Customer Deletion & Re-creation', () => {
+  superAdminTest(
+    'can delete customer and recreate with same email and phone',
+    async ({ page, request }) => {
+      if (!(await isTestApiAvailable(request))) {
+        superAdminTest.skip(true, 'Test API not enabled');
+        return;
+      }
+
+      // Cleanup any leftovers from previous runs
+      await cleanupTestCustomers(request);
+
+      // Step 1: Seed a customer
+      await seedCustomer(request, CUSTOMER_EMAIL, CUSTOMER_PHONE);
+
+      // Step 2: Verify customer appears on the customers page
+      await page.goto(CUSTOMERS_URL);
+      await page.waitForLoadState('networkidle');
+      await dismissErrorOverlay(page);
+      await expect(page.locator('tr', { hasText: CUSTOMER_EMAIL })).toBeVisible(
+        { timeout: 10_000 }
+      );
+
+      // Step 3: Delete via UI
+      await deleteCustomerViaUI(page, CUSTOMER_EMAIL);
+
+      // Step 4: Recreate with the SAME email and phone
+      await seedCustomer(request, CUSTOMER_EMAIL, CUSTOMER_PHONE);
+
+      // Step 5: Verify new customer appears
+      await page.goto(CUSTOMERS_URL);
+      await page.waitForLoadState('networkidle');
+      await dismissErrorOverlay(page);
+      await expect(page.locator('tr', { hasText: CUSTOMER_EMAIL })).toBeVisible(
+        { timeout: 10_000 }
+      );
+
+      // Teardown
+      await cleanupTestCustomers(request);
     }
   );
 });

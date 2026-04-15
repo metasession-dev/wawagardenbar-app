@@ -32,7 +32,10 @@ export async function sendPinAction(phone: string): Promise<SendPinResult> {
 
     await connectDB();
 
-    let user = await UserModel.findOne({ phone: sanitizedPhone });
+    let user = await UserModel.findOne({
+      phone: sanitizedPhone,
+      accountStatus: { $ne: 'deleted' },
+    });
     const isNewUser = !user;
 
     if (!user) {
@@ -52,19 +55,24 @@ export async function sendPinAction(phone: string): Promise<SendPinResult> {
     await user.save();
 
     // Send PIN via SMS
-    const smsResult = await SMSService.sendVerificationPinSMS(sanitizedPhone, pin);
+    const smsResult = await SMSService.sendVerificationPinSMS(
+      sanitizedPhone,
+      pin
+    );
 
     if (!smsResult.success) {
       console.error('Failed to send SMS PIN to', sanitizedPhone, smsResult);
-      
+
       // Provide specific error messages based on error code
       let userMessage = 'Failed to send verification PIN via SMS.';
       let canRetryWithEmail = true;
-      
+
       if (smsResult.errorCode === 'DND_REJECTION') {
-        userMessage = 'Unable to send SMS to this number. This number may be on a Do Not Disturb list.';
+        userMessage =
+          'Unable to send SMS to this number. This number may be on a Do Not Disturb list.';
       } else if (smsResult.errorCode === 'INVALID_PHONE') {
-        userMessage = 'The phone number format is invalid. Please check and try again.';
+        userMessage =
+          'The phone number format is invalid. Please check and try again.';
         canRetryWithEmail = false; // Invalid phone shouldn't allow email retry
       } else if (smsResult.errorCode === 'SERVICE_DISABLED') {
         userMessage = 'SMS service is currently unavailable.';
@@ -73,7 +81,7 @@ export async function sendPinAction(phone: string): Promise<SendPinResult> {
       } else if (smsResult.message) {
         userMessage = smsResult.message;
       }
-      
+
       return {
         success: false,
         message: userMessage,

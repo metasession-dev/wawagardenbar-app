@@ -1,7 +1,11 @@
 import bcrypt from 'bcrypt';
 import { UserModel } from '../models';
 import { AuditLogService } from './audit-log-service';
-import { IAdminPermissions, DEFAULT_ADMIN_PERMISSIONS, CSR_DEFAULT_PERMISSIONS } from '../interfaces';
+import {
+  IAdminPermissions,
+  DEFAULT_ADMIN_PERMISSIONS,
+  CSR_DEFAULT_PERMISSIONS,
+} from '../interfaces';
 
 export class AdminService {
   private static readonly BCRYPT_ROUNDS = 12;
@@ -395,9 +399,12 @@ export class AdminService {
       }
     }
 
-    // Soft delete
+    // Soft delete: set status and null unique fields to free them for reuse
     admin.accountStatus = 'deleted';
     admin.sessionToken = undefined;
+    admin.email = null;
+    admin.phone = null;
+    admin.username = null;
     await admin.save();
 
     // Create audit log

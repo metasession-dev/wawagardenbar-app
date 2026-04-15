@@ -40,9 +40,10 @@ export async function verifyWhatsAppPinAction(
 
     await connectDB();
 
-    const user = await UserModel.findOne({ phone: sanitizedPhone }).select(
-      '+verificationPin +pinExpiresAt'
-    );
+    const user = await UserModel.findOne({
+      phone: sanitizedPhone,
+      accountStatus: { $ne: 'deleted' },
+    }).select('+verificationPin +pinExpiresAt');
 
     if (!user) {
       return {

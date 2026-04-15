@@ -34,7 +34,10 @@ export async function sendWhatsAppPinAction(
 
     await connectDB();
 
-    let user = await UserModel.findOne({ phone: sanitizedPhone });
+    let user = await UserModel.findOne({
+      phone: sanitizedPhone,
+      accountStatus: { $ne: 'deleted' },
+    });
     const isNewUser = !user;
 
     if (!user) {
@@ -59,7 +62,11 @@ export async function sendWhatsAppPinAction(
     );
 
     if (!whatsappResult.success) {
-      console.error('Failed to send WhatsApp PIN to', sanitizedPhone, whatsappResult);
+      console.error(
+        'Failed to send WhatsApp PIN to',
+        sanitizedPhone,
+        whatsappResult
+      );
 
       // Provide specific error messages based on error code
       let userMessage = 'Failed to send verification PIN via WhatsApp.';
@@ -69,17 +76,20 @@ export async function sendWhatsAppPinAction(
       if (whatsappResult.errorCode === 'NOT_ON_WHATSAPP') {
         userMessage = 'This phone number is not registered on WhatsApp.';
       } else if (whatsappResult.errorCode === 'INVALID_PHONE') {
-        userMessage = 'The phone number format is invalid. Please check and try again.';
+        userMessage =
+          'The phone number format is invalid. Please check and try again.';
         canRetryWithSMS = false;
         canRetryWithEmail = false;
       } else if (whatsappResult.errorCode === 'SERVICE_DISABLED') {
         userMessage = 'WhatsApp service is currently unavailable.';
       } else if (whatsappResult.errorCode === 'QUOTA_EXCEEDED') {
-        userMessage = 'WhatsApp service limit reached. Please try SMS or Email.';
+        userMessage =
+          'WhatsApp service limit reached. Please try SMS or Email.';
       } else if (whatsappResult.errorCode === 'TEMPLATE_NOT_FOUND') {
         userMessage = 'WhatsApp messaging is temporarily unavailable.';
       } else if (whatsappResult.errorCode === 'MISSING_CREDENTIALS') {
-        userMessage = 'WhatsApp service is not configured. Please use SMS or Email.';
+        userMessage =
+          'WhatsApp service is not configured. Please use SMS or Email.';
       } else if (whatsappResult.message) {
         userMessage = whatsappResult.message;
       }

@@ -1,5 +1,11 @@
 import mongoose, { Schema, Model } from 'mongoose';
-import { IUser, IAddress, IPaymentMethod, IPreferences, ISocialProfiles } from '../interfaces';
+import {
+  IUser,
+  IAddress,
+  IPaymentMethod,
+  IPreferences,
+  ISocialProfiles,
+} from '../interfaces';
 
 const addressSchema = new Schema<IAddress>(
   {
@@ -80,15 +86,15 @@ const userSchema = new Schema<IUser>(
       trim: true,
     },
     emailVerified: { type: Boolean, default: false },
-    phone: { 
-      type: String, 
-      required: true, 
-      unique: true, 
-      trim: true 
+    phone: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
     },
     phoneVerified: { type: Boolean, default: false },
     profilePicture: { type: String, trim: true },
-    
+
     // Social Profiles
     socialProfiles: { type: socialProfilesSchema, default: {} },
 
@@ -101,12 +107,12 @@ const userSchema = new Schema<IUser>(
     verificationPin: { type: String, select: false },
     pinExpiresAt: { type: Date, select: false },
     sessionToken: { type: String, select: false },
-    
+
     // Admin Authentication
     username: {
       type: String,
       unique: true,
-      sparse: true,  // Allows null for non-admin users
+      sparse: true, // Allows null for non-admin users
       lowercase: true,
       trim: true,
       minlength: 3,
@@ -114,7 +120,7 @@ const userSchema = new Schema<IUser>(
     },
     password: {
       type: String,
-      select: false,  // Never return in queries by default
+      select: false, // Never return in queries by default
       minlength: 8,
     },
     isAdmin: {
@@ -140,14 +146,14 @@ const userSchema = new Schema<IUser>(
       type: Schema.Types.Mixed,
       default: null,
     },
-    
+
     // Addresses & Payment
     addresses: { type: [addressSchema], default: [] },
     paymentMethods: { type: [paymentMethodSchema], default: [] },
-    
+
     // Preferences
     preferences: { type: preferencesSchema, default: () => ({}) },
-    
+
     // Account Metadata
     accountStatus: {
       type: String,
@@ -161,12 +167,12 @@ const userSchema = new Schema<IUser>(
     totalPointsEarned: { type: Number, default: 0, min: 0 },
     totalPointsSpent: { type: Number, default: 0, min: 0 },
     profileCompletionPercentage: { type: Number, default: 0, min: 0, max: 100 },
-    
+
     // Guest Conversion
     isGuest: { type: Boolean, default: false },
     guestOrderIds: [{ type: Schema.Types.ObjectId, ref: 'Order' }],
     claimedAt: { type: Date },
-    
+
     // Timestamps
     lastLoginAt: { type: Date },
   },
@@ -204,10 +210,13 @@ userSchema.methods.getFullName = function getFullName(): string {
   return this.name || this.email.split('@')[0];
 };
 
-userSchema.methods.getDefaultAddress = function getDefaultAddress(): IAddress | null {
-  const defaultAddr = this.addresses.find((addr: IAddress) => addr.isDefault);
-  return defaultAddr || (this.addresses.length > 0 ? this.addresses[0] : null);
-};
+userSchema.methods.getDefaultAddress =
+  function getDefaultAddress(): IAddress | null {
+    const defaultAddr = this.addresses.find((addr: IAddress) => addr.isDefault);
+    return (
+      defaultAddr || (this.addresses.length > 0 ? this.addresses[0] : null)
+    );
+  };
 
 // Pre-save hook to update computed name field
 userSchema.pre('save', function preSave(next) {
@@ -215,7 +224,7 @@ userSchema.pre('save', function preSave(next) {
   if (this.firstName && this.lastName) {
     this.name = `${this.firstName} ${this.lastName}`;
   }
-  
+
   next();
 });
 

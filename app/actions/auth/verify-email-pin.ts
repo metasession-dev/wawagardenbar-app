@@ -33,7 +33,10 @@ export async function verifyEmailPinAction(
 
     await connectDB();
 
-    const user = await UserModel.findOne({ email: email.toLowerCase() }).select('+verificationPin +pinExpiresAt');
+    const user = await UserModel.findOne({
+      email: email.toLowerCase(),
+      accountStatus: { $ne: 'deleted' },
+    }).select('+verificationPin +pinExpiresAt');
 
     if (!user) {
       console.error('User not found for email:', email);
@@ -48,7 +51,7 @@ export async function verifyEmailPinAction(
       email: user.email,
       phone: user.phone,
       hasPIN: !!user.verificationPin,
-      pinExpiry: user.pinExpiresAt
+      pinExpiry: user.pinExpiresAt,
     });
 
     if (!user.verificationPin || !user.pinExpiresAt) {
@@ -81,7 +84,10 @@ export async function verifyEmailPinAction(
 
     // Create session
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     session.userId = user._id.toString();
     session.email = user.email;

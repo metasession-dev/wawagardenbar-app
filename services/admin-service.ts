@@ -399,12 +399,12 @@ export class AdminService {
       }
     }
 
-    // Soft delete: set status and null unique fields to free them for reuse
+    // Soft delete: set status and unset unique fields to free them for reuse
     admin.accountStatus = 'deleted';
     admin.sessionToken = undefined;
-    admin.email = null;
-    admin.phone = null;
-    admin.username = null;
+    admin.set('email', null);
+    admin.set('phone', null);
+    admin.set('username', null);
     await admin.save();
 
     // Create audit log

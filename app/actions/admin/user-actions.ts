@@ -147,12 +147,12 @@ export async function deleteUserAction(userId: string): Promise<ActionResult> {
     const userEmail = user.email;
     const userRole = user.role;
 
-    // Soft delete: set status and null unique fields to free them for reuse
+    // Soft delete: set status and unset unique fields to free them for reuse
     user.accountStatus = 'deleted';
     user.sessionToken = undefined;
-    user.email = null;
-    user.phone = null;
-    user.username = null;
+    user.set('email', null);
+    user.set('phone', null);
+    user.set('username', null);
     await user.save();
 
     // Create audit log

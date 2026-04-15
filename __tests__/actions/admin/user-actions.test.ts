@@ -45,6 +45,9 @@ function createMockUser(overrides: Record<string, unknown> = {}) {
     sessionToken: 'some-token',
     save: vi.fn().mockResolvedValue(undefined),
     deleteOne: vi.fn().mockResolvedValue(undefined),
+    set: vi.fn((key: string, value: unknown) => {
+      user[key] = value;
+    }),
     ...overrides,
   };
   return user;

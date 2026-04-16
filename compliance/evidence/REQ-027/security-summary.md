@@ -78,3 +78,12 @@ No new dependencies added. Baseline `xlsx` vulnerability is pre-existing and acc
 | Dependency Audit | PASS   |
 | E2E Tests        | PASS   |
 | Build Check      | PASS   |
+
+---
+
+## UAT Verification — 2026-04-16
+
+- UAT Health check: PASS — homepage returns 200
+- UAT Smoke test: PASS — API endpoints active (401 on auth-protected routes)
+- Feature verification: PENDING — delete + recreate flow requires authenticated super-admin session (manual verification)
+- UAT URL: https://wawagardenbar-app-uat.up.railway.app

@@ -16,7 +16,10 @@ interface SendEmailPinResult {
   isNewUser?: boolean;
 }
 
-export async function sendEmailPinAction(email: string, phone?: string): Promise<SendEmailPinResult> {
+export async function sendEmailPinAction(
+  email: string,
+  phone?: string
+): Promise<SendEmailPinResult> {
   try {
     if (!email || !validateEmail(email)) {
       return {
@@ -29,14 +32,21 @@ export async function sendEmailPinAction(email: string, phone?: string): Promise
 
     // Find user by phone if provided, otherwise by email
     let targetUser;
-    
+
     if (phone) {
       const sanitizedPhone = sanitizePhone(phone);
       const emailLower = email.toLowerCase();
-      
+
       // Find potential users
-      const userByPhone = await UserModel.findOne({ phone: sanitizedPhone });
-      const userByEmail = await UserModel.findOne({ email: emailLower });
+      const notDeleted = { accountStatus: { $ne: 'deleted' } };
+      const userByPhone = await UserModel.findOne({
+        phone: sanitizedPhone,
+        ...notDeleted,
+      });
+      const userByEmail = await UserModel.findOne({
+        email: emailLower,
+        ...notDeleted,
+      });
 
       if (userByEmail) {
         // Case 1: Email already exists. We prioritize the existing email account.
@@ -45,8 +55,13 @@ export async function sendEmailPinAction(email: string, phone?: string): Promise
 
         // We do NOT update the phone number here to avoid conflicts or overwriting valid data.
         // The user will be logged in with the phone number associated with this email account.
-        if (userByPhone && userByPhone._id.toString() !== userByEmail._id.toString()) {
-           console.log('Note: Phone number provided belongs to a different temporary user. Ignoring phone update on existing email user.');
+        if (
+          userByPhone &&
+          userByPhone._id.toString() !== userByEmail._id.toString()
+        ) {
+          console.log(
+            'Note: Phone number provided belongs to a different temporary user. Ignoring phone update on existing email user.'
+          );
         }
       } else {
         // Case 2: Email is new. Use the phone user.
@@ -66,12 +81,16 @@ export async function sendEmailPinAction(email: string, phone?: string): Promise
       }
     } else {
       // Email only login (legacy/admin?)
-      targetUser = await UserModel.findOne({ email: email.toLowerCase() });
+      targetUser = await UserModel.findOne({
+        email: email.toLowerCase(),
+        accountStatus: { $ne: 'deleted' },
+      });
 
       if (!targetUser) {
         return {
           success: false,
-          message: 'Email authentication requires a phone number. Please use SMS authentication.',
+          message:
+            'Email authentication requires a phone number. Please use SMS authentication.',
         };
       }
     }
@@ -81,15 +100,15 @@ export async function sendEmailPinAction(email: string, phone?: string): Promise
 
     targetUser.verificationPin = pin;
     targetUser.pinExpiresAt = pinExpiresAt;
-    
+
     // Save user with email and PIN
     await targetUser.save();
-    
-    console.log('Email PIN saved for user:', { 
-      userId: targetUser._id, 
-      email: targetUser.email, 
+
+    console.log('Email PIN saved for user:', {
+      userId: targetUser._id,
+      email: targetUser.email,
       phone: targetUser.phone,
-      pinSet: !!targetUser.verificationPin 
+      pinSet: !!targetUser.verificationPin,
     });
 
     // Send PIN via Email
@@ -99,7 +118,8 @@ export async function sendEmailPinAction(email: string, phone?: string): Promise
       console.error('Failed to send email PIN:', emailError);
       return {
         success: false,
-        message: 'Failed to send verification email. Please check your email address or try SMS instead.',
+        message:
+          'Failed to send verification email. Please check your email address or try SMS instead.',
       };
     }
 

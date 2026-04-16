@@ -20,7 +20,7 @@ import { UserManagementActions } from '@/components/features/admin/user-manageme
 async function getUsers() {
   await connectDB();
 
-  const users = await UserModel.find()
+  const users = await UserModel.find({ accountStatus: { $ne: 'deleted' } })
     .select('-verificationPin -pinExpiresAt -sessionToken')
     .sort({ createdAt: -1 })
     .limit(100)
@@ -56,7 +56,10 @@ async function UsersTable() {
           <TableBody>
             {users.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                <TableCell
+                  colSpan={7}
+                  className="text-center text-muted-foreground"
+                >
                   No users found
                 </TableCell>
               </TableRow>
@@ -71,8 +74,8 @@ async function UsersTable() {
                         user.role === 'super-admin'
                           ? 'default'
                           : user.role === 'admin'
-                          ? 'secondary'
-                          : 'outline'
+                            ? 'secondary'
+                            : 'outline'
                       }
                     >
                       {user.role}
@@ -81,12 +84,17 @@ async function UsersTable() {
                   <TableCell>{user.totalOrders}</TableCell>
                   <TableCell>₦{user.totalSpent.toLocaleString()}</TableCell>
                   <TableCell>
-                    <Badge variant={user.emailVerified ? 'default' : 'secondary'}>
+                    <Badge
+                      variant={user.emailVerified ? 'default' : 'secondary'}
+                    >
                       {user.emailVerified ? 'Verified' : 'Unverified'}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <UserManagementActions userId={user._id.toString()} userRole={user.role} />
+                    <UserManagementActions
+                      userId={user._id.toString()}
+                      userRole={user.role}
+                    />
                   </TableCell>
                 </TableRow>
               ))

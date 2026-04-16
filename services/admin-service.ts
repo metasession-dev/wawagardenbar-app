@@ -1,7 +1,11 @@
 import bcrypt from 'bcrypt';
 import { UserModel } from '../models';
 import { AuditLogService } from './audit-log-service';
-import { IAdminPermissions, DEFAULT_ADMIN_PERMISSIONS, CSR_DEFAULT_PERMISSIONS } from '../interfaces';
+import {
+  IAdminPermissions,
+  DEFAULT_ADMIN_PERMISSIONS,
+  CSR_DEFAULT_PERMISSIONS,
+} from '../interfaces';
 
 export class AdminService {
   private static readonly BCRYPT_ROUNDS = 12;
@@ -108,9 +112,10 @@ export class AdminService {
     createdBy: string;
     permissions?: IAdminPermissions;
   }) {
-    // Validate username uniqueness
+    // Validate username uniqueness (exclude soft-deleted users)
     const existingUser = await UserModel.findOne({
       username: data.username.toLowerCase(),
+      accountStatus: { $ne: 'deleted' },
     });
 
     if (existingUser) {
@@ -395,9 +400,14 @@ export class AdminService {
       }
     }
 
-    // Soft delete
+    // Soft delete: set status and mangle unique fields to free them for reuse
+    // Replace values with a unique identifier to avoid duplicate key errors
+    const uid = admin._id.toString();
     admin.accountStatus = 'deleted';
     admin.sessionToken = undefined;
+    if (admin.email) admin.email = `del_${uid}@deleted`;
+    if (admin.phone) admin.phone = `del_${uid}`;
+    if (admin.username) admin.username = `del_${uid}`;
     await admin.save();
 
     // Create audit log

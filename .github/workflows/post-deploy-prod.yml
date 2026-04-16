@@ -17,7 +17,7 @@ jobs:
     name: Production Evidence
     runs-on: self-hosted
     env:
-      SUPABASE_URL: ${{ secrets.META_COMPLY_SUPABASE_URL }}
+      SUPABASE_URL: ${{ vars.META_COMPLY_SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.META_COMPLY_SERVICE_ROLE_KEY }}
       PROD_URL: ${{ secrets.WAWAGARDENBAR_PROD_URL }}
       PROJECT_SLUG: wawagardenbar-app

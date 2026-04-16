@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # Husky pre-commit hook — runs lint-staged on staged files.
 # Catches linting issues before they enter the commit history.
 #
@@ -10,4 +10,4 @@
 #     "*.{ts,tsx,js,jsx,json,md}": ["prettier --write"]
 #   }
 
-npx --no -- lint-staged
+npx lint-staged

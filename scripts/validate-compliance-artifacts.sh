@@ -59,7 +59,7 @@ for REQ in $REQUIREMENTS; do
 
     # Verify test files referenced in test-plan.md exist in the tree
     TEST_FILES=$(grep -oP '(?:__tests__/|tests?/|e2e/|spec/|\.test\.|\.spec\.)\S+' "compliance/evidence/$REQ/test-plan.md" 2>/dev/null \
-      | sed 's/[`),.;:]*$//' | sort -u || true)
+      | sed 's/[`),.;:]*$//' | grep -v '/$' | sort -u || true)
     if [ -n "$TEST_FILES" ]; then
       MISSING_TESTS=0
       for TF in $TEST_FILES; do

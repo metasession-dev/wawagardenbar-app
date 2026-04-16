@@ -123,6 +123,13 @@ export default defineConfig({
       testMatch: /dashboard-revenue\.spec\.ts/,
       dependencies: ['auth-setup'],
     },
+    // User deletion and re-creation (REQ-027)
+    {
+      name: 'user-deletion-recreation',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /user-deletion-recreation\.spec\.ts/,
+      dependencies: ['auth-setup'],
+    },
   ],
   /* Start dev server before tests (skipped when BASE_URL is set) */
   webServer: process.env.BASE_URL

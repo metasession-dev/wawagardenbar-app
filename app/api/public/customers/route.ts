@@ -1,7 +1,14 @@
 import { NextRequest } from 'next/server';
 import UserModel from '@/models/user-model';
 import { UserService } from '@/services/user-service';
-import { withApiAuth, apiSuccess, apiError, parsePagination, parseJsonBody, serialize } from '@/lib/api-response';
+import {
+  withApiAuth,
+  apiSuccess,
+  apiError,
+  parsePagination,
+  parseJsonBody,
+  serialize,
+} from '@/lib/api-response';
 
 /**
  * GET /api/public/customers
@@ -99,13 +106,19 @@ export async function POST(request: NextRequest): Promise<Response> {
       const body = await parseJsonBody<Record<string, unknown>>(request);
       if (!body) return apiError('Invalid JSON body', 400);
 
-      const { email, firstName, lastName, phone, preferences } = body as Record<string, any>;
+      const { email, firstName, lastName, phone, preferences } = body as Record<
+        string,
+        any
+      >;
       if (!email || typeof email !== 'string' || !email.includes('@')) {
         return apiError('A valid email is required', 400);
       }
 
-      // Check for existing user
-      const existing = await UserModel.findOne({ email: email.toLowerCase().trim() })
+      // Check for existing active user (exclude soft-deleted)
+      const existing = await UserModel.findOne({
+        email: email.toLowerCase().trim(),
+        accountStatus: { $ne: 'deleted' },
+      })
         .select('-pinHash -pinExpiry -loginToken -loginTokenExpiry -__v')
         .lean();
       if (existing) {
@@ -149,7 +162,11 @@ export async function GET(request: NextRequest): Promise<Response> {
       // Quick search path
       if (query && query.trim().length >= 3) {
         const results = await UserService.searchUsers(query);
-        return apiSuccess(serialize(results), 200, { page: 1, limit: results.length, total: results.length });
+        return apiSuccess(serialize(results), 200, {
+          page: 1,
+          limit: results.length,
+          total: results.length,
+        });
       }
 
       const filter: Record<string, unknown> = {
@@ -160,9 +177,13 @@ export async function GET(request: NextRequest): Promise<Response> {
         filter.role = role;
       }
 
-      const sortField = sortParam.startsWith('-') ? sortParam.slice(1) : sortParam;
+      const sortField = sortParam.startsWith('-')
+        ? sortParam.slice(1)
+        : sortParam;
       const sortDir = sortParam.startsWith('-') ? -1 : 1;
-      const sortObj: Record<string, 1 | -1> = { [sortField]: sortDir as 1 | -1 };
+      const sortObj: Record<string, 1 | -1> = {
+        [sortField]: sortDir as 1 | -1,
+      };
 
       const [customers, total] = await Promise.all([
         UserModel.find(filter)

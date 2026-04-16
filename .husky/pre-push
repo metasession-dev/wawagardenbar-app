@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # Husky pre-push hook — runs TypeScript check as a fast gate before push.
 # The full test suite (E2E, SAST, dependency audit) runs in CI.
 #

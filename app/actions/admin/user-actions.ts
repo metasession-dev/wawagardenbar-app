@@ -26,20 +26,33 @@ export async function changeUserRoleAction(
 ): Promise<ActionResult> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     // Check if user is admin
-    if (!session.userId || !session.role || !['admin', 'super-admin'].includes(session.role)) {
+    if (
+      !session.userId ||
+      !session.role ||
+      !['admin', 'super-admin'].includes(session.role)
+    ) {
       return { success: false, error: 'Unauthorized' };
     }
 
     // Only super-admin can create other admins
     if (newRole === 'super-admin' && session.role !== 'super-admin') {
-      return { success: false, error: 'Only super-admin can assign super-admin role' };
+      return {
+        success: false,
+        error: 'Only super-admin can assign super-admin role',
+      };
     }
 
     if (newRole === 'admin' && session.role !== 'super-admin') {
-      return { success: false, error: 'Only super-admin can assign admin role' };
+      return {
+        success: false,
+        error: 'Only super-admin can assign admin role',
+      };
     }
 
     await connectDB();
@@ -99,7 +112,10 @@ export async function changeUserRoleAction(
 export async function deleteUserAction(userId: string): Promise<ActionResult> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     // Only super-admin can delete users
     if (!session.userId || session.role !== 'super-admin') {
@@ -129,7 +145,17 @@ export async function deleteUserAction(userId: string): Promise<ActionResult> {
     }
 
     const userEmail = user.email;
-    await user.deleteOne();
+    const userRole = user.role;
+
+    // Soft delete: set status and mangle unique fields to free them for reuse
+    // Replace values with a unique identifier to avoid duplicate key errors
+    const uid = user._id.toString();
+    user.accountStatus = 'deleted';
+    user.sessionToken = undefined;
+    if (user.email) user.email = `del_${uid}@deleted`;
+    if (user.phone) user.phone = `del_${uid}`;
+    if (user.username) user.username = `del_${uid}`;
+    await user.save();
 
     // Create audit log
     await AuditLogService.createLog({
@@ -141,7 +167,7 @@ export async function deleteUserAction(userId: string): Promise<ActionResult> {
       resourceId: userId,
       details: {
         deletedUserEmail: userEmail,
-        deletedUserRole: user.role,
+        deletedUserRole: userRole,
       },
     });
 
@@ -168,9 +194,16 @@ export async function getUserDetailsAction(
 ): Promise<ActionResult<unknown>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
-    if (!session.userId || !session.role || !['admin', 'super-admin'].includes(session.role)) {
+    if (
+      !session.userId ||
+      !session.role ||
+      !['admin', 'super-admin'].includes(session.role)
+    ) {
       return { success: false, error: 'Unauthorized' };
     }
 

@@ -225,6 +225,16 @@ for FILE in "${FILES[@]}"; do
       echo "OK (${FILE_SIZE} bytes)"
       SUCCEEDED=$((SUCCEEDED + 1))
       TOTAL_SIZE=$((TOTAL_SIZE + FILE_SIZE))
+      # Upsert release-requirement matrix entry (scopes requirements to this release)
+      if [ -n "$RELEASE_ID" ] && [ "$REQUIREMENT_ID" != "_compliance-docs" ]; then
+        curl -s -o /dev/null \
+          -X POST "${SUPABASE_URL}/rest/v1/compliance_release_requirements" \
+          -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+          -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+          -H "Content-Type: application/json" \
+          -H "Prefer: resolution=merge-duplicates,return=minimal" \
+          -d "{\"release_id\": \"${RELEASE_ID}\", \"requirement_id\": \"${REQUIREMENT_ID}\", \"status\": \"covered\"}"
+      fi
     else
       echo "FAILED (metadata: HTTP ${ROW_CODE})"
       FAILED=$((FAILED + 1))

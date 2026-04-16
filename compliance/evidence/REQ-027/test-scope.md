@@ -19,9 +19,9 @@ Standard gates plus targeted verification.
 
 **Additional testing required by risk level:**
 
-- [ ] Audit logging: deletion action still produces audit log entries
-- [ ] Unique constraint: deleted user's credentials are freed for reuse
-- [ ] Auth flow: soft-deleted users cannot log in
+- [x] Audit logging: deletion action still produces audit log entries
+- [x] Unique constraint: deleted user's credentials are freed for reuse
+- [x] Auth flow: soft-deleted users cannot log in
 
 ## Validation Approach
 
@@ -34,10 +34,10 @@ How we confirm this meets the business requirement:
 
 ## Acceptance Criteria
 
-- [ ] Admin deletion soft-deletes users (sets accountStatus to 'deleted') instead of hard-deleting
-- [ ] Unique fields (email, phone, username) are nulled on deletion to free them for reuse
-- [ ] Customer creation (POST /api/public/customers) excludes deleted users from duplicate checks
-- [ ] Auth flows (send-pin, send-whatsapp-pin, send-email-pin) exclude deleted users from lookups
-- [ ] Admin service deleteAdmin also nulls unique fields for consistency
-- [ ] phone field in user model updated to sparse: true (allows null for deleted records)
-- [ ] All existing E2E tests continue to pass (no regressions)
+- [x] Admin deletion soft-deletes users (sets accountStatus to 'deleted') instead of hard-deleting
+- [x] Unique fields (email, phone, username) are nulled on deletion to free them for reuse
+- [x] Customer creation (POST /api/public/customers) excludes deleted users from duplicate checks
+- [x] Auth flows (send-pin, send-whatsapp-pin, send-email-pin) exclude deleted users from lookups
+- [x] Admin service deleteAdmin also nulls unique fields for consistency
+- [x] phone field in user model updated to sparse: true (allows null for deleted records)
+- [x] All existing E2E tests continue to pass (no regressions)

@@ -322,7 +322,9 @@ The source of truth for these documents remains in git. Developers continue to e
 
 ### CI Pipeline Changes
 
-Add the META-COMPLY evidence upload step to your CI workflow, after tests pass. The upload script is available in the META-COMPLY repository at `scripts/upload-evidence.sh`. Download it to your project or reference it directly.
+The sync script generates CI workflows from templates. The main CI pipeline (`ci.yml`) registers the release in META-COMPLY in parallel with quality gates, then uploads evidence after gates pass (including Playwright HTML reports and Jest coverage). A separate `compliance-evidence.yml` handles compliance-only pushes (e.g. RTM updates, release tickets) without running the full quality gate suite.
+
+For manual integration, add the META-COMPLY evidence upload step to your CI workflow, after tests pass. The upload script is available at `scripts/upload-evidence.sh`.
 
 ```yaml
 # Add to .github/workflows/ci.yml, after the E2E test job

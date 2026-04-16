@@ -191,11 +191,11 @@ jobs:
   register-release:
     name: Register Release
     runs-on: self-hosted
-    if: ${{ vars.META_COMPLY_SUPABASE_URL != '' || secrets.META_COMPLY_SUPABASE_URL != '' }}
+    if: ${{ vars.META_COMPLY_SUPABASE_URL != '' }}
     outputs:
       version: ${{ steps.version.outputs.version }}
     env:
-      SUPABASE_URL: ${{ secrets.META_COMPLY_SUPABASE_URL }}
+      SUPABASE_URL: ${{ vars.META_COMPLY_SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.META_COMPLY_SERVICE_ROLE_KEY }}
     steps:
       - uses: actions/checkout@v4
@@ -279,7 +279,7 @@ jobs:
     needs: [quality-gates, register-release]
     if: ${{ !failure() && !cancelled() }}
     env:
-      SUPABASE_URL: ${{ secrets.META_COMPLY_SUPABASE_URL }}
+      SUPABASE_URL: ${{ vars.META_COMPLY_SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.META_COMPLY_SERVICE_ROLE_KEY }}
     steps:
       - uses: actions/checkout@v4

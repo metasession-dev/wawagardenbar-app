@@ -656,6 +656,7 @@ This section tracks discrete change requests (REQ-001 through REQ-008) that repr
 | REQ-026 | #57   | HIGH   | compliance/evidence/REQ-026/ | APPROVED - DEPLOYED | ostendo-io      | 2026-04-12 |
 | REQ-027 | #59   | MEDIUM | compliance/evidence/REQ-027/ | APPROVED - DEPLOYED | ostendo-io      | 2026-04-16 |
 | REQ-028 | #62   | MEDIUM | compliance/evidence/REQ-028/ | APPROVED - DEPLOYED | ostendo-io      | 2026-04-18 |
+| REQ-029 | #64   | HIGH   | compliance/evidence/REQ-029/ | DRAFT               | --              | --         |
 
 ### Change Request Dependencies
 

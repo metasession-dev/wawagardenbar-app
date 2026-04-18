@@ -8,6 +8,11 @@ import {
   ExpenseFilters,
   ExpenseSummary,
 } from '@/interfaces/expense.interface';
+import {
+  SEARCHABLE_STRING_FIELDS,
+  escapeRegex,
+  parseNumericTerm,
+} from '@/lib/expense-search';
 import { AuditLogService } from './audit-log-service';
 
 /**
@@ -77,7 +82,13 @@ export class ExpenseService {
   }
 
   /**
-   * Get expenses by date range with optional filters
+   * Get expenses by date range with optional filters.
+   *
+   * @requirement REQ-029 — searchTerm matches across description, notes,
+   * supplier, receiptReference, referenceNumber (case-insensitive literal
+   * substring) and exact amount when the term is a finite number. Replaces the
+   * previous `$text` path so that references containing pipes (e.g. TRF
+   * transfer references) are searchable.
    */
   static async getExpensesByDateRange(
     startDate: Date,
@@ -100,8 +111,17 @@ export class ExpenseService {
       query.category = filters.category;
     }
 
-    if (filters?.searchTerm) {
-      query.$text = { $search: filters.searchTerm };
+    const trimmedTerm = filters?.searchTerm?.trim() ?? '';
+    if (trimmedTerm !== '') {
+      const pattern = new RegExp(escapeRegex(trimmedTerm), 'i');
+      const or: Array<Record<string, unknown>> = SEARCHABLE_STRING_FIELDS.map(
+        (field) => ({ [field]: pattern })
+      );
+      const numeric = parseNumericTerm(trimmedTerm);
+      if (numeric !== null) {
+        or.push({ amount: numeric });
+      }
+      query.$or = or;
     }
 
     const expenses = await ExpenseModel.find(query)

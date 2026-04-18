@@ -2,13 +2,7 @@
 
 import { useState } from 'react';
 import { format } from 'date-fns';
-import {
-  MoreHorizontal,
-  Pencil,
-  Trash2,
-  Search,
-  X,
-} from 'lucide-react';
+import { MoreHorizontal, Pencil, Trash2, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -48,7 +42,13 @@ import {
 import { toast } from '@/hooks/use-toast';
 import { deleteExpenseAction } from '@/app/actions/finance/expense-actions';
 import { ExpenseType } from '@/interfaces/expense.interface';
+import { matchesExpenseSearch } from '@/lib/expense-search';
 
+/**
+ * @requirement REQ-029 — Extended search fields (notes, referenceNumber) are
+ * required on this shape so the shared matchesExpenseSearch predicate can
+ * consult them.
+ */
 interface Expense {
   _id: string;
   date: Date;
@@ -60,6 +60,8 @@ interface Expense {
   amount: number;
   supplier?: string;
   receiptReference?: string;
+  referenceNumber?: string;
+  notes?: string;
   createdBy: {
     firstName: string;
     lastName: string;
@@ -74,7 +76,12 @@ interface ExpenseListProps {
   userRole?: string;
 }
 
-export function ExpenseList({ expenses, onEdit, onRefresh, userRole }: ExpenseListProps) {
+export function ExpenseList({
+  expenses,
+  onEdit,
+  onRefresh,
+  userRole,
+}: ExpenseListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -86,12 +93,16 @@ export function ExpenseList({ expenses, onEdit, onRefresh, userRole }: ExpenseLi
     new Set(expenses.map((expense) => expense.category))
   ).sort();
 
-  // Filter expenses
+  // Filter expenses — REQ-029: shared predicate covers description, notes,
+  // supplier, receiptReference, referenceNumber, and exact-amount match.
+  // `category` is intentionally not in the shared predicate (it has its own
+  // dropdown filter below); keep the legacy category-substring fallback so
+  // typing a category name in the search still narrows the list as before.
   const filteredExpenses = expenses.filter((expense) => {
+    const termLower = searchTerm.toLowerCase();
     const matchesSearch =
-      expense.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      expense.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      expense.supplier?.toLowerCase().includes(searchTerm.toLowerCase());
+      matchesExpenseSearch(expense, searchTerm) ||
+      (termLower !== '' && expense.category.toLowerCase().includes(termLower));
 
     const matchesType =
       typeFilter === 'all' || expense.expenseType === typeFilter;
@@ -151,7 +162,7 @@ export function ExpenseList({ expenses, onEdit, onRefresh, userRole }: ExpenseLi
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search expenses..."
+              placeholder="Search description, supplier, reference, amount..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-8"
@@ -165,7 +176,9 @@ export function ExpenseList({ expenses, onEdit, onRefresh, userRole }: ExpenseLi
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
               <SelectItem value="direct-cost">Direct Cost</SelectItem>
-              <SelectItem value="operating-expense">Operating Expense</SelectItem>
+              <SelectItem value="operating-expense">
+                Operating Expense
+              </SelectItem>
             </SelectContent>
           </Select>
 
@@ -264,7 +277,8 @@ export function ExpenseList({ expenses, onEdit, onRefresh, userRole }: ExpenseLi
                       : '-'}
                   </TableCell>
                   <TableCell className="text-right font-medium">
-                    ₦{expense.amount.toLocaleString('en-NG', {
+                    ₦
+                    {expense.amount.toLocaleString('en-NG', {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })}
@@ -277,7 +291,11 @@ export function ExpenseList({ expenses, onEdit, onRefresh, userRole }: ExpenseLi
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                        >
                           <span className="sr-only">Open menu</span>
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
@@ -324,8 +342,8 @@ export function ExpenseList({ expenses, onEdit, onRefresh, userRole }: ExpenseLi
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Expense</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this expense? This action cannot be
-              undone.
+              Are you sure you want to delete this expense? This action cannot
+              be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

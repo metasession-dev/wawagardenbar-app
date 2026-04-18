@@ -653,9 +653,10 @@ This section tracks discrete change requests (REQ-001 through REQ-008) that repr
 | REQ-023 | #48   | LOW    | compliance/evidence/REQ-023/ | APPROVED - DEPLOYED       | metasession-dev | 2026-04-09 |
 | REQ-024 | #42   | HIGH   | compliance/evidence/REQ-024/ | APPROVED - DEPLOYED       | metasession-dev | 2026-04-09 |
 | REQ-025 | #50   | HIGH   | compliance/evidence/REQ-025/ | APPROVED - DEPLOYED       | ostendo-io      | 2026-04-12 |
-| REQ-026 | #57   | HIGH   | compliance/evidence/REQ-026/ | TESTED - PENDING SIGN-OFF | --              | --         |
-| REQ-027 | #59   | MEDIUM | compliance/evidence/REQ-027/ | TESTED - PENDING SIGN-OFF | --              | --         |
-| REQ-028 | #62   | MEDIUM | compliance/evidence/REQ-028/ | TESTED - PENDING SIGN-OFF | --              | --         |
+| REQ-026 | #57   | HIGH   | compliance/evidence/REQ-026/ | APPROVED - DEPLOYED       | ostendo-io      | 2026-04-12 |
+| REQ-027 | #59   | MEDIUM | compliance/evidence/REQ-027/ | APPROVED - DEPLOYED       | ostendo-io      | 2026-04-16 |
+| REQ-028 | #62   | MEDIUM | compliance/evidence/REQ-028/ | APPROVED - DEPLOYED       | ostendo-io      | 2026-04-18 |
+| REQ-029 | #64   | HIGH   | compliance/evidence/REQ-029/ | TESTED - PENDING SIGN-OFF | --              | --         |
 
 ### Change Request Dependencies
 

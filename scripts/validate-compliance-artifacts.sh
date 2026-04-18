@@ -57,8 +57,12 @@ for REQ in $REQUIREMENTS; do
   else
     echo "  OK: test-plan.md exists"
 
-    # Verify test files referenced in test-plan.md exist in the tree
-    TEST_FILES=$(grep -oP '(?:__tests__/|tests?/|e2e/|spec/|\.test\.|\.spec\.)\S+' "compliance/evidence/$REQ/test-plan.md" 2>/dev/null \
+    # Verify test files referenced in test-plan.md exist in the tree.
+    # Two alternatives: directory-prefixed paths (captured whole), and bare
+    # filenames containing .test. / .spec. (captured from the stem, not the
+    # dot — without the leading [\w./-]+ the match would start at `.test.`
+    # and drop the filename entirely). See META-COMPLY #133.
+    TEST_FILES=$(grep -oP '(?:__tests__/|tests?/|e2e/|spec/)\S+|[\w./-]+\.(?:test|spec)\.\S+' "compliance/evidence/$REQ/test-plan.md" 2>/dev/null \
       | sed 's/[`),.;:]*$//' | grep -v '/$' | sort -u || true)
     if [ -n "$TEST_FILES" ]; then
       MISSING_TESTS=0

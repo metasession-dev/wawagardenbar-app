@@ -2,6 +2,7 @@
 
 /**
  * @requirement REQ-026 - Pending expense group workflow
+ * @requirement REQ-028 - Grouped expense category dropdown in Edit Expense
  *
  * Dialog for editing a single live expense record (post-transfer).
  * Available to super-admin only.
@@ -32,7 +33,10 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -50,6 +54,9 @@ import {
   DIRECT_COST_CATEGORIES,
   OPERATING_EXPENSE_CATEGORIES,
 } from '@/interfaces/expense.interface';
+import type { CategoryGroup } from '@/interfaces/expense.interface';
+import { getExpenseCategoriesAction } from '@/app/actions/finance/expense-categories-actions';
+import { buildDropdownSections } from '@/lib/expense-categories-display';
 
 const editExpenseSchema = z.object({
   date: z.date({ required_error: 'Date is required' }),
@@ -92,6 +99,16 @@ export function EditExpenseDialog({
   onSuccess,
 }: EditExpenseDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [directCostCategories, setDirectCostCategories] = useState<string[]>([
+    ...DIRECT_COST_CATEGORIES,
+  ]);
+  const [operatingExpenseCategories, setOperatingExpenseCategories] = useState<
+    string[]
+  >([...OPERATING_EXPENSE_CATEGORIES]);
+  const [directCostGroups, setDirectCostGroups] = useState<CategoryGroup[]>([]);
+  const [operatingExpenseGroups, setOperatingExpenseGroups] = useState<
+    CategoryGroup[]
+  >([]);
 
   const form = useForm<EditExpenseFormValues>({
     resolver: zodResolver(editExpenseSchema),
@@ -123,14 +140,33 @@ export function EditExpenseDialog({
         supplier: expense.supplier ?? '',
         notes: expense.notes ?? '',
       });
+      // Pull live admin config so newly added categories/groups appear here too.
+      getExpenseCategoriesAction()
+        .then((result) => {
+          if (result.success && result.categories) {
+            setDirectCostCategories(result.categories.directCostCategories);
+            setOperatingExpenseCategories(
+              result.categories.operatingExpenseCategories
+            );
+            setDirectCostGroups(result.categories.directCostGroups ?? []);
+            setOperatingExpenseGroups(
+              result.categories.operatingExpenseGroups ?? []
+            );
+          }
+        })
+        .catch(() => {
+          /* use defaults */
+        });
     }
   }, [open, expense]);
 
   const expenseType = form.watch('expenseType');
-  const categories =
+  const sections = buildDropdownSections(
     expenseType === 'direct-cost'
-      ? DIRECT_COST_CATEGORIES
-      : OPERATING_EXPENSE_CATEGORIES;
+      ? directCostCategories
+      : operatingExpenseCategories,
+    expenseType === 'direct-cost' ? directCostGroups : operatingExpenseGroups
+  );
 
   async function onSubmit(data: EditExpenseFormValues) {
     if (!expense) return;
@@ -264,11 +300,35 @@ export function EditExpenseDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {categories.map((cat) => (
-                          <SelectItem key={cat} value={cat}>
-                            {cat}
-                          </SelectItem>
-                        ))}
+                        {sections.map((section, sectionIdx) => {
+                          const key =
+                            section.heading ?? `__ungrouped_${sectionIdx}`;
+                          const showSeparator =
+                            sectionIdx > 0 &&
+                            sections[sectionIdx - 1].items.length > 0 &&
+                            section.items.length > 0;
+                          return (
+                            <div key={key}>
+                              {showSeparator && <SelectSeparator />}
+                              {section.heading !== null ? (
+                                <SelectGroup>
+                                  <SelectLabel>{section.heading}</SelectLabel>
+                                  {section.items.map((cat) => (
+                                    <SelectItem key={cat} value={cat}>
+                                      {cat}
+                                    </SelectItem>
+                                  ))}
+                                </SelectGroup>
+                              ) : (
+                                section.items.map((cat) => (
+                                  <SelectItem key={cat} value={cat}>
+                                    {cat}
+                                  </SelectItem>
+                                ))
+                              )}
+                            </div>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                     <FormMessage />

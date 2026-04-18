@@ -310,12 +310,13 @@ export class SystemSettingsService {
   }
 
   /**
-   * Get expense categories
+   * Get expense categories and their optional display groups.
+   *
+   * @requirement REQ-028
    */
-  static async getExpenseCategories(): Promise<{
-    directCostCategories: string[];
-    operatingExpenseCategories: string[];
-  }> {
+  static async getExpenseCategories(): Promise<
+    import('@/interfaces/expense.interface').ExpenseCategoriesSettings
+  > {
     await connectDB();
 
     const setting = await SystemSettingsModel.findOne({
@@ -326,11 +327,27 @@ export class SystemSettingsService {
       await import('@/interfaces/expense.interface');
 
     const defaults = {
-      directCostCategories: [...DIRECT_COST_CATEGORIES],
-      operatingExpenseCategories: [...OPERATING_EXPENSE_CATEGORIES],
+      directCostCategories: [...DIRECT_COST_CATEGORIES] as string[],
+      operatingExpenseCategories: [...OPERATING_EXPENSE_CATEGORIES] as string[],
+      directCostGroups:
+        [] as import('@/interfaces/expense.interface').CategoryGroup[],
+      operatingExpenseGroups:
+        [] as import('@/interfaces/expense.interface').CategoryGroup[],
     };
 
-    return { ...defaults, ...(setting?.value || {}) };
+    const persisted = (setting?.value ?? {}) as Partial<
+      import('@/interfaces/expense.interface').ExpenseCategoriesSettings
+    >;
+
+    return {
+      directCostCategories:
+        persisted.directCostCategories ?? defaults.directCostCategories,
+      operatingExpenseCategories:
+        persisted.operatingExpenseCategories ??
+        defaults.operatingExpenseCategories,
+      directCostGroups: persisted.directCostGroups ?? [],
+      operatingExpenseGroups: persisted.operatingExpenseGroups ?? [],
+    };
   }
 
   /**
@@ -388,17 +405,14 @@ export class SystemSettingsService {
   }
 
   /**
-   * Update expense categories
+   * Update expense categories and their optional display groups.
+   *
+   * @requirement REQ-028
    */
   static async updateExpenseCategories(
-    categories: {
-      directCostCategories: string[];
-      operatingExpenseCategories: string[];
-    },
+    categories: import('@/interfaces/expense.interface').ExpenseCategoriesSettings,
     adminUserId: string
   ): Promise<boolean> {
-    await connectDB();
-
     // Validate that arrays are not empty
     if (categories.directCostCategories.length === 0) {
       throw new Error('Direct cost categories cannot be empty');
@@ -407,6 +421,29 @@ export class SystemSettingsService {
     if (categories.operatingExpenseCategories.length === 0) {
       throw new Error('Operating expense categories cannot be empty');
     }
+
+    // Validate group configuration per type. Fail fast before touching the DB.
+    const { validateGroups } = await import('@/lib/expense-categories-display');
+    const directResult = validateGroups(
+      categories.directCostCategories,
+      categories.directCostGroups ?? []
+    );
+    if (!directResult.ok) {
+      throw new Error(
+        `Direct cost groups invalid: ${directResult.errors.join(' ')}`
+      );
+    }
+    const operatingResult = validateGroups(
+      categories.operatingExpenseCategories,
+      categories.operatingExpenseGroups ?? []
+    );
+    if (!operatingResult.ok) {
+      throw new Error(
+        `Operating expense groups invalid: ${operatingResult.errors.join(' ')}`
+      );
+    }
+
+    await connectDB();
 
     await SystemSettingsModel.findOneAndUpdate(
       { key: 'expense-categories' },

@@ -130,6 +130,13 @@ export default defineConfig({
       testMatch: /user-deletion-recreation\.spec\.ts/,
       dependencies: ['auth-setup'],
     },
+    // Grouped expense category dropdown (REQ-028)
+    {
+      name: 'expense-category-groups',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /expense-category-groups\.spec\.ts/,
+      dependencies: ['auth-setup'],
+    },
   ],
   /* Start dev server before tests (skipped when BASE_URL is set) */
   webServer: process.env.BASE_URL

@@ -74,6 +74,10 @@ No new dependencies added. Baseline `xlsx` high-severity vulnerability is pre-ex
 
 ---
 
-## UAT Verification — pending
+## UAT Verification — 2026-04-18
 
-Will be recorded once UAT deploy completes. Feature verification: super-admin creates a group in Settings → opens Add Expense → confirms grouped dropdown renders with headings + A→Z items + "Other" tail.
+- UAT Health check: PASS — `GET /` returns HTTP 200 (0.75s)
+- UAT Smoke test: PASS — `/dashboard` returns 307 → `/login?redirect=%2Fdashboard` (auth gate intact); `/admin/login` returns HTTP 200
+- Security headers present on redirect: CSP, HSTS (max-age=31536000, preload), X-Content-Type-Options, frame-ancestors 'none'
+- Feature verification: PENDING — grouped dropdown requires authenticated super-admin session (manual verification). Functional contract covered by 21 unit tests + 4 passing E2E tests.
+- UAT URL: https://wawagardenbar-app-uat.up.railway.app

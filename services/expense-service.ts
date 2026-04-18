@@ -10,7 +10,7 @@ import {
 } from '@/interfaces/expense.interface';
 import {
   SEARCHABLE_STRING_FIELDS,
-  escapeRegex,
+  buildLiteralSearchRegex,
   parseNumericTerm,
 } from '@/lib/expense-search';
 import { AuditLogService } from './audit-log-service';
@@ -113,7 +113,7 @@ export class ExpenseService {
 
     const trimmedTerm = filters?.searchTerm?.trim() ?? '';
     if (trimmedTerm !== '') {
-      const pattern = new RegExp(escapeRegex(trimmedTerm), 'i');
+      const pattern = buildLiteralSearchRegex(trimmedTerm);
       const or: Array<Record<string, unknown>> = SEARCHABLE_STRING_FIELDS.map(
         (field) => ({ [field]: pattern })
       );

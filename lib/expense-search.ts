@@ -32,6 +32,19 @@ export function escapeRegex(term: string): string {
 }
 
 /**
+ * Build a case-insensitive RegExp that matches the term as a literal
+ * substring. Metacharacters are escaped first, so the resulting pattern has
+ * no alternations, quantifiers, or groups — ReDoS is not possible.
+ */
+export function buildLiteralSearchRegex(term: string): RegExp {
+  // escapeRegex() strips every regex metacharacter (., *, +, ?, ^, $, {, }, (,
+  // ), |, [, ], \) — so the compiled pattern is a literal substring with no
+  // alternations, quantifiers, or groups. ReDoS is not possible here.
+  // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
+  return new RegExp(escapeRegex(term), 'i');
+}
+
+/**
  * Parse a search term as a finite number only when the trimmed term is a pure
  * numeric literal. Returns null otherwise — including "Infinity" and "NaN".
  */

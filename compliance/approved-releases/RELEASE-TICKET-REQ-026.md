@@ -1,10 +1,10 @@
 # Release Ticket: REQ-026 — Pending Expense Group Workflow
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** APPROVED - DEPLOYED
 **Date:** 2026-04-12
 **Requirement ID:** REQ-026
 **Risk Level:** HIGH
-**PR:** TBD
+**PR:** #58
 
 ---
 

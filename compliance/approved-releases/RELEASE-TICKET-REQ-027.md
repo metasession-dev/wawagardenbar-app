@@ -1,10 +1,10 @@
 # Release Ticket: REQ-027 — User Soft-Delete and Re-creation
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** APPROVED - DEPLOYED
 **Date:** 2026-04-16
 **Requirement ID:** REQ-027
 **Risk Level:** MEDIUM
-**PR:** TBD
+**PR:** #61
 
 ---
 

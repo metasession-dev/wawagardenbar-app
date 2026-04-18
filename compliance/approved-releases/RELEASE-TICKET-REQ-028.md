@@ -1,10 +1,10 @@
 # Release Ticket: REQ-028 — Grouped Expense Category Dropdown
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** APPROVED - DEPLOYED
 **Date:** 2026-04-18
 **Requirement ID:** REQ-028
 **Risk Level:** MEDIUM
-**PR:** TBD
+**PR:** #63
 
 ---
 

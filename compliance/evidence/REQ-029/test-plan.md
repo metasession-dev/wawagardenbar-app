@@ -27,7 +27,7 @@ The server consumes `SEARCHABLE_STRING_FIELDS`, `escapeRegex`, and `parseNumeric
 | NEW       | `__tests__/lib/expense-search.test.ts`              | Pure unit tests for helpers — AC2, AC3, AC4, AC5, AC7                                                                                                                                                                  |
 | NEW       | `__tests__/services/expense-service.search.test.ts` | Mocked-model unit test for `getExpensesByDateRange` query shape — AC1 (server path), AC3 (server), AC4 (server), AC5 (server), AC6 (composition), AC8 (no-term), AC9 (regression of existing behaviour on this method) |
 | NEW       | `e2e/expenses-search.spec.ts`                       | Playwright E2E — AC1 driver end-to-end, AC6 combined with a category filter                                                                                                                                            |
-| UNCHANGED | all other existing `__tests__/**` + `e2e/**` files  | Regression — must remain green                                                                                                                                                                                         |
+| UNCHANGED | all other existing unit and E2E spec files          | Regression — must remain green                                                                                                                                                                                         |
 
 ## Unit tests (Phase 1 — TDD, before implementation)
 

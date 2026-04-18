@@ -52,7 +52,7 @@
 
 - [ ] Access control: `updateExpenseCategoriesAction` still rejects non-super-admin sessions (existing `requireSuperAdmin` guard). Covered in `e2e/expense-category-groups.spec.ts` via "non-super-admin cannot open the Settings page" (already a pre-existing expectation; re-asserted).
 - [ ] Backward compatibility: service test above exercises a doc written without the new keys.
-- [ ] Regression: full `playwright test` run must pass with no failures in `pending-expenses.spec.ts` or other finance specs.
+- [ ] Regression: full `playwright test` run must pass with no failures in `e2e/pending-expenses.spec.ts` or other finance specs.
 
 ## Test Data Requirements
 

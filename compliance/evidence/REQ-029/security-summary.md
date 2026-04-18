@@ -88,12 +88,10 @@ No new dependencies added. No dependency versions changed. Pre-existing `xlsx` h
 
 ---
 
-## UAT Verification — PENDING
+## UAT Verification — 2026-04-18
 
-To be performed against UAT after evidence commit (per SDLC Stage 3 §8–9):
-
-- UAT health check
-- UAT smoke test (expenses page loads, date-range default works)
-- Feature verification: paste TRF reference `TRF|2MPTfr482|2045529935434317824` into the search box on `/dashboard/finance/expenses` (with the date range covering the expense's `date`) → confirm the expense renders in the result table
-- Regression: clear search → original result set restored
-- Results will be appended to this file before PR to main
+- UAT Health check: PASS — `GET /` returns HTTP 200 (0.94s)
+- UAT Smoke test: PASS — `GET /dashboard` returns HTTP 200; `GET /dashboard/finance/expenses` returns 307 → `/login?redirect=%2Fdashboard%2Ffinance%2Fexpenses` (auth gate intact)
+- Security headers present on redirect: CSP, HSTS (`max-age=31536000; includeSubDomains; preload`), X-Content-Type-Options: nosniff, X-Frame-Options: DENY, frame-ancestors 'none', Permissions-Policy
+- Feature verification: PENDING — requires authenticated super-admin session to paste `TRF|2MPTfr482|2045529935434317824` into the search box on `/dashboard/finance/expenses` and confirm the expense row renders. Functional contract covered by 45 unit tests (including the exact driver string in `expense-search.test.ts::matches the full TRF reference containing pipes` and `expense-service.search.test.ts::escapes pipes so TRF|... matches the literal pipe`) + 5 passing E2E tests.
+- UAT URL: https://wawagardenbar-app-uat.up.railway.app

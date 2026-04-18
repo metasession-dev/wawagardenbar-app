@@ -36,6 +36,31 @@ export const OPERATING_EXPENSE_CATEGORIES = [
 ] as const;
 
 /**
+ * Category group — display-only grouping used by the Add/Edit Expense
+ * category dropdown. Groups are configured in Settings and are NOT stored
+ * on the expense record itself ({@link IExpense.category} remains a string).
+ *
+ * @requirement REQ-028
+ */
+export interface CategoryGroup {
+  name: string;
+  categoryNames: string[];
+}
+
+/**
+ * Shape returned by SystemSettingsService.getExpenseCategories and consumed
+ * by the Settings form, Add Expense form, and Edit Expense dialog.
+ *
+ * @requirement REQ-028
+ */
+export interface ExpenseCategoriesSettings {
+  directCostCategories: string[];
+  operatingExpenseCategories: string[];
+  directCostGroups: CategoryGroup[];
+  operatingExpenseGroups: CategoryGroup[];
+}
+
+/**
  * Expense Interface
  */
 export interface IExpense {

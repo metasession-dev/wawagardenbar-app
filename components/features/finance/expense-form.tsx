@@ -1,5 +1,8 @@
 'use client';
 
+/**
+ * @requirement REQ-028 - Grouped expense category dropdown in Add Expense
+ */
 import { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -27,7 +30,10 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -47,7 +53,11 @@ import {
   DIRECT_COST_CATEGORIES,
   OPERATING_EXPENSE_CATEGORIES,
 } from '@/interfaces/expense.interface';
-import { ExpenseType } from '@/interfaces/expense.interface';
+import type {
+  CategoryGroup,
+  ExpenseType,
+} from '@/interfaces/expense.interface';
+import { buildDropdownSections } from '@/lib/expense-categories-display';
 
 const lineItemSchema = z.object({
   expenseType: z.enum(['direct-cost', 'operating-expense'], {
@@ -102,6 +112,10 @@ export function ExpenseForm({
   const [operatingExpenseCategories, setOperatingExpenseCategories] = useState<
     string[]
   >([...OPERATING_EXPENSE_CATEGORIES]);
+  const [directCostGroups, setDirectCostGroups] = useState<CategoryGroup[]>([]);
+  const [operatingExpenseGroups, setOperatingExpenseGroups] = useState<
+    CategoryGroup[]
+  >([]);
 
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseFormSchema),
@@ -136,6 +150,10 @@ export function ExpenseForm({
         setOperatingExpenseCategories(
           result.categories.operatingExpenseCategories
         );
+        setDirectCostGroups(result.categories.directCostGroups ?? []);
+        setOperatingExpenseGroups(
+          result.categories.operatingExpenseGroups ?? []
+        );
       }
     } catch {
       /* use defaults */
@@ -144,10 +162,14 @@ export function ExpenseForm({
 
   const items = form.watch('items');
 
-  function getItemCategories(expenseType: string): string[] {
-    return expenseType === 'direct-cost'
-      ? directCostCategories
-      : operatingExpenseCategories;
+  function getDropdownSections(expenseType: string) {
+    const categories =
+      expenseType === 'direct-cost'
+        ? directCostCategories
+        : operatingExpenseCategories;
+    const groups =
+      expenseType === 'direct-cost' ? directCostGroups : operatingExpenseGroups;
+    return buildDropdownSections(categories, groups);
   }
 
   function handleQtyOrCostChange(index: number) {
@@ -282,7 +304,7 @@ export function ExpenseForm({
               </div>
 
               {fields.map((field, index) => {
-                const itemCategories = getItemCategories(
+                const sections = getDropdownSections(
                   items[index]?.expenseType ?? 'direct-cost'
                 );
                 return (
@@ -340,11 +362,38 @@ export function ExpenseForm({
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {itemCategories.map((cat) => (
-                                  <SelectItem key={cat} value={cat}>
-                                    {cat}
-                                  </SelectItem>
-                                ))}
+                                {sections.map((section, sectionIdx) => {
+                                  const key =
+                                    section.heading ??
+                                    `__ungrouped_${sectionIdx}`;
+                                  const showSeparator =
+                                    sectionIdx > 0 &&
+                                    sections[sectionIdx - 1].items.length > 0 &&
+                                    section.items.length > 0;
+                                  return (
+                                    <div key={key}>
+                                      {showSeparator && <SelectSeparator />}
+                                      {section.heading !== null ? (
+                                        <SelectGroup>
+                                          <SelectLabel>
+                                            {section.heading}
+                                          </SelectLabel>
+                                          {section.items.map((cat) => (
+                                            <SelectItem key={cat} value={cat}>
+                                              {cat}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectGroup>
+                                      ) : (
+                                        section.items.map((cat) => (
+                                          <SelectItem key={cat} value={cat}>
+                                            {cat}
+                                          </SelectItem>
+                                        ))
+                                      )}
+                                    </div>
+                                  );
+                                })}
                               </SelectContent>
                             </Select>
                             <FormMessage />

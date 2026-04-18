@@ -3,6 +3,7 @@
 import { requireSuperAdmin } from '@/lib/auth-middleware';
 import { SystemSettingsService } from '@/services/system-settings-service';
 import { revalidatePath } from 'next/cache';
+import type { ExpenseCategoriesSettings } from '@/interfaces/expense.interface';
 
 export async function updatePaymentSettingsAction(settings: {
   activeProvider: 'monnify' | 'paystack';
@@ -21,10 +22,12 @@ export async function updatePaymentSettingsAction(settings: {
   return { success: true };
 }
 
-export async function updateExpenseCategoriesAction(categories: {
-  directCostCategories: string[];
-  operatingExpenseCategories: string[];
-}) {
+/**
+ * @requirement REQ-028
+ */
+export async function updateExpenseCategoriesAction(
+  categories: ExpenseCategoriesSettings
+) {
   try {
     const session = await requireSuperAdmin();
 

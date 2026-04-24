@@ -1,0 +1,15 @@
+
+[90mstdout[2m | __tests__/actions/admin/menu-actions.customization-inventory.test.ts[2m > [22m[2mREQ-030: updateMenuItemAction — customization inventory links[2m > [22m[2mrejects inventoryDeduction that is NaN or Infinity
+[22m[39m🔍 allowManualPriceOverride from form: false -> parsed: [33mfalse[39m
+
+[90mstdout[2m | __tests__/actions/admin/menu-actions.customization-inventory.test.ts[2m > [22m[2mREQ-030: updateMenuItemAction — customization inventory links[2m > [22m[2mrejects inventoryDeduction that is NaN or Infinity
+[22m[39m🔍 allowManualPriceOverride from form: false -> parsed: [33mfalse[39m
+
+ [32m✓[39m __tests__/actions/admin/menu-actions.customization-inventory.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m __tests__/staff-pot/staff-pot-start-date.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m29 passed[39m[22m[90m (29)[39m
+[2m      Tests [22m [1m[32m386 passed[39m[22m[90m (386)[39m
+[2m   Start at [22m 12:34:49
+[2m   Duration [22m 1.53s[2m (transform 3.25s, setup 0ms, import 6.93s, tests 243ms, environment 3ms)[22m
+

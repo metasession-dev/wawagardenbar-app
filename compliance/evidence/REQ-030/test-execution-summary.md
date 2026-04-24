@@ -14,7 +14,8 @@
 | Unit tests       | `npx vitest run`                                         | 386 passed / 29 files                 |
 | SAST (Semgrep)   | `semgrep scan --config auto app/ lib/ services/ models/` | 1 finding (baseline ≤ 6)              |
 | Dependency audit | `npm audit --json`                                       | 1 high-severity (`xlsx`, allowlisted) |
-| E2E (Playwright) | `npx playwright test`                                    | To run in CI                          |
+| E2E (Playwright) | `npx playwright test` (CI)                               | pass (CI run 24887448477)             |
+| Evidence upload  | Compliance Evidence Upload workflow                      | pass (CI run 24887448475)             |
 
 ## Unit-test breakdown
 

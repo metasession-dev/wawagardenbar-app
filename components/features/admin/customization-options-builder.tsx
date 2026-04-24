@@ -5,6 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Plus, Trash2, GripVertical } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
@@ -12,6 +19,8 @@ interface CustomizationOption {
   name: string;
   price: number;
   available: boolean;
+  inventoryId?: string;
+  inventoryDeduction?: number;
 }
 
 interface Customization {
@@ -20,11 +29,23 @@ interface Customization {
   options: CustomizationOption[];
 }
 
+interface InventoryLookupItem {
+  _id: string;
+  name: string;
+  unit: string;
+}
+
 interface CustomizationOptionsBuilderProps {
   customizations: Customization[];
   onChange: (customizations: Customization[]) => void;
   disabled?: boolean;
+  availableInventories?: InventoryLookupItem[];
 }
+
+// Sentinel used by the Select "— None —" item. `<SelectItem value="">` is
+// disallowed by Radix, so we round-trip through a sentinel and treat it as
+// "clear the inventoryId field".
+const NO_INVENTORY_LINK = '__none__';
 
 /**
  * Customization options builder component
@@ -34,6 +55,7 @@ export function CustomizationOptionsBuilder({
   customizations,
   onChange,
   disabled = false,
+  availableInventories = [],
 }: CustomizationOptionsBuilderProps) {
   function addGroup() {
     onChange([
@@ -50,7 +72,11 @@ export function CustomizationOptionsBuilder({
     onChange(customizations.filter((_, i) => i !== groupIndex));
   }
 
-  function updateGroup(groupIndex: number, field: keyof Customization, value: any) {
+  function updateGroup(
+    groupIndex: number,
+    field: keyof Customization,
+    value: any
+  ) {
     const updated = [...customizations];
     updated[groupIndex] = { ...updated[groupIndex], [field]: value };
     onChange(updated);
@@ -105,7 +131,9 @@ export function CustomizationOptionsBuilder({
         {customizations.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <p>No customization options yet</p>
-            <p className="text-sm">Add groups like "Size", "Add-ons", or "Extras"</p>
+            <p className="text-sm">
+              Add groups like "Size", "Add-ons", or "Extras"
+            </p>
           </div>
         ) : (
           customizations.map((group, groupIndex) => (
@@ -120,7 +148,9 @@ export function CustomizationOptionsBuilder({
                       <Label>Group Name</Label>
                       <Input
                         value={group.name}
-                        onChange={(e) => updateGroup(groupIndex, 'name', e.target.value)}
+                        onChange={(e) =>
+                          updateGroup(groupIndex, 'name', e.target.value)
+                        }
                         placeholder="e.g., Size, Add-ons"
                         disabled={disabled}
                       />
@@ -138,46 +168,152 @@ export function CustomizationOptionsBuilder({
                   </div>
 
                   {/* Options */}
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <Label className="text-sm">Options</Label>
-                    {group.options.map((option, optionIndex) => (
-                      <div key={optionIndex} className="flex items-center gap-2">
-                        <Input
-                          value={option.name}
-                          onChange={(e) =>
-                            updateOption(groupIndex, optionIndex, 'name', e.target.value)
-                          }
-                          placeholder="Option name"
-                          disabled={disabled}
-                          className="flex-1"
-                        />
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={option.price}
-                          onChange={(e) =>
-                            updateOption(
-                              groupIndex,
-                              optionIndex,
-                              'price',
-                              parseFloat(e.target.value) || 0
-                            )
-                          }
-                          placeholder="Price"
-                          disabled={disabled}
-                          className="w-32"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeOption(groupIndex, optionIndex)}
-                          disabled={disabled || group.options.length === 1}
+                    {group.options.map((option, optionIndex) => {
+                      const unit =
+                        availableInventories.find(
+                          (i) => i._id === option.inventoryId
+                        )?.unit ?? 'units';
+                      return (
+                        <div
+                          key={optionIndex}
+                          className="space-y-2 rounded-md border p-3"
                         >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
+                          <div className="flex items-center gap-2">
+                            <Input
+                              value={option.name}
+                              onChange={(e) =>
+                                updateOption(
+                                  groupIndex,
+                                  optionIndex,
+                                  'name',
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Option name"
+                              disabled={disabled}
+                              className="flex-1"
+                            />
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={option.price}
+                              onChange={(e) =>
+                                updateOption(
+                                  groupIndex,
+                                  optionIndex,
+                                  'price',
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
+                              placeholder="Price"
+                              disabled={disabled}
+                              className="w-32"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() =>
+                                removeOption(groupIndex, optionIndex)
+                              }
+                              disabled={disabled || group.options.length === 1}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+
+                          {availableInventories.length > 0 && (
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                              <div className="flex-1 space-y-1">
+                                <Label className="text-xs text-muted-foreground">
+                                  Deduct from inventory (optional)
+                                </Label>
+                                <Select
+                                  value={
+                                    option.inventoryId || NO_INVENTORY_LINK
+                                  }
+                                  onValueChange={(value) => {
+                                    if (value === NO_INVENTORY_LINK) {
+                                      updateOption(
+                                        groupIndex,
+                                        optionIndex,
+                                        'inventoryId',
+                                        undefined
+                                      );
+                                      updateOption(
+                                        groupIndex,
+                                        optionIndex,
+                                        'inventoryDeduction',
+                                        undefined
+                                      );
+                                    } else {
+                                      updateOption(
+                                        groupIndex,
+                                        optionIndex,
+                                        'inventoryId',
+                                        value
+                                      );
+                                      if (
+                                        option.inventoryDeduction === undefined
+                                      ) {
+                                        updateOption(
+                                          groupIndex,
+                                          optionIndex,
+                                          'inventoryDeduction',
+                                          1
+                                        );
+                                      }
+                                    }
+                                  }}
+                                  disabled={disabled}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="— None —" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value={NO_INVENTORY_LINK}>
+                                      — None —
+                                    </SelectItem>
+                                    {availableInventories.map((inv) => (
+                                      <SelectItem key={inv._id} value={inv._id}>
+                                        {inv.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              {option.inventoryId && (
+                                <div className="w-full space-y-1 sm:w-48">
+                                  <Label className="text-xs text-muted-foreground">
+                                    Units to deduct ({unit})
+                                  </Label>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={option.inventoryDeduction ?? 1}
+                                    onChange={(e) => {
+                                      const parsed = parseFloat(e.target.value);
+                                      updateOption(
+                                        groupIndex,
+                                        optionIndex,
+                                        'inventoryDeduction',
+                                        Number.isFinite(parsed) && parsed > 0
+                                          ? parsed
+                                          : 1
+                                      );
+                                    }}
+                                    disabled={disabled}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                     <Button
                       type="button"
                       variant="outline"

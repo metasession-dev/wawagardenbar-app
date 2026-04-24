@@ -26,6 +26,10 @@ import {
   duplicateMenuItemAction,
 } from '@/app/actions/admin/menu-actions';
 import { getInventoryLocationsConfigAction } from '@/app/actions/inventory/location-actions';
+import {
+  listInventoryItemsAction,
+  type InventoryListItem,
+} from '@/app/actions/inventory/list-actions';
 import { MenuImageUpload } from './menu-image-upload';
 import { CustomizationOptionsBuilder } from './customization-options-builder';
 import { DietaryTagsSelector } from './dietary-tags-selector';
@@ -97,6 +101,9 @@ export function MenuItemEditForm({
     IInventoryLocationConfig[]
   >([]);
   const [initialLocation, setInitialLocation] = useState<string>('');
+  const [availableInventories, setAvailableInventories] = useState<
+    InventoryListItem[]
+  >([]);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -130,8 +137,20 @@ export function MenuItemEditForm({
       }
     }
 
+    async function fetchInventories() {
+      try {
+        const result = await listInventoryItemsAction();
+        if (result.success && result.data) {
+          setAvailableInventories(result.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch inventories:', error);
+      }
+    }
+
     fetchConversionRate();
     fetchLocations();
+    fetchInventories();
   }, []);
 
   const {
@@ -721,6 +740,7 @@ export function MenuItemEditForm({
           customizations={customizations}
           onChange={setCustomizations}
           disabled={isLoading}
+          availableInventories={availableInventories}
         />
 
         {/* Inventory Tracking */}

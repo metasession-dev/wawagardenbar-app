@@ -12,7 +12,6 @@ import { describe, it, expect } from 'vitest';
 import { resolveLinkedInventoryFor } from '@/lib/customization-inventory';
 
 const INV_OGBONO = '65a1b2c3d4e5f6a7b8c9d0e1';
-const INV_EGUSI = '65a1b2c3d4e5f6a7b8c9d0e2';
 const INV_UGU = '65a1b2c3d4e5f6a7b8c9d0e3';
 
 type MinimalOption = {

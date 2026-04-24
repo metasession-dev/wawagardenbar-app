@@ -13,6 +13,38 @@ import { SystemSettingsService } from '@/services/system-settings-service';
 import { Types } from 'mongoose';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
+import { z } from 'zod';
+
+// REQ-030: customizations validation for admin action boundary
+const customizationOptionInputSchema = z.object({
+  name: z.string(),
+  price: z.number(),
+  available: z.boolean(),
+  inventoryId: z
+    .union([
+      z.literal('').transform(() => undefined),
+      z
+        .string()
+        .regex(
+          /^[0-9a-fA-F]{24}$/,
+          'inventoryId must be a 24-character hex string'
+        ),
+    ])
+    .optional(),
+  inventoryDeduction: z
+    .number()
+    .finite({ message: 'inventoryDeduction must be a finite number' })
+    .positive({ message: 'inventoryDeduction must be a positive number' })
+    .optional(),
+});
+
+const customizationsInputSchema = z.array(
+  z.object({
+    name: z.string(),
+    required: z.boolean(),
+    options: z.array(customizationOptionInputSchema),
+  })
+);
 
 export interface ActionResult<T = unknown> {
   success: boolean;
@@ -277,11 +309,20 @@ export async function updateMenuItemAction(
     const slug = formData.get('slug') as string;
     const metaDescription = formData.get('metaDescription') as string;
 
-    // Customizations
+    // Customizations (REQ-030: validate shape + inventory link fields at this boundary)
     const customizationsStr = formData.get('customizations') as string;
-    const customizations = customizationsStr
+    const customizationsRaw = customizationsStr
       ? JSON.parse(customizationsStr)
       : [];
+    const parsedCustomizations =
+      customizationsInputSchema.safeParse(customizationsRaw);
+    if (!parsedCustomizations.success) {
+      const issues = parsedCustomizations.error.issues
+        .map((i) => `${i.path.join('.')}: ${i.message}`)
+        .join('; ');
+      return { success: false, error: `Invalid customizations: ${issues}` };
+    }
+    const customizations = parsedCustomizations.data;
 
     // Allergens and nutritional info
     const allergensStr = formData.get('allergens') as string;

@@ -33,6 +33,8 @@ export interface ICustomizationOption {
   name: string;
   price: number;
   available: boolean;
+  inventoryId?: string;
+  inventoryDeduction?: number;
 }
 
 export interface ICustomization {

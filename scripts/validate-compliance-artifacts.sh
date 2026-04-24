@@ -62,11 +62,24 @@ for REQ in $REQUIREMENTS; do
     # filenames containing .test. / .spec. (captured from the stem, not the
     # dot — without the leading [\w./-]+ the match would start at `.test.`
     # and drop the filename entirely). See META-COMPLY #133.
-    TEST_FILES=$(grep -oP '(?:__tests__/|tests?/|e2e/|spec/)\S+|[\w./-]+\.(?:test|spec)\.\S+' "compliance/evidence/$REQ/test-plan.md" 2>/dev/null \
-      | sed 's/[`),.;:]*$//' | grep -v '/$' | sort -u || true)
-    if [ -n "$TEST_FILES" ]; then
+    #
+    # mapfile + quoted expansion: without this, tokens like `__tests__/**`
+    # get pathname-expanded by the for-loop and produce phantom "missing"
+    # errors for every real subdirectory. See META-COMPLY #137.
+    mapfile -t TEST_FILES < <(
+      grep -oP '(?:__tests__/|tests?/|e2e/|spec/)\S+|[\w./-]+\.(?:test|spec)\.\S+' \
+        "compliance/evidence/$REQ/test-plan.md" 2>/dev/null \
+        | sed 's/[`),.;:]*$//' | grep -v '/$' | sort -u || true
+    )
+    if [ "${#TEST_FILES[@]}" -gt 0 ]; then
       MISSING_TESTS=0
-      for TF in $TEST_FILES; do
+      for TF in "${TEST_FILES[@]}"; do
+        # Prose glob references like `__tests__/**` describe a directory
+        # set, not a specific file — skip instead of treating as missing.
+        if [[ "$TF" == *[*?]* ]]; then
+          echo "  INFO: Skipping glob reference (not a file path): $TF"
+          continue
+        fi
         # Try exact path, then search from repo root
         if [ ! -f "$TF" ] && ! compgen -G "**/$TF" > /dev/null 2>&1; then
           echo "  ERROR: Test file referenced in test-plan.md not found: $TF"

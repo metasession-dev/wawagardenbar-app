@@ -102,13 +102,19 @@ if [ -n "$GIT_SHA" ] || [ -n "$CI_RUN_ID" ] || [ -n "$BRANCH" ]; then
 fi
 
 # --- Look up project ID from slug ---
-PROJECT_ID=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_projects?slug=eq.${PROJECT_SLUG}&select=id" \
+# Capture full response so we can distinguish "not found" from auth/RLS
+# failures that would otherwise show the same empty-PROJECT_ID symptom.
+# META-COMPLY #132.
+PROJECT_LOOKUP=$(curl -s -w "\n%{http_code}" "${SUPABASE_URL}/rest/v1/compliance_projects?slug=eq.${PROJECT_SLUG}&select=id" \
   -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-  -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-  | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+  -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}")
+PROJECT_LOOKUP_CODE=$(echo "$PROJECT_LOOKUP" | tail -n1)
+PROJECT_LOOKUP_BODY=$(echo "$PROJECT_LOOKUP" | sed '$d')
+PROJECT_ID=$(echo "$PROJECT_LOOKUP_BODY" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
 
 if [ -z "$PROJECT_ID" ]; then
   echo "Error: Project '${PROJECT_SLUG}' not found in META-COMPLY"
+  echo "  HTTP ${PROJECT_LOOKUP_CODE}: $(echo "$PROJECT_LOOKUP_BODY" | head -c 500)"
   exit 1
 fi
 
@@ -188,8 +194,11 @@ for FILE in "${FILES[@]}"; do
 
   echo -n "Uploading ${FILENAME}... "
 
-  # Upload to Supabase Storage
-  HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+  # Capture response body alongside HTTP code so we can show the actual
+  # error on failure (RLS denials, storage policy errors, and malformed
+  # payloads all return a JSON body that names the cause). META-COMPLY #132.
+  RESP_BODY_FILE=$(mktemp)
+  HTTP_CODE=$(curl -s -o "$RESP_BODY_FILE" -w "%{http_code}" \
     -X POST "${SUPABASE_URL}/storage/v1/object/compliance-evidence/${STORAGE_PATH}" \
     -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
     -H "Content-Type: ${MIME_TYPE}" \
@@ -197,6 +206,7 @@ for FILE in "${FILES[@]}"; do
     --data-binary "@${FILE}")
 
   if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+    rm -f "$RESP_BODY_FILE"
     # Build JSON payload with optional release/environment/category fields
     JSON_PAYLOAD="{
         \"project_id\": \"${PROJECT_ID}\",
@@ -213,7 +223,8 @@ for FILE in "${FILES[@]}"; do
     JSON_PAYLOAD="${JSON_PAYLOAD}}"
 
     # Create metadata row via PostgREST
-    ROW_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+    RESP_BODY_FILE=$(mktemp)
+    ROW_CODE=$(curl -s -o "$RESP_BODY_FILE" -w "%{http_code}" \
       -X POST "${SUPABASE_URL}/rest/v1/compliance_evidence" \
       -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
       -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
@@ -222,6 +233,7 @@ for FILE in "${FILES[@]}"; do
       -d "$JSON_PAYLOAD")
 
     if [ "$ROW_CODE" -ge 200 ] && [ "$ROW_CODE" -lt 300 ]; then
+      rm -f "$RESP_BODY_FILE"
       echo "OK (${FILE_SIZE} bytes)"
       SUCCEEDED=$((SUCCEEDED + 1))
       TOTAL_SIZE=$((TOTAL_SIZE + FILE_SIZE))
@@ -237,10 +249,14 @@ for FILE in "${FILES[@]}"; do
       fi
     else
       echo "FAILED (metadata: HTTP ${ROW_CODE})"
+      echo "  Response: $(head -c 500 "$RESP_BODY_FILE")"
+      rm -f "$RESP_BODY_FILE"
       FAILED=$((FAILED + 1))
     fi
   else
     echo "FAILED (storage: HTTP ${HTTP_CODE})"
+    echo "  Response: $(head -c 500 "$RESP_BODY_FILE")"
+    rm -f "$RESP_BODY_FILE"
     FAILED=$((FAILED + 1))
   fi
 done

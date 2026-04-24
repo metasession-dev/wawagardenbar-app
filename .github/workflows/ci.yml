@@ -299,6 +299,21 @@ jobs:
           FLAGS="${FLAGS} --release ${{ needs.register-release.outputs.version }} --create-release-if-missing"
           FLAGS="${FLAGS} --environment uat"
 
+          # Track failures across all uploads so we can fail the job at the
+          # end with the full picture. Previously each upload used
+          # `|| echo "Warning: ..."` which masked every error as a benign
+          # warning, letting broken releases ship without gate evidence
+          # (META-COMPLY #132).
+          UPLOAD_FAILURES=0
+          upload() {
+            local label="$1"; shift
+            echo "Uploading: ${label}"
+            if ! bash scripts/upload-evidence.sh "$@"; then
+              echo "::error::Failed to upload ${label}"
+              UPLOAD_FAILURES=$((UPLOAD_FAILURES + 1))
+            fi
+          }
+
           # Re-generate gate evidence as fallback if artifact download failed
           mkdir -p ci-evidence
           if [ ! -f ci-evidence/sast-results.json ]; then
@@ -315,62 +330,55 @@ jobs:
 
           # Upload SAST results (security_scan category)
           if [ -f ci-evidence/sast-results.json ]; then
-            echo "Uploading: sast-results.json"
-            bash scripts/upload-evidence.sh \
+            upload sast-results.json \
               wawagardenbar-app _compliance-docs audit_log ci-evidence/sast-results.json \
-              --category security_scan ${FLAGS} || echo "Warning: Failed to upload sast-results.json"
+              --category security_scan ${FLAGS}
           fi
 
           # Upload dependency audit (security_scan category)
           if [ -f ci-evidence/dependency-audit.json ]; then
-            echo "Uploading: dependency-audit.json"
-            bash scripts/upload-evidence.sh \
+            upload dependency-audit.json \
               wawagardenbar-app _compliance-docs audit_log ci-evidence/dependency-audit.json \
-              --category security_scan ${FLAGS} || echo "Warning: Failed to upload dependency-audit.json"
+              --category security_scan ${FLAGS}
           fi
 
           # Upload E2E test results (ci_pipeline category)
           if [ -f ci-evidence/e2e-results.json ]; then
-            echo "Uploading: e2e-results.json"
-            bash scripts/upload-evidence.sh \
+            upload e2e-results.json \
               wawagardenbar-app _compliance-docs e2e_result ci-evidence/e2e-results.json \
-              --category ci_pipeline ${FLAGS} || echo "Warning: Failed to upload e2e-results.json"
+              --category ci_pipeline ${FLAGS}
           fi
 
           # Upload Playwright HTML report (test_report category)
           if [ -d ci-evidence/playwright-report ]; then
             (cd ci-evidence && zip -qr playwright-report.zip playwright-report/) 2>/dev/null || true
             if [ -f ci-evidence/playwright-report.zip ]; then
-              echo "Uploading: playwright-report.zip"
-              bash scripts/upload-evidence.sh \
+              upload playwright-report.zip \
                 wawagardenbar-app _compliance-docs test_report ci-evidence/playwright-report.zip \
-                --category test_report ${FLAGS} || echo "Warning: Failed to upload playwright-report.zip"
+                --category test_report ${FLAGS}
             fi
           fi
 
           # Upload Jest coverage summary (test_report category)
           if [ -f ci-evidence/coverage/coverage-summary.json ]; then
-            echo "Uploading: coverage-summary.json"
-            bash scripts/upload-evidence.sh \
+            upload coverage-summary.json \
               wawagardenbar-app _compliance-docs test_report ci-evidence/coverage/coverage-summary.json \
-              --category test_report ${FLAGS} || echo "Warning: Failed to upload coverage-summary.json"
+              --category test_report ${FLAGS}
           fi
 
           # Upload test summary report (test_report category)
           if [ -f "compliance/test-summary-report.md" ]; then
-            echo "Uploading: test-summary-report.md"
-            bash scripts/upload-evidence.sh \
+            upload test-summary-report.md \
               wawagardenbar-app _compliance-docs compliance_document compliance/test-summary-report.md \
-              --category test_report ${FLAGS} || echo "Warning: Failed to upload test-summary-report.md"
+              --category test_report ${FLAGS}
           fi
 
           # Upload compliance docs (planning category)
           for DOC in compliance/RTM.md compliance/test-plan.md compliance/test-cases.md; do
             if [ -f "$DOC" ]; then
-              echo "Uploading: $(basename "$DOC")"
-              bash scripts/upload-evidence.sh \
+              upload "$(basename "$DOC")" \
                 wawagardenbar-app _compliance-docs compliance_document "$DOC" \
-                --category planning ${FLAGS} || echo "Warning: Failed to upload $(basename "$DOC")"
+                --category planning ${FLAGS}
             fi
           done
 
@@ -379,10 +387,9 @@ jobs:
             if [ -d "$DIR" ]; then
               for TICKET in "$DIR"/*.md; do
                 [ -f "$TICKET" ] || continue
-                echo "Uploading: $(basename "$TICKET")"
-                bash scripts/upload-evidence.sh \
+                upload "$(basename "$TICKET")" \
                   wawagardenbar-app _compliance-docs compliance_document "$TICKET" \
-                  --category release_artifact ${FLAGS} || echo "Warning: Failed to upload $(basename "$TICKET")"
+                  --category release_artifact ${FLAGS}
               done
             fi
           done
@@ -413,12 +420,16 @@ jobs:
               fi
               for ARTIFACT in "$REQ_DIR"*.md; do
                 [ -f "$ARTIFACT" ] || continue
-                echo "Uploading: ${REQ_ID}/$(basename "$ARTIFACT")"
-                bash scripts/upload-evidence.sh \
+                upload "${REQ_ID}/$(basename "$ARTIFACT")" \
                   wawagardenbar-app "${REQ_ID}" compliance_document "$ARTIFACT" \
-                  --category planning ${FLAGS} || echo "Warning: Failed to upload $(basename "$ARTIFACT")"
+                  --category planning ${FLAGS}
               done
             done
+          fi
+
+          if [ "$UPLOAD_FAILURES" -gt 0 ]; then
+            echo "::error::${UPLOAD_FAILURES} evidence upload(s) failed — release is missing gate evidence and cannot pass UAT review"
+            exit 1
           fi
 
       - name: Summary

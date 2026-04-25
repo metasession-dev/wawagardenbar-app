@@ -1,6 +1,10 @@
 # Release Ticket: REQ-030 — Multi-component inventory deduction via customization option links
 
-**Status:** TESTED - PENDING SIGN-OFF
+> **SUPERSEDED 2026-04-25** — This release was never merged. Original scope (REQ-030) shipped only the back-end + admin-config layer; the customer/staff order-time picker was missing, leaving the feature unreachable through the UI. Replaced by REQ-031 which scopes the full end-to-end journey. PR #66 closed unmerged. Back-end commits (`39d75d6`, `e007f3c`, `c5d4327`, `830ab4c`, `4469b6b`) remain on `develop` as the pre-cursor for REQ-031.
+>
+> **Successor:** REQ-031 / issue #67 / `compliance/evidence/REQ-031/`
+
+**Status:** SUPERSEDED (was: TESTED - PENDING SIGN-OFF)
 **Date:** 2026-04-24
 **Requirement ID:** REQ-030
 **Risk Level:** HIGH (MEDIUM baseline — order-fulfilment / inventory write path — with AI-involvement +1)

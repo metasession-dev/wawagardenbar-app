@@ -626,38 +626,39 @@ This section maps every section in `docs/REQUIREMENTS.md` to the specific test c
 
 This section tracks discrete change requests (REQ-001 through REQ-008) that represent implementation work items. Each entry maps to implementation artefacts, test evidence, and approval status.
 
-| REQ-ID  | Issue | Risk   | Evidence                     | Status              | Approver        | Date       |
-| ------- | ----- | ------ | ---------------------------- | ------------------- | --------------- | ---------- |
-| REQ-001 | --    | LOW    | compliance/evidence/REQ-001/ | APPROVED - DEPLOYED | William         | 2026-03-20 |
-| REQ-002 | --    | MEDIUM | compliance/evidence/REQ-002/ | APPROVED - DEPLOYED | William         | 2026-03-20 |
-| REQ-003 | --    | LOW    | compliance/evidence/REQ-003/ | APPROVED - DEPLOYED | William         | 2026-03-20 |
-| REQ-004 | --    | MEDIUM | compliance/evidence/REQ-004/ | APPROVED - DEPLOYED | William         | 2026-03-20 |
-| REQ-005 | --    | MEDIUM | compliance/evidence/REQ-005/ | APPROVED - DEPLOYED | William         | 2026-03-05 |
-| REQ-006 | --    | MEDIUM | compliance/evidence/REQ-006/ | APPROVED - DEPLOYED | William         | 2026-03-06 |
-| REQ-007 | --    | LOW    | compliance/evidence/REQ-007/ | APPROVED - DEPLOYED | William         | 2026-03-20 |
-| REQ-008 | --    | LOW    | compliance/evidence/REQ-008/ | APPROVED - DEPLOYED | William         | 2026-03-20 |
-| REQ-009 | #2    | HIGH   | compliance/evidence/REQ-009/ | APPROVED - DEPLOYED | William         | 2026-03-22 |
-| REQ-010 | #4    | MEDIUM | compliance/evidence/REQ-010/ | APPROVED - DEPLOYED | William         | 2026-03-23 |
-| REQ-011 | #6    | LOW    | compliance/evidence/REQ-011/ | APPROVED - DEPLOYED | William         | 2026-03-25 |
-| REQ-012 | #9    | HIGH   | compliance/evidence/REQ-012/ | APPROVED - DEPLOYED | William         | 2026-03-28 |
-| REQ-013 | #10   | HIGH   | compliance/evidence/REQ-013/ | APPROVED - DEPLOYED | William         | 2026-03-28 |
-| REQ-014 | #11   | MEDIUM | compliance/evidence/REQ-014/ | APPROVED - DEPLOYED | William         | 2026-03-28 |
-| REQ-015 | #15   | MEDIUM | compliance/evidence/REQ-015/ | APPROVED - DEPLOYED | William         | 2026-03-29 |
-| REQ-016 | #23   | LOW    | compliance/evidence/REQ-016/ | APPROVED - DEPLOYED | William         | 2026-03-29 |
-| REQ-017 | #26   | MEDIUM | compliance/evidence/REQ-017/ | APPROVED - DEPLOYED | William         | 2026-03-30 |
-| REQ-018 | #34   | MEDIUM | compliance/evidence/REQ-018/ | APPROVED - DEPLOYED | William         | 2026-04-02 |
-| REQ-019 | #41   | MEDIUM | compliance/evidence/REQ-019/ | APPROVED - DEPLOYED | William         | 2026-04-02 |
-| REQ-020 | #43   | MEDIUM | compliance/evidence/REQ-020/ | APPROVED - DEPLOYED | William         | 2026-04-02 |
-| REQ-021 | #44   | MEDIUM | compliance/evidence/REQ-021/ | APPROVED - DEPLOYED | William         | 2026-04-02 |
-| REQ-022 | #46   | MEDIUM | compliance/evidence/REQ-022/ | APPROVED - DEPLOYED | William         | 2026-04-06 |
-| REQ-023 | #48   | LOW    | compliance/evidence/REQ-023/ | APPROVED - DEPLOYED | metasession-dev | 2026-04-09 |
-| REQ-024 | #42   | HIGH   | compliance/evidence/REQ-024/ | APPROVED - DEPLOYED | metasession-dev | 2026-04-09 |
-| REQ-025 | #50   | HIGH   | compliance/evidence/REQ-025/ | APPROVED - DEPLOYED | ostendo-io      | 2026-04-12 |
-| REQ-026 | #57   | HIGH   | compliance/evidence/REQ-026/ | APPROVED - DEPLOYED | ostendo-io      | 2026-04-12 |
-| REQ-027 | #59   | MEDIUM | compliance/evidence/REQ-027/ | APPROVED - DEPLOYED | ostendo-io      | 2026-04-16 |
-| REQ-028 | #62   | MEDIUM | compliance/evidence/REQ-028/ | APPROVED - DEPLOYED | ostendo-io      | 2026-04-18 |
-| REQ-029 | #64   | HIGH   | compliance/evidence/REQ-029/ | APPROVED - DEPLOYED | ostendo-io      | 2026-04-18 |
-| REQ-030 | #53   | HIGH   | compliance/evidence/REQ-030/ | IN PROGRESS         | ostendo-io      | 2026-04-24 |
+| REQ-ID  | Issue | Risk   | Evidence                     | Status                                                                                             | Approver        | Date       |
+| ------- | ----- | ------ | ---------------------------- | -------------------------------------------------------------------------------------------------- | --------------- | ---------- |
+| REQ-001 | --    | LOW    | compliance/evidence/REQ-001/ | APPROVED - DEPLOYED                                                                                | William         | 2026-03-20 |
+| REQ-002 | --    | MEDIUM | compliance/evidence/REQ-002/ | APPROVED - DEPLOYED                                                                                | William         | 2026-03-20 |
+| REQ-003 | --    | LOW    | compliance/evidence/REQ-003/ | APPROVED - DEPLOYED                                                                                | William         | 2026-03-20 |
+| REQ-004 | --    | MEDIUM | compliance/evidence/REQ-004/ | APPROVED - DEPLOYED                                                                                | William         | 2026-03-20 |
+| REQ-005 | --    | MEDIUM | compliance/evidence/REQ-005/ | APPROVED - DEPLOYED                                                                                | William         | 2026-03-05 |
+| REQ-006 | --    | MEDIUM | compliance/evidence/REQ-006/ | APPROVED - DEPLOYED                                                                                | William         | 2026-03-06 |
+| REQ-007 | --    | LOW    | compliance/evidence/REQ-007/ | APPROVED - DEPLOYED                                                                                | William         | 2026-03-20 |
+| REQ-008 | --    | LOW    | compliance/evidence/REQ-008/ | APPROVED - DEPLOYED                                                                                | William         | 2026-03-20 |
+| REQ-009 | #2    | HIGH   | compliance/evidence/REQ-009/ | APPROVED - DEPLOYED                                                                                | William         | 2026-03-22 |
+| REQ-010 | #4    | MEDIUM | compliance/evidence/REQ-010/ | APPROVED - DEPLOYED                                                                                | William         | 2026-03-23 |
+| REQ-011 | #6    | LOW    | compliance/evidence/REQ-011/ | APPROVED - DEPLOYED                                                                                | William         | 2026-03-25 |
+| REQ-012 | #9    | HIGH   | compliance/evidence/REQ-012/ | APPROVED - DEPLOYED                                                                                | William         | 2026-03-28 |
+| REQ-013 | #10   | HIGH   | compliance/evidence/REQ-013/ | APPROVED - DEPLOYED                                                                                | William         | 2026-03-28 |
+| REQ-014 | #11   | MEDIUM | compliance/evidence/REQ-014/ | APPROVED - DEPLOYED                                                                                | William         | 2026-03-28 |
+| REQ-015 | #15   | MEDIUM | compliance/evidence/REQ-015/ | APPROVED - DEPLOYED                                                                                | William         | 2026-03-29 |
+| REQ-016 | #23   | LOW    | compliance/evidence/REQ-016/ | APPROVED - DEPLOYED                                                                                | William         | 2026-03-29 |
+| REQ-017 | #26   | MEDIUM | compliance/evidence/REQ-017/ | APPROVED - DEPLOYED                                                                                | William         | 2026-03-30 |
+| REQ-018 | #34   | MEDIUM | compliance/evidence/REQ-018/ | APPROVED - DEPLOYED                                                                                | William         | 2026-04-02 |
+| REQ-019 | #41   | MEDIUM | compliance/evidence/REQ-019/ | APPROVED - DEPLOYED                                                                                | William         | 2026-04-02 |
+| REQ-020 | #43   | MEDIUM | compliance/evidence/REQ-020/ | APPROVED - DEPLOYED                                                                                | William         | 2026-04-02 |
+| REQ-021 | #44   | MEDIUM | compliance/evidence/REQ-021/ | APPROVED - DEPLOYED                                                                                | William         | 2026-04-02 |
+| REQ-022 | #46   | MEDIUM | compliance/evidence/REQ-022/ | APPROVED - DEPLOYED                                                                                | William         | 2026-04-06 |
+| REQ-023 | #48   | LOW    | compliance/evidence/REQ-023/ | APPROVED - DEPLOYED                                                                                | metasession-dev | 2026-04-09 |
+| REQ-024 | #42   | HIGH   | compliance/evidence/REQ-024/ | APPROVED - DEPLOYED                                                                                | metasession-dev | 2026-04-09 |
+| REQ-025 | #50   | HIGH   | compliance/evidence/REQ-025/ | APPROVED - DEPLOYED                                                                                | ostendo-io      | 2026-04-12 |
+| REQ-026 | #57   | HIGH   | compliance/evidence/REQ-026/ | APPROVED - DEPLOYED                                                                                | ostendo-io      | 2026-04-12 |
+| REQ-027 | #59   | MEDIUM | compliance/evidence/REQ-027/ | APPROVED - DEPLOYED                                                                                | ostendo-io      | 2026-04-16 |
+| REQ-028 | #62   | MEDIUM | compliance/evidence/REQ-028/ | APPROVED - DEPLOYED                                                                                | ostendo-io      | 2026-04-18 |
+| REQ-029 | #64   | HIGH   | compliance/evidence/REQ-029/ | APPROVED - DEPLOYED                                                                                | ostendo-io      | 2026-04-18 |
+| REQ-030 | #53   | HIGH   | compliance/evidence/REQ-030/ | SUPERSEDED by REQ-031 (PR #66 closed unmerged; back-end commits retained on develop as pre-cursor) | ostendo-io      | 2026-04-24 |
+| REQ-031 | #67   | HIGH   | compliance/evidence/REQ-031/ | DRAFT                                                                                              | ostendo-io      | 2026-04-25 |
 
 ### Change Request Dependencies
 

@@ -33,7 +33,7 @@ export function OrderItemsTable({ order }: OrderItemsTableProps) {
                   <div className="w-12 h-12 rounded bg-muted flex items-center justify-center flex-shrink-0">
                     <ShoppingCart className="h-5 w-5 text-muted-foreground" />
                   </div>
-                  
+
                   <div className="flex-1">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1">
@@ -51,7 +51,10 @@ export function OrderItemsTable({ order }: OrderItemsTableProps) {
                             })()}
                           </p>
                           {item.priceOverridden && (
-                            <Badge variant="outline" className="text-orange-600 border-orange-600">
+                            <Badge
+                              variant="outline"
+                              className="text-orange-600 border-orange-600"
+                            >
                               <DollarSign className="h-3 w-3 mr-1" />
                               Price Overridden
                             </Badge>
@@ -60,7 +63,7 @@ export function OrderItemsTable({ order }: OrderItemsTableProps) {
                         <p className="text-sm text-muted-foreground">
                           ₦{item.price.toLocaleString()} per portion
                         </p>
-                        
+
                         {/* Price Override Details */}
                         {item.priceOverridden && (
                           <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded text-xs">
@@ -71,10 +74,20 @@ export function OrderItemsTable({ order }: OrderItemsTableProps) {
                             <div className="mt-1 space-y-1 text-muted-foreground">
                               {item.originalPrice && (
                                 <>
-                                  <div>Original: ₦{item.originalPrice.toLocaleString()}</div>
-                                  <div>Override: ₦{item.price.toLocaleString()}</div>
                                   <div>
-                                    Difference: {item.price > item.originalPrice ? '+' : ''}₦{(item.price - item.originalPrice).toLocaleString()}
+                                    Original: ₦
+                                    {item.originalPrice.toLocaleString()}
+                                  </div>
+                                  <div>
+                                    Override: ₦{item.price.toLocaleString()}
+                                  </div>
+                                  <div>
+                                    Difference:{' '}
+                                    {item.price > item.originalPrice ? '+' : ''}
+                                    ₦
+                                    {(
+                                      item.price - item.originalPrice
+                                    ).toLocaleString()}
                                   </div>
                                 </>
                               )}
@@ -83,25 +96,31 @@ export function OrderItemsTable({ order }: OrderItemsTableProps) {
                               )}
                               {item.priceOverriddenAt && (
                                 <div>
-                                  Overridden: {new Date(item.priceOverriddenAt).toLocaleString()}
+                                  Overridden:{' '}
+                                  {new Date(
+                                    item.priceOverriddenAt
+                                  ).toLocaleString()}
                                 </div>
                               )}
                             </div>
                           </div>
                         )}
-                        
+
                         {/* Customizations */}
-                        {item.customizations && item.customizations.length > 0 && (
-                          <div className="mt-1 text-xs text-muted-foreground">
-                            {item.customizations.map((custom: any, idx: number) => (
-                              <div key={idx}>
-                                • {custom.name}: {custom.value}
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                        {item.customizations &&
+                          item.customizations.length > 0 && (
+                            <div className="mt-1 text-xs text-muted-foreground">
+                              {item.customizations.map(
+                                (custom: any, idx: number) => (
+                                  <div key={idx}>
+                                    • {custom.name}: {custom.option}
+                                  </div>
+                                )
+                              )}
+                            </div>
+                          )}
                       </div>
-                      
+
                       <p className="font-medium whitespace-nowrap">
                         ₦{(item.price * item.quantity).toLocaleString()}
                       </p>

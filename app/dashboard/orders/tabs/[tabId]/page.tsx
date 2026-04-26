@@ -27,6 +27,7 @@ interface SerializedOrderItem {
   quantity: number;
   subtotal: number;
   portionSize?: 'full' | 'half' | 'quarter';
+  customizations?: Array<{ name: string; option: string; price: number }>;
 }
 
 interface SerializedOrder {
@@ -41,9 +42,15 @@ interface SerializedOrder {
 
 async function getTabDetails(tabId: string) {
   const cookieStore = await cookies();
-  const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+  const session = await getIronSession<SessionData>(
+    cookieStore,
+    sessionOptions
+  );
 
-  if (!session.userId || (session.role !== 'admin' && session.role !== 'super-admin')) {
+  if (
+    !session.userId ||
+    (session.role !== 'admin' && session.role !== 'super-admin')
+  ) {
     redirect('/dashboard');
   }
 
@@ -52,7 +59,7 @@ async function getTabDetails(tabId: string) {
   // Fully serialize to plain objects
   const plainTab = JSON.parse(JSON.stringify(details.tab));
   const plainOrders = JSON.parse(JSON.stringify(details.orders));
-  
+
   const serializedTab = {
     _id: plainTab._id,
     tabNumber: plainTab.tabNumber,
@@ -83,30 +90,39 @@ async function getTabDetails(tabId: string) {
       : [],
   };
 
-  const serializedOrders: SerializedOrder[] = plainOrders.map((order: any): SerializedOrder => ({
-    _id: order._id,
-    orderNumber: order.orderNumber,
-    status: order.status,
-    items: order.items.map((item: any): SerializedOrderItem => ({
-      name: item.name,
-      quantity: item.quantity,
-      subtotal: item.subtotal,
-      portionSize: item.portionSize,
-    })),
-    specialInstructions: order.specialInstructions,
-    total: order.total,
-    createdAt: order.createdAt,
-  }));
+  const serializedOrders: SerializedOrder[] = plainOrders.map(
+    (order: any): SerializedOrder => ({
+      _id: order._id,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      items: order.items.map(
+        (item: any): SerializedOrderItem => ({
+          name: item.name,
+          quantity: item.quantity,
+          subtotal: item.subtotal,
+          customizations: item.customizations,
+          portionSize: item.portionSize,
+        })
+      ),
+      specialInstructions: order.specialInstructions,
+      total: order.total,
+      createdAt: order.createdAt,
+    })
+  );
 
   return { tab: serializedTab, orders: serializedOrders };
 }
 
-export default async function DashboardTabDetailsPage({ params }: DashboardTabDetailsPageProps) {
+export default async function DashboardTabDetailsPage({
+  params,
+}: DashboardTabDetailsPageProps) {
   const { tabId } = await params;
   const { tab, orders } = await getTabDetails(tabId);
 
   // Count non-cancelled orders
-  const nonCancelledOrderCount = orders.filter(order => order.status !== 'cancelled').length;
+  const nonCancelledOrderCount = orders.filter(
+    (order) => order.status !== 'cancelled'
+  ).length;
 
   // Calculate outstanding balance after partial payments
   const totalPartialPayments = (tab.partialPayments || []).reduce(
@@ -138,12 +154,18 @@ export default async function DashboardTabDetailsPage({ params }: DashboardTabDe
               />
             </div>
             <p className="text-muted-foreground mt-2">
-              {tab.customName && <span className="text-sm">Tab #{tab.tabNumber} • </span>}
-              Table {tab.tableNumber} • Opened {new Date(tab.openedAt).toLocaleDateString()}
+              {tab.customName && (
+                <span className="text-sm">Tab #{tab.tabNumber} • </span>
+              )}
+              Table {tab.tableNumber} • Opened{' '}
+              {new Date(tab.openedAt).toLocaleDateString()}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant={tab.status === 'open' ? 'default' : 'secondary'} className="text-sm">
+            <Badge
+              variant={tab.status === 'open' ? 'default' : 'secondary'}
+              className="text-sm"
+            >
               {tab.status}
             </Badge>
             <DeleteTabDialog
@@ -200,15 +222,32 @@ export default async function DashboardTabDetailsPage({ params }: DashboardTabDe
                             } else if (item.portionSize === 'quarter') {
                               quantityDisplay = `${item.quantity} × 1/4x`;
                             }
-                            
+
                             return (
-                              <div key={itemIndex} className="flex justify-between text-sm">
-                                <span>
-                                  {quantityDisplay} {item.name}
-                                </span>
-                                <span className="font-medium">
-                                  ₦{item.subtotal.toLocaleString()}
-                                </span>
+                              <div
+                                key={itemIndex}
+                                className="flex flex-col text-sm"
+                              >
+                                <div className="flex justify-between">
+                                  <span>
+                                    {quantityDisplay} {item.name}
+                                  </span>
+                                  <span className="font-medium">
+                                    ₦{item.subtotal.toLocaleString()}
+                                  </span>
+                                </div>
+                                {item.customizations &&
+                                  item.customizations.length > 0 && (
+                                    <div className="ml-4 text-xs text-muted-foreground">
+                                      {item.customizations.map(
+                                        (c: any, ci: number) => (
+                                          <div key={ci}>
+                                            • {c.name}: {c.option}
+                                          </div>
+                                        )
+                                      )}
+                                    </div>
+                                  )}
                               </div>
                             );
                           })}
@@ -216,7 +255,9 @@ export default async function DashboardTabDetailsPage({ params }: DashboardTabDe
 
                         {order.specialInstructions && (
                           <div className="text-sm">
-                            <span className="text-muted-foreground">Note: </span>
+                            <span className="text-muted-foreground">
+                              Note:{' '}
+                            </span>
                             <span>{order.specialInstructions}</span>
                           </div>
                         )}
@@ -273,7 +314,9 @@ export default async function DashboardTabDetailsPage({ params }: DashboardTabDe
                   <Separator />
                   <div className="flex justify-between font-semibold">
                     <span>Total Partial Payments:</span>
-                    <span className="text-green-600">₦{totalPartialPayments.toLocaleString()}</span>
+                    <span className="text-green-600">
+                      ₦{totalPartialPayments.toLocaleString()}
+                    </span>
                   </div>
                   <div className="flex justify-between font-bold">
                     <span>Outstanding Balance:</span>
@@ -305,26 +348,36 @@ export default async function DashboardTabDetailsPage({ params }: DashboardTabDe
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal:</span>
-                  <span className="font-medium">₦{tab.subtotal.toLocaleString()}</span>
+                  <span className="font-medium">
+                    ₦{tab.subtotal.toLocaleString()}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Service Fee:</span>
-                  <span className="font-medium">₦{tab.serviceFee.toLocaleString()}</span>
+                  <span className="font-medium">
+                    ₦{tab.serviceFee.toLocaleString()}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Tax:</span>
-                  <span className="font-medium">₦{tab.tax.toLocaleString()}</span>
+                  <span className="font-medium">
+                    ₦{tab.tax.toLocaleString()}
+                  </span>
                 </div>
                 {tab.discountTotal > 0 && (
                   <div className="flex justify-between text-sm text-green-600">
                     <span>Discount:</span>
-                    <span className="font-medium">-₦{tab.discountTotal.toLocaleString()}</span>
+                    <span className="font-medium">
+                      -₦{tab.discountTotal.toLocaleString()}
+                    </span>
                   </div>
                 )}
                 {tab.tipAmount > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Tip:</span>
-                    <span className="font-medium">₦{tab.tipAmount.toLocaleString()}</span>
+                    <span className="font-medium">
+                      ₦{tab.tipAmount.toLocaleString()}
+                    </span>
                   </div>
                 )}
                 <Separator />
@@ -336,7 +389,9 @@ export default async function DashboardTabDetailsPage({ params }: DashboardTabDe
                   <>
                     <div className="flex justify-between text-sm text-green-600">
                       <span>Partial Payments:</span>
-                      <span className="font-medium">-₦{totalPartialPayments.toLocaleString()}</span>
+                      <span className="font-medium">
+                        -₦{totalPartialPayments.toLocaleString()}
+                      </span>
                     </div>
                     <Separator />
                     <div className="flex justify-between font-bold text-lg">
@@ -353,7 +408,8 @@ export default async function DashboardTabDetailsPage({ params }: DashboardTabDe
                     Tab Closed
                   </Badge>
                   <p className="text-sm text-muted-foreground mt-2">
-                    Paid on {tab.paidAt ? new Date(tab.paidAt).toLocaleString() : 'N/A'}
+                    Paid on{' '}
+                    {tab.paidAt ? new Date(tab.paidAt).toLocaleString() : 'N/A'}
                   </p>
                 </div>
               )}
@@ -389,13 +445,19 @@ export default async function DashboardTabDetailsPage({ params }: DashboardTabDe
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Status:</span>
-                <Badge variant={tab.status === 'open' ? 'default' : 'secondary'}>
+                <Badge
+                  variant={tab.status === 'open' ? 'default' : 'secondary'}
+                >
                   {tab.status}
                 </Badge>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Payment:</span>
-                <Badge variant={tab.paymentStatus === 'paid' ? 'default' : 'secondary'}>
+                <Badge
+                  variant={
+                    tab.paymentStatus === 'paid' ? 'default' : 'secondary'
+                  }
+                >
                   {tab.paymentStatus}
                 </Badge>
               </div>
@@ -416,7 +478,9 @@ export default async function DashboardTabDetailsPage({ params }: DashboardTabDe
               {tab.paymentReference && (
                 <div className="flex flex-col gap-1">
                   <span className="text-muted-foreground">Payment Ref:</span>
-                  <span className="font-mono text-xs break-all">{tab.paymentReference}</span>
+                  <span className="font-mono text-xs break-all">
+                    {tab.paymentReference}
+                  </span>
                 </div>
               )}
             </CardContent>

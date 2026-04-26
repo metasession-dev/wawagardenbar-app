@@ -76,6 +76,14 @@ export function CartItem({ item }: CartItemProps) {
   // REQ-031: include customization surcharges in line total. Surcharges scale
   // with portionMultiplier (D6) — handled by computeCartItemTotal.
   const itemTotal = computeCartItemTotal(item);
+  // Per-portion price for the "each" display also includes the surcharge so
+  // qty × perPortion = lineTotal (no mismatch in cart UI).
+  const customizationSurcharge = (item.customizations ?? []).reduce(
+    (s, c) => s + (typeof c.price === 'number' ? c.price : 0),
+    0
+  );
+  const perPortionPrice =
+    item.price + customizationSurcharge * (item.portionMultiplier ?? 1);
 
   return (
     <div className="space-y-3 rounded-lg border p-3">
@@ -126,7 +134,7 @@ export function CartItem({ item }: CartItemProps) {
             <span className="font-semibold">{formatPrice(itemTotal)}</span>
             <div className="flex flex-col items-end gap-1">
               <span className="text-sm text-muted-foreground">
-                {formatPrice(item.price)} each
+                {formatPrice(perPortionPrice)} each
               </span>
               {item.priceOverridden && item.originalPrice && (
                 <span className="text-xs text-orange-600 line-through">

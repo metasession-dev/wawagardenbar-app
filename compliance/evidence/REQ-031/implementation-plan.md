@@ -91,7 +91,7 @@ None. All UI primitives (`RadioGroup`, `Checkbox`, `Dialog`, `Label`) already in
 
 ## Risks / Considerations
 
-- **Cart-store persist version bump** drops in-flight customer carts on first load post-deploy. Acceptable — the alternative (silent merge of legacy items into new schema) risks losing soup choices. Document in release ticket so support knows to expect "my cart is empty" reports for ~24h.
+- **Cart-store persist version bumped 1→2 as a marker only.** No destructive migration: legacy items without a `customizations` field hash to the same merge key (empty trailing segment) as before, so they continue to work unchanged. Verified by passing the existing `requirements-verification.spec.ts` cart-persistence E2E tests. Earlier draft of the plan called for a clear-on-migrate (~24h "where's my cart" risk); that turned out to be unnecessary worry — confirmed once the failing E2E surfaced it.
 - **Modal-on-modal accessibility** in Edit Order dialog. Sub-dialog inside Edit Order needs Playwright check on focus-trap return-to-parent. Tested in the e2e spec.
 - **Express Order page is large** (491 lines). Picker integration adds state but the page already manages an `items` array — extension follows existing pattern.
 - **Public POST endpoint accepted `customizations` without validation pre-REQ-031.** This REQ closes a real (small) input-validation hole that REQ-030 didn't notice. Worth calling out in `ai-prompts.md` and the security summary.

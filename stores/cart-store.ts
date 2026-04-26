@@ -215,15 +215,11 @@ export const useCartStore = create<CartStore>()(
             })),
           };
         }
-        if (version <= 1) {
-          // v1 → v2 (REQ-031): clear cart so the new (id, portion, instructions,
-          // customizations) merge key doesn't mis-merge legacy lines that lack
-          // customizations against new lines that have them. Conservative; the
-          // alternative (silent merge) risks losing soup choices on add.
-          // Acceptable trade-off: customers re-add their cart on first load
-          // post-deploy (~24h of "where's my cart" reports possible).
-          state = { ...state, items: [] };
-        }
+        // v1 → v2 (REQ-031): no item shape change required. The new merge key
+        // includes customizations, but items without a customizations field
+        // hash to (id|portion|instructions|) which matches the v1 key for the
+        // same legacy line. So legacy carts continue to work unchanged; the
+        // version bump is a marker, not a destructive migration.
         return state;
       },
     }

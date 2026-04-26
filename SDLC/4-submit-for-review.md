@@ -250,20 +250,32 @@ EOF
 )"
 ```
 
-### Step 4: Wait for CI
+### Step 4: Wait for CI and Report Honest Status (MANDATORY)
+
+After creating the PR, **do not hand off to the reviewer yet**. Required checks include `Compliance Validation` and `META-COMPLY UAT Approval` — both take time to run and can fail for reasons the local gates did not catch (e.g. a missing `RELEASE-TICKET-REQ-XXX.md` that only the PR-side validator sees).
+
+1. Wait ≥60 seconds for required checks to register.
+2. Verify status:
 
 ```bash
-# Watch CI status
-gh pr checks
-
-# Or view in GitHub web UI — checks tab on the PR
+gh pr checks <PR-NUMBER>
+gh pr view <PR-NUMBER> --json mergeable,mergeStateStatus
 ```
 
-CI must pass before the reviewer can approve (enforced by branch protection). If CI fails:
+3. If ANY required check is `fail` or `pending`, DO NOT describe the PR as "awaiting review" or "awaiting approvers." Instead:
+   - Name each failing check and surface its error (e.g. `gh run view <RUN-ID> --log-failed`)
+   - Fix the underlying issue
+   - Re-push and re-check
+
+4. Only when every required check is `pass` **and** `mergeStateStatus` is `CLEAN` (or `BLOCKED` purely by required-reviewer approval) may you describe the PR as ready for review.
+
+**Why this matters:** A status like "awaiting UAT + 2 reviewers" is read by the developer as "nothing for me to do but approve." If a required check is red, that summary is a lie by omission — the PR cannot merge regardless of what the reviewer does. Honest status reporting at this step is the single cheapest defence against wasted review time.
+
+**If CI fails:**
 
 ```bash
 # Check which job failed
-gh pr checks
+gh pr checks <PR-NUMBER>
 
 # Fix the issue locally
 git add <fixed-files>

@@ -143,6 +143,23 @@ Before creating a PR, verify ALL of the following:
 
 If any item fails, resolve it before proceeding.
 
+### Status Reporting (MANDATORY before handing off)
+
+Before describing a PR as "awaiting review", "waiting on reviewers", "ready to merge", "Stage 4/5 requires human action", or any other happy-path language, you MUST:
+
+1. Run `gh pr checks <PR>` and capture the full output, and `gh pr view <PR> --json mergeable,mergeStateStatus` for GitHub's own mergeability signal.
+2. If ANY required check is `fail` or `pending`, do NOT use happy-path language. Instead report:
+   - Each failing check by name, with its error (from `gh run view <RUN> --log-failed` if needed)
+   - Each pending check by name
+   - The concrete fix you are about to apply, or a specific question for the developer
+3. If `mergeStateStatus` is anything other than `CLEAN` or `BLOCKED` (blocked only by required-reviewer approval), treat it as an open issue and investigate before claiming "ready".
+4. If `gh` itself fails (auth, rate limit, network): report "status unknown — gh call failed", never assume green.
+5. Only when every required check is `pass` AND the PR is mergeable may you say "awaiting review" or "awaiting approval".
+
+A summary like "awaiting UAT + 2 reviewers" reads to the developer as "nothing to do but approve." If a required check is red, that summary is a lie by omission — the PR cannot merge regardless of what the reviewer does.
+
+This rule applies any time you summarise PR state in chat, not only at the final handoff.
+
 ### Review Policy (Risk-Tiered)
 
 - **LOW risk:** CI provides independent verification. Self-merge is permitted after all CI checks pass.
@@ -160,5 +177,6 @@ If any item fails, resolve it before proceeding.
 - NEVER push directly to main — always develop → PR → main
 - NEVER skip Co-Authored-By when AI generates code
 - NEVER proceed past a WAIT CHECKPOINT without developer confirmation
+- NEVER describe a PR as "awaiting review" or "ready to merge" without first running `gh pr checks <PR>` and confirming every required check is `pass`
 - ALWAYS commit compliance markdown to git (RTM, test-scope, implementation-plan, security-summary, release tickets)
 - ALWAYS use merge commits (not squash) for develop → main

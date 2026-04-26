@@ -215,7 +215,10 @@ export async function getAvailableMenuItemsAction() {
     const menuItems = await MenuItemModel.find({
       isAvailable: true,
     })
-      .select('name price category subcategory image customizationOptions')
+      // REQ-031: include `customizations` so the Edit Order dialog can render
+      // the picker for items with customization groups. The previous `.select`
+      // referenced a non-existent `customizationOptions` field.
+      .select('name price category subcategory image customizations')
       .sort({ category: 1, name: 1 })
       .lean();
 

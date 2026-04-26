@@ -7,15 +7,15 @@
 
 ## Tests to Add
 
-- [ ] `__tests__/components/customization-picker.test.tsx` — picker component rendering and interaction (~7 tests)
-- [ ] `__tests__/components/customization-options-builder.combined-price.test.tsx` — admin builder live combined-price preview, toggle between surcharge / combined-price input modes (~4 tests)
+- [ ] `__tests__/lib/customization-picker-state.test.ts` — pure helper `derivePickerState({groups, selected}) → {isValid, missingRequiredGroups}` plus `toggleOption(selected, group, option, price, required)` for radio/checkbox semantics (~7 tests). Project has no React Testing Library setup; picker component reduces to a thin shell delegating to this helper, with visible-UI rendering verified in E2E (Option A from architectural decision).
+- [ ] `__tests__/lib/customization-builder-preview.test.ts` — pure helpers `deriveCombinedPricePreview({basePrice, surcharge, itemName, optionName}) → string` and `combinedToSurcharge(combinedPrice, basePrice) → number` for the admin builder (~4 tests). Same pure-helper rationale.
 - [ ] `__tests__/lib/customization-validation.test.ts` — pure helpers `validateSelectedCustomizations` and `summariseSelected` (~11 tests)
 - [ ] `__tests__/lib/cart-line-math.test.ts` — pure helper `computeLineTotal({basePrice, customizations, quantity, portionMultiplier})` covering: zero-surcharge legacy unchanged, single surcharge sums, multi-checkbox sums, half-portion scales surcharge, quarter-portion scales surcharge, rounding behaviour for sub-naira values (~7 tests)
 - [ ] `__tests__/stores/cart-store.customizations.test.ts` — merge-key behaviour AND line-total math with customizations (~8 tests)
 - [ ] `__tests__/actions/admin/express-actions.customizations.test.ts` — server validation + server-side total recomputation in `expressCreateOrderAction` (~7 tests, +1 for the tamper-detection case)
 - [ ] `__tests__/actions/admin/order-edit-actions.customizations.test.ts` — server validation + total recomputation in `updateOrderItemsAction` (~6 tests)
 - [ ] `__tests__/api/public/orders.customizations.test.ts` — server validation + total recomputation + tamper rejection in public POST handler (~7 tests)
-- [ ] `e2e/menu-customization-picker.spec.ts` — Playwright user-journey tests: (1) staff fulfilment with surcharge — line total ₦2,500 visible at every step; (2) customer cart with half portion — line total ₦1,250; (3) required-group block; (4) admin builder combined-price preview round-trip
+- [ ] `e2e/menu-customization-picker.spec.ts` — Playwright user-journey tests: (1) staff fulfilment with surcharge — line total ₦2,500 visible at every step; (2) customer cart with half portion — line total ₦1,250; (3) required-group block; (4) admin builder combined-price preview round-trip; (5) **picker visible-UI**: required group renders as radios; (6) **picker visible-UI**: optional group renders as checkboxes (5 + 6 cover what `customization-picker.test.tsx` would have, since this project has no RTL setup)
 
 ## Tests to Update
 

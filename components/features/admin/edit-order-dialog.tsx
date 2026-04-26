@@ -28,6 +28,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { CustomizationPickerDialog } from '@/components/features/menu/customization-picker-dialog';
+import {
+  summariseSelected,
+  type SelectedCustomization,
+} from '@/lib/customization-validation';
+import type { ICustomization } from '@/interfaces/menu-item.interface';
 
 interface EditOrderDialogProps {
   orderId: string;
@@ -54,6 +60,7 @@ interface MenuItem {
   price: number;
   category: string;
   subcategory?: string;
+  customizations?: ICustomization[];
 }
 
 interface OrderItem {
@@ -80,6 +87,9 @@ export function EditOrderDialog({
   const [availableMenuItems, setAvailableMenuItems] = useState<MenuItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingMenu, setIsFetchingMenu] = useState(false);
+  // REQ-031: when a selected menu item has customization groups, open the
+  // sub-dialog picker before pushing the line.
+  const [pickerMenuItem, setPickerMenuItem] = useState<MenuItem | null>(null);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -131,32 +141,58 @@ export function EditOrderDialog({
     setItems(newItems);
   }
 
+  function customizationsKey(c?: SelectedCustomization[]): string {
+    if (!c || c.length === 0) return '';
+    return [...c]
+      .sort((a, b) =>
+        `${a.name}|${a.option}`.localeCompare(`${b.name}|${b.option}`)
+      )
+      .map((s) => `${s.name}:${s.option}:${s.price}`)
+      .join(',');
+  }
+
+  function pushItem(
+    menuItem: MenuItem,
+    customizations?: SelectedCustomization[]
+  ) {
+    const key = customizationsKey(customizations);
+    const existingIndex = items.findIndex(
+      (item) =>
+        item.menuItemId === menuItem._id &&
+        customizationsKey(item.customizations) === key
+    );
+
+    if (existingIndex >= 0) {
+      // Same item + same customizations → increment quantity
+      handleQuantityChange(existingIndex, items[existingIndex].quantity + 1);
+      return;
+    }
+
+    setItems([
+      ...items,
+      {
+        menuItemId: menuItem._id,
+        name: menuItem.name,
+        price: menuItem.price,
+        quantity: 1,
+        customizations: customizations ?? [],
+        specialInstructions: '',
+      },
+    ]);
+  }
+
   function handleAddItem(menuItemId: string) {
     const menuItem = availableMenuItems.find((mi) => mi._id === menuItemId);
     if (!menuItem) return;
 
-    // Check if item already exists
-    const existingIndex = items.findIndex(
-      (item) => item.menuItemId === menuItemId
-    );
-
-    if (existingIndex >= 0) {
-      // Increment quantity
-      handleQuantityChange(existingIndex, items[existingIndex].quantity + 1);
-    } else {
-      // Add new item
-      setItems([
-        ...items,
-        {
-          menuItemId: menuItem._id,
-          name: menuItem.name,
-          price: menuItem.price,
-          quantity: 1,
-          customizations: [],
-          specialInstructions: '',
-        },
-      ]);
+    // REQ-031: if the menu item has customization groups, open the picker
+    // sub-dialog and let the staff pick before pushing the line.
+    if (menuItem.customizations && menuItem.customizations.length > 0) {
+      setPickerMenuItem(menuItem);
+      return;
     }
+
+    pushItem(menuItem);
   }
 
   async function handleSave() {
@@ -207,10 +243,15 @@ export function EditOrderDialog({
     }
   }
 
-  const subtotal = items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
+  // REQ-031: surcharge-aware subtotal display in the dialog. Server-side
+  // recompute is the source of truth; this matches it for visual consistency.
+  const subtotal = items.reduce((sum, item) => {
+    const surcharge = (item.customizations ?? []).reduce(
+      (s, c) => s + (typeof c.price === 'number' ? c.price : 0),
+      0
+    );
+    return sum + (item.price + surcharge) * item.quantity;
+  }, 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -262,14 +303,33 @@ export function EditOrderDialog({
                         <div className="flex items-center gap-2">
                           <p className="font-medium">{item.name}</p>
                           {item.portionSize === 'half' && (
-                            <Badge variant="secondary" className="text-xs">Half</Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              Half
+                            </Badge>
                           )}
                           {item.portionSize === 'quarter' && (
-                            <Badge variant="secondary" className="text-xs">Quarter</Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              Quarter
+                            </Badge>
                           )}
                         </div>
+                        {item.customizations &&
+                          item.customizations.length > 0 && (
+                            <p className="text-xs text-muted-foreground">
+                              {summariseSelected(item.customizations)}
+                            </p>
+                          )}
                         <p className="text-sm text-muted-foreground">
-                          ₦{item.price.toLocaleString()} each
+                          ₦
+                          {(
+                            item.price +
+                            (item.customizations ?? []).reduce(
+                              (s, c) =>
+                                s + (typeof c.price === 'number' ? c.price : 0),
+                              0
+                            )
+                          ).toLocaleString()}{' '}
+                          each
                         </p>
                       </div>
 
@@ -308,9 +368,18 @@ export function EditOrderDialog({
                         </Button>
                       </div>
 
-                      {/* Item Total */}
+                      {/* Item Total — REQ-031: surcharge-aware */}
                       <div className="w-24 text-right font-medium">
-                        ₦{(item.price * item.quantity).toLocaleString()}
+                        ₦
+                        {(
+                          (item.price +
+                            (item.customizations ?? []).reduce(
+                              (s, c) =>
+                                s + (typeof c.price === 'number' ? c.price : 0),
+                              0
+                            )) *
+                          item.quantity
+                        ).toLocaleString()}
                       </div>
 
                       {/* Remove Button */}
@@ -350,7 +419,10 @@ export function EditOrderDialog({
             >
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={isLoading || items.length === 0}>
+            <Button
+              onClick={handleSave}
+              disabled={isLoading || items.length === 0}
+            >
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -363,6 +435,22 @@ export function EditOrderDialog({
           </div>
         </div>
       </DialogContent>
+
+      {/* REQ-031: sub-dialog picker (modal-on-modal per D9) for adding a line
+          with customizations. Radix Dialog supports nested instances. */}
+      {pickerMenuItem && (
+        <CustomizationPickerDialog
+          open={!!pickerMenuItem}
+          onOpenChange={(open) => !open && setPickerMenuItem(null)}
+          itemName={pickerMenuItem.name}
+          groups={pickerMenuItem.customizations ?? []}
+          onConfirm={(selected) => {
+            pushItem(pickerMenuItem, selected);
+            setPickerMenuItem(null);
+          }}
+          confirmLabel="Add to Order"
+        />
+      )}
     </Dialog>
   );
 }

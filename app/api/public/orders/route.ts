@@ -3,9 +3,14 @@
  */
 import { NextRequest } from 'next/server';
 import Order from '@/models/order-model';
+import MenuItemModel from '@/models/menu-item-model';
 import { OrderService } from '@/services/order-service';
 import { TabService } from '@/services/tab-service';
 import { OrderStatus, OrderType } from '@/interfaces';
+import {
+  reconcileAndValidateOrderLines,
+  type MenuItemForReconcile,
+} from '@/lib/order-line-totals';
 import {
   withApiAuth,
   apiSuccess,
@@ -125,9 +130,13 @@ export async function GET(request: NextRequest): Promise<Response> {
       }
 
       // Build sort object
-      const sortField = sortParam.startsWith('-') ? sortParam.slice(1) : sortParam;
+      const sortField = sortParam.startsWith('-')
+        ? sortParam.slice(1)
+        : sortParam;
       const sortDir = sortParam.startsWith('-') ? -1 : 1;
-      const sortObj: Record<string, 1 | -1> = { [sortField]: sortDir as 1 | -1 };
+      const sortObj: Record<string, 1 | -1> = {
+        [sortField]: sortDir as 1 | -1,
+      };
 
       const [orders, total] = await Promise.all([
         Order.find(filter)
@@ -170,7 +179,13 @@ interface CreateOrderBody {
   guestName?: string;
   guestPhone?: string;
   deliveryDetails?: {
-    address: { street: string; city: string; state: string; postalCode?: string; country: string };
+    address: {
+      street: string;
+      city: string;
+      state: string;
+      postalCode?: string;
+      country: string;
+    };
     deliveryInstructions?: string;
   };
   pickupDetails?: { preferredPickupTime: string };
@@ -295,15 +310,27 @@ export async function POST(request: NextRequest): Promise<Response> {
       return apiError('Invalid JSON body', 400);
     }
 
-    const { orderType, items, subtotal, tax, deliveryFee, discount, total } = body;
+    const { orderType, items, subtotal, tax, deliveryFee, discount, total } =
+      body;
 
     if (!orderType || !items?.length || total == null) {
-      return apiError('orderType, items (non-empty), and total are required', 400);
+      return apiError(
+        'orderType, items (non-empty), and total are required',
+        400
+      );
     }
 
-    const validTypes: OrderType[] = ['dine-in', 'pickup', 'delivery', 'pay-now'];
+    const validTypes: OrderType[] = [
+      'dine-in',
+      'pickup',
+      'delivery',
+      'pay-now',
+    ];
     if (!validTypes.includes(orderType)) {
-      return apiError(`orderType must be one of: ${validTypes.join(', ')}`, 400);
+      return apiError(
+        `orderType must be one of: ${validTypes.join(', ')}`,
+        400
+      );
     }
 
     // Validate optional tab fields
@@ -316,26 +343,83 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
     const tableNumber = body.dineInDetails?.tableNumber?.trim();
     if (useTab && !tableNumber) {
-      return apiError('dineInDetails.tableNumber is required when using useTab', 400);
+      return apiError(
+        'dineInDetails.tableNumber is required when using useTab',
+        400
+      );
     }
 
     try {
-      const enrichedItems = items.map((item) => ({
-        ...item,
-        portionSize: item.portionSize || 'full',
-        portionMultiplier: item.portionMultiplier ?? 1,
-        customizations: item.customizations || [],
-        costPerUnit: 0,
-        totalCost: 0,
-        grossProfit: 0,
-        profitMargin: 0,
-        priceOverridden: false,
-      }));
+      // REQ-031: validate (group, option) pairs against the menu and recompute
+      // subtotal server-side. The menu is the source of truth for prices, not
+      // the client request. AC7 (validation) and AC15 (server total).
+      const menuItemIds = Array.from(
+        new Set(
+          items.map((i) => i.menuItemId).filter((id): id is string => !!id)
+        )
+      );
+      const menuItemDocs = await MenuItemModel.find({
+        _id: { $in: menuItemIds },
+      }).lean();
+      const menuMap = new Map<string, MenuItemForReconcile>(
+        menuItemDocs.map((m: any) => [
+          m._id.toString(),
+          {
+            _id: m._id.toString(),
+            name: m.name,
+            price: m.price,
+            customizations: m.customizations,
+          },
+        ])
+      );
+      const reconciled = reconcileAndValidateOrderLines({
+        menuItems: menuMap,
+        lines: items.map((item) => ({
+          menuItemId: item.menuItemId,
+          quantity: item.quantity,
+          portionMultiplier: item.portionMultiplier ?? 1,
+          customizations: item.customizations,
+        })),
+        // Tamper detection compares against client-supplied subtotal (not total,
+        // which includes fees/tax that the client doesn't compute).
+        clientTotal: typeof subtotal === 'number' ? subtotal : undefined,
+      });
+      if (!reconciled.valid) {
+        return apiError(reconciled.error, 400);
+      }
+
+      const enrichedItems = items.map((item) => {
+        const menuItem = menuMap.get(item.menuItemId);
+        const basePrice = menuItem?.price ?? item.price;
+        const multiplier = item.portionMultiplier ?? 1;
+        const surcharge = (item.customizations ?? []).reduce(
+          (s, c) => s + (typeof c.price === 'number' ? c.price : 0),
+          0
+        );
+        const adjustedBase = Math.round(basePrice * multiplier);
+        const itemSubtotal = Math.round(
+          (adjustedBase + surcharge * multiplier) * item.quantity
+        );
+        return {
+          ...item,
+          price: adjustedBase,
+          portionSize: item.portionSize || 'full',
+          portionMultiplier: multiplier,
+          customizations: item.customizations || [],
+          subtotal: itemSubtotal,
+          costPerUnit: 0,
+          totalCost: 0,
+          grossProfit: 0,
+          profitMargin: 0,
+          priceOverridden: false,
+        };
+      });
 
       const order = await OrderService.createOrder({
         orderType,
         items: enrichedItems as any,
-        subtotal: subtotal || 0,
+        // Server-recomputed subtotal — do NOT trust client-supplied value
+        subtotal: reconciled.recomputedSubtotal,
         tax: tax || 0,
         deliveryFee: deliveryFee || 0,
         discount: discount || 0,
@@ -346,7 +430,11 @@ export async function POST(request: NextRequest): Promise<Response> {
         guestPhone: body.guestPhone,
         deliveryDetails: body.deliveryDetails as any,
         pickupDetails: body.pickupDetails
-          ? { preferredPickupTime: new Date(body.pickupDetails.preferredPickupTime) } as any
+          ? ({
+              preferredPickupTime: new Date(
+                body.pickupDetails.preferredPickupTime
+              ),
+            } as any)
           : undefined,
         dineInDetails: body.dineInDetails as any,
         specialInstructions: body.specialInstructions,
@@ -363,10 +451,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         // Create a new tab for the table
         const existingTab = await TabService.getOpenTabForTable(tableNumber!);
         if (existingTab) {
-          return apiError(
-            `Table ${tableNumber} already has an open tab`,
-            409,
-          );
+          return apiError(`Table ${tableNumber} already has an open tab`, 409);
         }
         tab = await TabService.createTab({
           tableNumber: tableNumber!,
@@ -375,30 +460,31 @@ export async function POST(request: NextRequest): Promise<Response> {
           customerEmail: body.guestEmail,
           customerPhone: body.guestPhone,
         });
-        tab = await TabService.addOrderToTab(tab._id.toString(), order._id.toString());
+        tab = await TabService.addOrderToTab(
+          tab._id.toString(),
+          order._id.toString()
+        );
       } else if (useTab === 'existing') {
         // Find existing open tab for the table
         const existingTab = await TabService.getOpenTabForTable(tableNumber!);
         if (!existingTab) {
-          return apiError(
-            `No open tab found for table ${tableNumber}`,
-            422,
-          );
+          return apiError(`No open tab found for table ${tableNumber}`, 422);
         }
-        tab = await TabService.addOrderToTab(existingTab._id.toString(), order._id.toString());
+        tab = await TabService.addOrderToTab(
+          existingTab._id.toString(),
+          order._id.toString()
+        );
       }
 
       // Return wrapped response when tab is involved
       if (tab) {
-        return apiSuccess(
-          serialize({ order, tab }),
-          201,
-        );
+        return apiSuccess(serialize({ order, tab }), 201);
       }
 
       return apiSuccess(serialize(order), 201);
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Failed to create order';
+      const msg =
+        error instanceof Error ? error.message : 'Failed to create order';
       console.error('[PUBLIC API] POST /api/public/orders', error);
       return apiError(msg, 422);
     }

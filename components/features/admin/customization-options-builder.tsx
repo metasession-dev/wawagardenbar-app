@@ -14,6 +14,10 @@ import {
 } from '@/components/ui/select';
 import { Plus, Trash2, GripVertical } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import {
+  deriveCombinedPricePreview,
+  combinedToSurcharge,
+} from '@/lib/customization-builder-preview';
 
 interface CustomizationOption {
   name: string;
@@ -40,6 +44,10 @@ interface CustomizationOptionsBuilderProps {
   onChange: (customizations: Customization[]) => void;
   disabled?: boolean;
   availableInventories?: InventoryLookupItem[];
+  // REQ-031: needed for the live "Combined price" preview (D10).
+  // Optional so existing callers without REQ-031 wiring still compile.
+  basePrice?: number;
+  itemName?: string;
 }
 
 // Sentinel used by the Select "— None —" item. `<SelectItem value="">` is
@@ -56,7 +64,11 @@ export function CustomizationOptionsBuilder({
   onChange,
   disabled = false,
   availableInventories = [],
+  basePrice,
+  itemName,
 }: CustomizationOptionsBuilderProps) {
+  const showCombinedPreview =
+    typeof basePrice === 'number' && !!itemName && itemName.length > 0;
   function addGroup() {
     onChange([
       ...customizations,
@@ -195,22 +207,68 @@ export function CustomizationOptionsBuilder({
                               disabled={disabled}
                               className="flex-1"
                             />
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={option.price}
-                              onChange={(e) =>
-                                updateOption(
-                                  groupIndex,
-                                  optionIndex,
-                                  'price',
-                                  parseFloat(e.target.value) || 0
-                                )
-                              }
-                              placeholder="Price"
-                              disabled={disabled}
-                              className="w-32"
-                            />
+                            <div className="flex w-44 flex-col gap-1">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={option.price}
+                                onChange={(e) =>
+                                  updateOption(
+                                    groupIndex,
+                                    optionIndex,
+                                    'price',
+                                    parseFloat(e.target.value) || 0
+                                  )
+                                }
+                                placeholder="Surcharge"
+                                disabled={disabled}
+                                className="w-full"
+                              />
+                              {showCombinedPreview && option.name && (
+                                <p
+                                  className="text-xs text-muted-foreground"
+                                  data-testid="combined-price-preview"
+                                >
+                                  {deriveCombinedPricePreview({
+                                    basePrice: basePrice!,
+                                    surcharge: option.price || 0,
+                                    itemName: itemName!,
+                                    optionName: option.name,
+                                  })}
+                                </p>
+                              )}
+                              {showCombinedPreview && option.name && (
+                                <details className="text-xs text-muted-foreground">
+                                  <summary className="cursor-pointer hover:text-foreground">
+                                    Set combined price instead
+                                  </summary>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    placeholder={`Combined price for ${itemName} + ${option.name}`}
+                                    onChange={(e) => {
+                                      const combined = parseFloat(
+                                        e.target.value
+                                      );
+                                      if (Number.isNaN(combined)) return;
+                                      updateOption(
+                                        groupIndex,
+                                        optionIndex,
+                                        'price',
+                                        Math.max(
+                                          0,
+                                          combinedToSurcharge(
+                                            combined,
+                                            basePrice!
+                                          )
+                                        )
+                                      );
+                                    }}
+                                    className="mt-1 w-full"
+                                  />
+                                </details>
+                              )}
+                            </div>
                             <Button
                               type="button"
                               variant="ghost"

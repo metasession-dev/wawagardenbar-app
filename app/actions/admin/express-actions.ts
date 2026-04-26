@@ -14,6 +14,11 @@ import { OrderService } from '@/services/order-service';
 import TabModel from '@/models/tab-model';
 import MenuItemModel from '@/models/menu-item-model';
 import { ITab, IMenuItem } from '@/interfaces';
+import {
+  reconcileAndValidateOrderLines,
+  type MenuItemForReconcile,
+} from '@/lib/order-line-totals';
+import type { SelectedCustomization } from '@/lib/customization-validation';
 
 interface ActionResult<T = unknown> {
   success: boolean;
@@ -191,6 +196,7 @@ export async function expressCreateOrderAction(params: {
     quantity: number;
     portionSize?: 'full' | 'half' | 'quarter';
     specialInstructions?: string;
+    customizations?: SelectedCustomization[];
   }>;
   tabId?: string;
   tableNumber?: string;
@@ -206,29 +212,77 @@ export async function expressCreateOrderAction(params: {
       return { success: false, error: 'At least one item is required' };
     }
 
-    const subtotal = params.items.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0
+    // REQ-031: validate (group, option) pairs against the menu and recompute
+    // subtotal server-side. The menu is the source of truth for prices, not
+    // the client. AC7 (validation) and AC15 (server total) covered here.
+    const menuItemIds = Array.from(
+      new Set(params.items.map((i) => i.menuItemId))
     );
+    const menuItemDocs = await MenuItemModel.find({
+      _id: { $in: menuItemIds },
+    }).lean();
+    const menuMap = new Map<string, MenuItemForReconcile>(
+      menuItemDocs.map((m: any) => [
+        m._id.toString(),
+        {
+          _id: m._id.toString(),
+          name: m.name,
+          price: m.price,
+          customizations: m.customizations,
+        },
+      ])
+    );
+
+    const portionMultiplierFor = (size?: string) =>
+      size === 'half' ? 0.5 : size === 'quarter' ? 0.25 : 1.0;
+
+    const reconciled = reconcileAndValidateOrderLines({
+      menuItems: menuMap,
+      lines: params.items.map((item) => ({
+        menuItemId: item.menuItemId,
+        quantity: item.quantity,
+        portionMultiplier: portionMultiplierFor(item.portionSize),
+        customizations: item.customizations,
+      })),
+    });
+    if (!reconciled.valid) {
+      return { success: false, error: reconciled.error };
+    }
+    const subtotal = reconciled.recomputedSubtotal;
 
     const orderType = params.tabId
       ? ('dine-in' as const)
       : ('pay-now' as const);
-    const items = params.items.map((item) => ({
-      menuItemId: item.menuItemId,
-      name: item.name,
-      price: item.price,
-      quantity: item.quantity,
-      portionSize: item.portionSize || 'full',
-      portionMultiplier: 1,
-      customizations: [],
-      specialInstructions: item.specialInstructions,
-      subtotal: item.price * item.quantity,
-      costPerUnit: 0,
-      totalCost: 0,
-      grossProfit: 0,
-      profitMargin: 0,
-    }));
+    const items = params.items.map((item) => {
+      const menuItem = menuMap.get(item.menuItemId);
+      const basePrice = menuItem?.price ?? item.price;
+      const multiplier = portionMultiplierFor(item.portionSize);
+      const surcharge = (item.customizations ?? []).reduce(
+        (s, c) => s + (typeof c.price === 'number' ? c.price : 0),
+        0
+      );
+      // Persist the portion-adjusted base on the line (matches existing
+      // payment-actions semantics) and the surcharge-aware subtotal.
+      const adjustedBase = Math.round(basePrice * multiplier);
+      const itemSubtotal = Math.round(
+        (adjustedBase + surcharge * multiplier) * item.quantity
+      );
+      return {
+        menuItemId: item.menuItemId,
+        name: item.name,
+        price: adjustedBase,
+        quantity: item.quantity,
+        portionSize: item.portionSize || 'full',
+        portionMultiplier: multiplier,
+        customizations: item.customizations ?? [],
+        specialInstructions: item.specialInstructions,
+        subtotal: itemSubtotal,
+        costPerUnit: 0,
+        totalCost: 0,
+        grossProfit: 0,
+        profitMargin: 0,
+      };
+    });
 
     const order = await OrderService.createOrder({
       orderType,

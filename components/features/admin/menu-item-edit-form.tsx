@@ -741,6 +741,8 @@ export function MenuItemEditForm({
           onChange={setCustomizations}
           disabled={isLoading}
           availableInventories={availableInventories}
+          basePrice={menuItem.price}
+          itemName={menuItem.name}
         />
 
         {/* Inventory Tracking */}

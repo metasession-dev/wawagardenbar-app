@@ -15,19 +15,34 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { computeCartItemTotal } from '@/lib/cart-store-helpers';
+import { summariseSelected } from '@/lib/customization-validation';
 
 interface CartItemProps {
   item: CartItemType;
 }
 
 export function CartItem({ item }: CartItemProps) {
-  const { updateQuantity, removeItem, updateInstructions, overrideItemPrice, resetItemPrice } = useCartStore();
+  const {
+    updateQuantity,
+    removeItem,
+    updateInstructions,
+    overrideItemPrice,
+    resetItemPrice,
+  } = useCartStore();
   const { user } = useAuth();
-  const [isInstructionsOpen, setIsInstructionsOpen] = useState(!!item.specialInstructions);
-  const [instructions, setInstructions] = useState(item.specialInstructions || '');
+  const [isInstructionsOpen, setIsInstructionsOpen] = useState(
+    !!item.specialInstructions
+  );
+  const [instructions, setInstructions] = useState(
+    item.specialInstructions || ''
+  );
   const [overrideDialogOpen, setOverrideDialogOpen] = useState(false);
 
-  const isAdmin = user?.role === 'csr' || user?.role === 'admin' || user?.role === 'super-admin';
+  const isAdmin =
+    user?.role === 'csr' ||
+    user?.role === 'admin' ||
+    user?.role === 'super-admin';
   const canOverridePrice = isAdmin && item.allowManualPriceOverride;
 
   function handleQuantityChange(delta: number) {
@@ -58,7 +73,9 @@ export function CartItem({ item }: CartItemProps) {
     }).format(price);
   }
 
-  const itemTotal = item.price * item.quantity;
+  // REQ-031: include customization surcharges in line total. Surcharges scale
+  // with portionMultiplier (D6) — handled by computeCartItemTotal.
+  const itemTotal = computeCartItemTotal(item);
 
   return (
     <div className="space-y-3 rounded-lg border p-3">
@@ -95,6 +112,14 @@ export function CartItem({ item }: CartItemProps) {
               })()}
             </h4>
             <p className="text-sm text-muted-foreground">{item.category}</p>
+            {item.customizations && item.customizations.length > 0 && (
+              <p
+                className="mt-1 text-xs text-muted-foreground"
+                data-testid="cart-line-customizations"
+              >
+                {summariseSelected(item.customizations)}
+              </p>
+            )}
           </div>
 
           <div className="flex items-center justify-between">
@@ -113,7 +138,10 @@ export function CartItem({ item }: CartItemProps) {
 
           {/* Price Override Badge */}
           {item.priceOverridden && (
-            <Badge variant="outline" className="text-xs border-orange-600 text-orange-600">
+            <Badge
+              variant="outline"
+              className="text-xs border-orange-600 text-orange-600"
+            >
               <DollarSign className="h-3 w-3 mr-1" />
               Price Overridden
             </Badge>
@@ -134,11 +162,7 @@ export function CartItem({ item }: CartItemProps) {
             {item.priceOverridden ? 'Edit Price' : 'Override Price'}
           </Button>
           {item.priceOverridden && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleResetPrice}
-            >
+            <Button variant="ghost" size="sm" onClick={handleResetPrice}>
               Reset
             </Button>
           )}
@@ -180,7 +204,10 @@ export function CartItem({ item }: CartItemProps) {
       </div>
 
       {/* Special Instructions */}
-      <Collapsible open={isInstructionsOpen} onOpenChange={setIsInstructionsOpen}>
+      <Collapsible
+        open={isInstructionsOpen}
+        onOpenChange={setIsInstructionsOpen}
+      >
         <CollapsibleTrigger asChild>
           <Button variant="ghost" size="sm" className="w-full justify-start">
             <MessageSquare className="mr-2 h-4 w-4" />

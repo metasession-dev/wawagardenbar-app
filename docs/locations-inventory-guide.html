@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Wawa Garden Bar — Locations & Inventory User Guide</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: #1f2937; line-height: 1.45; font-size: 10.5pt; }
+  h1 { color: #0b3d2e; border-bottom: 2px solid #0b3d2e; padding-bottom: 6px; margin-bottom: 4px; font-size: 22pt; }
+  h2 { color: #0b3d2e; margin-top: 18pt; margin-bottom: 6pt; font-size: 14pt; border-left: 4px solid #0b3d2e; padding-left: 8px; page-break-after: avoid; }
+  h3 { color: #1f4a3a; margin-top: 12pt; margin-bottom: 4pt; font-size: 12pt; page-break-after: avoid; }
+  h4 { color: #1f4a3a; margin-top: 10pt; margin-bottom: 2pt; font-size: 11pt; page-break-after: avoid; }
+  p { margin: 4pt 0; }
+  ul, ol { margin: 4pt 0 6pt 0; padding-left: 22px; }
+  li { margin: 2pt 0; }
+  code, .path { font-family: "SF Mono", Menlo, Consolas, monospace; background: #f3f4f6; padding: 1px 5px; border-radius: 3px; font-size: 9.5pt; color: #111827; }
+  .label { font-family: "SF Mono", Menlo, Consolas, monospace; background: #ecfdf5; color: #065f46; padding: 1px 5px; border-radius: 3px; font-size: 9.5pt; }
+  .meta { color: #6b7280; font-size: 9.5pt; margin-bottom: 18pt; }
+  .callout { background: #fefce8; border-left: 4px solid #d97706; padding: 8px 12px; margin: 10pt 0; border-radius: 4px; }
+  .callout.tip { background: #ecfdf5; border-color: #059669; }
+  .callout.warn { background: #fef2f2; border-color: #dc2626; }
+  .callout strong { display: block; margin-bottom: 2px; color: #92400e; font-size: 9.5pt; text-transform: uppercase; letter-spacing: 0.4px; }
+  .callout.tip strong { color: #065f46; }
+  .callout.warn strong { color: #991b1b; }
+  table { width: 100%; border-collapse: collapse; margin: 8pt 0; font-size: 9.5pt; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 8px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; color: #0b3d2e; font-weight: 600; }
+  .toc { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px 16px; margin: 12pt 0 18pt; }
+  .toc h2 { border: 0; margin: 0 0 6px; padding: 0; font-size: 11pt; color: #0b3d2e; }
+  .toc ol { margin: 0; padding-left: 22px; }
+  .toc li { margin: 1pt 0; }
+  .step-list { counter-reset: step; list-style: none; padding-left: 0; }
+  .step-list > li { counter-increment: step; position: relative; padding-left: 32px; margin: 8pt 0; }
+  .step-list > li::before { content: counter(step); position: absolute; left: 0; top: 0; width: 22px; height: 22px; background: #0b3d2e; color: white; border-radius: 50%; text-align: center; line-height: 22px; font-weight: 600; font-size: 9.5pt; }
+  hr { border: 0; border-top: 1px solid #e5e7eb; margin: 16pt 0; }
+  .keep { page-break-inside: avoid; }
+</style>
+</head>
+<body>
+
+<h1>Locations & Inventory — User Guide</h1>
+<p class="meta">Wawa Garden Bar &middot; Admin / Manager Walkthrough &middot; 2026-04-25</p>
+
+<p>This guide explains how to set up <strong>multi-location inventory tracking</strong> in the Wawa Garden Bar admin dashboard, how to receive stock into specific locations, how to transfer stock between them, and how to review per-location reports and history.</p>
+
+<div class="toc keep">
+  <h2>Contents</h2>
+  <ol>
+    <li>Concepts &amp; terminology</li>
+    <li>One-time setup — turning on Location Tracking</li>
+    <li>Defining your locations</li>
+    <li>Setting the system defaults</li>
+    <li>Enabling per-item location tracking</li>
+    <li>Receiving stock into a location</li>
+    <li>Transferring stock between locations</li>
+    <li>Deducting stock manually (waste, damage, etc.)</li>
+    <li>Where to read per-location stock</li>
+    <li>Stock-movement history &amp; audit trail</li>
+    <li>How orders interact with locations</li>
+    <li>Common pitfalls &amp; FAQ</li>
+  </ol>
+</div>
+
+<h2>1. Concepts &amp; terminology</h2>
+<table>
+  <tr><th>Term</th><th>What it means</th></tr>
+  <tr><td><strong>Location</strong></td><td>A physical place that holds stock — e.g. <em>Main Bar</em>, <em>Garden Bar</em>, <em>Chiller&nbsp;1</em>, <em>Storage</em>, <em>Kitchen</em>.</td></tr>
+  <tr><td><strong>Location ID</strong></td><td>A short technical identifier (e.g. <code>chiller-1</code>) used internally. Lower-case, no spaces. Cannot be changed easily after stock has been recorded against it — pick something stable.</td></tr>
+  <tr><td><strong>Display Name</strong></td><td>The user-facing label staff see in dropdowns and reports (e.g. <em>Bar Chiller 1</em>). You can rename this freely.</td></tr>
+  <tr><td><strong>Default Receiving Location</strong></td><td>Where newly-received stock lands if you don't pick one explicitly.</td></tr>
+  <tr><td><strong>Default Sales Location</strong></td><td>Where stock is deducted from when an order is fulfilled.</td></tr>
+  <tr><td><strong>Stock Transfer</strong></td><td>A movement of stock from one location to another. Decrements the source, increments the destination, and writes a single audited transfer record.</td></tr>
+  <tr><td><strong>Stock Movement</strong></td><td>Every change to stock (receive, sale, waste, transfer, adjustment) creates a movement row visible in the item's Stock Movement History.</td></tr>
+</table>
+
+<h2>2. One-time setup — turning on Location Tracking</h2>
+<p>Multi-location tracking is off by default. A super-admin must enable it before anything else.</p>
+<ol class="step-list">
+  <li>Sign in as a <strong>super-admin</strong>.</li>
+  <li>Navigate to <span class="path">/dashboard/settings</span> and open the <span class="label">Locations</span> tab.</li>
+  <li>Toggle <span class="label">Enable Location Tracking</span> to <strong>ON</strong>.<br/><span class="meta">Subtitle reads: "Track inventory across multiple physical locations".</span></li>
+  <li>Don't save yet — first add at least one location (next section), then come back and pick the defaults, then save.</li>
+</ol>
+
+<div class="callout warn keep">
+  <strong>Heads-up</strong>
+  Turning the master toggle off later does not delete your locations or their stock — it just hides the location UI from staff. Re-enabling it brings everything back exactly as it was.
+</div>
+
+<h2>3. Defining your locations</h2>
+<p>Still on the <span class="label">Locations</span> tab:</p>
+<ol class="step-list">
+  <li>Click <span class="label">Add Location</span>. A new card appears.</li>
+  <li>Fill in the four fields per location:
+    <ul>
+      <li><strong>Location ID</strong> — short identifier, e.g. <code>main-bar</code>, <code>garden-bar</code>, <code>chiller-1</code>, <code>storage</code>. Required, must be unique.</li>
+      <li><strong>Display Name</strong> — human label, e.g. <em>Main Bar</em>. Required.</li>
+      <li><strong>Type</strong> — pick one: <em>Storage</em> / <em>Chiller</em> / <em>Other</em>. Reporting groups by this.</li>
+      <li><strong>Active</strong> — leave ON for live locations. Deactivating hides a location from dropdowns without losing its history.</li>
+    </ul>
+  </li>
+  <li>Repeat <span class="label">Add Location</span> for each physical place you store stock.</li>
+  <li>Use the trash icon next to a location to delete it (only safe before stock has been recorded there).</li>
+</ol>
+
+<div class="callout tip keep">
+  <strong>Suggested starter setup</strong>
+  Most venues do well with three to five locations: <em>Main Bar</em>, <em>Garden Bar</em>, <em>Storage</em>, <em>Chiller&nbsp;1</em>, <em>Kitchen</em>. Don't over-fragment — every location is one more thing for staff to count during snapshots.
+</div>
+
+<h2>4. Setting the system defaults</h2>
+<p>Below the locations list, configure the policies that govern day-to-day flow:</p>
+<table>
+  <tr><th>Setting</th><th>Pick</th></tr>
+  <tr><td><strong>Default Receiving Location</strong></td><td>Usually <em>Storage</em>. Newly-received deliveries land here unless the receiver picks otherwise.</td></tr>
+  <tr><td><strong>Default Sales Location</strong></td><td>Usually <em>Main Bar</em> (whatever the front-of-house pulls from). Order completions deduct from here automatically.</td></tr>
+  <tr><td><strong>Require Transfer Notes</strong></td><td>Turn ON if you want every transfer to carry a written justification. Recommended for audit-heavy environments.</td></tr>
+  <tr><td><strong>Allow Negative Stock</strong></td><td>Leave OFF unless you have a reason to oversell. ON lets stock dip below zero (useful when restocks lag entry).</td></tr>
+</table>
+<p>Click <span class="label">Save</span> at the top of the form. You're now ready to track stock per location.</p>
+
+<h2>5. Enabling per-item location tracking</h2>
+<p>The system-wide toggle <em>allows</em> per-location tracking; each inventory item still has to opt-in.</p>
+<ol class="step-list">
+  <li>Navigate to <span class="path">/dashboard/inventory</span>.</li>
+  <li>Find the item in the table. The <strong>Track by Location</strong> column shows a toggle — flip it to <strong>ON</strong>.</li>
+  <li>The item's row now displays per-location quantities (e.g. <em>Main Bar: 50 | Chiller 1: 30</em>) in the Locations column.</li>
+  <li>Click the item name to open <span class="path">/dashboard/inventory/{itemId}</span> for full per-location controls.</li>
+</ol>
+
+<div class="callout keep">
+  <strong>Migrating an existing item</strong>
+  When you first turn on Track by Location for an item that already has total stock, the entire current quantity is assigned to the <em>Default Receiving Location</em>. Use a Stock Transfer (next section) to split it across the real locations.
+</div>
+
+<h2>6. Receiving stock into a location</h2>
+<ol class="step-list">
+  <li>Open the inventory item: <span class="path">/dashboard/inventory/{itemId}</span>.</li>
+  <li>In the <span class="label">Stock Adjustments</span> section, click <span class="label">+ Add Stock</span>.</li>
+  <li>Fill in:
+    <ul>
+      <li><strong>Location</strong> — defaults to <em>Default Receiving Location</em>; change if the delivery went elsewhere.</li>
+      <li><strong>Quantity</strong> — units received (must be greater than 0).</li>
+      <li><strong>Reason</strong> — e.g. <em>Restock</em>, <em>Opening Stock</em>.</li>
+      <li><strong>Supplier</strong>, <strong>Cost Per Unit</strong>, <strong>Invoice Number</strong>, <strong>Notes</strong> — optional, all useful for cost tracking and audits.</li>
+    </ul>
+  </li>
+  <li>Click <span class="label">Add Stock</span>.</li>
+</ol>
+<p>The location's stock increases by the quantity entered, and a Stock Movement row is logged with type <em>Addition</em>, category <em>Restock</em>, and your name as <em>Performed By</em>.</p>
+
+<h2>7. Transferring stock between locations</h2>
+<p>Use this whenever stock physically moves — e.g. when bar staff carry bottles from Storage out to the Main Bar.</p>
+<ol class="step-list">
+  <li>Navigate to <span class="path">/dashboard/inventory/transfer</span> (also reachable from the Inventory menu as <em>Stock Transfer</em>).</li>
+  <li>Use <span class="label">Search Items</span> and <span class="label">Filter by Location</span> to find the item. Only items with Track by Location enabled appear.</li>
+  <li>Click the <span class="label">Transfer</span> button on the row.</li>
+  <li>In the dialog, fill in:
+    <ul>
+      <li><strong>From Location</strong> — only locations that hold this item appear, with their current stock shown.</li>
+      <li><strong>To Location</strong> — must differ from <em>From</em>.</li>
+      <li><strong>Quantity</strong> — must be greater than 0 and not exceed available stock at the source.</li>
+      <li><strong>Transfer Reference</strong> — optional ID/code for your records (e.g. <code>TR-2026-014</code>).</li>
+      <li><strong>Notes</strong> — optional unless <em>Require Transfer Notes</em> is on, in which case it's mandatory.</li>
+    </ul>
+  </li>
+  <li>Click <span class="label">Transfer</span>. A toast confirms <em>"Stock transferred successfully"</em> and the table refreshes.</li>
+</ol>
+
+<div class="callout tip keep">
+  <strong>What gets recorded</strong>
+  One Stock Movement row is created with type <em>Transfer</em>, category <em>transfer</em>, and both <em>From</em> and <em>To</em> locations populated. It also writes an audit-log entry (<code>inventory.stock_transferred</code>) that auditors can replay.
+</div>
+
+<h2>8. Deducting stock manually (waste, damage, etc.)</h2>
+<p>For stock loss outside an order — e.g. broken bottles, expired produce — adjust manually.</p>
+<ol class="step-list">
+  <li>Open the item at <span class="path">/dashboard/inventory/{itemId}</span>.</li>
+  <li>Click <span class="label">- Deduct Stock</span>.</li>
+  <li>Pick the <strong>Location</strong> the loss came from (defaults to <em>Default Sales Location</em>).</li>
+  <li>Enter the <strong>Quantity</strong>, pick a <strong>Reason</strong> from <em>Waste / Damage / Theft / Other</em>, and add notes.</li>
+  <li>Submit. A Stock Movement row is logged with type <em>Deduction</em> and category matching the reason.</li>
+</ol>
+
+<h2>9. Where to read per-location stock</h2>
+<table>
+  <tr><th>View</th><th>What it shows</th></tr>
+  <tr><td><span class="path">/dashboard/inventory</span> &nbsp;(list)</td><td>The <em>Locations</em> column shows an inline breakdown badge per row (e.g. <em>Main Bar: 50 | Chiller 1: 30</em>) — fastest way to scan everything at once.</td></tr>
+  <tr><td><span class="path">/dashboard/inventory/{itemId}</span> &nbsp;(detail)</td><td>The <strong>Stock by Location</strong> card shows each location with a percentage badge, absolute quantity, and a horizontal bar. Total stock is summed at the bottom.</td></tr>
+  <tr><td><span class="path">/dashboard/inventory/snapshots</span></td><td>Inventory snapshots include a per-location breakdown so staff can confirm system numbers against physical counts location-by-location. Discrepancies are calculated per location.</td></tr>
+</table>
+
+<h2>10. Stock-movement history &amp; audit trail</h2>
+<p>On any item's detail page, scroll to <span class="label">Stock Movement History</span>:</p>
+<ul>
+  <li><strong>Date / Time</strong> — formatted <em>MMM dd, yyyy HH:mm</em>.</li>
+  <li><strong>Type badge</strong> — colour-coded: green Addition, red Deduction, blue Adjustment, purple Transfer.</li>
+  <li><strong>Quantity</strong> — with sign (<code>+</code> or <code>-</code>).</li>
+  <li><strong>Location</strong> — single name for additions/deductions/adjustments; for transfers it shows <em>From → To</em> with an arrow.</li>
+  <li><strong>Reason / Category</strong> — sale, restock, waste, damage, transfer, etc.</li>
+  <li><strong>Performed By</strong> — staff name. Order-driven deductions show <em>System</em>.</li>
+  <li><strong>Details</strong> — expandable for supplier, invoice number, transfer reference, and any notes.</li>
+</ul>
+
+<h2>11. How orders interact with locations</h2>
+<p>When an order is fulfilled (status flips to <em>completed</em>), the system automatically deducts each ordered item's stock from the <strong>Default Sales Location</strong> set in <span class="path">/dashboard/settings</span>.</p>
+<ul>
+  <li>The POS / order screen does <em>not</em> currently prompt staff to pick a deduction location — it always uses the default.</li>
+  <li>If you need to record sales coming from a non-default location (e.g. an outdoor pop-up bar), do it via a Stock Transfer first (move the stock to that location), or correct it after the fact with a Stock Transfer between locations.</li>
+  <li>Cancelling an order calls the inverse: stock is restored to the same default sales location, with an Addition movement row.</li>
+</ul>
+
+<div class="callout warn keep">
+  <strong>Plan for this</strong>
+  If your venue regularly sells from more than one location, pick the busiest as the <em>Default Sales Location</em>, and run a daily Stock Transfer routine to seed the secondary location with what it needs for service. End-of-day, transfer the leftovers back to Storage.
+</div>
+
+<h2>12. Common pitfalls &amp; FAQ</h2>
+
+<h4>Q. I can't see the Locations tab in Settings.</h4>
+<p>You need a super-admin role. Regular admins don't see it.</p>
+
+<h4>Q. The "Transfer" button is missing for an item.</h4>
+<p>That item has <em>Track by Location</em> turned off. Enable it from the inventory list first.</p>
+
+<h4>Q. The "From Location" dropdown in the transfer dialog is empty.</h4>
+<p>The item has zero stock in every location. Add stock first via <em>+ Add Stock</em>.</p>
+
+<h4>Q. I deleted a location by mistake — what now?</h4>
+<p>If the location had stock or movement history, the rows still exist in the database but the deletion removes it from dropdowns. Re-add it with the same Location ID and Display Name to restore visibility. Prefer <em>deactivating</em> over deleting.</p>
+
+<h4>Q. Why doesn't my snapshot match the system count?</h4>
+<p>Each location is counted independently. Open the snapshot, expand the item, and check which location is short or over — the cause is usually a missed transfer or an off-system sale.</p>
+
+<h4>Q. Can I rename a Location ID after we've used it?</h4>
+<p>Display Name is safe to change at any time. Location ID is technically renameable but historical movement rows still point at the old ID, which fragments reports — only do this with engineering support.</p>
+
+<h4>Q. We split a single delivery across two locations — how do I record that?</h4>
+<p>Run <em>+ Add Stock</em> twice — once per location, with the appropriate quantity each time. Use the same Invoice Number on both rows so they reconcile in cost reports.</p>
+
+<hr/>
+
+<p class="meta">End of guide. For feature-specific compliance evidence, see <code>compliance/RTM.md</code>. For bug reports, raise an issue on the <em>wawagardenbar-app</em> repository.</p>
+
+</body>
+</html>

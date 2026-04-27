@@ -21,7 +21,11 @@ interface KitchenOrderCardProps {
 export function KitchenOrderCard({ order }: KitchenOrderCardProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [orderAge, setOrderAge] = useState(0);
-  const [pickupInfo, setPickupInfo] = useState<{ pickupLabel: string; countdownLabel: string; isOverdue: boolean } | null>(null);
+  const [pickupInfo, setPickupInfo] = useState<{
+    pickupLabel: string;
+    countdownLabel: string;
+    isOverdue: boolean;
+  } | null>(null);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -49,7 +53,11 @@ export function KitchenOrderCard({ order }: KitchenOrderCardProps) {
       const isOverdue = diffMinutes < 0;
       const absoluteMinutes = Math.abs(diffMinutes);
       const countdownLabel =
-        absoluteMinutes < 1 ? 'due now' : isOverdue ? `${absoluteMinutes} min overdue` : `${absoluteMinutes} min left`;
+        absoluteMinutes < 1
+          ? 'due now'
+          : isOverdue
+            ? `${absoluteMinutes} min overdue`
+            : `${absoluteMinutes} min left`;
       setPickupInfo({
         pickupLabel: format(pickupDate, 'h:mm a'),
         countdownLabel,
@@ -115,7 +123,9 @@ export function KitchenOrderCard({ order }: KitchenOrderCardProps) {
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-3xl font-bold text-white mb-1">{order.orderNumber}</h2>
+            <h2 className="text-3xl font-bold text-white mb-1">
+              {order.orderNumber}
+            </h2>
             <div className="flex items-center gap-3 text-gray-300">
               <span className="text-xl">
                 {order.orderType === 'dine-in' && '🍽️ Dine-in'}
@@ -125,13 +135,17 @@ export function KitchenOrderCard({ order }: KitchenOrderCardProps) {
               {pickupInfo && (
                 <div className="flex items-center gap-2 text-lg">
                   <span>{pickupInfo.pickupLabel}</span>
-                  <span className={`font-semibold ${pickupInfo.isOverdue ? 'text-red-300' : 'text-emerald-300'}`}>
+                  <span
+                    className={`font-semibold ${pickupInfo.isOverdue ? 'text-red-300' : 'text-emerald-300'}`}
+                  >
                     {pickupInfo.countdownLabel}
                   </span>
                 </div>
               )}
               {order.tableNumber && (
-                <span className="text-xl font-semibold">Table {order.tableNumber}</span>
+                <span className="text-xl font-semibold">
+                  Table {order.tableNumber}
+                </span>
               )}
             </div>
           </div>
@@ -161,7 +175,7 @@ export function KitchenOrderCard({ order }: KitchenOrderCardProps) {
             } else if (item.portionSize === 'quarter') {
               quantityDisplay = `${item.quantity} × 1/4x`;
             }
-            
+
             return (
               <div
                 key={index}
@@ -169,14 +183,16 @@ export function KitchenOrderCard({ order }: KitchenOrderCardProps) {
               >
                 <div className="flex-1">
                   <div className="flex items-center gap-3">
-                    <span className="text-2xl font-bold text-white">{quantityDisplay}</span>
+                    <span className="text-2xl font-bold text-white">
+                      {quantityDisplay}
+                    </span>
                     <span className="text-xl text-white">{item.name}</span>
                   </div>
                   {item.customizations && item.customizations.length > 0 && (
                     <div className="mt-1 ml-12 text-gray-400">
                       {item.customizations.map((custom: any, idx: number) => (
                         <div key={idx} className="text-sm">
-                          • {custom.name}: {custom.value}
+                          • {custom.name}: {custom.option}
                         </div>
                       ))}
                     </div>
@@ -190,8 +206,12 @@ export function KitchenOrderCard({ order }: KitchenOrderCardProps) {
         {/* Special Instructions */}
         {order.specialInstructions && (
           <div className="bg-yellow-900 border border-yellow-700 p-3 rounded-lg">
-            <p className="text-lg font-semibold text-yellow-200 mb-1">Special Instructions:</p>
-            <p className="text-lg text-yellow-100">{order.specialInstructions}</p>
+            <p className="text-lg font-semibold text-yellow-200 mb-1">
+              Special Instructions:
+            </p>
+            <p className="text-lg text-yellow-100">
+              {order.specialInstructions}
+            </p>
           </div>
         )}
 
@@ -243,7 +263,8 @@ export function KitchenOrderCard({ order }: KitchenOrderCardProps) {
 
         {/* Order Time */}
         <div className="text-center text-gray-400 text-sm pt-2">
-          Ordered {formatDistanceToNow(new Date(order.createdAt), { addSuffix: true })}
+          Ordered{' '}
+          {formatDistanceToNow(new Date(order.createdAt), { addSuffix: true })}
         </div>
       </CardContent>
     </Card>

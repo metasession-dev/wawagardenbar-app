@@ -62,11 +62,24 @@ for REQ in $REQUIREMENTS; do
     # filenames containing .test. / .spec. (captured from the stem, not the
     # dot — without the leading [\w./-]+ the match would start at `.test.`
     # and drop the filename entirely). See META-COMPLY #133.
-    TEST_FILES=$(grep -oP '(?:__tests__/|tests?/|e2e/|spec/)\S+|[\w./-]+\.(?:test|spec)\.\S+' "compliance/evidence/$REQ/test-plan.md" 2>/dev/null \
-      | sed 's/[`),.;:]*$//' | grep -v '/$' | sort -u || true)
-    if [ -n "$TEST_FILES" ]; then
+    #
+    # mapfile + quoted expansion: without this, tokens like `__tests__/**`
+    # get pathname-expanded by the for-loop and produce phantom "missing"
+    # errors for every real subdirectory. See META-COMPLY #137.
+    mapfile -t TEST_FILES < <(
+      grep -oP '(?:__tests__/|tests?/|e2e/|spec/)\S+|[\w./-]+\.(?:test|spec)\.\S+' \
+        "compliance/evidence/$REQ/test-plan.md" 2>/dev/null \
+        | sed 's/[`),.;:]*$//' | grep -v '/$' | sort -u || true
+    )
+    if [ "${#TEST_FILES[@]}" -gt 0 ]; then
       MISSING_TESTS=0
-      for TF in $TEST_FILES; do
+      for TF in "${TEST_FILES[@]}"; do
+        # Prose glob references like `__tests__/**` describe a directory
+        # set, not a specific file — skip instead of treating as missing.
+        if [[ "$TF" == *[*?]* ]]; then
+          echo "  INFO: Skipping glob reference (not a file path): $TF"
+          continue
+        fi
         # Try exact path, then search from repo root
         if [ ! -f "$TF" ] && ! compgen -G "**/$TF" > /dev/null 2>&1; then
           echo "  ERROR: Test file referenced in test-plan.md not found: $TF"
@@ -89,12 +102,16 @@ for REQ in $REQUIREMENTS; do
     echo "  OK: test-execution-summary.md exists"
   fi
 
-  # Check RTM entry exists and has correct status
+  # Check RTM entry exists and has correct status. SUPERSEDED is a terminal,
+  # non-shipping state — accept it cleanly so old REQs in the PR diff don't
+  # block the PR.
   if grep -q "$REQ" compliance/RTM.md 2>/dev/null; then
     if grep "$REQ" compliance/RTM.md | grep -q "TESTED - PENDING SIGN-OFF"; then
       echo "  OK: RTM status is TESTED - PENDING SIGN-OFF"
     elif grep "$REQ" compliance/RTM.md | grep -q "APPROVED"; then
       echo "  OK: RTM status is APPROVED"
+    elif grep "$REQ" compliance/RTM.md | grep -q "SUPERSEDED"; then
+      echo "  OK: RTM status is SUPERSEDED"
     else
       echo "  WARNING: RTM entry exists but status is not TESTED - PENDING SIGN-OFF"
     fi
@@ -103,10 +120,14 @@ for REQ in $REQUIREMENTS; do
     EXIT_CODE=1
   fi
 
-  # Check release ticket exists
+  # Check release ticket exists. SUPERSEDED REQs keep their ticket in
+  # compliance/superseded-releases/ — also a valid location.
   TICKET_PATTERN="compliance/pending-releases/RELEASE-TICKET-${REQ}*"
   APPROVED_PATTERN="compliance/approved-releases/RELEASE-TICKET-${REQ}*"
-  if compgen -G "$TICKET_PATTERN" > /dev/null 2>&1 || compgen -G "$APPROVED_PATTERN" > /dev/null 2>&1; then
+  SUPERSEDED_PATTERN="compliance/superseded-releases/RELEASE-TICKET-${REQ}*"
+  if compgen -G "$TICKET_PATTERN" > /dev/null 2>&1 \
+     || compgen -G "$APPROVED_PATTERN" > /dev/null 2>&1 \
+     || compgen -G "$SUPERSEDED_PATTERN" > /dev/null 2>&1; then
     echo "  OK: Release ticket exists"
   else
     echo "  ERROR: Release ticket missing: compliance/pending-releases/RELEASE-TICKET-${REQ}.md"

@@ -11,6 +11,8 @@ const customizationOptionSchema = new Schema<ICustomizationOption>(
     name: { type: String, required: true },
     price: { type: Number, required: true, min: 0 },
     available: { type: Boolean, default: true },
+    inventoryId: { type: Schema.Types.ObjectId, ref: 'Inventory' },
+    inventoryDeduction: { type: Number, min: 0 },
   },
   { _id: false }
 );
@@ -51,10 +53,10 @@ const menuItemSchema = new Schema<IMenuItem>(
       protein: { type: Number, min: 0 },
       carbs: { type: Number, min: 0 },
       fat: { type: Number, min: 0 },
-      spiceLevel: { 
-        type: String, 
+      spiceLevel: {
+        type: String,
         enum: ['none', 'mild', 'medium', 'hot', 'extra-hot'],
-        default: 'none'
+        default: 'none',
       },
     },
     slug: { type: String, unique: true, sparse: true },
@@ -78,12 +80,12 @@ const menuItemSchema = new Schema<IMenuItem>(
 );
 
 // Virtual field for half portion price
-menuItemSchema.virtual('halfPortionPrice').get(function() {
+menuItemSchema.virtual('halfPortionPrice').get(function () {
   return Math.round(this.price * 0.5);
 });
 
 // Virtual field for quarter portion price
-menuItemSchema.virtual('quarterPortionPrice').get(function() {
+menuItemSchema.virtual('quarterPortionPrice').get(function () {
   return Math.round(this.price * 0.25);
 });
 

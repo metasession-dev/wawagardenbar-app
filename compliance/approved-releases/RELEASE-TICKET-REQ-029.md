@@ -1,11 +1,11 @@
 # Release Ticket: REQ-029 — Expand expense search to cover receipt reference, notes, and amount
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** APPROVED - DEPLOYED
 **Date:** 2026-04-18
 **Requirement ID:** REQ-029
 **Risk Level:** HIGH (MEDIUM baseline — user-facing finance query — with AI-involvement +1)
 **Issue:** #64
-**PR:** _to be created after UAT verification_
+**PR:** #65 (merged as `bdf2c7a`)
 
 ---
 
@@ -115,5 +115,31 @@ _Pending — to be performed against the UAT environment after compliance commit
 
 ## Reviewers
 
-- [ ] Human reviewer #1 (required for HIGH risk)
-- [ ] UAT sign-off
+- [x] Human reviewer #1 (required for HIGH risk) — ostendo-io
+- [x] UAT sign-off — ostendo-io (META-COMPLY release 27a93a1d…)
+
+---
+
+## Audit Trail
+
+| Date       | Action                        | Actor            | Notes                                                                            |
+| ---------- | ----------------------------- | ---------------- | -------------------------------------------------------------------------------- |
+| 2026-04-18 | Requirement created           | ostendo-io       | Risk: HIGH, GitHub issue #64                                                     |
+| 2026-04-18 | Implementation plan           | Claude Code      | Approved by ostendo-io (WAIT CHECKPOINT 1)                                       |
+| 2026-04-18 | Test scope                    | Claude Code      | Approved by ostendo-io (WAIT CHECKPOINT 2)                                       |
+| 2026-04-18 | Test plan                     | Claude Code      | Approved by ostendo-io (WAIT CHECKPOINT 3)                                       |
+| 2026-04-18 | Unit tests written (TDD)      | Claude Code      | 45 tests — initially failing against pre-change code                             |
+| 2026-04-18 | Implementation completed      | Claude Code      | `lib/expense-search.ts`, server `$text` → regex `$or`, client wired              |
+| 2026-04-18 | E2E spec written              | Claude Code      | 5 Playwright tests                                                               |
+| 2026-04-18 | SAST-safety refactor          | Claude Code      | Moved `new RegExp` into `buildLiteralSearchRegex` with nosemgrep                 |
+| 2026-04-18 | CI gates passed (develop)     | CI               | Run #24610513313 — TSC, SAST, audit, E2E, build all green                        |
+| 2026-04-18 | Evidence compiled             | Claude Code      | Security summary, test execution summary                                         |
+| 2026-04-18 | UAT verification passed       | Claude Code      | Automated health + smoke green; META-COMPLY UAT approved by ostendo-io           |
+| 2026-04-18 | Validator glob bug hotfix     | Claude Code      | `__tests__/**` in test-plan.md was triggering shell expansion (META-COMPLY #137) |
+| 2026-04-18 | PR opened                     | Claude Code      | PR #65                                                                           |
+| 2026-04-18 | PR approved                   | ostendo-io       | HIGH risk second-human review                                                    |
+| 2026-04-18 | Merged to main                | ostendo-io       | Merge commit `bdf2c7a`                                                           |
+| 2026-04-18 | Production deploy             | System (Railway) | Auto-deploy from `main`                                                          |
+| 2026-04-18 | PROD post-deploy evidence     | CI               | Run #24614072078 — "Production is up (HTTP 200)" + smoke tests passed            |
+| 2026-04-18 | META-COMPLY release recorded  | System           | Release auto-transitioned to `released`                                          |
+| 2026-04-18 | Finalised APPROVED - DEPLOYED | Claude Code      | Release ticket moved to approved-releases/; RTM updated                          |

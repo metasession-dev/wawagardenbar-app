@@ -17,6 +17,7 @@ import {
   updateOrderStatusAction,
   toggleOrderReconciliationAction,
 } from '@/app/actions/admin/order-management-actions';
+import { summariseSelected } from '@/lib/customization-validation';
 import {
   Clock,
   User,
@@ -342,6 +343,14 @@ export function OrderCard({
               <div key={index} className="text-sm">
                 <span className="font-medium">{quantityDisplay}</span>{' '}
                 {item.name}
+                {item.customizations && item.customizations.length > 0 && (
+                  <div
+                    className="ml-6 text-xs text-muted-foreground"
+                    data-testid="order-card-customizations"
+                  >
+                    {summariseSelected(item.customizations)}
+                  </div>
+                )}
               </div>
             );
           })}

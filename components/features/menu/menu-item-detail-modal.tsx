@@ -23,6 +23,10 @@ import { useCartStore } from '@/stores/cart-store';
 import { validateCartItem } from '@/app/actions/cart/cart-actions';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
+import { CustomizationPicker } from '@/components/features/menu/customization-picker';
+import { derivePickerState } from '@/lib/customization-picker-state';
+import type { SelectedCustomization } from '@/lib/customization-validation';
+import { computeLineTotal } from '@/lib/cart-line-math';
 
 interface MenuItemDetailModalProps {
   item: MenuItemWithStock;
@@ -30,16 +34,32 @@ interface MenuItemDetailModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetailModalProps) {
+export function MenuItemDetailModal({
+  item,
+  open,
+  onOpenChange,
+}: MenuItemDetailModalProps) {
   const [quantity, setQuantity] = useState(1);
-  const [portionSize, setPortionSize] = useState<'full' | 'half' | 'quarter'>('full');
+  const [portionSize, setPortionSize] = useState<'full' | 'half' | 'quarter'>(
+    'full'
+  );
   const [adjustedPrice, setAdjustedPrice] = useState(item.price);
   const [specialInstructions, setSpecialInstructions] = useState('');
+  const [selectedCustomizations, setSelectedCustomizations] = useState<
+    SelectedCustomization[]
+  >([]);
   const [isAdding, setIsAdding] = useState(false);
   const { toast } = useToast();
   const { addItem, openCart } = useCartStore();
   const { session } = useAuth();
   const router = useRouter();
+
+  // REQ-031: picker validity gates Add-to-Cart for required groups
+  const customizationGroups = item.customizations ?? [];
+  const pickerState = derivePickerState({
+    groups: customizationGroups,
+    selected: selectedCustomizations,
+  });
 
   // Update price when portion changes
   useEffect(() => {
@@ -47,7 +67,10 @@ export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetail
       const basePrice = Math.round(item.price * 0.5);
       const surcharge = item.portionOptions?.halfPortionSurcharge || 0;
       setAdjustedPrice(basePrice + surcharge);
-    } else if (item.portionOptions?.quarterPortionEnabled && portionSize === 'quarter') {
+    } else if (
+      item.portionOptions?.quarterPortionEnabled &&
+      portionSize === 'quarter'
+    ) {
       const basePrice = Math.round(item.price * 0.25);
       const surcharge = item.portionOptions?.quarterPortionSurcharge || 0;
       setAdjustedPrice(basePrice + surcharge);
@@ -62,14 +85,14 @@ export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetail
   // Calculate max quantity based on portion size
   const getMaxQuantity = () => {
     if (!item.currentStock) return 99;
-    
+
     let portionMultiplier = 1.0;
     if (portionSize === 'half') {
       portionMultiplier = 0.5;
     } else if (portionSize === 'quarter') {
       portionMultiplier = 0.25;
     }
-    
+
     // Available portions = stock / portion multiplier
     // Example: 2 stock / 0.25 = 8 quarter portions
     const maxPortions = Math.floor(item.currentStock / portionMultiplier);
@@ -115,11 +138,15 @@ export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetail
     }
 
     setIsAdding(true);
-    
+
     try {
       // Validate item availability with portion size
-      const validation = await validateCartItem(item._id, quantity, portionSize);
-      
+      const validation = await validateCartItem(
+        item._id,
+        quantity,
+        portionSize
+      );
+
       if (!validation.success) {
         toast({
           title: 'Cannot Add to Cart',
@@ -130,22 +157,32 @@ export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetail
         return;
       }
 
-      // Add to cart with portion size
+      // Add to cart with portion size and selected customizations (REQ-031)
       addItem({
         id: item._id,
         name: item.name,
         price: adjustedPrice,
         quantity,
         portionSize,
-        portionMultiplier: portionSize === 'half' ? 0.5 : portionSize === 'quarter' ? 0.25 : 1.0,
+        portionMultiplier:
+          portionSize === 'half' ? 0.5 : portionSize === 'quarter' ? 0.25 : 1.0,
         image: item.images?.[0],
         category: item.category,
         specialInstructions: specialInstructions || undefined,
         preparationTime: item.preparationTime,
         allowManualPriceOverride: item.allowManualPriceOverride,
+        customizations:
+          selectedCustomizations.length > 0
+            ? selectedCustomizations
+            : undefined,
       });
 
-      const portionText = portionSize === 'half' ? ' (Half Portion)' : portionSize === 'quarter' ? ' (Quarter Portion)' : '';
+      const portionText =
+        portionSize === 'half'
+          ? ' (Half Portion)'
+          : portionSize === 'quarter'
+            ? ' (Quarter Portion)'
+            : '';
       toast({
         title: 'Added to Cart',
         description: `${quantity}x ${item.name}${portionText} added to your cart`,
@@ -154,11 +191,12 @@ export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetail
 
       // Open cart sidebar
       openCart();
-      
+
       // Close modal and reset
       onOpenChange(false);
       setQuantity(1);
       setSpecialInstructions('');
+      setSelectedCustomizations([]);
     } catch (error) {
       toast({
         title: 'Error',
@@ -175,9 +213,23 @@ export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetail
     setQuantity(1);
     setPortionSize('full');
     setSpecialInstructions('');
+    setSelectedCustomizations([]);
   }
 
-  const totalPrice = adjustedPrice * quantity;
+  // REQ-031: line total = (adjustedBase + Σ surcharge × portionMultiplier) × qty.
+  // Uses the cart-line-math helper so cart Order Summary and admin/POS surfaces
+  // display the same number.
+  const portionMultiplier =
+    portionSize === 'half' ? 0.5 : portionSize === 'quarter' ? 0.25 : 1.0;
+  const surchargeTotal = selectedCustomizations.reduce(
+    (s, c) => s + c.price,
+    0
+  );
+  const totalPrice = computeLineTotal({
+    basePrice: adjustedPrice + surchargeTotal * portionMultiplier,
+    quantity,
+    portionMultiplier: 1, // adjustedPrice already includes the portion multiplier baked in
+  });
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -213,7 +265,9 @@ export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetail
             >
               <AlertCircle className="h-5 w-5" />
               <span className="text-sm font-medium">
-                {isOutOfStock ? 'Out of Stock' : `Low Stock - Only ${maxQuantity} ${portionSize === 'full' ? 'available' : `${portionSize} portions available`}`}
+                {isOutOfStock
+                  ? 'Out of Stock'
+                  : `Low Stock - Only ${maxQuantity} ${portionSize === 'full' ? 'available' : `${portionSize} portions available`}`}
               </span>
             </div>
           )}
@@ -234,19 +288,25 @@ export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetail
                   {item.nutritionalInfo.calories && (
                     <div>
                       <p className="text-muted-foreground">Calories</p>
-                      <p className="font-medium">{item.nutritionalInfo.calories} kcal</p>
+                      <p className="font-medium">
+                        {item.nutritionalInfo.calories} kcal
+                      </p>
                     </div>
                   )}
                   {item.nutritionalInfo.protein && (
                     <div>
                       <p className="text-muted-foreground">Protein</p>
-                      <p className="font-medium">{item.nutritionalInfo.protein}g</p>
+                      <p className="font-medium">
+                        {item.nutritionalInfo.protein}g
+                      </p>
                     </div>
                   )}
                   {item.nutritionalInfo.carbs && (
                     <div>
                       <p className="text-muted-foreground">Carbs</p>
-                      <p className="font-medium">{item.nutritionalInfo.carbs}g</p>
+                      <p className="font-medium">
+                        {item.nutritionalInfo.carbs}g
+                      </p>
                     </div>
                   )}
                   {item.nutritionalInfo.fat && (
@@ -286,43 +346,85 @@ export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetail
           <Separator />
 
           {/* Portion Size Selector - Only for food items with portion options enabled */}
-          {item.mainCategory === 'food' && (item.portionOptions?.halfPortionEnabled || item.portionOptions?.quarterPortionEnabled) && (
-            <div>
-              <Label className="mb-3 block font-semibold">Portion Size</Label>
-              <RadioGroup value={portionSize} onValueChange={(value) => setPortionSize(value as 'full' | 'half' | 'quarter')}>
-                <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-accent">
-                  <RadioGroupItem value="full" id="full" />
-                  <Label htmlFor="full" className="flex-1 cursor-pointer font-normal">
-                    <div className="flex items-center justify-between">
-                      <span>Full Portion</span>
-                      <span className="font-semibold">{formatPrice(item.price)}</span>
+          {item.mainCategory === 'food' &&
+            (item.portionOptions?.halfPortionEnabled ||
+              item.portionOptions?.quarterPortionEnabled) && (
+              <div>
+                <Label className="mb-3 block font-semibold">Portion Size</Label>
+                <RadioGroup
+                  value={portionSize}
+                  onValueChange={(value) =>
+                    setPortionSize(value as 'full' | 'half' | 'quarter')
+                  }
+                >
+                  <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-accent">
+                    <RadioGroupItem value="full" id="full" />
+                    <Label
+                      htmlFor="full"
+                      className="flex-1 cursor-pointer font-normal"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>Full Portion</span>
+                        <span className="font-semibold">
+                          {formatPrice(item.price)}
+                        </span>
+                      </div>
+                    </Label>
+                  </div>
+                  {item.portionOptions?.halfPortionEnabled && (
+                    <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-accent">
+                      <RadioGroupItem value="half" id="half" />
+                      <Label
+                        htmlFor="half"
+                        className="flex-1 cursor-pointer font-normal"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span>Half Portion (50%)</span>
+                          <span className="font-semibold">
+                            {formatPrice(
+                              Math.round(item.price * 0.5) +
+                                (item.portionOptions?.halfPortionSurcharge || 0)
+                            )}
+                          </span>
+                        </div>
+                      </Label>
                     </div>
-                  </Label>
-                </div>
-                {item.portionOptions?.halfPortionEnabled && (
-                  <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-accent">
-                    <RadioGroupItem value="half" id="half" />
-                    <Label htmlFor="half" className="flex-1 cursor-pointer font-normal">
-                      <div className="flex items-center justify-between">
-                        <span>Half Portion (50%)</span>
-                        <span className="font-semibold">{formatPrice(Math.round(item.price * 0.5) + (item.portionOptions?.halfPortionSurcharge || 0))}</span>
-                      </div>
-                    </Label>
-                  </div>
-                )}
-                {item.portionOptions?.quarterPortionEnabled && (
-                  <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-accent">
-                    <RadioGroupItem value="quarter" id="quarter" />
-                    <Label htmlFor="quarter" className="flex-1 cursor-pointer font-normal">
-                      <div className="flex items-center justify-between">
-                        <span>Quarter Portion (25%)</span>
-                        <span className="font-semibold">{formatPrice(Math.round(item.price * 0.25) + (item.portionOptions?.quarterPortionSurcharge || 0))}</span>
-                      </div>
-                    </Label>
-                  </div>
-                )}
-              </RadioGroup>
-            </div>
+                  )}
+                  {item.portionOptions?.quarterPortionEnabled && (
+                    <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-accent">
+                      <RadioGroupItem value="quarter" id="quarter" />
+                      <Label
+                        htmlFor="quarter"
+                        className="flex-1 cursor-pointer font-normal"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span>Quarter Portion (25%)</span>
+                          <span className="font-semibold">
+                            {formatPrice(
+                              Math.round(item.price * 0.25) +
+                                (item.portionOptions?.quarterPortionSurcharge ||
+                                  0)
+                            )}
+                          </span>
+                        </div>
+                      </Label>
+                    </div>
+                  )}
+                </RadioGroup>
+              </div>
+            )}
+
+          {/* REQ-031: Customization Picker — between Portion and Quantity */}
+          {customizationGroups.length > 0 && (
+            <>
+              <Separator />
+              <CustomizationPicker
+                groups={customizationGroups}
+                value={selectedCustomizations}
+                onChange={setSelectedCustomizations}
+                disabled={isOutOfStock}
+              />
+            </>
           )}
 
           {/* Quantity Selector */}
@@ -339,7 +441,9 @@ export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetail
               >
                 <Minus className="h-4 w-4" />
               </Button>
-              <span className="w-12 text-center text-lg font-semibold">{quantity}</span>
+              <span className="w-12 text-center text-lg font-semibold">
+                {quantity}
+              </span>
               <Button
                 variant="outline"
                 size="icon"
@@ -373,13 +477,18 @@ export function MenuItemDetailModal({ item, open, onOpenChange }: MenuItemDetail
         <DialogFooter className="flex-col gap-2 sm:flex-row">
           <div className="flex flex-1 items-center justify-between sm:justify-start">
             <span className="text-sm text-muted-foreground">Total:</span>
-            <span className="ml-2 text-2xl font-bold">{formatPrice(totalPrice)}</span>
+            <span className="ml-2 text-2xl font-bold">
+              {formatPrice(totalPrice)}
+            </span>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={handleClose}>
               Cancel
             </Button>
-            <Button onClick={handleAddToCart} disabled={isOutOfStock || isAdding}>
+            <Button
+              onClick={handleAddToCart}
+              disabled={isOutOfStock || isAdding || !pickerState.isValid}
+            >
               <Plus className="mr-2 h-4 w-4" />
               {isAdding ? 'Adding...' : 'Add to Cart'}
             </Button>

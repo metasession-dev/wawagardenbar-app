@@ -5,6 +5,7 @@ import OrderModel from '@/models/order-model';
 import StockMovementModel from '@/models/stock-movement-model';
 import { sendLowStockAlertEmail } from '@/lib/email';
 import { SystemSettingsService } from '@/services/system-settings-service';
+import { resolveLinkedInventoryFor } from '@/lib/customization-inventory';
 
 /**
  * Inventory Service
@@ -27,73 +28,118 @@ class InventoryService {
     for (const item of order.items) {
       const menuItem = await MenuItemModel.findById(item.menuItemId);
 
-      // Skip if item doesn't track inventory
-      if (!menuItem?.trackInventory) {
+      if (!menuItem) {
         continue;
       }
 
-      // Get inventory record via canonical lookup
-      const inventory = await InventoryModel.findOne({ menuItemId: item.menuItemId });
-
-      if (!inventory) {
-        continue;
-      }
-
-      // Calculate actual quantity to deduct based on portion multiplier
       const actualQuantity = item.quantity * (item.portionMultiplier || 1.0);
 
-      // Deduct stock with fractional support
-      inventory.currentStock = Math.max(0, inventory.currentStock - actualQuantity);
+      if (menuItem.trackInventory) {
+        // Base inventory deduction
+        const inventory = await InventoryModel.findOne({
+          menuItemId: item.menuItemId,
+        });
 
-      // Add stock history entry with portion info
-      let reason = 'Sale';
-      let notes: string | undefined;
-      
-      if (item.portionSize === 'half') {
-        reason = 'Sale (Half Portion)';
-        notes = `${item.quantity}x half portions (${actualQuantity} units deducted)`;
-      } else if (item.portionSize === 'quarter') {
-        reason = 'Sale (Quarter Portion)';
-        notes = `${item.quantity}x quarter portions (${actualQuantity} units deducted)`;
+        if (inventory) {
+          inventory.currentStock = Math.max(
+            0,
+            inventory.currentStock - actualQuantity
+          );
+
+          let reason = 'Sale';
+          let notes: string | undefined;
+
+          if (item.portionSize === 'half') {
+            reason = 'Sale (Half Portion)';
+            notes = `${item.quantity}x half portions (${actualQuantity} units deducted)`;
+          } else if (item.portionSize === 'quarter') {
+            reason = 'Sale (Quarter Portion)';
+            notes = `${item.quantity}x quarter portions (${actualQuantity} units deducted)`;
+          }
+
+          await StockMovementModel.create({
+            inventoryId: inventory._id,
+            quantity: -actualQuantity,
+            type: 'deduction' as const,
+            reason,
+            performedBy: new mongoose.Types.ObjectId(
+              '000000000000000000000000'
+            ),
+            timestamp: new Date(),
+            category: 'sale' as const,
+            orderId: order._id,
+            performedByName: 'System',
+            notes,
+          });
+
+          if (inventory.currentStock <= 0) {
+            inventory.status = 'out-of-stock';
+          } else if (inventory.currentStock <= inventory.minimumStock) {
+            inventory.status = 'low-stock';
+          } else {
+            inventory.status = 'in-stock';
+          }
+
+          inventory.totalSales += actualQuantity;
+          inventory.lastSaleDate = new Date();
+
+          await inventory.save();
+
+          if (
+            inventory.status === 'low-stock' ||
+            inventory.status === 'out-of-stock'
+          ) {
+            await this.sendLowStockAlert(inventory);
+          }
+        }
       }
 
-      const movementData = {
-        inventoryId: inventory._id,
-        quantity: -actualQuantity,
-        type: 'deduction' as const,
-        reason,
-        performedBy: new mongoose.Types.ObjectId('000000000000000000000000'),
-        timestamp: new Date(),
-        category: 'sale' as const,
-        orderId: order._id,
-        performedByName: 'System',
-        notes,
-      };
+      // Linked customization-option deduction (runs independently of base trackInventory)
+      const linked = resolveLinkedInventoryFor(
+        menuItem,
+        item.customizations || []
+      );
+      for (const { inventoryId, deductionPerUnit } of linked) {
+        const linkedInv = await InventoryModel.findById(inventoryId);
+        if (!linkedInv) continue;
 
-      // Write to normalized StockMovement collection
-      await StockMovementModel.create(movementData);
+        const linkedAmount = actualQuantity * deductionPerUnit;
+        linkedInv.currentStock = Math.max(
+          0,
+          linkedInv.currentStock - linkedAmount
+        );
 
-      // Update status based on stock level
-      if (inventory.currentStock <= 0) {
-        inventory.status = 'out-of-stock';
-      } else if (inventory.currentStock <= inventory.minimumStock) {
-        inventory.status = 'low-stock';
-      } else {
-        inventory.status = 'in-stock';
-      }
+        await StockMovementModel.create({
+          inventoryId: linkedInv._id,
+          quantity: -linkedAmount,
+          type: 'deduction' as const,
+          reason: 'Sale (linked customization option)',
+          performedBy: new mongoose.Types.ObjectId('000000000000000000000000'),
+          timestamp: new Date(),
+          category: 'sale' as const,
+          orderId: order._id,
+          performedByName: 'System',
+        });
 
-      // Update sales tracking with actual quantity
-      inventory.totalSales += actualQuantity;
-      inventory.lastSaleDate = new Date();
+        if (linkedInv.currentStock <= 0) {
+          linkedInv.status = 'out-of-stock';
+        } else if (linkedInv.currentStock <= linkedInv.minimumStock) {
+          linkedInv.status = 'low-stock';
+        } else {
+          linkedInv.status = 'in-stock';
+        }
 
-      await inventory.save();
+        linkedInv.totalSales += linkedAmount;
+        linkedInv.lastSaleDate = new Date();
 
-      // Check for low stock and send alerts
-      if (
-        inventory.status === 'low-stock' ||
-        inventory.status === 'out-of-stock'
-      ) {
-        await this.sendLowStockAlert(inventory);
+        await linkedInv.save();
+
+        if (
+          linkedInv.status === 'low-stock' ||
+          linkedInv.status === 'out-of-stock'
+        ) {
+          await this.sendLowStockAlert(linkedInv);
+        }
       }
     }
   }
@@ -118,61 +164,95 @@ class InventoryService {
     for (const item of order.items) {
       const menuItem = await MenuItemModel.findById(item.menuItemId);
 
-      // Skip if item doesn't track inventory
-      if (!menuItem?.trackInventory) {
+      if (!menuItem) {
         continue;
       }
 
-      // Get inventory record via canonical lookup
-      const inventory = await InventoryModel.findOne({ menuItemId: item.menuItemId });
-
-      if (!inventory) {
-        continue;
-      }
-
-      // Calculate actual quantity to restore based on portion multiplier
       const actualQuantity = item.quantity * (item.portionMultiplier || 1.0);
 
-      // Restore stock
-      inventory.currentStock += actualQuantity;
+      if (menuItem.trackInventory) {
+        const inventory = await InventoryModel.findOne({
+          menuItemId: item.menuItemId,
+        });
 
-      // Add stock history entry
-      let notes: string | undefined;
-      if (item.portionSize === 'half') {
-        notes = `${item.quantity}x half portions (${actualQuantity} units restored)`;
-      } else if (item.portionSize === 'quarter') {
-        notes = `${item.quantity}x quarter portions (${actualQuantity} units restored)`;
+        if (inventory) {
+          inventory.currentStock += actualQuantity;
+
+          let notes: string | undefined;
+          if (item.portionSize === 'half') {
+            notes = `${item.quantity}x half portions (${actualQuantity} units restored)`;
+          } else if (item.portionSize === 'quarter') {
+            notes = `${item.quantity}x quarter portions (${actualQuantity} units restored)`;
+          }
+
+          await StockMovementModel.create({
+            inventoryId: inventory._id,
+            quantity: actualQuantity,
+            type: 'addition' as const,
+            reason: 'Order Cancelled - Stock Restored',
+            performedBy: new mongoose.Types.ObjectId(
+              '000000000000000000000000'
+            ),
+            timestamp: new Date(),
+            category: 'adjustment' as const,
+            orderId: order._id,
+            performedByName: 'System',
+            notes,
+          });
+
+          if (inventory.currentStock <= 0) {
+            inventory.status = 'out-of-stock';
+          } else if (inventory.currentStock <= inventory.minimumStock) {
+            inventory.status = 'low-stock';
+          } else {
+            inventory.status = 'in-stock';
+          }
+
+          inventory.totalSales = Math.max(
+            0,
+            inventory.totalSales - actualQuantity
+          );
+
+          await inventory.save();
+        }
       }
 
-      const movementData = {
-        inventoryId: inventory._id,
-        quantity: actualQuantity,
-        type: 'addition' as const,
-        reason: 'Order Cancelled - Stock Restored',
-        performedBy: new mongoose.Types.ObjectId('000000000000000000000000'),
-        timestamp: new Date(),
-        category: 'adjustment' as const,
-        orderId: order._id,
-        performedByName: 'System',
-        notes,
-      };
+      // Linked customization-option restore (runs independently of base trackInventory)
+      const linked = resolveLinkedInventoryFor(
+        menuItem,
+        item.customizations || []
+      );
+      for (const { inventoryId, deductionPerUnit } of linked) {
+        const linkedInv = await InventoryModel.findById(inventoryId);
+        if (!linkedInv) continue;
 
-      // Write to normalized StockMovement collection
-      await StockMovementModel.create(movementData);
+        const linkedAmount = actualQuantity * deductionPerUnit;
+        linkedInv.currentStock += linkedAmount;
 
-      // Update status based on stock level
-      if (inventory.currentStock <= 0) {
-        inventory.status = 'out-of-stock';
-      } else if (inventory.currentStock <= inventory.minimumStock) {
-        inventory.status = 'low-stock';
-      } else {
-        inventory.status = 'in-stock';
+        await StockMovementModel.create({
+          inventoryId: linkedInv._id,
+          quantity: linkedAmount,
+          type: 'addition' as const,
+          reason: 'Order Cancelled - Linked Customization Stock Restored',
+          performedBy: new mongoose.Types.ObjectId('000000000000000000000000'),
+          timestamp: new Date(),
+          category: 'adjustment' as const,
+          orderId: order._id,
+          performedByName: 'System',
+        });
+
+        if (linkedInv.currentStock <= 0) {
+          linkedInv.status = 'out-of-stock';
+        } else if (linkedInv.currentStock <= linkedInv.minimumStock) {
+          linkedInv.status = 'low-stock';
+        } else {
+          linkedInv.status = 'in-stock';
+        }
+
+        linkedInv.totalSales = Math.max(0, linkedInv.totalSales - linkedAmount);
+
+        await linkedInv.save();
       }
-
-      // Update sales tracking (reduce total sales)
-      inventory.totalSales = Math.max(0, inventory.totalSales - actualQuantity);
-
-      await inventory.save();
     }
 
     // Mark order as inventory restored
@@ -197,7 +277,9 @@ class InventoryService {
       return true;
     }
 
-    const inventory = await InventoryModel.findOne({ menuItemId: new mongoose.Types.ObjectId(menuItemId) });
+    const inventory = await InventoryModel.findOne({
+      menuItemId: new mongoose.Types.ObjectId(menuItemId),
+    });
 
     if (!inventory) {
       return true;
@@ -227,23 +309,40 @@ class InventoryService {
     }
 
     if (!menuItem.isAvailable) {
-      return { available: false, message: 'This item is currently unavailable' };
+      return {
+        available: false,
+        message: 'This item is currently unavailable',
+      };
     }
 
     // Validate portion options are enabled if requested
-    if (portionSize === 'half' && !menuItem.portionOptions?.halfPortionEnabled) {
-      return { available: false, message: 'Half portion is not available for this item' };
+    if (
+      portionSize === 'half' &&
+      !menuItem.portionOptions?.halfPortionEnabled
+    ) {
+      return {
+        available: false,
+        message: 'Half portion is not available for this item',
+      };
     }
-    
-    if (portionSize === 'quarter' && !menuItem.portionOptions?.quarterPortionEnabled) {
-      return { available: false, message: 'Quarter portion is not available for this item' };
+
+    if (
+      portionSize === 'quarter' &&
+      !menuItem.portionOptions?.quarterPortionEnabled
+    ) {
+      return {
+        available: false,
+        message: 'Quarter portion is not available for this item',
+      };
     }
 
     if (!menuItem.trackInventory) {
       return { available: true };
     }
 
-    const inventory = await InventoryModel.findOne({ menuItemId: menuItem._id });
+    const inventory = await InventoryModel.findOne({
+      menuItemId: menuItem._id,
+    });
 
     if (!inventory) {
       return { available: true };
@@ -258,7 +357,10 @@ class InventoryService {
     }
     const actualQuantityNeeded = quantity * portionMultiplier;
 
-    if (inventory.preventOrdersWhenOutOfStock && inventory.currentStock < actualQuantityNeeded) {
+    if (
+      inventory.preventOrdersWhenOutOfStock &&
+      inventory.currentStock < actualQuantityNeeded
+    ) {
       return {
         available: false,
         message: `Only ${inventory.currentStock} ${inventory.unit} available. You need ${actualQuantityNeeded} ${inventory.unit}.`,
@@ -376,7 +478,9 @@ class InventoryService {
 
     const velocity = await this.calculateSalesVelocity(inventoryId, days);
     const avgStock =
-      (inventory.currentStock + inventory.minimumStock + inventory.maximumStock) /
+      (inventory.currentStock +
+        inventory.minimumStock +
+        inventory.maximumStock) /
       3;
 
     if (avgStock === 0) {
@@ -432,7 +536,8 @@ class InventoryService {
 
     const totalWaste = wasteAgg.length > 0 ? wasteAgg[0].totalWaste : 0;
     const wasteCost = totalWaste * inventory.costPerUnit;
-    const totalMovement = totalMovementAgg.length > 0 ? totalMovementAgg[0].totalMovement : 0;
+    const totalMovement =
+      totalMovementAgg.length > 0 ? totalMovementAgg[0].totalMovement : 0;
     const wastePercentage =
       totalMovement > 0 ? (totalWaste / totalMovement) * 100 : 0;
 
@@ -447,9 +552,8 @@ class InventoryService {
    * Calculate profit margin for an item
    */
   static async calculateProfitMargin(inventoryId: string) {
-    const inventory = await InventoryModel.findById(inventoryId).populate(
-      'menuItemId'
-    );
+    const inventory =
+      await InventoryModel.findById(inventoryId).populate('menuItemId');
 
     if (!inventory || !inventory.menuItemId) {
       return {
@@ -583,52 +687,71 @@ class InventoryService {
     transferReference?: string;
     notes?: string;
   }): Promise<void> {
-    const { inventoryId, fromLocation, toLocation, quantity, performedBy, performedByName, transferReference, notes } = params;
-    
+    const {
+      inventoryId,
+      fromLocation,
+      toLocation,
+      quantity,
+      performedBy,
+      performedByName,
+      transferReference,
+      notes,
+    } = params;
+
     const inventory = await InventoryModel.findById(inventoryId);
-    
+
     if (!inventory) {
       throw new Error('Inventory item not found');
     }
-    
+
     if (!inventory.trackByLocation) {
       throw new Error('Location tracking is not enabled for this item');
     }
-    
+
     if (fromLocation === toLocation) {
       throw new Error('Source and destination locations must be different');
     }
-    
-    const sourceLocation = inventory.locations.find(l => l.location === fromLocation);
-    
+
+    const sourceLocation = inventory.locations.find(
+      (l) => l.location === fromLocation
+    );
+
     if (!sourceLocation) {
       throw new Error(`Source location '${fromLocation}' not found`);
     }
-    
+
     if (sourceLocation.currentStock < quantity) {
       throw new Error(
         `Insufficient stock in ${fromLocation}. Available: ${sourceLocation.currentStock}, Requested: ${quantity}`
       );
     }
-    
+
     // Resolve location names from system config
     let fromName = fromLocation;
     let toName = toLocation;
     try {
       const locConfig = await SystemSettingsService.getInventoryLocations();
-      const fromCfg = locConfig.locations.find((c: { id: string; name: string }) => c.id === fromLocation);
-      const toCfg = locConfig.locations.find((c: { id: string; name: string }) => c.id === toLocation);
+      const fromCfg = locConfig.locations.find(
+        (c: { id: string; name: string }) => c.id === fromLocation
+      );
+      const toCfg = locConfig.locations.find(
+        (c: { id: string; name: string }) => c.id === toLocation
+      );
       if (fromCfg) fromName = fromCfg.name;
       if (toCfg) toName = toCfg.name;
-    } catch { /* fallback to IDs */ }
+    } catch {
+      /* fallback to IDs */
+    }
 
     sourceLocation.currentStock -= quantity;
     sourceLocation.lastUpdated = new Date();
     sourceLocation.updatedBy = new mongoose.Types.ObjectId(performedBy);
     sourceLocation.updatedByName = performedByName;
-    
-    let destinationLocation = inventory.locations.find(l => l.location === toLocation);
-    
+
+    let destinationLocation = inventory.locations.find(
+      (l) => l.location === toLocation
+    );
+
     if (destinationLocation) {
       destinationLocation.currentStock += quantity;
       destinationLocation.lastUpdated = new Date();
@@ -644,7 +767,7 @@ class InventoryService {
         updatedByName: performedByName,
       } as any);
     }
-    
+
     const movementData = {
       inventoryId: inventory._id,
       quantity,
@@ -662,7 +785,7 @@ class InventoryService {
 
     // Write to normalized StockMovement collection
     await StockMovementModel.create(movementData);
-    
+
     await inventory.save();
   }
 
@@ -681,12 +804,20 @@ class InventoryService {
     transferReference?: string;
     notes?: string;
   }): Promise<{ success: number; failed: number; errors: string[] }> {
-    const { transfers, fromLocation, toLocation, performedBy, performedByName, transferReference, notes } = params;
-    
+    const {
+      transfers,
+      fromLocation,
+      toLocation,
+      performedBy,
+      performedByName,
+      transferReference,
+      notes,
+    } = params;
+
     let success = 0;
     let failed = 0;
     const errors: string[] = [];
-    
+
     for (const transfer of transfers) {
       try {
         await this.transferStock({
@@ -705,7 +836,7 @@ class InventoryService {
         errors.push(`${transfer.inventoryId}: ${error.message}`);
       }
     }
-    
+
     return { success, failed, errors };
   }
 
@@ -717,16 +848,16 @@ class InventoryService {
     location: string
   ): Promise<number> {
     const inventory = await InventoryModel.findById(inventoryId);
-    
+
     if (!inventory) {
       throw new Error('Inventory item not found');
     }
-    
+
     if (!inventory.trackByLocation) {
       return inventory.currentStock;
     }
-    
-    const loc = inventory.locations.find(l => l.location === location);
+
+    const loc = inventory.locations.find((l) => l.location === location);
     return loc?.currentStock || 0;
   }
 
@@ -745,17 +876,28 @@ class InventoryService {
     supplier?: string;
     notes?: string;
   }): Promise<void> {
-    const { inventoryId, location, quantity, reason, performedBy, performedByName, costPerUnit, invoiceNumber, supplier, notes } = params;
-    
+    const {
+      inventoryId,
+      location,
+      quantity,
+      reason,
+      performedBy,
+      performedByName,
+      costPerUnit,
+      invoiceNumber,
+      supplier,
+      notes,
+    } = params;
+
     const inventory = await InventoryModel.findById(inventoryId);
-    
+
     if (!inventory) {
       throw new Error('Inventory item not found');
     }
-    
+
     if (inventory.trackByLocation) {
-      const loc = inventory.locations.find(l => l.location === location);
-      
+      const loc = inventory.locations.find((l) => l.location === location);
+
       if (loc) {
         loc.currentStock += quantity;
         loc.lastUpdated = new Date();
@@ -773,10 +915,10 @@ class InventoryService {
     } else {
       inventory.currentStock += quantity;
     }
-    
+
     inventory.lastRestocked = new Date();
     inventory.totalRestocked += quantity;
-    
+
     const movementData = {
       inventoryId: inventory._id,
       quantity,
@@ -796,7 +938,7 @@ class InventoryService {
 
     // Write to normalized StockMovement collection
     await StockMovementModel.create(movementData);
-    
+
     await inventory.save();
   }
 
@@ -814,27 +956,37 @@ class InventoryService {
     orderId?: string;
     notes?: string;
   }): Promise<void> {
-    const { inventoryId, location, quantity, reason, performedBy, performedByName, category, orderId, notes } = params;
-    
+    const {
+      inventoryId,
+      location,
+      quantity,
+      reason,
+      performedBy,
+      performedByName,
+      category,
+      orderId,
+      notes,
+    } = params;
+
     const inventory = await InventoryModel.findById(inventoryId);
-    
+
     if (!inventory) {
       throw new Error('Inventory item not found');
     }
-    
+
     if (inventory.trackByLocation) {
-      const loc = inventory.locations.find(l => l.location === location);
-      
+      const loc = inventory.locations.find((l) => l.location === location);
+
       if (!loc) {
         throw new Error(`Location '${location}' not found`);
       }
-      
+
       if (loc.currentStock < quantity) {
         throw new Error(
           `Insufficient stock in ${location}. Available: ${loc.currentStock}, Requested: ${quantity}`
         );
       }
-      
+
       loc.currentStock = Math.max(0, loc.currentStock - quantity);
       loc.lastUpdated = new Date();
       loc.updatedBy = new mongoose.Types.ObjectId(performedBy);
@@ -842,7 +994,7 @@ class InventoryService {
     } else {
       inventory.currentStock = Math.max(0, inventory.currentStock - quantity);
     }
-    
+
     const movementData = {
       inventoryId: inventory._id,
       quantity: -quantity,
@@ -859,14 +1011,14 @@ class InventoryService {
 
     // Write to normalized StockMovement collection
     await StockMovementModel.create(movementData);
-    
+
     if (category === 'sale') {
       inventory.totalSales += quantity;
       inventory.lastSaleDate = new Date();
     } else if (category === 'waste' || category === 'damage') {
       inventory.totalWaste += quantity;
     }
-    
+
     await inventory.save();
   }
 
@@ -874,12 +1026,15 @@ class InventoryService {
    * Get location breakdown for an inventory item
    */
   static async getLocationBreakdown(inventoryId: string) {
-    const inventory = await InventoryModel.findById(inventoryId).populate('menuItemId', 'name');
-    
+    const inventory = await InventoryModel.findById(inventoryId).populate(
+      'menuItemId',
+      'name'
+    );
+
     if (!inventory) {
       throw new Error('Inventory item not found');
     }
-    
+
     if (!inventory.trackByLocation) {
       return {
         trackByLocation: false,
@@ -887,19 +1042,20 @@ class InventoryService {
         locations: [],
       };
     }
-    
+
     return {
       trackByLocation: true,
       totalStock: inventory.currentStock,
-      locations: inventory.locations.map(loc => ({
+      locations: inventory.locations.map((loc) => ({
         location: loc.location,
         locationName: loc.locationName,
         currentStock: loc.currentStock,
         lastUpdated: loc.lastUpdated,
         updatedByName: loc.updatedByName,
-        percentage: inventory.currentStock > 0 
-          ? ((loc.currentStock / inventory.currentStock) * 100).toFixed(1)
-          : '0',
+        percentage:
+          inventory.currentStock > 0
+            ? ((loc.currentStock / inventory.currentStock) * 100).toFixed(1)
+            : '0',
       })),
     };
   }
@@ -928,13 +1084,13 @@ class InventoryService {
    * Get low stock alerts by location
    */
   static async getLowStockByLocation() {
-    const inventories = await InventoryModel.find({ 
+    const inventories = await InventoryModel.find({
       trackByLocation: true,
-      status: { $in: ['low-stock', 'out-of-stock'] }
+      status: { $in: ['low-stock', 'out-of-stock'] },
     }).populate('menuItemId', 'name mainCategory category');
-    
+
     const alerts: any[] = [];
-    
+
     for (const inventory of inventories) {
       for (const location of inventory.locations) {
         if (location.currentStock <= inventory.minimumStock * 0.3) {
@@ -951,7 +1107,7 @@ class InventoryService {
         }
       }
     }
-    
+
     return alerts;
   }
 
@@ -965,33 +1121,39 @@ class InventoryService {
     performedByName: string
   ): Promise<void> {
     const inventory = await InventoryModel.findById(inventoryId);
-    
+
     if (!inventory) {
       throw new Error('Inventory item not found');
     }
-    
+
     if (inventory.trackByLocation) {
       throw new Error('Location tracking is already enabled');
     }
-    
+
     // Resolve location name from system config
     let locationName = initialLocation;
     try {
       const locConfig = await SystemSettingsService.getInventoryLocations();
-      const cfg = locConfig.locations.find((c: { id: string; name: string }) => c.id === initialLocation);
+      const cfg = locConfig.locations.find(
+        (c: { id: string; name: string }) => c.id === initialLocation
+      );
       if (cfg) locationName = cfg.name;
-    } catch { /* fallback to ID */ }
+    } catch {
+      /* fallback to ID */
+    }
 
     inventory.trackByLocation = true;
-    inventory.locations = [{
-      location: initialLocation,
-      locationName,
-      currentStock: inventory.currentStock,
-      lastUpdated: new Date(),
-      updatedBy: new mongoose.Types.ObjectId(performedBy),
-      updatedByName: performedByName,
-    } as any];
-    
+    inventory.locations = [
+      {
+        location: initialLocation,
+        locationName,
+        currentStock: inventory.currentStock,
+        lastUpdated: new Date(),
+        updatedBy: new mongoose.Types.ObjectId(performedBy),
+        updatedByName: performedByName,
+      } as any,
+    ];
+
     const movementData = {
       inventoryId: inventory._id,
       quantity: inventory.currentStock,
@@ -1006,7 +1168,7 @@ class InventoryService {
 
     // Write to normalized StockMovement collection
     await StockMovementModel.create(movementData);
-    
+
     await inventory.save();
   }
 }

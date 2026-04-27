@@ -6,6 +6,10 @@ import { connectDB } from '@/lib/mongodb';
 import OrderModel from '@/models/order-model';
 import MenuItemModel from '@/models/menu-item-model';
 import { Types } from 'mongoose';
+import {
+  reconcileAndValidateOrderLines,
+  type MenuItemForReconcile,
+} from '@/lib/order-line-totals';
 
 interface UpdateOrderItemsInput {
   orderId: string;
@@ -78,6 +82,35 @@ export async function updateOrderItemsAction(input: UpdateOrderItemsInput) {
       }
     }
 
+    // REQ-031: validate (group, option) pairs exist on the menu item and
+    // recompute the subtotal server-side. Single source of truth via the
+    // reconciler helper. AC7 (validation) and AC15 (server total) covered here.
+    const portionMultiplierFor = (size?: string) =>
+      size === 'half' ? 0.5 : size === 'quarter' ? 0.25 : 1.0;
+    const menuMap = new Map<string, MenuItemForReconcile>(
+      menuItems.map((m: any) => [
+        m._id.toString(),
+        {
+          _id: m._id.toString(),
+          name: m.name,
+          price: m.price,
+          customizations: m.customizations,
+        },
+      ])
+    );
+    const reconciled = reconcileAndValidateOrderLines({
+      menuItems: menuMap,
+      lines: input.items.map((item) => ({
+        menuItemId: item.menuItemId,
+        quantity: item.quantity,
+        portionMultiplier: portionMultiplierFor(item.portionSize),
+        customizations: item.customizations,
+      })),
+    });
+    if (!reconciled.valid) {
+      return { success: false, error: reconciled.error };
+    }
+
     // Build new items array
     const newItems = input.items.map((inputItem) => {
       const menuItem = menuItems.find(
@@ -88,24 +121,26 @@ export async function updateOrderItemsAction(input: UpdateOrderItemsInput) {
         throw new Error('Menu item not found');
       }
 
-      // Calculate item subtotal (base price + customizations)
-      let itemPrice = menuItem.price;
       const customizations = inputItem.customizations || [];
-      const customizationTotal = customizations.reduce(
-        (sum, custom) => sum + custom.price,
+      const multiplier = portionMultiplierFor(inputItem.portionSize);
+      const surchargeTotal = customizations.reduce(
+        (sum, custom) =>
+          sum + (typeof custom.price === 'number' ? custom.price : 0),
         0
       );
-      itemPrice += customizationTotal;
-
-      const itemSubtotal = itemPrice * inputItem.quantity;
+      const adjustedBase = Math.round(menuItem.price * multiplier);
+      // REQ-031: surcharge scales with portion (D6, AC13)
+      const itemSubtotal = Math.round(
+        (adjustedBase + surchargeTotal * multiplier) * inputItem.quantity
+      );
 
       return {
         menuItemId: new Types.ObjectId(menuItem._id),
         name: menuItem.name,
-        price: menuItem.price,
+        price: adjustedBase,
         quantity: inputItem.quantity,
         portionSize: inputItem.portionSize || 'full',
-        portionMultiplier: inputItem.portionSize === 'half' ? 0.5 : inputItem.portionSize === 'quarter' ? 0.25 : 1.0,
+        portionMultiplier: multiplier,
         customizations: customizations.map((custom) => ({
           name: custom.name,
           option: custom.option,
@@ -115,10 +150,12 @@ export async function updateOrderItemsAction(input: UpdateOrderItemsInput) {
         subtotal: itemSubtotal,
         costPerUnit: menuItem.costPerUnit || 0,
         totalCost: (menuItem.costPerUnit || 0) * inputItem.quantity,
-        grossProfit: itemSubtotal - (menuItem.costPerUnit || 0) * inputItem.quantity,
+        grossProfit:
+          itemSubtotal - (menuItem.costPerUnit || 0) * inputItem.quantity,
         profitMargin:
           itemSubtotal > 0
-            ? ((itemSubtotal - (menuItem.costPerUnit || 0) * inputItem.quantity) /
+            ? ((itemSubtotal -
+                (menuItem.costPerUnit || 0) * inputItem.quantity) /
                 itemSubtotal) *
               100
             : 0,
@@ -126,8 +163,8 @@ export async function updateOrderItemsAction(input: UpdateOrderItemsInput) {
       };
     });
 
-    // Calculate new subtotal
-    const newSubtotal = newItems.reduce((sum, item) => sum + item.subtotal, 0);
+    // REQ-031: subtotal is the server-recomputed value
+    const newSubtotal = reconciled.recomputedSubtotal;
 
     // Recalculate fees using SettingsService
     const totals = await SettingsService.calculateOrderTotals(
@@ -178,7 +215,10 @@ export async function getAvailableMenuItemsAction() {
     const menuItems = await MenuItemModel.find({
       isAvailable: true,
     })
-      .select('name price category subcategory image customizationOptions')
+      // REQ-031: include `customizations` so the Edit Order dialog can render
+      // the picker for items with customization groups. The previous `.select`
+      // referenced a non-existent `customizationOptions` field.
+      .select('name price category subcategory image customizations')
       .sort({ category: 1, name: 1 })
       .lean();
 

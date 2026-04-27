@@ -8,6 +8,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { RewardsSection } from './rewards-section';
 import { calculateCartTotals } from '@/app/actions/cart/cart-actions';
+import { computeCartItemTotal } from '@/lib/cart-store-helpers';
+import { summariseSelected } from '@/lib/customization-validation';
 
 interface OrderSummaryProps {
   orderType: 'dine-in' | 'pickup' | 'delivery' | 'pay-now';
@@ -15,11 +17,23 @@ interface OrderSummaryProps {
   onPointsApplied?: (points: number, discount: number) => void;
 }
 
-export function OrderSummary({ orderType, onRewardApplied, onPointsApplied }: OrderSummaryProps) {
+export function OrderSummary({
+  orderType,
+  onRewardApplied,
+  onPointsApplied,
+}: OrderSummaryProps) {
   const { items, getTotalPrice, getTotalItems } = useCartStore();
-  const [appliedReward, setAppliedReward] = useState<{ id: string; discount: number } | undefined>();
-  const [appliedPoints, setAppliedPoints] = useState<{ points: number; discount: number } | undefined>();
-  const [fees, setFees] = useState<{ serviceFee: number; deliveryFee: number; tax: number }>({
+  const [appliedReward, setAppliedReward] = useState<
+    { id: string; discount: number } | undefined
+  >();
+  const [appliedPoints, setAppliedPoints] = useState<
+    { points: number; discount: number } | undefined
+  >();
+  const [fees, setFees] = useState<{
+    serviceFee: number;
+    deliveryFee: number;
+    tax: number;
+  }>({
     serviceFee: 0,
     deliveryFee: 0,
     tax: 0,
@@ -53,13 +67,16 @@ export function OrderSummary({ orderType, onRewardApplied, onPointsApplied }: Or
   }, [subtotal, orderType]);
 
   const { serviceFee, deliveryFee, tax } = fees;
-  
+
   // Apply discounts
   const rewardDiscount = appliedReward?.discount || 0;
   const pointsDiscount = appliedPoints?.discount || 0;
   const totalDiscount = rewardDiscount + pointsDiscount;
-  
-  const total = Math.max(0, subtotal + deliveryFee + serviceFee + tax - totalDiscount);
+
+  const total = Math.max(
+    0,
+    subtotal + deliveryFee + serviceFee + tax - totalDiscount
+  );
 
   function handleRewardApplied(rewardId: string, discount: number) {
     setAppliedReward({ id: rewardId, discount });
@@ -100,42 +117,67 @@ export function OrderSummary({ orderType, onRewardApplied, onPointsApplied }: Or
         {/* Items List */}
         <ScrollArea className="max-h-64">
           <div className="space-y-3">
-            {items.map((item) => (
-              <div key={item.cartItemId} className="flex justify-between gap-2 text-sm">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium">{item.name}</p>
-                    {item.portionSize === 'half' && (
-                      <Badge variant="secondary" className="text-xs">Half</Badge>
+            {items.map((item) => {
+              // REQ-031: per-line total includes customization surcharges scaled
+              // by portionMultiplier. Per-portion display includes surcharge too
+              // so "1x ₦2,500" matches the line total.
+              const lineTotal = computeCartItemTotal(item);
+              const surcharge = (item.customizations ?? []).reduce(
+                (s, c) => s + (typeof c.price === 'number' ? c.price : 0),
+                0
+              );
+              const multiplier = item.portionMultiplier ?? 1;
+              const perPortion = item.price + surcharge * multiplier;
+              return (
+                <div
+                  key={item.cartItemId}
+                  className="flex justify-between gap-2 text-sm"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">{item.name}</p>
+                      {item.portionSize === 'half' && (
+                        <Badge variant="secondary" className="text-xs">
+                          Half
+                        </Badge>
+                      )}
+                      {item.portionSize === 'quarter' && (
+                        <Badge variant="secondary" className="text-xs">
+                          Quarter
+                        </Badge>
+                      )}
+                      {item.priceOverridden && (
+                        <Badge
+                          variant="outline"
+                          className="text-xs border-orange-600 text-orange-600"
+                        >
+                          Price Override
+                        </Badge>
+                      )}
+                    </div>
+                    {item.customizations && item.customizations.length > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        {summariseSelected(item.customizations)}
+                      </p>
                     )}
-                    {item.portionSize === 'quarter' && (
-                      <Badge variant="secondary" className="text-xs">Quarter</Badge>
-                    )}
-                    {item.priceOverridden && (
-                      <Badge variant="outline" className="text-xs border-orange-600 text-orange-600">
-                        Price Override
-                      </Badge>
+                    <p className="text-muted-foreground">
+                      {item.quantity}x {formatPrice(perPortion)}
+                      {item.priceOverridden && item.originalPrice && (
+                        <span className="ml-2 line-through text-xs">
+                          {formatPrice(item.originalPrice)}
+                        </span>
+                      )}
+                    </p>
+                    {item.specialInstructions && (
+                      <p className="text-xs text-muted-foreground italic mt-1">
+                        Note: {item.specialInstructions}
+                      </p>
                     )}
                   </div>
-                  <p className="text-muted-foreground">
-                    {item.quantity}x {formatPrice(item.price)}
-                    {item.priceOverridden && item.originalPrice && (
-                      <span className="ml-2 line-through text-xs">
-                        {formatPrice(item.originalPrice)}
-                      </span>
-                    )}
-                  </p>
-                  {item.specialInstructions && (
-                    <p className="text-xs text-muted-foreground italic mt-1">
-                      Note: {item.specialInstructions}
-                    </p>
-                  )}
+                  <span className="font-medium">{formatPrice(lineTotal)}</span>
                 </div>
-                <span className="font-medium">
-                  {formatPrice(item.price * item.quantity)}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </ScrollArea>
 
@@ -158,7 +200,9 @@ export function OrderSummary({ orderType, onRewardApplied, onPointsApplied }: Or
           {serviceFee > 0 && (
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">
-                Service Fee {serviceFeePercentage > 0 && `(${serviceFeePercentage.toFixed(1)}%)`}
+                Service Fee{' '}
+                {serviceFeePercentage > 0 &&
+                  `(${serviceFeePercentage.toFixed(1)}%)`}
               </span>
               <span>{formatPrice(serviceFee)}</span>
             </div>

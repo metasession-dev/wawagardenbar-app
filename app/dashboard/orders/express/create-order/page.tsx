@@ -17,6 +17,12 @@ import {
   expressCreateOrderAction,
   expressListOpenTabsAction,
 } from '@/app/actions/admin/express-actions';
+import { CustomizationPickerDialog } from '@/components/features/menu/customization-picker-dialog';
+import {
+  summariseSelected,
+  type SelectedCustomization,
+} from '@/lib/customization-validation';
+import type { ICustomization } from '@/interfaces/menu-item.interface';
 import {
   ArrowLeft,
   Search,
@@ -45,14 +51,17 @@ interface MenuItem {
     quarterPortionEnabled?: boolean;
     quarterPortionSurcharge?: number;
   };
+  customizations?: ICustomization[];
 }
 
 interface CartItem {
+  cartLineId: string; // local id so two same-menu-item lines with different customizations don't collide
   menuItemId: string;
   name: string;
   price: number;
   quantity: number;
   portionSize: 'full' | 'half' | 'quarter';
+  customizations?: SelectedCustomization[];
 }
 
 interface OpenTab {
@@ -80,11 +89,18 @@ function ExpressCreateOrderContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
+  // REQ-031: when a clicked menu item has customization groups, open the
+  // picker dialog before adding to cart.
+  const [pickerItem, setPickerItem] = useState<MenuItem | null>(null);
 
   // Checkout state
-  const [destination, setDestination] = useState<'tab' | 'pay-now'>(preselectedTabId ? 'tab' : 'tab');
+  const [destination, setDestination] = useState<'tab' | 'pay-now'>(
+    preselectedTabId ? 'tab' : 'tab'
+  );
   const [selectedTabId, setSelectedTabId] = useState(preselectedTabId || '');
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer' | 'card'>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<
+    'cash' | 'transfer' | 'card'
+  >('cash');
   const [paymentReference, setPaymentReference] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -132,39 +148,93 @@ function ExpressCreateOrderContent() {
     return () => clearTimeout(timeout);
   }, [searchQuery, selectedCategory, searchMenu]);
 
-  function addToCart(item: MenuItem) {
+  function customizationsKey(c?: SelectedCustomization[]): string {
+    if (!c || c.length === 0) return '';
+    return [...c]
+      .sort((a, b) =>
+        `${a.name}|${a.option}`.localeCompare(`${b.name}|${b.option}`)
+      )
+      .map((s) => `${s.name}:${s.option}:${s.price}`)
+      .join(',');
+  }
+
+  function addCartLine(
+    item: MenuItem,
+    customizations?: SelectedCustomization[]
+  ) {
+    const key = customizationsKey(customizations);
     setCart((prev) => {
-      const existing = prev.find((c) => c.menuItemId === item._id && c.portionSize === 'full');
+      const existing = prev.find(
+        (c) =>
+          c.menuItemId === item._id &&
+          c.portionSize === 'full' &&
+          customizationsKey(c.customizations) === key
+      );
       if (existing) {
         return prev.map((c) =>
-          c.menuItemId === item._id && c.portionSize === 'full'
+          c.cartLineId === existing.cartLineId
             ? { ...c, quantity: c.quantity + 1 }
             : c
         );
       }
-      return [...prev, { menuItemId: item._id, name: item.name, price: item.price, quantity: 1, portionSize: 'full' as const }];
+      return [
+        ...prev,
+        {
+          cartLineId: `${item._id}-${Date.now()}-${Math.random()
+            .toString(36)
+            .slice(2, 6)}`,
+          menuItemId: item._id,
+          name: item.name,
+          price: item.price,
+          quantity: 1,
+          portionSize: 'full' as const,
+          customizations,
+        },
+      ];
     });
   }
 
-  function updateQuantity(menuItemId: string, delta: number) {
+  function addToCart(item: MenuItem) {
+    if (item.customizations && item.customizations.length > 0) {
+      // REQ-031: open picker dialog before adding so the staff selects (group, option) pairs
+      setPickerItem(item);
+      return;
+    }
+    addCartLine(item);
+  }
+
+  function updateQuantity(cartLineId: string, delta: number) {
     setCart((prev) =>
       prev
         .map((c) =>
-          c.menuItemId === menuItemId ? { ...c, quantity: Math.max(0, c.quantity + delta) } : c
+          c.cartLineId === cartLineId
+            ? { ...c, quantity: Math.max(0, c.quantity + delta) }
+            : c
         )
         .filter((c) => c.quantity > 0)
     );
   }
 
-  function removeFromCart(menuItemId: string) {
-    setCart((prev) => prev.filter((c) => c.menuItemId !== menuItemId));
+  function removeFromCart(cartLineId: string) {
+    setCart((prev) => prev.filter((c) => c.cartLineId !== cartLineId));
   }
 
-  const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  // REQ-031: per-line total includes Σ option.price; portionMultiplier is 1 in
+  // express today (no portion picker).
+  const cartTotal = cart.reduce((sum, item) => {
+    const surcharge = (item.customizations ?? []).reduce(
+      (s, c) => s + (typeof c.price === 'number' ? c.price : 0),
+      0
+    );
+    return sum + (item.price + surcharge) * item.quantity;
+  }, 0);
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   function getCartQuantity(menuItemId: string): number {
-    return cart.find((c) => c.menuItemId === menuItemId)?.quantity || 0;
+    // Sum across lines with the same menuItemId (different customizations split into separate lines)
+    return cart
+      .filter((c) => c.menuItemId === menuItemId)
+      .reduce((sum, c) => sum + c.quantity, 0);
   }
 
   async function handleSubmit() {
@@ -172,21 +242,38 @@ function ExpressCreateOrderContent() {
 
     setSubmitting(true);
     const result = await expressCreateOrderAction({
-      items: cart,
+      // REQ-031: forward customizations per cart line. cartLineId is local UI
+      // state, not part of the action contract.
+      items: cart.map((c) => ({
+        menuItemId: c.menuItemId,
+        name: c.name,
+        price: c.price,
+        quantity: c.quantity,
+        portionSize: c.portionSize,
+        customizations: c.customizations,
+      })),
       tabId: destination === 'tab' ? selectedTabId : undefined,
       tableNumber: preselectedTable || undefined,
       paymentMethod: destination === 'pay-now' ? paymentMethod : undefined,
-      paymentReference: destination === 'pay-now' && paymentReference ? paymentReference : undefined,
+      paymentReference:
+        destination === 'pay-now' && paymentReference
+          ? paymentReference
+          : undefined,
     });
 
     if (result.success) {
       toast({
-        title: destination === 'tab' ? 'Order Added to Tab' : 'Order Created & Paid',
+        title:
+          destination === 'tab' ? 'Order Added to Tab' : 'Order Created & Paid',
         description: result.message,
       });
       router.push('/dashboard/orders');
     } else {
-      toast({ title: 'Error', description: result.error, variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: result.error,
+        variant: 'destructive',
+      });
     }
     setSubmitting(false);
   }
@@ -206,7 +293,11 @@ function ExpressCreateOrderContent() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => (step === 'checkout' ? setStep('menu') : router.push('/dashboard/orders'))}
+          onClick={() =>
+            step === 'checkout'
+              ? setStep('menu')
+              : router.push('/dashboard/orders')
+          }
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -221,7 +312,9 @@ function ExpressCreateOrderContent() {
           <Button size="lg" onClick={() => setStep('checkout')}>
             <ShoppingCart className="h-4 w-4 mr-2" />
             Checkout ({cartCount})
-            <span className="ml-2 font-bold">₦{cartTotal.toLocaleString()}</span>
+            <span className="ml-2 font-bold">
+              ₦{cartTotal.toLocaleString()}
+            </span>
           </Button>
         )}
       </div>
@@ -255,7 +348,9 @@ function ExpressCreateOrderContent() {
                 key={cat}
                 variant={selectedCategory === cat ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+                onClick={() =>
+                  setSelectedCategory(selectedCategory === cat ? null : cat)
+                }
               >
                 {cat}
               </Button>
@@ -276,28 +371,24 @@ function ExpressCreateOrderContent() {
                     <div className="flex justify-between items-start">
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">{item.name}</p>
-                        <p className="text-sm text-muted-foreground">{item.category}</p>
-                        <p className="font-bold mt-1">₦{item.price.toLocaleString()}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {item.category}
+                        </p>
+                        <p className="font-bold mt-1">
+                          ₦{item.price.toLocaleString()}
+                        </p>
                       </div>
                       {qty > 0 && (
-                        <div className="flex items-center gap-1 ml-2" onClick={(e) => e.stopPropagation()}>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => updateQuantity(item._id, -1)}
-                          >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <span className="w-6 text-center font-bold text-sm">{qty}</span>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => updateQuantity(item._id, 1)}
-                          >
-                            <Plus className="h-3 w-3" />
-                          </Button>
+                        <div
+                          className="flex items-center gap-1 ml-2"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {/* REQ-031: with customizations, multiple lines per menu item are possible.
+                              The +/- buttons no longer apply unambiguously; the staff manages quantity
+                              from the cart summary instead. Just show the count here. */}
+                          <span className="w-6 text-center font-bold text-sm">
+                            {qty}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -308,7 +399,9 @@ function ExpressCreateOrderContent() {
           </div>
 
           {menuItems.length === 0 && (
-            <p className="text-center text-muted-foreground py-8">No menu items found</p>
+            <p className="text-center text-muted-foreground py-8">
+              No menu items found
+            </p>
           )}
         </>
       )}
@@ -322,23 +415,63 @@ function ExpressCreateOrderContent() {
               <CardTitle className="text-lg">Order Summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {cart.map((item) => (
-                <div key={item.menuItemId} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => removeFromCart(item.menuItemId)}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                    <span>{item.name}</span>
-                    <span className="text-muted-foreground">x{item.quantity}</span>
+              {cart.map((item) => {
+                const surcharge = (item.customizations ?? []).reduce(
+                  (s, c) => s + (typeof c.price === 'number' ? c.price : 0),
+                  0
+                );
+                const lineTotal = (item.price + surcharge) * item.quantity;
+                return (
+                  <div
+                    key={item.cartLineId}
+                    className="flex items-start justify-between"
+                  >
+                    <div className="flex items-start gap-3">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => removeFromCart(item.cartLineId)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-2">
+                          <span>{item.name}</span>
+                          <span className="text-muted-foreground">
+                            x{item.quantity}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => updateQuantity(item.cartLineId, -1)}
+                          >
+                            <Minus className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => updateQuantity(item.cartLineId, 1)}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        {item.customizations &&
+                          item.customizations.length > 0 && (
+                            <p className="text-xs text-muted-foreground">
+                              {summariseSelected(item.customizations)}
+                            </p>
+                          )}
+                      </div>
+                    </div>
+                    <span className="font-medium">
+                      ₦{lineTotal.toLocaleString()}
+                    </span>
                   </div>
-                  <span className="font-medium">₦{(item.price * item.quantity).toLocaleString()}</span>
-                </div>
-              ))}
+                );
+              })}
               <Separator />
               <div className="flex justify-between font-bold text-lg">
                 <span>Total</span>
@@ -376,7 +509,9 @@ function ExpressCreateOrderContent() {
                 <div className="space-y-2">
                   <Label>Select Tab</Label>
                   {openTabs.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No open tabs available</p>
+                    <p className="text-sm text-muted-foreground">
+                      No open tabs available
+                    </p>
                   ) : (
                     <div className="space-y-2 max-h-48 overflow-y-auto">
                       {openTabs.map((tab) => (
@@ -390,11 +525,17 @@ function ExpressCreateOrderContent() {
                           onClick={() => setSelectedTabId(tab._id)}
                         >
                           <div className="flex justify-between">
-                            <span className="font-medium">Table {tab.tableNumber}</span>
-                            <span className="text-sm">₦{tab.total.toLocaleString()}</span>
+                            <span className="font-medium">
+                              Table {tab.tableNumber}
+                            </span>
+                            <span className="text-sm">
+                              ₦{tab.total.toLocaleString()}
+                            </span>
                           </div>
                           {tab.customerName && (
-                            <p className="text-sm text-muted-foreground">{tab.customerName}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {tab.customerName}
+                            </p>
                           )}
                         </div>
                       ))}
@@ -424,7 +565,9 @@ function ExpressCreateOrderContent() {
                       POS
                     </Button>
                     <Button
-                      variant={paymentMethod === 'transfer' ? 'default' : 'outline'}
+                      variant={
+                        paymentMethod === 'transfer' ? 'default' : 'outline'
+                      }
                       className="h-14 flex-col gap-1"
                       onClick={() => setPaymentMethod('transfer')}
                     >
@@ -471,6 +614,21 @@ function ExpressCreateOrderContent() {
               : `Pay ₦${cartTotal.toLocaleString()}`}
           </Button>
         </div>
+      )}
+
+      {/* REQ-031: customization picker dialog opens when adding a menu item with groups */}
+      {pickerItem && (
+        <CustomizationPickerDialog
+          open={!!pickerItem}
+          onOpenChange={(open) => !open && setPickerItem(null)}
+          itemName={pickerItem.name}
+          groups={pickerItem.customizations ?? []}
+          onConfirm={(selected) => {
+            addCartLine(pickerItem, selected);
+            setPickerItem(null);
+          }}
+          confirmLabel="Add to Order"
+        />
       )}
     </div>
   );

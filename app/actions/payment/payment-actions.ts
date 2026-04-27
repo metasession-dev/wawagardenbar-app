@@ -63,19 +63,24 @@ export async function createOrder(input: CreateOrderInput): Promise<{
 }> {
   console.log('🚀 createOrder called at:', new Date().toISOString(), {
     orderType: input.orderType,
-    items: input.items.map(i => `${i.quantity}x ${i.name}`),
+    items: input.items.map((i) => `${i.quantity}x ${i.name}`),
     customerEmail: input.customerInfo.email,
     tabId: input.tabId,
     idempotencyKey: input.idempotencyKey,
   });
-  
+
   try {
     await connectDB();
-    
+
     // Check for existing order with same idempotency key
-    const existingOrder = await Order.findOne({ idempotencyKey: input.idempotencyKey });
+    const existingOrder = await Order.findOne({
+      idempotencyKey: input.idempotencyKey,
+    });
     if (existingOrder) {
-      console.log('🔄 Returning existing order for idempotency key:', input.idempotencyKey);
+      console.log(
+        '🔄 Returning existing order for idempotency key:',
+        input.idempotencyKey
+      );
       return {
         success: true,
         data: { orderId: existingOrder._id.toString() },
@@ -84,15 +89,23 @@ export async function createOrder(input: CreateOrderInput): Promise<{
 
     // Check if user is logged in
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
     const userId = session.userId;
 
-    // Calculate totals using SettingsService
-    const subtotal = input.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    
+    // REQ-031: surcharge-aware subtotal via the shared helper. Legacy items
+    // with no customizations sum to base × qty exactly as before (AC8).
+    const { computeCartTotal } = await import('@/lib/cart-store-helpers');
+    const subtotal = computeCartTotal(input.items);
+
     const { SettingsService } = await import('@/services');
-    const totals = await SettingsService.calculateOrderTotals(subtotal, input.orderType);
-    
+    const totals = await SettingsService.calculateOrderTotals(
+      subtotal,
+      input.orderType
+    );
+
     const { serviceFee, deliveryFee, tax, total } = totals;
 
     // Generate order number with timestamp
@@ -108,11 +121,14 @@ export async function createOrder(input: CreateOrderInput): Promise<{
     }
 
     // Validate price overrides (admin only)
-    const hasOverrides = input.items.some(item => item.priceOverridden);
-    if (hasOverrides && (!session.role || !['admin', 'super-admin'].includes(session.role))) {
-      return { 
-        success: false, 
-        message: 'Unauthorized price override attempt' 
+    const hasOverrides = input.items.some((item) => item.priceOverridden);
+    if (
+      hasOverrides &&
+      (!session.role || !['admin', 'super-admin'].includes(session.role))
+    ) {
+      return {
+        success: false,
+        message: 'Unauthorized price override attempt',
       };
     }
 
@@ -120,27 +136,45 @@ export async function createOrder(input: CreateOrderInput): Promise<{
     const orderData: any = {
       orderNumber,
       orderType: input.orderType,
-      items: input.items.map((item) => ({
-        menuItemId: item.id,
-        name: item.name,
-        price: item.price,
-        quantity: item.quantity,
-        portionSize: item.portionSize || 'full',
-        portionMultiplier: item.portionMultiplier || 1.0,
-        specialInstructions: item.specialInstructions,
-        subtotal: item.price * item.quantity,
-        originalPrice: item.originalPrice,
-        priceOverridden: item.priceOverridden || false,
-        priceOverrideReason: item.priceOverrideReason,
-        priceOverriddenBy: item.priceOverridden && userId ? userId : undefined,
-        priceOverriddenAt: item.priceOverridden ? new Date() : undefined,
-      })),
-      // If user is logged in, use userId; otherwise use guest info
-      ...(userId ? { userId } : {
-        guestName: input.customerInfo.name,
-        guestEmail: input.customerInfo.email,
-        guestPhone: input.customerInfo.phone,
+      items: input.items.map((item) => {
+        // REQ-031: surcharge × portionMultiplier added to the per-line subtotal.
+        const multiplier = item.portionMultiplier || 1.0;
+        const surcharge = (item.customizations ?? []).reduce(
+          (s, c) => s + (typeof c.price === 'number' ? c.price : 0),
+          0
+        );
+        const itemSubtotal = Math.round(
+          (item.price + surcharge * multiplier) * item.quantity
+        );
+        return {
+          menuItemId: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          portionSize: item.portionSize || 'full',
+          portionMultiplier: multiplier,
+          specialInstructions: item.specialInstructions,
+          // REQ-031: persist selected customizations on the order line so
+          // REQ-030's deductStockForOrder can find the (group, option) pairs
+          // and run the linked-inventory deduction at fulfilment.
+          customizations: item.customizations ?? [],
+          subtotal: itemSubtotal,
+          originalPrice: item.originalPrice,
+          priceOverridden: item.priceOverridden || false,
+          priceOverrideReason: item.priceOverrideReason,
+          priceOverriddenBy:
+            item.priceOverridden && userId ? userId : undefined,
+          priceOverriddenAt: item.priceOverridden ? new Date() : undefined,
+        };
       }),
+      // If user is logged in, use userId; otherwise use guest info
+      ...(userId
+        ? { userId }
+        : {
+            guestName: input.customerInfo.name,
+            guestEmail: input.customerInfo.email,
+            guestPhone: input.customerInfo.phone,
+          }),
       // Track who created the order
       createdBy: userId,
       createdByRole: session.role || 'customer',
@@ -184,11 +218,13 @@ export async function createOrder(input: CreateOrderInput): Promise<{
 
     // Create order
     const order = await Order.create(orderData);
-    
+
     console.log('✅ Order created successfully:', {
       orderNumber: order.orderNumber,
       orderId: order._id.toString(),
-      items: order.items.map(i => `${i.quantity}x ${i.name} (${i.portionSize})`),
+      items: order.items.map(
+        (i) => `${i.quantity}x ${i.name} (${i.portionSize})`
+      ),
       total: order.total,
     });
 
@@ -245,12 +281,18 @@ export async function createOrder(input: CreateOrderInput): Promise<{
                 originalPrice: item.originalPrice,
                 newPrice: item.price,
                 difference: item.price - item.originalPrice,
-                percentageChange: ((item.price - item.originalPrice) / item.originalPrice * 100).toFixed(2),
+                percentageChange: (
+                  ((item.price - item.originalPrice) / item.originalPrice) *
+                  100
+                ).toFixed(2),
                 reason: item.priceOverrideReason || 'No reason provided',
               },
             });
           } catch (auditError) {
-            console.error('Error creating audit log for price override:', auditError);
+            console.error(
+              'Error creating audit log for price override:',
+              auditError
+            );
             // Don't fail the order if audit logging fails
           }
         }
@@ -275,13 +317,15 @@ export async function createOrder(input: CreateOrderInput): Promise<{
           lastName,
           email: input.customerInfo.email,
           phone: input.customerInfo.phone,
-          address: input.deliveryInfo ? {
-            streetAddress: input.deliveryInfo.street,
-            city: input.deliveryInfo.city,
-            state: input.deliveryInfo.state,
-            postalCode: input.deliveryInfo.postalCode,
-            deliveryInstructions: input.deliveryInfo.instructions,
-          } : undefined,
+          address: input.deliveryInfo
+            ? {
+                streetAddress: input.deliveryInfo.street,
+                city: input.deliveryInfo.city,
+                state: input.deliveryInfo.state,
+                postalCode: input.deliveryInfo.postalCode,
+                deliveryInstructions: input.deliveryInfo.instructions,
+              }
+            : undefined,
           savePhone: input.savePhone,
           saveAddress: input.saveAddress && !!input.deliveryInfo,
         });
@@ -298,11 +342,16 @@ export async function createOrder(input: CreateOrderInput): Promise<{
   } catch (error: any) {
     // Handle duplicate idempotency key error specifically
     if (error.code === 11000 && error.keyPattern?.idempotencyKey) {
-      console.log('⚠️ Duplicate idempotency key detected via DB constraint:', input.idempotencyKey);
-      
+      console.log(
+        '⚠️ Duplicate idempotency key detected via DB constraint:',
+        input.idempotencyKey
+      );
+
       // Try to find the existing order
       try {
-        const existingOrder = await Order.findOne({ idempotencyKey: input.idempotencyKey });
+        const existingOrder = await Order.findOne({
+          idempotencyKey: input.idempotencyKey,
+        });
         if (existingOrder) {
           return {
             success: true,
@@ -333,7 +382,10 @@ export async function initializePayment(
 
     // Get session to check user role
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     // Get order
     const order = await Order.findById(input.orderId);
@@ -345,10 +397,15 @@ export async function initializePayment(
     }
 
     // Generate payment reference
-    const paymentReference = PaymentService.generatePaymentReference(input.orderId);
+    const paymentReference = PaymentService.generatePaymentReference(
+      input.orderId
+    );
 
     // Determine redirect URL based on user role
-    const isStaff = session.role === 'csr' || session.role === 'admin' || session.role === 'super-admin';
+    const isStaff =
+      session.role === 'csr' ||
+      session.role === 'admin' ||
+      session.role === 'super-admin';
     const redirectUrl = isStaff
       ? `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/orders/${input.orderId}?payment=success`
       : `${process.env.NEXT_PUBLIC_APP_URL}/orders/${input.orderId}?payment=success`;
@@ -400,19 +457,22 @@ export async function verifyPayment(
 
     // Try to find order first
     const order = await Order.findOne({ paymentReference });
-    
+
     // If no order found, try to find tab
     const tab = !order ? await TabModel.findOne({ paymentReference }) : null;
 
     if (order) {
-      const statusMap: Record<string, 'pending' | 'paid' | 'failed' | 'cancelled' | 'refunded'> = {
-        'PAID': 'paid',
-        'OVERPAID': 'paid',
-        'FAILED': 'failed',
-        'CANCELLED': 'cancelled',
-        'PENDING': 'pending',
-        'PARTIALLY_PAID': 'pending',
-        'EXPIRED': 'failed',
+      const statusMap: Record<
+        string,
+        'pending' | 'paid' | 'failed' | 'cancelled' | 'refunded'
+      > = {
+        PAID: 'paid',
+        OVERPAID: 'paid',
+        FAILED: 'failed',
+        CANCELLED: 'cancelled',
+        PENDING: 'pending',
+        PARTIALLY_PAID: 'pending',
+        EXPIRED: 'failed',
       };
       order.paymentStatus = statusMap[response.status] || 'pending';
       order.transactionReference = response.transactionReference;
@@ -499,16 +559,24 @@ export async function getOrder(orderId: string): Promise<{
         timestamp: history.timestamp?.toISOString(),
         note: history.note,
       })),
-      deliveryDetails: orderObj.deliveryDetails ? {
-        ...orderObj.deliveryDetails,
-        estimatedDeliveryTime: orderObj.deliveryDetails.estimatedDeliveryTime?.toISOString(),
-        actualDeliveryTime: orderObj.deliveryDetails.actualDeliveryTime?.toISOString(),
-      } : undefined,
-      pickupDetails: orderObj.pickupDetails ? {
-        ...orderObj.pickupDetails,
-        preferredPickupTime: orderObj.pickupDetails.preferredPickupTime?.toISOString(),
-        actualPickupTime: orderObj.pickupDetails.actualPickupTime?.toISOString(),
-      } : undefined,
+      deliveryDetails: orderObj.deliveryDetails
+        ? {
+            ...orderObj.deliveryDetails,
+            estimatedDeliveryTime:
+              orderObj.deliveryDetails.estimatedDeliveryTime?.toISOString(),
+            actualDeliveryTime:
+              orderObj.deliveryDetails.actualDeliveryTime?.toISOString(),
+          }
+        : undefined,
+      pickupDetails: orderObj.pickupDetails
+        ? {
+            ...orderObj.pickupDetails,
+            preferredPickupTime:
+              orderObj.pickupDetails.preferredPickupTime?.toISOString(),
+            actualPickupTime:
+              orderObj.pickupDetails.actualPickupTime?.toISOString(),
+          }
+        : undefined,
     };
 
     return {
@@ -569,14 +637,22 @@ export async function initializeTabPayment(params: {
     }
 
     // Generate payment reference
-    const paymentReference = PaymentService.generatePaymentReference(params.tabId);
+    const paymentReference = PaymentService.generatePaymentReference(
+      params.tabId
+    );
 
     // Get session to check user role
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     // Determine redirect URL based on user role
-    const isStaff = session.role === 'csr' || session.role === 'admin' || session.role === 'super-admin';
+    const isStaff =
+      session.role === 'csr' ||
+      session.role === 'admin' ||
+      session.role === 'super-admin';
     const redirectUrl = isStaff
       ? `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/orders/tabs/${params.tabId}?payment=success`
       : `${process.env.NEXT_PUBLIC_APP_URL}/orders/tabs/${params.tabId}?payment=success`;

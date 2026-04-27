@@ -658,7 +658,7 @@ This section tracks discrete change requests (REQ-001 through REQ-008) that repr
 | REQ-028 | #62   | MEDIUM | compliance/evidence/REQ-028/ | APPROVED - DEPLOYED                                                                                | ostendo-io      | 2026-04-18 |
 | REQ-029 | #64   | HIGH   | compliance/evidence/REQ-029/ | APPROVED - DEPLOYED                                                                                | ostendo-io      | 2026-04-18 |
 | REQ-030 | #53   | HIGH   | compliance/evidence/REQ-030/ | SUPERSEDED by REQ-031 (PR #66 closed unmerged; back-end commits retained on develop as pre-cursor) | ostendo-io      | 2026-04-24 |
-| REQ-031 | #67   | HIGH   | compliance/evidence/REQ-031/ | DRAFT                                                                                              | ostendo-io      | 2026-04-25 |
+| REQ-031 | #67   | HIGH   | compliance/evidence/REQ-031/ | TESTED - PENDING SIGN-OFF                                                                          | ostendo-io      | 2026-04-27 |
 
 ### Change Request Dependencies
 

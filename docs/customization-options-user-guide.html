@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Wawa Garden Bar — Customization Options User Guide</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: #1f2937; line-height: 1.45; font-size: 10.5pt; }
+  h1 { color: #0b3d2e; border-bottom: 2px solid #0b3d2e; padding-bottom: 6px; margin-bottom: 4px; font-size: 22pt; }
+  h2 { color: #0b3d2e; margin-top: 18pt; margin-bottom: 6pt; font-size: 14pt; border-left: 4px solid #0b3d2e; padding-left: 8px; page-break-after: avoid; }
+  h3 { color: #1f4a3a; margin-top: 12pt; margin-bottom: 4pt; font-size: 12pt; page-break-after: avoid; }
+  h4 { color: #1f4a3a; margin-top: 10pt; margin-bottom: 2pt; font-size: 11pt; page-break-after: avoid; }
+  p { margin: 4pt 0; }
+  ul, ol { margin: 4pt 0 6pt 0; padding-left: 22px; }
+  li { margin: 2pt 0; }
+  code, .path { font-family: "SF Mono", Menlo, Consolas, monospace; background: #f3f4f6; padding: 1px 5px; border-radius: 3px; font-size: 9.5pt; color: #111827; }
+  .label { font-family: "SF Mono", Menlo, Consolas, monospace; background: #ecfdf5; color: #065f46; padding: 1px 5px; border-radius: 3px; font-size: 9.5pt; }
+  .meta { color: #6b7280; font-size: 9.5pt; margin-bottom: 18pt; }
+  .callout { background: #fefce8; border-left: 4px solid #d97706; padding: 8px 12px; margin: 10pt 0; border-radius: 4px; }
+  .callout.tip { background: #ecfdf5; border-color: #059669; }
+  .callout.warn { background: #fef2f2; border-color: #dc2626; }
+  .callout strong { display: block; margin-bottom: 2px; color: #92400e; font-size: 9.5pt; text-transform: uppercase; letter-spacing: 0.4px; }
+  .callout.tip strong { color: #065f46; }
+  .callout.warn strong { color: #991b1b; }
+  table { width: 100%; border-collapse: collapse; margin: 8pt 0; font-size: 9.5pt; }
+  th, td { border: 1px solid #d1d5db; padding: 5px 8px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; color: #0b3d2e; font-weight: 600; }
+  .toc { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px 16px; margin: 12pt 0 18pt; }
+  .toc h2 { border: 0; margin: 0 0 6px; padding: 0; font-size: 11pt; color: #0b3d2e; }
+  .toc ol { margin: 0; padding-left: 22px; }
+  .toc li { margin: 1pt 0; }
+  .step-list { counter-reset: step; list-style: none; padding-left: 0; }
+  .step-list > li { counter-increment: step; position: relative; padding-left: 32px; margin: 8pt 0; }
+  .step-list > li::before { content: counter(step); position: absolute; left: 0; top: 0; width: 22px; height: 22px; background: #0b3d2e; color: white; border-radius: 50%; text-align: center; line-height: 22px; font-weight: 600; font-size: 9.5pt; }
+  hr { border: 0; border-top: 1px solid #e5e7eb; margin: 16pt 0; }
+  .keep { page-break-inside: avoid; }
+  .footer { margin-top: 28pt; padding-top: 10pt; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 9pt; }
+</style>
+</head>
+<body>
+
+<h1>Customization Options — User Guide</h1>
+<p class="meta">Wawa Garden Bar &middot; Setup, sale, and verification &middot; 2026-04-27</p>
+
+<p>This guide explains how to set up <strong>customization options</strong> on a menu item — for example, a Poundo dish that comes with a choice of soup (Ogbono, Egusi, Ugu) — and how that selection drives <strong>multi-component inventory deduction</strong> at sale time. Each soup is its own inventory record; selling Poundo+Egusi decrements both the Poundo stock and the Egusi stock, with two distinct stock-movement audit rows.</p>
+
+<div class="toc keep">
+  <h2>Contents</h2>
+  <ol>
+    <li>What customization options are (and aren&apos;t)</li>
+    <li>Pre-requisite — set up the soup/garnish as its own menu item with inventory</li>
+    <li>Configuring the customization group on the parent dish</li>
+    <li>Setting per-option pricing — surcharge or combined price</li>
+    <li>Linking each option to its inventory record</li>
+    <li>Selling: customer flow on /menu</li>
+    <li>Selling: staff flow on Express Order</li>
+    <li>Editing an existing order&apos;s customizations</li>
+    <li>What happens at fulfilment — multi-component deduction</li>
+    <li>What happens on cancellation</li>
+    <li>Where to verify it worked — inventory pages &amp; stock-movement history</li>
+    <li>Common pitfalls &amp; FAQ</li>
+  </ol>
+</div>
+
+<h2>1. What customization options are (and aren&apos;t)</h2>
+<p>A <strong>customization group</strong> is a set of choices a customer makes when ordering a parent dish. Two flavours:</p>
+<table>
+  <tr><th>Group type</th><th>Behaviour</th><th>Example</th></tr>
+  <tr><td><strong>Required</strong></td><td>Customer must pick exactly one option (radio buttons). Order cannot be placed until selected.</td><td>"Soup" group on Poundo — must pick one</td></tr>
+  <tr><td><strong>Optional</strong></td><td>Customer may pick zero or more (checkboxes).</td><td>"Extras" — Plantain, Sauce, etc.</td></tr>
+</table>
+<p>Each option can carry an <strong>inventory link</strong>. When the customer selects an option that has a linked inventory record, that record decrements alongside the parent dish&apos;s inventory at sale time.</p>
+
+<div class="callout tip keep">
+  <strong>Two REQs together</strong>
+  This feature is the combined work of <strong>REQ-030</strong> (the inventory-link plumbing — already on <code>develop</code>) and <strong>REQ-031</strong> (the order-time picker, surcharge math, and end-to-end UX — this release). The original release ticket REQ-030 was superseded; the combined story ships under REQ-031 / issue #67.
+</div>
+
+<h2>2. Pre-requisite — set up the soup/garnish as its own menu item with inventory</h2>
+<p>The "Deduct from inventory" dropdown in the customization builder is populated from existing <strong>Inventory</strong> records, each of which is owned by a parent menu item. So before you can link "Poundo&apos;s Egusi option" to anything, Egusi itself has to exist as a menu item with inventory tracking turned on.</p>
+
+<ol class="step-list">
+  <li>Sign in as super-admin. Navigate to <span class="path">/dashboard/menu</span>.</li>
+  <li>Click <span class="label">Add Menu Item</span>. Name it <em>Egusi</em>. Save it.</li>
+  <li>Toggle <span class="label">Track Inventory</span> on. Set the initial stock and unit (e.g. <code>10 portions</code>). Save.</li>
+  <li>Repeat for each soup / garnish you want to offer (Ogbono, Ugu, etc.).</li>
+</ol>
+
+<p>If you already have these as standalone menu items with inventory, skip this step.</p>
+
+<h2>3. Configuring the customization group on the parent dish</h2>
+<ol class="step-list">
+  <li>Open the parent (e.g. Poundo) at <span class="path">/dashboard/menu</span> &rarr; click <em>Edit</em> on the row.</li>
+  <li>Scroll to <span class="label">Customization Options</span>.</li>
+  <li>Click <span class="label">Add Group</span>. Name it <em>Soup</em>.</li>
+  <li>Toggle <span class="label">Required</span> ON if the customer must pick one (recommended for soup).</li>
+  <li>For each soup variant, click <span class="label">Add Option</span> and enter the option name (<em>Ogbono</em>, <em>Egusi</em>, <em>Ugu</em>).</li>
+</ol>
+
+<h2>4. Setting per-option pricing — surcharge or combined price</h2>
+<p>Each option has a <strong>price</strong> field. This represents the <em>surcharge</em> added when the customer picks the option. To make the admin UX clearer, the page shows a live preview of the resulting <strong>combined price</strong>:</p>
+
+<table>
+  <tr><th>You enter (Surcharge)</th><th>Live preview shows</th></tr>
+  <tr><td>0</td><td>Poundo + Ogbono = ₦2,000</td></tr>
+  <tr><td>500</td><td>Poundo + Egusi = ₦2,500</td></tr>
+  <tr><td>800</td><td>Poundo + Ugu = ₦2,800</td></tr>
+</table>
+
+<p>If you&apos;d rather think in terms of the combined price, expand <span class="label">Set combined price instead</span> below the surcharge field and type the total directly — the surcharge auto-derives.</p>
+
+<div class="callout keep">
+  <strong>Half &amp; quarter portions scale the surcharge</strong>
+  If the customer orders a <em>half</em> Poundo with Egusi at ₦500 surcharge, they pay <code>0.5 × (2,000 + 500) = ₦1,250</code> and the kitchen deducts half a portion of Egusi from inventory. The surcharge scales with the portion multiplier.
+</div>
+
+<h2>5. Linking each option to its inventory record</h2>
+<ol class="step-list">
+  <li>For each option, find the <span class="label">Deduct from inventory (optional)</span> dropdown beneath the surcharge field.</li>
+  <li>Select the matching inventory item (e.g. pick <em>Egusi</em> for the Egusi option).</li>
+  <li>The <span class="label">Units to deduct (portions)</span> input appears next to the dropdown. Default <code>1</code> means one ordered Poundo+Egusi = one Egusi portion deducted. Change to <code>0.5</code> if a Poundo only consumes half a soup, etc.</li>
+  <li>Repeat for every option that should deduct extra inventory. Leave the dropdown as <em>— None —</em> for any option that shouldn&apos;t deduct (e.g. "no soup").</li>
+  <li>Click <span class="label">Save Changes</span> at the top of the page.</li>
+</ol>
+
+<h2>6. Selling: customer flow on /menu</h2>
+<ol class="step-list">
+  <li>The customer signs in and opens <span class="path">/menu</span>.</li>
+  <li>They tap the parent dish (Poundo). The detail modal opens with the <span class="label">Soup</span> picker between Portion Size and Quantity.</li>
+  <li>The Soup picker renders as <strong>radio buttons</strong> (because the group is required). Each option shows the surcharge if non-zero (<em>Egusi +₦500</em>).</li>
+  <li>The <span class="label">Add to Cart</span> button is <strong>disabled</strong> until the customer picks a soup. A red "please choose one" hint appears next to the group label.</li>
+  <li>After selecting Egusi, the modal&apos;s total updates to ₦2,500. The customer sets quantity, optionally adds Special Instructions, and clicks <span class="label">Add to Cart</span>.</li>
+  <li>The cart sidebar shows the line: <em>Poundo</em>, with <em>Soup: Egusi</em> beneath it, ₦2,500 each, and the surcharge-aware line total.</li>
+  <li>Checkout completes the order. The persisted order line records the customization for fulfilment.</li>
+</ol>
+
+<h2>7. Selling: staff flow on Express Order</h2>
+<ol class="step-list">
+  <li>Staff opens <span class="path">/dashboard/orders/express/create-order</span>.</li>
+  <li>Click on the parent dish (Poundo) in the menu grid.</li>
+  <li>If the dish has customization groups, a <span class="label">Customize Poundo</span> dialog opens — the same picker as the customer flow.</li>
+  <li>Pick the soup. <span class="label">Add to Order</span> enables once required groups are satisfied.</li>
+  <li>The cart summary on the right shows the line with <em>Soup: Egusi</em> beneath it and the surcharge-inclusive price.</li>
+  <li>Two Egusi orders + one Ogbono order create <strong>three</strong> separate cart lines (different customizations = different lines).</li>
+  <li>Click <span class="label">Checkout</span> to either add to a tab or pay now.</li>
+</ol>
+
+<h2>8. Editing an existing order&apos;s customizations</h2>
+<ol class="step-list">
+  <li>Open the order at <span class="path">/dashboard/orders/{orderId}</span>.</li>
+  <li>Click <span class="label">Edit Order Items</span> (visible only on unpaid, non-completed, non-cancelled orders).</li>
+  <li>To <em>add</em> a new line, pick a menu item from the dropdown. If the item has customizations, the picker sub-dialog opens automatically.</li>
+  <li>Make selections, click <span class="label">Add to Order</span>. The new line appears with the customizations summary beneath the item name.</li>
+  <li>Quantity controls work as before. Subtotal updates surcharge-aware.</li>
+  <li>Click <span class="label">Save Changes</span> to persist.</li>
+</ol>
+
+<div class="callout warn keep">
+  <strong>You can&apos;t edit existing line customizations directly</strong>
+  The Edit Order dialog can add new lines or change quantities. To <em>change</em> a line&apos;s customization (Egusi → Ogbono), remove the line and add a new one.
+</div>
+
+<h2>9. What happens at fulfilment — multi-component deduction</h2>
+<p>When staff marks the order <span class="label">Complete</span>, the system runs <code>deductStockForOrder</code>:</p>
+<ul>
+  <li>The <strong>parent dish</strong>&apos;s inventory decrements by <code>quantity × portionMultiplier</code>.</li>
+  <li>For each customization option with an inventory link, the <strong>linked inventory</strong> decrements by <code>quantity × portionMultiplier × inventoryDeduction</code>.</li>
+  <li>One <span class="label">stock-movement</span> row is written per inventory — both with category <em>sale</em>, both linked to the order ID for traceability.</li>
+</ul>
+<p>So a sale of <em>2 × Poundo + Egusi</em> writes two movement rows: <code>−2 Poundo</code> and <code>−2 Egusi</code>. A sale of <em>1 × half-Poundo + Egusi</em> writes <code>−0.5 Poundo</code> and <code>−0.5 Egusi</code>.</p>
+
+<h2>10. What happens on cancellation</h2>
+<p>Cancelling an already-fulfilled order calls <code>restoreStockForOrder</code>: both the parent and linked inventories are restored symmetrically with new <em>addition</em> stock-movement rows tied to the same order ID. Cancellation of a not-yet-completed order does nothing (no stock had been deducted).</p>
+
+<h2>11. Where to verify it worked — inventory pages &amp; stock-movement history</h2>
+<table>
+  <tr><th>View</th><th>What to check</th></tr>
+  <tr><td><span class="path">/dashboard/inventory</span></td><td>Both the parent (Poundo) and the linked (Egusi) rows show updated current stock immediately after Complete.</td></tr>
+  <tr><td><span class="path">/dashboard/inventory/{poundoId}</span></td><td>Stock-movement history table shows a new <em>Sale</em> row dated the order&apos;s completion time, tied to the order ID, quantity equal to the deducted amount.</td></tr>
+  <tr><td><span class="path">/dashboard/inventory/{egusiId}</span></td><td>Same — independent <em>Sale</em> row for the linked deduction.</td></tr>
+  <tr><td><span class="path">/dashboard/orders/{orderId}</span></td><td>Order detail page shows the customization summary beneath each line; <em>Subtotal</em> is the surcharge-inclusive value.</td></tr>
+  <tr><td><span class="path">/dashboard/orders</span></td><td>Order list cards show customizations beneath each line.</td></tr>
+  <tr><td><span class="path">/dashboard/kitchen</span></td><td>Each item card shows <em>• Soup: Egusi</em> so the kitchen knows what to plate.</td></tr>
+</table>
+
+<h2>12. Common pitfalls &amp; FAQ</h2>
+
+<h4>Q. The picker shows but Add to Cart is greyed out.</h4>
+<p>You haven&apos;t picked an option in a Required group. Look for the red "please choose one" hint next to the group label.</p>
+
+<h4>Q. The "Deduct from inventory" dropdown is empty when I&apos;m configuring an option.</h4>
+<p>You haven&apos;t set up any inventory records yet, OR the menu item dropdown only shows items where <em>Track Inventory</em> is on. Go back to step&nbsp;2.</p>
+
+<h4>Q. I deleted the linked inventory record. What happens to existing orders?</h4>
+<p>The order-fulfilment path silently skips the linked deduction (no crash) — the parent inventory still decrements normally. New orders that try to pick that option will see the option grey-out as orphaned. Re-link it or remove it.</p>
+
+<h4>Q. Two customers ordered Poundo+Egusi but they merged into one cart line. Why?</h4>
+<p>Same item + same portion + same customizations + same special instructions = same cart line. That&apos;s the merge rule. Different customizations create separate lines automatically.</p>
+
+<h4>Q. The price the customer paid doesn&apos;t match what I see in the menu math.</h4>
+<p>The server recomputes the subtotal from menu data on submit; the customer&apos;s total is always the menu&apos;s price + surcharge × quantity × portion multiplier, plus tax/service-fee/delivery. If the displayed total differs by more than 1 naira (rounding), the server rejects the submission — so you should never see this in practice.</p>
+
+<h4>Q. Can the surcharge be negative (a discount for a particular option)?</h4>
+<p>Not currently. The surcharge field is treated as ≥ 0 by the math. If you need an option to be cheaper than the parent base, model it with the option as the parent and the cheaper variant as the base. We may revisit if real demand emerges.</p>
+
+<h4>Q. Why isn&apos;t the customer charged separately for each linked inventory item?</h4>
+<p>The line price is <code>(parent base + Σ option surcharge) × quantity × portionMultiplier</code>. Linked-inventory deduction is an audit/restock concern; pricing is set by the option&apos;s surcharge, not by the linked inventory&apos;s standalone price.</p>
+
+<hr/>
+
+<div class="footer keep">
+  <p><strong>References &amp; audit trail</strong></p>
+  <ul>
+    <li>Issue: <code>metasession-dev/wawagardenbar-app#67</code></li>
+    <li>Requirement ID: <code>REQ-031</code></li>
+    <li>Predecessor (superseded): <code>REQ-030</code> / issue #53 — back-end + admin-config plumbing only; never reached production. See <code>compliance/superseded-releases/RELEASE-TICKET-REQ-030.md</code>.</li>
+    <li>SDLC patch driving the new planning template: <code>metasession-dev/META-COMPLY#152</code> (Surface Inventory + Given/When/Then ACs).</li>
+    <li>Related: locations &amp; multi-location inventory user guide at <code>docs/locations-inventory-guide.pdf</code>.</li>
+  </ul>
+</div>
+
+</body>
+</html>

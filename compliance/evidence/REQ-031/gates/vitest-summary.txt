@@ -1,0 +1,10 @@
+ [32m✓[39m __tests__/actions/admin/menu-actions.customization-inventory.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m __tests__/services/inventory-service.customization-linked.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m __tests__/pending-expense-group/pending-expense-group-service.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m __tests__/staff-pot/staff-pot-start-date.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m35 passed[39m[22m[90m (35)[39m
+[2m      Tests [22m [1m[32m452 passed[39m[22m[90m (452)[39m
+[2m   Start at [22m 08:26:15
+[2m   Duration [22m 1.70s[2m (transform 2.95s, setup 0ms, import 7.62s, tests 326ms, environment 4ms)[22m
+

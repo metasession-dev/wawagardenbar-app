@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import { MoreHorizontal, Pencil, Trash2, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -74,6 +75,13 @@ interface ExpenseListProps {
   onEdit: (expense: Expense) => void;
   onRefresh: () => void;
   userRole?: string;
+  /**
+   * @requirement REQ-032 — controlled selection for the bulk
+   * "Create pending group from selected" action. When `selectedIds` is
+   * undefined, the checkbox column is hidden (preserves legacy callers).
+   */
+  selectedIds?: Set<string>;
+  onSelectionChange?: (next: Set<string>) => void;
 }
 
 export function ExpenseList({
@@ -81,7 +89,10 @@ export function ExpenseList({
   onEdit,
   onRefresh,
   userRole,
+  selectedIds,
+  onSelectionChange,
 }: ExpenseListProps) {
+  const selectionEnabled = selectedIds !== undefined && !!onSelectionChange;
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -220,6 +231,26 @@ export function ExpenseList({
         <Table>
           <TableHeader>
             <TableRow>
+              {selectionEnabled && (
+                <TableHead className="w-[40px]">
+                  <Checkbox
+                    aria-label="Select all visible expenses"
+                    checked={
+                      filteredExpenses.length > 0 &&
+                      filteredExpenses.every((e) => selectedIds!.has(e._id))
+                    }
+                    onCheckedChange={(checked) => {
+                      const next = new Set(selectedIds);
+                      if (checked) {
+                        filteredExpenses.forEach((e) => next.add(e._id));
+                      } else {
+                        filteredExpenses.forEach((e) => next.delete(e._id));
+                      }
+                      onSelectionChange!(next);
+                    }}
+                  />
+                </TableHead>
+              )}
               <TableHead>Date</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Category</TableHead>
@@ -233,7 +264,10 @@ export function ExpenseList({
           <TableBody>
             {filteredExpenses.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8">
+                <TableCell
+                  colSpan={selectionEnabled ? 9 : 8}
+                  className="text-center py-8"
+                >
                   <div className="text-muted-foreground">
                     {hasActiveFilters
                       ? 'No expenses match your filters'
@@ -244,6 +278,23 @@ export function ExpenseList({
             ) : (
               filteredExpenses.map((expense) => (
                 <TableRow key={expense._id}>
+                  {selectionEnabled && (
+                    <TableCell>
+                      <Checkbox
+                        aria-label={`Select expense ${expense.description}`}
+                        checked={selectedIds!.has(expense._id)}
+                        onCheckedChange={(checked) => {
+                          const next = new Set(selectedIds);
+                          if (checked) {
+                            next.add(expense._id);
+                          } else {
+                            next.delete(expense._id);
+                          }
+                          onSelectionChange!(next);
+                        }}
+                      />
+                    </TableCell>
+                  )}
                   <TableCell className="whitespace-nowrap">
                     {format(new Date(expense.date), 'MMM dd, yyyy')}
                   </TableCell>

@@ -95,7 +95,12 @@ interface ExpenseFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
-  prefill?: { date?: Date };
+  /**
+   * @requirement REQ-032 — `items` lets the caller open the dialog
+   * pre-populated with one or more line items (e.g. mapped from selected
+   * existing Expense rows). When omitted the dialog opens with one blank line.
+   */
+  prefill?: { date?: Date; items?: ExpenseFormValues['items'] };
 }
 
 export function ExpenseForm({
@@ -121,7 +126,10 @@ export function ExpenseForm({
     resolver: zodResolver(expenseFormSchema),
     defaultValues: {
       date: prefill?.date ?? new Date(),
-      items: [makeDefaultItem()],
+      items:
+        prefill?.items && prefill.items.length > 0
+          ? prefill.items
+          : [makeDefaultItem()],
       notes: '',
     },
   });
@@ -136,7 +144,10 @@ export function ExpenseForm({
       fetchCategories();
       form.reset({
         date: prefill?.date ?? new Date(),
-        items: [makeDefaultItem()],
+        items:
+          prefill?.items && prefill.items.length > 0
+            ? prefill.items
+            : [makeDefaultItem()],
         notes: '',
       });
     }

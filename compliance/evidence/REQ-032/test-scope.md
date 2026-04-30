@@ -2,7 +2,7 @@
 
 **Risk Level:** MEDIUM
 **Requirement:** Create pending expense group from existing expenses — multi-select on the Expenses page → bulk-action button → reuse existing Add Expense dialog pre-populated with mapped line items → submit as a new `PendingExpenseGroup` (status `pending`). Standalone copy: source `Expense` rows are not modified, no back-link.
-**GitHub Issue:** TBD
+**GitHub Issue:** [#70](https://github.com/metasession-dev/wawagardenbar-app/issues/70)
 **Date:** 2026-04-30
 
 ## Test Approach

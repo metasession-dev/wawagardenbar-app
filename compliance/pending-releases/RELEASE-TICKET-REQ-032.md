@@ -4,7 +4,7 @@
 **Date:** 2026-04-30
 **Requirement ID:** REQ-032
 **Risk Level:** MEDIUM (financial data, additive — no schema migration, source rows unchanged)
-**Issue:** TBD
+**Issue:** [#70](https://github.com/metasession-dev/wawagardenbar-app/issues/70)
 **PR:** TBD
 
 ---

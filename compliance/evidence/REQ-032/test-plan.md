@@ -2,7 +2,7 @@
 
 **Requirement:** REQ-032 — Create pending expense group from existing expenses (multi-select, standalone copy)
 **Risk Level:** MEDIUM
-**GitHub Issue:** TBD
+**GitHub Issue:** [#70](https://github.com/metasession-dev/wawagardenbar-app/issues/70)
 **Date:** 2026-04-30
 
 ## Acceptance Criteria

@@ -37,7 +37,27 @@ type UnitOfMeasurement = {
 
 ## Tests to Update
 
-- [ ] None — existing suites are unaffected by the dropdown-source change. The migration of seed values is backfill-only.
+Audit performed against all `e2e/` specs and `__tests__/` files that interact with a `unit` field. Most are unaffected because they treat `unit` as an opaque string fixture that never reaches `lib/units.ts:validateUnit`. The exception is the one E2E spec that types into the previous free-text `<Input placeholder="kg">`:
+
+- [x] **`e2e/pending-expenses.spec.ts`** — three lines previously did `dialog.locator('input[placeholder="kg"]').fill(...)`. After REQ-033 the unit field is a `<SelectTrigger>` button, not an input. The spec is updated to:
+  - Replace the broken free-text fills with `Select` interactions (open the unit Select, pick a registry option).
+  - Pre-existing line 138 (`'head'`), line 145 (`'litres'`), line 208 (`'month'`) are now Select picks against the registry's seeded units.
+  - The second-line item in the multi-line submit test gets an explicit unit pick added since the form's Zod schema requires it.
+
+**Verified safe — no update needed** (these all treat `unit` as a string fixture that stays inside mocks or seed data; no path runs `validateUnit`):
+
+- `__tests__/lib/expense-to-line-item.test.ts` (REQ-032 — `unit: 'kg'` fixture)
+- `__tests__/services/inventory-service.customization-linked.test.ts` (REQ-031 — `unit: 'units'`)
+- `__tests__/inventory/crate-packaging.test.ts` (`unit: 'bottles'`)
+- `__tests__/inventory/restock-recommendation-strategies.test.ts` (`unit: 'bottles'`)
+- `__tests__/pending-expense-group/pending-expense-actions.test.ts` (REQ-026 — uses `unit: 'piece'`, non-canonical alias; works because mocked path)
+- `__tests__/pending-expense-group/pending-expense-group-service.test.ts` (REQ-026 — `unit: 'kg'`)
+- `e2e/expenses-search.spec.ts` (REQ-029 — read-only on the table; no form fill)
+- `e2e/menu-customization-inventory.spec.ts` (REQ-030/031 — admin builder smoke; no expense-form fill)
+- `e2e/menu-customization-picker.spec.ts` (REQ-031 — customer order journey)
+- `e2e/expense-category-groups.spec.ts` (REQ-028 — exercises the category dropdown only; no unit interaction)
+- `e2e/cost-snapshot.spec.ts`, `e2e/express-order-report.spec.ts` — no expense-form fill
+- `e2e/finance/create-pending-from-expenses.spec.ts` (REQ-032 — opens dialog with prefill; doesn't manually fill unit)
 
 ## Tests to Remove
 

@@ -135,14 +135,23 @@ adminTest.describe('REQ-026: Expense Form — Multi-line submission', () => {
       await descInputs.nth(0).fill('Goat for pepper soup');
       const numInputs = dialog.locator('input[type="number"]');
       await numInputs.nth(0).fill('1'); // qty
-      await dialog.locator('input[placeholder="kg"]').nth(0).fill('head');
+      // REQ-033: unit field is now a Select sourced from the UoM registry.
+      // Each line has 3 comboboxes (expenseType, category, unit); the unit
+      // for line 0 is the 3rd combobox (index 2).
+      await dialog.locator('button[role="combobox"]').nth(2).click();
+      await page.locator('[role="option"]').first().click();
       await numInputs.nth(1).fill('25000'); // unitCost → totalCost auto = 25000
 
       // Add second line item
       await dialog.locator('button', { hasText: /Add Item/ }).click();
       await descInputs.nth(1).fill('Palm Oil for cooking');
       await numInputs.nth(3).fill('2'); // qty row 2
-      await dialog.locator('input[placeholder="kg"]').nth(1).fill('litres');
+      // Line 1's combobox indexes are 3 (expenseType), 4 (category), 5 (unit).
+      // Set category + unit so the Zod-required fields are populated.
+      await dialog.locator('button[role="combobox"]').nth(4).click();
+      await page.locator('[role="option"]').first().click();
+      await dialog.locator('button[role="combobox"]').nth(5).click();
+      await page.locator('[role="option"]').first().click();
       await numInputs.nth(4).fill('3500'); // unitCost row 2
 
       // Submit
@@ -205,7 +214,9 @@ adminTest.describe('REQ-026: Save & Add Another', () => {
         .fill('Electricity bill');
       const numInputs = dialog.locator('input[type="number"]');
       await numInputs.nth(0).fill('1');
-      await dialog.locator('input[placeholder="kg"]').fill('month');
+      // REQ-033: unit field is now a Select; pick any active registry option.
+      await dialog.locator('button[role="combobox"]').nth(2).click();
+      await page.locator('[role="option"]').first().click();
       await numInputs.nth(1).fill('15000');
 
       // Click Save & Add Another

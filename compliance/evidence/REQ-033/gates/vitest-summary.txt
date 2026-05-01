@@ -1,0 +1,88 @@
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90m/home/william/Documents/SoftwareProjects/Metasession/wawagardenbar app[39m
+
+ [32m✓[39m __tests__/api/public/tabs-filter-support.test.ts [2m([22m[2m27 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m __tests__/reconciliation/reconciliation-logic.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m __tests__/tabs/partial-payment-validation.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 29[2mms[22m[39m
+ [32m✓[39m __tests__/lib/customization-validation.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m __tests__/lib/expense-search.test.ts [2m([22m[2m31 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m __tests__/lib/cart-store-helpers.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m __tests__/lib/expense-categories-display.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m __tests__/lib/customization-builder-preview.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m __tests__/lib/order-line-totals.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m __tests__/inventory/restock-recommendation.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m __tests__/services/expense-service.search.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m __tests__/reports/payment-method-aggregation.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m __tests__/lib/units.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m __tests__/inventory/restock-recommendation-strategies.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m __tests__/api/public/orders-tab-support.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m __tests__/lib/customization-inventory.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m __tests__/pending-expense-group/pending-expense-actions.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m __tests__/lib/expense-to-line-item.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m __tests__/lib/business-date.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m __tests__/actions/admin/user-actions.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m __tests__/services/system-settings-service.units.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+[90mstdout[2m | __tests__/actions/admin/menu-actions.customization-inventory.test.ts[2m > [22m[2mREQ-030: updateMenuItemAction — customization inventory links[2m > [22m[2maccepts valid 24-hex inventoryId + numeric inventoryDeduction and persists both
+[22m[39m🔍 allowManualPriceOverride from form: false -> parsed: [33mfalse[39m
+🔍 Before save - menuItem.allowManualPriceOverride: [33mfalse[39m -> setting to: [33mfalse[39m
+🔍 After assignment - menuItem.allowManualPriceOverride: [33mfalse[39m
+
+[90mstdout[2m | __tests__/actions/admin/menu-actions.customization-inventory.test.ts[2m > [22m[2mREQ-030: updateMenuItemAction — customization inventory links[2m > [22m[2maccepts customizations with no inventoryId at all (legacy shape preserved)
+[22m[39m🔍 allowManualPriceOverride from form: false -> parsed: [33mfalse[39m
+🔍 Before save - menuItem.allowManualPriceOverride: [33mfalse[39m -> setting to: [33mfalse[39m
+🔍 After assignment - menuItem.allowManualPriceOverride: [33mfalse[39m
+
+[90mstdout[2m | __tests__/actions/admin/menu-actions.customization-inventory.test.ts[2m > [22m[2mREQ-030: updateMenuItemAction — customization inventory links[2m > [22m[2mstrips empty-string inventoryId so the field is not persisted
+[22m[39m🔍 allowManualPriceOverride from form: false -> parsed: [33mfalse[39m
+🔍 Before save - menuItem.allowManualPriceOverride: [33mfalse[39m -> setting to: [33mfalse[39m
+🔍 After assignment - menuItem.allowManualPriceOverride: [33mfalse[39m
+
+[90mstdout[2m | __tests__/actions/admin/menu-actions.customization-inventory.test.ts[2m > [22m[2mREQ-030: updateMenuItemAction — customization inventory links[2m > [22m[2mrejects inventoryId that is not 24 hex chars
+[22m[39m🔍 allowManualPriceOverride from form: false -> parsed: [33mfalse[39m
+
+[90mstdout[2m | __tests__/actions/admin/menu-actions.customization-inventory.test.ts[2m > [22m[2mREQ-030: updateMenuItemAction — customization inventory links[2m > [22m[2mrejects inventoryId with non-hex characters
+[22m[39m🔍 allowManualPriceOverride from form: false -> parsed: [33mfalse[39m
+
+[90mstdout[2m | __tests__/actions/admin/menu-actions.customization-inventory.test.ts[2m > [22m[2mREQ-030: updateMenuItemAction — customization inventory links[2m > [22m[2mrejects inventoryDeduction of 0
+[22m[39m🔍 allowManualPriceOverride from form: false -> parsed: [33mfalse[39m
+
+[90mstdout[2m | __tests__/actions/admin/menu-actions.customization-inventory.test.ts[2m > [22m[2mREQ-030: updateMenuItemAction — customization inventory links[2m > [22m[2mrejects negative inventoryDeduction
+[22m[39m🔍 allowManualPriceOverride from form: false -> parsed: [33mfalse[39m
+
+[90mstdout[2m | __tests__/actions/admin/menu-actions.customization-inventory.test.ts[2m > [22m[2mREQ-030: updateMenuItemAction — customization inventory links[2m > [22m[2maccepts fractional inventoryDeduction (2.5)
+[22m[39m🔍 allowManualPriceOverride from form: false -> parsed: [33mfalse[39m
+🔍 Before save - menuItem.allowManualPriceOverride: [33mfalse[39m -> setting to: [33mfalse[39m
+🔍 After assignment - menuItem.allowManualPriceOverride: [33mfalse[39m
+
+[90mstdout[2m | __tests__/actions/admin/menu-actions.customization-inventory.test.ts[2m > [22m[2mREQ-030: updateMenuItemAction — customization inventory links[2m > [22m[2mrejects inventoryDeduction that is NaN or Infinity
+[22m[39m🔍 allowManualPriceOverride from form: false -> parsed: [33mfalse[39m
+
+[90mstdout[2m | __tests__/actions/admin/menu-actions.customization-inventory.test.ts[2m > [22m[2mREQ-030: updateMenuItemAction — customization inventory links[2m > [22m[2mrejects inventoryDeduction that is NaN or Infinity
+[22m[39m🔍 allowManualPriceOverride from form: false -> parsed: [33mfalse[39m
+
+[90mstdout[2m | __tests__/actions/admin/menu-actions.customization-inventory.test.ts[2m > [22m[2mREQ-030: updateMenuItemAction — customization inventory links[2m > [22m[2mrejects inventoryDeduction that is NaN or Infinity
+[22m[39m🔍 allowManualPriceOverride from form: false -> parsed: [33mfalse[39m
+
+ [32m✓[39m __tests__/actions/admin/menu-actions.customization-inventory.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+ [32m✓[39m __tests__/lib/cart-line-math.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m __tests__/services/system-settings-service.expense-categories.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 71[2mms[22m[39m
+ [32m✓[39m __tests__/services/inventory-service.customization-linked.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m __tests__/lib/customization-picker-state.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m __tests__/staff-pot/staff-pot-inventory-loss.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m __tests__/inventory/crate-packaging.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m __tests__/reports/business-date-attribution.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m __tests__/security/regex-injection-prevention.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m __tests__/reports/total-revenue-consistency.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m __tests__/security/path-traversal-sanitization.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m __tests__/reports/public-sales-summary-cost.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m __tests__/staff-pot/staff-pot-calculation.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m __tests__/reports/report-cost-snapshot.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m __tests__/inventory/price-update-inventory-sync.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m __tests__/pending-expense-group/pending-expense-group-service.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m __tests__/staff-pot/staff-pot-start-date.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m38 passed[39m[22m[90m (38)[39m
+[2m      Tests [22m [1m[32m486 passed[39m[22m[90m (486)[39m
+[2m   Start at [22m 20:08:27
+[2m   Duration [22m 1.94s[2m (transform 3.85s, setup 0ms, import 8.98s, tests 455ms, environment 5ms)[22m
+

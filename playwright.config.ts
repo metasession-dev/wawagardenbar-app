@@ -137,6 +137,28 @@ export default defineConfig({
       testMatch: /expense-category-groups\.spec\.ts/,
       dependencies: ['auth-setup'],
     },
+    // Pending expense group workflow (REQ-026 — added retroactively in REQ-033 since
+    // the spec was authored but never registered; CI was silently skipping it).
+    {
+      name: 'pending-expenses',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /pending-expenses\.spec\.ts/,
+      dependencies: ['auth-setup'],
+    },
+    // Create pending expense group from existing expenses (REQ-032)
+    {
+      name: 'create-pending-from-expenses',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /create-pending-from-expenses\.spec\.ts/,
+      dependencies: ['auth-setup'],
+    },
+    // Units of Measurement registry (REQ-033)
+    {
+      name: 'units-of-measurement',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /units-of-measurement\.spec\.ts/,
+      dependencies: ['auth-setup'],
+    },
   ],
   /* Start dev server before tests (skipped when BASE_URL is set) */
   webServer: process.env.BASE_URL

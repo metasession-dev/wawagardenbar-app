@@ -36,12 +36,16 @@ const TEST_UNIT_ID = `req033-test-${Date.now()}`;
 const TEST_UNIT_LABEL = `REQ-033 Test ${Date.now()}`;
 
 async function gotoSettings(page: Page) {
-  await page.goto('/dashboard/settings');
-  await page.waitForLoadState('networkidle');
+  // `domcontentloaded` is the right wait for this app — the dashboard keeps
+  // long-running connections open (SSE / HMR in dev) so `networkidle` never
+  // resolves locally.
+  await page.goto('/dashboard/settings', { waitUntil: 'domcontentloaded' });
+  // Best-effort scroll; don't fail the test if the section isn't there yet.
   await page
     .locator('text=Units of Measurement')
     .first()
-    .scrollIntoViewIfNeeded();
+    .scrollIntoViewIfNeeded({ timeout: 5000 })
+    .catch(() => undefined);
 }
 
 superAdminTest.describe('REQ-033: Units of Measurement registry', () => {
@@ -154,23 +158,32 @@ superAdminTest.describe('REQ-033: Units of Measurement registry', () => {
     }
   );
 
-  superAdminTest.afterEach(async ({ page }) => {
-    // Clean up the test unit we created in AC2 (best-effort).
+  superAdminTest.afterEach(async ({ page }, testInfo) => {
+    // Clean up the test unit we created in AC2 (best-effort, capped at 10s).
+    // Only relevant if AC2 ran; for other tests the locator simply finds
+    // nothing and the cleanup short-circuits.
+    testInfo.setTimeout(15000);
     try {
-      await gotoSettings(page);
+      await page.goto('/dashboard/settings', {
+        waitUntil: 'domcontentloaded',
+        timeout: 5000,
+      });
       const idInput = page.locator(`input[value="${TEST_UNIT_ID}"]`);
-      if ((await idInput.count()) > 0) {
+      const found = await idInput.count().catch(() => 0);
+      if (found > 0) {
         const row = idInput
           .first()
           .locator('xpath=ancestor::*[contains(@class,"grid-cols-12")][1]');
         const removeBtn = row.getByRole('button', { name: /Remove row/i });
-        if ((await removeBtn.count()) > 0) {
-          await removeBtn.click();
-          await page.getByRole('button', { name: /Save changes/i }).click();
+        if ((await removeBtn.count().catch(() => 0)) > 0) {
+          await removeBtn.click({ timeout: 3000 });
+          await page
+            .getByRole('button', { name: /Save changes/i })
+            .click({ timeout: 3000 });
         }
       }
     } catch {
-      /* best-effort cleanup */
+      /* best-effort cleanup — never fails a test */
     }
   });
 });

@@ -1,6 +1,7 @@
 # Expense Management - Requirements & Implementation
 
 ## Overview
+
 A comprehensive expense tracking system that captures both **Direct Costs** and **Operating Expenses** to enable accurate financial reporting and profitability analysis.
 
 ---
@@ -8,9 +9,11 @@ A comprehensive expense tracking system that captures both **Direct Costs** and 
 ## Expense Categories
 
 ### 1. Direct Costs (Cost of Goods Sold - COGS)
+
 **Definition:** Expenses directly tied to preparing and serving menu items. These costs are variable and scale with production volume.
 
 **Examples:**
+
 - **Meat/Protein:** Goat, chicken, beef, fish
 - **Cooking Oils:** Palm oil, vegetable oil
 - **Condiments & Spices:** Salt, pepper, herbs, spices
@@ -20,15 +23,18 @@ A comprehensive expense tracking system that captures both **Direct Costs** and 
 - **Other Ingredients:** Rice, garri, flour, etc.
 
 **Key Characteristics:**
+
 - Directly attributable to specific menu items
 - Variable costs (increase with sales volume)
 - Used to calculate menu item cost price
 - Impact gross profit margin
 
 ### 2. Operating Expenses (Indirect Costs)
+
 **Definition:** Expenses required to run the business operations but not directly tied to specific menu items. These are typically fixed or semi-fixed costs.
 
 **Examples:**
+
 - **Utilities:** Electricity, water
 - **Internet/Telecommunications:** WiFi, phone bills
 - **Maintenance & Repairs:** Fixing doors, plumbing, equipment repairs
@@ -41,6 +47,7 @@ A comprehensive expense tracking system that captures both **Direct Costs** and 
 - **Licenses & Permits:** Business registration, health permits
 
 **Key Characteristics:**
+
 - Not directly tied to specific menu items
 - Often fixed or semi-fixed costs
 - Required to keep business operational
@@ -51,9 +58,11 @@ A comprehensive expense tracking system that captures both **Direct Costs** and 
 ## Inventory Management Integration
 
 ### Non-Sellable Inventory Items
+
 **Purpose:** Track raw materials and ingredients used in food preparation for restocking purposes.
 
 **Examples:**
+
 - Palm oil (litres)
 - Salt (kilos)
 - Goat meat (whole goats or kilos)
@@ -62,15 +71,18 @@ A comprehensive expense tracking system that captures both **Direct Costs** and 
 - Vegetables
 
 **Key Points:**
+
 - **NOT part of financial profitability calculations**
 - Used purely for **inventory tracking and restocking alerts**
 - Helps answer: "When do I need to restock palm oil?"
 - Separate from sellable inventory (completed menu items)
 
 ### Sellable Inventory Items
+
 **Definition:** Completed menu items ready for sale to customers.
 
 **Examples:**
+
 - Goat Meat Pepper Soup
 - Jollof Rice
 - Fried Chicken
@@ -79,8 +91,9 @@ A comprehensive expense tracking system that captures both **Direct Costs** and 
 
 **Cost Calculation:**
 The cost of a sellable menu item includes ALL ingredients:
+
 ```
-Goat Meat Pepper Soup Cost = 
+Goat Meat Pepper Soup Cost =
   (Goat meat cost per portion) +
   (Palm oil cost per portion) +
   (Salt cost per portion) +
@@ -90,11 +103,13 @@ Goat Meat Pepper Soup Cost =
 ```
 
 **Example Calculation:**
+
 - 1 Goat costs ₦75,000
 - 1 Goat yields 200 portions of pepper soup
 - Base goat cost per portion: ₦75,000 / 200 = ₦375
 
 Additional ingredients per portion:
+
 - Palm oil: ₦50
 - Salt & spices: ₦20
 - Gas: ₦30
@@ -113,13 +128,15 @@ If selling price is ₦1,200, gross profit per portion = ₦700
 #### Features Required:
 
 ##### 1. Add Expense Form
+
 **Fields:**
+
 - **Date:** Date picker (defaults to today)
 - **Expense Type:** Dropdown
   - Direct Cost
   - Operating Expense
 - **Category:** Dropdown (dynamic based on expense type)
-  
+
   **Direct Cost Categories:**
   - Meat/Protein
   - Cooking Oil
@@ -128,7 +145,7 @@ If selling price is ₦1,200, gross profit per portion = ₦700
   - Cooking Gas/Fuel
   - Beverages (Stock)
   - Other Ingredients
-  
+
   **Operating Expense Categories:**
   - Utilities (Electricity, Water)
   - Internet/Telecommunications
@@ -151,12 +168,15 @@ If selling price is ₦1,200, gross profit per portion = ₦700
 - **Notes:** Textarea (optional, additional details)
 
 **Actions:**
+
 - Save Expense
 - Save & Add Another
 - Cancel
 
 ##### 2. Expense List/Table View
+
 **Columns:**
+
 - Date
 - Type (Direct Cost / Operating Expense)
 - Category
@@ -166,24 +186,87 @@ If selling price is ₦1,200, gross profit per portion = ₦700
 - Actions (Edit, Delete)
 
 **Filters:**
+
 - Date Range Picker
 - Expense Type (All, Direct Cost, Operating Expense)
 - Category Filter
 - Search by description
 
 **Summary Cards (above table):**
+
 - Total Direct Costs (selected period)
 - Total Operating Expenses (selected period)
 - Total Expenses (selected period)
 - Most Expensive Category
 
 ##### 3. Bulk Import
+
 - CSV upload for bulk expense entry
 - Template download for proper formatting
 
 ##### 4. Export
+
 - Export expenses as CSV/Excel
 - Filter by date range before export
+
+##### 5. Create Pending Group From Existing Expenses
+
+> **REQ-032** — added 2026-05-01.
+
+A bulk action on the expense list that lets an admin (or super-admin) **duplicate one or more recorded expenses into a single new pending expense group** in one click. Useful for recurring/regular bills (rent, utilities, fixed-supplier purchases): instead of retyping last cycle's lines, select them and submit the new group for super-admin approval and transfer.
+
+**How to use:**
+
+1. Open `/dashboard/finance/expenses`.
+2. **Tick the checkbox** at the start of each expense row you want to duplicate. Use the **header checkbox** to select every visible (filtered) row at once.
+3. The **bulk-action bar** appears above the table showing **"N expenses selected"** with two buttons:
+   - **Clear selection** — empties the selection set without opening anything.
+   - **Create pending group from selected (N)** — opens the existing **Add Expense** dialog **pre-populated with one line item per selected expense**.
+4. Review the pre-filled lines. You can edit any field, add more lines, or remove lines — exactly the same controls as the standard Add Expense dialog.
+5. Set the group **Date** (defaults to today; editable).
+6. Click **Submit**. The new pending group is created with status `pending` and appears at the top of `/dashboard/finance/expenses/pending`.
+
+**What gets copied (per line item):**
+
+| Pending line item field | Source from the selected expense                                              |
+| ----------------------- | ----------------------------------------------------------------------------- |
+| Expense type            | `expenseType` (Direct cost / Operating expense)                               |
+| Category                | `category`                                                                    |
+| Description             | `description`                                                                 |
+| Quantity                | `quantity` (defaults to `1` if the source had no quantity)                    |
+| Unit                    | `unit` (defaults to `each` if the source had no unit)                         |
+| Unit cost               | `amount ÷ quantity`, rounded to 2 decimal places                              |
+| Total cost              | `amount` exactly (preserves the recorded amount, even when quantity defaults) |
+
+The group **total amount** is the sum of the line totals. The group **date** is whatever you pick in the dialog, **not** the date of any source expense.
+
+**What does _not_ happen:**
+
+- **The source expenses are unchanged.** No fields are touched, no flag is set, no link is recorded. The duplicate is a standalone copy — if you later edit, delete, or re-categorise the source, the pending group is unaffected, and vice versa.
+- **No deduplication.** Selecting the same expense twice (e.g. once via header "select all" and once individually) results in one line for that expense — selection is a `Set`, not a list. Selecting the same expense across two separate runs of the bulk action does create two separate pending groups (each with one line for that expense).
+- **No reclassification.** This action does not move the source expense out of "recorded" into "pending". The two records coexist independently.
+
+**Permissions:** Same as Add Expense — admin or super-admin only. The bulk-action button is hidden for other roles.
+
+**Selection behaviour:**
+
+- Selection is **client-side only** (in-memory React state). Refreshing the page or navigating away clears it.
+- Selection is **cleared automatically** when the dialog opens — so an aborted dialog leaves no stale selection.
+- The header checkbox selects only the **filtered visible** rows, not the full underlying list. If you've narrowed the list with the search box or category filter, "select all" respects that.
+
+**Common workflow — recurring monthly utilities:**
+
+1. Filter the expense list to last month using the **30D** quick range.
+2. Filter by category **"Utilities (Electricity, Water)"**.
+3. Header checkbox → all visible utility rows tick.
+4. Click **Create pending group from selected (N)** → review descriptions and amounts (often unchanged month-to-month) → adjust the date to today → submit.
+5. The new pending group enters the standard approval flow at `/dashboard/finance/expenses/pending` for super-admin sign-off and transfer.
+
+**Reference:**
+
+- Acceptance criteria + test mapping: `compliance/evidence/REQ-032/test-plan.md`
+- Pure mapping helper: `lib/expense-to-line-item.ts`
+- Release ticket: `compliance/approved-releases/RELEASE-TICKET-REQ-032.md`
 
 ---
 
@@ -195,22 +278,22 @@ If selling price is ₦1,200, gross profit per portion = ₦700
 interface IExpense {
   _id: ObjectId;
   date: Date;
-  
+
   // Expense Classification
   expenseType: 'direct-cost' | 'operating-expense';
   category: string; // Dynamic based on expenseType
-  
+
   // Details
   description: string;
   quantity?: number;
   unit?: string; // 'goat', 'litres', 'kg', 'cylinders', etc.
   amount: number; // Total cost in Naira
-  
+
   // Tracking
   supplier?: string;
   receiptReference?: string;
   notes?: string;
-  
+
   // Audit
   createdBy: ObjectId; // Admin who recorded the expense
   createdAt: Date;
@@ -219,6 +302,7 @@ interface IExpense {
 ```
 
 **Indexes:**
+
 - `date` (for date range queries)
 - `expenseType` (for filtering)
 - `category` (for reporting)
@@ -288,6 +372,7 @@ interface IExpense {
    - Example: If ₦5,000 was spent on electricity on Monday, this is subtracted from Monday's gross profit
 
 ### Daily Report Calculation Flow:
+
 ```
 Revenue (from orders) = ₦200,000
 
@@ -313,22 +398,28 @@ Net Profit = ₦100,000 - ₦20,000 = ₦80,000
 ## Menu Item Cost Calculation
 
 ### Current System:
+
 Menu items have a `costPerUnit` field in the inventory model.
 
 ### Enhanced System (Recommended):
+
 Menu items should have a **detailed cost breakdown** that includes all ingredients.
 
 #### Option 1: Manual Cost Entry
+
 Admin manually calculates and enters the total cost per menu item, including all ingredients.
 
 **Example:**
+
 - Menu Item: Goat Meat Pepper Soup
 - Cost Per Unit: ₦500 (manually calculated to include goat, oil, spices, gas, etc.)
 
 #### Option 2: Recipe-Based Cost Calculation (Advanced)
+
 Create a recipe system that automatically calculates menu item cost based on ingredients.
 
 **Recipe Model:**
+
 ```typescript
 interface IRecipe {
   menuItemId: ObjectId;
@@ -346,6 +437,7 @@ interface IRecipe {
 ```
 
 **Example Recipe:**
+
 ```
 Goat Meat Pepper Soup (200 portions)
 - 1 Goat: ₦75,000
@@ -372,6 +464,7 @@ Cost Per Portion: ₦100,000 / 200 = ₦500
 ## Implementation Phases
 
 ### Phase 1: Basic Expense Entry
+
 1. Create `Expense` model and schema
 2. Create `ExpenseService` with basic CRUD operations
 3. Build expense entry form UI
@@ -379,17 +472,20 @@ Cost Per Portion: ₦100,000 / 200 = ₦500
 5. Add filtering and search
 
 ### Phase 2: Integration with Reports
+
 1. Update `FinancialReportService` to include expenses
 2. Modify daily report calculation to include direct costs and operating expenses
 3. Add expense breakdown section to daily report UI
 
 ### Phase 3: Advanced Features
+
 1. Implement CSV import/export
 2. Add expense analytics and trends
 3. Create expense categories management
 4. Add recurring expense templates
 
 ### Phase 4: Recipe System (Optional)
+
 1. Create recipe model and service
 2. Build recipe builder UI
 3. Link recipes to menu items

@@ -660,6 +660,8 @@ This section tracks discrete change requests (REQ-001 through REQ-008) that repr
 | REQ-030 | #53   | HIGH   | compliance/evidence/REQ-030/ | SUPERSEDED by REQ-031 (PR #66 closed unmerged; back-end commits retained on develop as pre-cursor) | ostendo-io      | 2026-04-24 |
 | REQ-031 | #67   | HIGH   | compliance/evidence/REQ-031/ | APPROVED - DEPLOYED                                                                                | ostendo-io      | 2026-04-27 |
 | REQ-032 | #70   | MEDIUM | compliance/evidence/REQ-032/ | APPROVED - DEPLOYED                                                                                | ostendo-io      | 2026-05-01 |
+| REQ-033 | #73   | MEDIUM | compliance/evidence/REQ-033/ | DRAFT (prereq for REQ-034 — UoM registry; soak ≥1 week before REQ-034 starts)                      | ostendo-io      | 2026-05-01 |
+| REQ-034 | #74   | HIGH   | compliance/evidence/REQ-034/ | DRAFT (BLOCKED on REQ-033 — recipes + production + kitchen-ingredient inventory + kitchen role)    | ostendo-io      | 2026-05-01 |
 
 ### Change Request Dependencies
 

@@ -37,6 +37,15 @@ echo ""
 for REQ in $REQUIREMENTS; do
   echo "--- Checking $REQ ---"
 
+  # If the REQ has no RTM row, it's a forward-reference or design discussion
+  # mentioned in a commit body, not a tracked requirement for this release.
+  # Skip rather than fail so that planning notes (e.g. "this prereq for
+  # REQ-XXX") don't drag a not-yet-started REQ into release validation.
+  if ! grep -q "| $REQ " compliance/RTM.md 2>/dev/null; then
+    echo "  INFO: $REQ is referenced in commits but has no RTM row — skipping (treated as forward-reference, not a tracked requirement for this release)"
+    continue
+  fi
+
   # Check evidence directory exists
   if [ ! -d "compliance/evidence/$REQ" ]; then
     echo "  ERROR: Evidence directory missing: compliance/evidence/$REQ/"

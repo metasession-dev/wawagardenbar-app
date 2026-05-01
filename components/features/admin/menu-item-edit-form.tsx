@@ -36,6 +36,12 @@ import { DietaryTagsSelector } from './dietary-tags-selector';
 import { DeleteMenuItemDialog } from './delete-menu-item-dialog';
 import { IMenuSettings } from '@/interfaces/menu-settings.interface';
 import { IInventoryLocationConfig } from '@/interfaces';
+import { getUnitsOfMeasurementAction } from '@/app/actions/units-actions';
+import {
+  DEFAULT_UNITS_OF_MEASUREMENT,
+  type UnitOfMeasurement,
+} from '@/interfaces/unit-of-measurement.interface';
+import { getActiveUnits } from '@/lib/units';
 
 const menuItemSchema = z.object({
   name: z
@@ -104,6 +110,9 @@ export function MenuItemEditForm({
   const [availableInventories, setAvailableInventories] = useState<
     InventoryListItem[]
   >([]);
+  const [unitsRegistry, setUnitsRegistry] = useState<UnitOfMeasurement[]>([
+    ...DEFAULT_UNITS_OF_MEASUREMENT,
+  ]);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -148,9 +157,22 @@ export function MenuItemEditForm({
       }
     }
 
+    // REQ-033: pull the UoM registry for the unit dropdown
+    async function fetchUnits() {
+      try {
+        const result = await getUnitsOfMeasurementAction();
+        if (result.success && result.units && result.units.length > 0) {
+          setUnitsRegistry(result.units);
+        }
+      } catch {
+        /* keep seed defaults */
+      }
+    }
+
     fetchConversionRate();
     fetchLocations();
     fetchInventories();
+    fetchUnits();
   }, []);
 
   const {
@@ -856,12 +878,23 @@ export function MenuItemEditForm({
 
                   <div className="space-y-2">
                     <Label htmlFor="unit">Unit Type</Label>
-                    <Input
-                      id="unit"
-                      {...register('unit')}
-                      placeholder="e.g., bottles, portions, kg"
+                    {/* REQ-033: registry-fed Select; falls back to seed defaults if fetch fails */}
+                    <Select
+                      value={watch('unit') ?? ''}
+                      onValueChange={(value) => setValue('unit', value)}
                       disabled={isLoading}
-                    />
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select unit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getActiveUnits(unitsRegistry).map((u) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 

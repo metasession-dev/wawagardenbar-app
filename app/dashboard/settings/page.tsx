@@ -11,6 +11,7 @@ import { SettingsForm } from '@/components/features/admin/settings-form';
 import { PaymentSettingsForm } from '@/components/features/admin/payment-settings-form';
 import { ExpenseCategoriesForm } from '@/components/features/admin/expense-categories-form';
 import { MenuCategoriesForm } from '@/components/features/admin/menu-categories-form';
+import { UnitsOfMeasurementForm } from '@/components/features/admin/units-of-measurement-form';
 import { StaffPotConfigForm } from '@/components/features/admin/staff-pot/staff-pot-config-form';
 import { BusinessDayCutoffForm } from '@/components/features/admin/business-day-cutoff-form';
 import Link from 'next/link';
@@ -37,6 +38,7 @@ export default async function SettingsPage() {
     inventoryLocationsSettings,
     staffPotConfig,
     businessDayCutoff,
+    unitsOfMeasurement,
   ] = await Promise.all([
     SettingsService.getSettings(),
     SystemSettingsService.getNotificationSettings(),
@@ -46,6 +48,7 @@ export default async function SettingsPage() {
     SystemSettingsService.getInventoryLocations(),
     SystemSettingsService.getStaffPotConfig(),
     SystemSettingsService.getBusinessDayCutoff(),
+    SystemSettingsService.getUnitsOfMeasurement(),
   ]);
 
   // Serialize for client - use JSON.parse(JSON.stringify()) to remove Mongoose metadata
@@ -143,6 +146,9 @@ export default async function SettingsPage() {
 
       {/* Expense Categories */}
       <ExpenseCategoriesForm initialCategories={expenseCategories} />
+
+      {/* Units of Measurement (REQ-033) */}
+      <UnitsOfMeasurementForm initialUnits={unitsOfMeasurement} />
 
       {/* Menu Categories */}
       <MenuCategoriesForm initialSettings={menuSettings} />

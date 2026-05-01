@@ -86,6 +86,36 @@ export async function updateBusinessDayCutoffAction(
   }
 }
 
+/**
+ * @requirement REQ-033 - App-wide Unit-of-Measurement registry
+ */
+export async function updateUnitsOfMeasurementAction(
+  units: import('@/interfaces/unit-of-measurement.interface').UnitOfMeasurement[]
+) {
+  try {
+    const session = await requireSuperAdmin();
+
+    await SystemSettingsService.updateUnitsOfMeasurement(
+      units,
+      session.userId!
+    );
+
+    revalidatePath('/dashboard/settings');
+    revalidatePath('/dashboard/finance/expenses');
+    revalidatePath('/dashboard/menu');
+
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to update units of measurement',
+    };
+  }
+}
+
 export async function updateMenuCategoriesAction(
   settings: import('@/interfaces/menu-settings.interface').IMenuSettings
 ) {

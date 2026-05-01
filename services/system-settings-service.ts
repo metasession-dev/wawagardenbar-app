@@ -717,6 +717,101 @@ export class SystemSettingsService {
   }
 
   /**
+   * @requirement REQ-033 - App-wide Unit-of-Measurement registry
+   *
+   * Returns the persisted UoM registry. Falls back to the default seed
+   * data on first read (no row exists yet) without persisting it — the
+   * registry is created lazily on first update via `findOneAndUpdate`
+   * with `upsert: true`. Same lazy-init pattern as expense-categories.
+   */
+  static async getUnitsOfMeasurement(): Promise<
+    import('@/interfaces/unit-of-measurement.interface').UnitOfMeasurement[]
+  > {
+    await connectDB();
+
+    const setting = await SystemSettingsModel.findOne({
+      key: 'units-of-measurement',
+    });
+
+    const { DEFAULT_UNITS_OF_MEASUREMENT } = await import(
+      '@/interfaces/unit-of-measurement.interface'
+    );
+
+    return (
+      (setting?.value as import('@/interfaces/unit-of-measurement.interface').UnitOfMeasurement[]) ||
+      DEFAULT_UNITS_OF_MEASUREMENT
+    );
+  }
+
+  /**
+   * @requirement REQ-033 - Update the UoM registry (super-admin only —
+   * enforced at the action layer).
+   *
+   * Validates that:
+   *   - the array is non-empty
+   *   - every entry has a non-empty trimmed `id` and `label`
+   *   - every `id` is unique
+   *   - every `category` is one of the recognised values
+   * Throws on invalid input. Persists with the existing `changeHistory`
+   * audit trail.
+   */
+  static async updateUnitsOfMeasurement(
+    units: import('@/interfaces/unit-of-measurement.interface').UnitOfMeasurement[],
+    adminUserId: string
+  ): Promise<boolean> {
+    const { UOM_CATEGORIES } = await import(
+      '@/interfaces/unit-of-measurement.interface'
+    );
+
+    if (!Array.isArray(units) || units.length === 0) {
+      throw new Error('Units of measurement registry cannot be empty');
+    }
+
+    const seenIds = new Set<string>();
+    for (const u of units) {
+      if (!u || typeof u.id !== 'string' || u.id.trim() === '') {
+        throw new Error('Every unit must have a non-empty id');
+      }
+      if (typeof u.label !== 'string' || u.label.trim() === '') {
+        throw new Error(`Unit '${u.id}' must have a non-empty label`);
+      }
+      if (!UOM_CATEGORIES.includes(u.category)) {
+        throw new Error(
+          `Unit '${u.id}' has invalid category '${u.category}' — must be one of: ${UOM_CATEGORIES.join(', ')}`
+        );
+      }
+      if (seenIds.has(u.id)) {
+        throw new Error(`Duplicate unit id: '${u.id}'`);
+      }
+      seenIds.add(u.id);
+    }
+
+    await connectDB();
+
+    await SystemSettingsModel.findOneAndUpdate(
+      { key: 'units-of-measurement' },
+      {
+        $set: {
+          value: units,
+          updatedBy: new Types.ObjectId(adminUserId),
+          updatedAt: new Date(),
+        },
+        $push: {
+          changeHistory: {
+            value: units,
+            changedBy: new Types.ObjectId(adminUserId),
+            changedAt: new Date(),
+            reason: 'Units of measurement updated',
+          },
+        },
+      },
+      { upsert: true, new: true }
+    );
+
+    return true;
+  }
+
+  /**
    * Initialize default settings
    */
   static async initializeDefaults(): Promise<void> {

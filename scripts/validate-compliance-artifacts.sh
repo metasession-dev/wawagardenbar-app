@@ -19,8 +19,11 @@ echo "=== Compliance Artifact Validation ==="
 echo "Comparing: $BASE_BRANCH...HEAD"
 echo ""
 
-# Extract REQ-XXX references from commits in this PR
-REQUIREMENTS=$(git log "$BASE_BRANCH"..HEAD --format='%B' | grep -oP 'REQ-\d+' | sort -u || true)
+# Extract REQ-XXX references from commits in this PR. Require at least 3
+# digits so placeholder patterns like 'REQ-0XX' (used in commit-body
+# templates referring to multiple sub-REQs) don't create phantom IDs that
+# block CI.
+REQUIREMENTS=$(git log "$BASE_BRANCH"..HEAD --format='%B' | grep -oP 'REQ-\d{3,}' | sort -u || true)
 
 if [ -z "$REQUIREMENTS" ]; then
   echo "No REQ-XXX references found in PR commits — skipping artifact validation."

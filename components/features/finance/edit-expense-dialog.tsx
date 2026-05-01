@@ -57,6 +57,12 @@ import {
 import type { CategoryGroup } from '@/interfaces/expense.interface';
 import { getExpenseCategoriesAction } from '@/app/actions/finance/expense-categories-actions';
 import { buildDropdownSections } from '@/lib/expense-categories-display';
+import { getUnitsOfMeasurementAction } from '@/app/actions/units-actions';
+import {
+  DEFAULT_UNITS_OF_MEASUREMENT,
+  type UnitOfMeasurement,
+} from '@/interfaces/unit-of-measurement.interface';
+import { getActiveUnits } from '@/lib/units';
 
 const editExpenseSchema = z.object({
   date: z.date({ required_error: 'Date is required' }),
@@ -109,6 +115,9 @@ export function EditExpenseDialog({
   const [operatingExpenseGroups, setOperatingExpenseGroups] = useState<
     CategoryGroup[]
   >([]);
+  const [unitsRegistry, setUnitsRegistry] = useState<UnitOfMeasurement[]>([
+    ...DEFAULT_UNITS_OF_MEASUREMENT,
+  ]);
 
   const form = useForm<EditExpenseFormValues>({
     resolver: zodResolver(editExpenseSchema),
@@ -156,6 +165,16 @@ export function EditExpenseDialog({
         })
         .catch(() => {
           /* use defaults */
+        });
+      // REQ-033: pull the UoM registry for the unit dropdown.
+      getUnitsOfMeasurementAction()
+        .then((result) => {
+          if (result.success && result.units && result.units.length > 0) {
+            setUnitsRegistry(result.units);
+          }
+        })
+        .catch(() => {
+          /* keep seed defaults */
         });
     }
   }, [open, expense]);
@@ -388,9 +407,23 @@ export function EditExpenseDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Unit</FormLabel>
-                    <FormControl>
-                      <Input placeholder="kg" {...field} />
-                    </FormControl>
+                    <Select
+                      value={field.value ?? ''}
+                      onValueChange={field.onChange}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select unit" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {getActiveUnits(unitsRegistry).map((u) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

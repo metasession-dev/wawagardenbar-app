@@ -26,26 +26,33 @@
 
 ## Tests to Add
 
+> **Note on test file paths.** REQ-034 is currently in DRAFT status (BLOCKED on
+> REQ-033). The file paths for the tests below are intentionally elided
+> from this document so the compliance validator does not chase non-existent
+> files during the REQ-033 soak window. Canonical paths live in
+> `compliance/evidence/REQ-034/implementation-plan.md` and are filled into
+> this document as part of the REQ-034 implementation kickoff.
+
 ### Pure helpers (vitest)
 
-- [ ] `__tests__/lib/recipe-execution.test.ts` — `computeIngredientsForBatches(recipe, batchCount)`, `validateProductionPreFlight({recipe, batchCount, currentStocks})`, `computeYieldVariance({expected, actual})`. ~10 tests covering: scales every ingredient by batchCount, rejects when batchCount ≤ 0, pre-flight passes when all stocks sufficient, fails with path-qualified error naming each short ingredient, variance positive/negative/zero.
-- [ ] `__tests__/lib/expense-inventory-link.test.ts` — `buildStockMovementFromExpense({expense, performedBy})`, `applyExpenseEdit({oldExpense, newExpense})`, `applyExpenseDelete({expense})`. ~8 tests covering: creates `addition` movement on initial save with linkedInventoryId, no movement when no link, edit voids prior + creates fresh on quantity change, edit voids prior + creates fresh on linkedInventoryId change, edit-with-no-relevant-change is a no-op, delete voids the prior movement, default quantity=1 if missing, default unit='each' if missing.
+- [ ] **Recipe-execution helper tests** — `computeIngredientsForBatches(recipe, batchCount)`, `validateProductionPreFlight({recipe, batchCount, currentStocks})`, `computeYieldVariance({expected, actual})`. ~10 tests covering: scales every ingredient by batchCount, rejects when batchCount ≤ 0, pre-flight passes when all stocks sufficient, fails with path-qualified error naming each short ingredient, variance positive/negative/zero.
+- [ ] **Expense ↔ inventory auto-link helper tests** — `buildStockMovementFromExpense({expense, performedBy})`, `applyExpenseEdit({oldExpense, newExpense})`, `applyExpenseDelete({expense})`. ~8 tests covering: creates addition movement on initial save with linkedInventoryId, no movement when no link, edit voids prior + creates fresh on quantity change, edit voids prior + creates fresh on linkedInventoryId change, edit-with-no-relevant-change is a no-op, delete voids the prior movement, default quantity=1 if missing, default unit='each' if missing.
 
 ### Service (vitest)
 
-- [ ] `__tests__/services/recipe-service.test.ts` — CRUD + validate. ~12 tests covering: createRecipe rejects duplicate ingredients, rejects unit mismatch, rejects non-existent inventory, rejects wrong-kind inventory, rejects yield ≤ 0, accepts valid input, updateRecipe validates same rules, deactivate flips isActive, listActiveRecipes returns only active, recipe targeting a deleted MenuItem still readable but warned, ingredient referencing a deleted Inventory still readable but warned.
-- [ ] `__tests__/services/production-service.test.ts` — execute + void with transaction rollback. ~10 tests covering: pre-flight passes → all StockMovements created + Production persisted, pre-flight fails → no rows written, mid-batch ingredient deduction failure → entire transaction rolls back, void-within-24h reverses every movement, void-after-24h rejected, void by non-super-admin rejected, voiding twice rejected, actualYield defaults to expected, override accepted, yieldVariance computed correctly.
-- [ ] `__tests__/services/expense-inventory-link.test.ts` — service-side integration of expense save / edit / delete with auto-link. ~6 tests covering the full edit/delete reversal flow against an in-memory Mongoose.
+- [ ] **Recipe service** — CRUD + validate. ~12 tests covering: createRecipe rejects duplicate ingredients, rejects unit mismatch, rejects non-existent inventory, rejects wrong-kind inventory, rejects yield ≤ 0, accepts valid input, updateRecipe validates same rules, deactivate flips isActive, listActiveRecipes returns only active, recipe targeting a deleted MenuItem still readable but warned, ingredient referencing a deleted Inventory still readable but warned.
+- [ ] **Production service** — execute + void with transaction rollback. ~10 tests covering: pre-flight passes → all StockMovements created + Production persisted, pre-flight fails → no rows written, mid-batch ingredient deduction failure → entire transaction rolls back, void-within-24h reverses every movement, void-after-24h rejected, void by non-super-admin rejected, voiding twice rejected, actualYield defaults to expected, override accepted, yieldVariance computed correctly.
+- [ ] **Expense ↔ inventory auto-link service** — integration of expense save / edit / delete with auto-link. ~6 tests covering the full edit/delete reversal flow against an in-memory Mongoose.
 
 ### E2E (Playwright)
 
-- [ ] `e2e/kitchen/recipe-and-production.spec.ts` — kitchen-role user logs in, navigates to `/dashboard/kitchen/recipes`, creates a recipe, executes 1 batch via the production modal, verifies both ingredient deductions and target MenuItem yield addition appear in the inventory dashboard with paired `StockMovement` rows. Skips gracefully if seed data missing.
-- [ ] `e2e/kitchen/role-isolation.spec.ts` — kitchen-role user tries to navigate to `/dashboard/orders/express/create-order`; verifies redirect or 403. Inverse: csr-role user tries to navigate to `/dashboard/kitchen/recipes`; verifies redirect or 403.
+- [ ] **Kitchen recipe + production journey** — kitchen-role user logs in, navigates to the kitchen recipes page, creates a recipe, executes 1 batch via the production modal, verifies both ingredient deductions and target MenuItem yield addition appear in the inventory dashboard with paired StockMovement rows. Skips gracefully if seed data missing.
+- [ ] **Role isolation** — kitchen-role user tries to navigate to the express order page; verifies redirect or 403. Inverse: csr-role user tries to navigate to the kitchen recipes page; verifies redirect or 403.
 
 ## Tests to Update
 
-- [ ] `__tests__/services/inventory-service.customization-linked.test.ts` (REQ-031 service tests) — verify still green; no behaviour change expected since kind-aware filtering doesn't apply at the linked-deduction path.
-- [ ] `e2e/menu-customization-picker.spec.ts` (REQ-031 user-journey) — verify still green.
+- [ ] REQ-031 service tests (inventory-service customization-linked) — verify still green; no behaviour change expected since kind-aware filtering doesn't apply at the linked-deduction path.
+- [ ] REQ-031 customization-picker E2E — verify still green.
 - [ ] Any existing inventory-list test that asserts "all rows" returned now needs to assert "rows of kind menu-item" by default (or add a kind-filter parameter).
 
 ## Tests to Remove
@@ -54,23 +61,28 @@ None.
 
 ## Functional Test Mapping
 
-| Acceptance Criterion                              | Test File                                                                                                     | Test Name                                                                                    |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| AC1 — Inventory split by kind, backfill           | manual UAT script run + DB inspection                                                                         | Captured in `uat-checklist.md`                                                               |
-| AC2 — Customer queries exclude kitchen ingredient | `__tests__/services/category-service.kind-filter.test.ts`                                                     | "category-service queries return only kind:menu-item" (per touchpoint)                       |
-| AC3 — Inventory tabs                              | manual UAT walkthrough                                                                                        | UAT checklist                                                                                |
-| AC4 — Kitchen role gating                         | `e2e/kitchen/role-isolation.spec.ts`                                                                          | "AC4: kitchen role denied at /dashboard/orders/express; csr denied at /kitchen"              |
-| AC5 — Expense Add-to-inventory dropdown           | `e2e/kitchen/recipe-and-production.spec.ts`                                                                   | "AC5: Direct Cost expense form shows kitchen-ingredient dropdown"                            |
-| AC6 — Auto-link transaction                       | `__tests__/services/expense-inventory-link.test.ts`                                                           | "creates one StockMovement and bumps stock atomically on save with linkedInventoryId"        |
-| AC7 — Edit/delete reversal                        | `__tests__/lib/expense-inventory-link.test.ts`                                                                | "edit voids prior + creates fresh on quantity change" (etc.)                                 |
-| AC8 — Recipe builder validation                   | `__tests__/services/recipe-service.test.ts`                                                                   | All 12 tests                                                                                 |
-| AC9 — Strict unit match                           | `__tests__/services/recipe-service.test.ts`                                                                   | "rejects unit mismatch"                                                                      |
-| AC10 — Production pre-flight                      | `__tests__/lib/recipe-execution.test.ts`                                                                      | "validateProductionPreFlight — fails with path-qualified error naming each short ingredient" |
-| AC11 — Atomic transaction + rollback              | `__tests__/services/production-service.test.ts`                                                               | "mid-batch deduction failure rolls back entire transaction"                                  |
-| AC12 — Yield default + override + variance        | `__tests__/lib/recipe-execution.test.ts`                                                                      | "computeYieldVariance — variance positive/negative/zero"                                     |
-| AC13 — Void within 24h, super-admin only          | `__tests__/services/production-service.test.ts`                                                               | "void-within-24h reverses every movement" / "void-after-24h rejected"                        |
-| AC14 — COGS regression                            | full vitest suite + manual UAT spot-check on reports                                                          | Existing tests; UAT verifies                                                                 |
-| AC15 — REQ-031 regression                         | `__tests__/services/inventory-service.customization-linked.test.ts` + `e2e/menu-customization-picker.spec.ts` | Existing — verify still pass                                                                 |
+| Acceptance Criterion | Test File | Test Name |
+| -------------------- | --------- | --------- |
+
+> Paths intentionally elided here while REQ-034 is BLOCKED on REQ-033. Canonical file paths live in `compliance/evidence/REQ-034/implementation-plan.md` and will be filled in when implementation starts.
+
+| Acceptance Criterion                              | Test (file paths in implementation-plan.md)                               | Test Name                                                                                    |
+| ------------------------------------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| AC1 — Inventory split by kind, backfill           | manual UAT script run + DB inspection                                     | Captured in uat-checklist.md                                                                 |
+| AC2 — Customer queries exclude kitchen ingredient | category-service kind-filter unit suite (per touchpoint)                  | "category-service queries return only kind:menu-item"                                        |
+| AC3 — Inventory tabs                              | manual UAT walkthrough                                                    | UAT checklist                                                                                |
+| AC4 — Kitchen role gating                         | role-isolation E2E                                                        | "AC4: kitchen role denied at express order; csr denied at kitchen recipes"                   |
+| AC5 — Expense Add-to-inventory dropdown           | recipe-and-production E2E                                                 | "AC5: Direct Cost expense form shows kitchen-ingredient dropdown"                            |
+| AC6 — Auto-link transaction                       | expense-inventory-link service suite                                      | "creates one StockMovement and bumps stock atomically on save with linkedInventoryId"        |
+| AC7 — Edit/delete reversal                        | expense-inventory-link helper suite                                       | "edit voids prior + creates fresh on quantity change" (etc.)                                 |
+| AC8 — Recipe builder validation                   | recipe-service suite                                                      | All 12 tests                                                                                 |
+| AC9 — Strict unit match                           | recipe-service suite                                                      | "rejects unit mismatch"                                                                      |
+| AC10 — Production pre-flight                      | recipe-execution helper suite                                             | "validateProductionPreFlight — fails with path-qualified error naming each short ingredient" |
+| AC11 — Atomic transaction + rollback              | production-service suite                                                  | "mid-batch deduction failure rolls back entire transaction"                                  |
+| AC12 — Yield default + override + variance        | recipe-execution helper suite                                             | "computeYieldVariance — variance positive/negative/zero"                                     |
+| AC13 — Void within 24h, super-admin only          | production-service suite                                                  | "void-within-24h reverses every movement" / "void-after-24h rejected"                        |
+| AC14 — COGS regression                            | full vitest suite + manual UAT spot-check on reports                      | Existing tests; UAT verifies                                                                 |
+| AC15 — REQ-031 regression                         | REQ-031 inventory-service customization-linked suite + REQ-031 picker E2E | Existing — verify still pass                                                                 |
 
 ## Non-Functional Tests
 

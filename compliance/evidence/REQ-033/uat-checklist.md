@@ -10,7 +10,7 @@
 
 ## Prerequisites
 
-- [ ] Develop CI for the REQ-033 commits (`6271eb2` + this gap-fix commit) is green
+- [ ] Develop CI for the REQ-033 commits is green (CI Pipeline + Compliance Evidence Upload + manually-triggered ci.yml run that uploads the 4 gate artefacts to the META-COMPLY release)
 - [ ] UAT redeployed from develop and reachable
 - [ ] Login as **super-admin** (`ade@wawagardenbar.com` or equivalent)
 
@@ -18,6 +18,43 @@ Capture as you go:
 
 - [ ] Browser screenshot for each AC where indicated below
 - [ ] Note the META-COMPLY UAT release version (`vYYYY.MM.DD.N`)
+
+---
+
+## Step 0 — Backfill the UAT database BEFORE walking the UI
+
+> **Why first?** Existing Expense / Inventory rows may carry free-text legacy `unit` values like `Kg` or `liters` that don't match any canonical registry id. After REQ-033 the form fields are Selects sourced from the registry — opening an old record with a mismatched value renders the Select **blank**, which confuses every UI verification step below. Run the backfill first so step 1 onwards opens existing records with the registry-canonical values they expect.
+>
+> Run from a local terminal session that has `MONGODB_WAWAGARDENBAR_APP_URI` and `MONGODB_DB_NAME` in `.env.local` pointing at the **UAT** database (not production, not local dev).
+
+- [ ] **Dry-run first** (no writes):
+
+  ```bash
+  npx tsx scripts/backfill-unit-values.ts --dry-run
+  ```
+
+  Capture stdout. Note the count of "would migrate", "already canonical", "unrecognised".
+
+- [ ] **Review any unrecognised values.** If any are reported (e.g. `'piece'`, `'month'`, `'doses'`):
+  - Either rename them via the relevant Edit dialog (Edit Expense / Edit Inventory) — the new dropdown enforces registry values for any record you save.
+  - Or, if the value is genuinely meaningful and you want it to survive backfill, add an alias entry to `LEGACY_UNIT_ALIASES` in `interfaces/unit-of-measurement.interface.ts`, push the change, redeploy UAT, and re-run the dry-run.
+
+- [ ] **Live run** (writes + audit file):
+
+  ```bash
+  npx tsx scripts/backfill-unit-values.ts
+  ```
+
+  Confirm:
+  - The audit file `_uom-backfill-{timestamp}.json` is written in CWD.
+  - stdout reports `expenses: N migrated, M already canonical, X unrecognised` (X should be **0** after the previous reconciliation step).
+  - Same for `inventories`.
+
+- [ ] Save the audit JSON file alongside the UAT screenshots — it is the rollback receipt.
+
+📷 _Screenshot:_ terminal showing dry-run + live-run stdout.
+
+**Expected:** all rows now have canonical registry ids; UI walkthrough below opens existing records with valid Select values.
 
 ---
 
@@ -107,22 +144,22 @@ Capture as you go:
 
 ---
 
-### 7. AC5 — Backfill script normalises legacy values (manual run on UAT DB)
+### 7. AC5 — Confirm backfill outcome on a real record
 
-> Run on the same UAT DB the app is deployed against. Requires `MONGODB_WAWAGARDENBAR_APP_URI` and `MONGODB_DB_NAME` in `.env.local` for the local terminal session.
+(The backfill itself was run in **Step 0** above, before this walkthrough. This step confirms the result is reflected in the UI.)
 
-- [ ] **Dry-run first**: `npx tsx scripts/backfill-unit-values.ts --dry-run`
-- [ ] Capture stdout — note the count of "would migrate", "already canonical", "unrecognised"
-- [ ] Review any unrecognised values; if a real free-text value is reported (e.g. `"piece"` or `"month"`), decide whether to:
-  - Update the source row manually through the Edit Expense / Edit Inventory dialog (now uses the Select), or
-  - Add a new alias to `LEGACY_UNIT_ALIASES` and re-run the script
-- [ ] **Live run**: `npx tsx scripts/backfill-unit-values.ts`
-- [ ] Confirm the audit file `_uom-backfill-{timestamp}.json` is written in CWD
-- [ ] Confirm stdout summarises `expenses: N migrated, M already canonical, X unrecognised` and the same for `inventories`
+- [ ] Open any pre-existing **paid expense** in `/dashboard/finance/expenses` whose `unit` was previously a legacy free-text value (one of the rows the dry-run reported as "would migrate")
+- [ ] In the Edit dialog, confirm the **Unit** Select shows a registry-canonical label (e.g. `Kilograms (kg)` instead of blank or `Kg`)
+- [ ] Open any pre-existing **inventory item** in `/dashboard/inventory` and verify the same: Select shows a registry label, not free-text
+- [ ] In a mongosh shell, spot-check one of the migrated rows directly:
+  ```
+  db.expenses.findOne({_id: ObjectId('<id-from-audit-file>')}).unit
+  ```
+  Confirm the value matches the audit file's `newUnit` field for that row.
 
-📷 _Screenshot:_ terminal showing dry-run + live-run stdout.
+📷 _Screenshot:_ Edit Expense dialog on a backfilled row showing the canonical label.
 
-**Expected:** zero unrecognised values after live-run completes (any legitimate ones reconciled in the previous step).
+**Expected:** every row reported as migrated by Step 0 now displays a registry label in both forms and matches the audit file's mapping.
 
 ---
 

@@ -23,6 +23,8 @@ import {
 import { toast } from '@/hooks/use-toast';
 import { DateRange } from 'react-day-picker';
 import Link from 'next/link';
+import { mapExpensesToLineItems } from '@/lib/expense-to-line-item';
+import type { IExpenseLineItem } from '@/interfaces/pending-expense-group.interface';
 
 interface ExpensesPageClientProps {
   userRole?: string;
@@ -38,6 +40,12 @@ export function ExpensesPageClient({ userRole }: ExpensesPageClientProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [editExpense, setEditExpense] = useState<any | null>(null);
+  const [selectedExpenseIds, setSelectedExpenseIds] = useState<Set<string>>(
+    new Set()
+  );
+  const [prefillItems, setPrefillItems] = useState<
+    IExpenseLineItem[] | undefined
+  >(undefined);
 
   useEffect(() => {
     if (dateRange?.from && dateRange?.to) {
@@ -79,10 +87,20 @@ export function ExpensesPageClient({ userRole }: ExpensesPageClientProps) {
 
   const handleFormClose = () => {
     setShowExpenseForm(false);
+    setPrefillItems(undefined);
   };
 
   const handleFormSuccess = () => {
     fetchData();
+  };
+
+  // REQ-032: open the Add Expense dialog pre-populated from the selected rows
+  const handleCreatePendingFromSelected = () => {
+    const selected = expenses.filter((e) => selectedExpenseIds.has(e._id));
+    if (selected.length === 0) return;
+    setPrefillItems(mapExpensesToLineItems(selected));
+    setShowExpenseForm(true);
+    setSelectedExpenseIds(new Set());
   };
 
   const handleQuickDateRange = (days: number) => {
@@ -221,6 +239,26 @@ export function ExpensesPageClient({ userRole }: ExpensesPageClientProps) {
           <CardTitle>Expense Records</CardTitle>
         </CardHeader>
         <CardContent>
+          {selectedExpenseIds.size > 0 && (
+            <div className="mb-4 flex items-center justify-between rounded-md border bg-muted/50 px-4 py-2">
+              <div className="text-sm font-medium">
+                {selectedExpenseIds.size} expense
+                {selectedExpenseIds.size === 1 ? '' : 's'} selected
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedExpenseIds(new Set())}
+                >
+                  Clear selection
+                </Button>
+                <Button size="sm" onClick={handleCreatePendingFromSelected}>
+                  Create pending group from selected ({selectedExpenseIds.size})
+                </Button>
+              </div>
+            </div>
+          )}
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <div className="text-muted-foreground">Loading expenses...</div>
@@ -231,6 +269,8 @@ export function ExpensesPageClient({ userRole }: ExpensesPageClientProps) {
               onEdit={(expense) => setEditExpense(expense)}
               onRefresh={fetchData}
               userRole={userRole}
+              selectedIds={selectedExpenseIds}
+              onSelectionChange={setSelectedExpenseIds}
             />
           )}
         </CardContent>
@@ -241,6 +281,7 @@ export function ExpensesPageClient({ userRole }: ExpensesPageClientProps) {
         open={showExpenseForm}
         onOpenChange={handleFormClose}
         onSuccess={handleFormSuccess}
+        prefill={prefillItems ? { items: prefillItems } : undefined}
       />
 
       {/* Edit Expense Dialog */}

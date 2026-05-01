@@ -1,11 +1,13 @@
 # Release Ticket: REQ-031 — End-to-end multi-inventory deduction for menu items with customization options
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** APPROVED - DEPLOYED
 **Date:** 2026-04-27
+**Approved:** 2026-04-27 — META-COMPLY UAT release v2026.04.27.2
+**Merged:** 2026-04-27 11:30:46 UTC — merge commit `b8fffc2`
 **Requirement ID:** REQ-031
 **Risk Level:** HIGH (MEDIUM baseline — user-facing order path with money side-effects — with AI-involvement +1)
 **Issue:** [#67](https://github.com/metasession-dev/wawagardenbar-app/issues/67)
-**PR:** _to be opened after this ticket lands_
+**PR:** [#69](https://github.com/metasession-dev/wawagardenbar-app/pull/69) (merged)
 **Predecessor:** REQ-030 / PR #66 (closed unmerged) — back-end + admin-config plumbing retained on `develop` as load-bearing pre-cursor (commits `39d75d6`, `e007f3c`, `c5d4327`, `830ab4c`, `4469b6b`)
 **Companion:** [META-COMPLY #152](https://github.com/metasession-dev/META-COMPLY/issues/152) — SDLC Stage 1 patch (Surface Inventory + Given/When/Then ACs) authored from this REQ&apos;s root-cause retrospective
 

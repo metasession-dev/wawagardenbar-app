@@ -137,6 +137,27 @@ All 8 ACs are mapped to either the unit suite, the E2E spec, or the manual UAT c
 - **Defect 2 (FIXED IN THIS REQ):** REQ-026's `pending-expenses.spec.ts` was never registered in `playwright.config.ts` — CI was silently skipping the spec since REQ-026 shipped. Same gap repeated by REQ-032's spec. Both fixed retroactively here.
 - **Defect 3 (FIXED IN PRIOR COMMIT):** `scripts/validate-compliance-artifacts.sh` regex `REQ-\d+` matched the placeholder `REQ-0XX` in commit bodies, creating phantom IDs. Tightened to `REQ-\d{3,}` in commit `6271eb2`.
 
+## Backfill dry-run: registry expansion based on live UAT data
+
+Ran `npx tsx scripts/backfill-unit-values.ts --dry-run` against the live UAT database (Railway proxy → `wawagardenbar_uat` DB) before approving the live run. Iterative expansion against the actual production-shape data:
+
+| Pass                                                                                                                                              | Unrecognised count                      | Action taken                                                      |
+| ------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- | ----------------------------------------------------------------- |
+| 1 (initial 9-entry seed)                                                                                                                          | **171** (150 expenses + 21 inventories) | Frequency-ranked the unrecognised values.                         |
+| 2 (+ 8 seed entries: crates, packs, plates, km, bags, cartons, eggs, visits; + ~25 aliases including `grams→g`)                                   | **41**                                  | Re-ranked. Remaining were boxes/dozen/months/hours + a few typos. |
+| 3 (+ 4 seed entries: boxes, dozen, hours, months; + ~16 aliases including `litre→litres`, `Littees→litres`, `bax→boxes`, `pasks→packs`, `kgs→kg`) | **29**                                  | Remaining 29 are bad-data rows that won't normalise via aliasing. |
+
+**Final 29 unrecognised** (all require manual cleanup — not addressable by the registry):
+
+- ~18 rows where staff typed bare numbers in the unit field (`'1'`, `'500'`, `'15'`, `'1000'`, `'12kg'`, `'38300'`, etc.)
+- ~3 composite values (`'bottles/pack'`, `'small bottles'`, `'50+ crates'`)
+- ~5 service-rendered values (`'subscription'`, `'naira'`, `'materials'`, `'labour'`, `'fee'`, `'cut'`)
+- ~1 typo (`'tonns'`)
+
+Manual cleanup post-deploy via Edit Expense / Edit Inventory dialogs (the new dropdowns enforce registry values for any record saved). Or leave them — they continue to display via `formatUnit`'s graceful fallback to the raw id.
+
+**Net registry size after expansion:** 17 default seed entries (was 9) + 51 aliases (was 24).
+
 ## Outstanding Items
 
 None blocking the release. Tracked elsewhere:

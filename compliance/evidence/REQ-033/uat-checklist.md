@@ -4,7 +4,7 @@
 **GitHub Issue:** [#73](https://github.com/metasession-dev/wawagardenbar-app/issues/73)
 **UAT environment:** `https://wawagardenbar-app-uat.up.railway.app`
 **Risk Level:** MEDIUM-HIGH
-**Date:** 2026-05-01 (revised 2026-05-03 to reorder Step 0 before walkthrough)
+**Date:** 2026-05-01 (revised 2026-05-03 to reorder Step 0 before walkthrough; re-uploaded after REQ-033 registered as a Requirement record on META-COMPLY)
 
 ---
 

@@ -191,42 +191,36 @@ jobs:
   register-release:
     name: Register Release
     runs-on: self-hosted
-    if: ${{ vars.META_COMPLY_SUPABASE_URL != '' }}
+    if: ${{ vars.META_COMPLY_BASE_URL != '' }}
     outputs:
       version: ${{ steps.version.outputs.version }}
     env:
-      SUPABASE_URL: ${{ vars.META_COMPLY_SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.META_COMPLY_SERVICE_ROLE_KEY }}
+      META_COMPLY_BASE_URL: ${{ vars.META_COMPLY_BASE_URL }}
+      META_COMPLY_API_KEY: ${{ secrets.META_COMPLY_API_KEY }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Validate META-COMPLY env
+        run: |
+          if [ -z "${META_COMPLY_BASE_URL}" ] || [ -z "${META_COMPLY_API_KEY}" ]; then
+            echo "::error::META_COMPLY_BASE_URL (variable) and META_COMPLY_API_KEY (secret) must both be set."
+            exit 1
+          fi
+          echo "BASE=${META_COMPLY_BASE_URL%/}" >> "$GITHUB_ENV"
 
       - name: Determine release version
         id: version
         run: |
           DATE_PREFIX="v$(date +%Y.%m.%d)"
-          if [ -n "${SUPABASE_URL}" ] && [ -n "${SUPABASE_SERVICE_ROLE_KEY}" ]; then
-            PROJ_ID=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_projects?slug=eq.wawagardenbar-app&select=id" \
-              -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-              -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-              | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
-            if [ -n "$PROJ_ID" ]; then
-              EXISTING=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_releases?project_id=eq.${PROJ_ID}&version=like.${DATE_PREFIX}%25&select=version&order=created_at.desc&limit=1" \
-                -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-                -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}")
-              LATEST=$(echo "$EXISTING" | grep -o '"version":"[^"]*"' | head -1 | cut -d'"' -f4)
-              if [ -n "$LATEST" ]; then
-                SEQ=$(echo "$LATEST" | sed -n "s/^${DATE_PREFIX}\.//p")
-                if [ -z "$SEQ" ]; then
-                  SEQ=1
-                fi
-                VERSION="${DATE_PREFIX}.$((SEQ + 1))"
-              else
-                VERSION="${DATE_PREFIX}"
-              fi
-            else
-              VERSION="${DATE_PREFIX}"
-            fi
-          else
+          # Resolve the next sequence version via META-COMPLY's CI API.
+          # The endpoint preserves the legacy ci.yml semantics: each push
+          # gets its own release (vX.Y.Z, vX.Y.Z.2, vX.Y.Z.3, …).
+          RESP=$(curl -s -H "Authorization: Bearer ${META_COMPLY_API_KEY}" \
+            "${BASE}/api/ci/releases/resolve?projectSlug=wawagardenbar-app&versionPrefix=${DATE_PREFIX}")
+          VERSION=$(echo "$RESP" | jq -r '.nextSequenceVersion // empty')
+          if [ -z "$VERSION" ]; then
+            # If the resolve endpoint failed, fall back to the bare date.
+            # The route's findOrCreateRelease will dedupe.
             VERSION="${DATE_PREFIX}"
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
@@ -247,26 +241,14 @@ jobs:
           if [ -f "compliance/RTM.md" ]; then
             REQS=$(grep -oP 'REQ-\d+' compliance/RTM.md | sort -t- -k2 -n -u)
             if [ -n "$REQS" ]; then
-              JSON_ARRAY="["
-              FIRST=true
-              for REQ in $REQS; do
-                [ "$FIRST" = true ] && FIRST=false || JSON_ARRAY="${JSON_ARRAY},"
-                JSON_ARRAY="${JSON_ARRAY}\"${REQ}\""
-              done
-              JSON_ARRAY="${JSON_ARRAY}]"
-              PROJ_ID=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_projects?slug=eq.wawagardenbar-app&select=id" \
-                -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-                -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-                | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
-              if [ -n "$PROJ_ID" ]; then
-                curl -s -o /dev/null -w "known_requirements sync: HTTP %{http_code}\n" \
-                  -X PATCH "${SUPABASE_URL}/rest/v1/compliance_projects?id=eq.${PROJ_ID}" \
-                  -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-                  -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-                  -H "Content-Type: application/json" \
-                  -d "{\"known_requirements\": ${JSON_ARRAY}}"
-                echo "Synced $(echo "$REQS" | wc -w) requirements from RTM.md"
-              fi
+              JSON_ARRAY=$(echo "$REQS" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+              HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+                -X PATCH "${BASE}/api/ci/projects/wawagardenbar-app/known-requirements" \
+                -H "Authorization: Bearer ${META_COMPLY_API_KEY}" \
+                -H "Content-Type: application/json" \
+                -d "{\"requirements\": ${JSON_ARRAY}}")
+              echo "known_requirements sync: HTTP ${HTTP_CODE}"
+              echo "Synced $(echo "$REQS" | wc -w) requirements from RTM.md"
             fi
           fi
 
@@ -277,10 +259,10 @@ jobs:
     name: Upload Evidence
     runs-on: self-hosted
     needs: [quality-gates, register-release]
-    if: ${{ !failure() && !cancelled() }}
+    if: ${{ !failure() && !cancelled() && vars.META_COMPLY_BASE_URL != '' }}
     env:
-      SUPABASE_URL: ${{ vars.META_COMPLY_SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.META_COMPLY_SERVICE_ROLE_KEY }}
+      META_COMPLY_BASE_URL: ${{ vars.META_COMPLY_BASE_URL }}
+      META_COMPLY_API_KEY: ${{ secrets.META_COMPLY_API_KEY }}
     steps:
       - uses: actions/checkout@v4
 
@@ -292,7 +274,7 @@ jobs:
           path: ci-evidence/
 
       - name: Generate and upload gate evidence
-        if: env.SUPABASE_URL != ''
+        if: env.META_COMPLY_BASE_URL != ''
         run: |
           chmod +x scripts/upload-evidence.sh 2>/dev/null || true
           FLAGS="--git-sha ${{ github.sha }} --ci-run-id ${{ github.run_id }} --branch ${{ github.ref_name }}"

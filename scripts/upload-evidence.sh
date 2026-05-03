@@ -1,33 +1,43 @@
 #!/usr/bin/env bash
 # @requirement REQ-007 - CLI upload script for CI pipelines
 # @requirement REQ-020 - Extended with release/environment/category flags
+# @requirement REQ-XXX - #224: posts to META-COMPLY's API instead of Supabase
 #
 # Usage:
 #   ./scripts/upload-evidence.sh <project-slug> <requirement-id> <evidence-type> <file-or-directory>
 #
 # Optional flags:
-#   --git-sha <sha>        Git commit SHA
-#   --ci-run-id <id>       CI run identifier
-#   --branch <branch>      Git branch name
-#   --release <version>    Release version (e.g. v1.0.0) — resolves to release UUID
-#   --create-release-if-missing  Auto-create the release as 'draft' if it doesn't exist
-#   --environment <env>    Environment: uat or production
-#   --category <cat>       Evidence category: ci_pipeline, local_dev, planning, test_report, security_scan, release_artifact
+#   --git-sha <sha>             Git commit SHA
+#   --ci-run-id <id>            CI run identifier
+#   --branch <branch>           Git branch name
+#   --release <version>         Release version (e.g. v1.0.0). The route
+#                               resolves it to a release UUID server-side.
+#   --create-release-if-missing Auto-create the release as 'draft' if absent
+#   --environment <env>         Environment: uat or production
+#   --category <cat>            Evidence category: ci_pipeline, local_dev,
+#                               planning, test_report, security_scan,
+#                               release_artifact
 #
-# Environment variables (required):
-#   SUPABASE_URL           Supabase project URL
-#   SUPABASE_SERVICE_ROLE_KEY  Service role key for authentication
+# Required environment variables:
+#   META_COMPLY_BASE_URL  e.g. https://meta-comply-production.up.railway.app
+#   META_COMPLY_API_KEY   project-scoped API key (uploader role); format `mc_…`.
+#                         Issue from: Project Settings → API Keys in
+#                         META-COMPLY's web UI.
 #
 # Examples:
-#   ./scripts/upload-evidence.sh meta-ats REQ-001 screenshot compliance/evidence/REQ-001/screenshots/
-#   ./scripts/upload-evidence.sh meta-ats _compliance-docs compliance_document compliance/RTM.md --git-sha abc123
-#   ./scripts/upload-evidence.sh meta-ats REQ-001 e2e_result playwright-report/ --release v1.0.0 --environment uat --category ci_pipeline
+#   ./scripts/upload-evidence.sh meta-ats REQ-001 screenshot \
+#       compliance/evidence/REQ-001/screenshots/
+#   ./scripts/upload-evidence.sh meta-ats _compliance-docs compliance_document \
+#       compliance/RTM.md --git-sha abc123
+#   ./scripts/upload-evidence.sh meta-ats REQ-001 e2e_result \
+#       playwright-report/ --release v1.0.0 --environment uat \
+#       --category ci_pipeline --create-release-if-missing
 
 set -euo pipefail
 
 # --- Parse arguments ---
 if [ "$#" -lt 4 ]; then
-  echo "Usage: $0 <project-slug> <requirement-id> <evidence-type> <file-or-directory> [--git-sha <sha>] [--ci-run-id <id>] [--branch <branch>]"
+  echo "Usage: $0 <project-slug> <requirement-id> <evidence-type> <file-or-directory> [flags…]"
   exit 1
 fi
 
@@ -58,27 +68,27 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 
-# --- Validate: --environment requires --release ---
 if [ -n "$ENVIRONMENT" ] && [ -z "$RELEASE_VERSION" ]; then
   echo "Error: --environment requires --release (evidence without a release is orphaned)"
   exit 1
 fi
-
-# --- Validate: --category required with --release ---
 if [ -n "$RELEASE_VERSION" ] && [ -z "$EVIDENCE_CATEGORY" ]; then
-  echo "Error: --category is required when --release is specified (evidence must be categorised for gate validation)"
+  echo "Error: --category is required when --release is specified (gate validation)"
   exit 1
 fi
 
-# --- Validate environment ---
-if [ -z "${SUPABASE_URL:-}" ]; then
-  echo "Error: SUPABASE_URL environment variable is required"
+if [ -z "${META_COMPLY_BASE_URL:-}" ]; then
+  echo "Error: META_COMPLY_BASE_URL environment variable is required"
   exit 1
 fi
-if [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
-  echo "Error: SUPABASE_SERVICE_ROLE_KEY environment variable is required"
+if [ -z "${META_COMPLY_API_KEY:-}" ]; then
+  echo "Error: META_COMPLY_API_KEY environment variable is required (issue from"
+  echo "       Project Settings → API Keys in META-COMPLY)"
   exit 1
 fi
+
+# Strip any trailing slash so we don't double-up later.
+META_COMPLY_BASE_URL="${META_COMPLY_BASE_URL%/}"
 
 # --- Build metadata JSON ---
 METADATA="{}"
@@ -101,65 +111,6 @@ if [ -n "$GIT_SHA" ] || [ -n "$CI_RUN_ID" ] || [ -n "$BRANCH" ]; then
   METADATA="${METADATA}}"
 fi
 
-# --- Look up project ID from slug ---
-# Capture full response so we can distinguish "not found" from auth/RLS
-# failures that would otherwise show the same empty-PROJECT_ID symptom.
-# META-COMPLY #132.
-PROJECT_LOOKUP=$(curl -s -w "\n%{http_code}" "${SUPABASE_URL}/rest/v1/compliance_projects?slug=eq.${PROJECT_SLUG}&select=id" \
-  -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-  -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}")
-PROJECT_LOOKUP_CODE=$(echo "$PROJECT_LOOKUP" | tail -n1)
-PROJECT_LOOKUP_BODY=$(echo "$PROJECT_LOOKUP" | sed '$d')
-PROJECT_ID=$(echo "$PROJECT_LOOKUP_BODY" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
-
-if [ -z "$PROJECT_ID" ]; then
-  echo "Error: Project '${PROJECT_SLUG}' not found in META-COMPLY"
-  echo "  HTTP ${PROJECT_LOOKUP_CODE}: $(echo "$PROJECT_LOOKUP_BODY" | head -c 500)"
-  exit 1
-fi
-
-echo "Project: ${PROJECT_SLUG} (${PROJECT_ID})"
-
-# --- Resolve release version to UUID (optional) ---
-RELEASE_ID=""
-if [ -n "$RELEASE_VERSION" ]; then
-  RELEASE_ID=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_releases?project_id=eq.${PROJECT_ID}&version=eq.${RELEASE_VERSION}&select=id" \
-    -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-    -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-    | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4 || true)
-
-  if [ -z "$RELEASE_ID" ]; then
-    if [ "$CREATE_RELEASE_IF_MISSING" = true ]; then
-      echo "Release '${RELEASE_VERSION}' not found — creating as draft"
-      CREATE_RESPONSE=$(curl -s \
-        -X POST "${SUPABASE_URL}/rest/v1/compliance_releases" \
-        -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-        -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-        -H "Content-Type: application/json" \
-        -H "Prefer: return=representation" \
-        -d "{
-          \"project_id\": \"${PROJECT_ID}\",
-          \"version\": \"${RELEASE_VERSION}\",
-          \"branch\": \"${BRANCH:-develop}\",
-          \"status\": \"draft\"
-        }")
-      RELEASE_ID=$(echo "$CREATE_RESPONSE" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
-      if [ -z "$RELEASE_ID" ]; then
-        echo "Error: Failed to create release '${RELEASE_VERSION}'"
-        echo "Response: ${CREATE_RESPONSE}"
-        exit 1
-      fi
-      echo "Release created: ${RELEASE_VERSION} (${RELEASE_ID})"
-    else
-      echo "Error: Release '${RELEASE_VERSION}' not found in META-COMPLY"
-      echo "Use --create-release-if-missing to auto-create it"
-      exit 1
-    fi
-  else
-    echo "Release: ${RELEASE_VERSION} (${RELEASE_ID})"
-  fi
-fi
-
 # --- Collect files ---
 FILES=()
 if [ -d "$FILE_PATH" ]; then
@@ -169,92 +120,47 @@ if [ -d "$FILE_PATH" ]; then
 else
   FILES=("$FILE_PATH")
 fi
-
 if [ ${#FILES[@]} -eq 0 ]; then
   echo "Error: No files found at $FILE_PATH"
   exit 1
 fi
 
-# --- Upload each file ---
+# --- Upload each file via /api/evidence/upload ---
 SUCCEEDED=0
 FAILED=0
 TOTAL_SIZE=0
+UPLOAD_URL="${META_COMPLY_BASE_URL}/api/evidence/upload"
 
 for FILE in "${FILES[@]}"; do
   FILENAME=$(basename "$FILE")
-  MIME_TYPE=$(file --mime-type -b "$FILE")
   FILE_SIZE=$(stat -c%s "$FILE" 2>/dev/null || stat -f%z "$FILE")
-
-  # Determine storage path
-  if [ "$EVIDENCE_TYPE" = "compliance_document" ]; then
-    STORAGE_PATH="${PROJECT_SLUG}/_compliance-docs/${FILENAME}"
-  else
-    STORAGE_PATH="${PROJECT_SLUG}/${REQUIREMENT_ID}/${FILENAME}"
-  fi
-
   echo -n "Uploading ${FILENAME}... "
-
-  # Capture response body alongside HTTP code so we can show the actual
-  # error on failure (RLS denials, storage policy errors, and malformed
-  # payloads all return a JSON body that names the cause). META-COMPLY #132.
   RESP_BODY_FILE=$(mktemp)
-  HTTP_CODE=$(curl -s -o "$RESP_BODY_FILE" -w "%{http_code}" \
-    -X POST "${SUPABASE_URL}/storage/v1/object/compliance-evidence/${STORAGE_PATH}" \
-    -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-    -H "Content-Type: ${MIME_TYPE}" \
-    -H "x-upsert: true" \
-    --data-binary "@${FILE}")
-
+  CURL_ARGS=(
+    -s -o "$RESP_BODY_FILE" -w "%{http_code}"
+    -X POST "$UPLOAD_URL"
+    -H "Authorization: Bearer ${META_COMPLY_API_KEY}"
+    -F "file=@${FILE}"
+    -F "projectSlug=${PROJECT_SLUG}"
+    -F "requirementId=${REQUIREMENT_ID}"
+    -F "evidenceType=${EVIDENCE_TYPE}"
+    -F "metadata=${METADATA}"
+  )
+  [ -n "$RELEASE_VERSION" ] && CURL_ARGS+=(-F "releaseVersion=${RELEASE_VERSION}")
+  if [ "$CREATE_RELEASE_IF_MISSING" = true ]; then
+    CURL_ARGS+=(-F "createReleaseIfMissing=true")
+  fi
+  [ -n "$BRANCH" ] && CURL_ARGS+=(-F "releaseBranch=${BRANCH}")
+  [ -n "$ENVIRONMENT" ] && CURL_ARGS+=(-F "environment=${ENVIRONMENT}")
+  [ -n "$EVIDENCE_CATEGORY" ] && CURL_ARGS+=(-F "evidenceCategory=${EVIDENCE_CATEGORY}")
+  HTTP_CODE=$(curl "${CURL_ARGS[@]}")
   if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
     rm -f "$RESP_BODY_FILE"
-    # Build JSON payload with optional release/environment/category fields
-    JSON_PAYLOAD="{
-        \"project_id\": \"${PROJECT_ID}\",
-        \"requirement_id\": \"${REQUIREMENT_ID}\",
-        \"evidence_type\": \"${EVIDENCE_TYPE}\",
-        \"file_path\": \"${STORAGE_PATH}\",
-        \"file_name\": \"${FILENAME}\",
-        \"file_size_bytes\": ${FILE_SIZE},
-        \"mime_type\": \"${MIME_TYPE}\",
-        \"metadata\": ${METADATA}"
-    [ -n "$RELEASE_ID" ] && JSON_PAYLOAD="${JSON_PAYLOAD}, \"release_id\": \"${RELEASE_ID}\""
-    [ -n "$ENVIRONMENT" ] && JSON_PAYLOAD="${JSON_PAYLOAD}, \"environment\": \"${ENVIRONMENT}\""
-    [ -n "$EVIDENCE_CATEGORY" ] && JSON_PAYLOAD="${JSON_PAYLOAD}, \"evidence_category\": \"${EVIDENCE_CATEGORY}\""
-    JSON_PAYLOAD="${JSON_PAYLOAD}}"
-
-    # Create metadata row via PostgREST
-    RESP_BODY_FILE=$(mktemp)
-    ROW_CODE=$(curl -s -o "$RESP_BODY_FILE" -w "%{http_code}" \
-      -X POST "${SUPABASE_URL}/rest/v1/compliance_evidence" \
-      -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-      -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-      -H "Content-Type: application/json" \
-      -H "Prefer: return=minimal" \
-      -d "$JSON_PAYLOAD")
-
-    if [ "$ROW_CODE" -ge 200 ] && [ "$ROW_CODE" -lt 300 ]; then
-      rm -f "$RESP_BODY_FILE"
-      echo "OK (${FILE_SIZE} bytes)"
-      SUCCEEDED=$((SUCCEEDED + 1))
-      TOTAL_SIZE=$((TOTAL_SIZE + FILE_SIZE))
-      # Upsert release-requirement matrix entry (scopes requirements to this release)
-      if [ -n "$RELEASE_ID" ] && [ "$REQUIREMENT_ID" != "_compliance-docs" ]; then
-        curl -s -o /dev/null \
-          -X POST "${SUPABASE_URL}/rest/v1/compliance_release_requirements" \
-          -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-          -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-          -H "Content-Type: application/json" \
-          -H "Prefer: resolution=merge-duplicates,return=minimal" \
-          -d "{\"release_id\": \"${RELEASE_ID}\", \"requirement_id\": \"${REQUIREMENT_ID}\", \"status\": \"covered\"}"
-      fi
-    else
-      echo "FAILED (metadata: HTTP ${ROW_CODE})"
-      echo "  Response: $(head -c 500 "$RESP_BODY_FILE")"
-      rm -f "$RESP_BODY_FILE"
-      FAILED=$((FAILED + 1))
-    fi
+    echo "OK (${FILE_SIZE} bytes)"
+    SUCCEEDED=$((SUCCEEDED + 1))
+    TOTAL_SIZE=$((TOTAL_SIZE + FILE_SIZE))
   else
-    echo "FAILED (storage: HTTP ${HTTP_CODE})"
+    echo "FAILED (HTTP ${HTTP_CODE})"
     echo "  Response: $(head -c 500 "$RESP_BODY_FILE")"
     rm -f "$RESP_BODY_FILE"
     FAILED=$((FAILED + 1))
@@ -266,7 +172,6 @@ echo ""
 echo "=== Upload Summary ==="
 echo "Files: ${SUCCEEDED} succeeded, ${FAILED} failed (${#FILES[@]} total)"
 echo "Total size: $((TOTAL_SIZE / 1024)) KB"
-
 if [ "$FAILED" -gt 0 ]; then
   exit 1
 fi

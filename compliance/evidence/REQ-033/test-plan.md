@@ -9,8 +9,13 @@
 
 - **AC1** — Settings page exposes a Units of Measurement section (super-admin only). Audit history (changeHistory) is visible.
 - **AC2** — Add / edit / soft-delete UoM through the UI works.
-- **AC3** — Expense form's unit field is a Select fed by the registry; free-text input is removed.
-- **AC4** — Menu-item form's unit field is a Select fed by the registry; the hardcoded SelectItem list is removed.
+- **AC3** — **Every form / dialog that renders a `unit` field** uses a registry-fed Select; no free-text Input remains. The canonical surface list (enumerated by `grep -rln 'placeholder="kg"\|name=".*\\.unit.*"' components/`):
+  - `components/features/finance/expense-form.tsx` (Add Expense dialog)
+  - `components/features/finance/edit-expense-dialog.tsx` (Edit recorded Expense)
+  - `components/features/finance/edit-pending-group-dialog.tsx` (Edit Pending Expense Group — discovered late on UAT 2026-05-03 and fixed in a follow-up commit; this is why the AC is now invariant-phrased rather than surface-named)
+- **AC4** — **Every form / dialog that renders a `unit` field on a MenuItem** uses a registry-fed Select; the hardcoded SelectItem list is removed. Surface list:
+  - `components/features/admin/menu-item-form.tsx` (Add Menu Item)
+  - `components/features/admin/menu-item-edit-form.tsx` (Edit Menu Item)
 - **AC5** — Backfill script (`scripts/backfill-unit-values.ts`) normalises existing `Expense.unit` and `Inventory.unit` values to registry IDs; unrecognised values reported in stdout for manual review.
 - **AC6** — Pure helpers (`getActiveUnits`, `validateUnit`, `findUnitById`) covered by unit tests.
 - **AC7** — Regression: existing expense / menu-item flows unchanged for end users beyond the dropdown source. All 462 baseline tests still pass.
@@ -37,7 +42,10 @@ type UnitOfMeasurement = {
 
 ## Tests to Update
 
-Audit performed against all `e2e/` specs and `__tests__/` files that interact with a `unit` field. Most are unaffected because they treat `unit` as an opaque string fixture that never reaches `lib/units.ts:validateUnit`. The exception is the one E2E spec that types into the previous free-text `<Input placeholder="kg">`:
+Audit performed in **two passes**:
+
+1. **Components-side audit (canonical)** — `grep -rln 'placeholder="kg"\|name=".*\.unit.*"' components/` enumerates every component that renders a `unit` field. This is the input to AC3/AC4 above. The original migration missed `edit-pending-group-dialog.tsx` because the components-side grep was skipped; it was caught on UAT and patched in a follow-up commit. Future migrations of UI patterns must run the components-side grep first (saved as memory feedback `feedback_grep_before_migration.md`).
+2. **Tests-side audit** — `grep -rln 'placeholder="kg"\|fill\(.*unit' e2e/ __tests__/` for files that exercise the field. Most are unaffected because they treat `unit` as an opaque string fixture that never reaches `lib/units.ts:validateUnit`. The exception is the one E2E spec that types into the previous free-text `<Input placeholder="kg">`:
 
 - [x] **`e2e/pending-expenses.spec.ts`** — three lines previously did `dialog.locator('input[placeholder="kg"]').fill(...)`. After REQ-033 the unit field is a `<SelectTrigger>` button, not an input. The spec is updated to:
   - Replace the broken free-text fills with `Select` interactions (open the unit Select, pick a registry option).

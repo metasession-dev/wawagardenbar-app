@@ -5,6 +5,10 @@
 #
 # Uploads compliance docs to META-COMPLY without running quality gates.
 # Complements ci.yml which skips compliance-only pushes via paths-ignore.
+#
+# Auth: project-scoped API key (uploader role). Issue from
+# META-COMPLY → Project Settings → API Keys. Set as repo Secret
+# META_COMPLY_API_KEY and repo Variable META_COMPLY_BASE_URL.
 
 name: Compliance Evidence Upload
 
@@ -23,38 +27,24 @@ jobs:
     name: Upload Compliance Evidence
     runs-on: self-hosted
     env:
-      SUPABASE_URL: ${{ vars.META_COMPLY_SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.META_COMPLY_SERVICE_ROLE_KEY }}
+      META_COMPLY_BASE_URL: ${{ vars.META_COMPLY_BASE_URL }}
+      META_COMPLY_API_KEY: ${{ secrets.META_COMPLY_API_KEY }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Determine release version
+      - name: Determine release version (date-based)
         id: version
-        if: env.SUPABASE_URL != ''
+        if: env.META_COMPLY_BASE_URL != '' && env.META_COMPLY_API_KEY != ''
         run: |
-          DATE_PREFIX="v$(date +%Y.%m.%d)"
-          PROJ_ID=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_projects?slug=eq.wawagardenbar-app&select=id" \
-            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-            | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
-          if [ -n "$PROJ_ID" ]; then
-            EXISTING=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_releases?project_id=eq.${PROJ_ID}&version=like.${DATE_PREFIX}%25&select=version&order=created_at.desc&limit=1" \
-              -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-              -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}")
-            LATEST=$(echo "$EXISTING" | grep -o '"version":"[^"]*"' | head -1 | cut -d'"' -f4)
-            if [ -n "$LATEST" ]; then
-              VERSION="$LATEST"
-            else
-              VERSION="${DATE_PREFIX}"
-            fi
-          else
-            VERSION="${DATE_PREFIX}"
-          fi
+          # One release per day; --create-release-if-missing on the
+          # first call of the day creates the draft, subsequent calls
+          # find and reuse it. No pre-flight Supabase lookup needed.
+          VERSION="v$(date +%Y.%m.%d)"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "Release version: ${VERSION}"
 
       - name: Upload compliance documents
-        if: env.SUPABASE_URL != ''
+        if: env.META_COMPLY_BASE_URL != '' && env.META_COMPLY_API_KEY != ''
         run: |
           chmod +x scripts/upload-evidence.sh 2>/dev/null || true
           FLAGS="--git-sha ${{ github.sha }} --ci-run-id ${{ github.run_id }} --branch ${{ github.ref_name }}"

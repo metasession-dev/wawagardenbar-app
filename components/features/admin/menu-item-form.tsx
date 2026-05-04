@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -21,6 +21,12 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { createMenuItemAction } from '@/app/actions/admin/menu-actions';
 import { IMenuSettings } from '@/interfaces/menu-settings.interface';
+import { getUnitsOfMeasurementAction } from '@/app/actions/units-actions';
+import {
+  DEFAULT_UNITS_OF_MEASUREMENT,
+  type UnitOfMeasurement,
+} from '@/interfaces/unit-of-measurement.interface';
+import { getActiveUnits } from '@/lib/units';
 
 const menuItemSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -60,8 +66,24 @@ interface MenuItemFormProps {
  */
 export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [unitsRegistry, setUnitsRegistry] = useState<UnitOfMeasurement[]>([
+    ...DEFAULT_UNITS_OF_MEASUREMENT,
+  ]);
   const router = useRouter();
   const { toast } = useToast();
+
+  // REQ-033: pull the UoM registry once on mount.
+  useEffect(() => {
+    getUnitsOfMeasurementAction()
+      .then((result) => {
+        if (result.success && result.units && result.units.length > 0) {
+          setUnitsRegistry(result.units);
+        }
+      })
+      .catch(() => {
+        /* keep seed defaults */
+      });
+  }, []);
 
   const {
     register,
@@ -563,12 +585,12 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
                     <SelectValue placeholder="Select unit" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="portions">Portions</SelectItem>
-                    <SelectItem value="bottles">Bottles</SelectItem>
-                    <SelectItem value="pieces">Pieces</SelectItem>
-                    <SelectItem value="kg">Kilograms</SelectItem>
-                    <SelectItem value="liters">Liters</SelectItem>
-                    <SelectItem value="units">Units</SelectItem>
+                    {/* REQ-033: registry-fed; falls back to seed defaults if fetch fails */}
+                    {getActiveUnits(unitsRegistry).map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

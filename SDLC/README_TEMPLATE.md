@@ -347,8 +347,8 @@ upload-evidence:
           --ci-run-id "${{ github.run_id }}" \
           --path playwright-report/
       env:
-        SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        META_COMPLY_BASE_URL: ${{ vars.META_COMPLY_BASE_URL }}
+        META_COMPLY_API_KEY: ${{ secrets.META_COMPLY_API_KEY }}
 
     # Upload security evidence
     - name: Upload SAST evidence
@@ -360,8 +360,8 @@ upload-evidence:
           --git-sha "${{ github.sha }}" \
           --path sast-results.json
       env:
-        SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        META_COMPLY_BASE_URL: ${{ vars.META_COMPLY_BASE_URL }}
+        META_COMPLY_API_KEY: ${{ secrets.META_COMPLY_API_KEY }}
 
 # Sync compliance docs on merge to main
 sync-compliance-docs:
@@ -381,8 +381,8 @@ sync-compliance-docs:
             --path "$doc"
         done
       env:
-        SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        META_COMPLY_BASE_URL: ${{ vars.META_COMPLY_BASE_URL }}
+        META_COMPLY_API_KEY: ${{ secrets.META_COMPLY_API_KEY }}
 ```
 
 ### .gitignore Updates
@@ -425,14 +425,14 @@ Project admins manage auditor access through META-COMPLY:
 
 For one-off reviews, generate a time-limited share link instead of creating an account.
 
-### Required Secrets
+### Required Secrets and Variables
 
-Add these to your GitHub repository secrets (Settings → Secrets → Actions):
+Add these to your GitHub repository (Settings → Secrets and variables → Actions):
 
-| Secret                      | Value                               | Source                              |
-| --------------------------- | ----------------------------------- | ----------------------------------- |
-| `SUPABASE_URL`              | Your Supabase project URL           | Supabase dashboard → Settings → API |
-| `SUPABASE_SERVICE_ROLE_KEY` | Service role key (server-side only) | Supabase dashboard → Settings → API |
+| Setting                | Tab       | Value                                                                              | Source                                              |
+| ---------------------- | --------- | ---------------------------------------------------------------------------------- | --------------------------------------------------- |
+| `META_COMPLY_BASE_URL` | Variables | The deployed META-COMPLY URL, e.g. `https://meta-comply-production.up.railway.app` | The hosting team                                    |
+| `META_COMPLY_API_KEY`  | Secrets   | Project-scoped API key (`mc_…`) with `uploader` role                               | META-COMPLY → Project Settings → API Keys → New key |
 
 ### Project Registration
 

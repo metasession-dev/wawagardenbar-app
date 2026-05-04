@@ -1,11 +1,13 @@
 # Release Ticket: REQ-032 — Create pending expense group from existing expenses
 
-**Status:** DRAFT
+**Status:** APPROVED - DEPLOYED
 **Date:** 2026-04-30
+**Approved:** 2026-05-01 — META-COMPLY UAT release v2026.05.01
+**Merged:** 2026-05-01 04:22:57 UTC — merge commit `609c963`
 **Requirement ID:** REQ-032
 **Risk Level:** MEDIUM (financial data, additive — no schema migration, source rows unchanged)
 **Issue:** [#70](https://github.com/metasession-dev/wawagardenbar-app/issues/70)
-**PR:** TBD
+**PR:** [#71](https://github.com/metasession-dev/wawagardenbar-app/pull/71) (merged)
 
 ---
 

@@ -47,6 +47,12 @@ import {
   deletePendingExpenseGroupAction,
 } from '@/app/actions/finance/pending-expense-actions';
 import { getExpenseCategoriesAction } from '@/app/actions/finance/expense-categories-actions';
+import { getUnitsOfMeasurementAction } from '@/app/actions/units-actions';
+import {
+  DEFAULT_UNITS_OF_MEASUREMENT,
+  type UnitOfMeasurement,
+} from '@/interfaces/unit-of-measurement.interface';
+import { getActiveUnits } from '@/lib/units';
 import { toast } from '@/hooks/use-toast';
 import {
   DIRECT_COST_CATEGORIES,
@@ -109,6 +115,9 @@ export function EditPendingGroupDialog({
   const [operatingExpenseCategories, setOperatingExpenseCategories] = useState<
     string[]
   >([...OPERATING_EXPENSE_CATEGORIES]);
+  const [unitsRegistry, setUnitsRegistry] = useState<UnitOfMeasurement[]>([
+    ...DEFAULT_UNITS_OF_MEASUREMENT,
+  ]);
 
   const form = useForm<EditFormValues>({
     resolver: zodResolver(editSchema),
@@ -127,6 +136,7 @@ export function EditPendingGroupDialog({
   useEffect(() => {
     if (open) {
       fetchCategories();
+      fetchUnits();
       form.reset({
         date: new Date(group.date),
         items: group.items.map((i) => ({ ...i })),
@@ -146,6 +156,18 @@ export function EditPendingGroupDialog({
       }
     } catch {
       /* use defaults */
+    }
+  }
+
+  // REQ-033: load the UoM registry; falls back to seed defaults on error.
+  async function fetchUnits() {
+    try {
+      const result = await getUnitsOfMeasurementAction();
+      if (result.success && result.units && result.units.length > 0) {
+        setUnitsRegistry(result.units);
+      }
+    } catch {
+      /* keep seed defaults */
     }
   }
 
@@ -431,13 +453,20 @@ export function EditPendingGroupDialog({
                             <FormLabel className="text-xs text-muted-foreground">
                               Unit
                             </FormLabel>
-                            <FormControl>
-                              <Input
-                                className="h-8 text-sm"
-                                placeholder="kg"
-                                {...f}
-                              />
-                            </FormControl>
+                            <Select value={f.value} onValueChange={f.onChange}>
+                              <FormControl>
+                                <SelectTrigger className="h-8 text-sm">
+                                  <SelectValue placeholder="Select unit" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {getActiveUnits(unitsRegistry).map((u) => (
+                                  <SelectItem key={u.id} value={u.id}>
+                                    {u.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                             <FormMessage />
                           </FormItem>
                         )}

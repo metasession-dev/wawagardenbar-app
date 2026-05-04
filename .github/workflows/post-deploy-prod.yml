@@ -17,8 +17,8 @@ jobs:
     name: Production Evidence
     runs-on: self-hosted
     env:
-      SUPABASE_URL: ${{ vars.META_COMPLY_SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.META_COMPLY_SERVICE_ROLE_KEY }}
+      META_COMPLY_BASE_URL: ${{ vars.META_COMPLY_BASE_URL }}
+      META_COMPLY_API_KEY: ${{ secrets.META_COMPLY_API_KEY }}
       PROD_URL: ${{ secrets.WAWAGARDENBAR_PROD_URL }}
       PROJECT_SLUG: wawagardenbar-app
       GIT_SHA: ${{ github.sha }}
@@ -27,25 +27,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Determine release version
-        id: version
+      - name: Validate META-COMPLY env
+        run: |
+          if [ -z "${META_COMPLY_BASE_URL}" ] || [ -z "${META_COMPLY_API_KEY}" ]; then
+            echo "::error::META_COMPLY_BASE_URL (variable) and META_COMPLY_API_KEY (secret) must both be set."
+            exit 1
+          fi
+          echo "BASE=${META_COMPLY_BASE_URL%/}" >> "$GITHUB_ENV"
+
+      - name: Resolve current release
+        id: release
         run: |
           DATE_PREFIX="v$(date +%Y.%m.%d)"
-          # Find the latest release for today (supports multiple releases per day)
-          PROJECT_ID=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_projects?slug=eq.${PROJECT_SLUG}&select=id" \
-            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-            | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
-          if [ -n "$PROJECT_ID" ]; then
-            EXISTING=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_releases?project_id=eq.${PROJECT_ID}&version=like.${DATE_PREFIX}%25&select=version&order=created_at.desc&limit=1" \
-              -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-              -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}")
-            VERSION=$(echo "$EXISTING" | grep -o '"version":"[^"]*"' | head -1 | cut -d'"' -f4)
-          fi
+          RESP=$(curl -s -H "Authorization: Bearer ${META_COMPLY_API_KEY}" \
+            "${BASE}/api/ci/releases/resolve?projectSlug=${PROJECT_SLUG}&versionPrefix=${DATE_PREFIX}")
+          VERSION=$(echo "$RESP" | jq -r '.latest.version // empty')
           if [ -z "$VERSION" ]; then
             VERSION="${DATE_PREFIX}"
           fi
+          RELEASE_ID=$(echo "$RESP" | jq -r '.latest.id // empty')
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "release_id=${RELEASE_ID}" >> "$GITHUB_OUTPUT"
           echo "Release version: ${VERSION}"
 
       - name: Wait for production deployment
@@ -84,10 +86,9 @@ jobs:
           RESULTS_EOF
 
       - name: Upload production evidence
-        if: env.SUPABASE_URL != ''
         run: |
           chmod +x scripts/upload-evidence.sh 2>/dev/null || true
-          VERSION="${{ steps.version.outputs.version }}"
+          VERSION="${{ steps.release.outputs.version }}"
           FLAGS="--release ${VERSION} --create-release-if-missing --environment production --category test_report"
           FLAGS="${FLAGS} --git-sha ${GIT_SHA} --ci-run-id ${CI_RUN} --branch main"
           if [ -f prod-smoke-results.json ]; then
@@ -97,23 +98,15 @@ jobs:
           fi
 
       - name: Mark release as released
-        if: env.SUPABASE_URL != ''
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          PROJECT_ID=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_projects?slug=eq.${PROJECT_SLUG}&select=id" \
-            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-            | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
-          RELEASE_ID=$(curl -s "${SUPABASE_URL}/rest/v1/compliance_releases?project_id=eq.${PROJECT_ID}&version=eq.${VERSION}&select=id" \
-            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-            | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+          RELEASE_ID="${{ steps.release.outputs.release_id }}"
           if [ -n "$RELEASE_ID" ]; then
             curl -s -o /dev/null -w "Release: HTTP %{http_code}\n" \
-              -X PATCH "${SUPABASE_URL}/rest/v1/compliance_releases?id=eq.${RELEASE_ID}" \
-              -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-              -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+              -X PATCH "${BASE}/api/ci/releases/${RELEASE_ID}" \
+              -H "Authorization: Bearer ${META_COMPLY_API_KEY}" \
               -H "Content-Type: application/json" \
-              -d '{"status": "released"}'
-            echo "Release ${VERSION} marked as released"
+              -d '{"status":"released"}'
+            echo "Release ${{ steps.release.outputs.version }} marked as released"
+          else
+            echo "::warning::No release_id resolved — skipping status patch"
           fi

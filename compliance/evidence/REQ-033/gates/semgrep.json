@@ -1,0 +1,158 @@
+{
+  "version": "1.155.0",
+  "results": [],
+  "errors": [
+    {
+      "code": 3,
+      "level": "warn",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": "components/features/admin/menu-item-edit-form.tsx",
+            "start": { "line": 578, "col": 37, "offset": 0 },
+            "end": { "line": 578, "col": 45, "offset": 8 }
+          },
+          {
+            "path": "components/features/admin/menu-item-edit-form.tsx",
+            "start": { "line": 988, "col": 53, "offset": 0 },
+            "end": { "line": 988, "col": 62, "offset": 9 }
+          },
+          {
+            "path": "components/features/admin/menu-item-edit-form.tsx",
+            "start": { "line": 1098, "col": 28, "offset": 0 },
+            "end": { "line": 1098, "col": 38, "offset": 10 }
+          },
+          {
+            "path": "components/features/admin/menu-item-edit-form.tsx",
+            "start": { "line": 1151, "col": 18, "offset": 0 },
+            "end": { "line": 1151, "col": 36, "offset": 18 }
+          }
+        ]
+      ],
+      "message": "Syntax error at line components/features/admin/menu-item-edit-form.tsx:578:\n `& Status` was unexpected",
+      "path": "components/features/admin/menu-item-edit-form.tsx",
+      "spans": [
+        {
+          "file": "components/features/admin/menu-item-edit-form.tsx",
+          "start": { "line": 578, "col": 37, "offset": 0 },
+          "end": { "line": 578, "col": 45, "offset": 8 }
+        },
+        {
+          "file": "components/features/admin/menu-item-edit-form.tsx",
+          "start": { "line": 988, "col": 53, "offset": 0 },
+          "end": { "line": 988, "col": 62, "offset": 9 }
+        },
+        {
+          "file": "components/features/admin/menu-item-edit-form.tsx",
+          "start": { "line": 1098, "col": 28, "offset": 0 },
+          "end": { "line": 1098, "col": 38, "offset": 10 }
+        },
+        {
+          "file": "components/features/admin/menu-item-edit-form.tsx",
+          "start": { "line": 1151, "col": 18, "offset": 0 },
+          "end": { "line": 1151, "col": 36, "offset": 18 }
+        }
+      ]
+    },
+    {
+      "code": 3,
+      "level": "warn",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": "services/system-settings-service.ts",
+            "start": { "line": 728, "col": 5, "offset": 0 },
+            "end": { "line": 728, "col": 75, "offset": 70 }
+          },
+          {
+            "path": "services/system-settings-service.ts",
+            "start": { "line": 759, "col": 12, "offset": 0 },
+            "end": { "line": 759, "col": 82, "offset": 70 }
+          }
+        ]
+      ],
+      "message": "Syntax error at line services/system-settings-service.ts:728:\n `import('@/interfaces/unit-of-measurement.interface').UnitOfMeasurement` was unexpected",
+      "path": "services/system-settings-service.ts",
+      "spans": [
+        {
+          "file": "services/system-settings-service.ts",
+          "start": { "line": 728, "col": 5, "offset": 0 },
+          "end": { "line": 728, "col": 75, "offset": 70 }
+        },
+        {
+          "file": "services/system-settings-service.ts",
+          "start": { "line": 759, "col": 12, "offset": 0 },
+          "end": { "line": 759, "col": 82, "offset": 70 }
+        }
+      ]
+    }
+  ],
+  "paths": {
+    "scanned": [
+      "app/actions/units-actions.ts",
+      "components/features/admin/menu-item-edit-form.tsx",
+      "components/features/admin/menu-item-form.tsx",
+      "components/features/admin/units-of-measurement-form.tsx",
+      "components/features/finance/edit-expense-dialog.tsx",
+      "components/features/finance/expense-form.tsx",
+      "interfaces/unit-of-measurement.interface.ts",
+      "lib/units.ts",
+      "scripts/backfill-unit-values.ts",
+      "services/system-settings-service.ts"
+    ]
+  },
+  "time": {
+    "rules": [],
+    "rules_parse_time": 0.9952819347381592,
+    "profiling_times": {
+      "config_time": 1.9563207626342773,
+      "core_time": 1.619692325592041,
+      "ignores_time": 0.0016353130340576172,
+      "total_time": 3.586155414581299
+    },
+    "parsing_time": {
+      "total_time": 0.0,
+      "per_file_time": { "mean": 0.0, "std_dev": 0.0 },
+      "very_slow_stats": { "time_ratio": 0.0, "count_ratio": 0.0 },
+      "very_slow_files": []
+    },
+    "scanning_time": {
+      "total_time": 1.700779676437378,
+      "per_file_time": {
+        "mean": 0.05669265588124593,
+        "std_dev": 0.009369936551796566
+      },
+      "very_slow_stats": { "time_ratio": 0.0, "count_ratio": 0.0 },
+      "very_slow_files": []
+    },
+    "matching_time": {
+      "total_time": 0.0,
+      "per_file_and_rule_time": { "mean": 0.0, "std_dev": 0.0 },
+      "very_slow_stats": { "time_ratio": 0.0, "count_ratio": 0.0 },
+      "very_slow_rules_on_files": []
+    },
+    "tainting_time": {
+      "total_time": 0.0,
+      "per_def_and_rule_time": { "mean": 0.0, "std_dev": 0.0 },
+      "very_slow_stats": { "time_ratio": 0.0, "count_ratio": 0.0 },
+      "very_slow_rules_on_defs": []
+    },
+    "fixpoint_timeouts": [],
+    "prefiltering": {
+      "project_level_time": 0.0,
+      "file_level_time": 0.0,
+      "rules_with_project_prefilters_ratio": 0.0,
+      "rules_with_file_prefilters_ratio": 0.9857142857142858,
+      "rules_selected_ratio": 0.02857142857142857,
+      "rules_matched_ratio": 0.02857142857142857
+    },
+    "targets": [],
+    "total_bytes": 0,
+    "max_memory_bytes": 1425286464
+  },
+  "engine_requested": "OSS",
+  "skipped_rules": [],
+  "profiling_results": []
+}

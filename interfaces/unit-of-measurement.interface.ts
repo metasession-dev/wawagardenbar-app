@@ -169,4 +169,6 @@ export const LEGACY_UNIT_ALIASES: Record<string, string> = {
   month: 'months',
   Month: 'months',
   Months: 'months',
+  monthly: 'months',
+  Monthly: 'months',
 };

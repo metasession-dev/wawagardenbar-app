@@ -103,8 +103,8 @@ Single additive change. Rollback = revert the merge commit. The backfill script 
 
 - [x] Implementation complete
 - [x] All quality gates pass on develop
-- [x] Backfill script run on UAT, unrecognised values reconciled (69 rows migrated; audit `_uom-backfill-1777701698442.json`)
+- [x] Backfill script run on UAT, unrecognised values reconciled (69 rows migrated; audit `compliance/evidence/REQ-033/_uom-backfill-uat-2026-05-02.json`)
 - [x] META-COMPLY UAT approval obtained — release v2026.05.03 (2026-05-04)
 - [x] PR merged to main — PR #75, merge commit `78de27e` (2026-05-04 15:13:27 UTC)
-- [ ] Backfill script run on production
+- [x] Backfill script run on production — 80 rows migrated (59 expenses + 21 inventories); 29 unrecognised entries left as-is (numbers, composites, descriptors); audit `compliance/evidence/REQ-033/_uom-backfill-prod-2026-05-04.json`; `'monthly'` alias added to `LEGACY_UNIT_ALIASES` mid-run (caught 5 extra rows)
 - [ ] Soak ≥ 1 week before REQ-034 starts (window opens 2026-05-04, REQ-034 cleared from 2026-05-11)

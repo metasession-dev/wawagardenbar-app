@@ -1,11 +1,13 @@
 # Release Ticket: REQ-033 — App-wide Unit-of-Measurement (UoM) registry
 
-**Status:** DRAFT
+**Status:** APPROVED - DEPLOYED
 **Date:** 2026-05-01
+**Approved:** 2026-05-04 — META-COMPLY UAT release v2026.05.03
+**Merged:** 2026-05-04 15:13:27 UTC — merge commit `78de27e`
 **Requirement ID:** REQ-033
 **Risk Level:** MEDIUM-HIGH (financial-data-adjacent, 25+ migration sites)
 **Issue:** [#73](https://github.com/metasession-dev/wawagardenbar-app/issues/73)
-**PR:** TBD
+**PR:** [#75](https://github.com/metasession-dev/wawagardenbar-app/pull/75) (merged)
 **Prereq for:** REQ-034 ([#74](https://github.com/metasession-dev/wawagardenbar-app/issues/74)) — must soak ≥1 week before REQ-034 starts
 
 ---
@@ -73,12 +75,12 @@ MEDIUM-HIGH risk — no AI-involvement bump warranted because the change is cont
 
 ## Quality Gates
 
-- [ ] TypeScript: 0 errors (`tsc --noEmit`)
-- [ ] Lint: 0 errors
-- [ ] Unit tests: 13 new pass; 462 baseline still pass (475 total)
-- [ ] E2E: `e2e/settings/units-of-measurement.spec.ts` passes
-- [ ] Build: `npm run build` succeeds
-- [ ] Compliance validator: `bash scripts/validate-compliance-artifacts.sh` passes for REQ-033
+- [x] TypeScript: 0 errors (`tsc --noEmit`)
+- [x] Lint: 0 errors
+- [x] Unit tests: 13 new pass; 462 baseline still pass (475 total)
+- [x] E2E: `e2e/settings/units-of-measurement.spec.ts` passes
+- [x] Build: `npm run build` succeeds
+- [x] Compliance validator: `bash scripts/validate-compliance-artifacts.sh` passes for REQ-033
 
 ---
 
@@ -99,10 +101,10 @@ Single additive change. Rollback = revert the merge commit. The backfill script 
 
 ## Sign-off
 
-- [ ] Implementation complete
-- [ ] All quality gates pass on develop
-- [ ] Backfill script run on UAT, unrecognised values reconciled
-- [ ] META-COMPLY UAT approval obtained
-- [ ] PR merged to main
+- [x] Implementation complete
+- [x] All quality gates pass on develop
+- [x] Backfill script run on UAT, unrecognised values reconciled (69 rows migrated; audit `_uom-backfill-1777701698442.json`)
+- [x] META-COMPLY UAT approval obtained — release v2026.05.03 (2026-05-04)
+- [x] PR merged to main — PR #75, merge commit `78de27e` (2026-05-04 15:13:27 UTC)
 - [ ] Backfill script run on production
-- [ ] Soak ≥ 1 week before REQ-034 starts
+- [ ] Soak ≥ 1 week before REQ-034 starts (window opens 2026-05-04, REQ-034 cleared from 2026-05-11)

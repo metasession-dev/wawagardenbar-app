@@ -1,0 +1,3262 @@
+{
+  "version": "1.155.0",
+  "results": [
+    {
+      "check_id": "yaml.github-actions.security.run-shell-injection.run-shell-injection",
+      "path": ".github/workflows/ci.yml",
+      "start": { "line": 230, "col": 9, "offset": 8444 },
+      "end": { "line": 238, "col": 2, "offset": 8948 },
+      "extra": {
+        "message": "Using variable interpolation `${{...}}` with `github` context data in a `run:` step could allow an attacker to inject their own code into the runner. This would allow them to steal secrets and code. `github` context data can have arbitrary user input and should be treated as untrusted. Instead, use an intermediate environment variable with `env:` to store the data and use the environment variable in the `run:` script. Be sure to use double-quotes the environment variable, like this: \"$ENVVAR\".",
+        "metadata": {
+          "category": "security",
+          "cwe": [
+            "CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')"
+          ],
+          "owasp": [
+            "A01:2017 - Injection",
+            "A03:2021 - Injection",
+            "A05:2025 - Injection"
+          ],
+          "references": [
+            "https://docs.github.com/en/actions/learn-github-actions/security-hardening-for-github-actions#understanding-the-risk-of-script-injections",
+            "https://securitylab.github.com/research/github-actions-untrusted-input/"
+          ],
+          "technology": ["github-actions"],
+          "cwe2022-top25": true,
+          "cwe2021-top25": true,
+          "subcategory": ["vuln"],
+          "likelihood": "HIGH",
+          "impact": "HIGH",
+          "confidence": "HIGH",
+          "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+          "vulnerability_class": ["Command Injection"],
+          "source": "https://semgrep.dev/r/yaml.github-actions.security.run-shell-injection.run-shell-injection",
+          "shortlink": "https://sg.run/pkzk"
+        },
+        "severity": "ERROR",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "yaml.github-actions.security.run-shell-injection.run-shell-injection",
+      "path": ".github/workflows/ci.yml",
+      "start": { "line": 278, "col": 9, "offset": 10766 },
+      "end": { "line": 416, "col": 2, "offset": 17305 },
+      "extra": {
+        "message": "Using variable interpolation `${{...}}` with `github` context data in a `run:` step could allow an attacker to inject their own code into the runner. This would allow them to steal secrets and code. `github` context data can have arbitrary user input and should be treated as untrusted. Instead, use an intermediate environment variable with `env:` to store the data and use the environment variable in the `run:` script. Be sure to use double-quotes the environment variable, like this: \"$ENVVAR\".",
+        "metadata": {
+          "category": "security",
+          "cwe": [
+            "CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')"
+          ],
+          "owasp": [
+            "A01:2017 - Injection",
+            "A03:2021 - Injection",
+            "A05:2025 - Injection"
+          ],
+          "references": [
+            "https://docs.github.com/en/actions/learn-github-actions/security-hardening-for-github-actions#understanding-the-risk-of-script-injections",
+            "https://securitylab.github.com/research/github-actions-untrusted-input/"
+          ],
+          "technology": ["github-actions"],
+          "cwe2022-top25": true,
+          "cwe2021-top25": true,
+          "subcategory": ["vuln"],
+          "likelihood": "HIGH",
+          "impact": "HIGH",
+          "confidence": "HIGH",
+          "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+          "vulnerability_class": ["Command Injection"],
+          "source": "https://semgrep.dev/r/yaml.github-actions.security.run-shell-injection.run-shell-injection",
+          "shortlink": "https://sg.run/pkzk"
+        },
+        "severity": "ERROR",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "yaml.github-actions.security.run-shell-injection.run-shell-injection",
+      "path": ".github/workflows/compliance-evidence.yml",
+      "start": { "line": 48, "col": 9, "offset": 1638 },
+      "end": { "line": 108, "col": 2, "offset": 4733 },
+      "extra": {
+        "message": "Using variable interpolation `${{...}}` with `github` context data in a `run:` step could allow an attacker to inject their own code into the runner. This would allow them to steal secrets and code. `github` context data can have arbitrary user input and should be treated as untrusted. Instead, use an intermediate environment variable with `env:` to store the data and use the environment variable in the `run:` script. Be sure to use double-quotes the environment variable, like this: \"$ENVVAR\".",
+        "metadata": {
+          "category": "security",
+          "cwe": [
+            "CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')"
+          ],
+          "owasp": [
+            "A01:2017 - Injection",
+            "A03:2021 - Injection",
+            "A05:2025 - Injection"
+          ],
+          "references": [
+            "https://docs.github.com/en/actions/learn-github-actions/security-hardening-for-github-actions#understanding-the-risk-of-script-injections",
+            "https://securitylab.github.com/research/github-actions-untrusted-input/"
+          ],
+          "technology": ["github-actions"],
+          "cwe2022-top25": true,
+          "cwe2021-top25": true,
+          "subcategory": ["vuln"],
+          "likelihood": "HIGH",
+          "impact": "HIGH",
+          "confidence": "HIGH",
+          "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+          "vulnerability_class": ["Command Injection"],
+          "source": "https://semgrep.dev/r/yaml.github-actions.security.run-shell-injection.run-shell-injection",
+          "shortlink": "https://sg.run/pkzk"
+        },
+        "severity": "ERROR",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal",
+      "path": "__tests__/security/path-traversal-sanitization.test.ts",
+      "start": { "line": 24, "col": 33, "offset": 771 },
+      "end": { "line": 24, "col": 40, "offset": 778 },
+      "extra": {
+        "message": "Detected possible user input going into a `path.join` or `path.resolve` function. This could possibly lead to a path traversal vulnerability,  where the attacker can access arbitrary files stored in the file system. Instead, be sure to sanitize or validate user input first.",
+        "metadata": {
+          "owasp": [
+            "A05:2017 - Broken Access Control",
+            "A01:2021 - Broken Access Control",
+            "A01:2025 - Broken Access Control"
+          ],
+          "cwe": [
+            "CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')"
+          ],
+          "category": "security",
+          "references": [
+            "https://owasp.org/www-community/attacks/Path_Traversal"
+          ],
+          "technology": ["javascript", "node.js"],
+          "cwe2022-top25": true,
+          "cwe2021-top25": true,
+          "subcategory": ["vuln"],
+          "likelihood": "HIGH",
+          "impact": "MEDIUM",
+          "confidence": "LOW",
+          "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+          "vulnerability_class": ["Path Traversal"],
+          "source": "https://semgrep.dev/r/javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal",
+          "shortlink": "https://sg.run/OPqk"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal",
+      "path": "__tests__/security/path-traversal-sanitization.test.ts",
+      "start": { "line": 24, "col": 42, "offset": 780 },
+      "end": { "line": 24, "col": 50, "offset": 788 },
+      "extra": {
+        "message": "Detected possible user input going into a `path.join` or `path.resolve` function. This could possibly lead to a path traversal vulnerability,  where the attacker can access arbitrary files stored in the file system. Instead, be sure to sanitize or validate user input first.",
+        "metadata": {
+          "owasp": [
+            "A05:2017 - Broken Access Control",
+            "A01:2021 - Broken Access Control",
+            "A01:2025 - Broken Access Control"
+          ],
+          "cwe": [
+            "CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')"
+          ],
+          "category": "security",
+          "references": [
+            "https://owasp.org/www-community/attacks/Path_Traversal"
+          ],
+          "technology": ["javascript", "node.js"],
+          "cwe2022-top25": true,
+          "cwe2021-top25": true,
+          "subcategory": ["vuln"],
+          "likelihood": "HIGH",
+          "impact": "MEDIUM",
+          "confidence": "LOW",
+          "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+          "vulnerability_class": ["Path Traversal"],
+          "source": "https://semgrep.dev/r/javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal",
+          "shortlink": "https://sg.run/OPqk"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "yaml.docker-compose.security.no-new-privileges.no-new-privileges",
+      "path": "docker-compose.migration.yml",
+      "start": { "line": 4, "col": 3, "offset": 28 },
+      "end": { "line": 4, "col": 12, "offset": 37 },
+      "extra": {
+        "message": "Service 'migration' allows for privilege escalation via setuid or setgid binaries. Add 'no-new-privileges:true' in 'security_opt' to prevent this.",
+        "metadata": {
+          "cwe": [
+            "CWE-732: Incorrect Permission Assignment for Critical Resource"
+          ],
+          "owasp": [
+            "A05:2021 - Security Misconfiguration",
+            "A06:2017 - Security Misconfiguration",
+            "A02:2025 - Security Misconfiguration"
+          ],
+          "references": [
+            "https://raesene.github.io/blog/2019/06/01/docker-capabilities-and-no-new-privs/",
+            "https://www.kernel.org/doc/Documentation/prctl/no_new_privs.txt",
+            "https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html#rule-4-add-no-new-privileges-flag"
+          ],
+          "category": "security",
+          "technology": ["docker-compose"],
+          "cwe2021-top25": true,
+          "subcategory": ["audit"],
+          "likelihood": "LOW",
+          "impact": "HIGH",
+          "confidence": "LOW",
+          "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+          "vulnerability_class": ["Improper Authorization"],
+          "source": "https://semgrep.dev/r/yaml.docker-compose.security.no-new-privileges.no-new-privileges",
+          "shortlink": "https://sg.run/0n8q"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "yaml.docker-compose.security.writable-filesystem-service.writable-filesystem-service",
+      "path": "docker-compose.migration.yml",
+      "start": { "line": 4, "col": 3, "offset": 28 },
+      "end": { "line": 4, "col": 12, "offset": 37 },
+      "extra": {
+        "message": "Service 'migration' is running with a writable root filesystem. This may allow malicious applications to download and run additional payloads, or modify container files. If an application inside a container has to save something temporarily consider using a tmpfs. Add 'read_only: true' to this service to prevent this.",
+        "metadata": {
+          "cwe": [
+            "CWE-732: Incorrect Permission Assignment for Critical Resource"
+          ],
+          "owasp": [
+            "A05:2021 - Security Misconfiguration",
+            "A06:2017 - Security Misconfiguration",
+            "A02:2025 - Security Misconfiguration"
+          ],
+          "references": [
+            "https://docs.docker.com/compose/compose-file/compose-file-v3/#domainname-hostname-ipc-mac_address-privileged-read_only-shm_size-stdin_open-tty-user-working_dir",
+            "https://blog.atomist.com/security-of-docker-kubernetes/",
+            "https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html#rule-8-set-filesystem-and-volumes-to-read-only"
+          ],
+          "category": "security",
+          "technology": ["docker-compose"],
+          "cwe2021-top25": true,
+          "subcategory": ["audit"],
+          "likelihood": "LOW",
+          "impact": "HIGH",
+          "confidence": "LOW",
+          "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+          "vulnerability_class": ["Improper Authorization"],
+          "source": "https://semgrep.dev/r/yaml.docker-compose.security.writable-filesystem-service.writable-filesystem-service",
+          "shortlink": "https://sg.run/e4JE"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "yaml.docker-compose.security.no-new-privileges.no-new-privileges",
+      "path": "docker-compose.prod.yml",
+      "start": { "line": 4, "col": 3, "offset": 28 },
+      "end": { "line": 4, "col": 6, "offset": 31 },
+      "extra": {
+        "message": "Service 'app' allows for privilege escalation via setuid or setgid binaries. Add 'no-new-privileges:true' in 'security_opt' to prevent this.",
+        "metadata": {
+          "cwe": [
+            "CWE-732: Incorrect Permission Assignment for Critical Resource"
+          ],
+          "owasp": [
+            "A05:2021 - Security Misconfiguration",
+            "A06:2017 - Security Misconfiguration",
+            "A02:2025 - Security Misconfiguration"
+          ],
+          "references": [
+            "https://raesene.github.io/blog/2019/06/01/docker-capabilities-and-no-new-privs/",
+            "https://www.kernel.org/doc/Documentation/prctl/no_new_privs.txt",
+            "https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html#rule-4-add-no-new-privileges-flag"
+          ],
+          "category": "security",
+          "technology": ["docker-compose"],
+          "cwe2021-top25": true,
+          "subcategory": ["audit"],
+          "likelihood": "LOW",
+          "impact": "HIGH",
+          "confidence": "LOW",
+          "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+          "vulnerability_class": ["Improper Authorization"],
+          "source": "https://semgrep.dev/r/yaml.docker-compose.security.no-new-privileges.no-new-privileges",
+          "shortlink": "https://sg.run/0n8q"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "yaml.docker-compose.security.writable-filesystem-service.writable-filesystem-service",
+      "path": "docker-compose.prod.yml",
+      "start": { "line": 4, "col": 3, "offset": 28 },
+      "end": { "line": 4, "col": 6, "offset": 31 },
+      "extra": {
+        "message": "Service 'app' is running with a writable root filesystem. This may allow malicious applications to download and run additional payloads, or modify container files. If an application inside a container has to save something temporarily consider using a tmpfs. Add 'read_only: true' to this service to prevent this.",
+        "metadata": {
+          "cwe": [
+            "CWE-732: Incorrect Permission Assignment for Critical Resource"
+          ],
+          "owasp": [
+            "A05:2021 - Security Misconfiguration",
+            "A06:2017 - Security Misconfiguration",
+            "A02:2025 - Security Misconfiguration"
+          ],
+          "references": [
+            "https://docs.docker.com/compose/compose-file/compose-file-v3/#domainname-hostname-ipc-mac_address-privileged-read_only-shm_size-stdin_open-tty-user-working_dir",
+            "https://blog.atomist.com/security-of-docker-kubernetes/",
+            "https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html#rule-8-set-filesystem-and-volumes-to-read-only"
+          ],
+          "category": "security",
+          "technology": ["docker-compose"],
+          "cwe2021-top25": true,
+          "subcategory": ["audit"],
+          "likelihood": "LOW",
+          "impact": "HIGH",
+          "confidence": "LOW",
+          "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+          "vulnerability_class": ["Improper Authorization"],
+          "source": "https://semgrep.dev/r/yaml.docker-compose.security.writable-filesystem-service.writable-filesystem-service",
+          "shortlink": "https://sg.run/e4JE"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "yaml.docker-compose.security.no-new-privileges.no-new-privileges",
+      "path": "docker-compose.yml",
+      "start": { "line": 4, "col": 3, "offset": 28 },
+      "end": { "line": 4, "col": 6, "offset": 31 },
+      "extra": {
+        "message": "Service 'app' allows for privilege escalation via setuid or setgid binaries. Add 'no-new-privileges:true' in 'security_opt' to prevent this.",
+        "metadata": {
+          "cwe": [
+            "CWE-732: Incorrect Permission Assignment for Critical Resource"
+          ],
+          "owasp": [
+            "A05:2021 - Security Misconfiguration",
+            "A06:2017 - Security Misconfiguration",
+            "A02:2025 - Security Misconfiguration"
+          ],
+          "references": [
+            "https://raesene.github.io/blog/2019/06/01/docker-capabilities-and-no-new-privs/",
+            "https://www.kernel.org/doc/Documentation/prctl/no_new_privs.txt",
+            "https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html#rule-4-add-no-new-privileges-flag"
+          ],
+          "category": "security",
+          "technology": ["docker-compose"],
+          "cwe2021-top25": true,
+          "subcategory": ["audit"],
+          "likelihood": "LOW",
+          "impact": "HIGH",
+          "confidence": "LOW",
+          "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+          "vulnerability_class": ["Improper Authorization"],
+          "source": "https://semgrep.dev/r/yaml.docker-compose.security.no-new-privileges.no-new-privileges",
+          "shortlink": "https://sg.run/0n8q"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "yaml.docker-compose.security.writable-filesystem-service.writable-filesystem-service",
+      "path": "docker-compose.yml",
+      "start": { "line": 4, "col": 3, "offset": 28 },
+      "end": { "line": 4, "col": 6, "offset": 31 },
+      "extra": {
+        "message": "Service 'app' is running with a writable root filesystem. This may allow malicious applications to download and run additional payloads, or modify container files. If an application inside a container has to save something temporarily consider using a tmpfs. Add 'read_only: true' to this service to prevent this.",
+        "metadata": {
+          "cwe": [
+            "CWE-732: Incorrect Permission Assignment for Critical Resource"
+          ],
+          "owasp": [
+            "A05:2021 - Security Misconfiguration",
+            "A06:2017 - Security Misconfiguration",
+            "A02:2025 - Security Misconfiguration"
+          ],
+          "references": [
+            "https://docs.docker.com/compose/compose-file/compose-file-v3/#domainname-hostname-ipc-mac_address-privileged-read_only-shm_size-stdin_open-tty-user-working_dir",
+            "https://blog.atomist.com/security-of-docker-kubernetes/",
+            "https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html#rule-8-set-filesystem-and-volumes-to-read-only"
+          ],
+          "category": "security",
+          "technology": ["docker-compose"],
+          "cwe2021-top25": true,
+          "subcategory": ["audit"],
+          "likelihood": "LOW",
+          "impact": "HIGH",
+          "confidence": "LOW",
+          "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+          "vulnerability_class": ["Improper Authorization"],
+          "source": "https://semgrep.dev/r/yaml.docker-compose.security.writable-filesystem-service.writable-filesystem-service",
+          "shortlink": "https://sg.run/e4JE"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "yaml.docker-compose.security.no-new-privileges.no-new-privileges",
+      "path": "docker-compose.yml",
+      "start": { "line": 44, "col": 3, "offset": 1373 },
+      "end": { "line": 44, "col": 10, "offset": 1380 },
+      "extra": {
+        "message": "Service 'mongodb' allows for privilege escalation via setuid or setgid binaries. Add 'no-new-privileges:true' in 'security_opt' to prevent this.",
+        "metadata": {
+          "cwe": [
+            "CWE-732: Incorrect Permission Assignment for Critical Resource"
+          ],
+          "owasp": [
+            "A05:2021 - Security Misconfiguration",
+            "A06:2017 - Security Misconfiguration",
+            "A02:2025 - Security Misconfiguration"
+          ],
+          "references": [
+            "https://raesene.github.io/blog/2019/06/01/docker-capabilities-and-no-new-privs/",
+            "https://www.kernel.org/doc/Documentation/prctl/no_new_privs.txt",
+            "https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html#rule-4-add-no-new-privileges-flag"
+          ],
+          "category": "security",
+          "technology": ["docker-compose"],
+          "cwe2021-top25": true,
+          "subcategory": ["audit"],
+          "likelihood": "LOW",
+          "impact": "HIGH",
+          "confidence": "LOW",
+          "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+          "vulnerability_class": ["Improper Authorization"],
+          "source": "https://semgrep.dev/r/yaml.docker-compose.security.no-new-privileges.no-new-privileges",
+          "shortlink": "https://sg.run/0n8q"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "yaml.docker-compose.security.writable-filesystem-service.writable-filesystem-service",
+      "path": "docker-compose.yml",
+      "start": { "line": 44, "col": 3, "offset": 1373 },
+      "end": { "line": 44, "col": 10, "offset": 1380 },
+      "extra": {
+        "message": "Service 'mongodb' is running with a writable root filesystem. This may allow malicious applications to download and run additional payloads, or modify container files. If an application inside a container has to save something temporarily consider using a tmpfs. Add 'read_only: true' to this service to prevent this.",
+        "metadata": {
+          "cwe": [
+            "CWE-732: Incorrect Permission Assignment for Critical Resource"
+          ],
+          "owasp": [
+            "A05:2021 - Security Misconfiguration",
+            "A06:2017 - Security Misconfiguration",
+            "A02:2025 - Security Misconfiguration"
+          ],
+          "references": [
+            "https://docs.docker.com/compose/compose-file/compose-file-v3/#domainname-hostname-ipc-mac_address-privileged-read_only-shm_size-stdin_open-tty-user-working_dir",
+            "https://blog.atomist.com/security-of-docker-kubernetes/",
+            "https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html#rule-8-set-filesystem-and-volumes-to-read-only"
+          ],
+          "category": "security",
+          "technology": ["docker-compose"],
+          "cwe2021-top25": true,
+          "subcategory": ["audit"],
+          "likelihood": "LOW",
+          "impact": "HIGH",
+          "confidence": "LOW",
+          "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+          "vulnerability_class": ["Improper Authorization"],
+          "source": "https://semgrep.dev/r/yaml.docker-compose.security.writable-filesystem-service.writable-filesystem-service",
+          "shortlink": "https://sg.run/e4JE"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "javascript.express.security.cors-misconfiguration.cors-misconfiguration",
+      "path": "lib/cors.ts",
+      "start": { "line": 36, "col": 57, "offset": 1047 },
+      "end": { "line": 36, "col": 63, "offset": 1053 },
+      "extra": {
+        "message": "By letting user input control CORS parameters, there is a risk that software does not properly verify that the source of data or communication is valid. Use literal values for CORS settings.",
+        "metadata": {
+          "owasp": [
+            "A07:2021 - Identification and Authentication Failures",
+            "A07:2025 - Authentication Failures"
+          ],
+          "cwe": ["CWE-346: Origin Validation Error"],
+          "category": "security",
+          "references": [
+            "https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS"
+          ],
+          "technology": ["express"],
+          "subcategory": ["vuln"],
+          "likelihood": "MEDIUM",
+          "impact": "MEDIUM",
+          "confidence": "MEDIUM",
+          "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+          "vulnerability_class": ["Improper Authentication"],
+          "source": "https://semgrep.dev/r/javascript.express.security.cors-misconfiguration.cors-misconfiguration",
+          "shortlink": "https://sg.run/nKXO"
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring",
+      "path": "scripts/delete-order.ts",
+      "start": { "line": 118, "col": 22, "offset": 3934 },
+      "end": { "line": 118, "col": 79, "offset": 3991 },
+      "extra": {
+        "message": "Detected string concatenation with a non-literal variable in a util.format / console.log function. If an attacker injects a format specifier in the string, it will forge the log message. Try to use constant values for the format string.",
+        "metadata": {
+          "cwe": ["CWE-134: Use of Externally-Controlled Format String"],
+          "owasp": [
+            "A01:2021 - Broken Access Control",
+            "A01:2025 - Broken Access Control"
+          ],
+          "category": "security",
+          "technology": ["javascript"],
+          "subcategory": ["audit"],
+          "likelihood": "MEDIUM",
+          "impact": "LOW",
+          "confidence": "LOW",
+          "references": ["https://cwe.mitre.org/data/definitions/134.html"],
+          "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+          "vulnerability_class": ["Improper Validation"],
+          "source": "https://semgrep.dev/r/javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring",
+          "shortlink": "https://sg.run/7Y5R"
+        },
+        "severity": "INFO",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring",
+      "path": "scripts/link-menu-inventory.ts",
+      "start": { "line": 45, "col": 23, "offset": 1488 },
+      "end": { "line": 45, "col": 72, "offset": 1537 },
+      "extra": {
+        "message": "Detected string concatenation with a non-literal variable in a util.format / console.log function. If an attacker injects a format specifier in the string, it will forge the log message. Try to use constant values for the format string.",
+        "metadata": {
+          "cwe": ["CWE-134: Use of Externally-Controlled Format String"],
+          "owasp": [
+            "A01:2021 - Broken Access Control",
+            "A01:2025 - Broken Access Control"
+          ],
+          "category": "security",
+          "technology": ["javascript"],
+          "subcategory": ["audit"],
+          "likelihood": "MEDIUM",
+          "impact": "LOW",
+          "confidence": "LOW",
+          "references": ["https://cwe.mitre.org/data/definitions/134.html"],
+          "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+          "vulnerability_class": ["Improper Validation"],
+          "source": "https://semgrep.dev/r/javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring",
+          "shortlink": "https://sg.run/7Y5R"
+        },
+        "severity": "INFO",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring",
+      "path": "scripts/migrate-profitability-data.ts",
+      "start": { "line": 140, "col": 21, "offset": 4389 },
+      "end": { "line": 140, "col": 69, "offset": 4437 },
+      "extra": {
+        "message": "Detected string concatenation with a non-literal variable in a util.format / console.log function. If an attacker injects a format specifier in the string, it will forge the log message. Try to use constant values for the format string.",
+        "metadata": {
+          "cwe": ["CWE-134: Use of Externally-Controlled Format String"],
+          "owasp": [
+            "A01:2021 - Broken Access Control",
+            "A01:2025 - Broken Access Control"
+          ],
+          "category": "security",
+          "technology": ["javascript"],
+          "subcategory": ["audit"],
+          "likelihood": "MEDIUM",
+          "impact": "LOW",
+          "confidence": "LOW",
+          "references": ["https://cwe.mitre.org/data/definitions/134.html"],
+          "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+          "vulnerability_class": ["Improper Validation"],
+          "source": "https://semgrep.dev/r/javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring",
+          "shortlink": "https://sg.run/7Y5R"
+        },
+        "severity": "INFO",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring",
+      "path": "scripts/seed-food-menu.ts",
+      "start": { "line": 433, "col": 23, "offset": 12750 },
+      "end": { "line": 433, "col": 58, "offset": 12785 },
+      "extra": {
+        "message": "Detected string concatenation with a non-literal variable in a util.format / console.log function. If an attacker injects a format specifier in the string, it will forge the log message. Try to use constant values for the format string.",
+        "metadata": {
+          "cwe": ["CWE-134: Use of Externally-Controlled Format String"],
+          "owasp": [
+            "A01:2021 - Broken Access Control",
+            "A01:2025 - Broken Access Control"
+          ],
+          "category": "security",
+          "technology": ["javascript"],
+          "subcategory": ["audit"],
+          "likelihood": "MEDIUM",
+          "impact": "LOW",
+          "confidence": "LOW",
+          "references": ["https://cwe.mitre.org/data/definitions/134.html"],
+          "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+          "vulnerability_class": ["Improper Validation"],
+          "source": "https://semgrep.dev/r/javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring",
+          "shortlink": "https://sg.run/7Y5R"
+        },
+        "severity": "INFO",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring",
+      "path": "services/instagram-service.ts",
+      "start": { "line": 150, "col": 21, "offset": 6221 },
+      "end": { "line": 150, "col": 57, "offset": 6257 },
+      "extra": {
+        "message": "Detected string concatenation with a non-literal variable in a util.format / console.log function. If an attacker injects a format specifier in the string, it will forge the log message. Try to use constant values for the format string.",
+        "metadata": {
+          "cwe": ["CWE-134: Use of Externally-Controlled Format String"],
+          "owasp": [
+            "A01:2021 - Broken Access Control",
+            "A01:2025 - Broken Access Control"
+          ],
+          "category": "security",
+          "technology": ["javascript"],
+          "subcategory": ["audit"],
+          "likelihood": "MEDIUM",
+          "impact": "LOW",
+          "confidence": "LOW",
+          "references": ["https://cwe.mitre.org/data/definitions/134.html"],
+          "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+          "vulnerability_class": ["Improper Validation"],
+          "source": "https://semgrep.dev/r/javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring",
+          "shortlink": "https://sg.run/7Y5R"
+        },
+        "severity": "INFO",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring",
+      "path": "services/xlsx-parser-service.ts",
+      "start": { "line": 202, "col": 25, "offset": 5980 },
+      "end": { "line": 202, "col": 61, "offset": 6016 },
+      "extra": {
+        "message": "Detected string concatenation with a non-literal variable in a util.format / console.log function. If an attacker injects a format specifier in the string, it will forge the log message. Try to use constant values for the format string.",
+        "metadata": {
+          "cwe": ["CWE-134: Use of Externally-Controlled Format String"],
+          "owasp": [
+            "A01:2021 - Broken Access Control",
+            "A01:2025 - Broken Access Control"
+          ],
+          "category": "security",
+          "technology": ["javascript"],
+          "subcategory": ["audit"],
+          "likelihood": "MEDIUM",
+          "impact": "LOW",
+          "confidence": "LOW",
+          "references": ["https://cwe.mitre.org/data/definitions/134.html"],
+          "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+          "vulnerability_class": ["Improper Validation"],
+          "source": "https://semgrep.dev/r/javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring",
+          "shortlink": "https://sg.run/7Y5R"
+        },
+        "severity": "INFO",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    }
+  ],
+  "errors": [
+    {
+      "code": 3,
+      "level": "warn",
+      "type": "Syntax error",
+      "message": "Syntax error at line compliance/evidence/REQ-036/gates/semgrep.json:1:\n missing element",
+      "path": "compliance/evidence/REQ-036/gates/semgrep.json"
+    },
+    {
+      "code": 3,
+      "level": "warn",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": ".github/workflows/check-uat-approval.yml",
+            "start": { "line": 83, "col": 29, "offset": 3289 },
+            "end": { "line": 83, "col": 63, "offset": 3323 }
+          },
+          {
+            "path": ".github/workflows/check-uat-approval.yml",
+            "start": { "line": 84, "col": 11, "offset": 3289 },
+            "end": { "line": 84, "col": 47, "offset": 3325 }
+          },
+          {
+            "path": ".github/workflows/check-uat-approval.yml",
+            "start": { "line": 85, "col": 14, "offset": 3289 },
+            "end": { "line": 85, "col": 48, "offset": 3323 }
+          }
+        ]
+      ],
+      "message": "Syntax error at line .github/workflows/check-uat-approval.yml:83:\n When parsing a snippet as Bash for metavariable-pattern in rule 'yaml.github-actions.security.curl-eval.curl-eval', `{ steps.release.outputs.release_id` was unexpected",
+      "path": ".github/workflows/check-uat-approval.yml",
+      "spans": [
+        {
+          "file": ".github/workflows/check-uat-approval.yml",
+          "start": { "line": 83, "col": 29, "offset": 3289 },
+          "end": { "line": 83, "col": 63, "offset": 3323 }
+        },
+        {
+          "file": ".github/workflows/check-uat-approval.yml",
+          "start": { "line": 84, "col": 11, "offset": 3289 },
+          "end": { "line": 84, "col": 47, "offset": 3325 }
+        },
+        {
+          "file": ".github/workflows/check-uat-approval.yml",
+          "start": { "line": 85, "col": 14, "offset": 3289 },
+          "end": { "line": 85, "col": 48, "offset": 3323 }
+        }
+      ]
+    },
+    {
+      "code": 3,
+      "level": "warn",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": ".github/workflows/check-uat-approval.yml",
+            "start": { "line": 98, "col": 26, "offset": 4018 },
+            "end": { "line": 98, "col": 57, "offset": 4049 }
+          },
+          {
+            "path": ".github/workflows/check-uat-approval.yml",
+            "start": { "line": 99, "col": 15, "offset": 4018 },
+            "end": { "line": 99, "col": 49, "offset": 4052 }
+          },
+          {
+            "path": ".github/workflows/check-uat-approval.yml",
+            "start": { "line": 102, "col": 23, "offset": 4018 },
+            "end": { "line": 102, "col": 26, "offset": 4021 }
+          },
+          {
+            "path": ".github/workflows/check-uat-approval.yml",
+            "start": { "line": 104, "col": 16, "offset": 4018 },
+            "end": { "line": 104, "col": 19, "offset": 4021 }
+          },
+          {
+            "path": ".github/workflows/check-uat-approval.yml",
+            "start": { "line": 106, "col": 17, "offset": 4018 },
+            "end": { "line": 106, "col": 20, "offset": 4021 }
+          }
+        ]
+      ],
+      "message": "Syntax error at line .github/workflows/check-uat-approval.yml:98:\n When parsing a snippet as Bash for metavariable-pattern in rule 'yaml.github-actions.security.curl-eval.curl-eval', `{ steps.release.outputs.version` was unexpected",
+      "path": ".github/workflows/check-uat-approval.yml",
+      "spans": [
+        {
+          "file": ".github/workflows/check-uat-approval.yml",
+          "start": { "line": 98, "col": 26, "offset": 4018 },
+          "end": { "line": 98, "col": 57, "offset": 4049 }
+        },
+        {
+          "file": ".github/workflows/check-uat-approval.yml",
+          "start": { "line": 99, "col": 15, "offset": 4018 },
+          "end": { "line": 99, "col": 49, "offset": 4052 }
+        },
+        {
+          "file": ".github/workflows/check-uat-approval.yml",
+          "start": { "line": 102, "col": 23, "offset": 4018 },
+          "end": { "line": 102, "col": 26, "offset": 4021 }
+        },
+        {
+          "file": ".github/workflows/check-uat-approval.yml",
+          "start": { "line": 104, "col": 16, "offset": 4018 },
+          "end": { "line": 104, "col": 19, "offset": 4021 }
+        },
+        {
+          "file": ".github/workflows/check-uat-approval.yml",
+          "start": { "line": 106, "col": 17, "offset": 4018 },
+          "end": { "line": 106, "col": 20, "offset": 4021 }
+        }
+      ]
+    },
+    {
+      "code": 3,
+      "level": "warn",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": ".github/workflows/check-uat-approval.yml",
+            "start": { "line": 112, "col": 30, "offset": 4831 },
+            "end": { "line": 112, "col": 66, "offset": 4867 }
+          },
+          {
+            "path": ".github/workflows/check-uat-approval.yml",
+            "start": { "line": 113, "col": 17, "offset": 4831 },
+            "end": { "line": 113, "col": 53, "offset": 4867 }
+          }
+        ]
+      ],
+      "message": "Syntax error at line .github/workflows/check-uat-approval.yml:112:\n When parsing a snippet as Bash for metavariable-pattern in rule 'yaml.github-actions.security.curl-eval.curl-eval', `{ github.event.pull_request.head.sha` was unexpected",
+      "path": ".github/workflows/check-uat-approval.yml",
+      "spans": [
+        {
+          "file": ".github/workflows/check-uat-approval.yml",
+          "start": { "line": 112, "col": 30, "offset": 4831 },
+          "end": { "line": 112, "col": 66, "offset": 4867 }
+        },
+        {
+          "file": ".github/workflows/check-uat-approval.yml",
+          "start": { "line": 113, "col": 17, "offset": 4831 },
+          "end": { "line": 113, "col": 53, "offset": 4867 }
+        }
+      ]
+    },
+    {
+      "code": 3,
+      "level": "warn",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": ".github/workflows/check-uat-approval.yml",
+            "start": { "line": 126, "col": 19, "offset": 5390 },
+            "end": { "line": 126, "col": 38, "offset": 5409 }
+          },
+          {
+            "path": ".github/workflows/check-uat-approval.yml",
+            "start": { "line": 131, "col": 22, "offset": 5390 },
+            "end": { "line": 131, "col": 41, "offset": 5409 }
+          },
+          {
+            "path": ".github/workflows/check-uat-approval.yml",
+            "start": { "line": 131, "col": 47, "offset": 5390 },
+            "end": { "line": 131, "col": 66, "offset": 5409 }
+          },
+          {
+            "path": ".github/workflows/check-uat-approval.yml",
+            "start": { "line": 131, "col": 85, "offset": 5390 },
+            "end": { "line": 131, "col": 100, "offset": 5405 }
+          }
+        ]
+      ],
+      "message": "Syntax error at line .github/workflows/check-uat-approval.yml:126:\n When parsing a snippet as Bash for metavariable-pattern in rule 'yaml.github-actions.security.curl-eval.curl-eval', `{ github.repository` was unexpected",
+      "path": ".github/workflows/check-uat-approval.yml",
+      "spans": [
+        {
+          "file": ".github/workflows/check-uat-approval.yml",
+          "start": { "line": 126, "col": 19, "offset": 5390 },
+          "end": { "line": 126, "col": 38, "offset": 5409 }
+        },
+        {
+          "file": ".github/workflows/check-uat-approval.yml",
+          "start": { "line": 131, "col": 22, "offset": 5390 },
+          "end": { "line": 131, "col": 41, "offset": 5409 }
+        },
+        {
+          "file": ".github/workflows/check-uat-approval.yml",
+          "start": { "line": 131, "col": 47, "offset": 5390 },
+          "end": { "line": 131, "col": 66, "offset": 5409 }
+        },
+        {
+          "file": ".github/workflows/check-uat-approval.yml",
+          "start": { "line": 131, "col": 85, "offset": 5390 },
+          "end": { "line": 131, "col": 100, "offset": 5405 }
+        }
+      ]
+    },
+    {
+      "code": 3,
+      "level": "warn",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": ".github/workflows/ci.yml",
+            "start": { "line": 142, "col": 23, "offset": 4808 },
+            "end": { "line": 142, "col": 27, "offset": 4812 }
+          }
+        ]
+      ],
+      "message": "Syntax error at line .github/workflows/ci.yml:142:\n When parsing a snippet as Bash for metavariable-pattern in rule 'yaml.github-actions.security.curl-eval.curl-eval', `\"${{` was unexpected",
+      "path": ".github/workflows/ci.yml",
+      "spans": [
+        {
+          "file": ".github/workflows/ci.yml",
+          "start": { "line": 142, "col": 23, "offset": 4808 },
+          "end": { "line": 142, "col": 27, "offset": 4812 }
+        }
+      ]
+    },
+    {
+      "code": 3,
+      "level": "warn",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": ".github/workflows/ci.yml",
+            "start": { "line": 234, "col": 13, "offset": 8450 },
+            "end": { "line": 234, "col": 16, "offset": 8453 }
+          },
+          {
+            "path": ".github/workflows/ci.yml",
+            "start": { "line": 236, "col": 13, "offset": 8450 },
+            "end": { "line": 236, "col": 16, "offset": 8453 }
+          },
+          {
+            "path": ".github/workflows/ci.yml",
+            "start": { "line": 236, "col": 40, "offset": 8450 },
+            "end": { "line": 236, "col": 43, "offset": 8453 }
+          }
+        ]
+      ],
+      "message": "Syntax error at line .github/workflows/ci.yml:234:\n When parsing a snippet as Bash for metavariable-pattern in rule 'yaml.github-actions.security.curl-eval.curl-eval', `${{` was unexpected",
+      "path": ".github/workflows/ci.yml",
+      "spans": [
+        {
+          "file": ".github/workflows/ci.yml",
+          "start": { "line": 234, "col": 13, "offset": 8450 },
+          "end": { "line": 234, "col": 16, "offset": 8453 }
+        },
+        {
+          "file": ".github/workflows/ci.yml",
+          "start": { "line": 236, "col": 13, "offset": 8450 },
+          "end": { "line": 236, "col": 16, "offset": 8453 }
+        },
+        {
+          "file": ".github/workflows/ci.yml",
+          "start": { "line": 236, "col": 40, "offset": 8450 },
+          "end": { "line": 236, "col": 43, "offset": 8453 }
+        }
+      ]
+    },
+    {
+      "code": 3,
+      "level": "warn",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": ".github/workflows/ci.yml",
+            "start": { "line": 279, "col": 20, "offset": 10772 },
+            "end": { "line": 279, "col": 32, "offset": 10784 }
+          },
+          {
+            "path": ".github/workflows/ci.yml",
+            "start": { "line": 279, "col": 50, "offset": 10772 },
+            "end": { "line": 279, "col": 65, "offset": 10787 }
+          },
+          {
+            "path": ".github/workflows/ci.yml",
+            "start": { "line": 279, "col": 80, "offset": 10772 },
+            "end": { "line": 279, "col": 97, "offset": 10789 }
+          },
+          {
+            "path": ".github/workflows/ci.yml",
+            "start": { "line": 280, "col": 29, "offset": 10772 },
+            "end": { "line": 280, "col": 69, "offset": 10812 }
+          }
+        ]
+      ],
+      "message": "Syntax error at line .github/workflows/ci.yml:279:\n When parsing a snippet as Bash for metavariable-pattern in rule 'yaml.github-actions.security.curl-eval.curl-eval', `{ github.sha` was unexpected",
+      "path": ".github/workflows/ci.yml",
+      "spans": [
+        {
+          "file": ".github/workflows/ci.yml",
+          "start": { "line": 279, "col": 20, "offset": 10772 },
+          "end": { "line": 279, "col": 32, "offset": 10784 }
+        },
+        {
+          "file": ".github/workflows/ci.yml",
+          "start": { "line": 279, "col": 50, "offset": 10772 },
+          "end": { "line": 279, "col": 65, "offset": 10787 }
+        },
+        {
+          "file": ".github/workflows/ci.yml",
+          "start": { "line": 279, "col": 80, "offset": 10772 },
+          "end": { "line": 279, "col": 97, "offset": 10789 }
+        },
+        {
+          "file": ".github/workflows/ci.yml",
+          "start": { "line": 280, "col": 29, "offset": 10772 },
+          "end": { "line": 280, "col": 69, "offset": 10812 }
+        }
+      ]
+    },
+    {
+      "code": 3,
+      "level": "warn",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": ".github/workflows/ci.yml",
+            "start": { "line": 418, "col": 44, "offset": 17340 },
+            "end": { "line": 418, "col": 84, "offset": 17380 }
+          }
+        ]
+      ],
+      "message": "Syntax error at line .github/workflows/ci.yml:418:\n When parsing a snippet as Bash for metavariable-pattern in rule 'yaml.github-actions.security.curl-eval.curl-eval', `{ needs.register-release.outputs.version` was unexpected",
+      "path": ".github/workflows/ci.yml",
+      "spans": [
+        {
+          "file": ".github/workflows/ci.yml",
+          "start": { "line": 418, "col": 44, "offset": 17340 },
+          "end": { "line": 418, "col": 84, "offset": 17380 }
+        }
+      ]
+    },
+    {
+      "code": 3,
+      "level": "warn",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": ".github/workflows/compliance-evidence.yml",
+            "start": { "line": 49, "col": 20, "offset": 1644 },
+            "end": { "line": 49, "col": 32, "offset": 1656 }
+          },
+          {
+            "path": ".github/workflows/compliance-evidence.yml",
+            "start": { "line": 49, "col": 50, "offset": 1644 },
+            "end": { "line": 49, "col": 65, "offset": 1659 }
+          },
+          {
+            "path": ".github/workflows/compliance-evidence.yml",
+            "start": { "line": 49, "col": 80, "offset": 1644 },
+            "end": { "line": 49, "col": 97, "offset": 1661 }
+          },
+          {
+            "path": ".github/workflows/compliance-evidence.yml",
+            "start": { "line": 50, "col": 29, "offset": 1644 },
+            "end": { "line": 50, "col": 60, "offset": 1675 }
+          }
+        ]
+      ],
+      "message": "Syntax error at line .github/workflows/compliance-evidence.yml:49:\n When parsing a snippet as Bash for metavariable-pattern in rule 'yaml.github-actions.security.curl-eval.curl-eval', `{ github.sha` was unexpected",
+      "path": ".github/workflows/compliance-evidence.yml",
+      "spans": [
+        {
+          "file": ".github/workflows/compliance-evidence.yml",
+          "start": { "line": 49, "col": 20, "offset": 1644 },
+          "end": { "line": 49, "col": 32, "offset": 1656 }
+        },
+        {
+          "file": ".github/workflows/compliance-evidence.yml",
+          "start": { "line": 49, "col": 50, "offset": 1644 },
+          "end": { "line": 49, "col": 65, "offset": 1659 }
+        },
+        {
+          "file": ".github/workflows/compliance-evidence.yml",
+          "start": { "line": 49, "col": 80, "offset": 1644 },
+          "end": { "line": 49, "col": 97, "offset": 1661 }
+        },
+        {
+          "file": ".github/workflows/compliance-evidence.yml",
+          "start": { "line": 50, "col": 29, "offset": 1644 },
+          "end": { "line": 50, "col": 60, "offset": 1675 }
+        }
+      ]
+    },
+    {
+      "code": 3,
+      "level": "warn",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": ".github/workflows/compliance-evidence.yml",
+            "start": { "line": 110, "col": 55, "offset": 4768 },
+            "end": { "line": 110, "col": 86, "offset": 4799 }
+          }
+        ]
+      ],
+      "message": "Syntax error at line .github/workflows/compliance-evidence.yml:110:\n When parsing a snippet as Bash for metavariable-pattern in rule 'yaml.github-actions.security.curl-eval.curl-eval', `{ steps.version.outputs.version` was unexpected",
+      "path": ".github/workflows/compliance-evidence.yml",
+      "spans": [
+        {
+          "file": ".github/workflows/compliance-evidence.yml",
+          "start": { "line": 110, "col": 55, "offset": 4768 },
+          "end": { "line": 110, "col": 86, "offset": 4799 }
+        }
+      ]
+    },
+    {
+      "code": 3,
+      "level": "warn",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": ".github/workflows/post-deploy-prod.yml",
+            "start": { "line": 85, "col": 8, "offset": 2327 },
+            "end": { "line": 85, "col": 12, "offset": 2331 }
+          }
+        ]
+      ],
+      "message": "Syntax error at line .github/workflows/post-deploy-prod.yml:85:\n When parsing a snippet as Bash for metavariable-pattern in rule 'yaml.github-actions.security.curl-eval.curl-eval', `_EOF` was unexpected",
+      "path": ".github/workflows/post-deploy-prod.yml",
+      "spans": [
+        {
+          "file": ".github/workflows/post-deploy-prod.yml",
+          "start": { "line": 85, "col": 8, "offset": 2327 },
+          "end": { "line": 85, "col": 12, "offset": 2331 }
+        }
+      ]
+    },
+    {
+      "code": 3,
+      "level": "warn",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": ".github/workflows/post-deploy-prod.yml",
+            "start": { "line": 90, "col": 12, "offset": 3290 },
+            "end": { "line": 90, "col": 43, "offset": 3321 }
+          }
+        ]
+      ],
+      "message": "Syntax error at line .github/workflows/post-deploy-prod.yml:90:\n When parsing a snippet as Bash for metavariable-pattern in rule 'yaml.github-actions.security.curl-eval.curl-eval', `{ steps.release.outputs.version` was unexpected",
+      "path": ".github/workflows/post-deploy-prod.yml",
+      "spans": [
+        {
+          "file": ".github/workflows/post-deploy-prod.yml",
+          "start": { "line": 90, "col": 12, "offset": 3290 },
+          "end": { "line": 90, "col": 43, "offset": 3321 }
+        }
+      ]
+    },
+    {
+      "code": 3,
+      "level": "warn",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": ".github/workflows/post-deploy-prod.yml",
+            "start": { "line": 101, "col": 29, "offset": 3940 },
+            "end": { "line": 101, "col": 63, "offset": 3974 }
+          },
+          {
+            "path": ".github/workflows/post-deploy-prod.yml",
+            "start": { "line": 108, "col": 19, "offset": 3940 },
+            "end": { "line": 108, "col": 50, "offset": 3971 }
+          }
+        ]
+      ],
+      "message": "Syntax error at line .github/workflows/post-deploy-prod.yml:101:\n When parsing a snippet as Bash for metavariable-pattern in rule 'yaml.github-actions.security.curl-eval.curl-eval', `{ steps.release.outputs.release_id` was unexpected",
+      "path": ".github/workflows/post-deploy-prod.yml",
+      "spans": [
+        {
+          "file": ".github/workflows/post-deploy-prod.yml",
+          "start": { "line": 101, "col": 29, "offset": 3940 },
+          "end": { "line": 101, "col": 63, "offset": 3974 }
+        },
+        {
+          "file": ".github/workflows/post-deploy-prod.yml",
+          "start": { "line": 108, "col": 19, "offset": 3940 },
+          "end": { "line": 108, "col": 50, "offset": 3971 }
+        }
+      ]
+    },
+    {
+      "code": 3,
+      "level": "warn",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": "app/(customer)/orders/page.tsx",
+            "start": { "line": 222, "col": 23, "offset": 0 },
+            "end": { "line": 222, "col": 34, "offset": 11 }
+          }
+        ]
+      ],
+      "message": "Syntax error at line app/(customer)/orders/page.tsx:222:\n `& Close Tab` was unexpected",
+      "path": "app/(customer)/orders/page.tsx",
+      "spans": [
+        {
+          "file": "app/(customer)/orders/page.tsx",
+          "start": { "line": 222, "col": 23, "offset": 0 },
+          "end": { "line": 222, "col": 34, "offset": 11 }
+        }
+      ]
+    },
+    {
+      "code": 3,
+      "level": "warn",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": "app/(customer)/orders/tabs/[tabId]/page.tsx",
+            "start": { "line": 272, "col": 25, "offset": 0 },
+            "end": { "line": 272, "col": 36, "offset": 11 }
+          }
+        ]
+      ],
+      "message": "Syntax error at line app/(customer)/orders/tabs/[tabId]/page.tsx:272:\n `& Close Tab` was unexpected",
+      "path": "app/(customer)/orders/tabs/[tabId]/page.tsx",
+      "spans": [
+        {
+          "file": "app/(customer)/orders/tabs/[tabId]/page.tsx",
+          "start": { "line": 272, "col": 25, "offset": 0 },
+          "end": { "line": 272, "col": 36, "offset": 11 }
+        }
+      ]
+    },
+    {
+      "code": 3,
+      "level": "warn",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": "app/dashboard/settings/actions.ts",
+            "start": { "line": 93, "col": 10, "offset": 0 },
+            "end": { "line": 93, "col": 80, "offset": 70 }
+          }
+        ]
+      ],
+      "message": "Syntax error at line app/dashboard/settings/actions.ts:93:\n `import('@/interfaces/unit-of-measurement.interface').UnitOfMeasurement` was unexpected",
+      "path": "app/dashboard/settings/actions.ts",
+      "spans": [
+        {
+          "file": "app/dashboard/settings/actions.ts",
+          "start": { "line": 93, "col": 10, "offset": 0 },
+          "end": { "line": 93, "col": 80, "offset": 70 }
+        }
+      ]
+    },
+    {
+      "code": 3,
+      "level": "warn",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": "components/features/admin/dietary-tags-selector.tsx",
+            "start": { "line": 70, "col": 28, "offset": 0 },
+            "end": { "line": 70, "col": 50, "offset": 22 }
+          }
+        ]
+      ],
+      "message": "Syntax error at line components/features/admin/dietary-tags-selector.tsx:70:\n `& Allergen Information` was unexpected",
+      "path": "components/features/admin/dietary-tags-selector.tsx",
+      "spans": [
+        {
+          "file": "components/features/admin/dietary-tags-selector.tsx",
+          "start": { "line": 70, "col": 28, "offset": 0 },
+          "end": { "line": 70, "col": 50, "offset": 22 }
+        }
+      ]
+    },
+    {
+      "code": 3,
+      "level": "warn",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": "components/features/admin/menu-item-edit-form.tsx",
+            "start": { "line": 578, "col": 37, "offset": 0 },
+            "end": { "line": 578, "col": 45, "offset": 8 }
+          },
+          {
+            "path": "components/features/admin/menu-item-edit-form.tsx",
+            "start": { "line": 988, "col": 53, "offset": 0 },
+            "end": { "line": 988, "col": 62, "offset": 9 }
+          },
+          {
+            "path": "components/features/admin/menu-item-edit-form.tsx",
+            "start": { "line": 1098, "col": 28, "offset": 0 },
+            "end": { "line": 1098, "col": 38, "offset": 10 }
+          },
+          {
+            "path": "components/features/admin/menu-item-edit-form.tsx",
+            "start": { "line": 1151, "col": 18, "offset": 0 },
+            "end": { "line": 1151, "col": 36, "offset": 18 }
+          }
+        ]
+      ],
+      "message": "Syntax error at line components/features/admin/menu-item-edit-form.tsx:578:\n `& Status` was unexpected",
+      "path": "components/features/admin/menu-item-edit-form.tsx",
+      "spans": [
+        {
+          "file": "components/features/admin/menu-item-edit-form.tsx",
+          "start": { "line": 578, "col": 37, "offset": 0 },
+          "end": { "line": 578, "col": 45, "offset": 8 }
+        },
+        {
+          "file": "components/features/admin/menu-item-edit-form.tsx",
+          "start": { "line": 988, "col": 53, "offset": 0 },
+          "end": { "line": 988, "col": 62, "offset": 9 }
+        },
+        {
+          "file": "components/features/admin/menu-item-edit-form.tsx",
+          "start": { "line": 1098, "col": 28, "offset": 0 },
+          "end": { "line": 1098, "col": 38, "offset": 10 }
+        },
+        {
+          "file": "components/features/admin/menu-item-edit-form.tsx",
+          "start": { "line": 1151, "col": 18, "offset": 0 },
+          "end": { "line": 1151, "col": 36, "offset": 18 }
+        }
+      ]
+    },
+    {
+      "code": 3,
+      "level": "warn",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": "components/features/admin/notification-settings-form.tsx",
+            "start": { "line": 208, "col": 87, "offset": 0 },
+            "end": { "line": 208, "col": 93, "offset": 6 }
+          },
+          {
+            "path": "components/features/admin/notification-settings-form.tsx",
+            "start": { "line": 238, "col": 87, "offset": 0 },
+            "end": { "line": 238, "col": 93, "offset": 6 }
+          }
+        ]
+      ],
+      "message": "Syntax error at line components/features/admin/notification-settings-form.tsx:208:\n `& SMS)` was unexpected",
+      "path": "components/features/admin/notification-settings-form.tsx",
+      "spans": [
+        {
+          "file": "components/features/admin/notification-settings-form.tsx",
+          "start": { "line": 208, "col": 87, "offset": 0 },
+          "end": { "line": 208, "col": 93, "offset": 6 }
+        },
+        {
+          "file": "components/features/admin/notification-settings-form.tsx",
+          "start": { "line": 238, "col": 87, "offset": 0 },
+          "end": { "line": 238, "col": 93, "offset": 6 }
+        }
+      ]
+    },
+    {
+      "code": 3,
+      "level": "warn",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": "components/features/admin/rewards/reward-rule-form.tsx",
+            "start": { "line": 584, "col": 34, "offset": 0 },
+            "end": { "line": 584, "col": 42, "offset": 8 }
+          }
+        ]
+      ],
+      "message": "Syntax error at line components/features/admin/rewards/reward-rule-form.tsx:584:\n `& Limits` was unexpected",
+      "path": "components/features/admin/rewards/reward-rule-form.tsx",
+      "spans": [
+        {
+          "file": "components/features/admin/rewards/reward-rule-form.tsx",
+          "start": { "line": 584, "col": 34, "offset": 0 },
+          "end": { "line": 584, "col": 42, "offset": 8 }
+        }
+      ]
+    },
+    {
+      "code": 3,
+      "level": "warn",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": "components/features/admin/settings-form.tsx",
+            "start": { "line": 168, "col": 40, "offset": 0 },
+            "end": { "line": 168, "col": 49, "offset": 9 }
+          }
+        ]
+      ],
+      "message": "Syntax error at line components/features/admin/settings-form.tsx:168:\n `& Pricing` was unexpected",
+      "path": "components/features/admin/settings-form.tsx",
+      "spans": [
+        {
+          "file": "components/features/admin/settings-form.tsx",
+          "start": { "line": 168, "col": 40, "offset": 0 },
+          "end": { "line": 168, "col": 49, "offset": 9 }
+        }
+      ]
+    },
+    {
+      "code": 3,
+      "level": "warn",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": "components/features/admin/stock-history-table.tsx",
+            "start": { "line": 69, "col": 29, "offset": 0 },
+            "end": { "line": 69, "col": 35, "offset": 6 }
+          }
+        ]
+      ],
+      "message": "Syntax error at line components/features/admin/stock-history-table.tsx:69:\n `& Time` was unexpected",
+      "path": "components/features/admin/stock-history-table.tsx",
+      "spans": [
+        {
+          "file": "components/features/admin/stock-history-table.tsx",
+          "start": { "line": 69, "col": 29, "offset": 0 },
+          "end": { "line": 69, "col": 35, "offset": 6 }
+        }
+      ]
+    },
+    {
+      "code": 3,
+      "level": "warn",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": "components/features/admin/tabs/admin-pay-tab-dialog.tsx",
+            "start": { "line": 458, "col": 62, "offset": 0 },
+            "end": { "line": 458, "col": 73, "offset": 11 }
+          }
+        ]
+      ],
+      "message": "Syntax error at line components/features/admin/tabs/admin-pay-tab-dialog.tsx:458:\n `& Close Tab` was unexpected",
+      "path": "components/features/admin/tabs/admin-pay-tab-dialog.tsx",
+      "spans": [
+        {
+          "file": "components/features/admin/tabs/admin-pay-tab-dialog.tsx",
+          "start": { "line": 458, "col": 62, "offset": 0 },
+          "end": { "line": 458, "col": 73, "offset": 11 }
+        }
+      ]
+    },
+    {
+      "code": 3,
+      "level": "warn",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": "components/features/checkout/rewards-section.tsx",
+            "start": { "line": 223, "col": 19, "offset": 0 },
+            "end": { "line": 223, "col": 27, "offset": 8 }
+          }
+        ]
+      ],
+      "message": "Syntax error at line components/features/checkout/rewards-section.tsx:223:\n `& Points` was unexpected",
+      "path": "components/features/checkout/rewards-section.tsx",
+      "spans": [
+        {
+          "file": "components/features/checkout/rewards-section.tsx",
+          "start": { "line": 223, "col": 19, "offset": 0 },
+          "end": { "line": 223, "col": 27, "offset": 8 }
+        }
+      ]
+    },
+    {
+      "code": 3,
+      "level": "warn",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": "components/features/reports/profit-section.tsx",
+            "start": { "line": 24, "col": 29, "offset": 0 },
+            "end": { "line": 24, "col": 45, "offset": 16 }
+          }
+        ]
+      ],
+      "message": "Syntax error at line components/features/reports/profit-section.tsx:24:\n `& Loss Statement` was unexpected",
+      "path": "components/features/reports/profit-section.tsx",
+      "spans": [
+        {
+          "file": "components/features/reports/profit-section.tsx",
+          "start": { "line": 24, "col": 29, "offset": 0 },
+          "end": { "line": 24, "col": 45, "offset": 16 }
+        }
+      ]
+    },
+    {
+      "code": 3,
+      "level": "warn",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": "components/shared/auth/login-form.tsx",
+            "start": { "line": 501, "col": 16, "offset": 0 },
+            "end": { "line": 501, "col": 23, "offset": 7 }
+          }
+        ]
+      ],
+      "message": "Syntax error at line components/shared/auth/login-form.tsx:501:\n `& Login` was unexpected",
+      "path": "components/shared/auth/login-form.tsx",
+      "spans": [
+        {
+          "file": "components/shared/auth/login-form.tsx",
+          "start": { "line": 501, "col": 16, "offset": 0 },
+          "end": { "line": 501, "col": 23, "offset": 7 }
+        }
+      ]
+    },
+    {
+      "code": 3,
+      "level": "warn",
+      "type": [
+        "PartialParsing",
+        [
+          {
+            "path": "services/system-settings-service.ts",
+            "start": { "line": 728, "col": 5, "offset": 0 },
+            "end": { "line": 728, "col": 75, "offset": 70 }
+          },
+          {
+            "path": "services/system-settings-service.ts",
+            "start": { "line": 759, "col": 12, "offset": 0 },
+            "end": { "line": 759, "col": 82, "offset": 70 }
+          }
+        ]
+      ],
+      "message": "Syntax error at line services/system-settings-service.ts:728:\n `import('@/interfaces/unit-of-measurement.interface').UnitOfMeasurement` was unexpected",
+      "path": "services/system-settings-service.ts",
+      "spans": [
+        {
+          "file": "services/system-settings-service.ts",
+          "start": { "line": 728, "col": 5, "offset": 0 },
+          "end": { "line": 728, "col": 75, "offset": 70 }
+        },
+        {
+          "file": "services/system-settings-service.ts",
+          "start": { "line": 759, "col": 12, "offset": 0 },
+          "end": { "line": 759, "col": 82, "offset": 70 }
+        }
+      ]
+    }
+  ],
+  "paths": {
+    "scanned": [
+      ".cursorrules",
+      ".docker-quick-ref.md",
+      ".dockerignore",
+      ".env.docker.example",
+      ".env.example",
+      ".env.local.example",
+      ".env.test",
+      ".eslintrc.json",
+      ".github/ISSUE_TEMPLATE/config.yml",
+      ".github/ISSUE_TEMPLATE/development.yml",
+      ".github/ISSUE_TEMPLATE/other.yml",
+      ".github/workflows/check-uat-approval.yml",
+      ".github/workflows/ci.yml",
+      ".github/workflows/compliance-evidence.yml",
+      ".github/workflows/compliance-validation.yml",
+      ".github/workflows/post-deploy-prod.yml",
+      ".gitignore",
+      ".husky/commit-msg",
+      ".husky/pre-commit",
+      ".husky/pre-push",
+      ".prettierrc",
+      ".windsurf/rules/code-style-guide.md",
+      ".windsurf/rules/requirements.md",
+      ".windsurf/rules/sdlc-compliance.md",
+      ".windsurf/rules/solid-security-compliance.md",
+      ".windsurf/workflows/README.md",
+      ".windsurf/workflows/audit-finish.md",
+      ".windsurf/workflows/deploy-main.md",
+      ".windsurf/workflows/deploy-railway.md",
+      ".windsurf/workflows/implement-and-test.md",
+      ".windsurf/workflows/plan-requirement.md",
+      ".windsurf/workflows/submit-for-review.md",
+      ".windsurfrules",
+      "CLAUDE.md",
+      "DEPLOYMENT-ACTUAL.md",
+      "DEPLOYMENT.md",
+      "DOCKER-OPTIMIZATION.md",
+      "DOCKER.md",
+      "Dockerfile",
+      "GEMINI.md",
+      "INSTRUCTIONS.md",
+      "MIGRATION-INVENTORY-SNAPSHOTS.md",
+      "PROJECT-STATUS.md",
+      "README.md",
+      "SDLC/0-project-setup.md",
+      "SDLC/1-plan-requirement.md",
+      "SDLC/2-implement-and-test.md",
+      "SDLC/3-compile-evidence.md",
+      "SDLC/4-submit-for-review.md",
+      "SDLC/5-deploy-main.md",
+      "SDLC/Deployment_Architecture.md",
+      "SDLC/Periodic_Security_Review_Schedule.md",
+      "SDLC/README.md",
+      "SDLC/README_TEMPLATE.md",
+      "SDLC/Test_Architecture.md",
+      "SDLC/Test_Plan.md",
+      "SDLC/Test_Plan_TEMPLATE.md",
+      "SDLC/Test_Policy.md",
+      "SDLC/Test_Strategy.md",
+      "SDLC/ai-rules/README.md",
+      "SDLC/ai-rules/SDLC_RULES.md",
+      "SDLC/ai-rules/claude/CLAUDE.md",
+      "SDLC/ai-rules/cursor/.cursorrules",
+      "SDLC/ai-rules/windsurf/.windsurfrules",
+      "__tests__/actions/admin/menu-actions.customization-inventory.test.ts",
+      "__tests__/actions/admin/user-actions.test.ts",
+      "__tests__/api/public/orders-tab-support.test.ts",
+      "__tests__/api/public/tabs-filter-support.test.ts",
+      "__tests__/inventory/crate-packaging.test.ts",
+      "__tests__/inventory/price-update-inventory-sync.test.ts",
+      "__tests__/inventory/restock-recommendation-strategies.test.ts",
+      "__tests__/inventory/restock-recommendation.test.ts",
+      "__tests__/lib/business-date.test.ts",
+      "__tests__/lib/cart-line-math.test.ts",
+      "__tests__/lib/cart-store-helpers.test.ts",
+      "__tests__/lib/customization-builder-preview.test.ts",
+      "__tests__/lib/customization-inventory.test.ts",
+      "__tests__/lib/customization-picker-state.test.ts",
+      "__tests__/lib/customization-validation.test.ts",
+      "__tests__/lib/expense-categories-display.test.ts",
+      "__tests__/lib/expense-search.test.ts",
+      "__tests__/lib/expense-to-line-item.test.ts",
+      "__tests__/lib/order-line-totals.test.ts",
+      "__tests__/lib/tip-aggregation.test.ts",
+      "__tests__/lib/units.test.ts",
+      "__tests__/pending-expense-group/pending-expense-actions.test.ts",
+      "__tests__/pending-expense-group/pending-expense-group-service.test.ts",
+      "__tests__/reconciliation/reconciliation-logic.test.ts",
+      "__tests__/reports/business-date-attribution.test.ts",
+      "__tests__/reports/payment-method-aggregation.test.ts",
+      "__tests__/reports/public-sales-summary-cost.test.ts",
+      "__tests__/reports/report-cost-snapshot.test.ts",
+      "__tests__/reports/total-revenue-consistency.test.ts",
+      "__tests__/security/path-traversal-sanitization.test.ts",
+      "__tests__/security/regex-injection-prevention.test.ts",
+      "__tests__/services/expense-service.search.test.ts",
+      "__tests__/services/financial-report-service.tip-method.test.ts",
+      "__tests__/services/financial-report-service.tip.test.ts",
+      "__tests__/services/inventory-service.customization-linked.test.ts",
+      "__tests__/services/order-service.tip.test.ts",
+      "__tests__/services/system-settings-service.expense-categories.test.ts",
+      "__tests__/services/system-settings-service.units.test.ts",
+      "__tests__/services/tab-service.tip-method.test.ts",
+      "__tests__/services/tab-service.tip.test.ts",
+      "__tests__/staff-pot/staff-pot-calculation.test.ts",
+      "__tests__/staff-pot/staff-pot-inventory-loss.test.ts",
+      "__tests__/staff-pot/staff-pot-start-date.test.ts",
+      "__tests__/tabs/partial-payment-validation.test.ts",
+      "app/(auth)/login/page.tsx",
+      "app/(customer)/orders/[orderId]/page.tsx",
+      "app/(customer)/orders/history/page.tsx",
+      "app/(customer)/orders/page.tsx",
+      "app/(customer)/orders/tabs/[tabId]/checkout/page.tsx",
+      "app/(customer)/orders/tabs/[tabId]/page.tsx",
+      "app/(customer)/orders/tabs/page.tsx",
+      "app/(customer)/profile/page.tsx",
+      "app/(customer)/profile/rewards/page.tsx",
+      "app/(public)/data-deletion/data-deletion-form.tsx",
+      "app/(public)/data-deletion/page.tsx",
+      "app/(public)/privacy/page.tsx",
+      "app/actions/admin/admin-management-actions.ts",
+      "app/actions/admin/api-key-actions.ts",
+      "app/actions/admin/create-test-user-action.ts",
+      "app/actions/admin/express-actions.ts",
+      "app/actions/admin/inventory-actions.ts",
+      "app/actions/admin/issued-rewards-actions.ts",
+      "app/actions/admin/manual-reward-actions.ts",
+      "app/actions/admin/menu-actions.ts",
+      "app/actions/admin/order-edit-actions.ts",
+      "app/actions/admin/order-management-actions.ts",
+      "app/actions/admin/order-payment-actions.ts",
+      "app/actions/admin/price-management-actions.ts",
+      "app/actions/admin/profitability-analytics-actions.ts",
+      "app/actions/admin/reward-analytics-actions.ts",
+      "app/actions/admin/reward-rules-actions.ts",
+      "app/actions/admin/settings-actions.ts",
+      "app/actions/admin/staff-pot-actions.ts",
+      "app/actions/admin/user-actions.ts",
+      "app/actions/auth/admin-login.ts",
+      "app/actions/auth/guest-checkout.ts",
+      "app/actions/auth/index.ts",
+      "app/actions/auth/logout.ts",
+      "app/actions/auth/send-email-pin.ts",
+      "app/actions/auth/send-pin.ts",
+      "app/actions/auth/send-whatsapp-pin.ts",
+      "app/actions/auth/verify-email-pin.ts",
+      "app/actions/auth/verify-pin.ts",
+      "app/actions/auth/verify-whatsapp-pin.ts",
+      "app/actions/cart/cart-actions.ts",
+      "app/actions/communication/communication-actions.ts",
+      "app/actions/expenses/csv-import-actions.ts",
+      "app/actions/finance/expense-actions.ts",
+      "app/actions/finance/expense-categories-actions.ts",
+      "app/actions/finance/pending-expense-actions.ts",
+      "app/actions/inventory/list-actions.ts",
+      "app/actions/inventory/location-actions.ts",
+      "app/actions/inventory/restock-recommendation-actions.ts",
+      "app/actions/inventory/snapshot-actions.ts",
+      "app/actions/order/complete-order-action.ts",
+      "app/actions/order/order-actions.ts",
+      "app/actions/payment/payment-actions.ts",
+      "app/actions/profile/profile-actions.ts",
+      "app/actions/reports/price-override-actions.ts",
+      "app/actions/reports/report-actions.ts",
+      "app/actions/rewards/rewards-actions.ts",
+      "app/actions/tabs/tab-actions.ts",
+      "app/actions/tabs/tab-restriction-actions.ts",
+      "app/actions/units-actions.ts",
+      "app/admin/change-password/page.tsx",
+      "app/admin/login/page.tsx",
+      "app/api/admin/settings/points-conversion-rate/impact/route.ts",
+      "app/api/admin/settings/points-conversion-rate/route.ts",
+      "app/api/analytics/profitability/route.ts",
+      "app/api/auth/logout/route.ts",
+      "app/api/auth/session/route.ts",
+      "app/api/auth/user/route.ts",
+      "app/api/health/route.ts",
+      "app/api/internal/socket/emit/route.ts",
+      "app/api/menu/[itemId]/price-history/route.ts",
+      "app/api/menu/[itemId]/update-price/route.ts",
+      "app/api/payment/verify/route.ts",
+      "app/api/points/balance/route.ts",
+      "app/api/points/eligible-items/route.ts",
+      "app/api/points/transactions/route.ts",
+      "app/api/public/admins/[adminId]/reset-password/route.ts",
+      "app/api/public/admins/[adminId]/route.ts",
+      "app/api/public/admins/route.ts",
+      "app/api/public/audit-logs/route.ts",
+      "app/api/public/audit-logs/summary/route.ts",
+      "app/api/public/customers/[customerId]/orders/route.ts",
+      "app/api/public/customers/[customerId]/route.ts",
+      "app/api/public/customers/route.ts",
+      "app/api/public/customers/summary/route.ts",
+      "app/api/public/health/route.ts",
+      "app/api/public/inventory/[inventoryId]/route.ts",
+      "app/api/public/inventory/alerts/route.ts",
+      "app/api/public/inventory/route.ts",
+      "app/api/public/inventory/summary/route.ts",
+      "app/api/public/menu/[itemId]/route.ts",
+      "app/api/public/menu/categories/route.ts",
+      "app/api/public/menu/route.ts",
+      "app/api/public/orders/[orderId]/route.ts",
+      "app/api/public/orders/route.ts",
+      "app/api/public/orders/stats/route.ts",
+      "app/api/public/orders/summary/route.ts",
+      "app/api/public/payments/[orderId]/manual/route.ts",
+      "app/api/public/payments/route.ts",
+      "app/api/public/payments/verify/route.ts",
+      "app/api/public/rewards/redeem/route.ts",
+      "app/api/public/rewards/route.ts",
+      "app/api/public/rewards/validate/route.ts",
+      "app/api/public/sales/summary/route.ts",
+      "app/api/public/settings/route.ts",
+      "app/api/public/tabs/[tabId]/route.ts",
+      "app/api/public/tabs/route.ts",
+      "app/api/public/tabs/summary/route.ts",
+      "app/api/reports/inventory/route.ts",
+      "app/api/rewards/active/route.ts",
+      "app/api/rewards/validate/route.ts",
+      "app/api/settings/points-conversion-rate/route.ts",
+      "app/api/settings/route.ts",
+      "app/api/webhooks/monnify/route.ts",
+      "app/api/webhooks/paystack/route.ts",
+      "app/api/webhooks/whatsapp/route.ts",
+      "app/checkout/page.tsx",
+      "app/dashboard/analytics/layout.tsx",
+      "app/dashboard/analytics/profitability/page.tsx",
+      "app/dashboard/audit-logs/layout.tsx",
+      "app/dashboard/audit-logs/page.tsx",
+      "app/dashboard/customers/layout.tsx",
+      "app/dashboard/customers/page.tsx",
+      "app/dashboard/debug-session/page.tsx",
+      "app/dashboard/expenses/uploaded/page.tsx",
+      "app/dashboard/finance/expenses/expenses-client.tsx",
+      "app/dashboard/finance/expenses/page.tsx",
+      "app/dashboard/finance/expenses/pending/page.tsx",
+      "app/dashboard/finance/layout.tsx",
+      "app/dashboard/forbidden/page.tsx",
+      "app/dashboard/inventory/[id]/page.tsx",
+      "app/dashboard/inventory/layout.tsx",
+      "app/dashboard/inventory/page.tsx",
+      "app/dashboard/inventory/restock-recommendations/page.tsx",
+      "app/dashboard/inventory/snapshots/[id]/page.tsx",
+      "app/dashboard/inventory/snapshots/page.tsx",
+      "app/dashboard/inventory/transfer/page.tsx",
+      "app/dashboard/kitchen/layout.tsx",
+      "app/dashboard/kitchen/page.tsx",
+      "app/dashboard/layout.tsx",
+      "app/dashboard/menu/[itemId]/edit/page.tsx",
+      "app/dashboard/menu/layout.tsx",
+      "app/dashboard/menu/new/page.tsx",
+      "app/dashboard/menu/page.tsx",
+      "app/dashboard/orders/[orderId]/page.tsx",
+      "app/dashboard/orders/analytics/page.tsx",
+      "app/dashboard/orders/express/close-tab/page.tsx",
+      "app/dashboard/orders/express/create-order/page.tsx",
+      "app/dashboard/orders/express/create-tab/page.tsx",
+      "app/dashboard/orders/inventory-summary/page.tsx",
+      "app/dashboard/orders/inventory-updates/page.tsx",
+      "app/dashboard/orders/layout.tsx",
+      "app/dashboard/orders/page.tsx",
+      "app/dashboard/orders/tabs/[tabId]/checkout/page.tsx",
+      "app/dashboard/orders/tabs/[tabId]/page.tsx",
+      "app/dashboard/orders/tabs/page.tsx",
+      "app/dashboard/page.tsx",
+      "app/dashboard/reports/daily/daily-report-client.tsx",
+      "app/dashboard/reports/daily/page.tsx",
+      "app/dashboard/reports/inventory/inventory-report-client.tsx",
+      "app/dashboard/reports/inventory/page.tsx",
+      "app/dashboard/reports/layout.tsx",
+      "app/dashboard/reports/page.tsx",
+      "app/dashboard/reports/profitability/page.tsx",
+      "app/dashboard/rewards/issue/page-new.tsx",
+      "app/dashboard/rewards/issue/page.tsx",
+      "app/dashboard/rewards/issued/page.tsx",
+      "app/dashboard/rewards/layout.tsx",
+      "app/dashboard/rewards/page.tsx",
+      "app/dashboard/rewards/rules/[id]/page.tsx",
+      "app/dashboard/rewards/rules/new/page.tsx",
+      "app/dashboard/rewards/rules/page.tsx",
+      "app/dashboard/rewards/templates/page.tsx",
+      "app/dashboard/settings/actions.ts",
+      "app/dashboard/settings/admins/[adminId]/permissions/page.tsx",
+      "app/dashboard/settings/admins/page.tsx",
+      "app/dashboard/settings/api-keys/api-keys-page-client.tsx",
+      "app/dashboard/settings/api-keys/page.tsx",
+      "app/dashboard/settings/data-requests/actions.ts",
+      "app/dashboard/settings/data-requests/page.tsx",
+      "app/dashboard/settings/data-requests/requests-table.tsx",
+      "app/dashboard/settings/layout.tsx",
+      "app/dashboard/settings/page.tsx",
+      "app/dashboard/staff-pot/page.tsx",
+      "app/dashboard/staff-pot/staff-pot-client.tsx",
+      "app/docs/api/page.tsx",
+      "app/globals.css",
+      "app/layout.tsx",
+      "app/menu/page.tsx",
+      "app/order/page.tsx",
+      "app/page.tsx",
+      "app/rewards/page.tsx",
+      "app/test-components/page.tsx",
+      "app/unauthorized/page.tsx",
+      "commitlint.config.mjs",
+      "compliance/RTM.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-001.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-002.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-003.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-004.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-005.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-006.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-007.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-008.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-009.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-010.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-011.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-012.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-013.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-014.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-015.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-016.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-017.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-018.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-019.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-020.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-021.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-022.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-023.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-024.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-025.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-026.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-027.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-028.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-029.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-031.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-032.md",
+      "compliance/approved-releases/RELEASE-TICKET-REQ-033.md",
+      "compliance/drafts/RTM-update-REQ-030-superseded.md",
+      "compliance/drafts/_NOTE-sdlc-sync-commit-a2d4551.md",
+      "compliance/drafts/_body-meta-comply-issue.md",
+      "compliance/drafts/_body-s18-followup-issue.md",
+      "compliance/drafts/_body-wawagardenbar-issue.md",
+      "compliance/drafts/issue-NEW-multi-inventory-e2e.md",
+      "compliance/drafts/sdlc-stage1-patch.md",
+      "compliance/evidence/REQ-001/documentation-validation.md",
+      "compliance/evidence/REQ-001/test-summary.txt",
+      "compliance/evidence/REQ-002/code-validation.md",
+      "compliance/evidence/REQ-003/implementation-validation.md",
+      "compliance/evidence/REQ-004/production-validation.md",
+      "compliance/evidence/REQ-005/unit-test-results.txt",
+      "compliance/evidence/REQ-006/unit-test-results.txt",
+      "compliance/evidence/REQ-007/e2e-results.json",
+      "compliance/evidence/REQ-007/e2e-test-results.txt",
+      "compliance/evidence/REQ-007/screenshots/01-home-page-branding-CTA.png",
+      "compliance/evidence/REQ-007/screenshots/02-home-page-order-type-cards.png",
+      "compliance/evidence/REQ-007/screenshots/03-home-page-mobile-responsive.png",
+      "compliance/evidence/REQ-007/screenshots/04-auth-login-page.png",
+      "compliance/evidence/REQ-007/screenshots/05-auth-redirect-orders-to-login.png",
+      "compliance/evidence/REQ-007/screenshots/06-auth-redirect-dashboard-to-login.png",
+      "compliance/evidence/REQ-007/screenshots/07-menu-page-items.png",
+      "compliance/evidence/REQ-007/screenshots/08-menu-page-categories.png",
+      "compliance/evidence/REQ-007/screenshots/09-checkout-page.png",
+      "compliance/evidence/REQ-007/screenshots/10-rewards-page.png",
+      "compliance/evidence/REQ-007/screenshots/11-rbac-orders-redirect.png",
+      "compliance/evidence/REQ-007/screenshots/12-rbac-menu-redirect.png",
+      "compliance/evidence/REQ-007/screenshots/13-rbac-inventory-redirect.png",
+      "compliance/evidence/REQ-007/screenshots/14-rbac-settings-redirect.png",
+      "compliance/evidence/REQ-007/screenshots/15-rbac-rewards-redirect.png",
+      "compliance/evidence/REQ-007/screenshots/16-rbac-audit-logs-redirect.png",
+      "compliance/evidence/REQ-007/screenshots/17-rbac-reports-redirect.png",
+      "compliance/evidence/REQ-007/screenshots/18-rbac-kitchen-redirect.png",
+      "compliance/evidence/REQ-007/screenshots/19-privacy-page.png",
+      "compliance/evidence/REQ-007/screenshots/20-data-deletion-page.png",
+      "compliance/evidence/REQ-007/screenshots/21-navigation-menu-link.png",
+      "compliance/evidence/REQ-007/test-plan.md",
+      "compliance/evidence/REQ-007/test-scope.md",
+      "compliance/evidence/REQ-007/validation-report.txt",
+      "compliance/evidence/REQ-008/validation-report.txt",
+      "compliance/evidence/REQ-009/ai-prompts.md",
+      "compliance/evidence/REQ-009/ai-use-note.md",
+      "compliance/evidence/REQ-009/security-summary.md",
+      "compliance/evidence/REQ-009/test-scope.md",
+      "compliance/evidence/REQ-010/ai-prompts.md",
+      "compliance/evidence/REQ-010/ai-use-note.md",
+      "compliance/evidence/REQ-010/implementation-plan.md",
+      "compliance/evidence/REQ-010/security-summary.md",
+      "compliance/evidence/REQ-010/test-scope.md",
+      "compliance/evidence/REQ-011/security-summary.md",
+      "compliance/evidence/REQ-011/test-scope.md",
+      "compliance/evidence/REQ-012/ai-use-note.md",
+      "compliance/evidence/REQ-012/implementation-plan.md",
+      "compliance/evidence/REQ-012/security-summary.md",
+      "compliance/evidence/REQ-012/test-scope.md",
+      "compliance/evidence/REQ-013/ai-use-note.md",
+      "compliance/evidence/REQ-013/implementation-plan.md",
+      "compliance/evidence/REQ-013/security-summary.md",
+      "compliance/evidence/REQ-013/test-scope.md",
+      "compliance/evidence/REQ-014/ai-use-note.md",
+      "compliance/evidence/REQ-014/implementation-plan.md",
+      "compliance/evidence/REQ-014/security-summary.md",
+      "compliance/evidence/REQ-014/test-scope.md",
+      "compliance/evidence/REQ-015/ai-use-note.md",
+      "compliance/evidence/REQ-015/implementation-plan.md",
+      "compliance/evidence/REQ-015/security-summary.md",
+      "compliance/evidence/REQ-015/test-scope.md",
+      "compliance/evidence/REQ-016/test-scope.md",
+      "compliance/evidence/REQ-017/ai-use-note.md",
+      "compliance/evidence/REQ-017/security-summary.md",
+      "compliance/evidence/REQ-017/test-plan.md",
+      "compliance/evidence/REQ-017/test-scope.md",
+      "compliance/evidence/REQ-018/ai-use-note.md",
+      "compliance/evidence/REQ-018/implementation-plan.md",
+      "compliance/evidence/REQ-018/security-summary.md",
+      "compliance/evidence/REQ-018/test-execution-summary.md",
+      "compliance/evidence/REQ-018/test-plan.md",
+      "compliance/evidence/REQ-018/test-scope.md",
+      "compliance/evidence/REQ-019/ai-prompts.md",
+      "compliance/evidence/REQ-019/ai-use-note.md",
+      "compliance/evidence/REQ-019/implementation-plan.md",
+      "compliance/evidence/REQ-019/security-summary.md",
+      "compliance/evidence/REQ-019/test-execution-summary.md",
+      "compliance/evidence/REQ-019/test-plan.md",
+      "compliance/evidence/REQ-019/test-scope.md",
+      "compliance/evidence/REQ-020/ai-prompts.md",
+      "compliance/evidence/REQ-020/ai-use-note.md",
+      "compliance/evidence/REQ-020/implementation-plan.md",
+      "compliance/evidence/REQ-020/security-summary.md",
+      "compliance/evidence/REQ-020/test-execution-summary.md",
+      "compliance/evidence/REQ-020/test-plan.md",
+      "compliance/evidence/REQ-020/test-scope.md",
+      "compliance/evidence/REQ-021/ai-prompts.md",
+      "compliance/evidence/REQ-021/ai-use-note.md",
+      "compliance/evidence/REQ-021/implementation-plan.md",
+      "compliance/evidence/REQ-021/security-summary.md",
+      "compliance/evidence/REQ-021/test-execution-summary.md",
+      "compliance/evidence/REQ-021/test-plan.md",
+      "compliance/evidence/REQ-021/test-scope.md",
+      "compliance/evidence/REQ-022/ai-prompts.md",
+      "compliance/evidence/REQ-022/ai-use-note.md",
+      "compliance/evidence/REQ-022/implementation-plan.md",
+      "compliance/evidence/REQ-022/security-summary.md",
+      "compliance/evidence/REQ-022/test-execution-summary.md",
+      "compliance/evidence/REQ-022/test-plan.md",
+      "compliance/evidence/REQ-022/test-scope.md",
+      "compliance/evidence/REQ-023/security-summary.md",
+      "compliance/evidence/REQ-023/test-execution-summary.md",
+      "compliance/evidence/REQ-023/test-plan.md",
+      "compliance/evidence/REQ-023/test-scope.md",
+      "compliance/evidence/REQ-024/ai-prompts.md",
+      "compliance/evidence/REQ-024/ai-use-note.md",
+      "compliance/evidence/REQ-024/implementation-plan.md",
+      "compliance/evidence/REQ-024/security-summary.md",
+      "compliance/evidence/REQ-024/test-execution-summary.md",
+      "compliance/evidence/REQ-024/test-plan.md",
+      "compliance/evidence/REQ-024/test-scope.md",
+      "compliance/evidence/REQ-025/ai-prompts.md",
+      "compliance/evidence/REQ-025/ai-use-note.md",
+      "compliance/evidence/REQ-025/implementation-plan.md",
+      "compliance/evidence/REQ-025/security-summary.md",
+      "compliance/evidence/REQ-025/test-execution-summary.md",
+      "compliance/evidence/REQ-025/test-plan.md",
+      "compliance/evidence/REQ-025/test-scope.md",
+      "compliance/evidence/REQ-026/ai-prompts.md",
+      "compliance/evidence/REQ-026/ai-use-note.md",
+      "compliance/evidence/REQ-026/implementation-plan.md",
+      "compliance/evidence/REQ-026/security-summary.md",
+      "compliance/evidence/REQ-026/test-execution-summary.md",
+      "compliance/evidence/REQ-026/test-plan.md",
+      "compliance/evidence/REQ-026/test-scope.md",
+      "compliance/evidence/REQ-027/ai-prompts.md",
+      "compliance/evidence/REQ-027/ai-use-note.md",
+      "compliance/evidence/REQ-027/implementation-plan.md",
+      "compliance/evidence/REQ-027/security-summary.md",
+      "compliance/evidence/REQ-027/test-execution-summary.md",
+      "compliance/evidence/REQ-027/test-plan.md",
+      "compliance/evidence/REQ-027/test-scope.md",
+      "compliance/evidence/REQ-028/ai-prompts.md",
+      "compliance/evidence/REQ-028/ai-use-note.md",
+      "compliance/evidence/REQ-028/implementation-plan.md",
+      "compliance/evidence/REQ-028/security-summary.md",
+      "compliance/evidence/REQ-028/test-execution-summary.md",
+      "compliance/evidence/REQ-028/test-plan.md",
+      "compliance/evidence/REQ-028/test-scope.md",
+      "compliance/evidence/REQ-029/ai-prompts.md",
+      "compliance/evidence/REQ-029/ai-use-note.md",
+      "compliance/evidence/REQ-029/implementation-plan.md",
+      "compliance/evidence/REQ-029/security-summary.md",
+      "compliance/evidence/REQ-029/test-execution-summary.md",
+      "compliance/evidence/REQ-029/test-plan.md",
+      "compliance/evidence/REQ-029/test-scope.md",
+      "compliance/evidence/REQ-030/ai-prompts.md",
+      "compliance/evidence/REQ-030/ai-use-note.md",
+      "compliance/evidence/REQ-030/gates/dependency-audit.json",
+      "compliance/evidence/REQ-030/gates/sast-results.json",
+      "compliance/evidence/REQ-030/gates/vitest-summary.txt",
+      "compliance/evidence/REQ-030/implementation-plan.md",
+      "compliance/evidence/REQ-030/security-summary.md",
+      "compliance/evidence/REQ-030/test-execution-summary.md",
+      "compliance/evidence/REQ-030/test-plan.md",
+      "compliance/evidence/REQ-030/test-scope.md",
+      "compliance/evidence/REQ-031/ai-prompts.md",
+      "compliance/evidence/REQ-031/ai-use-note.md",
+      "compliance/evidence/REQ-031/gates/dependency-audit.json",
+      "compliance/evidence/REQ-031/gates/semgrep.json",
+      "compliance/evidence/REQ-031/gates/tsc.txt",
+      "compliance/evidence/REQ-031/gates/vitest-summary.txt",
+      "compliance/evidence/REQ-031/implementation-plan.md",
+      "compliance/evidence/REQ-031/security-summary.md",
+      "compliance/evidence/REQ-031/test-execution-summary.md",
+      "compliance/evidence/REQ-031/test-plan.md",
+      "compliance/evidence/REQ-031/test-scope.md",
+      "compliance/evidence/REQ-032/gates/dependency-audit.json",
+      "compliance/evidence/REQ-032/gates/semgrep.json",
+      "compliance/evidence/REQ-032/gates/tsc.txt",
+      "compliance/evidence/REQ-032/gates/vitest-summary.txt",
+      "compliance/evidence/REQ-032/implementation-plan.md",
+      "compliance/evidence/REQ-032/security-summary.md",
+      "compliance/evidence/REQ-032/test-execution-summary.md",
+      "compliance/evidence/REQ-032/test-plan.md",
+      "compliance/evidence/REQ-032/test-scope.md",
+      "compliance/evidence/REQ-032/uat-checklist.md",
+      "compliance/evidence/REQ-033/_uom-backfill-prod-2026-05-04.json",
+      "compliance/evidence/REQ-033/_uom-backfill-uat-2026-05-02.json",
+      "compliance/evidence/REQ-033/ai-prompts.md",
+      "compliance/evidence/REQ-033/ai-use-note.md",
+      "compliance/evidence/REQ-033/gates/dependency-audit.json",
+      "compliance/evidence/REQ-033/gates/semgrep.json",
+      "compliance/evidence/REQ-033/gates/tsc.txt",
+      "compliance/evidence/REQ-033/gates/vitest-summary.txt",
+      "compliance/evidence/REQ-033/implementation-plan.md",
+      "compliance/evidence/REQ-033/security-summary.md",
+      "compliance/evidence/REQ-033/test-execution-summary.md",
+      "compliance/evidence/REQ-033/test-plan.md",
+      "compliance/evidence/REQ-033/test-scope.md",
+      "compliance/evidence/REQ-033/uat-checklist.md",
+      "compliance/evidence/REQ-035/ai-prompts.md",
+      "compliance/evidence/REQ-035/ai-use-note.md",
+      "compliance/evidence/REQ-035/gates/dependency-audit.json",
+      "compliance/evidence/REQ-035/gates/semgrep.json",
+      "compliance/evidence/REQ-035/gates/tsc.txt",
+      "compliance/evidence/REQ-035/gates/vitest-summary.txt",
+      "compliance/evidence/REQ-035/implementation-plan.md",
+      "compliance/evidence/REQ-035/security-summary.md",
+      "compliance/evidence/REQ-035/test-execution-summary.md",
+      "compliance/evidence/REQ-035/test-plan.md",
+      "compliance/evidence/REQ-035/test-scope.md",
+      "compliance/evidence/REQ-035/uat-checklist.md",
+      "compliance/evidence/REQ-036/gates/dependency-audit.json",
+      "compliance/evidence/REQ-036/gates/semgrep.json",
+      "compliance/evidence/REQ-036/gates/tsc.txt",
+      "compliance/evidence/REQ-036/gates/vitest-summary.txt",
+      "compliance/evidence/REQ-036/implementation-plan.md",
+      "compliance/evidence/REQ-036/test-plan.md",
+      "compliance/evidence/REQ-036/test-scope.md",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/01933bb71cc7f53f1c33b008f92652c7fb900394.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/029aa85aaf7f106865a2f11a0c64c38f7bc8fdf9.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/09bea5e898c5da3be4ab6a6b4bb8c905b7fdbee3.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/188c21e7f941d52e3b957e5a5e2ee8f50ccc5191.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/1c17c129d21f75791f656b8670975acce9b55337.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/2ceeb69ab09166d4750cfbacf87ebb8335c4e4f7.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/3bff899a20e66d18a5a5e33884adef36116bd8ba.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/56f9dd8c3ad0366750452fa1c5615187e16ba9e9.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/5d0e799791aceed04296b23c228500915ad88146.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/70f9c4c4144720492f6f67115681094275318839.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/74e2ed79a5f882baff1bf3bd46a45cf5fef79af9.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/783b28b2877ee2cdb8966fe57f9a56d5dee966ba.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/8da713075d4dbd20c382d00a23c50c04fe8ed0af.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/94380fe81f2b4346f5b0ac31212a13a9b47321c0.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/975acc7e23a4a23eafa57d4e9661117f060727ab.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/a0a39ae59c1226bbb8b0155939bee29c496194c6.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/a12821cd3d6dc700f0974d68b1e1b039f3a6a5bd.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/a56f066107269a813c15537b0589e51517d605cf.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/a9ff1b59eb3f3023e51fb5de6ad14b9af39827c2.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/ab54604437b11acada825d99d6a376590fac2fda.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/afcbd4b7de75e8b7955782426c703c5b46c34ab1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/b6e114a90d4e9e1d49c04eb70f1f9f456e400c42.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/be6f2f9431bfdcc8314d0bc7d496e60a0cf11d84.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/c2d48257cdd3eef03bfd4b73c16af68dca3385d7.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/ce80ed565708eab484ed4f64d811927cccd28b44.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/d0ce95e3b31c3d3ee95f116803701b2e2fbdd58b.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/d57975644a3f6043ed9905df142fa043dbd6c5d5.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/dca8ffe77de25c6665a38d56c236ae7e2768e297.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/f35f7c0a5128a6ade08a7b110d6b4845cd5dc2ef.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/f3ec659547741c1a3405d6084a85bb6964aa5072.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/data/fb7a6c2c300dead8cea91e1ed5f59d62b7c36fbc.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/playwright-report/index.html",
+      "compliance/evidence/adhoc-e2e-2026-03-17/report.md",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-output.txt",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/.last-run.json",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/auth.setup.ts-authenticate-as-admin-auth-setup/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/auth.setup.ts-authenticate-as-csr-auth-setup/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/auth.setup.ts-authenticate-as-super-admin-auth-setup/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-11-C-c832b-gement-customers-page-loads-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-11-D-1e4b4-n-access-dashboard-overview-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-11-D-230bb-ebar-shows-navigation-links-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-11-D-54c24-ard-shows-quick-stats-cards-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-11-D-766e4-shboard-to-dashboard-orders-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-11-D-a0ba3-header-with-Dashboard-title-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-11-D-fe03d-shows-recent-orders-section-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-12-O-39a46-alytics-card-on-orders-page-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-12-O-51c65-age-shows-Tabs-Display-link-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-12-O-77125-ads-with-title-and-controls-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-12-O-ad19d-shows-Quick-Actions-section-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-12-O-c71ca--shows-Kitchen-Display-link-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-13-M-15616-ement-page-loads-with-items-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-13-M-169f5-u-item-page-loads-with-form-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-14-I-a43a6-ventory-transfer-page-loads-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-14-I-aa9f5-entory-snapshots-page-loads-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-14-I-effde-gement-inventory-page-loads-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-15-F-9e27e-agement-expenses-page-loads-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-16-R-13a79-inventory-report-page-loads-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-16-R-ad55d-nalytics-reports-page-loads-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-16-R-b6b80-ics-daily-report-page-loads-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-16-R-cce05-itability-report-page-loads-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-16-R-ce025-bility-analytics-page-loads-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-17-K-08e88-splay-loads-with-dark-theme-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-17-K-97ac3-y-has-back-button-to-orders-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-17-K-ef711-ay-shows-active-order-count-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-18-R-1c7ca-ion-reward-rules-page-loads-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-18-R-3b631-reward-templates-page-loads-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-18-R-7ccfc-ion-rewards-dashboard-loads-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-18-R-a4eef-n-issued-rewards-page-loads-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-19-S-05b83-with-configuration-sections-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-19-S-1ae79-on-data-requests-page-loads-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-19-S-a6aa8-admin-management-page-loads-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-19-S-d4f44--keys-management-page-loads-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-23-Audit-Logs-audit-logs-page-loads-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-4-Ad-1b76a-ut-endpoint-returns-success-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-4-Ad-cd76a--dashboard-without-redirect-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-4-Su-5b719-n-access-dashboard-overview-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/authenticated-Section-8-Ta-360ee-ads-for-authenticated-admin-authenticated/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/csr-uat-UAT-Admin-List-—-C-29ea8-ialog-shows-CSR-role-option-csr-uat/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/csr-uat-UAT-Admin-List-—-C-c277f--list-CSR-role-filter-works-csr-uat/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/csr-uat-UAT-Admin-List-—-C-d4a4c-agement-page-shows-CSR-user-csr-uat/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/csr-uat-UAT-CSR-Access-—-P-6166b-R-can-access-customers-page-csr-uat/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/csr-uat-UAT-CSR-Access-—-P-674a3-CSR-can-access-rewards-page-csr-uat/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/csr-uat-UAT-CSR-Access-—-P-81577-es-CSR-can-access-tabs-page-csr-uat/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/csr-uat-UAT-CSR-Access-—-R-49d37-s-CSR-cannot-access-reports-csr-uat/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/csr-uat-UAT-CSR-Access-—-R-4f4f5--CSR-cannot-access-expenses-csr-uat/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/csr-uat-UAT-CSR-Access-—-R-93039-annot-access-inventory-page-csr-uat/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/csr-uat-UAT-CSR-Access-—-R-94031-nnot-access-menu-management-csr-uat/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/csr-uat-UAT-CSR-Access-—-R-bf4dc-SR-cannot-access-audit-logs-csr-uat/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/csr-uat-UAT-CSR-Access-—-R-d94df-cannot-access-settings-page-csr-uat/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/csr-uat-UAT-CSR-Login-Redi-68056-can-access-orders-dashboard-csr-uat/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/csr-uat-UAT-CSR-Login-Redi-8e7fe-shboard-to-dashboard-orders-csr-uat/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/csr-uat-UAT-CSR-Navigation-21f38-idebar-shows-Customers-link-csr-uat/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/csr-uat-UAT-CSR-Navigation-2d5c0-es-NOT-show-Audit-Logs-link-csr-uat/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/csr-uat-UAT-CSR-Navigation-4d144--does-NOT-show-Reports-link-csr-uat/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/csr-uat-UAT-CSR-Navigation-5d16f-bar-does-NOT-show-Menu-link-csr-uat/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/csr-uat-UAT-CSR-Navigation-7c1d6-does-NOT-show-Overview-link-csr-uat/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/csr-uat-UAT-CSR-Navigation-9ab29-does-NOT-show-Expenses-link-csr-uat/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/csr-uat-UAT-CSR-Navigation-a0108-R-sidebar-shows-Orders-link-csr-uat/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/csr-uat-UAT-CSR-Navigation-bee2f-does-NOT-show-Settings-link-csr-uat/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/csr-uat-UAT-CSR-Navigation-de1ca-CSR-sidebar-shows-CSR-badge-csr-uat/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/csr-uat-UAT-CSR-Navigation-e5dc7--sidebar-shows-Rewards-link-csr-uat/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/csr-uat-UAT-CSR-Navigation-fd95d-oes-NOT-show-Inventory-link-csr-uat/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--03a54--links-to-login-for-sign-in-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--04a52-enders-on-Desktop-1440x900--chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--05347-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--0658d-tion-uses-Next-js-framework-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--07027-ected-from-profile-to-login-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--09d5d-h-food-and-drink-categories-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--0da5d-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--0f1f4-nd-contains-privacy-content-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--0f71f-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--11fe3-home-page-logo-has-alt-text-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--12a53-ent-requires-authentication-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--1474e-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--14b82-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--15117-rejects-invalid-credentials-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--18cde-le-number-via-URL-parameter-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--19b18-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--1b717-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--1d3a0-nders-on-iPhone-SE-375x667--chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--1f8b4-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--25a15-nders-on-iPhone-12-390x844--chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--26a9a-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--2848f-is-running-and-serves-pages-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--2968f-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--2be32-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--2be34--with-title-and-description-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--30cf4-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--3137e-options-WhatsApp-SMS-Email--chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--33151-thorized-page-is-accessible-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--3497f-t-for-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--3648b-with-title-and-phone-prompt-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--398b4--page-is-handled-gracefully-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--3a528-es-dine-in-pickup-delivery--chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--3bdda-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--3d03d-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--3e3fb-ted-from-dashboard-to-login-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--42b3f-s-section-with-descriptions-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--42ec3-ds-with-loyalty-information-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--46930-ry-filter-via-URL-parameter-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--4bff1-e-renders-on-iPad-768x1024--chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--500e7-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--5348c-sername-and-password-fields-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--541e6-nders-with-credentials-form-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--54391-ge-has-descriptive-metadata-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--54ca9-ge-has-descriptive-metadata-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--553ca-ciated-labels-on-login-page-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--56ca4-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--5cc2e-ge-has-descriptive-metadata-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--5f7d6-plays-feature-preview-cards-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--6331c-plays-cart-items-and-totals-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--673f9-ds-Dine-In-Pickup-Delivery--chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--6b9e0-page-is-publicly-accessible-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--6cf9c-link-navigates-to-menu-page-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--71d93-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--7313a-age-includes-View-Menu-link-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--74973-elivery-method-descriptions-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--789b5-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--7b0d6-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--7bfd0-to-privacy-policy-and-terms-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--7c87e-age-has-Open-Graph-metadata-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--7e47a-rt-items-appear-in-checkout-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--7ed92-cludes-order-type-selection-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--7f615-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--81ae6-age-requires-authentication-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--877c6-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--8ecbe-kout-page-renders-with-form-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--91ce4--with-branding-logo-and-CTA-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--93549-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--97776-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--9841f-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--99654-onversion-100-points-NGN-1--chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--99b7b-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--9a931-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--9ab8c-home-→-menu-→-checkout-flow-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--9b9df-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--a105c-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--a241e-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--af39b--cart-shows-multi-step-form-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--ba461-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--bdfdb-nu-page-displays-item-cards-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--c1c68-ecial-instructions-per-item-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--c2d3f-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--c57a9-to-login-for-authentication-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--c583d-e-renders-on-iPad-768x1024--chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--c7633-fo-fields-name-email-phone--chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--c83ee-age-under-wawa-cart-storage-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--c9c13-rected-from-orders-to-login-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--caca7--not-empty-on-initial-load--chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--cb9bf--session-cookie-is-httpOnly-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--cd225-nders-on-iPhone-12-390x844--chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--d0db3-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--d491d-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--d512a-s-sr-only-text-for-branding-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--d5468-age-requires-authentication-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--d9d86-page-has-How-It-Works-guide-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--db45b-nders-on-iPhone-SE-375x667--chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--de215-vigation-buttons-Back-Next--chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--dec48-ts-search-via-URL-parameter-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--e0d28-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--e25b0-age-has-semantic-h1-heading-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--e30aa-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--e70fa-istinct-from-customer-login-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--e881f-enders-on-Desktop-1440x900--chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--f039b-orrectly-on-tablet-viewport-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--f215c-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--f5546-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--f57a5-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--f5f1d-orrectly-on-mobile-viewport-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--fb224-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--fb755-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--fcecc-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/adhoc-e2e-2026-03-17/test-results/requirements-verification--ff476-rects-unauthenticated-users-chromium/test-finished-1.png",
+      "compliance/evidence/periodic/access-control/.gitkeep",
+      "compliance/evidence/periodic/audit-log/.gitkeep",
+      "compliance/evidence/periodic/dependency-audit/.gitkeep",
+      "compliance/evidence/periodic/dr-test/.gitkeep",
+      "compliance/evidence/periodic/pentest/.gitkeep",
+      "compliance/evidence/periodic/sast-quarterly/.gitkeep",
+      "compliance/evidence/periodic/third-party/.gitkeep",
+      "compliance/evidence/sast-baseline.md",
+      "compliance/pending-releases/RELEASE-TICKET-REQ-035.md",
+      "compliance/pending-releases/RELEASE-TICKET-REQ-036.md",
+      "compliance/superseded-releases/RELEASE-TICKET-REQ-030.md",
+      "compliance/test-cases.md",
+      "compliance/test-plan.md",
+      "compliance/test-summary-report.md",
+      "components/features/admin/add-order-note-dialog.tsx",
+      "components/features/admin/admin-actions-dropdown.tsx",
+      "components/features/admin/admin-list.tsx",
+      "components/features/admin/admin-login-form.tsx",
+      "components/features/admin/api-keys/api-keys-table.tsx",
+      "components/features/admin/api-keys/create-api-key-dialog.tsx",
+      "components/features/admin/business-day-checkbox.tsx",
+      "components/features/admin/business-day-cutoff-form.tsx",
+      "components/features/admin/cancel-order-dialog.tsx",
+      "components/features/admin/category-filter.tsx",
+      "components/features/admin/change-password-form.tsx",
+      "components/features/admin/create-admin-dialog.tsx",
+      "components/features/admin/customization-options-builder.tsx",
+      "components/features/admin/dashboard-nav.tsx",
+      "components/features/admin/delete-menu-item-dialog.tsx",
+      "components/features/admin/dietary-tags-selector.tsx",
+      "components/features/admin/edit-order-dialog.tsx",
+      "components/features/admin/expense-categories-form.tsx",
+      "components/features/admin/expenses/csv-import-button.tsx",
+      "components/features/admin/expenses/edit-uploaded-expense-dialog.tsx",
+      "components/features/admin/expenses/uploaded-expenses-list.tsx",
+      "components/features/admin/expenses/uploaded-expenses-stats.tsx",
+      "components/features/admin/inventory-items-client.tsx",
+      "components/features/admin/inventory-locations-form.tsx",
+      "components/features/admin/inventory-table.tsx",
+      "components/features/admin/menu-categories-form.tsx",
+      "components/features/admin/menu-image-upload.tsx",
+      "components/features/admin/menu-item-edit-form.tsx",
+      "components/features/admin/menu-item-form.tsx",
+      "components/features/admin/menu-items-client.tsx",
+      "components/features/admin/menu-items-table.tsx",
+      "components/features/admin/notification-settings-form.tsx",
+      "components/features/admin/order-actions-sidebar.tsx",
+      "components/features/admin/order-analytics.tsx",
+      "components/features/admin/order-batch-actions.tsx",
+      "components/features/admin/order-card.tsx",
+      "components/features/admin/order-customer-info.tsx",
+      "components/features/admin/order-details-header.tsx",
+      "components/features/admin/order-export.tsx",
+      "components/features/admin/order-filters.tsx",
+      "components/features/admin/order-items-table.tsx",
+      "components/features/admin/order-payment-info.tsx",
+      "components/features/admin/order-queue.tsx",
+      "components/features/admin/order-search.tsx",
+      "components/features/admin/order-stats.tsx",
+      "components/features/admin/order-timeline.tsx",
+      "components/features/admin/orders/admin-pay-order-dialog.tsx",
+      "components/features/admin/payment-settings-form.tsx",
+      "components/features/admin/permissions-editor.tsx",
+      "components/features/admin/permissions-management-client.tsx",
+      "components/features/admin/price-history-viewer.tsx",
+      "components/features/admin/price-management-section.tsx",
+      "components/features/admin/price-override-dialog.tsx",
+      "components/features/admin/price-update-form.tsx",
+      "components/features/admin/profitability-charts.tsx",
+      "components/features/admin/profitability-dashboard-client.tsx",
+      "components/features/admin/profitability-filters.tsx",
+      "components/features/admin/profitability-overview-cards.tsx",
+      "components/features/admin/profitability-tables.tsx",
+      "components/features/admin/reports/price-override-analytics.tsx",
+      "components/features/admin/rewards/index.ts",
+      "components/features/admin/rewards/issued-rewards-table.tsx",
+      "components/features/admin/rewards/points-conversion-settings.tsx",
+      "components/features/admin/rewards/reward-charts.tsx",
+      "components/features/admin/rewards/reward-rule-form.tsx",
+      "components/features/admin/rewards/reward-rule-table.tsx",
+      "components/features/admin/rewards/reward-stats-cards.tsx",
+      "components/features/admin/role-badge.tsx",
+      "components/features/admin/settings-form.tsx",
+      "components/features/admin/staff-pot/staff-pot-config-form.tsx",
+      "components/features/admin/stock-adjustment-actions.tsx",
+      "components/features/admin/stock-history-table.tsx",
+      "components/features/admin/tabs/admin-pay-tab-dialog.tsx",
+      "components/features/admin/tabs/create-tab-dialog.tsx",
+      "components/features/admin/tabs/dashboard-tab-actions.tsx",
+      "components/features/admin/tabs/dashboard-tabs-filter.tsx",
+      "components/features/admin/tabs/dashboard-tabs-list-client.tsx",
+      "components/features/admin/tabs/delete-tab-dialog.tsx",
+      "components/features/admin/tabs/edit-tab-name-dialog.tsx",
+      "components/features/admin/units-of-measurement-form.tsx",
+      "components/features/admin/user-management-actions.tsx",
+      "components/features/api-docs/api-docs-client.tsx",
+      "components/features/cart/cart-button.tsx",
+      "components/features/cart/cart-item.tsx",
+      "components/features/cart/cart-sidebar.tsx",
+      "components/features/cart/cart-summary.tsx",
+      "components/features/cart/index.ts",
+      "components/features/checkout/address-selector.tsx",
+      "components/features/checkout/admin-checkout-indicator.tsx",
+      "components/features/checkout/admin-payment-option.tsx",
+      "components/features/checkout/checkout-form.tsx",
+      "components/features/checkout/customer-info-step.tsx",
+      "components/features/checkout/index.ts",
+      "components/features/checkout/order-details-step.tsx",
+      "components/features/checkout/order-status-dialog.tsx",
+      "components/features/checkout/order-summary.tsx",
+      "components/features/checkout/payment-method-step.tsx",
+      "components/features/checkout/rewards-section.tsx",
+      "components/features/checkout/tab-options-step.tsx",
+      "components/features/checkout/tip-input-step.tsx",
+      "components/features/communication/index.ts",
+      "components/features/communication/order-cancellation-form.tsx",
+      "components/features/communication/order-modification-form.tsx",
+      "components/features/communication/order-rating-form.tsx",
+      "components/features/communication/support-form.tsx",
+      "components/features/finance/edit-expense-dialog.tsx",
+      "components/features/finance/edit-pending-group-dialog.tsx",
+      "components/features/finance/expense-form.tsx",
+      "components/features/finance/expense-list.tsx",
+      "components/features/finance/pending-expense-group-list.tsx",
+      "components/features/finance/transfer-confirmation-dialog.tsx",
+      "components/features/inventory/inventory-summary-client.tsx",
+      "components/features/inventory/location-breakdown-card.tsx",
+      "components/features/inventory/previous-inventory-updates-client.tsx",
+      "components/features/inventory/restock-recommendations-client.tsx",
+      "components/features/inventory/snapshot-details-client.tsx",
+      "components/features/inventory/snapshots-list-client.tsx",
+      "components/features/inventory/stock-transfer-client.tsx",
+      "components/features/inventory/stock-transfer-dialog.tsx",
+      "components/features/kitchen/kitchen-order-card.tsx",
+      "components/features/kitchen/kitchen-order-grid.tsx",
+      "components/features/menu/category-navigation.tsx",
+      "components/features/menu/customization-picker-dialog.tsx",
+      "components/features/menu/customization-picker.tsx",
+      "components/features/menu/index.ts",
+      "components/features/menu/menu-content.tsx",
+      "components/features/menu/menu-grid.tsx",
+      "components/features/menu/menu-item-detail-modal.tsx",
+      "components/features/menu/menu-item.tsx",
+      "components/features/menu/menu-skeleton.tsx",
+      "components/features/menu/table-number-setter.tsx",
+      "components/features/orders/index.ts",
+      "components/features/orders/order-status-tracker.tsx",
+      "components/features/orders/order-status.tsx",
+      "components/features/orders/real-time-order-tracker.tsx",
+      "components/features/orders/tip-input-row.tsx",
+      "components/features/orders/verify-payment-button.tsx",
+      "components/features/profile/address-card.tsx",
+      "components/features/profile/address-form-dialog.tsx",
+      "components/features/profile/addresses-tab.tsx",
+      "components/features/profile/personal-info-tab.tsx",
+      "components/features/profile/preferences-tab.tsx",
+      "components/features/profile/profile-completion-card.tsx",
+      "components/features/reports/cost-section.tsx",
+      "components/features/reports/expenses-section.tsx",
+      "components/features/reports/price-overrides-section.tsx",
+      "components/features/reports/profit-section.tsx",
+      "components/features/reports/report-charts.tsx",
+      "components/features/reports/revenue-section.tsx",
+      "components/features/reports/tips-section.tsx",
+      "components/features/rewards/index.ts",
+      "components/features/rewards/reward-notification.tsx",
+      "components/features/rewards/reward-selector.tsx",
+      "components/features/tabs/tabs-filter.tsx",
+      "components/features/tabs/tabs-list-client.tsx",
+      "components/shared/auth/auth-dialog.tsx",
+      "components/shared/auth/guest-checkout-form.tsx",
+      "components/shared/auth/index.ts",
+      "components/shared/auth/login-form.tsx",
+      "components/shared/auth/login-form.tsx.backup",
+      "components/shared/breadcrumb.tsx",
+      "components/shared/errors/error-boundary.tsx",
+      "components/shared/errors/error-state.tsx",
+      "components/shared/errors/index.ts",
+      "components/shared/errors/not-found-state.tsx",
+      "components/shared/forms/form-field-wrapper.tsx",
+      "components/shared/forms/index.ts",
+      "components/shared/forms/select-field.tsx",
+      "components/shared/forms/submit-button.tsx",
+      "components/shared/forms/text-field.tsx",
+      "components/shared/forms/textarea-field.tsx",
+      "components/shared/layout/container.tsx",
+      "components/shared/layout/index.ts",
+      "components/shared/layout/main-layout.tsx",
+      "components/shared/navigation/footer.tsx",
+      "components/shared/navigation/index.ts",
+      "components/shared/navigation/navbar.tsx",
+      "components/shared/order/delivery-form.tsx",
+      "components/shared/order/dine-in-form.tsx",
+      "components/shared/order/index.ts",
+      "components/shared/order/order-type-selection.tsx",
+      "components/shared/order/pickup-form.tsx",
+      "components/shared/providers.tsx",
+      "components/shared/skeletons/index.ts",
+      "components/shared/skeletons/menu-item-skeleton.tsx",
+      "components/shared/skeletons/order-skeleton.tsx",
+      "components/shared/skeletons/page-skeleton.tsx",
+      "components/shared/ui/empty-state.tsx",
+      "components/shared/ui/index.ts",
+      "components/shared/ui/loading-button.tsx",
+      "components/shared/ui/page-header.tsx",
+      "components/ui/alert-dialog.tsx",
+      "components/ui/alert.tsx",
+      "components/ui/avatar.tsx",
+      "components/ui/badge.tsx",
+      "components/ui/breadcrumb.tsx",
+      "components/ui/button.tsx",
+      "components/ui/calendar.tsx",
+      "components/ui/card.tsx",
+      "components/ui/checkbox.tsx",
+      "components/ui/collapsible.tsx",
+      "components/ui/date-range-picker.tsx",
+      "components/ui/dialog.tsx",
+      "components/ui/dropdown-menu.tsx",
+      "components/ui/form.tsx",
+      "components/ui/input.tsx",
+      "components/ui/label.tsx",
+      "components/ui/multi-date-range-picker.tsx",
+      "components/ui/popover.tsx",
+      "components/ui/progress.tsx",
+      "components/ui/radio-group.tsx",
+      "components/ui/scroll-area.tsx",
+      "components/ui/select.tsx",
+      "components/ui/separator.tsx",
+      "components/ui/sheet.tsx",
+      "components/ui/skeleton.tsx",
+      "components/ui/slider.tsx",
+      "components/ui/switch.tsx",
+      "components/ui/table.tsx",
+      "components/ui/tabs.tsx",
+      "components/ui/textarea.tsx",
+      "components/ui/toast.tsx",
+      "components/ui/toaster.tsx",
+      "components.json",
+      "constants/api-docs-spec.ts",
+      "constants/api-key-scopes.ts",
+      "deploy-prod.sh",
+      "deploy.sh",
+      "docker-compose.migration.yml",
+      "docker-compose.prod.yml",
+      "docker-compose.yml",
+      "docs/BACKUP-STRATEGY.md",
+      "docs/CHANGELOG.md",
+      "docs/DIRECTORY-STRUCTURE.md",
+      "docs/DISASTER-RECOVERY.md",
+      "docs/DOCUMENTATION-STANDARD.md",
+      "docs/E2E-TEST-GUIDE.md",
+      "docs/README.md",
+      "docs/REQUIREMENTS.md",
+      "docs/account_statement_5166765290_2026-02-04.xlsx",
+      "docs/account_statement_6462736191_2026-02-04.xlsx",
+      "docs/admin/admin-management.md",
+      "docs/admin/admin-order-manual-payment.md",
+      "docs/admin/admin-order-process.md",
+      "docs/api/AGENT-TOOLING-FLOWS.md",
+      "docs/api/AGENT-TOOLING-GUIDE.md",
+      "docs/architecture/breadcrumb-examples.md",
+      "docs/architecture/breadcrumb-navigation.md",
+      "docs/architecture/component-verification.md",
+      "docs/architecture/deliverables-strategy.md",
+      "docs/architecture/pre-coding-checklist.md",
+      "docs/architecture/remaining-ui-enhancements.md",
+      "docs/architecture/requirements-update-summary.md",
+      "docs/architecture/ui-components.md",
+      "docs/architecture/ui-enhancements-completion-summary.md",
+      "docs/articles/achieving-audit-ready-test-compliance.md",
+      "docs/articles/api-refactoring-for-ai-agents.md",
+      "docs/articles/api-refactoring-summary.md",
+      "docs/articles/audit-finish-workflow-2min.md",
+      "docs/articles/audit-finish-workflow-design.md",
+      "docs/articles/compliance-gold-standard.md",
+      "docs/authentication/auth-implementation.md",
+      "docs/authentication/auth-setup.md",
+      "docs/authentication/email-fallback-authentication.md",
+      "docs/authentication/email-fallback-troubleshooting.md",
+      "docs/authentication/whatsapp-implementation-summary.md",
+      "docs/authentication/whatsapp-pin.md",
+      "docs/authentication/whatsapp-quick-reference.md",
+      "docs/authentication/whatsapp-setup-guide.md",
+      "docs/changelog-archive/2024-add-to-tab-button.md",
+      "docs/changelog-archive/2024-dashboard-stats-fix.md",
+      "docs/changelog-archive/2024-debugging-financial-reports.md",
+      "docs/changelog-archive/2024-financial-reports-final-fix.md",
+      "docs/changelog-archive/2024-financial-reports-fix.md",
+      "docs/changelog-archive/2024-inventory-deduction-fix.md",
+      "docs/changelog-archive/2024-name-consistency-fix.md",
+      "docs/changelog-archive/2024-order-stats-fix.md",
+      "docs/changelog-archive/2024-phone-sanitization-fix.md",
+      "docs/changelog-archive/2024-tab-payment-inventory-fix.md",
+      "docs/changelog-archive/2024-tabs-stats-update.md",
+      "docs/customization-options-user-guide.html",
+      "docs/customization-options-user-guide.pdf",
+      "docs/database/cleanup-scripts.md",
+      "docs/database/models-implementation.md",
+      "docs/database/schema.md",
+      "docs/features/MANUAL_PRICE_OVERRIDE_FEATURE.md",
+      "docs/features/MULTI_LOCATION_INVENTORY.md",
+      "docs/features/MULTI_LOCATION_INVENTORY_IMPLEMENTATION.md",
+      "docs/features/PORTION_SURCHARGE_FEATURE.md",
+      "docs/features/checkout-process.txt",
+      "docs/features/daily-inventory-summary.md",
+      "docs/features/documentation-update-customer-rewards.md",
+      "docs/features/half-portion-implementation-summary.md",
+      "docs/features/half-portion.md",
+      "docs/features/inventory-report.md",
+      "docs/features/menu-item-filter-config.md",
+      "docs/features/moniepoint-csv-expense-import-implementation.md",
+      "docs/features/moniepoint-csv-expense-import-summary.md",
+      "docs/features/moniepoint-csv-expense-import.md",
+      "docs/features/moniepoint-xlsx-expense-import-summary.md",
+      "docs/features/pay-now-order-type.md",
+      "docs/features/price-by-weight.md",
+      "docs/features/rewards-system-spec.md",
+      "docs/features/tabs-and-orders-system-spec.md",
+      "docs/features/tabs-orders-checkout-processing.txt",
+      "docs/features/user-profile-implementation-plan.md",
+      "docs/features/user-profile-implementation-summary.md",
+      "docs/features/user-profile.md",
+      "docs/finance/daily-reports.md",
+      "docs/finance/expenses.md",
+      "docs/finance/profitability-calculation.md",
+      "docs/finance/profitability-implementation-status.md",
+      "docs/finance/reports-v2.md",
+      "docs/finance/reports.md",
+      "docs/integrations/bulk-sms-implementation-plan-v2.md",
+      "docs/integrations/bulk-sms-implementation-plan.md",
+      "docs/integrations/instagram-design.txt",
+      "docs/integrations/instagram-implementation-details.md",
+      "docs/integrations/instagram-requirements.md",
+      "docs/integrations/meta-admin-integration.md",
+      "docs/integrations/monnify-integration-guide.md",
+      "docs/integrations/paystack-integration-guide.md",
+      "docs/integrations/paystack-requirements.md",
+      "docs/integrations/sms-error-handling.md",
+      "docs/integrations/testing-monnify-payments.md",
+      "docs/integrations/transactional-sms-requirements.md",
+      "docs/locations-inventory-guide.html",
+      "docs/locations-inventory-guide.pdf",
+      "docs/menu-management/drinks-menu-descriptions-update.md",
+      "docs/menu-management/drinks-menu-seeding.md",
+      "docs/menu-management/drinks-menu.md",
+      "docs/menu-management/food-menu-descriptions-update.md",
+      "docs/menu-management/food-menu.md",
+      "docs/menu-management/menu-testing-guide.md",
+      "docs/notes.txt",
+      "docs/operations/README.md",
+      "docs/operations/SOP-AGENTIC-ADMIN-MANAGEMENT.md",
+      "docs/operations/SOP-AGENTIC-AUDIT-LOGS.md",
+      "docs/operations/SOP-AGENTIC-CUSTOMER-MANAGEMENT.md",
+      "docs/operations/SOP-AGENTIC-CUSTOMER-ORDERING.md",
+      "docs/operations/SOP-AGENTIC-DELIVERY-ORDER-MANAGEMENT.md",
+      "docs/operations/SOP-AGENTIC-INVENTORY-MANAGEMENT.md",
+      "docs/operations/SOP-AGENTIC-MENU-MANAGEMENT.md",
+      "docs/operations/SOP-AGENTIC-ORDER-LIFECYCLE.md",
+      "docs/operations/SOP-AGENTIC-REPORTING.md",
+      "docs/operations/SOP-AGENTIC-REWARDS-LOYALTY.md",
+      "docs/operations/SOP-AGENTIC-TAB-ORDER-MANAGEMENT.md",
+      "docs/operations/SOP-AGENTIC-TAB-SETTLEMENT-PAYMENT.md",
+      "docs/operations/SOP-MANUAL-ADMIN-AUDIT-CUSTOMER-DATA.md",
+      "docs/operations/SOP-MANUAL-ADMIN-CUSTOMER-MANAGEMENT.md",
+      "docs/operations/SOP-MANUAL-ADMIN-DAILY-CLOSEOUT.md",
+      "docs/operations/SOP-MANUAL-ADMIN-INVENTORY-MANAGEMENT.md",
+      "docs/operations/SOP-MANUAL-ADMIN-MENU-MANAGEMENT.md",
+      "docs/operations/SOP-MANUAL-ADMIN-ORDER-MANAGEMENT.md",
+      "docs/operations/SOP-MANUAL-ADMIN-REPORTING-ANALYTICS.md",
+      "docs/operations/SOP-MANUAL-ADMIN-REWARDS-LOYALTY.md",
+      "docs/operations/SOP-MANUAL-ADMIN-USER-SYSTEM-CONFIG.md",
+      "docs/operations/SOP-MANUAL-CSR-DELIVERY-ORDER-MANAGEMENT.md",
+      "docs/operations/SOP-MANUAL-CUSTOMER-ORDERING.md",
+      "docs/operations/SOP-MANUAL-KITCHEN-DISPLAY-OPERATIONS.md",
+      "docs/operations/SOP-MANUAL-WAITER-ORDER-MODIFICATIONS.md",
+      "docs/operations/SOP-MANUAL-WAITER-TAB-ORDER-MANAGEMENT.md",
+      "docs/operations/SOP-MANUAL-WAITER-TAB-SETTLEMENT-PAYMENT.md",
+      "docs/operations/environment-variables-fixed.md",
+      "docs/operations/operational-scripts.md",
+      "docs/operations/setup.md",
+      "docs/phase-implementations/phase-2-core-customer-experience/FEATURE-2.1-COMPLETE.md",
+      "docs/phase-implementations/phase-2-core-customer-experience/FEATURE-2.2-COMPLETE.md",
+      "docs/phase-implementations/phase-2-core-customer-experience/FEATURE-2.3-COMPLETE.md",
+      "docs/phase-implementations/phase-2-core-customer-experience/FEATURE-2.4-COMPLETE.md",
+      "docs/phase-implementations/phase-2-core-customer-experience/PHASE-2-REVIEW.md",
+      "docs/phase-implementations/phase-3-order-management/FEATURE-3.1-REVIEW.md",
+      "docs/phase-implementations/phase-3-order-management/FEATURE-3.2-COMPLETE.md",
+      "docs/phase-implementations/phase-3-order-management/FEATURE-3.3-COMPLETE.md",
+      "docs/phase-implementations/phase-3-order-management/FEATURE-ORDER-PROCESSING-COMPLETE.md",
+      "docs/phase-implementations/phase-3-order-management/ORDER-INTEGRATION-CHECKLIST.md",
+      "docs/phase-implementations/phase-3-order-management/ORDER-PROCESSING-WORKFLOW.md",
+      "docs/phase-implementations/phase-3-order-management/ORDER-QUICK-START.md",
+      "docs/phase-implementations/phase-3-order-management/ORDER-SYSTEM-SUMMARY.md",
+      "docs/phase-implementations/phase-3-order-management/REWARDS-ADMIN-GAP-ANALYSIS.md",
+      "docs/phase-implementations/phase-3-order-management/REWARDS-INTEGRATION-GUIDE.md",
+      "docs/phase-implementations/phase-4-admin-dashboard/DOCUMENTATION-UPDATES-REWARDS.md",
+      "docs/phase-implementations/phase-4-admin-dashboard/FEATURE-4.1-COMPLETE.md",
+      "docs/phase-implementations/phase-4-admin-dashboard/FEATURE-4.2-COMPLETE.md",
+      "docs/phase-implementations/phase-4-admin-dashboard/FEATURE-4.2.2-COMPLETE.md",
+      "docs/phase-implementations/phase-4-admin-dashboard/FEATURE-4.2.2-PROGRESS.md",
+      "docs/phase-implementations/phase-4-admin-dashboard/FEATURE-4.2.2-REMAINING-IMPLEMENTATION.md",
+      "docs/phase-implementations/phase-4-admin-dashboard/FEATURE-4.2.2-SPEC.md",
+      "docs/phase-implementations/phase-4-admin-dashboard/FEATURE-4.2.2-TROUBLESHOOTING.md",
+      "docs/phase-implementations/phase-4-admin-dashboard/FEATURE-4.3-COMPLETE.md",
+      "docs/phase-implementations/phase-4-admin-dashboard/FEATURE-4.3-FIXES-2.md",
+      "docs/phase-implementations/phase-4-admin-dashboard/FEATURE-4.3-FIXES.md",
+      "docs/phase-implementations/phase-4-admin-dashboard/FEATURE-4.3-IMPLEMENTATION-STATUS.md",
+      "docs/phase-implementations/phase-4-admin-dashboard/FEATURE-4.3-PROGRESS.md",
+      "docs/phase-implementations/phase-4-admin-dashboard/FEATURE-4.3-SPEC.md",
+      "docs/phase-implementations/phase-4-admin-dashboard/FEATURE-4.4-COMPLETE.md",
+      "docs/phase-implementations/phase-4-admin-dashboard/FEATURE-4.4-PROGRESS.md",
+      "docs/phase-implementations/phase-4-admin-dashboard/FEATURE-4.4-SPEC.md",
+      "docs/phase-implementations/phase-4-admin-dashboard/INVENTORY-USER-GUIDE.md",
+      "docs/phase-implementations/phase-4-admin-dashboard/LOGO-SETUP.md",
+      "docs/ruleset.md",
+      "docs/testing/README.md",
+      "docs/testing/phase-3-completion-summary.md",
+      "docs/testing/quick-start-guide.md",
+      "docs/testing/quick-test.md",
+      "docs/testing/test-case-template.md",
+      "docs/todo-old.txt",
+      "docs/troubleshooting/MONIEPOINT_IMPORT_PRODUCTION_ERROR.md",
+      "docs/troubleshooting/PRODUCTION_DEBUG_STEPS.md",
+      "e2e/auth.setup.ts",
+      "e2e/authenticated.spec.ts",
+      "e2e/business-day-cutoff.spec.ts",
+      "e2e/cost-snapshot.spec.ts",
+      "e2e/csr-uat.spec.ts",
+      "e2e/daily-report-payments.spec.ts",
+      "e2e/dashboard-revenue.spec.ts",
+      "e2e/expense-category-groups.spec.ts",
+      "e2e/expenses-search.spec.ts",
+      "e2e/express-order-report.spec.ts",
+      "e2e/finance/create-pending-from-expenses.spec.ts",
+      "e2e/inventory-snapshots.spec.ts",
+      "e2e/menu-customization-inventory.spec.ts",
+      "e2e/menu-customization-picker.spec.ts",
+      "e2e/orders/admin-pay-tab-tip-method.spec.ts",
+      "e2e/orders/close-tab-tip-capture.spec.ts",
+      "e2e/orders/express-tip-capture.spec.ts",
+      "e2e/partial-payments.spec.ts",
+      "e2e/pending-expenses.spec.ts",
+      "e2e/reconciliation.spec.ts",
+      "e2e/requirements-verification.spec.ts",
+      "e2e/restock-recommendations.spec.ts",
+      "e2e/settings/units-of-measurement.spec.ts",
+      "e2e/staff-pot.spec.ts",
+      "e2e/user-deletion-recreation.spec.ts",
+      "hooks/index.ts",
+      "hooks/use-auth.ts",
+      "hooks/use-order-socket.ts",
+      "hooks/use-toast.ts",
+      "interfaces/admin-permissions.interface.ts",
+      "interfaces/api-key.interface.ts",
+      "interfaces/audit-log.interface.ts",
+      "interfaces/expense.interface.ts",
+      "interfaces/index.ts",
+      "interfaces/inventory-item-cost-history.interface.ts",
+      "interfaces/inventory-location.interface.ts",
+      "interfaces/inventory-snapshot.interface.ts",
+      "interfaces/inventory.interface.ts",
+      "interfaces/menu-item-price-history.interface.ts",
+      "interfaces/menu-item.interface.ts",
+      "interfaces/menu-settings.interface.ts",
+      "interfaces/order.interface.ts",
+      "interfaces/payment-method.interface.ts",
+      "interfaces/payment.interface.ts",
+      "interfaces/payment.ts",
+      "interfaces/pending-expense-group.interface.ts",
+      "interfaces/reward.interface.ts",
+      "interfaces/stock-movement.interface.ts",
+      "interfaces/tab.interface.ts",
+      "interfaces/unit-of-measurement.interface.ts",
+      "interfaces/uploaded-expense.interface.ts",
+      "interfaces/user.interface.ts",
+      "lib/api-key-validator.ts",
+      "lib/api-response.ts",
+      "lib/auth-middleware.ts",
+      "lib/auth-utils.ts",
+      "lib/business-date.ts",
+      "lib/cart-line-math.ts",
+      "lib/cart-store-helpers.ts",
+      "lib/cors.ts",
+      "lib/customization-builder-preview.ts",
+      "lib/customization-inventory.ts",
+      "lib/customization-picker-state.ts",
+      "lib/customization-validation.ts",
+      "lib/date-periods.ts",
+      "lib/email.ts",
+      "lib/expense-categories-display.ts",
+      "lib/expense-search.ts",
+      "lib/expense-to-line-item.ts",
+      "lib/fee-calculator.ts",
+      "lib/format-order-item.ts",
+      "lib/mongodb.ts",
+      "lib/order-line-totals.ts",
+      "lib/permissions.ts",
+      "lib/rate-limiter.ts",
+      "lib/report-export.ts",
+      "lib/session.ts",
+      "lib/sms.ts",
+      "lib/socket-client.ts",
+      "lib/socket-emit-helper.ts",
+      "lib/socket-server.ts",
+      "lib/tab-restrictions.ts",
+      "lib/tip-aggregation.ts",
+      "lib/units.ts",
+      "lib/utils.ts",
+      "lib/whatsapp.ts",
+      "models/api-key-model.ts",
+      "models/audit-log-model.ts",
+      "models/expense-model.ts",
+      "models/index.ts",
+      "models/inventory-item-cost-history-model.ts",
+      "models/inventory-model.ts",
+      "models/inventory-snapshot-model.ts",
+      "models/menu-item-model.ts",
+      "models/menu-item-price-history-model.ts",
+      "models/order-model.ts",
+      "models/payment-model.ts",
+      "models/pending-expense-group-model.ts",
+      "models/points-transaction-model.ts",
+      "models/reward-model.ts",
+      "models/reward-rule-model.ts",
+      "models/settings-model.ts",
+      "models/staff-pot-snapshot-model.ts",
+      "models/stock-movement-model.ts",
+      "models/system-settings-model.ts",
+      "models/tab-model.ts",
+      "models/uploaded-expense-model.ts",
+      "models/user-model.ts",
+      "next.config.ts",
+      "package-lock.json",
+      "package.json",
+      "playwright.config.ts",
+      "postcss.config.mjs",
+      "proxy.ts",
+      "public/logo.png",
+      "public/sounds/README.md",
+      "public/sounds/new-order.mp3",
+      "public/uploads/menu/6916f6a82bfa6b45cb983953-1763420862712.png",
+      "railway.toml",
+      "results.json",
+      "run-prod-migrations.sh",
+      "scripts/README.md",
+      "scripts/add-half-portion-field.ts",
+      "scripts/backfill-business-dates-bulk.ts",
+      "scripts/backfill-business-dates.ts",
+      "scripts/backfill-snapshot-inventory-ids.ts",
+      "scripts/backfill-tip-payment-method.ts",
+      "scripts/backfill-unit-values.ts",
+      "scripts/check-admin-permissions.ts",
+      "scripts/check-admin-user.ts",
+      "scripts/check-customization-prices.ts",
+      "scripts/check-inventory-tracking.ts",
+      "scripts/check-paid-orders.ts",
+      "scripts/check-requirement-jsdoc.sh",
+      "scripts/check-settings.ts",
+      "scripts/check-tab-orders.ts",
+      "scripts/check-xlsx-module.ts",
+      "scripts/clean-orphaned-inventory.ts",
+      "scripts/cleanup-database.ts",
+      "scripts/cleanup-legacy-inventory-fields.ts",
+      "scripts/create-super-admin.ts",
+      "scripts/delete-all-inventory.ts",
+      "scripts/delete-all-menu-items.ts",
+      "scripts/delete-all-orders.ts",
+      "scripts/delete-all-users.ts",
+      "scripts/delete-food-menu.ts",
+      "scripts/delete-order.ts",
+      "scripts/delete-user-data.ts",
+      "scripts/diagnose-uat.ts",
+      "scripts/fix-email-index.ts",
+      "scripts/fix-orphan-stock.ts",
+      "scripts/fix-tab-orders.ts",
+      "scripts/link-menu-inventory.ts",
+      "scripts/list-all-tabs.ts",
+      "scripts/migrate-api-key-scopes.ts",
+      "scripts/migrate-inventory-snapshots.ts",
+      "scripts/migrate-location-tracking.ts",
+      "scripts/migrate-portion-options.ts",
+      "scripts/migrate-price-override-fields.ts",
+      "scripts/migrate-profitability-data.ts",
+      "scripts/migrate-stock-history.ts",
+      "scripts/quick-cleanup.ts",
+      "scripts/recalculate-tabs.ts",
+      "scripts/run-migrations.sh",
+      "scripts/seed-drinks-menu.ts",
+      "scripts/seed-e2e-admins.ts",
+      "scripts/seed-food-menu.ts",
+      "scripts/seed-inventory.ts",
+      "scripts/seed-menu.ts",
+      "scripts/seed-test-users.ts",
+      "scripts/selective-cleanup.ts",
+      "scripts/sync-prod-to-uat.sh",
+      "scripts/test-report-date.ts",
+      "scripts/test-webhook.ts",
+      "scripts/update-admin-credentials.ts",
+      "scripts/upload-evidence.sh",
+      "scripts/validate-commits.sh",
+      "scripts/validate-compliance-artifacts.sh",
+      "scripts/verify-cost-data.ts",
+      "scripts/verify-payment.ts",
+      "sdlc-config.json",
+      "server.ts",
+      "services/admin-service.ts",
+      "services/api-key-service.ts",
+      "services/audit-log-service.ts",
+      "services/category-service.ts",
+      "services/csv-parser-service.ts",
+      "services/expense-service.ts",
+      "services/financial-report-service.ts",
+      "services/index.ts",
+      "services/instagram-service.ts",
+      "services/inventory-service.ts",
+      "services/inventory-snapshot-service.ts",
+      "services/monnify-service.ts",
+      "services/order-analytics-service.ts",
+      "services/order-service.ts",
+      "services/payment-service.ts",
+      "services/paystack-service.ts",
+      "services/pending-expense-group-service.ts",
+      "services/points-service.ts",
+      "services/price-history-service.ts",
+      "services/price-override-analytics-service.ts",
+      "services/profile-service.ts",
+      "services/profitability-analytics-service.ts",
+      "services/restock-recommendation-service.ts",
+      "services/rewards-service.ts",
+      "services/settings-service.ts",
+      "services/staff-pot-service.ts",
+      "services/system-settings-service.ts",
+      "services/tab-service.ts",
+      "services/uploaded-expense-service.ts",
+      "services/user-service.ts",
+      "services/xlsx-parser-service.ts",
+      "stores/cart-store.ts",
+      "stores/order-store.ts",
+      "tailwind.config.ts",
+      "tmp",
+      "tsconfig.json",
+      "vitest.config.ts"
+    ]
+  },
+  "time": {
+    "rules": [],
+    "rules_parse_time": 0.9796121120452881,
+    "profiling_times": {
+      "config_time": 2.2268495559692383,
+      "core_time": 11.845142364501953,
+      "ignores_time": 0.0015189647674560547,
+      "total_time": 14.08199429512024
+    },
+    "parsing_time": {
+      "total_time": 0.0,
+      "per_file_time": { "mean": 0.0, "std_dev": 0.0 },
+      "very_slow_stats": { "time_ratio": 0.0, "count_ratio": 0.0 },
+      "very_slow_files": []
+    },
+    "scanning_time": {
+      "total_time": 108.33801102638245,
+      "per_file_time": {
+        "mean": 0.030708053012013188,
+        "std_dev": 0.00940389527432235
+      },
+      "very_slow_stats": {
+        "time_ratio": 0.01900941344403054,
+        "count_ratio": 0.0002834467120181406
+      },
+      "very_slow_files": [
+        {
+          "fpath": "e2e/requirements-verification.spec.ts",
+          "ftime": 2.0594420433044434
+        }
+      ]
+    },
+    "matching_time": {
+      "total_time": 0.0,
+      "per_file_and_rule_time": { "mean": 0.0, "std_dev": 0.0 },
+      "very_slow_stats": { "time_ratio": 0.0, "count_ratio": 0.0 },
+      "very_slow_rules_on_files": []
+    },
+    "tainting_time": {
+      "total_time": 0.0,
+      "per_def_and_rule_time": { "mean": 0.0, "std_dev": 0.0 },
+      "very_slow_stats": { "time_ratio": 0.0, "count_ratio": 0.0 },
+      "very_slow_rules_on_defs": []
+    },
+    "fixpoint_timeouts": [
+      {
+        "error_type": "Fixpoint timeout",
+        "severity": "warn",
+        "message": "Fixpoint timeout while performing taint analysis at app/actions/admin/express-actions.ts:195:22 [rules: 1, first: javascript.express.security.injection.raw-html-format.raw-html-format]",
+        "location": {
+          "path": "app/actions/admin/express-actions.ts",
+          "start": { "line": 195, "col": 23, "offset": 5036 },
+          "end": { "line": 195, "col": 47, "offset": 5060 }
+        }
+      },
+      {
+        "error_type": "Fixpoint timeout",
+        "severity": "warn",
+        "message": "Fixpoint timeout while performing taint analysis at app/actions/admin/menu-actions.ts:250:22 [rules: 3, first: javascript.express.security.injection.raw-html-format.raw-html-format]",
+        "location": {
+          "path": "app/actions/admin/menu-actions.ts",
+          "start": { "line": 250, "col": 23, "offset": 7659 },
+          "end": { "line": 250, "col": 43, "offset": 7679 }
+        }
+      },
+      {
+        "error_type": "Fixpoint timeout",
+        "severity": "warn",
+        "message": "Fixpoint timeout while performing taint analysis at app/actions/admin/order-edit-actions.ts:33:22 [rules: 1, first: javascript.express.security.injection.raw-html-format.raw-html-format]",
+        "location": {
+          "path": "app/actions/admin/order-edit-actions.ts",
+          "start": { "line": 33, "col": 23, "offset": 814 },
+          "end": { "line": 33, "col": 45, "offset": 836 }
+        }
+      },
+      {
+        "error_type": "Fixpoint timeout",
+        "severity": "warn",
+        "message": "Fixpoint timeout while performing taint analysis at app/actions/expenses/csv-import-actions.ts:31:22 [rules: 1, first: javascript.express.security.injection.raw-html-format.raw-html-format]",
+        "location": {
+          "path": "app/actions/expenses/csv-import-actions.ts",
+          "start": { "line": 31, "col": 23, "offset": 858 },
+          "end": { "line": 31, "col": 48, "offset": 883 }
+        }
+      },
+      {
+        "error_type": "Fixpoint timeout",
+        "severity": "warn",
+        "message": "Fixpoint timeout while performing taint analysis at app/api/public/orders/route.ts:306:22 [rules: 1, first: javascript.express.security.injection.raw-html-format.raw-html-format]",
+        "location": {
+          "path": "app/api/public/orders/route.ts",
+          "start": { "line": 306, "col": 23, "offset": 14889 },
+          "end": { "line": 306, "col": 27, "offset": 14893 }
+        }
+      },
+      {
+        "error_type": "Fixpoint timeout",
+        "severity": "warn",
+        "message": "Fixpoint timeout while performing taint analysis at app/dashboard/orders/express/create-order/page.tsx:76:9 [rules: 1, first: javascript.express.security.cors-misconfiguration.cors-misconfiguration]",
+        "location": {
+          "path": "app/dashboard/orders/express/create-order/page.tsx",
+          "start": { "line": 76, "col": 10, "offset": 1997 },
+          "end": { "line": 76, "col": 35, "offset": 2022 }
+        }
+      },
+      {
+        "error_type": "Fixpoint timeout",
+        "severity": "warn",
+        "message": "Fixpoint timeout while performing taint analysis at app/dashboard/orders/tabs/[tabId]/page.tsx:121:30 [rules: 1, first: javascript.express.security.audit.remote-property-injection.remote-property-injection]",
+        "location": {
+          "path": "app/dashboard/orders/tabs/[tabId]/page.tsx",
+          "start": { "line": 121, "col": 31, "offset": 3902 },
+          "end": { "line": 121, "col": 54, "offset": 3925 }
+        }
+      },
+      {
+        "error_type": "Fixpoint timeout",
+        "severity": "warn",
+        "message": "Fixpoint timeout while performing taint analysis at app/dashboard/reports/inventory/inventory-report-client.tsx:47:16 [rules: 1, first: javascript.express.security.x-frame-options-misconfiguration.x-frame-options-misconfiguration]",
+        "location": {
+          "path": "app/dashboard/reports/inventory/inventory-report-client.tsx",
+          "start": { "line": 47, "col": 17, "offset": 992 },
+          "end": { "line": 47, "col": 38, "offset": 1013 }
+        }
+      },
+      {
+        "error_type": "Fixpoint timeout",
+        "severity": "warn",
+        "message": "Fixpoint timeout while performing taint analysis at components/features/admin/create-admin-dialog.tsx:69:16 [rules: 1, first: javascript.express.security.injection.raw-html-format.raw-html-format]",
+        "location": {
+          "path": "components/features/admin/create-admin-dialog.tsx",
+          "start": { "line": 69, "col": 17, "offset": 2221 },
+          "end": { "line": 69, "col": 34, "offset": 2238 }
+        }
+      },
+      {
+        "error_type": "Fixpoint timeout",
+        "severity": "warn",
+        "message": "Fixpoint timeout while performing taint analysis at components/features/admin/rewards/reward-rule-form.tsx:122:16 [rules: 1, first: javascript.express.security.injection.raw-html-format.raw-html-format]",
+        "location": {
+          "path": "components/features/admin/rewards/reward-rule-form.tsx",
+          "start": { "line": 122, "col": 17, "offset": 3620 },
+          "end": { "line": 122, "col": 31, "offset": 3634 }
+        }
+      },
+      {
+        "error_type": "Fixpoint timeout",
+        "severity": "warn",
+        "message": "Fixpoint timeout while performing taint analysis at components/features/admin/settings-form.tsx:118:16 [rules: 3, first: javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring]",
+        "location": {
+          "path": "components/features/admin/settings-form.tsx",
+          "start": { "line": 118, "col": 17, "offset": 3067 },
+          "end": { "line": 118, "col": 29, "offset": 3079 }
+        }
+      },
+      {
+        "error_type": "Fixpoint timeout",
+        "severity": "warn",
+        "message": "Fixpoint timeout while performing taint analysis at components/features/admin/stock-adjustment-actions.tsx:43:16 [rules: 1, first: javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring]",
+        "location": {
+          "path": "components/features/admin/stock-adjustment-actions.tsx",
+          "start": { "line": 43, "col": 17, "offset": 1151 },
+          "end": { "line": 43, "col": 39, "offset": 1173 }
+        }
+      },
+      {
+        "error_type": "Fixpoint timeout",
+        "severity": "warn",
+        "message": "Fixpoint timeout while performing taint analysis at components/features/admin/tabs/admin-pay-tab-dialog.tsx:47:16 [rules: 1, first: javascript.express.security.injection.raw-html-format.raw-html-format]",
+        "location": {
+          "path": "components/features/admin/tabs/admin-pay-tab-dialog.tsx",
+          "start": { "line": 47, "col": 17, "offset": 1324 },
+          "end": { "line": 47, "col": 34, "offset": 1341 }
+        }
+      },
+      {
+        "error_type": "Fixpoint timeout",
+        "severity": "warn",
+        "message": "Fixpoint timeout while performing taint analysis at components/features/finance/edit-pending-group-dialog.tsx:103:16 [rules: 1, first: javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring]",
+        "location": {
+          "path": "components/features/finance/edit-pending-group-dialog.tsx",
+          "start": { "line": 103, "col": 17, "offset": 2848 },
+          "end": { "line": 103, "col": 39, "offset": 2870 }
+        }
+      },
+      {
+        "error_type": "Fixpoint timeout",
+        "severity": "warn",
+        "message": "Fixpoint timeout while performing taint analysis at scripts/delete-order.ts:42:15 [rules: 1, first: javascript.express.security.injection.raw-html-format.raw-html-format]",
+        "location": {
+          "path": "scripts/delete-order.ts",
+          "start": { "line": 42, "col": 16, "offset": 1199 },
+          "end": { "line": 42, "col": 27, "offset": 1210 }
+        }
+      },
+      {
+        "error_type": "Fixpoint timeout",
+        "severity": "warn",
+        "message": "Fixpoint timeout while performing taint analysis at scripts/fix-orphan-stock.ts:27:15 [rules: 1, first: javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring]",
+        "location": {
+          "path": "scripts/fix-orphan-stock.ts",
+          "start": { "line": 27, "col": 16, "offset": 865 },
+          "end": { "line": 27, "col": 30, "offset": 879 }
+        }
+      },
+      {
+        "error_type": "Fixpoint timeout",
+        "severity": "warn",
+        "message": "Fixpoint timeout while performing taint analysis at services/inventory-snapshot-service.ts:173:15 [rules: 1, first: javascript.express.security.injection.raw-html-format.raw-html-format]",
+        "location": {
+          "path": "services/inventory-snapshot-service.ts",
+          "start": { "line": 173, "col": 16, "offset": 5388 },
+          "end": { "line": 173, "col": 31, "offset": 5403 }
+        }
+      }
+    ],
+    "prefiltering": {
+      "project_level_time": 0.0,
+      "file_level_time": 0.0,
+      "rules_with_project_prefilters_ratio": 0.0,
+      "rules_with_file_prefilters_ratio": 0.9862757115608227,
+      "rules_selected_ratio": 0.09262176296389642,
+      "rules_matched_ratio": 0.09262176296389642
+    },
+    "targets": [],
+    "total_bytes": 0,
+    "max_memory_bytes": 2359698944
+  },
+  "engine_requested": "OSS",
+  "skipped_rules": [],
+  "profiling_results": []
+}

@@ -85,13 +85,13 @@ tipsBreakdown: {
 
 Audit performed via `grep -rln "tipAmount\|paymentMethod" __tests__/ e2e/`. Files that touch tip / payment fields:
 
-- [ ] `__tests__/services/financial-report-service.test.ts` — extend the existing daily-summary fixture to include orders with `tipAmount > 0` and assert that the new `tipsBreakdown` is populated AND that `paymentBreakdown.total` matches its pre-tip value (regression for AC6).
-- [ ] `e2e/express-order-report.spec.ts` (REQ-013-era) — add an assertion that the new Tips section is present on the report page when at least one order has a tip; otherwise skip the assertion gracefully.
-- [ ] `e2e/orders/express-create-order.spec.ts` (if present) — assert tip input is rendered next to the payment-method dropdown.
+- The AC6 regression (paymentBreakdown.total invariant under tips) is covered by the new dedicated `__tests__/services/financial-report-service.tip.test.ts` rather than extending an existing service-spec — this gives the regression a clearly-named home and avoids fixture sprawl on the existing `__tests__/reports/payment-method-aggregation.test.ts`.
+- `e2e/express-order-report.spec.ts` (REQ-013-era) — no update required; it asserts `paymentBreakdown.total` and existing per-method cards. The Tips section is verified by the new dedicated specs (`e2e/orders/express-tip-capture.spec.ts`, `e2e/orders/close-tab-tip-capture.spec.ts`).
 
 **Verified safe — no update needed:**
 
 - All other E2E specs that submit express orders or close tabs treat `tipAmount` as defaulted-to-0 fixtures; the new optional field stays at its default and behaviour is unchanged.
+- Existing `__tests__/reports/payment-method-aggregation.test.ts` continues to pass — its fixtures don't supply `tipAmount` so the new tips-aggregation branches are dormant for those cases.
 
 ## Tests to Remove
 

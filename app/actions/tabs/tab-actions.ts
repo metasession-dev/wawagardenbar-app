@@ -362,6 +362,7 @@ export async function getDashboardFilteredTabsAction(filters: {
 
 /**
  * @requirement REQ-012 - Record a partial payment on an open tab
+ * @requirement REQ-035 - optional tipAmount on the partial-payment row
  */
 export async function recordPartialPaymentAction(params: {
   tabId: string;
@@ -369,6 +370,7 @@ export async function recordPartialPaymentAction(params: {
   note: string;
   paymentType: 'cash' | 'transfer' | 'card';
   paymentReference?: string;
+  tipAmount?: number;
 }): Promise<ActionResult<{ tab: ITab }>> {
   try {
     const cookieStore = await cookies();
@@ -409,6 +411,7 @@ export async function recordPartialPaymentAction(params: {
       paymentType: params.paymentType,
       paymentReference: params.paymentReference,
       processedBy: session.userId,
+      tipAmount: params.tipAmount,
     });
 
     revalidatePath('/dashboard/orders/tabs');
@@ -432,8 +435,11 @@ export async function recordPartialPaymentAction(params: {
 }
 
 /**
- * Complete tab payment manually (admin)
- * For cash, transfer, or POS payments
+ * Complete tab payment manually (admin).
+ * For cash, transfer, or POS payments.
+ *
+ * @requirement REQ-035 - optional tipAmount captured on the closing
+ *   partial-payment row.
  */
 export async function completeTabPaymentManuallyAction(params: {
   tabId: string;
@@ -441,6 +447,7 @@ export async function completeTabPaymentManuallyAction(params: {
   paymentReference: string;
   comments?: string;
   businessDate?: Date;
+  tipAmount?: number;
 }): Promise<ActionResult<{ tab: ITab }>> {
   try {
     const cookieStore = await cookies();
@@ -481,6 +488,7 @@ export async function completeTabPaymentManuallyAction(params: {
       comments: params.comments,
       processedBy: session.userId,
       businessDate: params.businessDate,
+      tipAmount: params.tipAmount,
     } as any);
 
     revalidatePath('/dashboard/orders/tabs');

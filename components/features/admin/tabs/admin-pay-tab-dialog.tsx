@@ -20,6 +20,7 @@ import {
   recordPartialPaymentAction,
 } from '@/app/actions/tabs/tab-actions';
 import { BusinessDayCheckbox } from '@/components/features/admin/business-day-checkbox';
+import { TipInputRow } from '@/components/features/orders/tip-input-row';
 import {
   Loader2,
   CreditCard,
@@ -67,6 +68,12 @@ export function AdminPayTabDialog({
     'cash' | 'transfer' | 'card'
   >('cash');
   const [partialPaymentReference, setPartialPaymentReference] = useState('');
+  // REQ-035 — tip capture for full and partial close-tab flows. The
+  // closing payment becomes a partial-payment row carrying the tip;
+  // partial payments carry the tip on their own row. Tip method = the
+  // row's paymentType (no separate dropdown).
+  const [tipAmount, setTipAmount] = useState(0);
+  const [partialTipAmount, setPartialTipAmount] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [businessDate, setBusinessDate] = useState<Date | undefined>(undefined);
   const { toast } = useToast();
@@ -92,6 +99,7 @@ export function AdminPayTabDialog({
         paymentReference: paymentReference.trim(),
         comments: comments.trim(),
         businessDate,
+        tipAmount: tipAmount > 0 ? tipAmount : undefined,
       });
 
       if (result.success) {
@@ -161,6 +169,7 @@ export function AdminPayTabDialog({
         note: partialNote.trim(),
         paymentType: partialPaymentType,
         paymentReference: partialPaymentReference.trim() || undefined,
+        tipAmount: partialTipAmount > 0 ? partialTipAmount : undefined,
       });
 
       if (result.success) {
@@ -203,6 +212,8 @@ export function AdminPayTabDialog({
     setPartialAmount('');
     setPartialNote('');
     setPartialPaymentReference('');
+    setTipAmount(0);
+    setPartialTipAmount(0);
   }
 
   return (
@@ -388,6 +399,17 @@ export function AdminPayTabDialog({
                 />
               </div>
 
+              {/* REQ-035 — tip on the closing payment. Tip method
+                  inherits the closing payment's paymentType (no
+                  separate dropdown — the bill-method radio above is
+                  the source of truth). */}
+              <TipInputRow
+                tipAmount={tipAmount}
+                onTipAmountChange={setTipAmount}
+                disabled={isSubmitting}
+                id="tab-close-tip"
+              />
+
               <BusinessDayCheckbox onBusinessDateChange={setBusinessDate} />
 
               <Button
@@ -500,6 +522,15 @@ export function AdminPayTabDialog({
                   disabled={isSubmitting}
                 />
               </div>
+
+              {/* REQ-035 — tip on this partial-payment row. Tip
+                  method inherits the row's paymentType. */}
+              <TipInputRow
+                tipAmount={partialTipAmount}
+                onTipAmountChange={setPartialTipAmount}
+                disabled={isSubmitting}
+                id="tab-partial-tip"
+              />
 
               {partialAmount &&
                 parseFloat(partialAmount) > 0 &&

@@ -104,6 +104,23 @@ export interface DailySummaryReport {
     unspecified: number;
     total: number;
   };
+  /**
+   * @requirement REQ-035 — tips received, broken down by the method
+   * each tip arrived on. Tracked separately from `paymentBreakdown` so
+   * tips never inflate revenue figures (paymentBreakdown.total stays
+   * revenue-only). Sources:
+   *   - Order.tipAmount keyed by `tipPaymentMethod ?? paymentMethod`.
+   *   - Tab.partialPayments[].tipAmount keyed by the row's `paymentType`.
+   */
+  tipsBreakdown: {
+    cash: number;
+    card: number;
+    transfer: number;
+    ussd: number;
+    phone: number;
+    unspecified: number;
+    total: number;
+  };
   netProfit: number;
   metrics: {
     grossProfitMargin: number;
@@ -115,15 +132,19 @@ export interface DailySummaryReport {
 export class FinancialReportService {
   /**
    * @requirement REQ-013 - Aggregate partial payments from tabs into payment breakdown
+   * @requirement REQ-035 - also accumulate per-row tip amounts into tipsBreakdown
+   *
    * Queries Tab.partialPayments where paidAt falls in the date range and adds
-   * amounts to the payment breakdown by payment type. Also returns the total
-   * partial payment amount per tab so order totals can be adjusted to avoid
-   * double-counting.
+   * amounts to the payment breakdown by payment type. Tips on the same rows
+   * accumulate into a parallel tipsBreakdown — they do NOT count toward
+   * `paymentBreakdown.total`. Also returns the total partial payment amount
+   * per tab so order totals can be adjusted to avoid double-counting.
    */
   private static async aggregatePartialPayments(
     startDate: Date,
     endDate: Date,
-    paymentBreakdown: Record<string, number>
+    paymentBreakdown: Record<string, number>,
+    tipsBreakdown?: Record<string, number>
   ): Promise<{
     tabPartialTotals: Map<string, number>;
     totalPartialPayments: number;
@@ -150,6 +171,7 @@ export class FinancialReportService {
       for (const pp of tab.partialPayments || []) {
         const method = pp.paymentType as string;
         const amount = pp.amount || 0;
+        const tip = (pp as { tipAmount?: number }).tipAmount || 0;
 
         if (method && validMethods.includes(method)) {
           paymentBreakdown[method] += amount;
@@ -158,6 +180,18 @@ export class FinancialReportService {
         }
         paymentBreakdown.total += amount;
         totalPartialPayments += amount;
+
+        // REQ-035 — accumulate the row's tip into tipsBreakdown using
+        // the same paymentType bucket. Tips are kept out of
+        // paymentBreakdown.total to preserve the revenue-only invariant.
+        if (tipsBreakdown && tip > 0) {
+          if (method && validMethods.includes(method)) {
+            tipsBreakdown[method] += tip;
+          } else {
+            tipsBreakdown.unspecified += tip;
+          }
+          tipsBreakdown.total += tip;
+        }
 
         // Track total partial payments per tab for double-counting prevention
         const tabId = tab._id.toString();
@@ -228,6 +262,15 @@ export class FinancialReportService {
         unspecified: 0,
         total: 0,
       },
+      tipsBreakdown: {
+        cash: 0,
+        card: 0,
+        transfer: 0,
+        ussd: 0,
+        phone: 0,
+        unspecified: 0,
+        total: 0,
+      },
       netProfit: 0,
       metrics: {
         grossProfitMargin: 0,
@@ -240,11 +283,14 @@ export class FinancialReportService {
      * @requirement REQ-013 - Aggregate partial payments from tabs first,
      * then aggregate order payments, subtracting partial payment amounts
      * from tab orders to avoid double-counting.
+     * @requirement REQ-035 - also accumulate per-row tip amounts into
+     * `report.tipsBreakdown` (independent of paymentBreakdown).
      */
     const {} = await FinancialReportService.aggregatePartialPayments(
       startDate,
       endDate,
-      report.paymentBreakdown as Record<string, number>
+      report.paymentBreakdown as Record<string, number>,
+      report.tipsBreakdown as Record<string, number>
     );
     // Note: aggregatePartialPayments now uses Tab.businessDate for attribution
 
@@ -309,6 +355,27 @@ export class FinancialReportService {
           report.paymentBreakdown.unspecified += amount;
         }
         report.paymentBreakdown.total += amount;
+      }
+
+      /**
+       * @requirement REQ-035 — tips on this order roll into tipsBreakdown,
+       * keyed by `tipPaymentMethod` (or `paymentMethod` for legacy rows).
+       * Tab orders skip this path because the tab's partial-payment rows
+       * are the source of truth for tab tips (avoids double-counting when
+       * the closing payment is captured both as an Order.tipAmount and as
+       * a partial-payment subdoc tipAmount). Express pay-now orders have
+       * no tabId, so they always run this branch.
+       */
+      const tip = order.tipAmount || 0;
+      if (!order.tabId && tip > 0) {
+        const tipMethod =
+          (order.tipPaymentMethod as string | undefined) ?? method;
+        if (tipMethod && validMethods.includes(tipMethod)) {
+          (report.tipsBreakdown as Record<string, number>)[tipMethod] += tip;
+        } else {
+          report.tipsBreakdown.unspecified += tip;
+        }
+        report.tipsBreakdown.total += tip;
       }
     }
 
@@ -505,6 +572,15 @@ export class FinancialReportService {
         unspecified: 0,
         total: 0,
       },
+      tipsBreakdown: {
+        cash: 0,
+        card: 0,
+        transfer: 0,
+        ussd: 0,
+        phone: 0,
+        unspecified: 0,
+        total: 0,
+      },
       netProfit: 0,
       metrics: {
         grossProfitMargin: 0,
@@ -515,11 +591,13 @@ export class FinancialReportService {
 
     /**
      * @requirement REQ-013 - Same partial payment logic as generateDailySummary
+     * @requirement REQ-035 - same tipsBreakdown aggregation
      */
     const {} = await FinancialReportService.aggregatePartialPayments(
       start,
       end,
-      report.paymentBreakdown as Record<string, number>
+      report.paymentBreakdown as Record<string, number>,
+      report.tipsBreakdown as Record<string, number>
     );
 
     const rangeTabIdsWithPartials = new Set<string>();
@@ -570,6 +648,21 @@ export class FinancialReportService {
           report.paymentBreakdown.unspecified += amount;
         }
         report.paymentBreakdown.total += amount;
+      }
+
+      // REQ-035 — non-tab orders (express pay-now) contribute their
+      // Order.tipAmount to tipsBreakdown. Tab orders skip this branch
+      // because their partial-payment subdocs already cover tab tips.
+      const tip = order.tipAmount || 0;
+      if (!order.tabId && tip > 0) {
+        const tipMethod =
+          (order.tipPaymentMethod as string | undefined) ?? method;
+        if (tipMethod && validMethods.includes(tipMethod)) {
+          (report.tipsBreakdown as Record<string, number>)[tipMethod] += tip;
+        } else {
+          report.tipsBreakdown.unspecified += tip;
+        }
+        report.tipsBreakdown.total += tip;
       }
     }
 

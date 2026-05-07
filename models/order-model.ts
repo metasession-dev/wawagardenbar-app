@@ -9,6 +9,7 @@ import {
   OrderType,
   OrderStatus,
 } from '../interfaces';
+import { PAYMENT_METHODS_FULL } from '../interfaces/payment-method.interface';
 
 const orderItemSchema = new Schema<IOrderItem>(
   {
@@ -140,6 +141,13 @@ const orderSchema = new Schema<IOrder>(
     deliveryFee: { type: Number, default: 0, min: 0 },
     discount: { type: Number, default: 0, min: 0 },
     tipAmount: { type: Number, default: 0, min: 0 },
+    // REQ-035 — payment method the *tip* arrived on. Optional and
+    // independent of `paymentMethod` (customer can pay card and tip cash).
+    // Validated below: required iff `tipAmount > 0`.
+    tipPaymentMethod: {
+      type: String,
+      enum: [...PAYMENT_METHODS_FULL],
+    },
     total: { type: Number, required: true, min: 0 },
     totalCost: { type: Number, default: 0, min: 0 },
     grossProfit: { type: Number, default: 0 },
@@ -154,7 +162,7 @@ const orderSchema = new Schema<IOrder>(
     transactionReference: { type: String },
     paymentMethod: {
       type: String,
-      enum: ['card', 'transfer', 'ussd', 'phone', 'cash'],
+      enum: [...PAYMENT_METHODS_FULL],
     },
     paymentStatus: {
       type: String,
@@ -249,6 +257,21 @@ orderSchema.pre('save', function preSave(next) {
         timestamp: new Date(),
       },
     ];
+  }
+  next();
+});
+
+// REQ-035 — invariant: a non-zero tip must declare its payment method.
+// Mongoose `validate` runs before `save`, so this catches both new docs
+// and updates that mutate either field.
+orderSchema.pre('validate', function preValidateTip(next) {
+  const tip = this.tipAmount ?? 0;
+  if (tip > 0 && !this.tipPaymentMethod) {
+    return next(
+      new Error(
+        'Order: tipPaymentMethod is required when tipAmount > 0 (REQ-035)'
+      )
+    );
   }
   next();
 });

@@ -110,6 +110,10 @@ const tabSchema = new Schema<ITab>(
           required: true,
         },
         paidAt: { type: Date, default: Date.now },
+        // REQ-035 — tip on this partial-payment row. The row's
+        // `paymentType` doubles as the tip method. Tab-level `tipAmount`
+        // is recomputed as the sum of these by the pre('save') hook.
+        tipAmount: { type: Number, default: 0, min: 0 },
       },
     ],
     paymentStatus: {
@@ -161,6 +165,19 @@ tabSchema.index({ userId: 1, status: 1 });
 tabSchema.index({ openedAt: -1 });
 tabSchema.index({ businessDate: 1 });
 tabSchema.index({ tableNumber: 1, status: 1 });
+
+// REQ-035 — tab-level `tipAmount` is a derived sum of partial-payment
+// tips. Recompute on every save so callers cannot drift the two apart.
+// (Pre-REQ-035 callers only ever set the tab-level field directly; their
+// behaviour is preserved when no partial-payment carries a tip — the sum
+// is 0 and the existing field is overwritten with 0, matching the
+// default. After REQ-035, all writes go through the partial-payment
+// path which keeps both fields in sync.)
+tabSchema.pre('save', function recomputeTabTipAmount(next) {
+  const partials = this.partialPayments ?? [];
+  this.tipAmount = partials.reduce((sum, pp) => sum + (pp.tipAmount ?? 0), 0);
+  next();
+});
 
 const TabModel: Model<ITab> =
   mongoose.models.Tab || mongoose.model<ITab>('Tab', tabSchema);

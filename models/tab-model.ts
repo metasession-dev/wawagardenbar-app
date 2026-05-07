@@ -110,10 +110,17 @@ const tabSchema = new Schema<ITab>(
           required: true,
         },
         paidAt: { type: Date, default: Date.now },
-        // REQ-035 — tip on this partial-payment row. The row's
-        // `paymentType` doubles as the tip method. Tab-level `tipAmount`
-        // is recomputed as the sum of these by the pre('save') hook.
+        // REQ-035 — tip on this partial-payment row. Tab-level
+        // `tipAmount` is recomputed as the sum of these by pre('save').
         tipAmount: { type: Number, default: 0, min: 0 },
+        // REQ-036 — independent tip-payment-method per partial row.
+        // Optional; when unset, the daily-report aggregator falls back
+        // to the row's own `paymentType`. Lets staff record card-paid
+        // bill + cash-paid tip on the same row.
+        tipPaymentMethod: {
+          type: String,
+          enum: ['cash', 'transfer', 'card'],
+        },
       },
     ],
     paymentStatus: {

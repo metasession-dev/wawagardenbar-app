@@ -181,12 +181,15 @@ export class FinancialReportService {
         paymentBreakdown.total += amount;
         totalPartialPayments += amount;
 
-        // REQ-035 — accumulate the row's tip into tipsBreakdown using
-        // the same paymentType bucket. Tips are kept out of
-        // paymentBreakdown.total to preserve the revenue-only invariant.
+        // REQ-035 — accumulate the row's tip into tipsBreakdown.
+        // REQ-036 — prefer the row's explicit tipPaymentMethod over
+        // paymentType so a card-paid bill + cash-paid tip lands in the
+        // cash bucket. Falls back to paymentType for legacy rows.
         if (tipsBreakdown && tip > 0) {
-          if (method && validMethods.includes(method)) {
-            tipsBreakdown[method] += tip;
+          const tipMethod =
+            (pp as { tipPaymentMethod?: string }).tipPaymentMethod ?? method;
+          if (tipMethod && validMethods.includes(tipMethod)) {
+            tipsBreakdown[tipMethod] += tip;
           } else {
             tipsBreakdown.unspecified += tip;
           }

@@ -374,8 +374,10 @@ export async function expressGetTabForCloseAction(
  * Close a tab with payment (express flow).
  *
  * @requirement REQ-035 — accepts optional `tipAmount` for the closing
- * payment. The tip's method = the closing payment's `paymentType` (per
- * the locked design decision: one tip per partial-payment row).
+ * payment.
+ * @requirement REQ-036 — accepts optional `tipPaymentMethod`,
+ * independent of `paymentType`. Lets staff record a card-paid bill +
+ * cash-paid tip on the same closing payment row.
  */
 export async function expressCloseTabAction(params: {
   tabId: string;
@@ -383,6 +385,7 @@ export async function expressCloseTabAction(params: {
   paymentReference?: string;
   businessDate?: Date;
   tipAmount?: number;
+  tipPaymentMethod?: 'cash' | 'transfer' | 'card';
 }): Promise<ActionResult<{ tab: ITab }>> {
   try {
     const session = await requireAdminSession();
@@ -399,6 +402,7 @@ export async function expressCloseTabAction(params: {
       processedBy: session.userId!,
       businessDate: params.businessDate,
       tipAmount: params.tipAmount,
+      tipPaymentMethod: params.tipPaymentMethod,
     } as any);
 
     revalidatePath('/dashboard/orders');

@@ -86,6 +86,11 @@ async function getTabDetails(tabId: string) {
           paymentType: pp.paymentType,
           paymentReference: pp.paymentReference,
           paidAt: pp.paidAt,
+          // REQ-035 — per-row tip amount.
+          // REQ-036 — per-row tip payment method (optional; falls back
+          // to paymentType in the report when unset).
+          tipAmount: pp.tipAmount ?? 0,
+          tipPaymentMethod: pp.tipPaymentMethod,
         }))
       : [],
   };
@@ -306,6 +311,20 @@ export default async function DashboardTabDetailsPage({
                         {pp.paymentReference && (
                           <p className="text-xs text-muted-foreground">
                             Ref: {pp.paymentReference}
+                          </p>
+                        )}
+                        {/* REQ-035/REQ-036 — per-row tip + method. */}
+                        {pp.tipAmount > 0 && (
+                          <p className="text-xs text-amber-700 dark:text-amber-500">
+                            + ₦{pp.tipAmount.toLocaleString()} tip
+                            <span className="ml-1 text-muted-foreground">
+                              (via{' '}
+                              {(pp.tipPaymentMethod ?? pp.paymentType) ===
+                              'card'
+                                ? 'POS / Card'
+                                : (pp.tipPaymentMethod ?? pp.paymentType)}
+                              )
+                            </span>
                           </p>
                         )}
                       </div>

@@ -564,8 +564,9 @@ export class TabService {
 
   /**
    * @requirement REQ-012 - Record a partial payment on an open tab
-   * @requirement REQ-035 - optional tipAmount captured on the row;
-   *   row's paymentType doubles as the tip method.
+   * @requirement REQ-035 - optional tipAmount captured on the row.
+   * @requirement REQ-036 - independent tipPaymentMethod captured on the
+   *   row (falls back to row's paymentType for legacy callers).
    */
   static async recordPartialPayment(params: {
     tabId: string;
@@ -575,6 +576,7 @@ export class TabService {
     paymentReference?: string;
     processedBy: string;
     tipAmount?: number;
+    tipPaymentMethod?: 'cash' | 'transfer' | 'card';
   }): Promise<ITab> {
     await connectDB();
 
@@ -627,6 +629,12 @@ export class TabService {
       processedBy: new Types.ObjectId(params.processedBy),
       paidAt: new Date(),
       tipAmount,
+      // REQ-036 — only persist tipPaymentMethod when explicitly supplied;
+      // omitting it is the signal to the daily-report aggregator to fall
+      // back to this row's `paymentType` (legacy behaviour preserved).
+      ...(params.tipPaymentMethod !== undefined
+        ? { tipPaymentMethod: params.tipPaymentMethod }
+        : {}),
     });
 
     await tab.save();
@@ -660,10 +668,13 @@ export class TabService {
    * For cash, transfer, or POS payments.
    *
    * @requirement REQ-035 — accepts optional `tipAmount`. The closing
-   * payment is now persisted as a partial-payment row carrying its own
-   * tipAmount, so multi-method tabs (e.g. card + cash tip) capture the
-   * tip alongside the bill payment that received it. The TabModel
-   * pre('save') hook recomputes tab-level tipAmount as the sum.
+   * payment is persisted as a partial-payment row carrying its own
+   * tipAmount, so multi-method tabs capture the tip alongside the bill
+   * payment that received it. The TabModel pre('save') hook recomputes
+   * tab-level tipAmount as the sum.
+   * @requirement REQ-036 — accepts optional `tipPaymentMethod`,
+   * independent of `paymentType`. Lets staff record a card-paid bill +
+   * cash-paid tip on the same closing payment row.
    */
   static async completeTabPaymentManually(params: {
     tabId: string;
@@ -672,6 +683,7 @@ export class TabService {
     comments?: string;
     processedBy: string;
     tipAmount?: number;
+    tipPaymentMethod?: 'cash' | 'transfer' | 'card';
   }): Promise<ITab> {
     await connectDB();
 
@@ -721,6 +733,11 @@ export class TabService {
         processedBy: new Types.ObjectId(params.processedBy),
         paidAt: new Date(),
         tipAmount,
+        // REQ-036 — persist explicit tipPaymentMethod when provided;
+        // omitting it lets the aggregator fall back to `paymentType`.
+        ...(params.tipPaymentMethod !== undefined
+          ? { tipPaymentMethod: params.tipPaymentMethod }
+          : {}),
       });
     }
 

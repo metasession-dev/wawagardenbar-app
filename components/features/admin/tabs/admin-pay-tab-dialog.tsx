@@ -70,10 +70,29 @@ export function AdminPayTabDialog({
   const [partialPaymentReference, setPartialPaymentReference] = useState('');
   // REQ-035 — tip capture for full and partial close-tab flows. The
   // closing payment becomes a partial-payment row carrying the tip;
-  // partial payments carry the tip on their own row. Tip method = the
-  // row's paymentType (no separate dropdown).
+  // partial payments carry the tip on their own row.
+  // REQ-036 — tip method is now independently selectable per row.
+  // Default = the row's bill paymentType (paymentType for full,
+  // partialPaymentType for partial); staff can override via the
+  // dropdown in <TipInputRow>.
   const [tipAmount, setTipAmount] = useState(0);
+  const [tipPaymentMethod, setTipPaymentMethod] = useState<
+    'cash' | 'transfer' | 'card'
+  >('cash');
+  const [tipMethodOverridden, setTipMethodOverridden] = useState(false);
+  const effectiveTipMethod = tipMethodOverridden
+    ? tipPaymentMethod
+    : paymentType;
+
   const [partialTipAmount, setPartialTipAmount] = useState(0);
+  const [partialTipPaymentMethod, setPartialTipPaymentMethod] = useState<
+    'cash' | 'transfer' | 'card'
+  >('cash');
+  const [partialTipMethodOverridden, setPartialTipMethodOverridden] =
+    useState(false);
+  const partialEffectiveTipMethod = partialTipMethodOverridden
+    ? partialTipPaymentMethod
+    : partialPaymentType;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [businessDate, setBusinessDate] = useState<Date | undefined>(undefined);
   const { toast } = useToast();
@@ -100,6 +119,11 @@ export function AdminPayTabDialog({
         comments: comments.trim(),
         businessDate,
         tipAmount: tipAmount > 0 ? tipAmount : undefined,
+        // REQ-036 — only forward when the tip method differs from the
+        // bill type (an explicit override). When effective = bill type,
+        // omitting it lets the aggregator's `??` fallback do its job.
+        tipPaymentMethod:
+          tipAmount > 0 && tipMethodOverridden ? effectiveTipMethod : undefined,
       });
 
       if (result.success) {
@@ -170,6 +194,11 @@ export function AdminPayTabDialog({
         paymentType: partialPaymentType,
         paymentReference: partialPaymentReference.trim() || undefined,
         tipAmount: partialTipAmount > 0 ? partialTipAmount : undefined,
+        // REQ-036 — explicit tip method when overridden.
+        tipPaymentMethod:
+          partialTipAmount > 0 && partialTipMethodOverridden
+            ? partialEffectiveTipMethod
+            : undefined,
       });
 
       if (result.success) {
@@ -214,6 +243,8 @@ export function AdminPayTabDialog({
     setPartialPaymentReference('');
     setTipAmount(0);
     setPartialTipAmount(0);
+    setTipMethodOverridden(false);
+    setPartialTipMethodOverridden(false);
   }
 
   return (
@@ -399,13 +430,18 @@ export function AdminPayTabDialog({
                 />
               </div>
 
-              {/* REQ-035 — tip on the closing payment. Tip method
-                  inherits the closing payment's paymentType (no
-                  separate dropdown — the bill-method radio above is
-                  the source of truth). */}
+              {/* REQ-035 — tip on the closing payment.
+                  REQ-036 — tip method dropdown is now independent of
+                  the bill payment type (defaults to it but can be
+                  overridden). */}
               <TipInputRow
                 tipAmount={tipAmount}
                 onTipAmountChange={setTipAmount}
+                tipPaymentMethod={effectiveTipMethod}
+                onTipPaymentMethodChange={(m) => {
+                  setTipPaymentMethod(m);
+                  setTipMethodOverridden(true);
+                }}
                 disabled={isSubmitting}
                 id="tab-close-tip"
               />
@@ -523,11 +559,17 @@ export function AdminPayTabDialog({
                 />
               </div>
 
-              {/* REQ-035 — tip on this partial-payment row. Tip
-                  method inherits the row's paymentType. */}
+              {/* REQ-035 — tip on this partial-payment row.
+                  REQ-036 — tip method dropdown is independent of the
+                  row's paymentType (defaults to it but can be overridden). */}
               <TipInputRow
                 tipAmount={partialTipAmount}
                 onTipAmountChange={setPartialTipAmount}
+                tipPaymentMethod={partialEffectiveTipMethod}
+                onTipPaymentMethodChange={(m) => {
+                  setPartialTipPaymentMethod(m);
+                  setPartialTipMethodOverridden(true);
+                }}
                 disabled={isSubmitting}
                 id="tab-partial-tip"
               />

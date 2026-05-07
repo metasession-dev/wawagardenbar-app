@@ -662,6 +662,7 @@ This section tracks discrete change requests (REQ-001 through REQ-008) that repr
 | REQ-032 | #70   | MEDIUM | compliance/evidence/REQ-032/ | APPROVED - DEPLOYED                                                                                | ostendo-io      | 2026-05-01 |
 | REQ-033 | #73   | MEDIUM | compliance/evidence/REQ-033/ | APPROVED - DEPLOYED                                                                                | ostendo-io      | 2026-05-04 |
 | REQ-035 | #76   | HIGH   | compliance/evidence/REQ-035/ | TESTED - PENDING SIGN-OFF                                                                          | ostendo-io      | 2026-05-07 |
+| REQ-036 | #77   | MEDIUM | compliance/evidence/REQ-036/ | DRAFT (add-on to REQ-035 #76 — tip-method dropdown parity + tip display on order surfaces)         | ostendo-io      | 2026-05-07 |
 
 ### Change Request Dependencies
 

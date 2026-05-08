@@ -7,7 +7,7 @@ description: Create a PR from develop to main — triggers CI independent verifi
 **Pipeline Stage:** 4 of 5
 **Previous:** `3-compile-evidence.md` (tracked) or `2-implement-and-test.md` (untracked)
 **Next:** `5-deploy-main.md` (after PR approved)
-**References:** Test Policy (`sdlc/files/Test_Policy.md` in META-COMPLY) (approval gate, AI governance), Test Strategy (reviewer requirements)
+**References:** Test Policy (`sdlc/files/Test_Policy.md` in DevAudit) (approval gate, AI governance), Test Strategy (reviewer requirements)
 
 ---
 
@@ -19,15 +19,15 @@ description: Create a PR from develop to main — triggers CI independent verifi
 - CI on `develop` is green
 - UAT verification has passed
 - Evidence is compiled and uploaded
-- META-COMPLY UAT approval is granted
+- DevAudit UAT approval is granted
 
 The PR is the **merge request**, not the development workspace. Develop on `develop`, iterate until ready, then create the PR as the final step before merge.
 
 ## What Happens at This Stage
 
-When you create the PR, CI runs automatically — GitHub Actions re-executes the verification gates (TypeScript, SAST, dependency audit, E2E) independently. The META-COMPLY UAT approval check also runs, verifying the release has been approved for UAT in META-COMPLY. This produces tamper-resistant evidence verified by GitHub's infrastructure.
+When you create the PR, CI runs automatically — GitHub Actions re-executes the verification gates (TypeScript, SAST, dependency audit, E2E) independently. The DevAudit UAT approval check also runs, verifying the release has been approved for UAT in DevAudit. This produces tamper-resistant evidence verified by GitHub's infrastructure.
 
-> **Note:** The UAT approval check will fail initially if the release hasn't been approved in META-COMPLY yet. This is expected. After approving the release in META-COMPLY, re-run the `UAT Approval Gate` workflow from GitHub Actions (or use `workflow_dispatch`) to update the check status. The PR cannot be merged until this check passes — it is a required status check.
+> **Note:** The UAT approval check will fail initially if the release hasn't been approved in DevAudit yet. This is expected. After approving the release in DevAudit, re-run the `UAT Approval Gate` workflow from GitHub Actions (or use `workflow_dispatch`) to update the check status. The PR cannot be merged until this check passes — it is a required status check.
 
 What happens next depends on the risk level of the requirements in the PR:
 
@@ -43,7 +43,7 @@ If a PR contains requirements at multiple risk levels, the highest risk level de
 - All changes committed and pushed on `develop`
 - All local gates passing
 - **UAT verification passed** — health check, smoke test, feature verification recorded in evidence
-- **META-COMPLY UAT approval granted** — release status is `uat_approved` in META-COMPLY (required for the UAT approval check to pass on the PR)
+- **DevAudit UAT approval granted** — release status is `uat_approved` in DevAudit (required for the UAT approval check to pass on the PR)
 - For tracked requirements: RTM updated, release ticket created, evidence saved
 - **Know the risk level** of the requirement(s) — this determines whether a second reviewer is required
 
@@ -67,7 +67,7 @@ Before creating a PR, verify all prerequisites are met. **Do NOT skip this check
 - [ ] `compliance/evidence/REQ-XXX/ai-prompts.md` exists (if AI was used on MEDIUM/HIGH risk)
 - [ ] RTM status is `TESTED - PENDING SIGN-OFF`: `grep 'REQ-XXX' compliance/RTM.md`
 - [ ] Release ticket exists: `ls compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md`
-- [ ] Evidence uploaded to META-COMPLY (or saved locally if git-based)
+- [ ] Evidence uploaded to DevAudit (or saved locally if git-based)
 
 **Risk-tier reminder:**
 
@@ -140,7 +140,7 @@ CI runs automatically on this PR. The following gates must pass before merge:
 |--------|----------|---------------|
 | **CI status** | Green/red icons on PR commits | Pass/fail for each gate (independent, tamper-resistant) |
 | **CI E2E comment** | PR comments (automated) | E2E pass/fail with commit SHA |
-| **META-COMPLY evidence** | [View evidence on META-COMPLY](https://[META-COMPLY-URL]/projects/[PROJECT_SLUG]/requirements/REQ-XXX) | Playwright report, SAST results, dependency audit |
+| **DevAudit evidence** | [View evidence on DevAudit](https://[DevAudit-URL]/projects/[PROJECT_SLUG]/requirements/REQ-XXX) | Playwright report, SAST results, dependency audit |
 | **Security summary** | `compliance/evidence/REQ-XXX/security-summary.md` (in PR files) | Developer's local gate results + UAT verification |
 | **Test scope** | `compliance/evidence/REQ-XXX/test-scope.md` (in PR files) | What was planned to be tested (cross-reference with results) |
 | **Test changes** | PR description ("Test Changes" section) + PR files | Which test files were added/modified and what they cover |
@@ -238,7 +238,7 @@ gh pr create --base main --head develop --title "type: description" --body "$(ca
 - [ ] Dependency audit (CI)
 - [ ] E2E tests (CI)
 
-CI pass/fail visible on PR commit status icons. Full test evidence available on [META-COMPLY](https://[META-COMPLY-URL]/projects/[PROJECT_SLUG]).
+CI pass/fail visible on PR commit status icons. Full test evidence available on [DevAudit](https://[DevAudit-URL]/projects/[PROJECT_SLUG]).
 
 ## Reviewer Checklist
 - [ ] Code correct, no sensitive data, no regressions
@@ -252,7 +252,7 @@ EOF
 
 ### Step 4: Wait for CI and Report Honest Status (MANDATORY)
 
-After creating the PR, **do not hand off to the reviewer yet**. Required checks include `Compliance Validation` and `META-COMPLY UAT Approval` — both take time to run and can fail for reasons the local gates did not catch (e.g. a missing `RELEASE-TICKET-REQ-XXX.md` that only the PR-side validator sees).
+After creating the PR, **do not hand off to the reviewer yet**. Required checks include `Compliance Validation` and `DevAudit UAT Approval` — both take time to run and can fail for reasons the local gates did not catch (e.g. a missing `RELEASE-TICKET-REQ-XXX.md` that only the PR-side validator sees).
 
 1. Wait ≥60 seconds for required checks to register.
 2. Verify status:

@@ -10,7 +10,7 @@
 
 This document defines the technical standards for how Metasession builds and structures test infrastructure. It specifies mandatory tools, frameworks, directory structures, design patterns, code conventions, CI/CD pipeline configuration, environment setup, and artifact storage.
 
-This document answers **"what we build tests with and how we structure the code."** For why we test and our governance commitments, see the Test Policy (`sdlc/files/Test_Policy.md` in META-COMPLY). For how we approach testing methodically, see the Test Strategy.
+This document answers **"what we build tests with and how we structure the code."** For why we test and our governance commitments, see the Test Policy (`sdlc/files/Test_Policy.md` in DevAudit). For how we approach testing methodically, see the Test Strategy.
 
 Individual products implement these standards as documented in product-specific Test Plans.
 
@@ -260,7 +260,7 @@ PR cannot merge unless all stages pass.
 
 ### Git Hooks Configuration (Required)
 
-Hook templates are provided in `sdlc/files/hooks/` in the META-COMPLY repository. Copy them into your project during setup (see `0-project-setup.md` Step 5c).
+Hook templates are provided in `sdlc/files/hooks/` in the DevAudit repository. Copy them into your project during setup (see `0-project-setup.md` Step 5c).
 
 **Pre-commit** (`.husky/pre-commit` — template: `hooks/pre-commit`):
 
@@ -285,11 +285,11 @@ Hook templates are provided in `sdlc/files/hooks/` in the META-COMPLY repository
 ```bash
 npm install --save-dev husky @commitlint/cli @commitlint/config-conventional lint-staged
 npx husky init
-cp path/to/META-COMPLY/sdlc/files/hooks/commit-msg .husky/commit-msg
-cp path/to/META-COMPLY/sdlc/files/hooks/pre-commit .husky/pre-commit
-cp path/to/META-COMPLY/sdlc/files/hooks/pre-push .husky/pre-push
+cp path/to/devaudit/sdlc/files/hooks/commit-msg .husky/commit-msg
+cp path/to/devaudit/sdlc/files/hooks/pre-commit .husky/pre-commit
+cp path/to/devaudit/sdlc/files/hooks/pre-push .husky/pre-push
 chmod +x .husky/commit-msg .husky/pre-commit .husky/pre-push
-cp path/to/META-COMPLY/sdlc/files/hooks/commitlint.config.mjs commitlint.config.mjs
+cp path/to/devaudit/sdlc/files/hooks/commitlint.config.mjs commitlint.config.mjs
 npm pkg set scripts.prepare="husky"
 ```
 
@@ -462,7 +462,7 @@ Each product creates a product-specific Test Plan that:
 
 **Next Review Date:** March 2027
 
-**Related Documents:** Test Policy, Test Strategy, Periodic Security Review Schedule, Project Test Plans (in META-COMPLY/sdlc/files/)
+**Related Documents:** Test Policy, Test Strategy, Periodic Security Review Schedule, Project Test Plans (in devaudit/sdlc/files/)
 
 ---
 

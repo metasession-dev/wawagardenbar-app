@@ -278,19 +278,19 @@ change so it should be Low risk.
 
 ---
 
-## META-COMPLY Integration
+## DevAudit Integration
 
-META-COMPLY is the centralised compliance evidence portal for all Metasession projects. It replaces git-based evidence storage with a web application that provides secure, auditor-accessible evidence management.
+DevAudit is the centralised compliance evidence portal for all Metasession projects. It replaces git-based evidence storage with a web application that provides secure, auditor-accessible evidence management.
 
-**What changes when META-COMPLY is active:**
+**What changes when DevAudit is active:**
 
 ### Evidence Storage (Workflow 3: Compile Evidence)
 
-Evidence artifacts are uploaded to META-COMPLY instead of being committed to git.
+Evidence artifacts are uploaded to DevAudit instead of being committed to git.
 
-| Before (git-based)                                 | After (META-COMPLY)                             |
+| Before (git-based)                                 | After (DevAudit)                                |
 | -------------------------------------------------- | ----------------------------------------------- |
-| `cp e2e-results.json compliance/evidence/REQ-XXX/` | CLI script or CI uploads to META-COMPLY         |
+| `cp e2e-results.json compliance/evidence/REQ-XXX/` | CLI script or CI uploads to DevAudit            |
 | `git add compliance/evidence/REQ-XXX/`             | Binary artifacts excluded via `.gitignore`      |
 | Evidence only visible to repo collaborators        | Evidence visible to anyone with an access grant |
 | Screenshots bloat git history permanently          | Files stored in Supabase Storage, not git       |
@@ -306,7 +306,7 @@ Evidence artifacts are uploaded to META-COMPLY instead of being committed to git
 - `compliance/evidence/REQ-XXX/security-summary.md` — security summary (text)
 - Release tickets in `compliance/pending-releases/` and `compliance/approved-releases/`
 
-**What moves to META-COMPLY:**
+**What moves to DevAudit:**
 
 - Screenshots (PNG, JPEG) from E2E test runs
 - `e2e-results.json` and other generated test result files
@@ -316,20 +316,20 @@ Evidence artifacts are uploaded to META-COMPLY instead of being committed to git
 
 ### Compliance Document Syncing
 
-CI automatically uploads read-only snapshots of the compliance source documents (RTM, test plan, test cases, test summary report) to META-COMPLY on every merge to `main`. Auditors see the full compliance picture — planning documents alongside evidence — in one place, without needing repository access.
+CI automatically uploads read-only snapshots of the compliance source documents (RTM, test plan, test cases, test summary report) to DevAudit on every merge to `main`. Auditors see the full compliance picture — planning documents alongside evidence — in one place, without needing repository access.
 
-The source of truth for these documents remains in git. Developers continue to edit them as part of the normal workflow. META-COMPLY holds read-only copies tagged with the git SHA they were synced from.
+The source of truth for these documents remains in git. Developers continue to edit them as part of the normal workflow. DevAudit holds read-only copies tagged with the git SHA they were synced from.
 
 ### CI Pipeline Changes
 
-The sync script generates CI workflows from templates. The main CI pipeline (`ci.yml`) registers the release in META-COMPLY in parallel with quality gates, then uploads evidence after gates pass (including Playwright HTML reports and Jest coverage). A separate `compliance-evidence.yml` handles compliance-only pushes (e.g. RTM updates, release tickets) without running the full quality gate suite.
+The sync script generates CI workflows from templates. The main CI pipeline (`ci.yml`) registers the release in DevAudit in parallel with quality gates, then uploads evidence after gates pass (including Playwright HTML reports and Jest coverage). A separate `compliance-evidence.yml` handles compliance-only pushes (e.g. RTM updates, release tickets) without running the full quality gate suite.
 
-For manual integration, add the META-COMPLY evidence upload step to your CI workflow, after tests pass. The upload script is available at `scripts/upload-evidence.sh`.
+For manual integration, add the DevAudit evidence upload step to your CI workflow, after tests pass. The upload script is available at `scripts/upload-evidence.sh`.
 
 ```yaml
 # Add to .github/workflows/ci.yml, after the E2E test job
 upload-evidence:
-  name: Upload Evidence to META-COMPLY
+  name: Upload Evidence to DevAudit
   runs-on: ubuntu-latest
   needs: [e2e-tests]
   if: github.event_name == 'pull_request'
@@ -390,7 +390,7 @@ sync-compliance-docs:
 Add to your project's `.gitignore` to stop tracking binary evidence:
 
 ```gitignore
-# Compliance binary evidence (stored in META-COMPLY)
+# Compliance binary evidence (stored in DevAudit)
 compliance/evidence/**/*.json
 compliance/evidence/**/*.png
 compliance/evidence/**/*.jpeg
@@ -402,22 +402,22 @@ compliance/evidence/adhoc-*/
 
 ### Workflow 3 Prompt (Updated)
 
-When META-COMPLY is active, the evidence compilation prompt changes:
+When DevAudit is active, the evidence compilation prompt changes:
 
 ```
 Read 3-compile-evidence.md and compile all evidence for REQ-XXX.
 
 Verify all gates pass. For binary evidence (screenshots, JSON results,
-HTML reports), upload to META-COMPLY using the CLI script instead of
+HTML reports), upload to DevAudit using the CLI script instead of
 committing to git. Keep text-based evidence (test-scope.md, security-summary.md,
 ai-use-note.md) in git. Update the RTM, generate the release ticket, and commit.
 ```
 
 ### Access for Auditors
 
-Project admins manage auditor access through META-COMPLY:
+Project admins manage auditor access through DevAudit:
 
-1. Navigate to the project in META-COMPLY
+1. Navigate to the project in DevAudit
 2. Go to Access Management
 3. Enter the auditor's email, select "viewer" role, set an optional expiry date
 4. The auditor receives a magic link email — no password required
@@ -429,15 +429,15 @@ For one-off reviews, generate a time-limited share link instead of creating an a
 
 Add these to your GitHub repository (Settings → Secrets and variables → Actions):
 
-| Setting                | Tab       | Value                                                                              | Source                                              |
-| ---------------------- | --------- | ---------------------------------------------------------------------------------- | --------------------------------------------------- |
-| `META_COMPLY_BASE_URL` | Variables | The deployed META-COMPLY URL, e.g. `https://meta-comply-production.up.railway.app` | The hosting team                                    |
-| `META_COMPLY_API_KEY`  | Secrets   | Project-scoped API key (`mc_…`) with `uploader` role                               | META-COMPLY → Project Settings → API Keys → New key |
+| Setting                | Tab       | Value                                                             | Source                                           |
+| ---------------------- | --------- | ----------------------------------------------------------------- | ------------------------------------------------ |
+| `META_COMPLY_BASE_URL` | Variables | The deployed DevAudit URL, e.g. `https://devaudit.metasession.co` | The hosting team                                 |
+| `META_COMPLY_API_KEY`  | Secrets   | Project-scoped API key (`mc_…`) with `uploader` role              | DevAudit → Project Settings → API Keys → New key |
 
 ### Project Registration
 
-Before CI can upload evidence, the project must be registered in META-COMPLY:
+Before CI can upload evidence, the project must be registered in DevAudit:
 
-1. Sign in to META-COMPLY as an admin
+1. Sign in to DevAudit as an admin
 2. Create a new project with the project slug matching `[PROJECT_SLUG]` used in CI
 3. The storage namespace and access grants are created automatically

@@ -8,7 +8,7 @@
 
 ## Purpose
 
-This document defines the security activities that occur on a schedule rather than per-feature. Per-commit security scanning (SAST and SCA) is defined in the Test Strategy (`sdlc/files/Test_Strategy.md` in META-COMPLY). Specific tooling for those scans is defined in the Test Architecture. This document covers the periodic activities: penetration testing, full codebase review, disaster recovery testing, dependency deep audits, and third-party assessments.
+This document defines the security activities that occur on a schedule rather than per-feature. Per-commit security scanning (SAST and SCA) is defined in the Test Strategy (`sdlc/files/Test_Strategy.md` in DevAudit). Specific tooling for those scans is defined in the Test Architecture. This document covers the periodic activities: penetration testing, full codebase review, disaster recovery testing, dependency deep audits, and third-party assessments.
 
 ---
 
@@ -171,4 +171,4 @@ RTO and RPO targets are defined per project in their Test Plans.
 
 **Next Review Date:** June 2026 (quarterly)
 
-**Related Documents:** Test Policy, Test Strategy, Test Architecture, Project Test Plans (in META-COMPLY/sdlc/files/)
+**Related Documents:** Test Policy, Test Strategy, Test Architecture, Project Test Plans (in devaudit/sdlc/files/)

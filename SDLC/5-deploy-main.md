@@ -6,7 +6,7 @@ description: Merge approved PR, verify deployment including security checks, syn
 
 **Pipeline Stage:** 5 of 5
 **Previous:** `4-submit-for-review.md` (after PR approved and CI passed)
-**References:** Test Plan (post-deploy verification, DR targets), Test Strategy (`sdlc/files/Test_Strategy.md` in META-COMPLY)
+**References:** Test Plan (post-deploy verification, DR targets), Test Strategy (`sdlc/files/Test_Strategy.md` in DevAudit)
 
 ---
 
@@ -16,7 +16,7 @@ description: Merge approved PR, verify deployment including security checks, syn
 - **LOW risk:** Self-merged after CI passed
 - **MEDIUM/HIGH risk:** PR approved by a second human reviewer, no unresolved review comments
 - UAT verification passed (completed in workflow 3, recorded in evidence)
-- META-COMPLY UAT approval granted (verified by CI check on PR)
+- DevAudit UAT approval granted (verified by CI check on PR)
 
 ## Steps
 
@@ -180,12 +180,12 @@ git checkout develop
 
 If the project uses separate UAT and Production environments:
 
-| Environment | Branch    | Auto-deploy | Purpose                                                                                       |
-| ----------- | --------- | ----------- | --------------------------------------------------------------------------------------------- |
-| UAT         | `develop` | Yes         | Pre-PR verification — CI evidence uploaded to META-COMPLY, reviewed and approved before PR    |
-| Production  | `main`    | Yes         | Live deployment after PR approval — post-deploy evidence captured and uploaded to META-COMPLY |
+| Environment | Branch    | Auto-deploy | Purpose                                                                                    |
+| ----------- | --------- | ----------- | ------------------------------------------------------------------------------------------ |
+| UAT         | `develop` | Yes         | Pre-PR verification — CI evidence uploaded to DevAudit, reviewed and approved before PR    |
+| Production  | `main`    | Yes         | Live deployment after PR approval — post-deploy evidence captured and uploaded to DevAudit |
 
-UAT verification and META-COMPLY approval are completed in workflow 3 before the PR is created. After merge to main, the post-deploy workflow runs smoke tests against production, uploads evidence to META-COMPLY (environment=production), and marks the release as `released`.
+UAT verification and DevAudit approval are completed in workflow 3 before the PR is created. After merge to main, the post-deploy workflow runs smoke tests against production, uploads evidence to DevAudit (environment=production), and marks the release as `released`.
 
 ### Automated Post-Deploy Workflow
 
@@ -193,8 +193,8 @@ If your project has `post-deploy-prod.yml` (template in `sdlc/files/ci/`), Steps
 
 1. Waits for deployment to propagate
 2. Runs production smoke tests (health check, key endpoints)
-3. Uploads production evidence to META-COMPLY with `--environment production`
-4. Marks the release as `released` in META-COMPLY
+3. Uploads production evidence to DevAudit with `--environment production`
+4. Marks the release as `released` in DevAudit
 
 Manual verification (Step 5: security checks) is still recommended for MEDIUM/HIGH risk releases.
 

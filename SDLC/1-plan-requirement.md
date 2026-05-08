@@ -6,7 +6,7 @@ description: Define a new requirement in the RTM, classify risk, create implemen
 
 **Pipeline Stage:** 1 of 5
 **Next:** `2-implement-and-test.md`
-**References:** Test Policy (`sdlc/files/Test_Policy.md` in META-COMPLY) (risk classification, AI governance), Test Strategy (risk matrix, testing depth, AI documentation)
+**References:** Test Policy (`sdlc/files/Test_Policy.md` in DevAudit) (risk classification, AI governance), Test Strategy (risk matrix, testing depth, AI documentation)
 
 ---
 

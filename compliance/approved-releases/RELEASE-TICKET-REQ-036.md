@@ -1,12 +1,14 @@
 # Release Ticket: REQ-036 — Quick-action tip-method parity + tip display on order surfaces
 
-**Status:** DRAFT
+**Status:** APPROVED - DEPLOYED
 **Date:** 2026-05-07
+**Approved:** 2026-05-08 — META-COMPLY UAT approved (alongside REQ-035)
+**Merged:** 2026-05-08 12:44:04 UTC — merge commit `c5b4e44` (PR [#80](https://github.com/metasession-dev/wawagardenbar-app/pull/80), bundled with REQ-035)
 **Requirement ID:** REQ-036
 **Risk Level:** MEDIUM (additive schema field + thin service passthrough + UI display)
-**Issue:** [#77](https://github.com/metasession-dev/wawagardenbar-app/issues/77)
+**Issue:** [#77](https://github.com/metasession-dev/wawagardenbar-app/issues/77) (closed)
 **Parent Issue:** [#76](https://github.com/metasession-dev/wawagardenbar-app/issues/76) (REQ-035)
-**Add-on to:** REQ-035 — same merge cycle if both ready, otherwise separate PR after REQ-035.
+**Add-on to:** REQ-035 — shipped in the same merge cycle (PR #80).
 
 ---
 
@@ -112,8 +114,9 @@ Single additive change. Rollback = revert the merge commit. The new schema field
 
 ## Sign-off
 
-- [ ] Implementation complete
-- [ ] All quality gates pass on develop
-- [ ] META-COMPLY UAT approval obtained
-- [ ] PR merged to main
-- [ ] Production smoke (capture + display + report attribution) green
+- [x] Implementation complete (incl. D2 patch on `app/dashboard/orders/express/close-tab/page.tsx` after UAT-discovered missed surface)
+- [x] All quality gates pass on develop — CI run [#7](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/25555263101) on `3adf04b` (Quality Gates ✓ Register Release ✓ Upload Evidence ✓ — META-COMPLY [#263](https://github.com/metasession-dev/META-COMPLY/issues/263) infra fix verified end-to-end)
+- [x] META-COMPLY UAT approval obtained — 2026-05-08 (alongside REQ-035)
+- [x] PR merged to main — PR [#80](https://github.com/metasession-dev/wawagardenbar-app/pull/80), merge commit `c5b4e44` (2026-05-08 12:44:04 UTC)
+- [x] No backfill required — additive optional field; aggregator fallback handles legacy rows
+- [ ] Production smoke (capture + display + report attribution) green — pending

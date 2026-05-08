@@ -1,11 +1,14 @@
 # Release Ticket: REQ-035 — Tip recording at express checkout + tips breakdown in Daily Financial Report
 
-**Status:** DRAFT
+**Status:** APPROVED - DEPLOYED
 **Date:** 2026-05-07
+**Approved:** 2026-05-08 — META-COMPLY UAT approved
+**Merged:** 2026-05-08 12:44:04 UTC — merge commit `c5b4e44` (PR [#80](https://github.com/metasession-dev/wawagardenbar-app/pull/80))
 **Requirement ID:** REQ-035
 **Risk Level:** HIGH (financial-data write path; multi-collection schema additions; daily-report aggregator change)
-**Issue:** [#76](https://github.com/metasession-dev/wawagardenbar-app/issues/76)
+**Issue:** [#76](https://github.com/metasession-dev/wawagardenbar-app/issues/76) (closed)
 **Independent of:** REQ-034 (#74) — can ship in parallel, no soak-window dependency.
+**Add-on shipped alongside:** REQ-036 (#77) — tip-method dropdown parity + tip display on order surfaces.
 
 ---
 
@@ -127,10 +130,10 @@ No soak window required for downstream features. (REQ-034 is independent and que
 
 ## Sign-off
 
-- [ ] Implementation complete
-- [ ] All quality gates pass on develop
-- [ ] Backfill script run on UAT, log inspected
-- [ ] META-COMPLY UAT approval obtained
-- [ ] PR merged to main
-- [ ] Backfill script run on production
-- [ ] Production smoke (express tip + close-tab tip + report export) green
+- [x] Implementation complete
+- [x] All quality gates pass on develop — CI run [#7](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/25555263101) on `3adf04b` (Quality Gates ✓ Register Release ✓ Upload Evidence ✓)
+- [x] Backfill script run on UAT, log inspected — `wawagardenbar_uat` had 0 candidates (REQ-035 first surface to capture tips)
+- [x] META-COMPLY UAT approval obtained — 2026-05-08
+- [x] PR merged to main — PR [#80](https://github.com/metasession-dev/wawagardenbar-app/pull/80), merge commit `c5b4e44` (2026-05-08 12:44:04 UTC)
+- [ ] Backfill script run on production — pending user confirmation; expected 0 candidates (UAT pattern)
+- [ ] Production smoke (express tip + close-tab tip + report export) green — pending

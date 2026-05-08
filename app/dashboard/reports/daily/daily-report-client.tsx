@@ -2,13 +2,27 @@
 
 import { useState, useEffect } from 'react';
 import { subDays } from 'date-fns';
-import { Calendar, Download, TrendingUp, TrendingDown, DollarSign, Banknote, CreditCard, Building2, Smartphone, Phone } from 'lucide-react';
+import {
+  Calendar,
+  Download,
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Banknote,
+  CreditCard,
+  Building2,
+  Smartphone,
+  Phone,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { generateDailyReportAction, generateDateRangeReportAction } from '@/app/actions/reports/report-actions';
+import {
+  generateDailyReportAction,
+  generateDateRangeReportAction,
+} from '@/app/actions/reports/report-actions';
 import type { DailySummaryReport } from '@/services/financial-report-service';
 import { RevenueSection } from '@/components/features/reports/revenue-section';
 import { CostSection } from '@/components/features/reports/cost-section';
@@ -16,7 +30,12 @@ import { ProfitSection } from '@/components/features/reports/profit-section';
 import { ExpensesSection } from '@/components/features/reports/expenses-section';
 import { PriceOverridesSection } from '@/components/features/reports/price-overrides-section';
 import { ReportCharts } from '@/components/features/reports/report-charts';
-import { exportReportAsPDF, exportReportAsExcel, exportReportAsCSV } from '@/lib/report-export';
+import { TipsSection } from '@/components/features/reports/tips-section';
+import {
+  exportReportAsPDF,
+  exportReportAsExcel,
+  exportReportAsCSV,
+} from '@/lib/report-export';
 
 interface DateRange {
   from: Date;
@@ -44,11 +63,14 @@ export function DailyReportClient() {
 
     try {
       let result;
-      
+
       if (reportType === 'single') {
         result = await generateDailyReportAction(dateRange.from);
       } else {
-        result = await generateDateRangeReportAction(dateRange.from, dateRange.to);
+        result = await generateDateRangeReportAction(
+          dateRange.from,
+          dateRange.to
+        );
       }
 
       if (result.success && result.report) {
@@ -57,7 +79,8 @@ export function DailyReportClient() {
         setError(result.error || 'Failed to load report');
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'An unexpected error occurred';
+      const message =
+        err instanceof Error ? err.message : 'An unexpected error occurred';
       setError(message);
       console.error('Report error:', err);
     } finally {
@@ -107,7 +130,9 @@ export function DailyReportClient() {
       {/* Header with Date Selector */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Daily Financial Report</h2>
+          <h2 className="text-3xl font-bold tracking-tight">
+            Daily Financial Report
+          </h2>
           <p className="text-muted-foreground">
             Comprehensive financial analysis and insights
           </p>
@@ -152,8 +177,11 @@ export function DailyReportClient() {
               <Calendar className="h-5 w-5 text-muted-foreground" />
               <span className="text-sm font-medium">Report Period:</span>
             </div>
-            
-            <Tabs value={reportType} onValueChange={(v) => setReportType(v as 'single' | 'range')}>
+
+            <Tabs
+              value={reportType}
+              onValueChange={(v) => setReportType(v as 'single' | 'range')}
+            >
               <TabsList>
                 <TabsTrigger value="single">Single Day</TabsTrigger>
                 <TabsTrigger value="range">Date Range</TabsTrigger>
@@ -201,7 +229,9 @@ export function DailyReportClient() {
             {/* Total Revenue */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Total Revenue
+                </CardTitle>
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -217,7 +247,9 @@ export function DailyReportClient() {
             {/* Gross Profit */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Gross Profit</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Gross Profit
+                </CardTitle>
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -233,7 +265,9 @@ export function DailyReportClient() {
             {/* Operating Expenses */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Operating Expenses</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Operating Expenses
+                </CardTitle>
                 <TrendingDown className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -241,15 +275,23 @@ export function DailyReportClient() {
                   {formatCurrency(report.operatingExpenses.totalExpenses)}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {report.operatingExpenses.directCosts.length + report.operatingExpenses.operatingCosts.length} expenses
+                  {report.operatingExpenses.directCosts.length +
+                    report.operatingExpenses.operatingCosts.length}{' '}
+                  expenses
                 </p>
               </CardContent>
             </Card>
 
             {/* Net Profit */}
-            <Card className={report.netProfit >= 0 ? 'border-green-500' : 'border-red-500'}>
+            <Card
+              className={
+                report.netProfit >= 0 ? 'border-green-500' : 'border-red-500'
+              }
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Net Profit</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Net Profit
+                </CardTitle>
                 {report.netProfit >= 0 ? (
                   <TrendingUp className="h-4 w-4 text-green-500" />
                 ) : (
@@ -257,7 +299,9 @@ export function DailyReportClient() {
                 )}
               </CardHeader>
               <CardContent>
-                <div className={`text-2xl font-bold ${report.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <div
+                  className={`text-2xl font-bold ${report.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                >
                   {formatCurrency(report.netProfit)}
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -268,116 +312,195 @@ export function DailyReportClient() {
           </div>
 
           {/* Payment Breakdown */}
-          {report.paymentBreakdown && (report.metrics.orderCount > 0 || report.paymentBreakdown.total > 0) && (
-            <div className="space-y-3">
-              <h3 className="text-lg font-semibold">Revenue by Payment Method</h3>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {report.paymentBreakdown.cash > 0 && (
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Cash</CardTitle>
-                      <Banknote className="h-4 w-4 text-green-600" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{formatCurrency(report.paymentBreakdown.cash)}</div>
-                      <p className="text-xs text-muted-foreground">
-                        {((report.paymentBreakdown.cash / (report.paymentBreakdown.total || 1)) * 100).toFixed(1)}% of total
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-                {report.paymentBreakdown.card > 0 && (
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">POS / Card</CardTitle>
-                      <CreditCard className="h-4 w-4 text-blue-600" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{formatCurrency(report.paymentBreakdown.card)}</div>
-                      <p className="text-xs text-muted-foreground">
-                        {((report.paymentBreakdown.card / (report.paymentBreakdown.total || 1)) * 100).toFixed(1)}% of total
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-                {report.paymentBreakdown.transfer > 0 && (
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Transfer</CardTitle>
-                      <Building2 className="h-4 w-4 text-purple-600" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{formatCurrency(report.paymentBreakdown.transfer)}</div>
-                      <p className="text-xs text-muted-foreground">
-                        {((report.paymentBreakdown.transfer / (report.paymentBreakdown.total || 1)) * 100).toFixed(1)}% of total
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-                {report.paymentBreakdown.ussd > 0 && (
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">USSD</CardTitle>
-                      <Phone className="h-4 w-4 text-orange-600" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{formatCurrency(report.paymentBreakdown.ussd)}</div>
-                      <p className="text-xs text-muted-foreground">
-                        {((report.paymentBreakdown.ussd / (report.paymentBreakdown.total || 1)) * 100).toFixed(1)}% of total
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-                {report.paymentBreakdown.phone > 0 && (
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Phone</CardTitle>
-                      <Smartphone className="h-4 w-4 text-teal-600" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{formatCurrency(report.paymentBreakdown.phone)}</div>
-                      <p className="text-xs text-muted-foreground">
-                        {((report.paymentBreakdown.phone / (report.paymentBreakdown.total || 1)) * 100).toFixed(1)}% of total
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-                {report.paymentBreakdown.unspecified > 0 && (
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Unspecified</CardTitle>
-                      <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{formatCurrency(report.paymentBreakdown.unspecified)}</div>
-                      <p className="text-xs text-muted-foreground">
-                        {((report.paymentBreakdown.unspecified / (report.paymentBreakdown.total || 1)) * 100).toFixed(1)}% of total
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-                {report.paymentBreakdown.total === 0 && (
-                  <Card className="col-span-full">
-                    <CardContent className="py-6 text-center text-muted-foreground">
-                      Payment method data not available for these orders. Orders may have been recorded without specifying a payment method.
-                    </CardContent>
-                  </Card>
-                )}
+          {report.paymentBreakdown &&
+            (report.metrics.orderCount > 0 ||
+              report.paymentBreakdown.total > 0) && (
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold">
+                  Revenue by Payment Method
+                </h3>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {report.paymentBreakdown.cash > 0 && (
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">
+                          Cash
+                        </CardTitle>
+                        <Banknote className="h-4 w-4 text-green-600" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">
+                          {formatCurrency(report.paymentBreakdown.cash)}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {(
+                            (report.paymentBreakdown.cash /
+                              (report.paymentBreakdown.total || 1)) *
+                            100
+                          ).toFixed(1)}
+                          % of total
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                  {report.paymentBreakdown.card > 0 && (
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">
+                          POS / Card
+                        </CardTitle>
+                        <CreditCard className="h-4 w-4 text-blue-600" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">
+                          {formatCurrency(report.paymentBreakdown.card)}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {(
+                            (report.paymentBreakdown.card /
+                              (report.paymentBreakdown.total || 1)) *
+                            100
+                          ).toFixed(1)}
+                          % of total
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                  {report.paymentBreakdown.transfer > 0 && (
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">
+                          Transfer
+                        </CardTitle>
+                        <Building2 className="h-4 w-4 text-purple-600" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">
+                          {formatCurrency(report.paymentBreakdown.transfer)}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {(
+                            (report.paymentBreakdown.transfer /
+                              (report.paymentBreakdown.total || 1)) *
+                            100
+                          ).toFixed(1)}
+                          % of total
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                  {report.paymentBreakdown.ussd > 0 && (
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">
+                          USSD
+                        </CardTitle>
+                        <Phone className="h-4 w-4 text-orange-600" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">
+                          {formatCurrency(report.paymentBreakdown.ussd)}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {(
+                            (report.paymentBreakdown.ussd /
+                              (report.paymentBreakdown.total || 1)) *
+                            100
+                          ).toFixed(1)}
+                          % of total
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                  {report.paymentBreakdown.phone > 0 && (
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">
+                          Phone
+                        </CardTitle>
+                        <Smartphone className="h-4 w-4 text-teal-600" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">
+                          {formatCurrency(report.paymentBreakdown.phone)}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {(
+                            (report.paymentBreakdown.phone /
+                              (report.paymentBreakdown.total || 1)) *
+                            100
+                          ).toFixed(1)}
+                          % of total
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                  {report.paymentBreakdown.unspecified > 0 && (
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">
+                          Unspecified
+                        </CardTitle>
+                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">
+                          {formatCurrency(report.paymentBreakdown.unspecified)}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {(
+                            (report.paymentBreakdown.unspecified /
+                              (report.paymentBreakdown.total || 1)) *
+                            100
+                          ).toFixed(1)}
+                          % of total
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                  {report.paymentBreakdown.total === 0 && (
+                    <Card className="col-span-full">
+                      <CardContent className="py-6 text-center text-muted-foreground">
+                        Payment method data not available for these orders.
+                        Orders may have been recorded without specifying a
+                        payment method.
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+
+          {/* REQ-035 — Tips received, broken down by the method each
+              tip arrived on. Renders nothing on zero-tip days. */}
+          <TipsSection
+            breakdown={report.tipsBreakdown}
+            formatCurrency={formatCurrency}
+          />
 
           {/* Export Buttons */}
           <div className="flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => handleExport('pdf')}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleExport('pdf')}
+            >
               <Download className="h-4 w-4 mr-2" />
               Export PDF
             </Button>
-            <Button variant="outline" size="sm" onClick={() => handleExport('excel')}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleExport('excel')}
+            >
               <Download className="h-4 w-4 mr-2" />
               Export Excel
             </Button>
-            <Button variant="outline" size="sm" onClick={() => handleExport('csv')}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleExport('csv')}
+            >
               <Download className="h-4 w-4 mr-2" />
               Export CSV
             </Button>
@@ -427,7 +550,9 @@ export function DailyReportClient() {
           <CardContent className="py-12">
             <div className="text-center">
               <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No Report Generated</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                No Report Generated
+              </h3>
               <p className="text-muted-foreground mb-4">
                 Select a date and click "Generate Report" to view financial data
               </p>

@@ -19,12 +19,13 @@ echo "=== Compliance Artifact Validation ==="
 echo "Comparing: $BASE_BRANCH...HEAD"
 echo ""
 
-# Extract REQ-XXX references from commits in this PR. Require at least 3
-# digits so placeholder patterns like 'REQ-0XX' (used in commit-body
-# templates referring to multiple sub-REQs) don't create phantom IDs that
-# block CI.
-# (Project-local hardening — re-apply after every SDLC sync until pushed
-# upstream to META-COMPLY's master template.)
+# Extract REQ-XXX references from commits in this PR.
+#
+# Requires ≥3 digits so placeholder patterns like `REQ-0XX` (used in
+# commit-body templates referring to a batch of sub-REQs) don't create
+# phantom IDs that block CI — the loose `\d+` would match `REQ-0` from
+# `REQ-0XX` and then ERROR on a missing evidence dir for the phantom
+# `REQ-0`. The project's stable id format is REQ-001 onwards (#232).
 REQUIREMENTS=$(git log "$BASE_BRANCH"..HEAD --format='%B' | grep -oP 'REQ-\d{3,}' | sort -u || true)
 
 if [ -z "$REQUIREMENTS" ]; then
@@ -39,14 +40,17 @@ echo ""
 for REQ in $REQUIREMENTS; do
   echo "--- Checking $REQ ---"
 
-  # If the REQ has no RTM row, it's a forward-reference or design discussion
-  # mentioned in a commit body, not a tracked requirement for this release.
-  # Skip rather than fail so that planning notes (e.g. "this prereq for
-  # REQ-XXX") don't drag a not-yet-started REQ into release validation.
-  # (Project-local hardening — re-apply after every SDLC sync until pushed
-  # upstream to META-COMPLY's master template.)
+  # Skip REQs that have no RTM row — they're forward-references or
+  # design-discussion mentions in commit bodies, not tracked
+  # requirements for this release. Two practical cases (#232):
+  #   - "REQ-033 is a prereq for REQ-034" — REQ-034 hasn't started.
+  #   - REQ scaffolded then descoped — RTM row removed but old
+  #     `Ref: REQ-XXX` commits still grep-match.
+  # The `| $REQ ` pattern (leading pipe + trailing space) matches the
+  # markdown table row used in RTM, so a substring elsewhere doesn't
+  # accidentally satisfy it.
   if ! grep -q "| $REQ " compliance/RTM.md 2>/dev/null; then
-    echo "  INFO: $REQ is referenced in commits but has no RTM row — skipping (treated as forward-reference, not a tracked requirement for this release)"
+    echo "  INFO: $REQ is referenced in commits but has no RTM row — skipping (forward-reference, not a tracked requirement for this release)"
     continue
   fi
 
@@ -77,11 +81,11 @@ for REQ in $REQUIREMENTS; do
     # Two alternatives: directory-prefixed paths (captured whole), and bare
     # filenames containing .test. / .spec. (captured from the stem, not the
     # dot — without the leading [\w./-]+ the match would start at `.test.`
-    # and drop the filename entirely). See META-COMPLY #133.
+    # and drop the filename entirely). See DevAudit #133.
     #
     # mapfile + quoted expansion: without this, tokens like `__tests__/**`
     # get pathname-expanded by the for-loop and produce phantom "missing"
-    # errors for every real subdirectory. See META-COMPLY #137.
+    # errors for every real subdirectory. See DevAudit #137.
     mapfile -t TEST_FILES < <(
       grep -oP '(?:__tests__/|tests?/|e2e/|spec/)\S+|[\w./-]+\.(?:test|spec)\.\S+' \
         "compliance/evidence/$REQ/test-plan.md" 2>/dev/null \
@@ -118,11 +122,11 @@ for REQ in $REQUIREMENTS; do
     echo "  OK: test-execution-summary.md exists"
   fi
 
-  # Check RTM entry exists and has correct status. SUPERSEDED is a terminal,
-  # non-shipping state — accept it cleanly so old REQs in the PR diff don't
-  # block the PR.
-  # (Project-local hardening — re-apply after every SDLC sync until pushed
-  # upstream to META-COMPLY's master template.)
+  # Check RTM entry exists and has an accepted terminal status. Accepts
+  # SUPERSEDED as a valid terminal state — used when a REQ is replaced
+  # by a successor (e.g. REQ-030 superseded by REQ-031). Without this
+  # branch every PR with a commit referencing a SUPERSEDED REQ blocks
+  # CI (#232).
   if grep -q "$REQ" compliance/RTM.md 2>/dev/null; then
     if grep "$REQ" compliance/RTM.md | grep -q "TESTED - PENDING SIGN-OFF"; then
       echo "  OK: RTM status is TESTED - PENDING SIGN-OFF"
@@ -138,10 +142,9 @@ for REQ in $REQUIREMENTS; do
     EXIT_CODE=1
   fi
 
-  # Check release ticket exists. SUPERSEDED REQs keep their ticket in
-  # compliance/superseded-releases/ — also a valid location.
-  # (Project-local hardening — re-apply after every SDLC sync until pushed
-  # upstream to META-COMPLY's master template.)
+  # Check release ticket exists. Accepts the superseded-releases/
+  # location as a valid terminal home (mirrors pending- and
+  # approved-releases/) so SUPERSEDED REQs don't block CI (#232).
   TICKET_PATTERN="compliance/pending-releases/RELEASE-TICKET-${REQ}*"
   APPROVED_PATTERN="compliance/approved-releases/RELEASE-TICKET-${REQ}*"
   SUPERSEDED_PATTERN="compliance/superseded-releases/RELEASE-TICKET-${REQ}*"

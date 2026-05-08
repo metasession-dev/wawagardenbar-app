@@ -18,6 +18,7 @@ import {
   expressListOpenTabsAction,
 } from '@/app/actions/admin/express-actions';
 import { CustomizationPickerDialog } from '@/components/features/menu/customization-picker-dialog';
+import { TipInputRow } from '@/components/features/orders/tip-input-row';
 import {
   summariseSelected,
   type SelectedCustomization,
@@ -102,6 +103,19 @@ function ExpressCreateOrderContent() {
     'cash' | 'transfer' | 'card'
   >('cash');
   const [paymentReference, setPaymentReference] = useState('');
+  // REQ-035 — tip capture for the pay-now branch. tipPaymentMethod is
+  // independent of paymentMethod so a customer can pay card and tip cash.
+  const [tipAmount, setTipAmount] = useState(0);
+  const [tipPaymentMethod, setTipPaymentMethod] = useState<
+    'cash' | 'transfer' | 'card'
+  >('cash');
+  // Default tipPaymentMethod tracks paymentMethod until staff overrides
+  // (overrideability is a UI-only convenience; the persisted value is
+  // whatever ends in tipPaymentMethod state at submit time).
+  const [tipMethodOverridden, setTipMethodOverridden] = useState(false);
+  const effectiveTipMethod = tipMethodOverridden
+    ? tipPaymentMethod
+    : paymentMethod;
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -258,6 +272,13 @@ function ExpressCreateOrderContent() {
       paymentReference:
         destination === 'pay-now' && paymentReference
           ? paymentReference
+          : undefined,
+      // REQ-035 — only forward tip on pay-now; tab orders don't pay yet.
+      tipAmount:
+        destination === 'pay-now' && tipAmount > 0 ? tipAmount : undefined,
+      tipPaymentMethod:
+        destination === 'pay-now' && tipAmount > 0
+          ? effectiveTipMethod
           : undefined,
     });
 
@@ -586,6 +607,17 @@ function ExpressCreateOrderContent() {
                       />
                     </div>
                   )}
+                  {/* REQ-035 — tip capture on the pay-now branch. */}
+                  <TipInputRow
+                    tipAmount={tipAmount}
+                    onTipAmountChange={setTipAmount}
+                    tipPaymentMethod={effectiveTipMethod}
+                    onTipPaymentMethodChange={(m) => {
+                      setTipPaymentMethod(m);
+                      setTipMethodOverridden(true);
+                    }}
+                    disabled={submitting}
+                  />
                 </div>
               )}
             </CardContent>

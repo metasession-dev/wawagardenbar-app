@@ -660,7 +660,9 @@ This section tracks discrete change requests (REQ-001 through REQ-008) that repr
 | REQ-030 | #53   | HIGH   | compliance/evidence/REQ-030/ | SUPERSEDED by REQ-031 (PR #66 closed unmerged; back-end commits retained on develop as pre-cursor) | ostendo-io      | 2026-04-24 |
 | REQ-031 | #67   | HIGH   | compliance/evidence/REQ-031/ | APPROVED - DEPLOYED                                                                                | ostendo-io      | 2026-04-27 |
 | REQ-032 | #70   | MEDIUM | compliance/evidence/REQ-032/ | APPROVED - DEPLOYED                                                                                | ostendo-io      | 2026-05-01 |
-| REQ-033 | #73   | MEDIUM | compliance/evidence/REQ-033/ | TESTED - PENDING SIGN-OFF (UoM registry; prereq for the future REQ-034 recipes work)               | ostendo-io      | 2026-05-01 |
+| REQ-033 | #73   | MEDIUM | compliance/evidence/REQ-033/ | APPROVED - DEPLOYED                                                                                | ostendo-io      | 2026-05-04 |
+| REQ-035 | #76   | HIGH   | compliance/evidence/REQ-035/ | TESTED - PENDING SIGN-OFF                                                                          | ostendo-io      | 2026-05-07 |
+| REQ-036 | #77   | MEDIUM | compliance/evidence/REQ-036/ | TESTED - PENDING SIGN-OFF (add-on to REQ-035 #76)                                                  | ostendo-io      | 2026-05-07 |
 
 ### Change Request Dependencies
 

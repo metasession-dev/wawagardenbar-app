@@ -601,7 +601,12 @@ export class OrderService {
 
   /**
    * Complete order payment manually (admin)
-   * For cash, transfer, or POS card payments
+   * For cash, transfer, or POS card payments.
+   *
+   * @requirement REQ-035 — accepts optional `tipAmount` + `tipPaymentMethod`.
+   * Validates: tipAmount >= 0; if tipAmount > 0 then tipPaymentMethod must be
+   * supplied and in PAYMENT_METHODS_EXPRESS. Persists both fields. Order.total
+   * already includes the tip (existing behaviour from REQ-013 era).
    */
   static async completeOrderPaymentManually(params: {
     orderId: string;
@@ -609,11 +614,29 @@ export class OrderService {
     paymentReference: string;
     comments?: string;
     processedByAdminId: string;
+    tipAmount?: number;
+    tipPaymentMethod?: 'cash' | 'transfer' | 'card';
   }): Promise<IOrder> {
     await connectDB();
 
     if (!Types.ObjectId.isValid(params.orderId)) {
       throw new Error('Invalid order ID');
+    }
+
+    // REQ-035 — guard tip params before touching the DB.
+    const tipAmount = params.tipAmount ?? 0;
+    if (!Number.isFinite(tipAmount) || tipAmount < 0) {
+      throw new Error('tipAmount must be a non-negative number');
+    }
+    if (tipAmount > 0) {
+      if (!params.tipPaymentMethod) {
+        throw new Error('tipPaymentMethod is required when tipAmount > 0');
+      }
+      if (!['cash', 'transfer', 'card'].includes(params.tipPaymentMethod)) {
+        throw new Error(
+          `tipPaymentMethod must be one of cash/transfer/card; got ${params.tipPaymentMethod}`
+        );
+      }
     }
 
     const order = await Order.findById(params.orderId);
@@ -650,6 +673,17 @@ export class OrderService {
     order.paymentMethod = params.paymentType;
     order.paymentReference = params.paymentReference;
     order.paidAt = new Date();
+
+    // REQ-035 — persist tip fields. For express-flow orders, `total` is
+    // bill-only (subtotal). For customer-checkout orders, `total` is
+    // already inflated by tipAmount upstream (see app/actions/payment/
+    // payment-actions.ts). Either way, this service just stores what
+    // was passed in; the daily-report aggregator pulls tipsBreakdown
+    // from `tipAmount` and `tipPaymentMethod` directly.
+    if (tipAmount > 0) {
+      order.tipAmount = tipAmount;
+      order.tipPaymentMethod = params.tipPaymentMethod;
+    }
     if ((params as any).businessDate) {
       order.businessDate = (params as any).businessDate;
     } else {

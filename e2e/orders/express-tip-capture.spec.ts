@@ -1,0 +1,163 @@
+/**
+ * @requirement REQ-035 — Tip recording at express checkout
+ *
+ * Verifies that the express create-order flow captures a tip and the
+ * tip's payment method independently, and that the resulting Order
+ * persists both fields.
+ *
+ * The test exercises the realistic case the feature targets: customer
+ * pays card while leaving a cash tip. Asserts the Daily Financial
+ * Report's new "Tips Received" section shows the tip under the cash
+ * bucket — independent of where the bill itself was attributed.
+ *
+ * Skips gracefully if admin auth state isn't present (CI without seeded
+ * admin credentials, or local dev without the auth.setup having run).
+ */
+import { test as base, expect, Page } from '@playwright/test';
+import path from 'path';
+
+const ADMIN_FILE = path.join(__dirname, '../../.auth/admin.json');
+
+const test = base.extend({
+  storageState: ADMIN_FILE,
+});
+
+test.describe.configure({ mode: 'serial' });
+
+async function isAuthenticated(page: Page): Promise<boolean> {
+  try {
+    await page.goto('/dashboard/orders');
+    await page.waitForLoadState('networkidle');
+    return page.url().includes('/dashboard');
+  } catch {
+    return false;
+  }
+}
+
+async function readTipsBreakdown(page: Page): Promise<{
+  total: number;
+  cash: number;
+  card: number;
+  transfer: number;
+}> {
+  return page.evaluate(() => {
+    const result = { total: 0, cash: 0, card: 0, transfer: 0 };
+    const sectionHeading = Array.from(document.querySelectorAll('h3')).find(
+      (h) => /Tips Received/i.test(h.textContent ?? '')
+    );
+    if (!sectionHeading) return result;
+
+    const totalMatch = (sectionHeading.textContent ?? '').match(
+      /(?:₦|NGN)\s*([\d,]+(?:\.\d+)?)\s*total/i
+    );
+    if (totalMatch) result.total = parseFloat(totalMatch[1].replace(/,/g, ''));
+
+    const grid = sectionHeading.nextElementSibling;
+    if (!grid) return result;
+    const cards = grid.querySelectorAll('[class*="rounded"]');
+    for (const card of cards) {
+      const titleText =
+        card.querySelector('[class*="font-medium"]')?.textContent?.trim() ?? '';
+      const amountText =
+        card.querySelector('[class*="text-2xl"]')?.textContent?.trim() ?? '';
+      const m = amountText.match(/(?:₦|NGN)\s*([\d,]+(?:\.\d+)?)/);
+      if (!m) continue;
+      const amount = parseFloat(m[1].replace(/,/g, ''));
+      if (titleText === 'Cash tips') result.cash = amount;
+      else if (titleText === 'POS / Card tips') result.card = amount;
+      else if (titleText === 'Transfer tips') result.transfer = amount;
+    }
+    return result;
+  });
+}
+
+async function openTodayReport(page: Page) {
+  await page.goto('/dashboard/reports/daily');
+  await page.waitForLoadState('networkidle');
+  await page.getByRole('button', { name: 'Today' }).click();
+  await page.waitForLoadState('networkidle');
+  await page
+    .getByText('Generating report...')
+    .waitFor({ state: 'hidden', timeout: 15000 })
+    .catch(() => {});
+}
+
+test.describe.serial('REQ-035: express order tip capture', () => {
+  let baselineCashTips = 0;
+  const TIP = 500;
+
+  test.beforeEach(async ({ page }, testInfo) => {
+    if (!(await isAuthenticated(page))) {
+      testInfo.skip(true, 'Admin login failed — skipping');
+    }
+  });
+
+  test('AC7 baseline — read current cash-tip total', async ({ page }) => {
+    await openTodayReport(page);
+    const { cash } = await readTipsBreakdown(page);
+    baselineCashTips = cash;
+  });
+
+  test('AC1 + AC4 — record ₦500 cash tip on a card-paid express order', async ({
+    page,
+  }) => {
+    await page.goto('/dashboard/orders/express/create-order');
+    await page.waitForLoadState('networkidle');
+
+    // Pick the first menu item.
+    const menuCard = page.locator('.grid .cursor-pointer').first();
+    await expect(menuCard).toBeVisible({ timeout: 10000 });
+    await menuCard.click();
+
+    // Proceed to checkout.
+    const checkoutBtn = page.getByRole('button', { name: /Checkout/i });
+    await expect(checkoutBtn).toBeVisible({ timeout: 5000 });
+    await checkoutBtn.click();
+
+    const payNowBtn = page.locator('button').filter({ hasText: 'Pay Now' });
+    await expect(payNowBtn).toBeVisible({ timeout: 5000 });
+    await payNowBtn.click();
+
+    // Choose POS as the bill payment method.
+    const posBtn = page.locator('button').filter({ hasText: 'POS' }).first();
+    await expect(posBtn).toBeVisible({ timeout: 5000 });
+    await posBtn.click();
+
+    // Enter the tip amount and override the method to cash.
+    const tipInput = page.locator('#tip-amount');
+    await expect(tipInput).toBeVisible();
+    await tipInput.fill(String(TIP));
+    // Tip method dropdown defaults to the bill method (POS / 'card');
+    // override to 'cash' to exercise AC4.
+    const tipMethodTrigger = page
+      .locator('[id="tip-amount"] ~ * button')
+      .first();
+    if (await tipMethodTrigger.isVisible().catch(() => false)) {
+      await tipMethodTrigger.click();
+      const cashOption = page.getByRole('option', { name: /^Cash$/ });
+      if (await cashOption.isVisible().catch(() => false)) {
+        await cashOption.click();
+      }
+    }
+
+    // Submit.
+    const payBtn = page.getByRole('button', { name: /Pay ₦/i });
+    await expect(payBtn).toBeVisible({ timeout: 5000 });
+    await payBtn.click();
+
+    await page.waitForURL(/\/dashboard\/orders/, { timeout: 15000 });
+    await page.waitForLoadState('networkidle');
+  });
+
+  test('AC7 — Daily Report Tips Received cash card increased by ₦500', async ({
+    page,
+  }) => {
+    await openTodayReport(page);
+    await expect(
+      page.locator('h3').filter({ hasText: /Tips Received/i })
+    ).toBeVisible({ timeout: 15000 });
+    const { cash, total } = await readTipsBreakdown(page);
+    expect(cash - baselineCashTips).toBeGreaterThanOrEqual(TIP);
+    expect(total).toBeGreaterThanOrEqual(cash);
+  });
+});

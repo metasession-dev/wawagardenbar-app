@@ -7,7 +7,7 @@ description: Compile test, security, and AI evidence, update RTM, create release
 **Pipeline Stage:** 3 of 5
 **Previous:** `2-implement-and-test.md`
 **Next:** `4-submit-for-review.md`
-**References:** Test Strategy (`sdlc/files/Test_Strategy.md` in META-COMPLY) (evidence requirements), Test Architecture (tooling), Test Plan (artifact structure)
+**References:** Test Strategy (`sdlc/files/Test_Strategy.md` in DevAudit) (evidence requirements), Test Architecture (tooling), Test Plan (artifact structure)
 
 ---
 
@@ -21,25 +21,25 @@ description: Compile test, security, and AI evidence, update RTM, create release
 
 ## Evidence Storage Rule
 
-**Markdown stays in git. Binary and JSON evidence goes to META-COMPLY.**
+**Markdown stays in git. Binary and JSON evidence goes to DevAudit.**
 
-| Artifact                                                | Store in    | Why                                                            |
-| ------------------------------------------------------- | ----------- | -------------------------------------------------------------- |
-| `compliance/RTM.md`                                     | Git         | Source of truth, version history, PR-reviewable                |
-| `compliance/evidence/REQ-XXX/test-scope.md`             | Git         | Planning artifact, reviewed in PRs                             |
-| `compliance/evidence/REQ-XXX/implementation-plan.md`    | Git         | Design decisions artifact (MEDIUM/HIGH risk), reviewed in PRs  |
-| `compliance/evidence/REQ-XXX/test-plan.md`              | Git         | Test strategy — tests to add/update/remove, mapped to criteria |
-| `compliance/evidence/REQ-XXX/test-execution-summary.md` | Git         | Gate results, test changes, coverage against test plan         |
-| `compliance/evidence/REQ-XXX/ai-use-note.md`            | Git         | Small markdown, needs PR review                                |
-| `compliance/evidence/REQ-XXX/ai-prompts.md`             | Git         | Small markdown, needs PR review                                |
-| `compliance/evidence/REQ-XXX/security-summary.md`       | Git         | Small markdown, needs PR review                                |
-| `compliance/pending-releases/RELEASE-TICKET-*.md`       | Git         | Reviewed and moved to approved-releases                        |
-| E2E results (JSON)                                      | META-COMPLY | Large, bloats git history                                      |
-| Screenshots (PNG/JPG)                                   | META-COMPLY | Binary, bloats git history                                     |
-| SAST results (JSON)                                     | META-COMPLY | Large JSON, bloats git history                                 |
-| Dependency audit (JSON)                                 | META-COMPLY | Large JSON, bloats git history                                 |
-| Unit test output (TXT)                                  | META-COMPLY | Verbose output, bloats git history                             |
-| Test reports (HTML)                                     | META-COMPLY | Binary, bloats git history                                     |
+| Artifact                                                | Store in | Why                                                            |
+| ------------------------------------------------------- | -------- | -------------------------------------------------------------- |
+| `compliance/RTM.md`                                     | Git      | Source of truth, version history, PR-reviewable                |
+| `compliance/evidence/REQ-XXX/test-scope.md`             | Git      | Planning artifact, reviewed in PRs                             |
+| `compliance/evidence/REQ-XXX/implementation-plan.md`    | Git      | Design decisions artifact (MEDIUM/HIGH risk), reviewed in PRs  |
+| `compliance/evidence/REQ-XXX/test-plan.md`              | Git      | Test strategy — tests to add/update/remove, mapped to criteria |
+| `compliance/evidence/REQ-XXX/test-execution-summary.md` | Git      | Gate results, test changes, coverage against test plan         |
+| `compliance/evidence/REQ-XXX/ai-use-note.md`            | Git      | Small markdown, needs PR review                                |
+| `compliance/evidence/REQ-XXX/ai-prompts.md`             | Git      | Small markdown, needs PR review                                |
+| `compliance/evidence/REQ-XXX/security-summary.md`       | Git      | Small markdown, needs PR review                                |
+| `compliance/pending-releases/RELEASE-TICKET-*.md`       | Git      | Reviewed and moved to approved-releases                        |
+| E2E results (JSON)                                      | DevAudit | Large, bloats git history                                      |
+| Screenshots (PNG/JPG)                                   | DevAudit | Binary, bloats git history                                     |
+| SAST results (JSON)                                     | DevAudit | Large JSON, bloats git history                                 |
+| Dependency audit (JSON)                                 | DevAudit | Large JSON, bloats git history                                 |
+| Unit test output (TXT)                                  | DevAudit | Verbose output, bloats git history                             |
+| Test reports (HTML)                                     | DevAudit | Binary, bloats git history                                     |
 
 ## Steps
 
@@ -116,14 +116,14 @@ cat > compliance/evidence/REQ-XXX/test-execution-summary.md << 'EOF'
 
 | Evidence | Location |
 |----------|----------|
-| E2E results | META-COMPLY: [project]/REQ-XXX/e2e-results.json |
-| SAST results | META-COMPLY: [project]/REQ-XXX/sast-results.json |
-| Dependency audit | META-COMPLY: [project]/REQ-XXX/dependency-audit.json |
+| E2E results | DevAudit: [project]/REQ-XXX/e2e-results.json |
+| SAST results | DevAudit: [project]/REQ-XXX/sast-results.json |
+| Dependency audit | DevAudit: [project]/REQ-XXX/dependency-audit.json |
 | Playwright report | CI artifact: playwright-report/ |
 EOF
 ```
 
-This summary is committed to git (small markdown) and uploaded to META-COMPLY where reviewers can see it inline on the release dashboard.
+This summary is committed to git (small markdown) and uploaded to DevAudit where reviewers can see it inline on the release dashboard.
 
 ---
 
@@ -135,14 +135,14 @@ git diff --name-only origin/main...HEAD -- '*.ts' '*.tsx' | head -20
 
 Each modified file should have `@requirement REQ-XXX` header.
 
-### Step 3: Upload Test Evidence to META-COMPLY
+### Step 3: Upload Test Evidence to DevAudit
 
-Upload evidence to META-COMPLY so reviewers can access full test results (Playwright reports, SAST scans, dependency audits) without needing GitHub Checks tab access. This is the primary way reviewers verify test evidence.
+Upload evidence to DevAudit so reviewers can access full test results (Playwright reports, SAST scans, dependency audits) without needing GitHub Checks tab access. This is the primary way reviewers verify test evidence.
 
-The upload script is available in the META-COMPLY repository at `scripts/upload-evidence.sh`.
+The upload script is available in the DevAudit repository at `scripts/upload-evidence.sh`.
 
 ```bash
-# Ensure META-COMPLY environment variables are set
+# Ensure DevAudit environment variables are set
 # SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY
 
 # Upload E2E results
@@ -156,7 +156,7 @@ npm test -- --verbose 2>&1 | tee /tmp/unit-test-results.txt
   --git-sha "$(git rev-parse HEAD)"
 ```
 
-**Alternative (git-based):** If not using META-COMPLY, save evidence locally:
+**Alternative (git-based):** If not using DevAudit, save evidence locally:
 
 ```bash
 cp [E2E_RESULTS_PATH] compliance/evidence/REQ-XXX/
@@ -170,7 +170,7 @@ npm test -- --verbose 2>&1 | tee compliance/evidence/REQ-XXX/unit-test-results.t
 semgrep scan --config auto [SOURCE_DIR]/ --json > /tmp/sast-results.json 2>&1
 npm audit --json > /tmp/dependency-audit.json 2>&1
 
-# Upload to META-COMPLY
+# Upload to DevAudit
 ./scripts/upload-evidence.sh [PROJECT_SLUG] REQ-XXX audit_log /tmp/sast-results.json \
   --git-sha "$(git rev-parse HEAD)"
 ./scripts/upload-evidence.sh [PROJECT_SLUG] REQ-XXX audit_log /tmp/dependency-audit.json \
@@ -186,7 +186,7 @@ cat > compliance/evidence/REQ-XXX/security-summary.md << EOF
 **SAST Tool:** Semgrep (auto config)
 **SAST High/Critical Findings:** 0
 **Dependency Audit High/Critical:** 0
-Evidence uploaded to META-COMPLY project: [PROJECT_SLUG]
+Evidence uploaded to DevAudit project: [PROJECT_SLUG]
 EOF
 ```
 
@@ -272,17 +272,17 @@ Create `compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md`:
 
 ## Test Evidence
 
-| Test Type        | Count | Passed | Failed | Evidence Location                          |
-| ---------------- | ----- | ------ | ------ | ------------------------------------------ |
-| E2E (Playwright) | [N]   | [N]    | 0      | META-COMPLY portal: [PROJECT_SLUG]/REQ-XXX |
-| Unit             | [N]   | [N]    | 0      | META-COMPLY portal: [PROJECT_SLUG]/REQ-XXX |
+| Test Type        | Count | Passed | Failed | Evidence Location                       |
+| ---------------- | ----- | ------ | ------ | --------------------------------------- |
+| E2E (Playwright) | [N]   | [N]    | 0      | DevAudit portal: [PROJECT_SLUG]/REQ-XXX |
+| Unit             | [N]   | [N]    | 0      | DevAudit portal: [PROJECT_SLUG]/REQ-XXX |
 
 ## Security Evidence
 
 | Check            | Result          | Evidence Location                                      |
 | ---------------- | --------------- | ------------------------------------------------------ |
-| SAST             | 0 high/critical | META-COMPLY portal: [PROJECT_SLUG]/REQ-XXX             |
-| Dependency Audit | 0 high/critical | META-COMPLY portal: [PROJECT_SLUG]/REQ-XXX             |
+| SAST             | 0 high/critical | DevAudit portal: [PROJECT_SLUG]/REQ-XXX                |
+| Dependency Audit | 0 high/critical | DevAudit portal: [PROJECT_SLUG]/REQ-XXX                |
 | Access Control   | [PASS/N/A]      | Git: `compliance/evidence/REQ-XXX/security-summary.md` |
 | Audit Log        | [PASS/N/A]      | Git: `compliance/evidence/REQ-XXX/security-summary.md` |
 
@@ -347,7 +347,7 @@ Create `compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md`:
 
 Commit compliance documents locally but **do not push**. UAT verification (Step 10) runs against the deployment from the prior push. Pushing here would trigger a redundant CI run. We batch everything into a single push after UAT verification.
 
-If using META-COMPLY, commit only compliance documents (RTM, release ticket, test scope, AI notes, security summary). Binary evidence (JSON results, screenshots) is stored in META-COMPLY, not git.
+If using DevAudit, commit only compliance documents (RTM, release ticket, test scope, AI notes, security summary). Binary evidence (JSON results, screenshots) is stored in DevAudit, not git.
 
 **Before committing, verify all required artifacts exist:**
 
@@ -360,7 +360,7 @@ If using META-COMPLY, commit only compliance documents (RTM, release ticket, tes
 - [ ] `compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md`
 
 ```bash
-# META-COMPLY projects — commit compliance docs only (no push)
+# DevAudit projects — commit compliance docs only (no push)
 git add compliance/RTM.md compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md \
   compliance/evidence/REQ-XXX/test-scope.md \
   compliance/evidence/REQ-XXX/test-plan.md \
@@ -372,16 +372,16 @@ git add compliance/RTM.md compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md 
 git commit -m "compliance: [REQ-XXX] evidence compiled - awaiting review"
 ```
 
-If NOT using META-COMPLY (git-based evidence):
+If NOT using DevAudit (git-based evidence):
 
 ```bash
 git add compliance/RTM.md compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md compliance/evidence/REQ-XXX/
 git commit -m "compliance: [REQ-XXX] evidence compiled - awaiting review"
 ```
 
-### Step 10: UAT Verification and META-COMPLY Approval (MANDATORY)
+### Step 10: UAT Verification and DevAudit Approval (MANDATORY)
 
-The develop branch auto-deploys to UAT. CI has already uploaded all gate evidence to META-COMPLY. **Wait for the deployment to complete**, then verify the change works in the UAT environment before creating a PR.
+The develop branch auto-deploys to UAT. CI has already uploaded all gate evidence to DevAudit. **Wait for the deployment to complete**, then verify the change works in the UAT environment before creating a PR.
 
 #### WAIT CHECKPOINT: Confirm CI + Deployment Complete
 
@@ -454,9 +454,9 @@ git push origin develop
 
 Wait for CI to pass before proceeding to `4-submit-for-review.md`.
 
-## META-COMPLY CI Integration
+## DevAudit CI Integration
 
-Projects using META-COMPLY can automate evidence upload via the reusable GitHub Actions workflow. After CI tests pass, evidence is uploaded to the centralized portal where auditors can browse it.
+Projects using DevAudit can automate evidence upload via the reusable GitHub Actions workflow. After CI tests pass, evidence is uploaded to the centralized portal where auditors can browse it.
 
 ### Versioning Convention
 
@@ -471,9 +471,9 @@ The version is auto-generated by CI from the current date. Projects may override
 
 ### How Releases Are Created
 
-CI **auto-creates releases** in META-COMPLY when uploading evidence. The workflow passes `--create-release-if-missing` to the upload script, which creates a `draft` release if one doesn't exist for the given version. This means:
+CI **auto-creates releases** in DevAudit when uploading evidence. The workflow passes `--create-release-if-missing` to the upload script, which creates a `draft` release if one doesn't exist for the given version. This means:
 
-- You don't need to manually create releases in META-COMPLY
+- You don't need to manually create releases in DevAudit
 - Evidence is always linked to a release (never orphaned)
 - The release dashboard shows evidence immediately after CI runs
 - Requirements are auto-synced from `compliance/RTM.md` to enable completeness tracking
@@ -485,7 +485,7 @@ Add this job to your CI pipeline (after E2E tests pass):
 ```yaml
 upload-evidence:
   needs: [e2e-tests]
-  uses: metasession-dev/META-COMPLY/.github/workflows/upload-evidence.yml@main
+  uses: metasession-dev/devaudit/.github/workflows/upload-evidence.yml@main
   with:
     project-slug: your-project-slug
     release-version: v2026.03.27 # or use date-based auto-generation
@@ -497,7 +497,7 @@ upload-evidence:
 
 This automatically:
 
-- Creates the release in META-COMPLY if it doesn't exist (status: `draft`)
+- Creates the release in DevAudit if it doesn't exist (status: `draft`)
 - Uploads compliance source documents (RTM, test plan, test cases, test summary report)
 - Syncs `known_requirements` from RTM.md for completeness tracking
 - Tags each upload with git SHA and CI run ID for traceability
@@ -508,26 +508,26 @@ Copy these from `sdlc/files/ci/` into your project's `.github/workflows/`:
 
 **`check-uat-approval.yml`** — UAT approval gate on PRs to main:
 
-- Blocks merge until the release is `uat_approved` in META-COMPLY
+- Blocks merge until the release is `uat_approved` in DevAudit
 - Add as a required status check on the `main` branch protection rule
 
 **`post-deploy-prod.yml`** — Production evidence capture after merge to main:
 
 - Runs production smoke tests
-- Uploads production evidence to META-COMPLY (environment: production)
+- Uploads production evidence to DevAudit (environment: production)
 - Marks the release as `released`
 
-The source of truth for compliance documents remains in git. META-COMPLY holds read-only snapshots so auditors see the full compliance picture in one place.
+The source of truth for compliance documents remains in git. DevAudit holds read-only snapshots so auditors see the full compliance picture in one place.
 
 ## Output
 
 - RTM: `TESTED - PENDING SIGN-OFF`
 - Release ticket in `compliance/pending-releases/`
-- Test + security + AI evidence uploaded to META-COMPLY (or in `compliance/evidence/REQ-XXX/` if git-based)
+- Test + security + AI evidence uploaded to DevAudit (or in `compliance/evidence/REQ-XXX/` if git-based)
 - Compliance documents (test scope, AI notes, security summary) committed to git
 - Test scope fully addressed
 - UAT verification passed and recorded
-- META-COMPLY UAT release approved (required before PR to main)
+- DevAudit UAT release approved (required before PR to main)
 
 ## Next Step
 

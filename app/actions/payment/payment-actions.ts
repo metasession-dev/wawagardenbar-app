@@ -40,6 +40,12 @@ export interface CreateOrderInput {
   specialInstructions?: string;
   tabId?: string;
   tipAmount?: number;
+  // REQ-036 — independent tip payment method, persisted on Order.tipPaymentMethod.
+  // For gateway-driven customer payments this defaults to whatever the
+  // gateway returns, but the customer-checkout TipInputStep lets the
+  // user (or the staff using customer-checkout in admin mode) pick
+  // independently.
+  tipPaymentMethod?: 'cash' | 'transfer' | 'card';
   savePhone?: boolean;
   saveAddress?: boolean;
   idempotencyKey: string;
@@ -183,6 +189,11 @@ export async function createOrder(input: CreateOrderInput): Promise<{
       tax,
       deliveryFee,
       tipAmount: input.tipAmount || 0,
+      // REQ-036 — persist explicit tipPaymentMethod when provided, so
+      // the daily-report tipsBreakdown attributes the tip correctly.
+      ...(input.tipPaymentMethod
+        ? { tipPaymentMethod: input.tipPaymentMethod }
+        : {}),
       total: total + (input.tipAmount || 0),
       estimatedWaitTime,
       specialInstructions: input.specialInstructions,

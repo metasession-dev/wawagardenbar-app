@@ -186,7 +186,11 @@ export async function expressGetCategoriesAction(): Promise<
 }
 
 /**
- * Create an order and optionally attach to a tab (express flow)
+ * Create an order and optionally attach to a tab (express flow).
+ *
+ * @requirement REQ-035 — accepts optional `tipAmount` + `tipPaymentMethod`
+ * for the immediate-pay branch. The tip's payment method is independent
+ * of the bill's `paymentMethod` (default = paymentMethod, override-able).
  */
 export async function expressCreateOrderAction(params: {
   items: Array<{
@@ -203,6 +207,8 @@ export async function expressCreateOrderAction(params: {
   paymentMethod?: 'cash' | 'transfer' | 'card';
   paymentReference?: string;
   customerName?: string;
+  tipAmount?: number;
+  tipPaymentMethod?: 'cash' | 'transfer' | 'card';
 }): Promise<ActionResult<{ order: any; tab?: ITab }>> {
   try {
     const session = await requireAdminSession();
@@ -300,13 +306,17 @@ export async function expressCreateOrderAction(params: {
         : undefined,
     });
 
-    // For pay-now orders, mark as paid immediately with the chosen payment method
+    // For pay-now orders, mark as paid immediately with the chosen payment method.
+    // REQ-035 — forward tip fields when supplied. completeOrderPaymentManually
+    // validates non-zero tipAmount requires a tipPaymentMethod.
     if (!params.tabId && params.paymentMethod) {
       await OrderService.completeOrderPaymentManually({
         orderId: order._id.toString(),
         paymentType: params.paymentMethod,
         paymentReference: params.paymentReference || `EXPRESS-${Date.now()}`,
         processedByAdminId: session.userId!,
+        tipAmount: params.tipAmount,
+        tipPaymentMethod: params.tipPaymentMethod,
       });
     }
 
@@ -361,13 +371,21 @@ export async function expressGetTabForCloseAction(
 }
 
 /**
- * Close a tab with payment (express flow)
+ * Close a tab with payment (express flow).
+ *
+ * @requirement REQ-035 — accepts optional `tipAmount` for the closing
+ * payment.
+ * @requirement REQ-036 — accepts optional `tipPaymentMethod`,
+ * independent of `paymentType`. Lets staff record a card-paid bill +
+ * cash-paid tip on the same closing payment row.
  */
 export async function expressCloseTabAction(params: {
   tabId: string;
   paymentType: 'cash' | 'transfer' | 'card';
   paymentReference?: string;
   businessDate?: Date;
+  tipAmount?: number;
+  tipPaymentMethod?: 'cash' | 'transfer' | 'card';
 }): Promise<ActionResult<{ tab: ITab }>> {
   try {
     const session = await requireAdminSession();
@@ -383,6 +401,8 @@ export async function expressCloseTabAction(params: {
       paymentReference: params.paymentReference || `EXPRESS-${Date.now()}`,
       processedBy: session.userId!,
       businessDate: params.businessDate,
+      tipAmount: params.tipAmount,
+      tipPaymentMethod: params.tipPaymentMethod,
     } as any);
 
     revalidatePath('/dashboard/orders');

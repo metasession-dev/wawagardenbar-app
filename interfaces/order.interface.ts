@@ -1,4 +1,5 @@
 import { Types } from 'mongoose';
+import type { PaymentMethod } from './payment-method.interface';
 
 export type OrderType = 'dine-in' | 'pickup' | 'delivery' | 'pay-now';
 
@@ -83,6 +84,8 @@ export interface IOrder {
   deliveryFee: number;
   discount: number;
   tipAmount: number;
+  // REQ-035 — independent of `paymentMethod`. Required iff tipAmount > 0.
+  tipPaymentMethod?: PaymentMethod;
   total: number;
   totalCost: number;
   grossProfit: number;
@@ -95,7 +98,7 @@ export interface IOrder {
   paymentId?: Types.ObjectId;
   paymentReference?: string;
   transactionReference?: string;
-  paymentMethod?: 'card' | 'transfer' | 'ussd' | 'phone' | 'cash';
+  paymentMethod?: PaymentMethod;
   paymentStatus?: 'pending' | 'paid' | 'failed' | 'cancelled' | 'refunded';
   paidAt?: Date;
   businessDate?: Date;

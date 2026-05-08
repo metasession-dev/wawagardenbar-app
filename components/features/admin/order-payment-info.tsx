@@ -52,7 +52,7 @@ export function OrderPaymentInfo({ order }: OrderPaymentInfoProps) {
         {/* Payment Status */}
         <div>
           <p className="text-sm font-medium mb-2">Status</p>
-          <Badge 
+          <Badge
             variant={getPaymentStatusVariant(order.paymentStatus)}
             className="flex items-center gap-1 w-fit"
           >
@@ -94,6 +94,26 @@ export function OrderPaymentInfo({ order }: OrderPaymentInfoProps) {
           <p className="text-sm font-medium">Amount</p>
           <p className="text-lg font-bold">₦{order.total.toLocaleString()}</p>
         </div>
+
+        {/* REQ-035/REQ-036 — tip + method, when present. */}
+        {order.tipAmount > 0 && (
+          <div>
+            <p className="text-sm font-medium">Tip</p>
+            <p className="text-base font-semibold">
+              ₦{order.tipAmount.toLocaleString()}
+              {(order.tipPaymentMethod || order.paymentMethod) && (
+                <span className="ml-2 text-xs font-normal text-muted-foreground">
+                  via{' '}
+                  <span className="capitalize">
+                    {(order.tipPaymentMethod || order.paymentMethod) === 'card'
+                      ? 'POS / Card'
+                      : order.tipPaymentMethod || order.paymentMethod}
+                  </span>
+                </span>
+              )}
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

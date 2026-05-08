@@ -200,7 +200,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate META-COMPLY env
+      - name: Validate DevAudit env
         run: |
           if [ -z "${META_COMPLY_BASE_URL}" ] || [ -z "${META_COMPLY_API_KEY}" ]; then
             echo "::error::META_COMPLY_BASE_URL (variable) and META_COMPLY_API_KEY (secret) must both be set."
@@ -212,7 +212,7 @@ jobs:
         id: version
         run: |
           DATE_PREFIX="v$(date +%Y.%m.%d)"
-          # Resolve the next sequence version via META-COMPLY's CI API.
+          # Resolve the next sequence version via DevAudit's CI API.
           # The endpoint preserves the legacy ci.yml semantics: each push
           # gets its own release (vX.Y.Z, vX.Y.Z.2, vX.Y.Z.3, …).
           RESP=$(curl -s -H "Authorization: Bearer ${META_COMPLY_API_KEY}" \
@@ -229,7 +229,7 @@ jobs:
       - name: Ensure release exists
         run: |
           chmod +x scripts/upload-evidence.sh 2>/dev/null || true
-          # Create the release in META-COMPLY (no evidence yet — just registration)
+          # Create the release in DevAudit (no evidence yet — just registration)
           bash scripts/upload-evidence.sh \
             wawagardenbar-app _compliance-docs compliance_document README.md \
             --release ${{ steps.version.outputs.version }} --create-release-if-missing \
@@ -253,7 +253,7 @@ jobs:
           fi
 
   # ──────────────────────────────────────────────
-  # Upload Evidence to META-COMPLY (after gates pass)
+  # Upload Evidence to DevAudit (after gates pass)
   # ──────────────────────────────────────────────
   upload-evidence:
     name: Upload Evidence
@@ -285,7 +285,7 @@ jobs:
           # end with the full picture. Previously each upload used
           # `|| echo "Warning: ..."` which masked every error as a benign
           # warning, letting broken releases ship without gate evidence
-          # (META-COMPLY #132).
+          # (DevAudit #132).
           UPLOAD_FAILURES=0
           upload() {
             local label="$1"; shift
@@ -380,7 +380,7 @@ jobs:
           # pending release ticket. Without this scoping every historical
           # compliance/evidence/REQ-*/ folder would be re-uploaded on every
           # run, re-populating the release-requirement matrix with the full
-          # project catalogue (META-COMPLY #133).
+          # project catalogue (DevAudit #133).
           IN_SCOPE_REQS=()
           if [ -d compliance/pending-releases ]; then
             for TICKET in compliance/pending-releases/RELEASE-TICKET-REQ-*.md; do

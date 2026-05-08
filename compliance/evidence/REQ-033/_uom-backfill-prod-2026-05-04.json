@@ -1,0 +1,562 @@
+[
+  {
+    "timestamp": "2026-05-04T16:07:33.432Z",
+    "collection": "expenses",
+    "rowId": "69de65119936e62a8d58f904",
+    "originalUnit": "kgs",
+    "newUnit": "kg"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:33.686Z",
+    "collection": "expenses",
+    "rowId": "69de75ff9936e62a8d590e9a",
+    "originalUnit": "grams",
+    "newUnit": "g"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:33.888Z",
+    "collection": "expenses",
+    "rowId": "69de75ff9936e62a8d590e9c",
+    "originalUnit": "grams",
+    "newUnit": "g"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:34.092Z",
+    "collection": "expenses",
+    "rowId": "69dfed3e9936e62a8d5a0098",
+    "originalUnit": "liters",
+    "newUnit": "litres"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:34.297Z",
+    "collection": "expenses",
+    "rowId": "69e087ac9936e62a8d5a0278",
+    "originalUnit": "crate",
+    "newUnit": "crates"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:34.499Z",
+    "collection": "expenses",
+    "rowId": "69e087ac9936e62a8d5a027c",
+    "originalUnit": "pack",
+    "newUnit": "packs"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:34.704Z",
+    "collection": "expenses",
+    "rowId": "69e087ac9936e62a8d5a027d",
+    "originalUnit": "pack",
+    "newUnit": "packs"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:34.908Z",
+    "collection": "expenses",
+    "rowId": "69e0ad259936e62a8d5a02c4",
+    "originalUnit": "Month",
+    "newUnit": "months"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:35.114Z",
+    "collection": "expenses",
+    "rowId": "69e2520aec08756860fc801f",
+    "originalUnit": "grams",
+    "newUnit": "g"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:35.314Z",
+    "collection": "expenses",
+    "rowId": "69e2520aec08756860fc8021",
+    "originalUnit": "grams",
+    "newUnit": "g"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:35.519Z",
+    "collection": "expenses",
+    "rowId": "69e2520aec08756860fc8022",
+    "originalUnit": "litre",
+    "newUnit": "litres"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:35.728Z",
+    "collection": "expenses",
+    "rowId": "69e2520aec08756860fc8023",
+    "originalUnit": "bag",
+    "newUnit": "bags"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:35.923Z",
+    "collection": "expenses",
+    "rowId": "69e2520aec08756860fc8024",
+    "originalUnit": "bag",
+    "newUnit": "bags"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:36.133Z",
+    "collection": "expenses",
+    "rowId": "69e2520aec08756860fc8025",
+    "originalUnit": "grams",
+    "newUnit": "g"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:36.344Z",
+    "collection": "expenses",
+    "rowId": "69e25221ec08756860fc8034",
+    "originalUnit": "pack",
+    "newUnit": "packs"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:36.546Z",
+    "collection": "expenses",
+    "rowId": "69e2b163ec08756860fd02dc",
+    "originalUnit": "Crate",
+    "newUnit": "crates"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:36.751Z",
+    "collection": "expenses",
+    "rowId": "69e2b163ec08756860fd02dd",
+    "originalUnit": "Km",
+    "newUnit": "km"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:36.956Z",
+    "collection": "expenses",
+    "rowId": "69e3aa719b962cb9fbf5f75a",
+    "originalUnit": "grams",
+    "newUnit": "g"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:37.161Z",
+    "collection": "expenses",
+    "rowId": "69e3aa719b962cb9fbf5f75b",
+    "originalUnit": "grams",
+    "newUnit": "g"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:37.365Z",
+    "collection": "expenses",
+    "rowId": "69e4f3f269f321b1a63e95f3",
+    "originalUnit": "crate",
+    "newUnit": "crates"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:37.570Z",
+    "collection": "expenses",
+    "rowId": "69e4f3f269f321b1a63e95f4",
+    "originalUnit": "crate",
+    "newUnit": "crates"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:37.777Z",
+    "collection": "expenses",
+    "rowId": "69e5f25e69f321b1a63ebd18",
+    "originalUnit": "Unit",
+    "newUnit": "units"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:37.980Z",
+    "collection": "expenses",
+    "rowId": "69e5f34b69f321b1a63ebd40",
+    "originalUnit": "Kg",
+    "newUnit": "kg"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:38.182Z",
+    "collection": "expenses",
+    "rowId": "69e5f34b69f321b1a63ebd41",
+    "originalUnit": "Box",
+    "newUnit": "boxes"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:38.391Z",
+    "collection": "expenses",
+    "rowId": "69e5f34b69f321b1a63ebd42",
+    "originalUnit": "Crate",
+    "newUnit": "crates"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:38.597Z",
+    "collection": "expenses",
+    "rowId": "69e5f34b69f321b1a63ebd43",
+    "originalUnit": "Kg",
+    "newUnit": "kg"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:38.800Z",
+    "collection": "expenses",
+    "rowId": "69e674d069f321b1a63f09c4",
+    "originalUnit": "visit",
+    "newUnit": "visits"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:39.001Z",
+    "collection": "expenses",
+    "rowId": "69e77f9d69f321b1a63f5c81",
+    "originalUnit": "bag",
+    "newUnit": "bags"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:39.209Z",
+    "collection": "expenses",
+    "rowId": "69e86b5669f321b1a63f9116",
+    "originalUnit": "bag",
+    "newUnit": "bags"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:39.415Z",
+    "collection": "expenses",
+    "rowId": "69eb857169f321b1a63fffba",
+    "originalUnit": "egg",
+    "newUnit": "eggs"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:39.619Z",
+    "collection": "expenses",
+    "rowId": "69ebd7c169f321b1a640ed9a",
+    "originalUnit": "Littees",
+    "newUnit": "litres"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:39.800Z",
+    "collection": "expenses",
+    "rowId": "69ec277e69f321b1a641c6fc",
+    "originalUnit": "unit",
+    "newUnit": "units"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:40.024Z",
+    "collection": "expenses",
+    "rowId": "69ec277e69f321b1a641c6fd",
+    "originalUnit": "unit",
+    "newUnit": "units"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:40.233Z",
+    "collection": "expenses",
+    "rowId": "69ec2b6b69f321b1a641c7ef",
+    "originalUnit": "pack",
+    "newUnit": "packs"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:40.439Z",
+    "collection": "expenses",
+    "rowId": "69ef9425f6a811cfb62704a3",
+    "originalUnit": "unit",
+    "newUnit": "units"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:40.643Z",
+    "collection": "expenses",
+    "rowId": "69efb009f6a811cfb6270580",
+    "originalUnit": "l",
+    "newUnit": "litres"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:40.849Z",
+    "collection": "expenses",
+    "rowId": "69f05354f6a811cfb6275e73",
+    "originalUnit": "hr",
+    "newUnit": "hours"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:41.048Z",
+    "collection": "expenses",
+    "rowId": "69f07f45f6a811cfb627723e",
+    "originalUnit": "month",
+    "newUnit": "months"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:41.230Z",
+    "collection": "expenses",
+    "rowId": "69f0a2a5f6a811cfb627aefa",
+    "originalUnit": "grams",
+    "newUnit": "g"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:41.461Z",
+    "collection": "expenses",
+    "rowId": "69f0a2a5f6a811cfb627aefb",
+    "originalUnit": "bag",
+    "newUnit": "bags"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:41.666Z",
+    "collection": "expenses",
+    "rowId": "69f0a2a5f6a811cfb627aefc",
+    "originalUnit": "bag",
+    "newUnit": "bags"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:41.873Z",
+    "collection": "expenses",
+    "rowId": "69f0a2a5f6a811cfb627aeff",
+    "originalUnit": "bax",
+    "newUnit": "boxes"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:42.078Z",
+    "collection": "expenses",
+    "rowId": "69f0b195f6a811cfb627af68",
+    "originalUnit": "pasks",
+    "newUnit": "packs"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:42.286Z",
+    "collection": "expenses",
+    "rowId": "69f0b55bf6a811cfb627af9e",
+    "originalUnit": "pack",
+    "newUnit": "packs"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:42.487Z",
+    "collection": "expenses",
+    "rowId": "69f34a4cf6a811cfb62cebd9",
+    "originalUnit": "crate",
+    "newUnit": "crates"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:42.697Z",
+    "collection": "expenses",
+    "rowId": "69f34a4cf6a811cfb62cebde",
+    "originalUnit": "crate",
+    "newUnit": "crates"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:42.897Z",
+    "collection": "expenses",
+    "rowId": "69f34a4cf6a811cfb62cebdf",
+    "originalUnit": "crate",
+    "newUnit": "crates"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:43.098Z",
+    "collection": "expenses",
+    "rowId": "69f34a4cf6a811cfb62cebe8",
+    "originalUnit": "crate",
+    "newUnit": "crates"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:43.306Z",
+    "collection": "expenses",
+    "rowId": "69f4b5852602ac2f21d6984c",
+    "originalUnit": "grams",
+    "newUnit": "g"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:43.510Z",
+    "collection": "expenses",
+    "rowId": "69f637f52602ac2f21d7071f",
+    "originalUnit": "month",
+    "newUnit": "months"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:43.715Z",
+    "collection": "expenses",
+    "rowId": "69f637f52602ac2f21d70720",
+    "originalUnit": "month",
+    "newUnit": "months"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:43.920Z",
+    "collection": "expenses",
+    "rowId": "69f638852602ac2f21d70754",
+    "originalUnit": "month",
+    "newUnit": "months"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:44.121Z",
+    "collection": "expenses",
+    "rowId": "69f640ef2602ac2f21d707a9",
+    "originalUnit": "month",
+    "newUnit": "months"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:44.331Z",
+    "collection": "expenses",
+    "rowId": "69f642362602ac2f21d707dd",
+    "originalUnit": "month",
+    "newUnit": "months"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:44.530Z",
+    "collection": "expenses",
+    "rowId": "69f642362602ac2f21d707de",
+    "originalUnit": "monthly",
+    "newUnit": "months"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:44.742Z",
+    "collection": "expenses",
+    "rowId": "69f642362602ac2f21d707df",
+    "originalUnit": "monthly",
+    "newUnit": "months"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:44.944Z",
+    "collection": "expenses",
+    "rowId": "69f642362602ac2f21d707e0",
+    "originalUnit": "monthly",
+    "newUnit": "months"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:45.145Z",
+    "collection": "expenses",
+    "rowId": "69f644402602ac2f21d7098e",
+    "originalUnit": "monthly",
+    "newUnit": "months"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:45.353Z",
+    "collection": "expenses",
+    "rowId": "69f644402602ac2f21d7098f",
+    "originalUnit": "monthly",
+    "newUnit": "months"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:46.626Z",
+    "collection": "inventories",
+    "rowId": "694540785172c0ca02759656",
+    "originalUnit": "Carton",
+    "newUnit": "cartons"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:46.892Z",
+    "collection": "inventories",
+    "rowId": "694540785172c0ca0275965b",
+    "originalUnit": "Carton",
+    "newUnit": "cartons"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:47.093Z",
+    "collection": "inventories",
+    "rowId": "694540785172c0ca02759660",
+    "originalUnit": "Carton",
+    "newUnit": "cartons"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:47.302Z",
+    "collection": "inventories",
+    "rowId": "6945407c58325b5c8527ae98",
+    "originalUnit": "Plates",
+    "newUnit": "plates"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:47.503Z",
+    "collection": "inventories",
+    "rowId": "6945407c58325b5c8527ae9e",
+    "originalUnit": "Plates",
+    "newUnit": "plates"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:47.708Z",
+    "collection": "inventories",
+    "rowId": "6945407c58325b5c8527aea4",
+    "originalUnit": "Plates",
+    "newUnit": "plates"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:47.913Z",
+    "collection": "inventories",
+    "rowId": "6945407c58325b5c8527aeaa",
+    "originalUnit": "Plates",
+    "newUnit": "plates"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:48.119Z",
+    "collection": "inventories",
+    "rowId": "6945407c58325b5c8527aeb0",
+    "originalUnit": "Plates",
+    "newUnit": "plates"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:48.322Z",
+    "collection": "inventories",
+    "rowId": "6945407c58325b5c8527aeb6",
+    "originalUnit": "Plates",
+    "newUnit": "plates"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:48.527Z",
+    "collection": "inventories",
+    "rowId": "6945407c58325b5c8527aebc",
+    "originalUnit": "Plates",
+    "newUnit": "plates"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:48.732Z",
+    "collection": "inventories",
+    "rowId": "6945407c58325b5c8527aec2",
+    "originalUnit": "Plates",
+    "newUnit": "plates"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:48.937Z",
+    "collection": "inventories",
+    "rowId": "6945407c58325b5c8527aec8",
+    "originalUnit": "Plates",
+    "newUnit": "plates"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:49.142Z",
+    "collection": "inventories",
+    "rowId": "6945407c58325b5c8527aece",
+    "originalUnit": "Plates",
+    "newUnit": "plates"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:49.347Z",
+    "collection": "inventories",
+    "rowId": "6945407c58325b5c8527aed4",
+    "originalUnit": "Plates",
+    "newUnit": "plates"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:49.551Z",
+    "collection": "inventories",
+    "rowId": "6945407c58325b5c8527aeda",
+    "originalUnit": "Plates",
+    "newUnit": "plates"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:49.752Z",
+    "collection": "inventories",
+    "rowId": "6945407c58325b5c8527aee0",
+    "originalUnit": "Plates",
+    "newUnit": "plates"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:49.962Z",
+    "collection": "inventories",
+    "rowId": "6945407c58325b5c8527aee6",
+    "originalUnit": "Plates",
+    "newUnit": "plates"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:50.162Z",
+    "collection": "inventories",
+    "rowId": "6945407c58325b5c8527aeec",
+    "originalUnit": "Plates",
+    "newUnit": "plates"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:50.371Z",
+    "collection": "inventories",
+    "rowId": "6945407c58325b5c8527aef2",
+    "originalUnit": "Plates",
+    "newUnit": "plates"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:50.576Z",
+    "collection": "inventories",
+    "rowId": "695d5c75426d280234f0a4af",
+    "originalUnit": "Carton",
+    "newUnit": "cartons"
+  },
+  {
+    "timestamp": "2026-05-04T16:07:50.782Z",
+    "collection": "inventories",
+    "rowId": "69ceaef7e14251a524ec2cee",
+    "originalUnit": "Plates",
+    "newUnit": "plates"
+  }
+]

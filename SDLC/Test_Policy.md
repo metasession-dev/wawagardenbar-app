@@ -10,7 +10,7 @@
 
 This Test Policy establishes Metasession's organizational commitment to quality assurance and testing excellence. It defines our philosophy, principles, accountability standards, and governance for all testing activities — including AI-assisted development.
 
-This policy answers **"why we test"** and **"what we commit to."** For how we approach testing methodically, see the Test Strategy (`sdlc/files/Test_Strategy.md` in META-COMPLY). For what tools and patterns we use, see the Test Architecture.
+This policy answers **"why we test"** and **"what we commit to."** For how we approach testing methodically, see the Test Strategy (`sdlc/files/Test_Strategy.md` in DevAudit). For what tools and patterns we use, see the Test Architecture.
 
 ---
 
@@ -274,7 +274,7 @@ Project Test Plans (per product)
 
 **Next Review Date:** March 2027
 
-**Related Documents:** Test Strategy, Test Architecture, Periodic Security Review Schedule, Project Test Plans (in META-COMPLY/sdlc/files/)
+**Related Documents:** Test Strategy, Test Architecture, Periodic Security Review Schedule, Project Test Plans (in devaudit/sdlc/files/)
 
 ---
 

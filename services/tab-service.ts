@@ -564,6 +564,9 @@ export class TabService {
 
   /**
    * @requirement REQ-012 - Record a partial payment on an open tab
+   * @requirement REQ-035 - optional tipAmount captured on the row.
+   * @requirement REQ-036 - independent tipPaymentMethod captured on the
+   *   row (falls back to row's paymentType for legacy callers).
    */
   static async recordPartialPayment(params: {
     tabId: string;
@@ -572,6 +575,8 @@ export class TabService {
     paymentType: 'cash' | 'transfer' | 'card';
     paymentReference?: string;
     processedBy: string;
+    tipAmount?: number;
+    tipPaymentMethod?: 'cash' | 'transfer' | 'card';
   }): Promise<ITab> {
     await connectDB();
 
@@ -609,6 +614,12 @@ export class TabService {
       throw new Error('A note is required for partial payments');
     }
 
+    // REQ-035 — guard tipAmount before mutating.
+    const tipAmount = params.tipAmount ?? 0;
+    if (!Number.isFinite(tipAmount) || tipAmount < 0) {
+      throw new Error('tipAmount must be a non-negative number');
+    }
+
     // Record the partial payment
     tab.partialPayments.push({
       amount: params.amount,
@@ -617,6 +628,13 @@ export class TabService {
       paymentReference: params.paymentReference,
       processedBy: new Types.ObjectId(params.processedBy),
       paidAt: new Date(),
+      tipAmount,
+      // REQ-036 — only persist tipPaymentMethod when explicitly supplied;
+      // omitting it is the signal to the daily-report aggregator to fall
+      // back to this row's `paymentType` (legacy behaviour preserved).
+      ...(params.tipPaymentMethod !== undefined
+        ? { tipPaymentMethod: params.tipPaymentMethod }
+        : {}),
     });
 
     await tab.save();
@@ -647,7 +665,16 @@ export class TabService {
 
   /**
    * Complete tab payment manually (admin)
-   * For cash, transfer, or POS payments
+   * For cash, transfer, or POS payments.
+   *
+   * @requirement REQ-035 — accepts optional `tipAmount`. The closing
+   * payment is persisted as a partial-payment row carrying its own
+   * tipAmount, so multi-method tabs capture the tip alongside the bill
+   * payment that received it. The TabModel pre('save') hook recomputes
+   * tab-level tipAmount as the sum.
+   * @requirement REQ-036 — accepts optional `tipPaymentMethod`,
+   * independent of `paymentType`. Lets staff record a card-paid bill +
+   * cash-paid tip on the same closing payment row.
    */
   static async completeTabPaymentManually(params: {
     tabId: string;
@@ -655,8 +682,16 @@ export class TabService {
     paymentReference: string;
     comments?: string;
     processedBy: string;
+    tipAmount?: number;
+    tipPaymentMethod?: 'cash' | 'transfer' | 'card';
   }): Promise<ITab> {
     await connectDB();
+
+    // REQ-035 — guard tipAmount before any mutation.
+    const tipAmount = params.tipAmount ?? 0;
+    if (!Number.isFinite(tipAmount) || tipAmount < 0) {
+      throw new Error('tipAmount must be a non-negative number');
+    }
 
     const tab = await TabModel.findById(params.tabId).populate(
       'userId',
@@ -679,6 +714,31 @@ export class TabService {
     if (!customerEmail && tab.userId) {
       const populatedUser = tab.userId as any;
       customerEmail = populatedUser.email || '';
+    }
+
+    // REQ-035 — push the closing payment as a partial-payment row so
+    // its tip is captured per-method. Outstanding balance = tab.total
+    // minus existing partials.
+    const priorPartialTotal = (tab.partialPayments || []).reduce(
+      (sum: number, pp: any) => sum + (pp.amount || 0),
+      0
+    );
+    const closingAmount = Math.max(0, (tab.total || 0) - priorPartialTotal);
+    if (closingAmount > 0) {
+      tab.partialPayments.push({
+        amount: closingAmount,
+        note: 'Final payment (closing tab)',
+        paymentType: params.paymentType,
+        paymentReference: params.paymentReference,
+        processedBy: new Types.ObjectId(params.processedBy),
+        paidAt: new Date(),
+        tipAmount,
+        // REQ-036 — persist explicit tipPaymentMethod when provided;
+        // omitting it lets the aggregator fall back to `paymentType`.
+        ...(params.tipPaymentMethod !== undefined
+          ? { tipPaymentMethod: params.tipPaymentMethod }
+          : {}),
+      });
     }
 
     // Update tab status and payment info

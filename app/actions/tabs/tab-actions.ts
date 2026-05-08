@@ -362,6 +362,8 @@ export async function getDashboardFilteredTabsAction(filters: {
 
 /**
  * @requirement REQ-012 - Record a partial payment on an open tab
+ * @requirement REQ-035 - optional tipAmount on the partial-payment row
+ * @requirement REQ-036 - optional tipPaymentMethod independent of paymentType
  */
 export async function recordPartialPaymentAction(params: {
   tabId: string;
@@ -369,6 +371,8 @@ export async function recordPartialPaymentAction(params: {
   note: string;
   paymentType: 'cash' | 'transfer' | 'card';
   paymentReference?: string;
+  tipAmount?: number;
+  tipPaymentMethod?: 'cash' | 'transfer' | 'card';
 }): Promise<ActionResult<{ tab: ITab }>> {
   try {
     const cookieStore = await cookies();
@@ -409,6 +413,8 @@ export async function recordPartialPaymentAction(params: {
       paymentType: params.paymentType,
       paymentReference: params.paymentReference,
       processedBy: session.userId,
+      tipAmount: params.tipAmount,
+      tipPaymentMethod: params.tipPaymentMethod,
     });
 
     revalidatePath('/dashboard/orders/tabs');
@@ -432,8 +438,12 @@ export async function recordPartialPaymentAction(params: {
 }
 
 /**
- * Complete tab payment manually (admin)
- * For cash, transfer, or POS payments
+ * Complete tab payment manually (admin).
+ * For cash, transfer, or POS payments.
+ *
+ * @requirement REQ-035 - optional tipAmount captured on the closing
+ *   partial-payment row.
+ * @requirement REQ-036 - optional tipPaymentMethod independent of paymentType.
  */
 export async function completeTabPaymentManuallyAction(params: {
   tabId: string;
@@ -441,6 +451,8 @@ export async function completeTabPaymentManuallyAction(params: {
   paymentReference: string;
   comments?: string;
   businessDate?: Date;
+  tipAmount?: number;
+  tipPaymentMethod?: 'cash' | 'transfer' | 'card';
 }): Promise<ActionResult<{ tab: ITab }>> {
   try {
     const cookieStore = await cookies();
@@ -481,6 +493,8 @@ export async function completeTabPaymentManuallyAction(params: {
       comments: params.comments,
       processedBy: session.userId,
       businessDate: params.businessDate,
+      tipAmount: params.tipAmount,
+      tipPaymentMethod: params.tipPaymentMethod,
     } as any);
 
     revalidatePath('/dashboard/orders/tabs');

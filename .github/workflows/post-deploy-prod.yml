@@ -27,7 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate META-COMPLY env
+      - name: Validate DevAudit env
         run: |
           if [ -z "${META_COMPLY_BASE_URL}" ] || [ -z "${META_COMPLY_API_KEY}" ]; then
             echo "::error::META_COMPLY_BASE_URL (variable) and META_COMPLY_API_KEY (secret) must both be set."

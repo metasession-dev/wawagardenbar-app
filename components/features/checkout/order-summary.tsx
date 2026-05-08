@@ -15,12 +15,18 @@ interface OrderSummaryProps {
   orderType: 'dine-in' | 'pickup' | 'delivery' | 'pay-now';
   onRewardApplied?: (rewardId: string, discount: number) => void;
   onPointsApplied?: (points: number, discount: number) => void;
+  // REQ-036 — display the running tip line. Threaded from CheckoutForm
+  // via form.watch('tipAmount' / 'tipPaymentMethod').
+  tipAmount?: number;
+  tipPaymentMethod?: 'cash' | 'transfer' | 'card';
 }
 
 export function OrderSummary({
   orderType,
   onRewardApplied,
   onPointsApplied,
+  tipAmount = 0,
+  tipPaymentMethod,
 }: OrderSummaryProps) {
   const { items, getTotalPrice, getTotalItems } = useCartStore();
   const [appliedReward, setAppliedReward] = useState<
@@ -42,6 +48,7 @@ export function OrderSummary({
 
   const subtotal = getTotalPrice();
   const totalItems = getTotalItems();
+  const tipForTotal = Math.max(0, tipAmount || 0);
 
   // Fetch accurate fees from settings
   useEffect(() => {
@@ -73,9 +80,11 @@ export function OrderSummary({
   const pointsDiscount = appliedPoints?.discount || 0;
   const totalDiscount = rewardDiscount + pointsDiscount;
 
+  // REQ-036 — total includes the tip in the running summary so the
+  // customer sees the all-in number before submitting.
   const total = Math.max(
     0,
-    subtotal + deliveryFee + serviceFee + tax - totalDiscount
+    subtotal + deliveryFee + serviceFee + tax - totalDiscount + tipForTotal
   );
 
   function handleRewardApplied(rewardId: string, discount: number) {
@@ -220,6 +229,28 @@ export function OrderSummary({
             <div className="flex justify-between text-sm text-purple-600">
               <span>Points Discount</span>
               <span>-{formatPrice(pointsDiscount)}</span>
+            </div>
+          )}
+
+          {/* REQ-036 — tip line in the running summary, with method
+              suffix when chosen. Hidden when no tip. */}
+          {tipForTotal > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">
+                Tip
+                {tipPaymentMethod && (
+                  <span className="ml-1 text-xs">
+                    (via{' '}
+                    <span className="capitalize">
+                      {tipPaymentMethod === 'card'
+                        ? 'POS / Card'
+                        : tipPaymentMethod}
+                    </span>
+                    )
+                  </span>
+                )}
+              </span>
+              <span>{formatPrice(tipForTotal)}</span>
             </div>
           )}
         </div>

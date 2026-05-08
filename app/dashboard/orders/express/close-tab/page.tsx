@@ -24,6 +24,7 @@ import {
   expressCloseTabAction,
 } from '@/app/actions/admin/express-actions';
 import { BusinessDayCheckbox } from '@/components/features/admin/business-day-checkbox';
+import { TipInputRow } from '@/components/features/orders/tip-input-row';
 import {
   ArrowLeft,
   Loader2,
@@ -75,6 +76,17 @@ export default function ExpressCloseTabPage() {
   );
   const [paymentReference, setPaymentReference] = useState('');
   const [businessDate, setBusinessDate] = useState<Date | undefined>(undefined);
+  // REQ-036 — tip capture for the express close-tab flow. Tip method
+  // defaults to the bill `paymentType` and is independently
+  // overrideable via the dropdown in <TipInputRow>.
+  const [tipAmount, setTipAmount] = useState(0);
+  const [tipPaymentMethod, setTipPaymentMethod] = useState<
+    'cash' | 'transfer' | 'card'
+  >('cash');
+  const [tipMethodOverridden, setTipMethodOverridden] = useState(false);
+  const effectiveTipMethod = tipMethodOverridden
+    ? tipPaymentMethod
+    : paymentType;
 
   useEffect(() => {
     loadOpenTabs();
@@ -114,6 +126,9 @@ export default function ExpressCloseTabPage() {
       paymentType,
       paymentReference: paymentReference || undefined,
       businessDate,
+      tipAmount: tipAmount > 0 ? tipAmount : undefined,
+      tipPaymentMethod:
+        tipAmount > 0 && tipMethodOverridden ? effectiveTipMethod : undefined,
     });
 
     if (result.success) {
@@ -311,6 +326,20 @@ export default function ExpressCloseTabPage() {
                     />
                   </div>
                 )}
+                {/* REQ-036 — tip on the closing payment, with
+                    independent method dropdown that defaults to the
+                    bill type and can be overridden. */}
+                <TipInputRow
+                  tipAmount={tipAmount}
+                  onTipAmountChange={setTipAmount}
+                  tipPaymentMethod={effectiveTipMethod}
+                  onTipPaymentMethodChange={(m) => {
+                    setTipPaymentMethod(m);
+                    setTipMethodOverridden(true);
+                  }}
+                  disabled={closing}
+                  id="express-close-tab-tip"
+                />
               </CardContent>
             </Card>
           )}

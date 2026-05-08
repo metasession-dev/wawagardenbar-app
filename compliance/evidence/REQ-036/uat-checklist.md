@@ -45,6 +45,25 @@ REQ-036 is fully additive; legacy partial-payment rows fall back to `paymentType
 
 ---
 
+## Step 1b — AC2b: Express Close Tab page tip section (D2 — missed surface, patched)
+
+This page (`/dashboard/orders/express/close-tab`) is a separate route from the AdminPayTabDialog modal. It was missed during initial REQ-036 surface enumeration and patched before merge.
+
+- [ ] Navigate to `/dashboard/orders/express/close-tab`. Pick an open tab from the list.
+- [ ] On the Confirm step, choose **POS** as the bill payment type.
+- [ ] Verify the new Tip section appears below the bill payment buttons: numeric amount input + tip method dropdown.
+- [ ] Enter `200` for the tip; override the dropdown to **Cash**.
+- [ ] Verify helper text reads "Tip recorded as cash regardless of bill payment method."
+- [ ] Click **Close Tab**.
+
+📷 _Screenshot:_ Express close-tab page showing card bill + cash tip override before submit.
+
+📷 _Screenshot:_ post-close confirmation.
+
+**Expected:** Tab closed; partial-payment row carries `paymentType: 'card'`, `tipAmount: 200`, `tipPaymentMethod: 'cash'`. Daily Report shows ₦200 in cash tip bucket.
+
+---
+
 ## Step 2 — AC2: Process Tab Payment > Partial Payment with tip method override
 
 - [ ] On a different open tab, click **Customer Wants to Pay**, choose **Partial Payment**.
@@ -129,9 +148,9 @@ REQ-036 is fully additive; legacy partial-payment rows fall back to `paymentType
 - [ ] Screenshots saved and attached to the META-COMPLY UAT release.
 - [ ] Tester noted any deviations / outstanding issues below.
 
-**Tester:** ********\_\_\_********
-**Date:** ********\_\_\_********
-**META-COMPLY UAT release:** v****\_\_\_****
+**Tester:** **\*\*\*\***\_\_\_**\*\*\*\***
+**Date:** **\*\*\*\***\_\_\_**\*\*\*\***
+**META-COMPLY UAT release:** v\***\*\_\_\_\*\***
 
 ### Issues found during UAT
 

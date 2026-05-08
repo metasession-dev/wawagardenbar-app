@@ -10,6 +10,7 @@
 
 - **AC1** — Process Tab Payment > Full Payment: tip section has both an amount input AND a Cash / POS / Transfer dropdown for the tip's payment method, defaulting to the bill's payment type but independently overrideable.
 - **AC2** — Process Tab Payment > Partial Payment: same as AC1 for the partial-payment row.
+- **AC2b** — Express Close Tab page (`/dashboard/orders/express/close-tab`): same as AC1 — tip section with amount + method dropdown. Discovered as missed surface during UAT 2026-05-08 (D2 in `test-execution-summary.md`); patched in the same REQ before merge.
 - **AC3** — Customer-checkout Tip step (`TipInputStep`): gains a Cash / POS / Transfer dropdown below the custom-amount input. Required when `tipAmount > 0`.
 - **AC4** — Server persists explicit `tipPaymentMethod` on `Tab.partialPayments[]` (new field) and on `Order.tipPaymentMethod` (existing field). Falls back to bill payment type when caller omits it.
 - **AC5** — Admin order detail (`OrderPaymentInfo`) renders the tip amount + method as a row beneath the Amount when `Order.tipAmount > 0`.
@@ -57,6 +58,7 @@ None.
 | --------------------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | AC1 — Full Payment tip method dropdown              | `e2e/orders/admin-pay-tab-tip-method.spec.ts`                    | "AC1: card bill + cash tip on closing payment row"                                                 |
 | AC2 — Partial Payment tip method dropdown           | manual UAT walkthrough (component test optional)                 | Documented in `uat-checklist.md`                                                                   |
+| AC2b — Express Close Tab page tip section           | manual UAT walkthrough                                           | Documented in `uat-checklist.md` Step 1b — added 2026-05-08 after D2 discovery                     |
 | AC3 — Customer-checkout tip method dropdown         | manual UAT walkthrough                                           | Documented in `uat-checklist.md` — staff records tip via customer-checkout while creating-as-admin |
 | AC4 — Server persists tipPaymentMethod (tab)        | `__tests__/services/tab-service.tip-method.test.ts`              | All 3 tab-service tests                                                                            |
 | AC5 — OrderPaymentInfo renders tip                  | manual UAT walkthrough                                           | Documented in `uat-checklist.md`                                                                   |

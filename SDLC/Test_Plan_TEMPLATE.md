@@ -4,7 +4,7 @@
 
 **Project:** [PROJECT NAME] | **Repository:** `[org/repo-name]`
 
-**Parent Documents:** Test Policy, Test Strategy, Test Architecture (all Tier 1, in META-COMPLY/sdlc/files/)
+**Parent Documents:** Test Policy, Test Strategy, Test Architecture (all Tier 1, in devaudit/sdlc/files/)
 
 ---
 
@@ -12,7 +12,7 @@
 
 This Test Plan defines project-specific testing details for [PROJECT NAME]. It implements the universal standards from Tier 1 with concrete environment details, test suites, entry/exit criteria, and compliance artifacts.
 
-For testing philosophy and governance: Test Policy (`sdlc/files/Test_Policy.md` in META-COMPLY).
+For testing philosophy and governance: Test Policy (`sdlc/files/Test_Policy.md` in DevAudit).
 For testing methodology and approach: Test Strategy.
 For tools, patterns, and code standards: Test Architecture.
 
@@ -309,4 +309,4 @@ Annual pen test scope: [PRODUCTION_URL], API endpoints, auth mechanism, [databas
 | ------- | ------ | -------- | ------------ |
 | 1.0     | [DATE] | [AUTHOR] | Initial plan |
 
-**Parent Documents:** Test Policy, Test Strategy, Test Architecture, Periodic Security Review Schedule (in META-COMPLY/sdlc/files/)
+**Parent Documents:** Test Policy, Test Strategy, Test Architecture, Periodic Security Review Schedule (in devaudit/sdlc/files/)

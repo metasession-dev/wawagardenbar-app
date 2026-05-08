@@ -10,7 +10,7 @@
 
 This Test Strategy defines the methodological approach to testing across Metasession. It establishes how we plan, execute, and evaluate testing — the testing levels, security methodology, AI testing protocol, defect lifecycle, traceability approach, risk classification, and evidence requirements.
 
-This document answers **"how we approach testing."** For why we test and what we commit to, see the Test Policy (`sdlc/files/Test_Policy.md` in META-COMPLY). For specific tools, patterns, and code standards, see the Test Architecture.
+This document answers **"how we approach testing."** For why we test and what we commit to, see the Test Policy (`sdlc/files/Test_Policy.md` in DevAudit). For specific tools, patterns, and code standards, see the Test Architecture.
 
 ---
 
@@ -64,7 +64,7 @@ Both are required before any release. The project's Test Plan specifies which va
 
 ### Per-Commit Gates (Mandatory for All Changes)
 
-Every push to `develop` triggers the full CI pipeline. All gates run on both develop pushes and PRs to main. Gate results are auto-uploaded to META-COMPLY (environment=uat) on develop pushes. Every code change must pass these automated gates:
+Every push to `develop` triggers the full CI pipeline. All gates run on both develop pushes and PRs to main. Gate results are auto-uploaded to DevAudit (environment=uat) on develop pushes. Every code change must pass these automated gates:
 
 **Static Application Security Testing (SAST)** — Scans source code for vulnerability patterns including injection, insecure defaults, and improper error handling. Exit criteria: 0 high/critical findings. Medium findings require documented justification or remediation plan.
 
@@ -250,14 +250,14 @@ Projects may use trunk-based with integration branch or direct trunk-based flow.
 
 1. **Implement** — Code on working branch with requirement references
 2. **Local gates** — Type checking, linting, security scan, tests
-3. **Push to develop** — Triggers full CI pipeline (all gates), evidence auto-uploaded to META-COMPLY, auto-deploys to UAT
-4. **UAT review** — Review evidence in META-COMPLY, approve UAT release
-5. **PR to main** — CI re-runs gates independently, META-COMPLY UAT approval check verified
+3. **Push to develop** — Triggers full CI pipeline (all gates), evidence auto-uploaded to DevAudit, auto-deploys to UAT
+4. **UAT review** — Review evidence in DevAudit, approve UAT release
+5. **PR to main** — CI re-runs gates independently, DevAudit UAT approval check verified
 6. **Review** — Human reviews code, security, AI involvement, compliance artifacts
 7. **Approve** — Immutable record of reviewer identity and timestamp
 8. **Merge** — Triggers production deployment
-9. **Post-deploy** — Smoke tests against production, evidence uploaded to META-COMPLY (environment=production)
-10. **Prod review** — Approve production release in META-COMPLY
+9. **Post-deploy** — Smoke tests against production, evidence uploaded to DevAudit (environment=production)
+10. **Prod review** — Approve production release in DevAudit
 
 The four-eyes principle is enforced through mandatory PR reviews. The PR approval constitutes formal sign-off for compliance purposes.
 
@@ -352,7 +352,7 @@ Sprint retrospectives, quarterly metric reviews, and incident lessons learned fe
 
 **Next Review Date:** March 2027
 
-**Related Documents:** Test Policy, Test Architecture, Periodic Security Review Schedule, Project Test Plans (in META-COMPLY/sdlc/files/)
+**Related Documents:** Test Policy, Test Architecture, Periodic Security Review Schedule, Project Test Plans (in devaudit/sdlc/files/)
 
 ---
 

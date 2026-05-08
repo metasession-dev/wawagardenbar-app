@@ -102,9 +102,9 @@ Do NOT proceed to evidence compilation or PR creation until CI is green. If CI f
 
 ### Evidence Storage Rule
 
-Markdown stays in git. Binary/JSON evidence goes to META-COMPLY portal.
+Markdown stays in git. Binary/JSON evidence goes to DevAudit portal.
 
-Upload to META-COMPLY (NEVER commit to git):
+Upload to DevAudit (NEVER commit to git):
 
 - E2E results (JSON), screenshots (PNG/JPG), SAST results (JSON), dependency audit (JSON), unit test output (TXT), test reports (HTML)
 
@@ -118,7 +118,7 @@ Read `SDLC/3-compile-evidence.md` for full details, including release ticket tem
 
 1. Confirm CI is green before compiling evidence: `gh run list --branch develop --limit 1`
 2. Generate `compliance/evidence/REQ-XXX/test-execution-summary.md` — gate results, test changes, coverage against test plan
-3. Upload binary/JSON evidence to META-COMPLY portal
+3. Upload binary/JSON evidence to DevAudit portal
 4. Create `compliance/evidence/REQ-XXX/security-summary.md` (in git)
 5. Update RTM status to `TESTED - PENDING SIGN-OFF`
 6. Create `compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md` (use template from workflow file). If the change requires post-deploy actions (data migrations, backfill scripts), document them in the release ticket's Post-Deploy Actions section with exact commands
@@ -126,7 +126,7 @@ Read `SDLC/3-compile-evidence.md` for full details, including release ticket tem
 8. **WAIT CHECKPOINT:** Confirm CI + UAT deployment complete before UAT verification.
 9. **Verify on UAT** (if configured) — health check, smoke test, feature verification. Record in `security-summary.md`. Commit locally. Do NOT create a PR until UAT is green.
 10. **Push all compliance commits** in a single push: `git push origin develop`
-11. **Verify release in META-COMPLY** — CI auto-creates releases and links evidence. Check that a release exists with the current version (date-based: `v{YYYY}.{MM}.{DD}` or `v{YYYY}.{MM}.{DD}.{N}` for multiple releases on the same day) and evidence is linked.
+11. **Verify release in DevAudit** — CI auto-creates releases and links evidence. Check that a release exists with the current version (date-based: `v{YYYY}.{MM}.{DD}` or `v{YYYY}.{MM}.{DD}.{N}` for multiple releases on the same day) and evidence is linked.
 
 ### Pre-Flight Checklist (Before Creating PR)
 
@@ -138,7 +138,7 @@ Before creating a PR, verify ALL of the following:
 - [ ] CI green on develop (not stale): `gh run list --branch develop --limit 1`
 - [ ] Working tree clean: `git status`
 - [ ] UAT verification passed (if configured)
-- [ ] META-COMPLY UAT approval granted
+- [ ] DevAudit UAT approval granted
 - [ ] For tracked requirements: test-scope.md complete, implementation-plan.md exists (MEDIUM/HIGH), RTM is `TESTED - PENDING SIGN-OFF`, release ticket created, evidence uploaded
 
 If any item fails, resolve it before proceeding.
@@ -172,7 +172,7 @@ This rule applies any time you summarise PR state in chat, not only at the final
 - NEVER self-merge a MEDIUM or HIGH risk PR — a second human reviewer MUST approve
 - NEVER use `--no-verify` to skip hooks
 - NEVER commit secrets (.env, credentials, API keys)
-- NEVER commit binary/JSON evidence to git — upload to META-COMPLY instead
+- NEVER commit binary/JSON evidence to git — upload to DevAudit instead
 - NEVER create a PR to main without UAT verification passing first (if UAT configured)
 - NEVER push directly to main — always develop → PR → main
 - NEVER skip Co-Authored-By when AI generates code

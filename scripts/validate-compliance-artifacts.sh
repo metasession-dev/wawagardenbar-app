@@ -81,11 +81,11 @@ for REQ in $REQUIREMENTS; do
     # Two alternatives: directory-prefixed paths (captured whole), and bare
     # filenames containing .test. / .spec. (captured from the stem, not the
     # dot — without the leading [\w./-]+ the match would start at `.test.`
-    # and drop the filename entirely). See META-COMPLY #133.
+    # and drop the filename entirely). See DevAudit #133.
     #
     # mapfile + quoted expansion: without this, tokens like `__tests__/**`
     # get pathname-expanded by the for-loop and produce phantom "missing"
-    # errors for every real subdirectory. See META-COMPLY #137.
+    # errors for every real subdirectory. See DevAudit #137.
     mapfile -t TEST_FILES < <(
       grep -oP '(?:__tests__/|tests?/|e2e/|spec/)\S+|[\w./-]+\.(?:test|spec)\.\S+' \
         "compliance/evidence/$REQ/test-plan.md" 2>/dev/null \

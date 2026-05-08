@@ -6,7 +6,7 @@ description: One-time project setup — configure repository, CI pipeline, compl
 
 **Document Type:** Setup Guide | **Run Once:** At project start, before any workflow is executed
 
-**Parent Documents:** Test Policy, Test Strategy, Test Architecture (all Tier 1, in META-COMPLY/sdlc/files/)
+**Parent Documents:** Test Policy, Test Strategy, Test Architecture (all Tier 1, in devaudit/sdlc/files/)
 
 ---
 
@@ -64,7 +64,7 @@ Configure in GitHub → Settings → Branches → Branch protection rules:
     - `sast`
     - `dependency-audit`
     - `e2e-tests`
-    - `META-COMPLY UAT Approval` (from `check-uat-approval.yml` — blocks merge until release is approved in META-COMPLY. Re-run the workflow after approving in META-COMPLY to turn the check green)
+    - `DevAudit UAT Approval` (from `check-uat-approval.yml` — blocks merge until release is approved in DevAudit. Re-run the workflow after approving in DevAudit to turn the check green)
 - [x] Require branches to be up to date before merging
 - [x] Do not allow bypassing the above settings
 
@@ -369,7 +369,7 @@ Copy these template workflows from `sdlc/files/ci/` into your project's `.github
 **`check-uat-approval.yml`** — UAT approval gate:
 
 - Runs on PRs to `main` and `workflow_dispatch`
-- Queries META-COMPLY for release approval status
+- Queries DevAudit for release approval status
 - Blocks merge unless release is `uat_approved`
 - Add `Check UAT Approval` as a required status check on `main`
 
@@ -377,10 +377,10 @@ Copy these template workflows from `sdlc/files/ci/` into your project's `.github
 
 - Runs on push to `main` (after merge)
 - Waits for deployment, runs production smoke tests
-- Uploads production evidence to META-COMPLY (`environment: production`)
-- Marks the release as `released` in META-COMPLY
+- Uploads production evidence to DevAudit (`environment: production`)
+- Marks the release as `released` in DevAudit
 
-**Versioning convention:** Releases use date-based versions by default (`v2026.03.27`, or `v2026.03.27.2` for the second release on the same day). CI auto-creates releases in META-COMPLY when uploading evidence and auto-increments the sequence number if a release already exists for today. Update `PROJECT_SLUG` and `PRODUCTION_URL` in each template.
+**Versioning convention:** Releases use date-based versions by default (`v2026.03.27`, or `v2026.03.27.2` for the second release on the same day). CI auto-creates releases in DevAudit when uploading evidence and auto-increments the sequence number if a release already exists for today. Update `PROJECT_SLUG` and `PRODUCTION_URL` in each template.
 
 ---
 
@@ -413,17 +413,17 @@ npm install --save-dev husky @commitlint/cli @commitlint/config-conventional lin
 npx husky init
 ```
 
-Copy hook templates from META-COMPLY SDLC:
+Copy hook templates from DevAudit SDLC:
 
 ```bash
-# From your project root (adjust path to META-COMPLY)
-cp path/to/META-COMPLY/sdlc/files/hooks/commit-msg .husky/commit-msg
-cp path/to/META-COMPLY/sdlc/files/hooks/pre-commit .husky/pre-commit
-cp path/to/META-COMPLY/sdlc/files/hooks/pre-push .husky/pre-push
+# From your project root (adjust path to DevAudit)
+cp path/to/devaudit/sdlc/files/hooks/commit-msg .husky/commit-msg
+cp path/to/devaudit/sdlc/files/hooks/pre-commit .husky/pre-commit
+cp path/to/devaudit/sdlc/files/hooks/pre-push .husky/pre-push
 chmod +x .husky/commit-msg .husky/pre-commit .husky/pre-push
 
 # Copy commitlint config
-cp path/to/META-COMPLY/sdlc/files/hooks/commitlint.config.mjs commitlint.config.mjs
+cp path/to/devaudit/sdlc/files/hooks/commitlint.config.mjs commitlint.config.mjs
 ```
 
 Add lint-staged configuration to `package.json`:
@@ -446,7 +446,7 @@ npm pkg set scripts.prepare="husky"
 ### 5d. JSDoc requirement check script (optional — for CI enforcement)
 
 ```bash
-cp path/to/META-COMPLY/sdlc/files/scripts/check-requirement-jsdoc.sh scripts/check-requirement-jsdoc.sh
+cp path/to/devaudit/sdlc/files/scripts/check-requirement-jsdoc.sh scripts/check-requirement-jsdoc.sh
 chmod +x scripts/check-requirement-jsdoc.sh
 ```
 
@@ -470,7 +470,7 @@ npx tsc --noEmit
 
 ## Step 6: Create Project Test Plan
 
-Copy `Test_Plan_TEMPLATE.md` from META-COMPLY (`sdlc/files/Test_Plan_TEMPLATE.md`) to `compliance/test-plan.md` and fill in:
+Copy `Test_Plan_TEMPLATE.md` from DevAudit (`sdlc/files/Test_Plan_TEMPLATE.md`) to `compliance/test-plan.md` and fill in:
 
 - [ ] Project name and repository
 - [ ] Stack and hosting details
@@ -533,7 +533,7 @@ If any step fails, fix the configuration before starting real work.
 | Git hooks configured (Husky, Commitlint, lint-staged)                          | [ ]    |
 | Hook verification passed (commitlint, pre-push tsc)                            | [ ]    |
 | AI assistant SDLC rules configured (CLAUDE.md / .windsurfrules / .cursorrules) | [ ]    |
-| META-COMPLY evidence upload configured in CI                                   | [ ]    |
+| DevAudit evidence upload configured in CI                                      | [ ]    |
 | Project Test Plan created                                                      | [ ]    |
 | End-to-end pipeline verified with test change                                  | [ ]    |
 

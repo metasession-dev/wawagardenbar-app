@@ -126,18 +126,28 @@ if [ ${#FILES[@]} -eq 0 ]; then
 fi
 
 # --- Upload each file via /api/evidence/upload ---
+#
+# Retry-on-429 / 5xx: consumer CI workflows fire 8-12 sequential uploads per
+# requirement (test-scope, test-plan, implementation-plan, security-summary,
+# test-execution-summary, ai-prompts, ai-use-note, uat-checklist, gates/*.json).
+# That cadence trips DevAudit's per-IP rate limiter, marking otherwise-green
+# CI runs as failed. Retry transiently with exponential backoff (1s → 16s),
+# honouring Retry-After if the portal supplies it. Auth/validation errors
+# (4xx other than 429) still fail fast — they won't fix themselves.
+#
+# Issue: devaudit#263.
 SUCCEEDED=0
 FAILED=0
 TOTAL_SIZE=0
 UPLOAD_URL="${META_COMPLY_BASE_URL}/api/evidence/upload"
+MAX_ATTEMPTS=${UPLOAD_MAX_ATTEMPTS:-5}
+INITIAL_BACKOFF_SECONDS=${UPLOAD_INITIAL_BACKOFF_SECONDS:-1}
 
 for FILE in "${FILES[@]}"; do
   FILENAME=$(basename "$FILE")
   FILE_SIZE=$(stat -c%s "$FILE" 2>/dev/null || stat -f%z "$FILE")
   echo -n "Uploading ${FILENAME}... "
-  RESP_BODY_FILE=$(mktemp)
   CURL_ARGS=(
-    -s -o "$RESP_BODY_FILE" -w "%{http_code}"
     -X POST "$UPLOAD_URL"
     -H "Authorization: Bearer ${META_COMPLY_API_KEY}"
     -F "file=@${FILE}"
@@ -153,14 +163,52 @@ for FILE in "${FILES[@]}"; do
   [ -n "$BRANCH" ] && CURL_ARGS+=(-F "releaseBranch=${BRANCH}")
   [ -n "$ENVIRONMENT" ] && CURL_ARGS+=(-F "environment=${ENVIRONMENT}")
   [ -n "$EVIDENCE_CATEGORY" ] && CURL_ARGS+=(-F "evidenceCategory=${EVIDENCE_CATEGORY}")
-  HTTP_CODE=$(curl "${CURL_ARGS[@]}")
+
+  ATTEMPT=1
+  BACKOFF=$INITIAL_BACKOFF_SECONDS
+  HTTP_CODE=0
+  RESP_BODY_FILE=""
+  while [ "$ATTEMPT" -le "$MAX_ATTEMPTS" ]; do
+    [ -n "$RESP_BODY_FILE" ] && rm -f "$RESP_BODY_FILE"
+    RESP_BODY_FILE=$(mktemp)
+    RESP_HEADERS_FILE=$(mktemp)
+    HTTP_CODE=$(curl -s -o "$RESP_BODY_FILE" -D "$RESP_HEADERS_FILE" -w "%{http_code}" "${CURL_ARGS[@]}")
+    if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+      rm -f "$RESP_HEADERS_FILE"
+      break
+    fi
+    # Decide whether the failure is retriable (429 or 5xx).
+    if [ "$HTTP_CODE" = "429" ] || { [ "$HTTP_CODE" -ge 500 ] && [ "$HTTP_CODE" -lt 600 ]; }; then
+      if [ "$ATTEMPT" -lt "$MAX_ATTEMPTS" ]; then
+        # Honour Retry-After (seconds) if the portal supplied it; otherwise back off.
+        WAIT_SECONDS=$BACKOFF
+        RETRY_AFTER=$(grep -i '^retry-after:' "$RESP_HEADERS_FILE" 2>/dev/null | head -1 | sed 's/^[Rr]etry-[Aa]fter:[[:space:]]*//' | tr -d '\r')
+        if [[ "$RETRY_AFTER" =~ ^[0-9]+$ ]] && [ "$RETRY_AFTER" -gt 0 ]; then
+          WAIT_SECONDS=$RETRY_AFTER
+        fi
+        echo -n "(HTTP ${HTTP_CODE}, retry in ${WAIT_SECONDS}s) "
+        rm -f "$RESP_HEADERS_FILE"
+        sleep "$WAIT_SECONDS"
+        ATTEMPT=$((ATTEMPT + 1))
+        BACKOFF=$((BACKOFF * 2))
+        continue
+      fi
+    fi
+    rm -f "$RESP_HEADERS_FILE"
+    break
+  done
+
   if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
     rm -f "$RESP_BODY_FILE"
-    echo "OK (${FILE_SIZE} bytes)"
+    if [ "$ATTEMPT" -gt 1 ]; then
+      echo "OK (${FILE_SIZE} bytes, attempt ${ATTEMPT}/${MAX_ATTEMPTS})"
+    else
+      echo "OK (${FILE_SIZE} bytes)"
+    fi
     SUCCEEDED=$((SUCCEEDED + 1))
     TOTAL_SIZE=$((TOTAL_SIZE + FILE_SIZE))
   else
-    echo "FAILED (HTTP ${HTTP_CODE})"
+    echo "FAILED (HTTP ${HTTP_CODE} after ${ATTEMPT} attempt(s))"
     echo "  Response: $(head -c 500 "$RESP_BODY_FILE")"
     rm -f "$RESP_BODY_FILE"
     FAILED=$((FAILED + 1))

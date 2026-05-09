@@ -135,5 +135,5 @@ No soak window required for downstream features. (REQ-034 is independent and que
 - [x] Backfill script run on UAT, log inspected — `wawagardenbar_uat` had 0 candidates (REQ-035 first surface to capture tips)
 - [x] META-COMPLY UAT approval obtained — 2026-05-08
 - [x] PR merged to main — PR [#80](https://github.com/metasession-dev/wawagardenbar-app/pull/80), merge commit `c5b4e44` (2026-05-08 12:44:04 UTC)
-- [ ] Backfill script run on production — pending user confirmation; expected 0 candidates (UAT pattern)
+- [x] Backfill script run on production — 2026-05-09 dry-run: **0 candidates** (`tipAmount > 0 AND tipPaymentMethod missing`). Mirrors UAT — REQ-035 is the first surface to capture tips, so no legacy rows exist. No write run needed (no-op).
 - [ ] Production smoke (express tip + close-tab tip + report export) green — pending

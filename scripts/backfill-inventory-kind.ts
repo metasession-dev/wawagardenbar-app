@@ -1,16 +1,19 @@
 /**
  * @requirement REQ-034 — One-time idempotent backfill: every existing
- * Inventory row gets `kind: 'menu-item'`.
+ * Inventory + MenuItem row gets `kind: 'menu-item'`.
  *
- * Why: REQ-034 splits inventory into 'menu-item' (sellable) vs
- * 'kitchen-ingredient' (raw recipe input). Pre-existing rows are all
- * sellable items by definition, so they default to 'menu-item'.
- * Kitchen-ingredient rows are created fresh after the migration via
- * the Expense → Inventory link or by admin entry.
+ * Why: REQ-034 splits both Inventory AND MenuItem rows into 'menu-item'
+ * (sellable) vs 'kitchen-ingredient' (raw recipe input). Pre-existing
+ * rows are all sellable items by definition, so they default to
+ * 'menu-item'. Kitchen-ingredient rows are created fresh after the
+ * migration via the Expense → Inventory link or by admin entry. The
+ * MenuItem kind is mirrored so customer-menu queries can filter via a
+ * single condition without joining to Inventory.
  *
  * Behaviour:
- *   - Skips rows where `kind` is already set (idempotent).
- *   - --dry-run prints the candidate count without writing.
+ *   - Skips rows where `kind` is already set (idempotent on both
+ *     collections).
+ *   - --dry-run prints the candidate counts without writing.
  *
  * Usage:
  *   npx tsx scripts/backfill-inventory-kind.ts
@@ -23,6 +26,7 @@ import mongoose from 'mongoose';
 import { config } from 'dotenv';
 import path from 'path';
 import InventoryModel from '../models/inventory-model';
+import MenuItemModel from '../models/menu-item-model';
 import { INVENTORY_KIND_BACKFILL_FILTER } from '../lib/inventory-kind-backfill';
 
 config({ path: path.resolve(__dirname, '../.env.local') });
@@ -42,14 +46,19 @@ async function main() {
   }
 
   console.log(
-    `[REQ-034] inventory.kind backfill starting (dry-run=${DRY_RUN}); connecting…`
+    `[REQ-034] kind backfill starting (dry-run=${DRY_RUN}); connecting…`
   );
   await mongoose.connect(uri);
 
-  const candidateCount = await InventoryModel.countDocuments(
+  const inventoryCandidates = await InventoryModel.countDocuments(
     INVENTORY_KIND_BACKFILL_FILTER
   );
-  console.log(`[REQ-034] candidates without kind: ${candidateCount}`);
+  const menuItemCandidates = await MenuItemModel.countDocuments(
+    INVENTORY_KIND_BACKFILL_FILTER
+  );
+  console.log(
+    `[REQ-034] candidates without kind — inventory: ${inventoryCandidates}, menu-items: ${menuItemCandidates}`
+  );
 
   if (DRY_RUN) {
     console.log('[REQ-034] dry-run: no writes performed.');
@@ -57,11 +66,19 @@ async function main() {
     return;
   }
 
-  const res = await InventoryModel.updateMany(INVENTORY_KIND_BACKFILL_FILTER, {
+  const invRes = await InventoryModel.updateMany(
+    INVENTORY_KIND_BACKFILL_FILTER,
+    { $set: { kind: 'menu-item' } }
+  );
+  console.log(
+    `[REQ-034] updated ${invRes.modifiedCount} inventory rows (matched ${invRes.matchedCount}).`
+  );
+
+  const miRes = await MenuItemModel.updateMany(INVENTORY_KIND_BACKFILL_FILTER, {
     $set: { kind: 'menu-item' },
   });
   console.log(
-    `[REQ-034] updated ${res.modifiedCount} inventory rows (matched ${res.matchedCount}).`
+    `[REQ-034] updated ${miRes.modifiedCount} menu-item rows (matched ${miRes.matchedCount}).`
   );
 
   await mongoose.disconnect();

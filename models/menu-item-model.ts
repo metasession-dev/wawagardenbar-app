@@ -4,6 +4,8 @@ import {
   ICustomization,
   ICustomizationOption,
   MenuMainCategory,
+  MenuItemKind,
+  INVENTORY_KINDS,
 } from '../interfaces';
 
 const customizationOptionSchema = new Schema<ICustomizationOption>(
@@ -28,6 +30,12 @@ const customizationSchema = new Schema<ICustomization>(
 
 const menuItemSchema = new Schema<IMenuItem>(
   {
+    kind: {
+      type: String,
+      enum: INVENTORY_KINDS as unknown as MenuItemKind[],
+      default: 'menu-item',
+      required: true,
+    },
     name: { type: String, required: true, trim: true },
     description: { type: String, required: true },
     mainCategory: {
@@ -92,6 +100,7 @@ menuItemSchema.virtual('quarterPortionPrice').get(function () {
 menuItemSchema.index({ name: 'text', description: 'text', tags: 'text' });
 menuItemSchema.index({ mainCategory: 1, category: 1 });
 menuItemSchema.index({ isAvailable: 1, mainCategory: 1 });
+menuItemSchema.index({ kind: 1, isAvailable: 1 });
 
 const MenuItemModel: Model<IMenuItem> =
   mongoose.models.MenuItem ||

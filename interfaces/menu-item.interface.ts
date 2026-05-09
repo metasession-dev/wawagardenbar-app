@@ -29,6 +29,16 @@ export type MenuCategory =
 
 export type MenuMainCategory = 'drinks' | 'food';
 
+/**
+ * REQ-034: discriminator on MenuItem mirrors the one on Inventory.
+ * Customer-menu queries filter `kind: 'menu-item'` so kitchen-ingredient
+ * MenuItems (created as foreign-key targets for kitchen-ingredient
+ * Inventory rows) never appear on customer-facing surfaces.
+ *
+ * Kept as an alias of `InventoryKind` so the two stay in sync.
+ */
+export type MenuItemKind = import('./inventory.interface').InventoryKind;
+
 export interface ICustomizationOption {
   name: string;
   price: number;
@@ -45,6 +55,11 @@ export interface ICustomization {
 
 export interface IMenuItem {
   _id: string;
+  /**
+   * REQ-034: discriminates sellable items from kitchen-ingredient targets.
+   * Defaults to `'menu-item'` for legacy rows after the backfill script runs.
+   */
+  kind: MenuItemKind;
   name: string;
   description: string;
   mainCategory: MenuMainCategory;

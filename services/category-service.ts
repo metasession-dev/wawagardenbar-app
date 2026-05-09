@@ -29,7 +29,9 @@ export class CategoryService {
   static async getAllMenuItems(): Promise<MenuItemWithStock[]> {
     await connectDB();
 
-    const items = await MenuItem.find({ isAvailable: true })
+    // REQ-034 AC2: kitchen-ingredient MenuItems never appear on customer
+    // surfaces — every customer-menu query gates on `kind: 'menu-item'`.
+    const items = await MenuItem.find({ isAvailable: true, kind: 'menu-item' })
       .sort({ mainCategory: 1, category: 1, name: 1 })
       .lean();
 
@@ -60,6 +62,7 @@ export class CategoryService {
     const items = await MenuItem.find({
       mainCategory,
       isAvailable: true,
+      kind: 'menu-item',
     })
       .sort({ category: 1, name: 1 })
       .lean();
@@ -91,6 +94,7 @@ export class CategoryService {
     const items = await MenuItem.find({
       category,
       isAvailable: true,
+      kind: 'menu-item',
     })
       .sort({ name: 1 })
       .lean();
@@ -117,7 +121,12 @@ export class CategoryService {
   static async getItemById(itemId: string): Promise<MenuItemWithStock | null> {
     await connectDB();
 
-    const item = await MenuItem.findById(itemId).lean();
+    // REQ-034 AC2: by-id lookup gates on kind so a kitchen-ingredient
+    // menu-item id submitted via URL or API can never resolve here.
+    const item = await MenuItem.findOne({
+      _id: itemId,
+      kind: 'menu-item',
+    }).lean();
     if (!item) return null;
 
     const inventory = await Inventory.findOne({ menuItemId: item._id }).lean();
@@ -158,10 +167,12 @@ export class CategoryService {
       MenuItem.distinct('category', {
         mainCategory: 'drinks',
         isAvailable: true,
+        kind: 'menu-item',
       }),
       MenuItem.distinct('category', {
         mainCategory: 'food',
         isAvailable: true,
+        kind: 'menu-item',
       }),
     ]);
 
@@ -194,6 +205,7 @@ export class CategoryService {
     const safeQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const items = await MenuItem.find({
       isAvailable: true,
+      kind: 'menu-item',
       $or: [
         { name: { $regex: safeQuery, $options: 'i' } },
         { description: { $regex: safeQuery, $options: 'i' } },
@@ -229,7 +241,8 @@ export class CategoryService {
   }> {
     await connectDB();
 
-    const item = await MenuItem.findById(itemId);
+    // REQ-034 AC2: kitchen-ingredient items are not orderable, ever.
+    const item = await MenuItem.findOne({ _id: itemId, kind: 'menu-item' });
     if (!item || !item.isAvailable) {
       return { available: false, stockStatus: 'out-of-stock' };
     }

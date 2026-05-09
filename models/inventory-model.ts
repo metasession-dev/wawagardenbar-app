@@ -1,5 +1,11 @@
 import mongoose, { Schema, Model } from 'mongoose';
-import { IInventory, IInventoryLocation, StockStatus } from '../interfaces';
+import {
+  IInventory,
+  IInventoryLocation,
+  InventoryKind,
+  INVENTORY_KINDS,
+  StockStatus,
+} from '../interfaces';
 
 const inventoryLocationSchema = new Schema<IInventoryLocation>(
   {
@@ -21,6 +27,12 @@ const inventorySchema = new Schema<IInventory>(
       ref: 'MenuItem',
       required: true,
       unique: true,
+    },
+    kind: {
+      type: String,
+      enum: INVENTORY_KINDS as unknown as InventoryKind[],
+      default: 'menu-item',
+      required: true,
     },
     currentStock: { type: Number, required: true, min: 0 },
     minimumStock: { type: Number, required: true, min: 0 },
@@ -60,6 +72,7 @@ const inventorySchema = new Schema<IInventory>(
 inventorySchema.index({ status: 1 });
 inventorySchema.index({ currentStock: 1 });
 inventorySchema.index({ 'locations.location': 1 });
+inventorySchema.index({ kind: 1 });
 
 inventorySchema.pre('save', function preSave(next) {
   // Sync currentStock with location totals if tracking by location

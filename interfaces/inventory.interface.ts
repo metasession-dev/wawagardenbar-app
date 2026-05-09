@@ -2,6 +2,19 @@ import { Types } from 'mongoose';
 
 export type StockStatus = 'in-stock' | 'low-stock' | 'out-of-stock';
 
+/**
+ * REQ-034: Inventory rows split by `kind`.
+ *  - 'menu-item'         — sellable items shown on customer menus.
+ *  - 'kitchen-ingredient' — raw ingredients consumed by recipes; never returned
+ *                           by customer-menu queries.
+ */
+export type InventoryKind = 'menu-item' | 'kitchen-ingredient';
+
+export const INVENTORY_KINDS: readonly InventoryKind[] = [
+  'menu-item',
+  'kitchen-ingredient',
+] as const;
+
 export type LocationType =
   | 'store'
   | 'chiller-1'
@@ -22,6 +35,11 @@ export interface IInventoryLocation {
 export interface IInventory {
   _id: Types.ObjectId;
   menuItemId: Types.ObjectId;
+  /**
+   * REQ-034: discriminates sellable items from kitchen ingredients.
+   * Defaults to `'menu-item'` for legacy rows after the backfill script runs.
+   */
+  kind: InventoryKind;
   currentStock: number;
   minimumStock: number;
   maximumStock: number;

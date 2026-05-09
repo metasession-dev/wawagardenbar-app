@@ -34,7 +34,7 @@ export interface ITab {
   tableNumber: string;
   userId?: Types.ObjectId;
   createdBy?: Types.ObjectId;
-  createdByRole?: 'customer' | 'csr' | 'admin' | 'super-admin';
+  createdByRole?: import('./user.interface').UserRole;
   openedByStaffId?: Types.ObjectId;
   customerName?: string;
   customerEmail?: string;

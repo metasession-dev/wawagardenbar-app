@@ -13,26 +13,30 @@ These shape the implementation. Confirmed by reading the tree, not assumed from 
 3. **Mongo deployment** — both prod and UAT are STANDALONE (`hello.setName` undefined, no `hosts` array). `withTransaction` unavailable. Resolution #3: optimistic deduction with reversal pass.
 4. **Customer-menu query touchpoints** — confirmed in `services/category-service.ts` (3 sites at L32, L60, L91 per issue), `app/actions/admin/express-actions.ts`, `app/actions/admin/order-edit-actions.ts`. Add `kind: 'menu-item'` filter at each site.
 
-## Phased plan
+## Single-PR plan
 
-Two PRs, in sequence.
+All scope ships in one PR develop → main after UAT (user override 2026-05-09: bundled, no soak gate). Branch: `req-034/scaffold` carries scaffold + implementation; merged to develop, then PR opened.
 
 ---
 
-## PR1 — Phase A: data model + roles + Expense→Inventory link
+## Order of work
 
-**Branch:** `req-034/phase-a-data-model-and-roles`
-**Soak gate:** REQ-033 1-week soak elapses 2026-05-11 — code may land on develop now; merge to main waits.
+The following 12 steps are ordered for safe progression: schema first, then services, then UI, then E2E. Tests are written before each step's implementation per `feedback_tests_before_push.md`.
 
-### Order of work
-
-1. **Extend role enum + Mongoose validator + interface mirrors.** No behavioural change yet (kitchen still treated as csr-equivalent in this commit; default-deny added in step 6).
+1. **Extend role enum + Mongoose validator + interface mirrors.** kitchen / bar / waiting added; default-deny for kitchen wired in step 6.
 2. **Add `Inventory.kind` discriminator + backfill script.** Run script against UAT.
 3. **Customer-menu query guards** — add `kind: 'menu-item'` to every menu query.
 4. **Inventory dashboard tabs** — Sellable / Kitchen.
 5. **Expense → Inventory link** — schema fields, helper module, service-layer wiring (save / edit / delete), expense form UI dropdown, weighted-average cost via `InventoryItemCostHistory`, block-on-negative reversal.
-6. **Lock down kitchen role** — switch from csr-equivalent to default-deny allowlist on `/dashboard/kitchen/*`. Bar/waiting stay csr-equivalent.
+6. **Lock down kitchen role** — default-deny allowlist on `/dashboard/kitchen/*`. Bar/waiting stay csr-equivalent.
 7. **Settings UI role dropdown** — add Kitchen / Bar / Waiting options.
+8. **Recipe model + service** — schema, validation (target/ingredient kind, no duplicates, dimension match), CRUD.
+9. **Production model + service** — schema, optimistic deduction with reversal pass, void with 24h reasonNote enforcement.
+10. **Pure helpers** — `lib/recipe-execution.ts`, `lib/dimension-conversion.ts` (mass + volume factor table).
+11. **Kitchen pages + components** — `/dashboard/kitchen/recipes`, `/dashboard/kitchen/production`, recipe-builder, make-batch-dialog, production-history.
+12. **E2E spec** — full flow: recipe → batch → report → void.
+
+Tests-first commits land before each implementation step. RTM flips DRAFT → TESTED at the end of step 12; → APPROVED at Stage 5 finalize.
 
 ### Files (create)
 
@@ -52,7 +56,7 @@ Two PRs, in sequence.
 - `interfaces/inventory.interface.ts` (mirror)
 - `models/expense-model.ts` (+ `linkedInventoryId`, `stockMovementId`)
 - `interfaces/expense.interface.ts` (mirror)
-- `models/stock-movement-model.ts` (+ `productionId` ref; not yet used in Phase A)
+- `models/stock-movement-model.ts` (+ `productionId` ref + `'production'` category)
 - `models/user-model.ts` (extend role enum)
 - `interfaces/user.interface.ts`, `interfaces/api-key.interface.ts`, `interfaces/order.interface.ts`, `interfaces/tab.interface.ts` (+ kitchen / bar / waiting)
 - `lib/session.ts`, `lib/auth-middleware.ts`, `lib/permissions.ts`, `lib/tab-restrictions.ts` (kitchen default-deny + bar/waiting csr-equivalent)
@@ -64,28 +68,9 @@ Two PRs, in sequence.
 - `components/features/finance/expense-form.tsx` (+ Add-to-inventory dropdown)
 - `app/dashboard/inventory/page.tsx` + `inventory-items-client.tsx` (Sellable / Kitchen tabs)
 - `app/dashboard/settings/admins/page.tsx` (role dropdown)
-- `compliance/RTM.md` (REQ-034 row → DRAFT → TESTED — flips at end of Phase B)
+- `compliance/RTM.md` (REQ-034 row → DRAFT → TESTED — flips after step 12)
 
-### Phase A AC coverage
-
-AC1, AC2, AC3, AC4, AC5, AC6, AC7. (AC8–AC16 land in Phase B.)
-
----
-
-## PR2 — Phase B: Recipes + Production
-
-**Branch:** `req-034/phase-b-recipes-and-production`
-**Depends on:** PR1 merged to develop.
-
-### Order of work
-
-1. **Recipe model + interface + service** — CRUD + validation. Deduction-time conversion via REQ-033 registry helpers.
-2. **Production model + interface + service** — execute (optimistic deduction + reversal pass), void (24h cutoff + reasonNote enforcement). Pure helpers in `lib/recipe-execution.ts` + `lib/dimension-conversion.ts`.
-3. **Server actions + pages + components** — `/dashboard/kitchen/recipes`, `/dashboard/kitchen/production`, recipe-builder, make-batch-dialog, production-history.
-4. **E2E spec** — full kitchen flow.
-5. **RTM flip** — DRAFT → TESTED → APPROVED on Stage 5.
-
-### Files (create)
+### Files (create — recipes + production)
 
 - `models/recipe-model.ts`, `interfaces/recipe.interface.ts`
 - `models/production-model.ts`, `interfaces/production.interface.ts`
@@ -95,16 +80,11 @@ AC1, AC2, AC3, AC4, AC5, AC6, AC7. (AC8–AC16 land in Phase B.)
 - `app/actions/kitchen/recipe-actions.ts`, `app/actions/kitchen/production-actions.ts`
 - `app/dashboard/kitchen/recipes/page.tsx`, `app/dashboard/kitchen/recipes/[recipeId]/page.tsx`, `app/dashboard/kitchen/production/page.tsx`
 - `components/features/kitchen/recipe-builder.tsx`, `components/features/kitchen/recipe-list.tsx`, `components/features/kitchen/make-batch-dialog.tsx`, `components/features/kitchen/production-history.tsx`
-- `__tests__/lib/recipe-execution.test.ts`
-- `__tests__/lib/dimension-conversion.test.ts`
-- `__tests__/services/recipe-service.test.ts`, `__tests__/services/recipe-service.deactivation.test.ts`
-- `__tests__/services/production-service.preflight.test.ts`, `__tests__/services/production-service.optimistic.test.ts`, `__tests__/services/production-service.void.test.ts`
-- `__tests__/services/cost-aggregation.test.ts`
-- `e2e/kitchen/recipe-and-production.spec.ts`
+- `__tests__/lib/dimension-conversion.test.ts` (other test stubs already present from scaffold)
 
-### Phase B AC coverage
+### AC coverage
 
-AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15 (regression), AC16.
+All 16 ACs (AC1–AC16) ship in this PR.
 
 ---
 
@@ -121,8 +101,7 @@ AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15 (regression), AC16.
 
 ## Backout
 
-- **Phase A revert:** drop the merge commit. Inventory.kind is additive (default `'menu-item'`); existing rows unaffected. Expense.linkedInventoryId is optional; legacy rows untouched. Roles enum is additive; pre-existing users untouched.
-- **Phase B revert:** drop the merge commit. Recipe + Production collections are net-new; deletion is no-op for everyone except kitchen staff. No live data loss for non-kitchen users.
+Single bundled revert (one merge commit). Schema additions are additive optional fields with defaults — reverting code does not break existing rows. Recipe + Production collections are net-new; deletion is no-op for everyone except kitchen staff. Roles enum is additive; pre-existing users untouched. The backfill script writes only when `kind` is unset; re-running post-rollback is a no-op.
 
 ## AI involvement
 

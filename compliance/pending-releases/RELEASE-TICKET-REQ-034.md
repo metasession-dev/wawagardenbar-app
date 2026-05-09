@@ -5,8 +5,8 @@
 **Requirement ID:** REQ-034
 **Risk Level:** HIGH (financial-data write path; multi-collection writes; new role + permissions; cross-cutting menu-query change; new optimistic-deduction transaction pattern)
 **Issue:** [#74](https://github.com/metasession-dev/wawagardenbar-app/issues/74)
-**Blocked by:** REQ-033 (#73) — UoM registry must ship and soak ≥1 week first. **Anchored:** REQ-033 prod-deployed 2026-05-04; soak elapses **2026-05-11**.
-**PR Split:** Two PRs — (a) data-model + Inventory.kind + Expense link + roles; (b) recipes + production.
+**Blocked by:** REQ-033 (#73) — UoM registry shipped 2026-05-04. Soak window waived per user override (2026-05-09): UAT testing on develop is the substantive gate.
+**PR plan:** Single bundled PR develop → main after UAT (per user direction).
 
 ---
 
@@ -38,9 +38,7 @@ HIGH risk — 2 reviewers + AI-prompts artefact required. Risk warrants the bump
 
 (See `compliance/evidence/REQ-034/implementation-plan.md` for the full file-level plan.)
 
-### Phase A — data model + roles + Expense→Inventory link
-
-**Files Created:**
+### Files Created — data model + roles + Expense→Inventory link
 
 - `lib/expense-inventory-link.ts` — `buildStockMovementFromExpense`, `computeWeightedAverageCost`, `validateReversalDoesNotNegate`
 - `scripts/backfill-inventory-kind.ts` (idempotent)
@@ -48,7 +46,7 @@ HIGH risk — 2 reviewers + AI-prompts artefact required. Risk warrants the bump
 - `__tests__/services/{category-service.kind-filter,expense-inventory-link,expense-inventory-link.reversal}.test.ts`
 - `__tests__/components/expense-form.add-to-inventory.test.tsx`
 
-**Files Modified:**
+### Files Modified — data model + roles + Expense→Inventory link
 
 - `models/inventory-model.ts` (+ `kind`)
 - `models/expense-model.ts` (+ `linkedInventoryId`, `stockMovementId`)
@@ -64,9 +62,7 @@ HIGH risk — 2 reviewers + AI-prompts artefact required. Risk warrants the bump
 - `app/dashboard/settings/admins/page.tsx` (role dropdown)
 - `compliance/RTM.md`
 
-### Phase B — Recipes + Production
-
-**Files Created:**
+### Files Created — Recipes + Production
 
 - `models/{recipe,production}-model.ts`, `interfaces/{recipe,production}.interface.ts`
 - `services/{recipe,production}-service.ts`
@@ -103,7 +99,7 @@ HIGH risk — 2 reviewers + AI-prompts artefact required. Risk warrants the bump
 
 ## Quality Gates
 
-(populated post-CI for Phase A and Phase B.)
+(populated post-CI.)
 
 - [ ] TypeScript: 0 errors (`tsc --noEmit`) — `gates/tsc.txt`
 - [ ] Unit tests: 517 baseline + ~25 new = ~542 total — `gates/vitest-summary.txt`
@@ -118,11 +114,7 @@ HIGH risk — 2 reviewers + AI-prompts artefact required. Risk warrants the bump
 
 ## Rollback Plan
 
-**Phase A:** Revert the merge commit. Schema additions are additive optional fields with defaults — reverting code does not break existing rows. Roles enum is additive; pre-existing users untouched.
-
-**Phase B:** Revert the merge commit. Recipe + Production collections are net-new; deletion is no-op for everyone except kitchen staff. Restored Phase A capabilities (Inventory.kind, expense link) remain functional.
-
-The backfill script writes only when `kind` is unset. Re-running it post-rollback is a no-op.
+Single bundled revert. Schema additions are additive optional fields with defaults — reverting code does not break existing rows. Recipe + Production collections are net-new; deletion is no-op for non-kitchen users. Roles enum is additive; pre-existing users untouched. Backfill script writes only when `kind` is unset; re-running post-rollback is a no-op.
 
 ---
 
@@ -145,7 +137,6 @@ No soak window required for downstream features.
 - [ ] All quality gates pass on develop
 - [ ] Backfill script run on UAT, log inspected
 - [ ] META-COMPLY / DevAudit UAT approval obtained
-- [ ] PR (Phase A) merged to main
-- [ ] PR (Phase B) merged to main
+- [ ] PR merged to main (single bundled PR per user direction 2026-05-09)
 - [ ] Backfill script run on production, log inspected
 - [ ] Production smoke (recipe author + production execute + report) green

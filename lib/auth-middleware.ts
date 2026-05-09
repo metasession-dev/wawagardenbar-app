@@ -10,7 +10,10 @@ import { IAdminPermissions } from '@/interfaces';
  */
 export async function requireAuth(): Promise<SessionData> {
   const cookieStore = await cookies();
-  const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+  const session = await getIronSession<SessionData>(
+    cookieStore,
+    sessionOptions
+  );
 
   if (!session.userId) {
     redirect('/login');
@@ -35,10 +38,12 @@ export async function requireRole(
 }
 
 /**
- * Check if user is admin
+ * Check if user is staff (admin-side surfaces).
+ * Includes csr-equivalent roles (bar, waiting) but NOT kitchen — kitchen
+ * has a default-deny allowlist on /dashboard/kitchen/* via requireKitchen().
  */
 export async function requireAdmin(): Promise<SessionData> {
-  return requireRole(['csr', 'admin', 'super-admin']);
+  return requireRole(['csr', 'admin', 'super-admin', 'bar', 'waiting']);
 }
 
 /**
@@ -46,6 +51,14 @@ export async function requireAdmin(): Promise<SessionData> {
  */
 export async function requireSuperAdmin(): Promise<SessionData> {
   return requireRole(['super-admin']);
+}
+
+/**
+ * Check if user is allowed on /dashboard/kitchen/* surfaces.
+ * Kitchen role + admin + super-admin only.
+ */
+export async function requireKitchen(): Promise<SessionData> {
+  return requireRole(['kitchen', 'admin', 'super-admin']);
 }
 
 /**
@@ -97,7 +110,10 @@ export async function requirePermission(
   // Debug logging
   console.log(`[Auth] Checking permission: ${permission}`);
   console.log(`[Auth] User Role: ${session.role}`);
-  console.log(`[Auth] Permissions:`, JSON.stringify(session.permissions, null, 2));
+  console.log(
+    `[Auth] Permissions:`,
+    JSON.stringify(session.permissions, null, 2)
+  );
 
   // Check if admin has the required permission
   if (!session.permissions || !session.permissions[permission]) {

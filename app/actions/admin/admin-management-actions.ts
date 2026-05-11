@@ -4,6 +4,7 @@ import { requireSuperAdmin, getCurrentSession } from '@/lib/auth-middleware';
 import { AdminService } from '@/services/admin-service';
 import { connectDB } from '@/lib/mongodb';
 import { IAdminPermissions } from '@/interfaces';
+import type { UserRole } from '@/interfaces/user.interface';
 
 /**
  * Create new admin user
@@ -14,7 +15,8 @@ export async function createAdminAction(data: {
   email?: string;
   firstName?: string;
   lastName?: string;
-  role: 'csr' | 'admin' | 'super-admin';
+  // REQ-034: admin-side assignable roles include kitchen, bar, waiting.
+  role: Exclude<UserRole, 'customer'>;
   permissions?: IAdminPermissions;
 }) {
   try {
@@ -45,7 +47,8 @@ export async function createAdminAction(data: {
  */
 export async function listAdminsAction(filters?: {
   search?: string;
-  role?: 'csr' | 'admin' | 'super-admin';
+  // REQ-034: filter widened to include kitchen / bar / waiting.
+  role?: Exclude<UserRole, 'customer'>;
   status?: 'active' | 'suspended' | 'deleted';
   sortBy?: 'username' | 'role' | 'lastLoginAt' | 'createdAt';
   sortOrder?: 'asc' | 'desc';
@@ -78,7 +81,10 @@ export async function listAdminsAction(filters?: {
  */
 export async function resetAdminPasswordAction(
   adminId: string
-): Promise<{ success: true; message: string; tempPassword: string } | { success: false; message: string; tempPassword?: never }> {
+): Promise<
+  | { success: true; message: string; tempPassword: string }
+  | { success: false; message: string; tempPassword?: never }
+> {
   try {
     const session = await requireSuperAdmin();
     await connectDB();

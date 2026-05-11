@@ -46,8 +46,12 @@ import {
 } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
-import { createPendingExpenseGroupAction } from '@/app/actions/finance/pending-expense-actions';
+import {
+  createPendingExpenseGroupAction,
+  listKitchenIngredientInventoryAction,
+} from '@/app/actions/finance/pending-expense-actions';
 import { getExpenseCategoriesAction } from '@/app/actions/finance/expense-categories-actions';
+import { shouldShowAddToInventoryDropdown } from '@/lib/expense-inventory-link';
 import { getUnitsOfMeasurementAction } from '@/app/actions/units-actions';
 import {
   DEFAULT_UNITS_OF_MEASUREMENT,
@@ -75,6 +79,8 @@ const lineItemSchema = z.object({
   unit: z.string().min(1, 'Unit is required'),
   unitCost: z.number().min(0, 'Unit cost must be 0 or more'),
   totalCost: z.number().min(0, 'Total cost must be 0 or more'),
+  // REQ-034 AC5 — optional kitchen-ingredient inventory id.
+  linkedInventoryId: z.string().optional(),
 });
 
 const expenseFormSchema = z.object({
@@ -94,7 +100,15 @@ function makeDefaultItem() {
     unit: '',
     unitCost: 0,
     totalCost: 0,
+    linkedInventoryId: undefined as string | undefined,
   };
+}
+
+interface KitchenInventoryOption {
+  id: string;
+  name: string;
+  category: string;
+  unit: string;
 }
 
 interface ExpenseFormProps {
@@ -130,6 +144,11 @@ export function ExpenseForm({
   const [unitsRegistry, setUnitsRegistry] = useState<UnitOfMeasurement[]>([
     ...DEFAULT_UNITS_OF_MEASUREMENT,
   ]);
+  // REQ-034 AC5 — kitchen-ingredient inventory rows for the per-line
+  // "Add to inventory" dropdown; only loaded when the dialog opens.
+  const [kitchenInventory, setKitchenInventory] = useState<
+    KitchenInventoryOption[]
+  >([]);
 
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseFormSchema),
@@ -152,6 +171,7 @@ export function ExpenseForm({
     if (open) {
       fetchCategories();
       fetchUnits();
+      fetchKitchenInventory();
       form.reset({
         date: prefill?.date ?? new Date(),
         items:
@@ -190,6 +210,18 @@ export function ExpenseForm({
       }
     } catch {
       /* keep seed defaults */
+    }
+  }
+
+  // REQ-034 AC5: load kitchen-ingredient inventory rows for the dropdown.
+  async function fetchKitchenInventory() {
+    try {
+      const result = await listKitchenIngredientInventoryAction();
+      if (result.success && result.items) {
+        setKitchenInventory(result.items);
+      }
+    } catch {
+      /* dropdown will simply be empty */
     }
   }
 
@@ -359,6 +391,14 @@ export function ExpenseForm({
                               onValueChange={(v) => {
                                 f.onChange(v);
                                 form.setValue(`items.${index}.category`, '');
+                                // REQ-034 AC5: clear the inventory link when
+                                // expense type flips away from Direct Cost.
+                                if (v !== 'direct-cost') {
+                                  form.setValue(
+                                    `items.${index}.linkedInventoryId`,
+                                    undefined
+                                  );
+                                }
                               }}
                               value={f.value}
                             >
@@ -583,6 +623,52 @@ export function ExpenseForm({
                         </Button>
                       </div>
                     </div>
+                    {/* REQ-034 AC5: Add-to-inventory link — Direct Cost only */}
+                    {shouldShowAddToInventoryDropdown(
+                      items[index]?.expenseType
+                    ) && (
+                      <FormField
+                        control={form.control}
+                        name={`items.${index}.linkedInventoryId`}
+                        render={({ field: f }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs text-muted-foreground">
+                              Add to inventory (optional)
+                            </FormLabel>
+                            <Select
+                              value={f.value ?? '__none__'}
+                              onValueChange={(v) =>
+                                f.onChange(v === '__none__' ? undefined : v)
+                              }
+                            >
+                              <FormControl>
+                                <SelectTrigger className="h-8 text-sm">
+                                  <SelectValue placeholder="No inventory link" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="__none__">
+                                  No inventory link
+                                </SelectItem>
+                                {kitchenInventory.length === 0 ? (
+                                  <SelectItem value="__empty__" disabled>
+                                    No kitchen ingredients available
+                                  </SelectItem>
+                                ) : (
+                                  kitchenInventory.map((opt) => (
+                                    <SelectItem key={opt.id} value={opt.id}>
+                                      {opt.name}
+                                      {opt.category ? ` — ${opt.category}` : ''}
+                                    </SelectItem>
+                                  ))
+                                )}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
                   </div>
                 );
               })}

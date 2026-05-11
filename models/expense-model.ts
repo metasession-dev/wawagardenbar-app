@@ -60,6 +60,21 @@ const ExpenseSchema = new Schema<IExpense>(
       index: true,
       sparse: true,
     },
+    // REQ-034 AC6/AC7 — Inventory link fields.
+    linkedInventoryId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Inventory',
+      index: true,
+      sparse: true,
+    },
+    stockMovementId: {
+      type: Schema.Types.ObjectId,
+      ref: 'StockMovement',
+      sparse: true,
+    },
+    linkVoidedAt: {
+      type: Date,
+    },
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',

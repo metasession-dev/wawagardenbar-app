@@ -87,6 +87,19 @@ export interface IExpense {
   // Traceability
   pendingGroupId?: string;
 
+  // REQ-034 AC6/AC7 — Inventory link. Optional; set when the user selected
+  // a kitchen-ingredient inventory row at submission time. Side-effects
+  // (StockMovement, currentStock bump, cost-history row) fire when the
+  // pending group's `confirmTransfer` materialises this Expense; the new
+  // movement's _id is then patched back onto `stockMovementId`. On edit /
+  // delete the prior movement is voided and a reversal pair is recorded
+  // (audit preserved — no physical deletion). `linkVoidedAt` flips when
+  // the inventory effects have been reversed so subsequent edit/delete
+  // calls do not double-reverse.
+  linkedInventoryId?: ObjectId;
+  stockMovementId?: ObjectId;
+  linkVoidedAt?: Date;
+
   // Audit
   createdBy: ObjectId;
   createdAt: Date;
@@ -110,6 +123,8 @@ export interface CreateExpenseDTO {
   referenceNumber?: string;
   notes?: string;
   pendingGroupId?: string;
+  // REQ-034: optional inventory link captured at submission.
+  linkedInventoryId?: string;
   createdBy: string;
 }
 
@@ -129,6 +144,10 @@ export interface UpdateExpenseDTO {
   receiptReference?: string;
   referenceNumber?: string;
   notes?: string;
+  // REQ-034: editing the link is allowed (subject to AC7 block-on-negative
+  // for the reversal of the prior link). Pass `null` to clear; omit to leave
+  // the link untouched.
+  linkedInventoryId?: string | null;
 }
 
 /**

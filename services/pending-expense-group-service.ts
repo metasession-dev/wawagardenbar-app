@@ -1,7 +1,10 @@
 /**
  * @requirement REQ-026 - Pending expense group workflow
+ * @requirement REQ-034 - confirmTransfer fires Expense → Inventory link side-effects
+ *                        when a line item carries `linkedInventoryId`
  */
 import { ObjectId } from 'mongodb';
+import { Types } from 'mongoose';
 import { connectDB } from '@/lib/mongodb';
 import { PendingExpenseGroupModel } from '@/models/pending-expense-group-model';
 import { ExpenseModel } from '@/models';
@@ -13,6 +16,7 @@ import {
   UpdatePendingExpenseGroupDTO,
   AssignBatchDTO,
 } from '@/interfaces/pending-expense-group.interface';
+import { applyExpenseInventoryLink } from './expense-inventory-link-service';
 
 // ── Pure logic functions (exported for unit testing) ───────────────────────────
 
@@ -76,6 +80,9 @@ export interface ExpenseRecordDTO {
   notes?: string;
   createdBy: string;
   pendingGroupId: string;
+  // REQ-034 AC6 — propagated from the line item; consumed by confirmTransfer
+  // to drive the Inventory side-effects after the Expense row is inserted.
+  linkedInventoryId?: string;
 }
 
 export function buildExpenseRecordsFromGroup(
@@ -101,6 +108,7 @@ export function buildExpenseRecordsFromGroup(
     notes: group.notes,
     createdBy: transferredBy,
     pendingGroupId: group._id.toString(),
+    linkedInventoryId: item.linkedInventoryId,
   }));
 }
 
@@ -261,12 +269,45 @@ export class PendingExpenseGroupService {
         transferReference,
         transferredBy
       );
-      await ExpenseModel.insertMany(
+      const inserted = await ExpenseModel.insertMany(
         expenseRecords.map((r) => ({
           ...r,
           createdBy: new ObjectId(r.createdBy),
+          linkedInventoryId: r.linkedInventoryId
+            ? new ObjectId(r.linkedInventoryId)
+            : undefined,
         }))
       );
+
+      // REQ-034 AC6 — fire Inventory side-effects for every line item that
+      // carried a linkedInventoryId. Each call is wrapped in try/catch so a
+      // single bad link does not block the rest of the batch; the failure is
+      // logged and surfaced via the existing audit trail via StockMovement
+      // reversal records (applyExpenseInventoryLink runs its own reversal
+      // pass internally).
+      for (let i = 0; i < inserted.length; i++) {
+        const record = expenseRecords[i];
+        if (!record.linkedInventoryId) continue;
+        const expenseDoc = inserted[i] as { _id: Types.ObjectId };
+        try {
+          await applyExpenseInventoryLink({
+            expenseId: expenseDoc._id,
+            linkedInventoryId: new Types.ObjectId(record.linkedInventoryId),
+            quantity: record.quantity,
+            amount: record.amount,
+            supplier: undefined,
+            notes: record.notes,
+            date: record.date,
+            performedBy: transferredBy,
+          });
+        } catch (err) {
+          console.error(
+            `[REQ-034] expense link failed for expense ${expenseDoc._id.toString()}:`,
+            err
+          );
+        }
+      }
+
       await PendingExpenseGroupModel.findByIdAndUpdate(group._id, {
         $set: {
           status: 'transferred',

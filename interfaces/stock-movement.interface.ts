@@ -7,6 +7,9 @@ export type StockMovementType = 'addition' | 'deduction' | 'adjustment';
 
 /**
  * Stock movement category
+ * REQ-034: 'production' is the category written when a kitchen
+ * production batch deducts ingredients or adds yield to the target
+ * menu item's inventory.
  */
 export type StockMovementCategory =
   | 'sale'
@@ -15,6 +18,7 @@ export type StockMovementCategory =
   | 'damage'
   | 'adjustment'
   | 'transfer'
+  | 'production'
   | 'other';
 
 /**
@@ -32,6 +36,8 @@ export interface IStockMovement {
   timestamp: Date;
   category?: StockMovementCategory;
   orderId?: Types.ObjectId;
+  /** REQ-034: production batch this movement belongs to. */
+  productionId?: Types.ObjectId;
   invoiceNumber?: string;
   supplier?: string;
   costPerUnit?: number;

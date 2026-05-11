@@ -35,10 +35,18 @@ const stockMovementSchema = new Schema<IStockMovement>(
         'damage',
         'adjustment',
         'transfer',
+        'production',
         'other',
       ] as StockMovementCategory[],
     },
     orderId: { type: Schema.Types.ObjectId, ref: 'Order' },
+    // REQ-034 AC11/AC13: production batch the movement belongs to.
+    productionId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Production',
+      index: true,
+      sparse: true,
+    },
     invoiceNumber: { type: String },
     supplier: { type: String },
     costPerUnit: { type: Number, min: 0 },

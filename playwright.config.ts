@@ -159,6 +159,13 @@ export default defineConfig({
       testMatch: /units-of-measurement\.spec\.ts/,
       dependencies: ['auth-setup'],
     },
+    // Kitchen recipes + production (REQ-034)
+    {
+      name: 'kitchen-recipe-and-production',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /kitchen\/recipe-and-production\.spec\.ts/,
+      dependencies: ['auth-setup'],
+    },
   ],
   /* Start dev server before tests (skipped when BASE_URL is set) */
   webServer: process.env.BASE_URL

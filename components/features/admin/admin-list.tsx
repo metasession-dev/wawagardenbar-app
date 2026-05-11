@@ -23,6 +23,10 @@ import { Badge } from '@/components/ui/badge';
 import { AdminActionsDropdown } from './admin-actions-dropdown';
 import { Search } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import {
+  ASSIGNABLE_ROLES,
+  getRoleDisplayLabel,
+} from '@/lib/admin-role-presets';
 
 export function AdminList() {
   const [admins, setAdmins] = useState<any[]>([]);
@@ -72,9 +76,12 @@ export function AdminList() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Roles</SelectItem>
-              <SelectItem value="csr">CSR</SelectItem>
-              <SelectItem value="admin">Admin</SelectItem>
-              <SelectItem value="super-admin">Super Admin</SelectItem>
+              {/* REQ-034 AC4: kitchen / bar / waiting filter options */}
+              {ASSIGNABLE_ROLES.map((r) => (
+                <SelectItem key={r} value={r}>
+                  {getRoleDisplayLabel(r)}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
 

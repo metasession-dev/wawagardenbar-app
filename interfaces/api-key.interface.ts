@@ -19,7 +19,15 @@ export type ApiKeyScope =
   | 'analytics:read'
   | 'audit:read';
 
-export type ApiKeyRole = 'customer' | 'csr' | 'admin' | 'super-admin';
+export type ApiKeyRole =
+  | 'customer'
+  | 'csr'
+  | 'admin'
+  | 'super-admin'
+  // REQ-034: mirror UserRole additions
+  | 'kitchen'
+  | 'bar'
+  | 'waiting';
 
 export interface IApiKey {
   _id: Types.ObjectId;

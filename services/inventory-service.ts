@@ -6,6 +6,7 @@ import StockMovementModel from '@/models/stock-movement-model';
 import { sendLowStockAlertEmail } from '@/lib/email';
 import { SystemSettingsService } from '@/services/system-settings-service';
 import { resolveLinkedInventoryFor } from '@/lib/customization-inventory';
+import type { InventoryKind } from '@/interfaces/inventory.interface';
 
 /**
  * Inventory Service
@@ -368,6 +369,18 @@ class InventoryService {
     }
 
     return { available: true };
+  }
+
+  /**
+   * REQ-034 AC3: List inventory rows filtered by `kind`. The Inventory dashboard
+   * uses this to populate its Sellable / Kitchen tabs without leaking
+   * kitchen-ingredient rows into the sellable tab (or vice versa).
+   */
+  static async listByKind(kind: InventoryKind) {
+    return InventoryModel.find({ kind })
+      .populate('menuItemId', 'name mainCategory category')
+      .sort({ currentStock: 1 })
+      .lean();
   }
 
   /**

@@ -27,7 +27,13 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PermissionsEditor } from './permissions-editor';
-import { IAdminPermissions, DEFAULT_ADMIN_PERMISSIONS, CSR_DEFAULT_PERMISSIONS } from '@/interfaces';
+import { IAdminPermissions, DEFAULT_ADMIN_PERMISSIONS } from '@/interfaces';
+import {
+  ASSIGNABLE_ROLES,
+  getRoleDisplayLabel,
+  getRoleDescription,
+  getDefaultPermissionsForRole,
+} from '@/lib/admin-role-presets';
 
 const createAdminSchema = z
   .object({
@@ -50,10 +56,15 @@ const createAdminSchema = z
         'Password must contain at least one special character'
       ),
     confirmPassword: z.string(),
-    email: z.string().email('Invalid email address').optional().or(z.literal('')),
+    email: z
+      .string()
+      .email('Invalid email address')
+      .optional()
+      .or(z.literal('')),
     firstName: z.string().optional(),
     lastName: z.string().optional(),
-    role: z.enum(['csr', 'admin', 'super-admin']),
+    // REQ-034 AC4: kitchen / bar / waiting selectable alongside the existing roles.
+    role: z.enum(['csr', 'bar', 'waiting', 'kitchen', 'admin', 'super-admin']),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
@@ -70,7 +81,9 @@ export function CreateAdminDialog({ children }: CreateAdminDialogProps) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [permissions, setPermissions] = useState<IAdminPermissions>(DEFAULT_ADMIN_PERMISSIONS);
+  const [permissions, setPermissions] = useState<IAdminPermissions>(
+    DEFAULT_ADMIN_PERMISSIONS
+  );
 
   const {
     register,
@@ -100,7 +113,14 @@ export function CreateAdminDialog({ children }: CreateAdminDialogProps) {
         firstName: data.firstName || undefined,
         lastName: data.lastName || undefined,
         role: data.role,
-        permissions: data.role === 'admin' || data.role === 'csr' ? permissions : undefined,
+        // REQ-034: pass the customisable permissions object only for the roles
+        // whose UI exposes the PermissionsEditor (csr + admin). Other roles
+        // (super-admin / kitchen / bar / waiting) inherit the preset from
+        // AdminService.createAdmin via getDefaultPermissionsForRole.
+        permissions:
+          data.role === 'admin' || data.role === 'csr'
+            ? permissions
+            : undefined,
       });
 
       if (!result.success) {
@@ -251,8 +271,11 @@ export function CreateAdminDialog({ children }: CreateAdminDialogProps) {
               value={role}
               onValueChange={(value) => {
                 setValue('role', value as any);
-                if (value === 'csr') setPermissions(CSR_DEFAULT_PERMISSIONS);
-                else if (value === 'admin') setPermissions(DEFAULT_ADMIN_PERMISSIONS);
+                // REQ-034: switching to a non-editable role just resets the
+                // editor state to that role's preset (defensive — the editor
+                // is hidden anyway for super-admin / kitchen / bar / waiting).
+                const preset = getDefaultPermissionsForRole(value as any);
+                setPermissions(preset ?? DEFAULT_ADMIN_PERMISSIONS);
               }}
               disabled={isLoading}
             >
@@ -260,21 +283,20 @@ export function CreateAdminDialog({ children }: CreateAdminDialogProps) {
                 <SelectValue placeholder="Select role" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="csr">Customer Service Rep</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="super-admin">Super Admin</SelectItem>
+                {ASSIGNABLE_ROLES.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {getRoleDisplayLabel(r)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              {role === 'csr'
-                ? 'Order management, customer communication, and refund requests'
-                : role === 'admin'
-                ? 'Customizable permissions for specific features'
-                : 'Full access to all dashboard features'}
+              {getRoleDescription(role)}
             </p>
           </div>
 
-          {/* Permissions - For CSR and Admin roles */}
+          {/* Permissions - For CSR and Admin roles only (other roles use
+              fixed presets driven by getDefaultPermissionsForRole). */}
           {(role === 'csr' || role === 'admin') && (
             <div className="space-y-2">
               <Label>Permissions</Label>

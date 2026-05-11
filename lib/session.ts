@@ -32,11 +32,32 @@ export const defaultSession: SessionData = {
 };
 
 /**
- * Check if session belongs to admin or super-admin
+ * Check if session belongs to admin-side staff (csr-equivalent and above).
+ * REQ-034: bar + waiting are csr-equivalent. Kitchen is excluded — it uses
+ * a default-deny allowlist on /dashboard/kitchen/* via isKitchen().
  */
 export function isAdmin(session: SessionData | null): boolean {
   if (!session?.role) return false;
-  return session.role === 'csr' || session.role === 'admin' || session.role === 'super-admin';
+  return (
+    session.role === 'csr' ||
+    session.role === 'admin' ||
+    session.role === 'super-admin' ||
+    session.role === 'bar' ||
+    session.role === 'waiting'
+  );
+}
+
+/**
+ * Check if session belongs to kitchen staff (or admin / super-admin who
+ * also have access to /dashboard/kitchen/*).
+ */
+export function isKitchen(session: SessionData | null): boolean {
+  if (!session?.role) return false;
+  return (
+    session.role === 'kitchen' ||
+    session.role === 'admin' ||
+    session.role === 'super-admin'
+  );
 }
 
 /**

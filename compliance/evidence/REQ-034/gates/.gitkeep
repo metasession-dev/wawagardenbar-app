@@ -1,0 +1,8 @@
+# gates/
+
+Compiled at the end of each implementation commit:
+
+- `tsc.txt` — `npx tsc --noEmit` output
+- `vitest-summary.txt` — `npm test -- --reporter=verbose` summary
+- `semgrep.json` — `npx semgrep --config p/typescript --json` output
+- `dependency-audit.json` — `npm audit --omit=dev --json` output

@@ -1,8 +1,15 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CategoryFilter } from './category-filter';
 import { InventoryTable } from './inventory-table';
+import {
+  isInventoryTabVisibleForRole,
+  type InventoryTab,
+} from '@/lib/inventory-tabs';
+import type { InventoryKind } from '@/interfaces/inventory.interface';
+import type { UserRole } from '@/interfaces/user.interface';
 
 interface InventoryLocation {
   location: string;
@@ -12,6 +19,7 @@ interface InventoryLocation {
 
 interface InventoryItem {
   _id: string;
+  kind: InventoryKind;
   menuItemId: {
     _id: string;
     name: string;
@@ -28,10 +36,12 @@ interface InventoryItem {
 }
 
 interface InventoryItemsClientProps {
-  inventory: InventoryItem[];
+  sellableInventory: InventoryItem[];
+  kitchenInventory: InventoryItem[];
+  currentRole?: UserRole;
 }
 
-export function InventoryItemsClient({ inventory }: InventoryItemsClientProps) {
+function InventoryTabContent({ inventory }: { inventory: InventoryItem[] }) {
   const [selectedCategory, setSelectedCategory] = useState('');
 
   const categories = useMemo(() => {
@@ -59,5 +69,43 @@ export function InventoryItemsClient({ inventory }: InventoryItemsClientProps) {
       />
       <InventoryTable inventory={filteredItems} />
     </div>
+  );
+}
+
+export function InventoryItemsClient({
+  sellableInventory,
+  kitchenInventory,
+  currentRole,
+}: InventoryItemsClientProps) {
+  // REQ-034 AC3: hide the Kitchen tab from the kitchen role (defense-in-depth;
+  // /dashboard/inventory is already super-admin-gated in lib/permissions.ts).
+  const showKitchenTab = isInventoryTabVisibleForRole('kitchen', currentRole);
+  const [activeTab, setActiveTab] = useState<InventoryTab>('sellable');
+
+  return (
+    <Tabs
+      value={activeTab}
+      onValueChange={(value) => setActiveTab(value as InventoryTab)}
+      className="space-y-4"
+    >
+      <TabsList>
+        <TabsTrigger value="sellable">
+          Sellable ({sellableInventory.length})
+        </TabsTrigger>
+        {showKitchenTab && (
+          <TabsTrigger value="kitchen">
+            Kitchen ({kitchenInventory.length})
+          </TabsTrigger>
+        )}
+      </TabsList>
+      <TabsContent value="sellable">
+        <InventoryTabContent inventory={sellableInventory} />
+      </TabsContent>
+      {showKitchenTab && (
+        <TabsContent value="kitchen">
+          <InventoryTabContent inventory={kitchenInventory} />
+        </TabsContent>
+      )}
+    </Tabs>
   );
 }

@@ -69,6 +69,8 @@ jobs:
           esac
           echo "Post-deploy terminal status: ${TERMINAL_STATUS}"
           echo "BASE=${BASE%/}" >> "$GITHUB_ENV"
+          # Export for upload-evidence.sh, which reads $META_COMPLY_BASE_URL directly.
+          echo "META_COMPLY_BASE_URL=${BASE%/}" >> "$GITHUB_ENV"
           echo "TERMINAL_STATUS=${TERMINAL_STATUS}" >> "$GITHUB_ENV"
 
       - name: Resolve current release

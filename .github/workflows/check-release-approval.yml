@@ -64,6 +64,8 @@ jobs:
           esac
           # Strip trailing slash so we don't double-up later.
           echo "BASE=${BASE%/}" >> "$GITHUB_ENV"
+          # Export for upload-evidence.sh / any other tool that reads $META_COMPLY_BASE_URL directly.
+          echo "META_COMPLY_BASE_URL=${BASE%/}" >> "$GITHUB_ENV"
 
       - name: Resolve current release
         id: release

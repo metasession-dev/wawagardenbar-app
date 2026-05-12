@@ -70,6 +70,8 @@ jobs:
               echo "DevAudit reachable at ${BASE} (HTTP ${CODE})"
               echo "skip=false" >> "$GITHUB_OUTPUT"
               echo "BASE=${BASE%/}" >> "$GITHUB_ENV"
+              # Export for upload-evidence.sh, which reads $META_COMPLY_BASE_URL directly.
+              echo "META_COMPLY_BASE_URL=${BASE%/}" >> "$GITHUB_ENV"
               ;;
             *)
               echo "::error::DevAudit base URL ${BASE} returned HTTP ${CODE}. Likely a stale alias or wrong host. Check sdlc-config.json devaudit.base_url."

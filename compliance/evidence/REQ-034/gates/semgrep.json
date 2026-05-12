@@ -1,0 +1,84 @@
+{
+  "version": "1.155.0",
+  "results": [],
+  "errors": [],
+  "paths": {
+    "scanned": [
+      "app/actions/kitchen/production-actions.ts",
+      "app/actions/kitchen/recipe-actions.ts",
+      "lib/admin-role-presets.ts",
+      "lib/dimension-conversion.ts",
+      "lib/expense-inventory-link.ts",
+      "lib/inventory-kind-backfill.ts",
+      "lib/inventory-tabs.ts",
+      "lib/recipe-execution.ts",
+      "lib/recipe-validation.ts",
+      "services/expense-inventory-link-service.ts",
+      "services/production-service.ts",
+      "services/recipe-service.ts"
+    ]
+  },
+  "time": {
+    "rules": [],
+    "rules_parse_time": 0.982882022857666,
+    "profiling_times": {
+      "config_time": 2.2502596378326416,
+      "core_time": 1.3920259475708008,
+      "ignores_time": 0.001287698745727539,
+      "total_time": 3.651926279067993
+    },
+    "parsing_time": {
+      "total_time": 0.0,
+      "per_file_time": { "mean": 0.0, "std_dev": 0.0 },
+      "very_slow_stats": { "time_ratio": 0.0, "count_ratio": 0.0 },
+      "very_slow_files": []
+    },
+    "scanning_time": {
+      "total_time": 0.9287495613098145,
+      "per_file_time": {
+        "mean": 0.025798598925272625,
+        "std_dev": 0.001194818743355894
+      },
+      "very_slow_stats": { "time_ratio": 0.0, "count_ratio": 0.0 },
+      "very_slow_files": []
+    },
+    "matching_time": {
+      "total_time": 0.0,
+      "per_file_and_rule_time": { "mean": 0.0, "std_dev": 0.0 },
+      "very_slow_stats": { "time_ratio": 0.0, "count_ratio": 0.0 },
+      "very_slow_rules_on_files": []
+    },
+    "tainting_time": {
+      "total_time": 0.0,
+      "per_def_and_rule_time": { "mean": 0.0, "std_dev": 0.0 },
+      "very_slow_stats": { "time_ratio": 0.0, "count_ratio": 0.0 },
+      "very_slow_rules_on_defs": []
+    },
+    "fixpoint_timeouts": [
+      {
+        "error_type": "Fixpoint timeout",
+        "severity": "warn",
+        "message": "Fixpoint timeout while performing taint analysis at services/recipe-service.ts:41:23 [rules: 1, first: javascript.express.security.injection.raw-html-format.raw-html-format]",
+        "location": {
+          "path": "services/recipe-service.ts",
+          "start": { "line": 41, "col": 24, "offset": 1495 },
+          "end": { "line": 41, "col": 45, "offset": 1516 }
+        }
+      }
+    ],
+    "prefiltering": {
+      "project_level_time": 0.0,
+      "file_level_time": 0.0,
+      "rules_with_project_prefilters_ratio": 0.0,
+      "rules_with_file_prefilters_ratio": 0.9857142857142858,
+      "rules_selected_ratio": 0.025396825396825397,
+      "rules_matched_ratio": 0.025396825396825397
+    },
+    "targets": [],
+    "total_bytes": 0,
+    "max_memory_bytes": 1379439360
+  },
+  "engine_requested": "OSS",
+  "skipped_rules": [],
+  "profiling_results": []
+}

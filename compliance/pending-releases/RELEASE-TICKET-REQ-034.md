@@ -1,12 +1,14 @@
 # Release Ticket: REQ-034 — Recipes + Production + Kitchen-Ingredient Inventory + Kitchen/Bar/Waiting roles
 
-**Status:** DRAFT (scaffold)
-**Date:** 2026-05-09
+**Status:** TESTED - PENDING SIGN-OFF
+**Date:** 2026-05-12 (status flip; scaffold 2026-05-09)
 **Requirement ID:** REQ-034
 **Risk Level:** HIGH (financial-data write path; multi-collection writes; new role + permissions; cross-cutting menu-query change; new optimistic-deduction transaction pattern)
 **Issue:** [#74](https://github.com/metasession-dev/wawagardenbar-app/issues/74)
 **Blocked by:** REQ-033 (#73) — UoM registry shipped 2026-05-04. Soak window waived per user override (2026-05-09): UAT testing on develop is the substantive gate.
 **PR plan:** Single bundled PR develop → main after UAT (per user direction).
+**CI Run:** [25703823360](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/25703823360) — Quality Gates ✓ Register Release ✓ Upload Evidence ✓ (rerun green after META-COMPLY slug restore)
+**Git SHA:** `9b19c430f0254f3616d0f0f18eff8f7d78ac69d9` (develop, post-CVE-fix)
 
 ---
 
@@ -99,16 +101,14 @@ HIGH risk — 2 reviewers + AI-prompts artefact required. Risk warrants the bump
 
 ## Quality Gates
 
-(populated post-CI.)
-
-- [ ] TypeScript: 0 errors (`tsc --noEmit`) — `gates/tsc.txt`
-- [ ] Unit tests: 517 baseline + ~25 new = ~542 total — `gates/vitest-summary.txt`
-- [ ] E2E: `e2e/kitchen/recipe-and-production.spec.ts` passes
-- [ ] Build: `npm run build` succeeds
-- [ ] Semgrep: 0 findings on REQ-034 changed files
-- [ ] Dependency audit: 0 unaccepted high/critical (mongoose 8.23.1 baseline preserved)
-- [ ] CI Pipeline: PASS (Quality Gates ✓ Register Release ✓ Upload Evidence ✓)
-- [ ] Compliance validator: `bash scripts/validate-compliance-artifacts.sh` passes
+- [x] TypeScript: 0 errors (`tsc --noEmit`) — `compliance/evidence/REQ-034/gates/tsc.txt`
+- [x] Unit tests: 517 baseline + 201 new = **718 passed / 4 skipped** — `compliance/evidence/REQ-034/gates/vitest-summary.txt`
+- [x] E2E: `e2e/kitchen/recipe-and-production.spec.ts` registered in `playwright.config.ts` (`kitchen-recipe-and-production` project); CI Playwright run green.
+- [x] Build: `npm run build` — CI green (Quality Gates job 75513048988).
+- [x] Semgrep: 0 findings on REQ-034 changed files (`lib/**`, `services/**`, `app/actions/kitchen/**`) — `compliance/evidence/REQ-034/gates/semgrep.json`.
+- [x] Dependency audit: 0 unaccepted high/critical. CVE fix in `9b19c43` (next / fast-uri / fast-xml-builder via `npm audit fix`; lockfile-only). Remaining: 1 high `xlsx` (already CI-allowlisted) + 3 moderates below the high/critical gate. Evidence: `compliance/evidence/REQ-034/gates/npm-audit.json`.
+- [x] CI Pipeline: PASS — [run 25703823360](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/25703823360) (Quality Gates ✓ Register Release ✓ Upload Evidence ✓; Upload Evidence required a single rerun after META-COMPLY admin restored the missing project slug — defect D2 in `test-execution-summary.md`).
+- [x] Compliance evidence uploaded to META-COMPLY — release `v2026.05.12` (auto-resolved by `register-release` job).
 
 ---
 
@@ -133,10 +133,25 @@ No soak window required for downstream features.
 
 ## Sign-off
 
-- [ ] Implementation complete
-- [ ] All quality gates pass on develop
+- [x] Implementation complete (12/12 steps merged to develop at `4159c9c`; CVE fix `9b19c43`)
+- [x] All quality gates pass on develop (CI run 25703823360 — Quality Gates + Upload Evidence both green)
 - [ ] Backfill script run on UAT, log inspected
 - [ ] META-COMPLY / DevAudit UAT approval obtained
 - [ ] PR merged to main (single bundled PR per user direction 2026-05-09)
 - [ ] Backfill script run on production, log inspected
 - [ ] Production smoke (recipe author + production execute + report) green
+
+---
+
+## Audit Trail
+
+| Date       | Action                                 | Actor           | Notes                                                                                                                                                                                                |
+| ---------- | -------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-05-09 | Requirement scaffolded                 | ostendo-io      | HIGH risk; soak waived per user override; single bundled PR planned.                                                                                                                                 |
+| 2026-05-09 | Steps 1–3 committed                    | ostendo-io + AI | Roles + Inventory.kind + customer-menu guards.                                                                                                                                                       |
+| 2026-05-11 | Steps 4–12 committed                   | ostendo-io + AI | Tabs, Expense link, role dropdown, Recipe + Production + E2E. 11 commits on req-034/scaffold.                                                                                                        |
+| 2026-05-12 | Branch merged to develop               | ostendo-io      | `--no-ff` merge `4159c9c` preserves the 11-commit audit chain.                                                                                                                                       |
+| 2026-05-12 | CVE response (npm audit fix)           | ostendo-io + AI | Commit `9b19c43`; lockfile-only patch for `next` / `fast-uri` / `fast-xml-builder`. Unrelated to REQ-034 code; gates the merge to green.                                                             |
+| 2026-05-12 | CI green                               | GitHub Actions  | Run [25703823360](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/25703823360); Upload Evidence required a single rerun after META-COMPLY admin restored the missing project slug. |
+| 2026-05-12 | Tests passed                           | ostendo-io      | 718 vitest pass / 4 skipped; tsc 0; SAST 0 findings; npm audit 0 unaccepted high/critical.                                                                                                           |
+| 2026-05-12 | RTM flipped to TESTED–PENDING SIGN-OFF | ostendo-io + AI | `compliance/RTM.md` row updated; evidence compiled.                                                                                                                                                  |

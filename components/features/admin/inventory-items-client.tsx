@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CategoryFilter } from './category-filter';
 import { InventoryTable } from './inventory-table';
+import { AddKitchenIngredientDialog } from './add-kitchen-ingredient-dialog';
 import type { InventoryTab } from '@/lib/inventory-tabs';
 import type { InventoryKind } from '@/interfaces/inventory.interface';
 
@@ -90,7 +91,10 @@ export function InventoryItemsClient({
       <TabsContent value="sellable">
         <InventoryTabContent inventory={sellableInventory} />
       </TabsContent>
-      <TabsContent value="kitchen">
+      <TabsContent value="kitchen" className="space-y-3">
+        <div className="flex justify-end">
+          <AddKitchenIngredientDialog />
+        </div>
         <InventoryTabContent inventory={kitchenInventory} />
       </TabsContent>
     </Tabs>

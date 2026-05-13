@@ -47,6 +47,12 @@ vi.mock('@/services/system-settings-service', () => ({
       { id: 'kg', label: 'Kilograms (kg)', category: 'mass', isActive: true },
       { id: 'g', label: 'Grams (g)', category: 'mass', isActive: true },
     ]),
+    getExpenseCategories: vi.fn().mockResolvedValue({
+      directCostCategories: ['Meat/Protein', 'Cooking Oil', 'Custom Spices'],
+      operatingExpenseCategories: [],
+      directCostGroups: [{ name: 'Proteins', categoryNames: ['Meat/Protein'] }],
+      operatingExpenseGroups: [],
+    }),
   },
 }));
 
@@ -212,12 +218,18 @@ describe('REQ-034 D7 — pair invariant: reap MenuItem on Inventory failure', ()
 });
 
 describe('REQ-034 D7 — getKitchenIngredientFormOptionsAction', () => {
-  it('returns DIRECT_COST_CATEGORIES + active units', async () => {
+  it('returns expense-categories list + groups + active units', async () => {
     mockSession({ role: 'super-admin' });
     const r = await getKitchenIngredientFormOptionsAction();
     expect(r.success).toBe(true);
     if (r.success) {
+      // Custom category from system-settings flows through.
+      expect(r.categories).toContain('Custom Spices');
       expect(r.categories).toContain('Meat/Protein');
+      // Groups also surfaced for grouped-dropdown rendering.
+      expect(r.categoryGroups).toEqual([
+        { name: 'Proteins', categoryNames: ['Meat/Protein'] },
+      ]);
       expect(r.units.map((u) => u.id)).toEqual(
         expect.arrayContaining(['kg', 'g'])
       );

@@ -24,7 +24,10 @@ import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -34,6 +37,8 @@ import {
   createKitchenIngredientAction,
   getKitchenIngredientFormOptionsAction,
 } from '@/app/actions/admin/kitchen-ingredient-actions';
+import { buildDropdownSections } from '@/lib/expense-categories-display';
+import type { CategoryGroup } from '@/interfaces/expense.interface';
 
 interface UnitOption {
   id: string;
@@ -55,6 +60,7 @@ export function AddKitchenIngredientDialog() {
   const [maximumStock, setMaximumStock] = useState<string>('0');
 
   const [categories, setCategories] = useState<string[]>([]);
+  const [categoryGroups, setCategoryGroups] = useState<CategoryGroup[]>([]);
   const [units, setUnits] = useState<UnitOption[]>([]);
 
   useEffect(() => {
@@ -65,6 +71,7 @@ export function AddKitchenIngredientDialog() {
       if (cancelled) return;
       if (result.success) {
         setCategories(result.categories);
+        setCategoryGroups(result.categoryGroups ?? []);
         setUnits(result.units);
       } else {
         setError(result.error);
@@ -74,6 +81,8 @@ export function AddKitchenIngredientDialog() {
       cancelled = true;
     };
   }, [open]);
+
+  const categorySections = buildDropdownSections(categories, categoryGroups);
 
   function resetForm() {
     setName('');
@@ -148,11 +157,34 @@ export function AddKitchenIngredientDialog() {
                   <SelectValue placeholder="Pick a category…" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {c}
-                    </SelectItem>
-                  ))}
+                  {categorySections.map((section, sectionIdx) => {
+                    const key = section.heading ?? `__ungrouped_${sectionIdx}`;
+                    const showSeparator =
+                      sectionIdx > 0 &&
+                      categorySections[sectionIdx - 1].items.length > 0 &&
+                      section.items.length > 0;
+                    return (
+                      <div key={key}>
+                        {showSeparator && <SelectSeparator />}
+                        {section.heading !== null ? (
+                          <SelectGroup>
+                            <SelectLabel>{section.heading}</SelectLabel>
+                            {section.items.map((c) => (
+                              <SelectItem key={c} value={c}>
+                                {c}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        ) : (
+                          section.items.map((c) => (
+                            <SelectItem key={c} value={c}>
+                              {c}
+                            </SelectItem>
+                          ))
+                        )}
+                      </div>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>

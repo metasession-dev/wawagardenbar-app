@@ -18,7 +18,6 @@ import { sessionOptions, SessionData } from '@/lib/session';
 import { connectDB } from '@/lib/mongodb';
 import MenuItemModel from '@/models/menu-item-model';
 import InventoryModel from '@/models/inventory-model';
-import { DIRECT_COST_CATEGORIES } from '@/interfaces/expense.interface';
 import { SystemSettingsService } from '@/services/system-settings-service';
 
 interface CreateKitchenIngredientInput {
@@ -124,15 +123,27 @@ export async function createKitchenIngredientAction(
 }
 
 /** Returns the COGS category options + the active UoM registry, so the
- *  client form can render its dropdowns without two round-trips. */
+ *  client form can render its dropdowns without two round-trips.
+ *
+ *  COGS categories are sourced from the same `expense-categories`
+ *  system-settings entry the Expense form uses
+ *  (`SystemSettingsService.getExpenseCategories`), so any custom
+ *  categories added via Settings → Expense Categories flow through
+ *  here too. `directCostGroups` is also returned so the client can
+ *  render a grouped dropdown matching the Expense form's UX.
+ */
 export async function getKitchenIngredientFormOptionsAction() {
   try {
     const session = await getSession();
     requireInventoryManagement(session);
-    const units = await SystemSettingsService.getUnitsOfMeasurement();
+    const [units, expenseCategories] = await Promise.all([
+      SystemSettingsService.getUnitsOfMeasurement(),
+      SystemSettingsService.getExpenseCategories(),
+    ]);
     return {
       success: true as const,
-      categories: [...DIRECT_COST_CATEGORIES],
+      categories: expenseCategories.directCostCategories,
+      categoryGroups: expenseCategories.directCostGroups ?? [],
       units: units
         .filter((u) => u.isActive)
         .map((u) => ({ id: u.id, label: u.label, category: u.category })),
@@ -143,6 +154,7 @@ export async function getKitchenIngredientFormOptionsAction() {
       error:
         error instanceof Error ? error.message : 'Failed to load form options',
       categories: [],
+      categoryGroups: [],
       units: [],
     };
   }

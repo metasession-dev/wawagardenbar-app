@@ -12,14 +12,17 @@ import { SessionData } from './session';
  */
 export const routePermissions: Record<string, UserRole[]> = {
   '/dashboard': ['csr', 'admin', 'super-admin'],
-  '/dashboard/menu': ['super-admin'],
+  // Each route lists the maximal role allowlist; the layout's
+  // `requirePermission(...)` does the per-feature gate. Mismatches here
+  // bounce users at `proxy.ts` middleware before the layout can run.
+  '/dashboard/menu': ['admin', 'super-admin'],
   '/dashboard/orders': ['csr', 'admin', 'super-admin'],
   '/dashboard/customers': ['csr', 'super-admin'],
-  '/dashboard/inventory': ['super-admin'],
-  '/dashboard/rewards': ['csr', 'super-admin'],
+  '/dashboard/inventory': ['admin', 'super-admin'],
+  '/dashboard/rewards': ['csr', 'admin', 'super-admin'],
   '/dashboard/analytics': ['super-admin'],
   '/dashboard/audit-logs': ['super-admin'],
-  '/dashboard/settings': ['super-admin'],
+  '/dashboard/settings': ['admin', 'super-admin'],
   '/dashboard/kitchen': ['admin', 'super-admin'],
   '/dashboard/kitchen/recipes': ['admin', 'super-admin'],
   '/dashboard/kitchen/production': ['admin', 'super-admin'],

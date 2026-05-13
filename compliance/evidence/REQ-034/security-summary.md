@@ -77,3 +77,42 @@
 - Every Production void emits N+1 reversal `StockMovement` rows tagged with the same `productionId`.
 - Every Expense link save / edit / delete emits a `StockMovement` row tagged with `expenseId`.
 - All `StockMovement` rows carry `performedBy` (user id), `performedAt` (UTC timestamp), and an optional `reasonNote`.
+
+## UAT Verification — 2026-05-13
+
+**UAT URL:** https://wawagardenbar-app-uat.up.railway.app
+**Deployed commit:** `9b19c43` (develop post-CVE-fix)
+**Mongo URI source:** Railway CLI `railway environment uat → service wawagardenbar-app → variables` (then resolved to `MONGO_PUBLIC_URL` for local network reach).
+
+### Smoke
+
+- ✅ Homepage `/` returns HTTP 200.
+- ✅ Public menu API (`/api/public/menu`) returns the expected 401 Unauthorized when called without an API key — auth gate intact.
+
+### Migration (D-block defect resolution)
+
+**Defect surfaced during UAT smoke:** Inventory dashboard's Sellable + Kitchen tabs both showed `(0)` while the unconditional `countDocuments()` stats card showed `Total Items: 111`. Diagnosis: the 111 pre-existing UAT Inventory documents had no `kind` field, so the `InventoryModel.find({ kind: ... })` queries on the tab content returned no rows. (Mongo treats `{ kind: 'menu-item' }` as field-must-exist; the Mongoose schema default only applies to new documents.)
+
+Migration plan in `test-plan.md` already anticipated this — the backfill was expected to run on UAT before code deploys. Ran it now:
+
+| Step                     | Inventory candidates | MenuItem candidates | Outcome                                                   |
+| ------------------------ | -------------------- | ------------------- | --------------------------------------------------------- |
+| Dry-run #1               | 111                  | 108                 | No writes; matches `countDocuments()` from the dashboard. |
+| Live backfill            | 111 → updated        | 108 → updated       | All rows tagged `kind:'menu-item'`.                       |
+| Dry-run #2 (idempotency) | 0                    | 0                   | Confirms idempotent.                                      |
+
+Logs: `compliance/evidence/REQ-034/gates/uat-backfill-{dryrun,live}.txt`.
+
+After the backfill, the user refreshed the Inventory dashboard and confirmed the Sellable tab populated correctly (Kitchen tab remains 0 as expected — no kitchen-ingredient rows exist yet).
+
+This is recorded as **Defect D3** (a deploy-sequence procedural defect, not a code bug — the code worked exactly as specified; the deploy ordering missed the migration step that test-plan.md called out). See `test-execution-summary.md` for the consolidated defect log.
+
+### Feature verification (in progress)
+
+Handed back to the user — interactive walkthrough per `uat-checklist.md` covering:
+
+- Role allowlist E2E (kitchen / bar / waiting accounts created in Settings → Admins, each role's access boundary verified)
+- Recipe builder validation paths (duplicate / cross-dimension / count-strict-match rejections; deactivation toggle)
+- Production execution + pre-flight blocking + super-admin-only Void within and past 24h
+- Expense → Inventory link save / edit / delete + block-on-negative on edit
+- Daily Financial Report regression

@@ -154,20 +154,21 @@ async function RecentOrders() {
  */
 async function QuickStats() {
   // Fetch real statistics from database
-  const [pendingOrdersCount, lowStockCount, activeCustomersCount] = await Promise.all([
-    // Count pending/confirmed orders
-    OrderModel.countDocuments({
-      status: { $in: ['pending', 'confirmed'] },
-    }),
-    // Count low stock items
-    InventoryModel.countDocuments({
-      status: 'low-stock',
-    }),
-    // Count active customers (users who have placed at least one order)
-    UserModel.countDocuments({
-      role: 'customer',
-    }),
-  ]);
+  const [pendingOrdersCount, lowStockCount, activeCustomersCount] =
+    await Promise.all([
+      // Count pending/confirmed orders
+      OrderModel.countDocuments({
+        status: { $in: ['pending', 'confirmed'] },
+      }),
+      // Count low stock items
+      InventoryModel.countDocuments({
+        status: 'low-stock',
+      }),
+      // Count active customers (users who have placed at least one order)
+      UserModel.countDocuments({
+        role: 'customer',
+      }),
+    ]);
 
   const stats = [
     {
@@ -239,8 +240,22 @@ function MetricsSkeleton() {
 export default async function DashboardPage() {
   const session = await getCurrentSession();
 
+  // REQ-034 — kitchen role's only accessible surface is /dashboard/kitchen/*.
+  // Send them directly to the recipes home so they don't land on the overview
+  // (which they can't render — orders/inventory aggregates require permissions
+  // they don't have) or on /unauthorized (which they no longer trip thanks to
+  // the relaxed parent guard).
+  if (session?.role === 'kitchen') {
+    redirect('/dashboard/kitchen/recipes');
+  }
+
   // Redirect CSR and regular admins to orders page since they don't have access to overview
   if (session?.role === 'csr' || session?.role === 'admin') {
+    redirect('/dashboard/orders');
+  }
+
+  // Bar / waiting roles are csr-equivalent — funnel them to orders too.
+  if (session?.role === 'bar' || session?.role === 'waiting') {
     redirect('/dashboard/orders');
   }
 

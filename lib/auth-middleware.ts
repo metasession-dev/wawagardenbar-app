@@ -62,6 +62,28 @@ export async function requireKitchen(): Promise<SessionData> {
 }
 
 /**
+ * REQ-034 — outermost guard for `/dashboard/layout.tsx`. Allows every
+ * dashboard-capable role through so each sub-route's own layout can
+ * apply its narrower allowlist (e.g. `requirePermission` for
+ * feature-gated areas, `requireKitchen` for `/dashboard/kitchen/*`).
+ * `kitchen` is included here so its sub-route layout can run; kitchen
+ * still gets denied at every non-kitchen sub-route by the existing
+ * per-section guards (kitchen's feature-permissions are all-false by
+ * design, and `requirePermission` calls `requireAdmin` internally
+ * which excludes kitchen).
+ */
+export async function requireDashboardAccess(): Promise<SessionData> {
+  return requireRole([
+    'csr',
+    'admin',
+    'super-admin',
+    'bar',
+    'waiting',
+    'kitchen',
+  ]);
+}
+
+/**
  * Get current session (without redirect)
  */
 export async function getCurrentSession(): Promise<SessionData | null> {

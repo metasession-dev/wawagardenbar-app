@@ -11,22 +11,46 @@
 - [ ] Confirm at least 3 `kind: 'kitchen-ingredient'` records added to UAT (e.g. goat meat, palm oil, salt).
 - [ ] Confirm at least one Recipe authored on UAT linking a MenuItem to those ingredients.
 
-## Phase A — Roles + Inventory.kind + Expense link
+## Phase A — kitchenManagement permission + Inventory.kind + Expense link
 
-### Step 1 — Role assignment
+### Step 1 — Permission gating (post-D5 walkback, 2026-05-13)
 
-- [ ] Settings > Admins: role dropdown lists Customer / CSR / Admin / Super-admin / **Kitchen / Bar / Waiting**.
-- [ ] Create test user A with role `kitchen`. Log in.
-  - [ ] User can hit `/dashboard/kitchen/recipes` and `/dashboard/kitchen/production`.
-  - [ ] User CANNOT hit `/dashboard/orders` (returns 403 or redirects).
-  - [ ] User CANNOT hit `/dashboard/finance` (returns 403 or redirects).
-  - [ ] User CANNOT hit `/dashboard/settings` (returns 403 or redirects).
-  - [ ] User CANNOT hit `/dashboard/inventory` (returns 403 or redirects).
-- [ ] Create test user B with role `bar`. Log in.
-  - [ ] User can hit `/dashboard/orders/*` (csr-equivalent).
-  - [ ] User CANNOT hit `/dashboard/finance` or `/dashboard/settings`.
-- [ ] Create test user C with role `waiting`. Log in.
-  - [ ] Same csr-equivalent access as bar.
+> AC4 was redesigned during UAT — see defect D5 in
+> `test-execution-summary.md`. The three originally-proposed roles
+> (`kitchen` / `bar` / `waiting`) were dropped in favour of a single
+> `kitchenManagement` feature-permission on the existing
+> csr / admin / super-admin role set.
+
+- [ ] Settings → Admins → Create Admin (or edit an existing admin) →
+      **Permissions** section shows **Kitchen Management** as the 8th
+      toggle (ChefHat icon, "Author recipes and record production
+      batches"), after **Settings & Configuration**.
+- [ ] Sidebar shows a **Kitchen** entry (ChefHat icon) only when the
+      current user has `kitchenManagement` granted.
+  - [ ] As super-admin: Kitchen link visible by default.
+  - [ ] As an admin without kitchenManagement: Kitchen link absent.
+  - [ ] Grant the permission, log out + back in: Kitchen link
+        appears.
+- [ ] Create a test admin user **with** `kitchenManagement` enabled.
+  - [ ] Log in as that user → can hit `/dashboard/kitchen/recipes` and
+        `/dashboard/kitchen/production`.
+- [ ] Create a test admin user **without** `kitchenManagement`.
+  - [ ] Log in as that user → hitting `/dashboard/kitchen/recipes`
+        bounces to `/dashboard/forbidden` (or the equivalent
+        `requirePermission` redirect target).
+- [ ] As a csr user (no `kitchenManagement` by default): hitting
+      `/dashboard/kitchen/recipes` is denied.
+
+### Defunct items from the original checklist
+
+The following items were superseded by the D5 walk-back and no longer
+apply — the three roles they reference do not exist:
+
+- ~~"Settings > Admins: role dropdown lists Kitchen / Bar / Waiting"~~
+- ~~"Create test user B with role `bar`" / "test user C with role `waiting`"~~
+
+The orphaned kitchen-role test user created during the original
+walkthrough should be deleted from Settings → Admins.
 
 ### Step 2 — Customer-menu kind filter
 

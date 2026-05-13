@@ -19,6 +19,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  ChefHat,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -98,6 +99,14 @@ const navItems: NavItem[] = [
     icon: BarChart3,
     roles: ['admin', 'super-admin'],
     permission: 'reportsAndAnalytics',
+  },
+  {
+    // REQ-034 — links to recipes; production lives under the same section.
+    title: 'Kitchen',
+    href: '/dashboard/kitchen/recipes',
+    icon: ChefHat,
+    roles: ['admin', 'super-admin'],
+    permission: 'kitchenManagement',
   },
   {
     title: 'Staff Pot',

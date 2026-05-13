@@ -1,16 +1,16 @@
 /**
  * REQ-034 AC3 — Inventory dashboard tab helpers.
  *
- * Pure functions for splitting inventory rows by their `kind` discriminator
- * (added in AC1) into the two dashboard tabs, and gating tab visibility for
- * the new `kitchen` role.
+ * Pure functions for splitting inventory rows by their `kind`
+ * discriminator (added in AC1) into the two dashboard tabs.
  *
- * Lives in `lib/` so it can be shared between the server page (`getInventory`
- * kind filter) and the client component (`InventoryItemsClient` tab content)
- * without dragging React imports into a node-environment test file.
+ * The route itself is gated by `requirePermission('inventoryManagement')`
+ * via `app/dashboard/inventory/layout.tsx`, so only admin-side users
+ * with that permission see either tab. There is no per-role visibility
+ * branch — Kitchen access is granted through the separate
+ * `kitchenManagement` permission on the kitchen sub-routes.
  */
 import type { InventoryKind } from '@/interfaces/inventory.interface';
-import type { UserRole } from '@/interfaces/user.interface';
 
 export const INVENTORY_TABS = ['sellable', 'kitchen'] as const;
 export type InventoryTab = (typeof INVENTORY_TABS)[number];
@@ -32,14 +32,4 @@ export function filterInventoryByTab<T extends { kind?: InventoryKind | null }>(
       item.kind === undefined || item.kind === null ? 'menu-item' : item.kind;
     return effective === targetKind;
   });
-}
-
-export function isInventoryTabVisibleForRole(
-  tab: InventoryTab,
-  role: UserRole | undefined
-): boolean {
-  if (tab === 'sellable') return true;
-  // tab === 'kitchen'
-  if (!role) return false;
-  return role !== 'kitchen';
 }

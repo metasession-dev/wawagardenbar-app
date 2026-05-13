@@ -36,16 +36,7 @@ export interface IPaymentMethod {
   isDefault: boolean;
 }
 
-export type UserRole =
-  | 'customer'
-  | 'csr'
-  | 'admin'
-  | 'super-admin'
-  // REQ-034: kitchen has default-deny allowlist on /dashboard/kitchen/*;
-  // bar and waiting are csr-equivalent until future REQs narrow them.
-  | 'kitchen'
-  | 'bar'
-  | 'waiting';
+export type UserRole = 'customer' | 'csr' | 'admin' | 'super-admin';
 
 export interface ISocialProfile {
   handle: string;

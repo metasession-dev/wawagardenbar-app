@@ -49,20 +49,31 @@
 **Threat:** `backfill-inventory-kind.ts` accidentally writes `kind: 'kitchen-ingredient'` on existing menu-item rows.
 **Mitigation:** Script is idempotent (skip if `kind` already set) and ALWAYS sets `'menu-item'` for any pre-existing row (the kitchen-ingredient kind is only created via new flow). Audit JSON written to CWD before mutation; rollback via reading the audit file. Dry-run first on UAT, then on prod.
 
-## Authentication / authorisation matrix
+## Authentication / authorisation matrix (post-D5 walk-back)
 
-| Surface                         | Customer     | CSR          | Bar          | Waiting      | Admin | Super-admin | Kitchen |
-| ------------------------------- | ------------ | ------------ | ------------ | ------------ | ----- | ----------- | ------- |
-| `/dashboard/orders/*`           | ✗            | ✓            | ✓            | ✓            | ✓     | ✓           | **✗**   |
-| `/dashboard/customers/*`        | ✗            | ✓            | ✓            | ✓            | ✗     | ✓           | **✗**   |
-| `/dashboard/inventory/*`        | ✗            | ✗            | ✗            | ✗            | ✗     | ✓           | **✗**   |
-| `/dashboard/finance/*`          | ✗            | ✗            | ✗            | ✗            | ✗     | ✓           | **✗**   |
-| `/dashboard/settings/*`         | ✗            | ✗            | ✗            | ✗            | ✗     | ✓           | **✗**   |
-| `/dashboard/kitchen/recipes`    | ✗            | ✗            | ✗            | ✗            | ✓     | ✓           | **✓**   |
-| `/dashboard/kitchen/production` | ✗            | ✗            | ✗            | ✗            | ✓     | ✓           | **✓**   |
-| Public menu API                 | ✓ (filtered) | ✓ (filtered) | ✓ (filtered) | ✓ (filtered) | ✓     | ✓           | ✗       |
+The three new roles (kitchen / bar / waiting) were walked back during
+UAT — see defect D5 in `test-execution-summary.md`. The matrix now uses
+the original three admin-side roles plus the per-feature permission
+gating:
 
-(Bar and waiting roles default to csr-equivalent in this REQ. Future REQs will narrow them.)
+| Surface                         | Customer     | CSR          | Admin    | Super-admin |
+| ------------------------------- | ------------ | ------------ | -------- | ----------- |
+| `/dashboard/orders/*`           | ✗            | ✓            | ✓ (perm) | ✓           |
+| `/dashboard/customers/*`        | ✗            | ✓            | ✗        | ✓           |
+| `/dashboard/inventory/*`        | ✗            | ✗            | ✓ (perm) | ✓           |
+| `/dashboard/finance/*`          | ✗            | ✗            | ✓ (perm) | ✓           |
+| `/dashboard/settings/*`         | ✗            | ✗            | ✓ (perm) | ✓           |
+| `/dashboard/kitchen/recipes`    | ✗            | ✓ (perm)     | ✓ (perm) | ✓           |
+| `/dashboard/kitchen/production` | ✗            | ✓ (perm)     | ✓ (perm) | ✓           |
+| Public menu API                 | ✓ (filtered) | ✓ (filtered) | ✓        | ✓           |
+
+`(perm)` = gated by the corresponding `IAdminPermissions` flag toggled
+in Settings → Admins → Permissions. `/dashboard/kitchen/*` is gated by
+the new `kitchenManagement` permission (default false on csr + admin;
+unconditionally true on super-admin). Any role with the permission
+granted can author recipes and run production batches. Voiding a
+production stays super-admin-only via a hard role check at the service
+layer.
 
 ## SAST / dependency
 

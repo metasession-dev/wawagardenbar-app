@@ -1,218 +1,70 @@
 /**
- * @requirement REQ-034 — AC4
- * New roles kitchen / bar / waiting in enum.
- * Kitchen: default-deny allowlist on /dashboard/kitchen/*.
- * Bar/waiting: csr-equivalent.
+ * @requirement REQ-034 — AC4 (post-walkback shape)
+ *
+ * AC4 originally added three new roles (kitchen / bar / waiting). The
+ * design was walked back on 2026-05-13 in favour of a single
+ * `kitchenManagement` feature-permission toggled on existing
+ * csr / admin / super-admin roles. This file now asserts the
+ * post-walkback invariants:
+ *   - UserRole stays at the original four values.
+ *   - `/dashboard/kitchen/*` routes are allowlisted for admin +
+ *     super-admin (the layout itself uses
+ *     `requirePermission('kitchenManagement')` which is the
+ *     load-bearing gate; the route allowlist is documentation).
+ *   - `IAdminPermissions` includes the new `kitchenManagement` field
+ *     with sensible defaults (false on admin/csr; true on super-admin).
  */
 import { describe, it, expect } from 'vitest';
+import { routePermissions } from '@/lib/permissions';
 import {
-  routePermissions,
-  dashboardSections,
-  hasPermission,
-  isAdmin,
-  isSuperAdmin,
-  canAccessDashboardSection,
-  getPermissionLevel,
-} from '@/lib/permissions';
-import type { UserRole } from '@/interfaces/user.interface';
-import type { SessionData } from '@/lib/session';
+  DEFAULT_ADMIN_PERMISSIONS,
+  CSR_DEFAULT_PERMISSIONS,
+  SUPER_ADMIN_PERMISSIONS,
+  type IAdminPermissions,
+} from '@/interfaces/admin-permissions.interface';
 
-const session = (role: UserRole): SessionData => ({
-  isLoggedIn: true,
-  userId: 'u1',
-  role,
+describe('REQ-034 AC4 — UserRole stays at the original four values', () => {
+  it('only customer / csr / admin / super-admin are accepted', () => {
+    const validRole: import('@/interfaces/user.interface').UserRole = 'admin';
+    expect(validRole).toBe('admin');
+    // @ts-expect-error — 'kitchen' should not be assignable
+    const _kitchen: import('@/interfaces/user.interface').UserRole = 'kitchen';
+    // @ts-expect-error — 'bar' should not be assignable
+    const _bar: import('@/interfaces/user.interface').UserRole = 'bar';
+    // @ts-expect-error — 'waiting' should not be assignable
+    const _waiting: import('@/interfaces/user.interface').UserRole = 'waiting';
+    void _kitchen;
+    void _bar;
+    void _waiting;
+  });
 });
 
-describe('REQ-034 AC4 — kitchen/bar/waiting roles', () => {
-  describe('role enum is exhaustive', () => {
-    it('UserRole admits the three new values without TS error', () => {
-      const roles: UserRole[] = [
-        'customer',
-        'csr',
-        'admin',
-        'super-admin',
-        'kitchen',
-        'bar',
-        'waiting',
-      ];
-      expect(roles).toHaveLength(7);
-    });
+describe('REQ-034 AC4 — kitchen route allowlist', () => {
+  it('grants admin + super-admin only (permission-gated downstream)', () => {
+    expect(routePermissions['/dashboard/kitchen']).toEqual([
+      'admin',
+      'super-admin',
+    ]);
+    expect(routePermissions['/dashboard/kitchen/recipes']).toEqual([
+      'admin',
+      'super-admin',
+    ]);
+    expect(routePermissions['/dashboard/kitchen/production']).toEqual([
+      'admin',
+      'super-admin',
+    ]);
+  });
+});
+
+describe('REQ-034 AC4 — kitchenManagement permission shape', () => {
+  it('exists on IAdminPermissions', () => {
+    const sample: IAdminPermissions = DEFAULT_ADMIN_PERMISSIONS;
+    expect(typeof sample.kitchenManagement).toBe('boolean');
   });
 
-  describe('kitchen default-deny allowlist', () => {
-    it('allows /dashboard/kitchen/recipes', () => {
-      expect(
-        hasPermission(session('kitchen'), '/dashboard/kitchen/recipes')
-      ).toBe(true);
-    });
-    it('allows /dashboard/kitchen/production', () => {
-      expect(
-        hasPermission(session('kitchen'), '/dashboard/kitchen/production')
-      ).toBe(true);
-    });
-    it('denies /dashboard/orders', () => {
-      expect(hasPermission(session('kitchen'), '/dashboard/orders')).toBe(
-        false
-      );
-    });
-    it('denies /dashboard/customers', () => {
-      expect(hasPermission(session('kitchen'), '/dashboard/customers')).toBe(
-        false
-      );
-    });
-    it('denies /dashboard/inventory', () => {
-      expect(hasPermission(session('kitchen'), '/dashboard/inventory')).toBe(
-        false
-      );
-    });
-    it('denies /dashboard/rewards', () => {
-      expect(hasPermission(session('kitchen'), '/dashboard/rewards')).toBe(
-        false
-      );
-    });
-    it('denies /dashboard/settings', () => {
-      expect(hasPermission(session('kitchen'), '/dashboard/settings')).toBe(
-        false
-      );
-    });
-    it('denies /dashboard/analytics', () => {
-      expect(hasPermission(session('kitchen'), '/dashboard/analytics')).toBe(
-        false
-      );
-    });
-    it('denies /dashboard/menu', () => {
-      expect(hasPermission(session('kitchen'), '/dashboard/menu')).toBe(false);
-    });
-    it('isAdmin() returns false for kitchen', () => {
-      expect(isAdmin(session('kitchen'))).toBe(false);
-    });
-  });
-
-  describe('bar csr-equivalent', () => {
-    it('allows /dashboard/orders (csr-permitted)', () => {
-      expect(hasPermission(session('bar'), '/dashboard/orders')).toBe(true);
-    });
-    it('allows /dashboard/customers (csr-permitted)', () => {
-      expect(hasPermission(session('bar'), '/dashboard/customers')).toBe(true);
-    });
-    it('allows /dashboard/rewards (csr-permitted)', () => {
-      expect(hasPermission(session('bar'), '/dashboard/rewards')).toBe(true);
-    });
-    it('denies /dashboard/settings (super-admin only)', () => {
-      expect(hasPermission(session('bar'), '/dashboard/settings')).toBe(false);
-    });
-    it('denies /dashboard/analytics (super-admin only)', () => {
-      expect(hasPermission(session('bar'), '/dashboard/analytics')).toBe(false);
-    });
-    it('denies /dashboard/inventory (super-admin only)', () => {
-      expect(hasPermission(session('bar'), '/dashboard/inventory')).toBe(false);
-    });
-    it('denies /dashboard/kitchen/recipes', () => {
-      expect(hasPermission(session('bar'), '/dashboard/kitchen/recipes')).toBe(
-        false
-      );
-    });
-    it('isAdmin() returns true for bar (csr-equivalent)', () => {
-      expect(isAdmin(session('bar'))).toBe(true);
-    });
-  });
-
-  describe('waiting csr-equivalent', () => {
-    it('allows /dashboard/orders (csr-permitted)', () => {
-      expect(hasPermission(session('waiting'), '/dashboard/orders')).toBe(true);
-    });
-    it('allows /dashboard/customers (csr-permitted)', () => {
-      expect(hasPermission(session('waiting'), '/dashboard/customers')).toBe(
-        true
-      );
-    });
-    it('denies /dashboard/settings (super-admin only)', () => {
-      expect(hasPermission(session('waiting'), '/dashboard/settings')).toBe(
-        false
-      );
-    });
-    it('denies /dashboard/kitchen/recipes', () => {
-      expect(
-        hasPermission(session('waiting'), '/dashboard/kitchen/recipes')
-      ).toBe(false);
-    });
-    it('isAdmin() returns true for waiting (csr-equivalent)', () => {
-      expect(isAdmin(session('waiting'))).toBe(true);
-    });
-  });
-
-  describe('admin / super-admin still access /dashboard/kitchen/*', () => {
-    it('admin allowed on kitchen recipes', () => {
-      expect(
-        hasPermission(session('admin'), '/dashboard/kitchen/recipes')
-      ).toBe(true);
-    });
-    it('super-admin allowed on kitchen recipes', () => {
-      expect(
-        hasPermission(session('super-admin'), '/dashboard/kitchen/recipes')
-      ).toBe(true);
-    });
-    it('csr NOT allowed on kitchen recipes', () => {
-      expect(hasPermission(session('csr'), '/dashboard/kitchen/recipes')).toBe(
-        false
-      );
-    });
-  });
-
-  describe('canAccessDashboardSection', () => {
-    it('kitchen section allows kitchen role', () => {
-      expect(canAccessDashboardSection('kitchen', 'kitchenRecipes')).toBe(true);
-      expect(canAccessDashboardSection('kitchen', 'kitchenProduction')).toBe(
-        true
-      );
-    });
-    it('kitchen section denies bar/waiting', () => {
-      expect(canAccessDashboardSection('bar', 'kitchenRecipes')).toBe(false);
-      expect(canAccessDashboardSection('waiting', 'kitchenRecipes')).toBe(
-        false
-      );
-    });
-    it('orders section allows bar / waiting (csr-equivalent)', () => {
-      expect(canAccessDashboardSection('bar', 'orders')).toBe(true);
-      expect(canAccessDashboardSection('waiting', 'orders')).toBe(true);
-    });
-    it('orders section denies kitchen', () => {
-      expect(canAccessDashboardSection('kitchen', 'orders')).toBe(false);
-    });
-  });
-
-  describe('getPermissionLevel', () => {
-    it('kitchen / bar / waiting are level 2 (csr-equivalent)', () => {
-      expect(getPermissionLevel('kitchen')).toBe(2);
-      expect(getPermissionLevel('bar')).toBe(2);
-      expect(getPermissionLevel('waiting')).toBe(2);
-      expect(getPermissionLevel('csr')).toBe(2);
-    });
-    it('admin is level 3, super-admin level 4', () => {
-      expect(getPermissionLevel('admin')).toBe(3);
-      expect(getPermissionLevel('super-admin')).toBe(4);
-    });
-  });
-
-  describe('isSuperAdmin', () => {
-    it('returns false for kitchen / bar / waiting', () => {
-      expect(isSuperAdmin(session('kitchen'))).toBe(false);
-      expect(isSuperAdmin(session('bar'))).toBe(false);
-      expect(isSuperAdmin(session('waiting'))).toBe(false);
-    });
-  });
-
-  describe('routePermissions / dashboardSections shape', () => {
-    it('has /dashboard/kitchen/recipes route', () => {
-      expect(routePermissions['/dashboard/kitchen/recipes']).toEqual([
-        'admin',
-        'super-admin',
-        'kitchen',
-      ]);
-    });
-    it('has kitchenRecipes + kitchenProduction sections', () => {
-      expect(dashboardSections.kitchenRecipes.roles).toContain('kitchen');
-      expect(dashboardSections.kitchenProduction.roles).toContain('kitchen');
-    });
+  it('defaults: admin = false, csr = false, super-admin = true', () => {
+    expect(DEFAULT_ADMIN_PERMISSIONS.kitchenManagement).toBe(false);
+    expect(CSR_DEFAULT_PERMISSIONS.kitchenManagement).toBe(false);
+    expect(SUPER_ADMIN_PERMISSIONS.kitchenManagement).toBe(true);
   });
 });

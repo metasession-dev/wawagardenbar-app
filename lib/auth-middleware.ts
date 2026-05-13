@@ -39,11 +39,9 @@ export async function requireRole(
 
 /**
  * Check if user is staff (admin-side surfaces).
- * Includes csr-equivalent roles (bar, waiting) but NOT kitchen — kitchen
- * has a default-deny allowlist on /dashboard/kitchen/* via requireKitchen().
  */
 export async function requireAdmin(): Promise<SessionData> {
-  return requireRole(['csr', 'admin', 'super-admin', 'bar', 'waiting']);
+  return requireRole(['csr', 'admin', 'super-admin']);
 }
 
 /**
@@ -51,36 +49,6 @@ export async function requireAdmin(): Promise<SessionData> {
  */
 export async function requireSuperAdmin(): Promise<SessionData> {
   return requireRole(['super-admin']);
-}
-
-/**
- * Check if user is allowed on /dashboard/kitchen/* surfaces.
- * Kitchen role + admin + super-admin only.
- */
-export async function requireKitchen(): Promise<SessionData> {
-  return requireRole(['kitchen', 'admin', 'super-admin']);
-}
-
-/**
- * REQ-034 — outermost guard for `/dashboard/layout.tsx`. Allows every
- * dashboard-capable role through so each sub-route's own layout can
- * apply its narrower allowlist (e.g. `requirePermission` for
- * feature-gated areas, `requireKitchen` for `/dashboard/kitchen/*`).
- * `kitchen` is included here so its sub-route layout can run; kitchen
- * still gets denied at every non-kitchen sub-route by the existing
- * per-section guards (kitchen's feature-permissions are all-false by
- * design, and `requirePermission` calls `requireAdmin` internally
- * which excludes kitchen).
- */
-export async function requireDashboardAccess(): Promise<SessionData> {
-  return requireRole([
-    'csr',
-    'admin',
-    'super-admin',
-    'bar',
-    'waiting',
-    'kitchen',
-  ]);
 }
 
 /**

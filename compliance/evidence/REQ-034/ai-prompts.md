@@ -151,3 +151,62 @@ CI run [25703823360](https://github.com/metasession-dev/wawagardenbar-app/action
 - Quality Gates: PASS (job 75513048988)
 - Register Release: PASS (job 75513048581)
 - Upload Evidence: PASS (job 75513036849, after rerun)
+
+### UAT iteration: defect D4 then D5 walk-back (2026-05-13)
+
+After UAT redeployed, two issues surfaced in succession.
+
+**D4 — kitchen-role-bounced-by-parent-layout.** A newly-created kitchen
+user was redirected to `/unauthorized` instead of `/dashboard/kitchen/recipes`.
+Root cause: `/dashboard/layout.tsx` uses `requireAdmin()` whose
+allowlist excluded the new kitchen role. Step-11 oversight on my part —
+I changed the child kitchen-layout gate but not the parent.
+
+Initially patched with a `requireDashboardAccess()` helper that
+broadened the parent allowlist to include kitchen role (commit
+`0fdf1fc`).
+
+**D5 — design walk-back.** User reviewed the running system and surfaced
+that the existing PermissionsEditor (7 toggles: Order / Menu / Inventory
+/ Rewards / Reports / Expenses / Settings) was the right shape, and
+that adding three new roles was over-engineering. Better fit: add a
+single **kitchenManagement** feature-permission toggle to the existing
+shape, and keep the existing csr/admin/super-admin role set.
+
+**AskUserQuestion** confirmed three sub-decisions:
+
+1. Permission name — `kitchenManagement` (matches existing
+   "XManagement" naming).
+2. Production void gate — stay super-admin-only via the existing role
+   check (cleanest minimum change; AC13 wording unchanged).
+3. Existing UAT kitchen test user — operator deletes manually after
+   the deploy lands.
+
+**Walk-back commit:**
+
+- Added `kitchenManagement: boolean` to `IAdminPermissions` (admin/csr
+  defaults: false; super-admin: true).
+- Added "Kitchen Management" toggle (ChefHat icon) to PermissionsEditor.
+- `/dashboard/kitchen/layout.tsx` switched from `requireKitchen()` to
+  `requirePermission('kitchenManagement')`.
+- Kitchen server actions (`recipe-actions`, `production-actions`)
+  switched from role-or-above checks to permission checks.
+- Removed `kitchen`, `bar`, `waiting` from `UserRole` and `ApiKeyRole`
+  enums.
+- Deleted `lib/admin-role-presets.ts` and its 19-test suite.
+- Reverted `lib/permissions.ts`, `lib/session.ts`, `lib/auth-middleware.ts`,
+  `app/dashboard/layout.tsx`, `app/dashboard/page.tsx`,
+  `create-admin-dialog.tsx`, `admin-list.tsx`, `admin-service.ts`,
+  `admin-management-actions.ts` to their pre-step-1 shapes.
+- Simplified `lib/inventory-tabs.ts` to drop role-visibility helper.
+- Updated `production-service.void.test.ts` to assert `csr` (not
+  `kitchen`) is BLOCKED.
+- Updated `seed-e2e-admins.ts` and `admin-login.ts` to include the new
+  permission field.
+
+The kitchen _feature_ work — `Inventory.kind`, `MenuItem.kind`,
+customer-menu filter, Sellable/Kitchen tabs, expense link, recipe +
+production services + 24h void, kitchen pages, E2E spec — is unchanged.
+
+Tests: 662 pass (was 718; net -56 covering the role-specific test
+deletions/rewrites). tsc 0 errors.

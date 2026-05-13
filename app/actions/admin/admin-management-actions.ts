@@ -4,7 +4,6 @@ import { requireSuperAdmin, getCurrentSession } from '@/lib/auth-middleware';
 import { AdminService } from '@/services/admin-service';
 import { connectDB } from '@/lib/mongodb';
 import { IAdminPermissions } from '@/interfaces';
-import type { UserRole } from '@/interfaces/user.interface';
 
 /**
  * Create new admin user
@@ -15,8 +14,7 @@ export async function createAdminAction(data: {
   email?: string;
   firstName?: string;
   lastName?: string;
-  // REQ-034: admin-side assignable roles include kitchen, bar, waiting.
-  role: Exclude<UserRole, 'customer'>;
+  role: 'csr' | 'admin' | 'super-admin';
   permissions?: IAdminPermissions;
 }) {
   try {
@@ -47,8 +45,7 @@ export async function createAdminAction(data: {
  */
 export async function listAdminsAction(filters?: {
   search?: string;
-  // REQ-034: filter widened to include kitchen / bar / waiting.
-  role?: Exclude<UserRole, 'customer'>;
+  role?: 'csr' | 'admin' | 'super-admin';
   status?: 'active' | 'suspended' | 'deleted';
   sortBy?: 'username' | 'role' | 'lastLoginAt' | 'createdAt';
   sortOrder?: 'asc' | 'desc';

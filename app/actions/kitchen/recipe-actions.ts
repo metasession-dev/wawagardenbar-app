@@ -25,14 +25,12 @@ async function getSession(): Promise<SessionData> {
   return getIronSession<SessionData>(cookieStore, sessionOptions);
 }
 
-function requireKitchenOrAbove(session: SessionData): void {
+function requireKitchenManagement(session: SessionData): void {
   if (!session.isLoggedIn || !session.userId) throw new Error('Unauthorized');
-  if (
-    session.role !== 'kitchen' &&
-    session.role !== 'admin' &&
-    session.role !== 'super-admin'
-  ) {
-    throw new Error('Insufficient permissions');
+  // Super-admin has every permission unconditionally.
+  if (session.role === 'super-admin') return;
+  if (!session.permissions?.kitchenManagement) {
+    throw new Error('Insufficient permissions — kitchenManagement required');
   }
 }
 
@@ -48,7 +46,7 @@ export async function createRecipeAction(
 ) {
   try {
     const session = await getSession();
-    requireKitchenOrAbove(session);
+    requireKitchenManagement(session);
     const recipe = await RecipeService.createRecipe({
       ...data,
       createdBy: session.userId!,
@@ -69,7 +67,7 @@ export async function createRecipeAction(
 export async function updateRecipeAction(id: string, data: UpdateRecipeDTO) {
   try {
     const session = await getSession();
-    requireKitchenOrAbove(session);
+    requireKitchenManagement(session);
     const recipe = await RecipeService.updateRecipe(id, data);
     revalidatePath('/dashboard/kitchen/recipes');
     revalidatePath(`/dashboard/kitchen/recipes/${id}`);
@@ -126,7 +124,7 @@ export async function reactivateRecipeAction(id: string) {
 export async function listRecipesAction(includeInactive = false) {
   try {
     const session = await getSession();
-    requireKitchenOrAbove(session);
+    requireKitchenManagement(session);
     const recipes = includeInactive
       ? await RecipeService.listAllRecipes()
       : await RecipeService.listActiveRecipes();
@@ -146,7 +144,7 @@ export async function listRecipesAction(includeInactive = false) {
 export async function getRecipeAction(id: string) {
   try {
     const session = await getSession();
-    requireKitchenOrAbove(session);
+    requireKitchenManagement(session);
     const recipe = await RecipeService.getRecipeById(id);
     if (!recipe) return { success: false as const, error: 'Recipe not found' };
     return {
@@ -167,7 +165,7 @@ export async function getRecipeAction(id: string) {
 export async function listRecipeFormOptionsAction() {
   try {
     const session = await getSession();
-    requireKitchenOrAbove(session);
+    requireKitchenManagement(session);
     await connectDB();
     const [targets, kitchenInventory] = await Promise.all([
       MenuItemModel.find({ kind: 'menu-item' })

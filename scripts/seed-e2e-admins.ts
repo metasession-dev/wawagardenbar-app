@@ -48,7 +48,9 @@ async function seed() {
     await connectDB();
 
     // Find or create a system user for the audit trail
-    let systemUser = await UserModel.findOne({ email: 'system@wawagardenbar.com' });
+    let systemUser = await UserModel.findOne({
+      email: 'system@wawagardenbar.com',
+    });
     if (!systemUser) {
       systemUser = await UserModel.create({
         email: 'system@wawagardenbar.com',
@@ -81,6 +83,7 @@ async function seed() {
                 reportsAndAnalytics: true,
                 expensesManagement: true,
                 settingsAndConfiguration: true,
+                kitchenManagement: true,
               },
             }
           : {}),
@@ -94,6 +97,7 @@ async function seed() {
                 reportsAndAnalytics: false,
                 expensesManagement: false,
                 settingsAndConfiguration: false,
+                kitchenManagement: false,
               },
             }
           : {}),

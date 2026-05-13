@@ -149,7 +149,7 @@ describe('REQ-034 AC13 — void within 24h', () => {
     ).rejects.toThrow(/super-admin/);
   });
 
-  it('kitchen role is BLOCKED', async () => {
+  it('csr role is BLOCKED', async () => {
     const { production, _id } = makeProduction({ performedAt });
     (ProductionModel.findById as ReturnType<typeof vi.fn>).mockResolvedValue(
       production
@@ -158,7 +158,7 @@ describe('REQ-034 AC13 — void within 24h', () => {
       ProductionService.voidBatch({
         productionId: _id.toString(),
         voidedBy,
-        voidedByRole: 'kitchen',
+        voidedByRole: 'csr',
       })
     ).rejects.toThrow(/super-admin/);
   });

@@ -77,33 +77,6 @@ export const API_KEY_ROLE_SCOPES: Record<ApiKeyRole, ApiKeyScope[]> = {
     'analytics:read',
     'audit:read',
   ],
-  // REQ-034: bar / waiting are csr-equivalent for API scopes too;
-  // kitchen scopes are deliberately limited (no order / payment writes).
-  bar: [
-    'menu:read',
-    'orders:read',
-    'orders:write',
-    'customers:read',
-    'customers:write',
-    'payments:read',
-    'payments:write',
-    'rewards:read',
-    'tabs:read',
-    'tabs:write',
-  ],
-  waiting: [
-    'menu:read',
-    'orders:read',
-    'orders:write',
-    'customers:read',
-    'customers:write',
-    'payments:read',
-    'payments:write',
-    'rewards:read',
-    'tabs:read',
-    'tabs:write',
-  ],
-  kitchen: ['menu:read', 'inventory:read'],
 };
 
 export const API_KEY_ROLE_LABELS: Record<ApiKeyRole, string> = {
@@ -111,9 +84,6 @@ export const API_KEY_ROLE_LABELS: Record<ApiKeyRole, string> = {
   csr: 'Customer Service',
   admin: 'Admin',
   'super-admin': 'Super Admin',
-  kitchen: 'Kitchen',
-  bar: 'Bar',
-  waiting: 'Waiting',
 };
 
 export const API_KEY_ROLE_DESCRIPTIONS: Record<ApiKeyRole, string> = {
@@ -122,8 +92,4 @@ export const API_KEY_ROLE_DESCRIPTIONS: Record<ApiKeyRole, string> = {
   admin:
     'CSR scopes plus menu writes, inventory reads, analytics, and audit logs',
   'super-admin': 'Full access to all API scopes',
-  kitchen: 'Read-only menu + inventory for recipe + production work',
-  bar: 'Bar staff: csr-equivalent (orders, customers, payments, rewards, tabs)',
-  waiting:
-    'Waiting staff: csr-equivalent (orders, customers, payments, rewards, tabs)',
 };

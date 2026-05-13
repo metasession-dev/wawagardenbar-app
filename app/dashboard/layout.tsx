@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { requireDashboardAccess } from '@/lib/auth-middleware';
+import { requireAdmin } from '@/lib/auth-middleware';
 import { DashboardNav } from '@/components/features/admin/dashboard-nav';
 import { Breadcrumb } from '@/components/shared/breadcrumb';
 
@@ -11,28 +11,16 @@ export const metadata = {
 };
 
 /**
- * Admin dashboard layout.
- *
- * Outermost gate for `/dashboard/*`. Allows every dashboard-capable role
- * (csr, admin, super-admin, bar, waiting, kitchen) through — each
- * sub-route's own layout enforces its narrower allowlist:
- *   - feature-gated areas (orders, finance, inventory, etc.) use
- *     `requirePermission(...)` which internally calls `requireAdmin`,
- *     denying kitchen role.
- *   - `/dashboard/kitchen/*` uses `requireKitchen()`, allowing kitchen.
- *
- * REQ-034 (D4 fix): previously gated by `requireAdmin()` which excluded
- * kitchen role outright — kitchen got bounced to `/unauthorized` before
- * the kitchen sub-route layout could run.
+ * Admin dashboard layout
+ * Requires admin or super-admin role
  */
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // Require dashboard-capable role (kitchen is included; sub-routes
-  // narrow further).
-  const session = await requireDashboardAccess();
+  // Require admin authentication
+  const session = await requireAdmin();
 
   if (!session.userId) {
     redirect('/login');

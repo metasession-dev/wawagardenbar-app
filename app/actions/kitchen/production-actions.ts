@@ -18,14 +18,11 @@ async function getSession(): Promise<SessionData> {
   return getIronSession<SessionData>(cookieStore, sessionOptions);
 }
 
-function requireKitchenOrAbove(session: SessionData): void {
+function requireKitchenManagement(session: SessionData): void {
   if (!session.isLoggedIn || !session.userId) throw new Error('Unauthorized');
-  if (
-    session.role !== 'kitchen' &&
-    session.role !== 'admin' &&
-    session.role !== 'super-admin'
-  ) {
-    throw new Error('Insufficient permissions');
+  if (session.role === 'super-admin') return;
+  if (!session.permissions?.kitchenManagement) {
+    throw new Error('Insufficient permissions — kitchenManagement required');
   }
 }
 
@@ -37,7 +34,7 @@ export async function makeBatchAction(input: {
 }) {
   try {
     const session = await getSession();
-    requireKitchenOrAbove(session);
+    requireKitchenManagement(session);
     const production = await ProductionService.makeBatch({
       recipeId: input.recipeId,
       batchCount: input.batchCount,
@@ -99,7 +96,7 @@ export async function voidProductionAction(input: {
 export async function listRecentProductionsAction(limit = 50) {
   try {
     const session = await getSession();
-    requireKitchenOrAbove(session);
+    requireKitchenManagement(session);
     const productions = await ProductionService.listRecentProductions(limit);
     return {
       success: true as const,

@@ -12,7 +12,7 @@
 - **AC1** — Inventory rows split by `kind`; existing rows backfilled to `'menu-item'`.
 - **AC2** — Customer-order menu queries never return kitchen-ingredient inventory.
 - **AC3** — Inventory dashboard shows Sellable / Kitchen tabs (kitchen tab hidden from kitchen role).
-- **AC4** — Roles `kitchen`, `bar`, `waiting` added to enum + Settings dropdown. Kitchen users access ONLY `/dashboard/kitchen/*` (default-deny everywhere else); bar/waiting users get csr-equivalent access.
+- **AC4** _(walked back 2026-05-13 — see defect D5 in `test-execution-summary.md`)_ — A new `kitchenManagement` feature-permission is added to `IAdminPermissions` and surfaced as a toggle in Settings → Admins → Permissions (alongside Order/Menu/Inventory/Rewards/Reports/Expenses/Settings). `/dashboard/kitchen/*` is gated by this permission. Super-admin holds it unconditionally; admin / csr require an explicit grant. The originally-proposed three new roles (`kitchen`, `bar`, `waiting`) were dropped during UAT — the existing csr/admin/super-admin role set covers the use case once kitchenManagement is granular.
 - **AC5** — Expense form shows "Add to inventory" only for Direct Cost; dropdown filtered to kitchen-ingredient.
 - **AC6** — Saving expense with link auto-creates StockMovement + bumps inventory + recomputes weighted-average cost in a single optimistic write sequence with reversal-pass on failure.
 - **AC7** — Editing/deleting expense voids the prior movement and creates the reversal (audit preserved, no physical deletion). Edit/delete blocked if reversal would drive `currentStock` negative.
@@ -30,14 +30,14 @@
 
 ### Phase A tests
 
-| AC  | Test                                                                                                                           | Type      |
-| --- | ------------------------------------------------------------------------------------------------------------------------------ | --------- |
-| AC1 | `__tests__/lib/inventory-kind.test.ts` — Inventory schema accepts `kind`; default is `'menu-item'`; backfill script idempotent | Unit      |
-| AC2 | `__tests__/services/category-service.kind-filter.test.ts` — every menu query filters `kind:'menu-item'`                        | Unit      |
-| AC4 | `__tests__/lib/permissions-roles.test.ts` — new roles in enum; kitchen default-deny; bar/waiting csr-equivalent                | Unit      |
-| AC5 | `__tests__/components/expense-form.add-to-inventory.test.tsx` — dropdown visible only for Direct Cost                          | Component |
-| AC6 | `__tests__/services/expense-inventory-link.test.ts` — save creates movement + bumps stock + weighted-average cost              | Unit      |
-| AC7 | `__tests__/services/expense-inventory-link.reversal.test.ts` — edit/delete reversal flow + block-on-negative                   | Unit      |
+| AC  | Test                                                                                                                                                                                                          | Type      |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| AC1 | `__tests__/lib/inventory-kind.test.ts` — Inventory schema accepts `kind`; default is `'menu-item'`; backfill script idempotent                                                                                | Unit      |
+| AC2 | `__tests__/services/category-service.kind-filter.test.ts` — every menu query filters `kind:'menu-item'`                                                                                                       | Unit      |
+| AC4 | `__tests__/lib/permissions-roles.test.ts` — UserRole stays at 4 values; `IAdminPermissions.kitchenManagement` exists; defaults are admin/csr=false + super-admin=true; `/dashboard/kitchen/*` route allowlist | Unit      |
+| AC5 | `__tests__/components/expense-form.add-to-inventory.test.tsx` — dropdown visible only for Direct Cost                                                                                                         | Component |
+| AC6 | `__tests__/services/expense-inventory-link.test.ts` — save creates movement + bumps stock + weighted-average cost                                                                                             | Unit      |
+| AC7 | `__tests__/services/expense-inventory-link.reversal.test.ts` — edit/delete reversal flow + block-on-negative                                                                                                  | Unit      |
 
 ### Phase B tests
 

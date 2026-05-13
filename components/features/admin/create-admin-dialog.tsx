@@ -27,13 +27,11 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PermissionsEditor } from './permissions-editor';
-import { IAdminPermissions, DEFAULT_ADMIN_PERMISSIONS } from '@/interfaces';
 import {
-  ASSIGNABLE_ROLES,
-  getRoleDisplayLabel,
-  getRoleDescription,
-  getDefaultPermissionsForRole,
-} from '@/lib/admin-role-presets';
+  IAdminPermissions,
+  DEFAULT_ADMIN_PERMISSIONS,
+  CSR_DEFAULT_PERMISSIONS,
+} from '@/interfaces';
 
 const createAdminSchema = z
   .object({
@@ -63,8 +61,7 @@ const createAdminSchema = z
       .or(z.literal('')),
     firstName: z.string().optional(),
     lastName: z.string().optional(),
-    // REQ-034 AC4: kitchen / bar / waiting selectable alongside the existing roles.
-    role: z.enum(['csr', 'bar', 'waiting', 'kitchen', 'admin', 'super-admin']),
+    role: z.enum(['csr', 'admin', 'super-admin']),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
@@ -113,10 +110,6 @@ export function CreateAdminDialog({ children }: CreateAdminDialogProps) {
         firstName: data.firstName || undefined,
         lastName: data.lastName || undefined,
         role: data.role,
-        // REQ-034: pass the customisable permissions object only for the roles
-        // whose UI exposes the PermissionsEditor (csr + admin). Other roles
-        // (super-admin / kitchen / bar / waiting) inherit the preset from
-        // AdminService.createAdmin via getDefaultPermissionsForRole.
         permissions:
           data.role === 'admin' || data.role === 'csr'
             ? permissions
@@ -271,11 +264,9 @@ export function CreateAdminDialog({ children }: CreateAdminDialogProps) {
               value={role}
               onValueChange={(value) => {
                 setValue('role', value as any);
-                // REQ-034: switching to a non-editable role just resets the
-                // editor state to that role's preset (defensive — the editor
-                // is hidden anyway for super-admin / kitchen / bar / waiting).
-                const preset = getDefaultPermissionsForRole(value as any);
-                setPermissions(preset ?? DEFAULT_ADMIN_PERMISSIONS);
+                if (value === 'csr') setPermissions(CSR_DEFAULT_PERMISSIONS);
+                else if (value === 'admin')
+                  setPermissions(DEFAULT_ADMIN_PERMISSIONS);
               }}
               disabled={isLoading}
             >
@@ -283,20 +274,21 @@ export function CreateAdminDialog({ children }: CreateAdminDialogProps) {
                 <SelectValue placeholder="Select role" />
               </SelectTrigger>
               <SelectContent>
-                {ASSIGNABLE_ROLES.map((r) => (
-                  <SelectItem key={r} value={r}>
-                    {getRoleDisplayLabel(r)}
-                  </SelectItem>
-                ))}
+                <SelectItem value="csr">Customer Service Rep</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="super-admin">Super Admin</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              {getRoleDescription(role)}
+              {role === 'csr'
+                ? 'Order management, customer communication, and refund requests'
+                : role === 'admin'
+                  ? 'Customizable permissions for specific features'
+                  : 'Full access to all dashboard features'}
             </p>
           </div>
 
-          {/* Permissions - For CSR and Admin roles only (other roles use
-              fixed presets driven by getDefaultPermissionsForRole). */}
+          {/* Permissions — for CSR and Admin roles (super-admin has full access). */}
           {(role === 'csr' || role === 'admin') && (
             <div className="space-y-2">
               <Label>Permissions</Label>

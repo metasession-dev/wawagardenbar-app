@@ -16,11 +16,9 @@ import {
   INVENTORY_TABS,
   INVENTORY_TAB_TO_KIND,
   filterInventoryByTab,
-  isInventoryTabVisibleForRole,
   type InventoryTab,
 } from '@/lib/inventory-tabs';
 import type { InventoryKind } from '@/interfaces/inventory.interface';
-import type { UserRole } from '@/interfaces/user.interface';
 
 type Row = { _id: string; kind?: InventoryKind | null };
 
@@ -72,49 +70,6 @@ describe('REQ-034 AC3 — filterInventoryByTab', () => {
     const out = filterInventoryByTab(input, 'sellable');
     expect(out).not.toBe(input);
     expect(input).toHaveLength(1);
-  });
-});
-
-describe('REQ-034 AC3 — isInventoryTabVisibleForRole', () => {
-  const allRoles: UserRole[] = [
-    'customer',
-    'csr',
-    'admin',
-    'super-admin',
-    'kitchen',
-    'bar',
-    'waiting',
-  ];
-
-  it('sellable tab is visible for every role (including kitchen)', () => {
-    for (const role of allRoles) {
-      expect(isInventoryTabVisibleForRole('sellable', role)).toBe(true);
-    }
-  });
-
-  it('kitchen tab is hidden from the kitchen role', () => {
-    expect(isInventoryTabVisibleForRole('kitchen', 'kitchen')).toBe(false);
-  });
-
-  it('kitchen tab is visible for super-admin and admin', () => {
-    expect(isInventoryTabVisibleForRole('kitchen', 'super-admin')).toBe(true);
-    expect(isInventoryTabVisibleForRole('kitchen', 'admin')).toBe(true);
-  });
-
-  it('kitchen tab is visible for csr/bar/waiting (route-gated upstream)', () => {
-    expect(isInventoryTabVisibleForRole('kitchen', 'csr')).toBe(true);
-    expect(isInventoryTabVisibleForRole('kitchen', 'bar')).toBe(true);
-    expect(isInventoryTabVisibleForRole('kitchen', 'waiting')).toBe(true);
-  });
-
-  it('handles undefined role by hiding the kitchen tab (fail-closed)', () => {
-    expect(
-      isInventoryTabVisibleForRole('kitchen', undefined as unknown as UserRole)
-    ).toBe(false);
-    // sellable still visible for unauthenticated SSR fallbacks
-    expect(
-      isInventoryTabVisibleForRole('sellable', undefined as unknown as UserRole)
-    ).toBe(true);
   });
 });
 

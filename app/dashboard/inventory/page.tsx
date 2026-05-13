@@ -1,8 +1,5 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
-import { cookies } from 'next/headers';
-import { getIronSession } from 'iron-session';
-import { sessionOptions, SessionData } from '@/lib/session';
 import { connectDB } from '@/lib/mongodb';
 import InventoryModel from '@/models/inventory-model';
 import '@/models/menu-item-model'; // Import to ensure MenuItem model is registered
@@ -58,15 +55,6 @@ async function getInventoryByKind(kind: InventoryKind) {
           }))
         : [],
   }));
-}
-
-async function getCurrentRole() {
-  const cookieStore = await cookies();
-  const session = await getIronSession<SessionData>(
-    cookieStore,
-    sessionOptions
-  );
-  return session.role;
 }
 
 /**
@@ -141,17 +129,15 @@ async function InventoryStats() {
  * Inventory list (Sellable / Kitchen tabs — REQ-034 AC3).
  */
 async function InventoryList() {
-  const [sellableInventory, kitchenInventory, currentRole] = await Promise.all([
+  const [sellableInventory, kitchenInventory] = await Promise.all([
     getInventoryByKind('menu-item'),
     getInventoryByKind('kitchen-ingredient'),
-    getCurrentRole(),
   ]);
 
   return (
     <InventoryItemsClient
       sellableInventory={sellableInventory}
       kitchenInventory={kitchenInventory}
-      currentRole={currentRole}
     />
   );
 }

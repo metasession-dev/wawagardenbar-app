@@ -1,9 +1,11 @@
 import bcrypt from 'bcrypt';
 import { UserModel } from '../models';
 import { AuditLogService } from './audit-log-service';
-import { IAdminPermissions } from '../interfaces';
-import { getDefaultPermissionsForRole } from '../lib/admin-role-presets';
-import type { UserRole } from '../interfaces/user.interface';
+import {
+  IAdminPermissions,
+  DEFAULT_ADMIN_PERMISSIONS,
+  CSR_DEFAULT_PERMISSIONS,
+} from '../interfaces';
 
 export class AdminService {
   private static readonly BCRYPT_ROUNDS = 12;
@@ -106,8 +108,7 @@ export class AdminService {
     email?: string;
     firstName?: string;
     lastName?: string;
-    // REQ-034: admin-side roles include kitchen, bar, waiting.
-    role: Exclude<UserRole, 'customer'>;
+    role: 'csr' | 'admin' | 'super-admin';
     createdBy: string;
     permissions?: IAdminPermissions;
   }) {
@@ -130,12 +131,14 @@ export class AdminService {
     // Hash password
     const hashedPassword = await this.hashPassword(data.password);
 
-    // Determine permissions based on role. REQ-034: kitchen/bar/waiting use
-    // their own presets via getDefaultPermissionsForRole.
-    const adminPermissions: IAdminPermissions | null =
-      data.permissions ?? getDefaultPermissionsForRole(data.role);
-    // Super-admin returns null from the helper — no feature gating, only
-    // route-level guards in lib/permissions.ts apply.
+    // Determine permissions based on role
+    let adminPermissions: IAdminPermissions | null = null;
+    if (data.role === 'csr') {
+      adminPermissions = data.permissions || CSR_DEFAULT_PERMISSIONS;
+    } else if (data.role === 'admin') {
+      adminPermissions = data.permissions || DEFAULT_ADMIN_PERMISSIONS;
+    }
+    // Super-admin has no restrictions (null)
 
     // Create user
     const admin = await UserModel.create({
@@ -176,7 +179,7 @@ export class AdminService {
    */
   static async listAdmins(filters?: {
     search?: string;
-    role?: Exclude<UserRole, 'customer'>;
+    role?: 'csr' | 'admin' | 'super-admin';
     status?: 'active' | 'suspended' | 'deleted';
     sortBy?: 'username' | 'role' | 'lastLoginAt' | 'createdAt';
     sortOrder?: 'asc' | 'desc';

@@ -4,12 +4,8 @@ import { useMemo, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CategoryFilter } from './category-filter';
 import { InventoryTable } from './inventory-table';
-import {
-  isInventoryTabVisibleForRole,
-  type InventoryTab,
-} from '@/lib/inventory-tabs';
+import type { InventoryTab } from '@/lib/inventory-tabs';
 import type { InventoryKind } from '@/interfaces/inventory.interface';
-import type { UserRole } from '@/interfaces/user.interface';
 
 interface InventoryLocation {
   location: string;
@@ -38,7 +34,6 @@ interface InventoryItem {
 interface InventoryItemsClientProps {
   sellableInventory: InventoryItem[];
   kitchenInventory: InventoryItem[];
-  currentRole?: UserRole;
 }
 
 function InventoryTabContent({ inventory }: { inventory: InventoryItem[] }) {
@@ -75,11 +70,7 @@ function InventoryTabContent({ inventory }: { inventory: InventoryItem[] }) {
 export function InventoryItemsClient({
   sellableInventory,
   kitchenInventory,
-  currentRole,
 }: InventoryItemsClientProps) {
-  // REQ-034 AC3: hide the Kitchen tab from the kitchen role (defense-in-depth;
-  // /dashboard/inventory is already super-admin-gated in lib/permissions.ts).
-  const showKitchenTab = isInventoryTabVisibleForRole('kitchen', currentRole);
   const [activeTab, setActiveTab] = useState<InventoryTab>('sellable');
 
   return (
@@ -92,20 +83,16 @@ export function InventoryItemsClient({
         <TabsTrigger value="sellable">
           Sellable ({sellableInventory.length})
         </TabsTrigger>
-        {showKitchenTab && (
-          <TabsTrigger value="kitchen">
-            Kitchen ({kitchenInventory.length})
-          </TabsTrigger>
-        )}
+        <TabsTrigger value="kitchen">
+          Kitchen ({kitchenInventory.length})
+        </TabsTrigger>
       </TabsList>
       <TabsContent value="sellable">
         <InventoryTabContent inventory={sellableInventory} />
       </TabsContent>
-      {showKitchenTab && (
-        <TabsContent value="kitchen">
-          <InventoryTabContent inventory={kitchenInventory} />
-        </TabsContent>
-      )}
+      <TabsContent value="kitchen">
+        <InventoryTabContent inventory={kitchenInventory} />
+      </TabsContent>
     </Tabs>
   );
 }

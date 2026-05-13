@@ -5,23 +5,24 @@ import { SessionData } from './session';
  * Route permissions configuration
  * Maps routes to allowed roles
  *
- * REQ-034:
- * - bar, waiting are csr-equivalent (added wherever csr appears)
- * - kitchen has a default-deny allowlist: only /dashboard/kitchen/* permitted
+ * REQ-034: `/dashboard/kitchen/*` is gated by the `kitchenManagement`
+ * feature-permission (toggled per admin in Settings → Admins), not by
+ * a dedicated role. Any admin or super-admin with the permission can
+ * reach those routes.
  */
 export const routePermissions: Record<string, UserRole[]> = {
-  '/dashboard': ['csr', 'admin', 'super-admin', 'bar', 'waiting'],
+  '/dashboard': ['csr', 'admin', 'super-admin'],
   '/dashboard/menu': ['super-admin'],
-  '/dashboard/orders': ['csr', 'admin', 'super-admin', 'bar', 'waiting'],
-  '/dashboard/customers': ['csr', 'super-admin', 'bar', 'waiting'],
+  '/dashboard/orders': ['csr', 'admin', 'super-admin'],
+  '/dashboard/customers': ['csr', 'super-admin'],
   '/dashboard/inventory': ['super-admin'],
-  '/dashboard/rewards': ['csr', 'super-admin', 'bar', 'waiting'],
+  '/dashboard/rewards': ['csr', 'super-admin'],
   '/dashboard/analytics': ['super-admin'],
   '/dashboard/audit-logs': ['super-admin'],
   '/dashboard/settings': ['super-admin'],
-  '/dashboard/kitchen': ['admin', 'super-admin', 'kitchen'],
-  '/dashboard/kitchen/recipes': ['admin', 'super-admin', 'kitchen'],
-  '/dashboard/kitchen/production': ['admin', 'super-admin', 'kitchen'],
+  '/dashboard/kitchen': ['admin', 'super-admin'],
+  '/dashboard/kitchen/recipes': ['admin', 'super-admin'],
+  '/dashboard/kitchen/production': ['admin', 'super-admin'],
 };
 
 /**
@@ -31,34 +32,27 @@ export const routePermissions: Record<string, UserRole[]> = {
 export const dashboardSections = {
   overview: { roles: ['admin', 'super-admin'] as UserRole[] },
   menu: { roles: ['super-admin'] as UserRole[] },
-  orders: {
-    roles: ['csr', 'admin', 'super-admin', 'bar', 'waiting'] as UserRole[],
-  },
-  customers: { roles: ['csr', 'super-admin', 'bar', 'waiting'] as UserRole[] },
+  orders: { roles: ['csr', 'admin', 'super-admin'] as UserRole[] },
+  customers: { roles: ['csr', 'super-admin'] as UserRole[] },
   inventory: { roles: ['super-admin'] as UserRole[] },
-  rewards: { roles: ['csr', 'super-admin', 'bar', 'waiting'] as UserRole[] },
+  rewards: { roles: ['csr', 'super-admin'] as UserRole[] },
   analytics: { roles: ['super-admin'] as UserRole[] },
   auditLogs: { roles: ['super-admin'] as UserRole[] },
   settings: { roles: ['super-admin'] as UserRole[] },
-  kitchenRecipes: { roles: ['admin', 'super-admin', 'kitchen'] as UserRole[] },
-  kitchenProduction: {
-    roles: ['admin', 'super-admin', 'kitchen'] as UserRole[],
-  },
+  /** REQ-034 — visible when session.permissions.kitchenManagement is true. */
+  kitchenRecipes: { roles: ['admin', 'super-admin'] as UserRole[] },
+  kitchenProduction: { roles: ['admin', 'super-admin'] as UserRole[] },
 };
 
 /**
- * Check if user is admin-side staff (csr-equivalent or above).
- * REQ-034: bar + waiting csr-equivalent. Kitchen excluded — uses
- * default-deny allowlist on /dashboard/kitchen/*.
+ * Check if user is admin-side staff (csr or above).
  */
 export function isAdmin(session: SessionData | null): boolean {
   if (!session?.role) return false;
   return (
     session.role === 'csr' ||
     session.role === 'admin' ||
-    session.role === 'super-admin' ||
-    session.role === 'bar' ||
-    session.role === 'waiting'
+    session.role === 'super-admin'
   );
 }
 
@@ -124,8 +118,6 @@ export function requiresSuperAdmin(route: string): boolean {
 
 /**
  * Get user's highest permission level
- * REQ-034: kitchen / bar / waiting all map to level 2 (csr-equivalent).
- * Kitchen is csr-level numerically but route-restricted via routePermissions.
  */
 export function getPermissionLevel(role: UserRole | undefined): number {
   switch (role) {
@@ -134,9 +126,6 @@ export function getPermissionLevel(role: UserRole | undefined): number {
     case 'admin':
       return 3;
     case 'csr':
-    case 'bar':
-    case 'waiting':
-    case 'kitchen':
       return 2;
     case 'customer':
       return 1;

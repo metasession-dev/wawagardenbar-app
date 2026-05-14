@@ -1,0 +1,4 @@
+[dotenv@17.2.3] injecting env (50) from .env.local -- tip: ⚙️  enable debug logging with { debug: true }
+[REQ-034 D10] expense-link unit audit starting; connecting…
+[REQ-034 D10] active expense links to inspect: 0
+[REQ-034 D10] flagged 0 link(s) with unit mismatch — full report at /home/william/Documents/SoftwareProjects/Metasession/wawagardenbar app/compliance/evidence/REQ-034/gates/audit-expense-link-units.json

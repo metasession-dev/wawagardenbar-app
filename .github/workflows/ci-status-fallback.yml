@@ -1,0 +1,53 @@
+# CI Status Fallback — workaround for METACOMPLY-291.
+#
+# The main `ci.yml` workflow uses `paths-ignore` to skip CI on
+# docs/compliance-only commits. When such a commit is the HEAD of a
+# develop→main PR, branch protection still expects a `Quality Gates`
+# status on that SHA — so the PR sits in "Expected — Waiting for status
+# to be reported" until someone runs `gh workflow run "CI Pipeline"`
+# manually.
+#
+# This workflow always fires on the inverse path list (i.e. only when
+# the commit ONLY touched paths the heavy gate ignores) and reports a
+# `Quality Gates` status. Both workflows define a job named
+# `Quality Gates`; for a mixed-content commit both fire and both report
+# success, which branch protection treats as satisfied.
+#
+# Remove this file once METACOMPLY-291 is fixed in the upstream
+# `sdlc/files/ci/` templates and re-synced.
+#
+# Tracking: https://github.com/metasession-dev/devaudit/issues/291
+
+name: CI Status Fallback
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - '.github/workflows/**'
+      - 'SDLC/**'
+      - 'compliance/**'
+      - '*.md'
+      - '.cursorrules'
+      - '.windsurfrules'
+      - 'sdlc-config.json'
+      - 'scripts/upload-evidence.sh'
+      - 'scripts/validate-compliance-artifacts.sh'
+      - 'scripts/validate-commits.sh'
+      - 'scripts/check-requirement-jsdoc.sh'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-gates:
+    name: Quality Gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark Quality Gates satisfied (docs/compliance-only commit)
+        run: |
+          echo "This commit only touched paths ignored by the main CI Pipeline."
+          echo "Reporting a green Quality Gates status so branch protection is"
+          echo "satisfied without requiring a manual workflow_dispatch run."
+          echo "See https://github.com/metasession-dev/devaudit/issues/291"

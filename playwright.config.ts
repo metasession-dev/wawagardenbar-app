@@ -159,6 +159,56 @@ export default defineConfig({
       testMatch: /units-of-measurement\.spec\.ts/,
       dependencies: ['auth-setup'],
     },
+    // Kitchen recipes + production (REQ-034)
+    {
+      name: 'kitchen-recipe-and-production',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /kitchen\/recipe-and-production\.spec\.ts/,
+      dependencies: ['auth-setup'],
+    },
+    // REQ-034 D11 — UAT-checklist backfill (Steps 1–7)
+    {
+      name: 'kitchen-permission-gating',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /kitchen\/permission-gating\.spec\.ts/,
+      dependencies: ['auth-setup'],
+    },
+    {
+      name: 'kitchen-menu-kind-filter',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /kitchen\/menu-kind-filter\.spec\.ts/,
+      dependencies: ['auth-setup'],
+    },
+    {
+      name: 'kitchen-inventory-tabs',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /kitchen\/inventory-tabs\.spec\.ts/,
+      dependencies: ['auth-setup'],
+    },
+    {
+      name: 'kitchen-expense-link',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /kitchen\/expense-link\.spec\.ts/,
+      dependencies: ['auth-setup'],
+    },
+    {
+      name: 'kitchen-recipe-validation',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /kitchen\/recipe-validation\.spec\.ts/,
+      dependencies: ['auth-setup'],
+    },
+    {
+      name: 'kitchen-production-flow',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /kitchen\/production-flow\.spec\.ts/,
+      dependencies: ['auth-setup'],
+    },
+    {
+      name: 'kitchen-daily-report-regression',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /kitchen\/daily-report-regression\.spec\.ts/,
+      dependencies: ['auth-setup'],
+    },
   ],
   /* Start dev server before tests (skipped when BASE_URL is set) */
   webServer: process.env.BASE_URL

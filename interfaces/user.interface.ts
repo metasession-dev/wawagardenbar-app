@@ -62,7 +62,7 @@ export interface IUser {
   phone?: string;
   phoneVerified?: boolean;
   profilePicture?: string;
-  
+
   // Social Profiles
   socialProfiles?: ISocialProfiles;
 
@@ -71,24 +71,24 @@ export interface IUser {
   verificationPin?: string;
   pinExpiresAt?: Date;
   sessionToken?: string;
-  
+
   // Admin Authentication Fields
-  username?: string;              // Unique username for admin login
-  password?: string;              // Hashed password (bcrypt)
-  isAdmin: boolean;               // Flag to identify admin users
-  mustChangePassword?: boolean;   // Force password change on next login
-  passwordChangedAt?: Date;       // Track password change history
-  failedLoginAttempts?: number;   // Track failed login attempts
-  accountLockedUntil?: Date;      // Account lockout timestamp
+  username?: string; // Unique username for admin login
+  password?: string; // Hashed password (bcrypt)
+  isAdmin: boolean; // Flag to identify admin users
+  mustChangePassword?: boolean; // Force password change on next login
+  passwordChangedAt?: Date; // Track password change history
+  failedLoginAttempts?: number; // Track failed login attempts
+  accountLockedUntil?: Date; // Account lockout timestamp
   permissions?: IAdminPermissions; // Granular permissions for admin users
-  
+
   // Addresses & Payment
   addresses: IAddress[];
   paymentMethods: IPaymentMethod[];
-  
+
   // Preferences
   preferences?: IPreferences;
-  
+
   // Account Metadata
   accountStatus: 'active' | 'suspended' | 'deleted';
   totalSpent: number;
@@ -98,17 +98,17 @@ export interface IUser {
   totalPointsEarned: number;
   totalPointsSpent: number;
   profileCompletionPercentage?: number;
-  
+
   // Guest Conversion
   isGuest: boolean;
   guestOrderIds?: Types.ObjectId[];
   claimedAt?: Date;
-  
+
   // Timestamps
   lastLoginAt?: Date;
   createdAt: Date;
   updatedAt: Date;
-  
+
   // Methods
   incrementOrderCount?: () => void;
   addToTotalSpent?: (amount: number) => void;

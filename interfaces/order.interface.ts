@@ -70,7 +70,7 @@ export interface IOrder {
   idempotencyKey?: string;
   userId?: Types.ObjectId;
   createdBy?: Types.ObjectId;
-  createdByRole?: 'customer' | 'csr' | 'admin' | 'super-admin';
+  createdByRole?: import('./user.interface').UserRole;
   guestEmail?: string;
   guestName?: string;
   guestPhone?: string;

@@ -30,7 +30,7 @@ export class TabService {
     tableNumber: string;
     userId?: string;
     createdBy?: string;
-    createdByRole?: 'customer' | 'csr' | 'admin' | 'super-admin';
+    createdByRole?: import('@/interfaces').UserRole;
     openedByStaffId?: string;
     customerName?: string;
     customerEmail?: string;

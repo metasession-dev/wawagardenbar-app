@@ -32,11 +32,15 @@ export const defaultSession: SessionData = {
 };
 
 /**
- * Check if session belongs to admin or super-admin
+ * Check if session belongs to admin-side staff (csr or above).
  */
 export function isAdmin(session: SessionData | null): boolean {
   if (!session?.role) return false;
-  return session.role === 'csr' || session.role === 'admin' || session.role === 'super-admin';
+  return (
+    session.role === 'csr' ||
+    session.role === 'admin' ||
+    session.role === 'super-admin'
+  );
 }
 
 /**

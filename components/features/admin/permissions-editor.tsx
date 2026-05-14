@@ -1,5 +1,10 @@
 'use client';
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { IAdminPermissions, DEFAULT_ADMIN_PERMISSIONS } from '@/interfaces';
 import {
@@ -10,6 +15,7 @@ import {
   FileText,
   DollarSign,
   Settings,
+  ChefHat,
 } from 'lucide-react';
 
 interface PermissionsEditorProps {
@@ -18,7 +24,11 @@ interface PermissionsEditorProps {
   disabled?: boolean;
 }
 
-export function PermissionsEditor({ permissions, onChange, disabled }: PermissionsEditorProps) {
+export function PermissionsEditor({
+  permissions,
+  onChange,
+  disabled,
+}: PermissionsEditorProps) {
   const currentPermissions = permissions || DEFAULT_ADMIN_PERMISSIONS;
 
   function handleToggle(key: keyof IAdminPermissions) {
@@ -71,6 +81,13 @@ export function PermissionsEditor({ permissions, onChange, disabled }: Permissio
       title: 'Settings & Configuration',
       icon: Settings,
       description: 'Access to system settings and configuration',
+    },
+    {
+      // REQ-034 — gates /dashboard/kitchen/* (recipes + production).
+      key: 'kitchenManagement' as const,
+      title: 'Kitchen Management',
+      icon: ChefHat,
+      description: 'Author recipes and record production batches',
     },
   ];
 

@@ -19,6 +19,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  ChefHat,
+  Boxes,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -98,6 +100,23 @@ const navItems: NavItem[] = [
     icon: BarChart3,
     roles: ['admin', 'super-admin'],
     permission: 'reportsAndAnalytics',
+  },
+  {
+    // REQ-034 D8/D9 — Recipes + Production as sibling entries under
+    // `kitchenManagement`. The legacy full-screen order grid lives at
+    // `/dashboard/kitchen-display` (accessed from /dashboard/orders).
+    title: 'Recipes',
+    href: '/dashboard/kitchen/recipes',
+    icon: ChefHat,
+    roles: ['admin', 'super-admin'],
+    permission: 'kitchenManagement',
+  },
+  {
+    title: 'Production',
+    href: '/dashboard/kitchen/production',
+    icon: Boxes,
+    roles: ['admin', 'super-admin'],
+    permission: 'kitchenManagement',
   },
   {
     title: 'Staff Pot',

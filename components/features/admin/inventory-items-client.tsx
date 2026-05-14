@@ -1,8 +1,12 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CategoryFilter } from './category-filter';
 import { InventoryTable } from './inventory-table';
+import { AddKitchenIngredientDialog } from './add-kitchen-ingredient-dialog';
+import type { InventoryTab } from '@/lib/inventory-tabs';
+import type { InventoryKind } from '@/interfaces/inventory.interface';
 
 interface InventoryLocation {
   location: string;
@@ -12,6 +16,7 @@ interface InventoryLocation {
 
 interface InventoryItem {
   _id: string;
+  kind: InventoryKind;
   menuItemId: {
     _id: string;
     name: string;
@@ -28,10 +33,11 @@ interface InventoryItem {
 }
 
 interface InventoryItemsClientProps {
-  inventory: InventoryItem[];
+  sellableInventory: InventoryItem[];
+  kitchenInventory: InventoryItem[];
 }
 
-export function InventoryItemsClient({ inventory }: InventoryItemsClientProps) {
+function InventoryTabContent({ inventory }: { inventory: InventoryItem[] }) {
   const [selectedCategory, setSelectedCategory] = useState('');
 
   const categories = useMemo(() => {
@@ -59,5 +65,38 @@ export function InventoryItemsClient({ inventory }: InventoryItemsClientProps) {
       />
       <InventoryTable inventory={filteredItems} />
     </div>
+  );
+}
+
+export function InventoryItemsClient({
+  sellableInventory,
+  kitchenInventory,
+}: InventoryItemsClientProps) {
+  const [activeTab, setActiveTab] = useState<InventoryTab>('sellable');
+
+  return (
+    <Tabs
+      value={activeTab}
+      onValueChange={(value) => setActiveTab(value as InventoryTab)}
+      className="space-y-4"
+    >
+      <TabsList>
+        <TabsTrigger value="sellable">
+          Sellable ({sellableInventory.length})
+        </TabsTrigger>
+        <TabsTrigger value="kitchen">
+          Kitchen ({kitchenInventory.length})
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value="sellable">
+        <InventoryTabContent inventory={sellableInventory} />
+      </TabsContent>
+      <TabsContent value="kitchen" className="space-y-3">
+        <div className="flex justify-end">
+          <AddKitchenIngredientDialog />
+        </div>
+        <InventoryTabContent inventory={kitchenInventory} />
+      </TabsContent>
+    </Tabs>
   );
 }

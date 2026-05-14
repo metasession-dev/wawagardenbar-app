@@ -61,8 +61,10 @@ export async function updateOrderItemsAction(input: UpdateOrderItemsInput) {
     // Validate and fetch menu items
     const menuItemIds = input.items.map((item) => item.menuItemId);
     const uniqueMenuItemIds = [...new Set(menuItemIds)];
+    // REQ-034 AC2: order-edit can only accept sellable menu-items.
     const menuItems = await MenuItemModel.find({
       _id: { $in: uniqueMenuItemIds },
+      kind: 'menu-item',
     });
 
     if (menuItems.length !== uniqueMenuItemIds.length) {
@@ -214,6 +216,9 @@ export async function getAvailableMenuItemsAction() {
 
     const menuItems = await MenuItemModel.find({
       isAvailable: true,
+      // REQ-034 AC2: order-edit's "available items" picker must hide
+      // kitchen-ingredient menu-items.
+      kind: 'menu-item',
     })
       // REQ-031: include `customizations` so the Edit Order dialog can render
       // the picker for items with customization groups. The previous `.select`

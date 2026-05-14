@@ -133,7 +133,7 @@ export class OrderService {
   static async createOrder(orderData: {
     userId?: string;
     createdBy?: string;
-    createdByRole?: 'customer' | 'csr' | 'admin' | 'super-admin';
+    createdByRole?: import('@/interfaces').UserRole;
     guestEmail?: string;
     guestName?: string;
     guestPhone?: string;

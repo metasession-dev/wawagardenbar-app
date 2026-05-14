@@ -343,9 +343,11 @@ Create `compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md`:
 | [date] | Submitted for review     | [who]      | PR #[number]                      |
 ```
 
-### Step 9: Commit Compliance Docs (do NOT push yet)
+### Step 9: Commit Compliance Docs and Push
 
-Commit compliance documents locally but **do not push**. UAT verification (Step 10) runs against the deployment from the prior push. Pushing here would trigger a redundant CI run. We batch everything into a single push after UAT verification.
+Commit compliance documents and push immediately. Heavy CI gates (E2E, TypeScript, build) skip markdown-only pushes via `paths-ignore`, so this push is cheap — but the Compliance Evidence Upload workflow fires and pushes the new artefacts to DevAudit. Pushing immediately means destination breakage (dead alias URL, revoked API key, schema drift) surfaces in seconds, not at the end of the stage.
+
+> **What changed in sdlc-v1.22.0:** Earlier versions of this stage held the commit locally and batched the push at the end. We learned the hard way that this hides destination integration bugs — a stale `devaudit.base_url` was invisible until the batched push, by which point the dev had already done UAT verification against the assumption that evidence had been uploaded. Push-early surfaces those problems within seconds.
 
 If using DevAudit, commit only compliance documents (RTM, release ticket, test scope, AI notes, security summary). Binary evidence (JSON results, screenshots) is stored in DevAudit, not git.
 
@@ -360,7 +362,7 @@ If using DevAudit, commit only compliance documents (RTM, release ticket, test s
 - [ ] `compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md`
 
 ```bash
-# DevAudit projects — commit compliance docs only (no push)
+# DevAudit projects — commit + push compliance docs
 git add compliance/RTM.md compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md \
   compliance/evidence/REQ-XXX/test-scope.md \
   compliance/evidence/REQ-XXX/test-plan.md \
@@ -370,6 +372,7 @@ git add compliance/RTM.md compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md 
   compliance/evidence/REQ-XXX/ai-prompts.md \
   compliance/evidence/REQ-XXX/security-summary.md
 git commit -m "compliance: [REQ-XXX] evidence compiled - awaiting review"
+git push origin develop
 ```
 
 If NOT using DevAudit (git-based evidence):
@@ -377,11 +380,29 @@ If NOT using DevAudit (git-based evidence):
 ```bash
 git add compliance/RTM.md compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md compliance/evidence/REQ-XXX/
 git commit -m "compliance: [REQ-XXX] evidence compiled - awaiting review"
+git push origin develop
 ```
 
-### Step 10: UAT Verification and DevAudit Approval (MANDATORY)
+#### Wait for the Compliance Evidence Upload workflow
 
-The develop branch auto-deploys to UAT. CI has already uploaded all gate evidence to DevAudit. **Wait for the deployment to complete**, then verify the change works in the UAT environment before creating a PR.
+```bash
+gh run watch --workflow "Compliance Evidence Upload"
+```
+
+If it fails — typically a stale `devaudit.base_url`, a revoked `META_COMPLY_API_KEY`, or schema drift — fix the configuration and re-push. Resolving this here is fast and recoverable; the same failure caught at the end of the stage would mean a long detour through UAT verification before discovering the upload never happened.
+
+### Step 10: UAT-Environment Verification (CONDITIONAL)
+
+**Skip this step entirely if any of these are true:**
+
+- Project's `sdlc-config.json` has `uat.enabled: false` — meaning the project has no deployed UAT environment configured (internal services, retroactive-compliance pickups, etc.).
+- Requirement's risk class is **not** listed in project's `uat.required_risk_classes` (defaults: `payment`, `destructive_migration`, `realtime`, `physical_ux`). Text-only fixes, internal refactors, low-risk UI tweaks carry none of these and skip UAT-env verification.
+
+When skipped, proceed directly to Step 11.
+
+> **Why opt-in by risk class?** UAT-env verification has two functions: (a) catching environment-specific issues (env vars, DB differences, build behaviour) and (b) recording that a human exercised the deployed system before approval. (a) is only valuable when there are environment-specific failure modes — a text-label change can't carry one. (b) is the four-eyes record, which Step 11 captures independently. Running UAT-env verification on every requirement adds ceremony without value; running it on risky requirements adds confidence where it matters. See sdlc-v1.22.0 release notes for the full rationale.
+
+When this step DOES apply, the develop branch's auto-deploy to UAT must complete first. **Wait for the deployment to complete**, then verify the change works in the UAT environment.
 
 #### WAIT CHECKPOINT: Confirm CI + Deployment Complete
 
@@ -437,22 +458,36 @@ cat >> compliance/evidence/REQ-XXX/security-summary.md << EOF
 EOF
 
 git add compliance/evidence/REQ-XXX/security-summary.md
-git commit -m "compliance: [REQ-XXX] UAT verification passed"
-```
-
-**If UAT verification fails:** Fix the issue on `develop`, re-run local gates, push again, and repeat UAT verification. Do NOT proceed to creating a PR until UAT is green.
-
-**If no UAT environment:** Skip Step 10 entirely.
-
-### Step 11: Push All Compliance Commits
-
-Now push all batched commits (evidence + UAT results) in a single push. This triggers one CI run instead of multiple.
-
-```bash
+git commit -m "compliance: [REQ-XXX] UAT-environment verification passed"
 git push origin develop
 ```
 
-Wait for CI to pass before proceeding to `4-submit-for-review.md`.
+**If UAT-env verification fails:** Fix the issue on `develop`, re-run local gates, push, and repeat UAT-env verification. Do NOT proceed to Step 11 until UAT-env is green.
+
+### Step 11: Approve Release in DevAudit (MANDATORY)
+
+This is the **four-eyes release approval gate** — an authorised reviewer reviews the evidence on the release row in DevAudit and clicks Approve. This step is always required, whether or not Step 10 ran.
+
+When ready:
+
+1. Open the release in DevAudit. The URL has the shape `https://[DEVAUDIT_BASE_URL]/projects/[PROJECT_SLUG]/releases/[releaseId]` and is posted as a comment on the develop branch by CI (look at the latest run of `Release Approval Gate` or `Compliance Evidence Upload`).
+2. Review:
+   - **Quality gate results** (TypeScript, SAST, dependency audit, E2E, coverage) — uploaded by CI on the Stage 2 implementation push.
+   - **Compliance Markdowns** (RTM, release ticket, test-scope, test-execution-summary, security-summary, ai-prompts) — uploaded by Compliance Evidence Upload on the Step 9 push.
+   - **UAT-environment verification record** (if Step 10 ran) — in `security-summary.md`.
+3. Click **Approve**. The release status transitions to `release_approved` (backend enum still `uat_approved` in v1.22.x for backwards-compat; renamed in v1.23.0).
+
+If something looks wrong, click **Reject** and add a comment. Return to Stage 2 to fix, then re-walk Stage 3 from Step 1.
+
+#### Approver mode
+
+Project's `sdlc-config.json` `approval.mode` setting:
+
+- `dual_actor` (recommended) — DevAudit enforces `approver_user_id ≠ release_creator_user_id`. If you're the release creator, you cannot approve your own release; delegate to another authorised reviewer.
+- `solo_with_gap` — DevAudit allows self-approval. This is a documented control gap; the gap must be recorded in `compliance/risk-register.md` with explicit acknowledgement of which compliance clauses it diverges from (SOC2 CC8.1, ISO 29119 §5.4).
+- `auto_low_risk` — LOW-risk requirements auto-approve once Compliance Evidence Upload completes (audited as a system event). MEDIUM/HIGH requirements always require a human click.
+
+The `Release Approval Gate` workflow on Stage 4's PR enforces this — it polls DevAudit's API for `release.status` and fails the PR if approval isn't recorded. Wait for the next CI run on develop to confirm the gate sees the approval before proceeding to Stage 4.
 
 ## DevAudit CI Integration
 
@@ -506,9 +541,9 @@ This automatically:
 
 Copy these from `sdlc/files/ci/` into your project's `.github/workflows/`:
 
-**`check-uat-approval.yml`** — UAT approval gate on PRs to main:
+**`check-release-approval.yml`** (renamed from `check-uat-approval.yml` in sdlc-v1.22.0) — Release Approval Gate on PRs to main:
 
-- Blocks merge until the release is `uat_approved` in DevAudit
+- Blocks merge until the release is approved in DevAudit (`uat_approved` / `release_approved` / downstream statuses)
 - Add as a required status check on the `main` branch protection rule
 
 **`post-deploy-prod.yml`** — Production evidence capture after merge to main:
@@ -524,10 +559,10 @@ The source of truth for compliance documents remains in git. DevAudit holds read
 - RTM: `TESTED - PENDING SIGN-OFF`
 - Release ticket in `compliance/pending-releases/`
 - Test + security + AI evidence uploaded to DevAudit (or in `compliance/evidence/REQ-XXX/` if git-based)
-- Compliance documents (test scope, AI notes, security summary) committed to git
+- Compliance documents (test scope, AI notes, security summary) committed to git and pushed
 - Test scope fully addressed
-- UAT verification passed and recorded
-- DevAudit UAT release approved (required before PR to main)
+- UAT-environment verification passed and recorded (only if Step 10 applied — opt-in by risk class)
+- **Release approved in DevAudit** (status: `uat_approved` / `release_approved`) — always required before PR to main
 
 ## Next Step
 

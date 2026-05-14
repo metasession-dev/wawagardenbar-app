@@ -1,0 +1,5 @@
+[dotenv@17.2.3] injecting env (50) from .env.local -- tip: 🔐 encrypt with Dotenvx: https://dotenvx.com
+[REQ-034] kind backfill starting (dry-run=false); connecting…
+[REQ-034] candidates without kind — inventory: 111, menu-items: 108
+[REQ-034] updated 111 inventory rows (matched 111).
+[REQ-034] updated 108 menu-item rows (matched 108).

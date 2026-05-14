@@ -15,8 +15,8 @@ description: Merge approved PR, verify deployment including security checks, syn
 - All CI checks passed (enforced by branch protection)
 - **LOW risk:** Self-merged after CI passed
 - **MEDIUM/HIGH risk:** PR approved by a second human reviewer, no unresolved review comments
-- UAT verification passed (completed in workflow 3, recorded in evidence)
-- DevAudit UAT approval granted (verified by CI check on PR)
+- UAT-environment verification passed (only if Stage 3 Step 10 applied — opt-in by risk class)
+- **Release approved in DevAudit** (Stage 3 Step 11, verified by Release Approval Gate on the PR)
 
 ## Steps
 
@@ -124,6 +124,35 @@ cat >> compliance/evidence/REQ-XXX/security-summary.md << EOF
 EOF
 ```
 
+### Step 5a: Post-Deploy Release Approval in DevAudit (CONDITIONAL)
+
+**When this step applies:** Project's `sdlc-config.json` has `production_review.terminal_status: "prod_review"` (the default in sdlc-v1.22.0+). The `post-deploy-prod.yml` workflow has just PATCHed the release to status `prod_review` and is now waiting for human acknowledgement.
+
+**When to skip:** Project has `production_review.terminal_status: "released"` (Option B — preserves v1.21.x auto-release behaviour). The workflow has already advanced the release to `released` and no human clicks are needed.
+
+#### What this step is for
+
+The post-deploy approval gate captures an explicit audit trail: a named human (or auto-approver, depending on `approval.mode`) attests that they verified production behaved correctly after deploy, separate from the pre-merge Release Approval. Two distinct events are recorded:
+
+1. `release.production_approved` — human reviewed prod smoke results + did any extra checks they consider appropriate.
+2. `release.released` — human formally closed out the release lifecycle.
+
+The backend stores both with reviewer identity, SHA, and timestamp. This satisfies SOC2 CC7.4 (post-deployment monitoring) and ISO 29119 §5.6 (release closure).
+
+#### Steps
+
+1. Wait for `post-deploy-prod.yml` to complete (the workflow's "Advance release status" step prints `Release vYYYY.MM.DD → prod_review` when done).
+2. Open the release in DevAudit: `https://[DEVAUDIT_BASE_URL]/projects/[PROJECT_SLUG]/releases/[releaseId]`.
+3. Review the `prod-smoke-results.json` evidence (uploaded by the workflow) plus any post-deploy actions logged in the release ticket.
+4. Click **Approve Production** — status transitions to `prod_approved`.
+5. Click **Mark as Released** — status transitions to `released`. Pipeline lifecycle complete in DevAudit.
+
+If the smoke results look wrong or a manual verification fails, click **Reject** on the production approval and follow the Rollback procedure below before retrying.
+
+#### Approver mode (same as Stage 3 Step 11)
+
+`approval.mode` is checked again here. `dual_actor` means the post-deploy approver must differ from the release creator. `solo_with_gap` accepts self-approval but records the control gap. `auto_low_risk` allows LOW-risk requirements to auto-advance through both transitions on workflow completion; MEDIUM/HIGH always require a human click.
+
 ### Step 6: Finalize Compliance (Tracked Requirements Only)
 
 ```bash
@@ -185,18 +214,20 @@ If the project uses separate UAT and Production environments:
 | UAT         | `develop` | Yes         | Pre-PR verification — CI evidence uploaded to DevAudit, reviewed and approved before PR    |
 | Production  | `main`    | Yes         | Live deployment after PR approval — post-deploy evidence captured and uploaded to DevAudit |
 
-UAT verification and DevAudit approval are completed in workflow 3 before the PR is created. After merge to main, the post-deploy workflow runs smoke tests against production, uploads evidence to DevAudit (environment=production), and marks the release as `released`.
+UAT-environment verification (if applicable per risk class) and Release Approval are completed in workflow 3 before the PR is created. After merge to main, the post-deploy workflow runs smoke tests against production, uploads evidence to DevAudit (environment=production), and advances the release to `production_review.terminal_status` from `sdlc-config.json` (default `prod_review` — human acknowledges via portal; or `released` — auto-release).
 
 ### Automated Post-Deploy Workflow
 
-If your project has `post-deploy-prod.yml` (template in `sdlc/files/ci/`), Steps 3-5 are handled automatically by CI after merge. The workflow:
+If your project has `post-deploy-prod.yml` (template in `sdlc/files/ci/`), Steps 3-4 are handled automatically by CI after merge. The workflow:
 
 1. Waits for deployment to propagate
 2. Runs production smoke tests (health check, key endpoints)
 3. Uploads production evidence to DevAudit with `--environment production`
-4. Marks the release as `released` in DevAudit
+4. Advances the release to `production_review.terminal_status` from `sdlc-config.json`:
+   - **`prod_review` (default, Option A)** — stops at `prod_review`, expects a human to walk Step 5a (Approve Production → Mark as Released) in the DevAudit portal. Captures two named audit events post-deploy.
+   - **`released` (Option B)** — PATCHes straight to `released`, no human click expected. Preserves v1.21.x behaviour for projects that don't want post-deploy ceremony.
 
-Manual verification (Step 5: security checks) is still recommended for MEDIUM/HIGH risk releases.
+Manual verification (Step 5: security checks) is still recommended for MEDIUM/HIGH risk releases regardless of which terminal_status is configured.
 
 ---
 

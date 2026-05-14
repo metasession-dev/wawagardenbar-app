@@ -269,8 +269,8 @@ export async function createOrder(input: CreateOrderInput): Promise<{
       // Don't fail the order creation if socket emission fails
     }
 
-    // Revalidate kitchen dashboard
-    revalidatePath('/dashboard/kitchen');
+    // Revalidate kitchen display (full-screen order grid for kitchen staff).
+    revalidatePath('/dashboard/kitchen-display');
 
     // Create audit logs for price overrides
     if (hasOverrides && userId) {

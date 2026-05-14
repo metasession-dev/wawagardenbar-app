@@ -39,5 +39,28 @@
     "scripts/validate-compliance-artifacts.sh",
     "scripts/validate-commits.sh",
     "scripts/check-requirement-jsdoc.sh"
-  ]
+  ],
+  "devaudit": {
+    "base_url": "https://devaudit.metasession.co",
+    "project_slug": "wawagardenbar-app",
+    "api_key_secret": "META_COMPLY_API_KEY"
+  },
+  "uat": {
+    "enabled": true,
+    "url": "https://wawagardenbar-app-uat.up.railway.app",
+    "required_risk_classes": [
+      "payment",
+      "destructive_migration",
+      "realtime",
+      "physical_ux"
+    ]
+  },
+  "approval": {
+    "mode": "solo_with_gap",
+    "auto_low_risk_threshold": "LOW"
+  },
+  "production_review": {
+    "enabled": true,
+    "terminal_status": "prod_review"
+  }
 }

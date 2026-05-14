@@ -78,7 +78,10 @@ export async function listAdminsAction(filters?: {
  */
 export async function resetAdminPasswordAction(
   adminId: string
-): Promise<{ success: true; message: string; tempPassword: string } | { success: false; message: string; tempPassword?: never }> {
+): Promise<
+  | { success: true; message: string; tempPassword: string }
+  | { success: false; message: string; tempPassword?: never }
+> {
   try {
     const session = await requireSuperAdmin();
     await connectDB();

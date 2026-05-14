@@ -42,11 +42,14 @@ export async function adminLoginAction(
     session.email = admin.email || undefined;
     session.name = admin.name || admin.username;
     session.role = admin.role;
-    
+
     // Sanitize permissions - only store the boolean flags we need
     // This handles potential legacy data and keeps cookie size small
     if (admin.permissions) {
-      console.log('[Login] Raw permissions from DB:', JSON.stringify(admin.permissions));
+      console.log(
+        '[Login] Raw permissions from DB:',
+        JSON.stringify(admin.permissions)
+      );
       session.permissions = {
         orderManagement: !!admin.permissions.orderManagement,
         menuManagement: !!admin.permissions.menuManagement,
@@ -55,8 +58,12 @@ export async function adminLoginAction(
         reportsAndAnalytics: !!admin.permissions.reportsAndAnalytics,
         expensesManagement: !!admin.permissions.expensesManagement,
         settingsAndConfiguration: !!admin.permissions.settingsAndConfiguration,
+        kitchenManagement: !!admin.permissions.kitchenManagement,
       };
-      console.log('[Login] Saving permissions to session:', JSON.stringify(session.permissions));
+      console.log(
+        '[Login] Saving permissions to session:',
+        JSON.stringify(session.permissions)
+      );
     } else {
       console.log('[Login] No permissions found for admin');
       session.permissions = undefined;

@@ -1,0 +1,8 @@
+[dotenv@17.2.3] injecting env (50) from .env.local -- tip: ⚙️  write to custom object with { processEnv: myObject }
+[REQ-034] kind backfill starting (dry-run=true); connecting…
+[REQ-034] candidates without kind — inventory: 112, menu-items: 98
+[REQ-034] dry-run: no writes performed.
+[dotenv@17.2.3] injecting env (50) from .env.local -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+[REQ-034] kind backfill starting (dry-run=true); connecting…
+[REQ-034] candidates without kind — inventory: 0, menu-items: 0
+[REQ-034] dry-run: no writes performed.

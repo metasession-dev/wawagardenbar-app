@@ -1,4 +1,5 @@
 import { ObjectId } from 'mongodb';
+import { Types } from 'mongoose';
 import { ExpenseModel } from '@/models';
 import UserModel from '@/models/user-model';
 import {
@@ -14,6 +15,10 @@ import {
   parseNumericTerm,
 } from '@/lib/expense-search';
 import { AuditLogService } from './audit-log-service';
+import {
+  applyExpenseInventoryLink,
+  reverseExpenseInventoryLink,
+} from './expense-inventory-link-service';
 
 /**
  * Expense Service
@@ -35,7 +40,13 @@ export class ExpenseService {
   }
 
   /**
-   * Create a new expense
+   * Create a new expense.
+   *
+   * REQ-034 AC6 — If `linkedInventoryId` is set, fires the Expense → Inventory
+   * side-effects (StockMovement, currentStock $inc, cost-history close + insert).
+   * The main flow (Form → pending group → confirmTransfer) reuses these effects
+   * via PendingExpenseGroupService; this entry point exists so the CSV import
+   * approval path stays consistent.
    */
   static async createExpense(data: CreateExpenseDTO): Promise<IExpense> {
     // Validate that date is not in the future
@@ -57,8 +68,32 @@ export class ExpenseService {
     // Create expense
     const expense = await ExpenseModel.create({
       ...data,
+      linkedInventoryId: data.linkedInventoryId
+        ? new ObjectId(data.linkedInventoryId)
+        : undefined,
       createdBy: new ObjectId(data.createdBy),
     });
+
+    if (data.linkedInventoryId) {
+      try {
+        await applyExpenseInventoryLink({
+          expenseId: expense._id as Types.ObjectId,
+          linkedInventoryId: new Types.ObjectId(data.linkedInventoryId),
+          quantity: data.quantity,
+          expenseUnit: data.unit,
+          amount: data.amount,
+          supplier: data.supplier,
+          notes: data.notes,
+          date: data.date,
+          performedBy: data.createdBy,
+        });
+      } catch (err) {
+        console.error(
+          `[REQ-034] createExpense: link side-effects failed for ${expense._id.toString()}:`,
+          err
+        );
+      }
+    }
 
     // Create audit log
     const userDetails = await this.getUserForAudit(data.createdBy);
@@ -189,6 +224,13 @@ export class ExpenseService {
 
   /**
    * Update an expense
+   *
+   * REQ-034 AC7 — If the expense was previously linked to a kitchen-ingredient
+   * inventory row (linkedInventoryId set, linkVoidedAt unset), and the
+   * update touches the link, quantity, or amount, we run a reversal of the
+   * prior side-effects then re-apply with the new values. The reversal is
+   * blocked (no state written) if it would drive Inventory.currentStock
+   * below zero.
    */
   static async updateExpense(
     id: string,
@@ -213,11 +255,61 @@ export class ExpenseService {
       throw new Error('Unit must be provided when quantity is specified');
     }
 
-    const expense = await ExpenseModel.findByIdAndUpdate(
-      id,
-      { $set: data },
-      { new: true, runValidators: true }
-    )
+    const prior = await ExpenseModel.findById(id);
+    if (!prior) {
+      throw new Error('Expense not found');
+    }
+
+    // REQ-034 AC7 — figure out whether the inventory link is affected by
+    // this update and what the reversal / re-apply quantities should be.
+    const priorLinkActive = !!prior.linkedInventoryId && !prior.linkVoidedAt;
+    const linkChangeRequested = data.linkedInventoryId !== undefined;
+    const quantityChanged =
+      data.quantity !== undefined && data.quantity !== prior.quantity;
+    const amountChanged =
+      data.amount !== undefined && data.amount !== prior.amount;
+    const linkAffected =
+      priorLinkActive &&
+      (linkChangeRequested || quantityChanged || amountChanged);
+
+    if (linkAffected) {
+      await reverseExpenseInventoryLink({
+        expenseId: prior._id as Types.ObjectId,
+        linkedInventoryId: prior.linkedInventoryId as Types.ObjectId,
+        quantity: prior.quantity,
+        expenseUnit: prior.unit,
+        performedBy: updatedBy,
+        reason: `Expense edit reversal (${prior._id.toString()})`,
+        // Will reset `linkVoidedAt` below when we re-apply.
+      });
+    }
+
+    // Build the $set / $unset payload. `linkedInventoryId: null` clears.
+    const setPayload: Record<string, unknown> = {};
+    const unsetPayload: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(data)) {
+      if (k === 'linkedInventoryId') continue;
+      if (v !== undefined) setPayload[k] = v;
+    }
+    if (linkChangeRequested) {
+      if (data.linkedInventoryId === null || data.linkedInventoryId === '') {
+        unsetPayload.linkedInventoryId = '';
+        unsetPayload.stockMovementId = '';
+      } else if (data.linkedInventoryId) {
+        setPayload.linkedInventoryId = new Types.ObjectId(
+          data.linkedInventoryId
+        );
+      }
+    }
+
+    const updateOps: Record<string, unknown> = {};
+    if (Object.keys(setPayload).length > 0) updateOps.$set = setPayload;
+    if (Object.keys(unsetPayload).length > 0) updateOps.$unset = unsetPayload;
+
+    const expense = await ExpenseModel.findByIdAndUpdate(id, updateOps, {
+      new: true,
+      runValidators: true,
+    })
       .populate({
         path: 'createdBy',
         select: 'firstName lastName email',
@@ -227,6 +319,27 @@ export class ExpenseService {
 
     if (!expense) {
       throw new Error('Expense not found');
+    }
+
+    // Re-apply the link if the updated expense still has one and the
+    // reversal ran (or the link is brand-new on this update).
+    const e = expense as unknown as IExpense;
+    if (e.linkedInventoryId) {
+      const linkNeedsApply =
+        linkAffected || (!priorLinkActive && linkChangeRequested);
+      if (linkNeedsApply) {
+        await applyExpenseInventoryLink({
+          expenseId: e._id as Types.ObjectId,
+          linkedInventoryId: e.linkedInventoryId as Types.ObjectId,
+          quantity: e.quantity,
+          expenseUnit: e.unit,
+          amount: e.amount,
+          supplier: e.supplier,
+          notes: e.notes,
+          date: e.date,
+          performedBy: updatedBy,
+        });
+      }
     }
 
     // Create audit log
@@ -249,12 +362,29 @@ export class ExpenseService {
 
   /**
    * Delete an expense
+   *
+   * REQ-034 AC7 — If the expense had an active inventory link, void the
+   * linked StockMovement (audit-preserving compensating movement) and
+   * decrement the linked Inventory.currentStock by the original quantity.
+   * Blocks (no Mongo writes performed) if the reversal would drive
+   * currentStock below 0.
    */
   static async deleteExpense(id: string, deletedBy: string): Promise<void> {
     const expense = await ExpenseModel.findById(id);
 
     if (!expense) {
       throw new Error('Expense not found');
+    }
+
+    if (expense.linkedInventoryId && !expense.linkVoidedAt) {
+      await reverseExpenseInventoryLink({
+        expenseId: expense._id as Types.ObjectId,
+        linkedInventoryId: expense.linkedInventoryId as Types.ObjectId,
+        quantity: expense.quantity,
+        expenseUnit: expense.unit,
+        performedBy: deletedBy,
+        reason: `Expense delete reversal (${expense._id.toString()})`,
+      });
     }
 
     await ExpenseModel.findByIdAndDelete(id);

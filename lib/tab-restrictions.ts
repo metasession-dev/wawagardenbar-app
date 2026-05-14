@@ -1,8 +1,8 @@
 import { TabService } from '@/services/tab-service';
-import { ITab } from '@/interfaces';
+import { ITab, UserRole } from '@/interfaces';
 
 export interface TabRestrictionContext {
-  userRole: 'customer' | 'csr' | 'admin' | 'super-admin';
+  userRole: UserRole;
   userId: string;
   customerId?: string;
   tableNumber?: string;
@@ -26,26 +26,28 @@ export async function checkTabRestrictions(
   if (context.userRole === 'admin' || context.userRole === 'super-admin') {
     // If admin is creating order for customer, check customer's tabs
     if (context.customerId) {
-      const customerTab = await TabService.getOpenTabForCustomer(context.customerId);
+      const customerTab = await TabService.getOpenTabForCustomer(
+        context.customerId
+      );
       return {
         isRestricted: false,
         existingTab: customerTab,
-        message: customerTab 
+        message: customerTab
           ? `Customer has an open tab at Table ${customerTab.tableNumber}`
           : undefined,
       };
     }
-    
+
     return {
       isRestricted: false,
       existingTab: null,
     };
   }
-  
+
   // Customers are subject to restrictions
   if (context.userRole === 'customer') {
     const existingTab = await TabService.getOpenTabForUser(context.userId);
-    
+
     if (existingTab) {
       return {
         isRestricted: true,
@@ -54,7 +56,7 @@ export async function checkTabRestrictions(
       };
     }
   }
-  
+
   return {
     isRestricted: false,
     existingTab: null,

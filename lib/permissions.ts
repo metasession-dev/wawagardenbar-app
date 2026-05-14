@@ -4,17 +4,29 @@ import { SessionData } from './session';
 /**
  * Route permissions configuration
  * Maps routes to allowed roles
+ *
+ * REQ-034: `/dashboard/kitchen/*` is gated by the `kitchenManagement`
+ * feature-permission (toggled per admin in Settings → Admins), not by
+ * a dedicated role. Any admin or super-admin with the permission can
+ * reach those routes.
  */
 export const routePermissions: Record<string, UserRole[]> = {
   '/dashboard': ['csr', 'admin', 'super-admin'],
-  '/dashboard/menu': ['super-admin'],
+  // Each route lists the maximal role allowlist; the layout's
+  // `requirePermission(...)` does the per-feature gate. Mismatches here
+  // bounce users at `proxy.ts` middleware before the layout can run.
+  '/dashboard/menu': ['admin', 'super-admin'],
   '/dashboard/orders': ['csr', 'admin', 'super-admin'],
   '/dashboard/customers': ['csr', 'super-admin'],
-  '/dashboard/inventory': ['super-admin'],
-  '/dashboard/rewards': ['csr', 'super-admin'],
+  '/dashboard/inventory': ['admin', 'super-admin'],
+  '/dashboard/rewards': ['csr', 'admin', 'super-admin'],
   '/dashboard/analytics': ['super-admin'],
   '/dashboard/audit-logs': ['super-admin'],
-  '/dashboard/settings': ['super-admin'],
+  '/dashboard/settings': ['admin', 'super-admin'],
+  '/dashboard/kitchen': ['admin', 'super-admin'],
+  '/dashboard/kitchen/recipes': ['admin', 'super-admin'],
+  '/dashboard/kitchen/production': ['admin', 'super-admin'],
+  '/dashboard/kitchen-display': ['csr', 'admin', 'super-admin'],
 };
 
 /**
@@ -31,14 +43,21 @@ export const dashboardSections = {
   analytics: { roles: ['super-admin'] as UserRole[] },
   auditLogs: { roles: ['super-admin'] as UserRole[] },
   settings: { roles: ['super-admin'] as UserRole[] },
+  /** REQ-034 — visible when session.permissions.kitchenManagement is true. */
+  kitchenRecipes: { roles: ['admin', 'super-admin'] as UserRole[] },
+  kitchenProduction: { roles: ['admin', 'super-admin'] as UserRole[] },
 };
 
 /**
- * Check if user is admin (admin or super-admin)
+ * Check if user is admin-side staff (csr or above).
  */
 export function isAdmin(session: SessionData | null): boolean {
   if (!session?.role) return false;
-  return session.role === 'csr' || session.role === 'admin' || session.role === 'super-admin';
+  return (
+    session.role === 'csr' ||
+    session.role === 'admin' ||
+    session.role === 'super-admin'
+  );
 }
 
 /**
@@ -98,9 +117,7 @@ export function requiresSuperAdmin(route: string): boolean {
   const allowedRoles = routePermissions[route];
   if (!allowedRoles) return false;
 
-  return (
-    allowedRoles.length === 1 && allowedRoles[0] === 'super-admin'
-  );
+  return allowedRoles.length === 1 && allowedRoles[0] === 'super-admin';
 }
 
 /**

@@ -15,6 +15,13 @@ export interface IExpenseLineItem {
   unit: string;
   unitCost: number;
   totalCost: number;
+  // REQ-034 AC5/AC6 — user picks a kitchen-ingredient inventory row at form
+  // submission time. The selection is carried through pending → approved →
+  // transferred without side-effect; at confirmTransfer the resulting Expense
+  // row gets `linkedInventoryId` set and the inventory effects fire.
+  // Stored as a string (24-char hex ObjectId) for serialisation friendliness
+  // through server actions.
+  linkedInventoryId?: string;
 }
 
 /**

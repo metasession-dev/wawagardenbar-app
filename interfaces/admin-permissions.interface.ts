@@ -6,6 +6,12 @@ export interface IAdminPermissions {
   reportsAndAnalytics: boolean;
   expensesManagement: boolean;
   settingsAndConfiguration: boolean;
+  /**
+   * REQ-034 — gates `/dashboard/kitchen/*` (recipes + production).
+   * Default `false` for admin and csr; `true` for super-admin.
+   * Granted via Settings → Admins → Permissions toggle.
+   */
+  kitchenManagement: boolean;
 }
 
 export const DEFAULT_ADMIN_PERMISSIONS: IAdminPermissions = {
@@ -16,6 +22,7 @@ export const DEFAULT_ADMIN_PERMISSIONS: IAdminPermissions = {
   reportsAndAnalytics: true,
   expensesManagement: false,
   settingsAndConfiguration: false,
+  kitchenManagement: false,
 };
 
 export const CSR_DEFAULT_PERMISSIONS: IAdminPermissions = {
@@ -26,6 +33,7 @@ export const CSR_DEFAULT_PERMISSIONS: IAdminPermissions = {
   reportsAndAnalytics: false,
   expensesManagement: false,
   settingsAndConfiguration: false,
+  kitchenManagement: false,
 };
 
 export const SUPER_ADMIN_PERMISSIONS: IAdminPermissions = {
@@ -36,4 +44,5 @@ export const SUPER_ADMIN_PERMISSIONS: IAdminPermissions = {
   reportsAndAnalytics: true,
   expensesManagement: true,
   settingsAndConfiguration: true,
+  kitchenManagement: true,
 };

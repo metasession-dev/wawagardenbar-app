@@ -13,21 +13,21 @@ description: Create a PR from develop to main — triggers CI independent verifi
 
 ## IMPORTANT: Do NOT Create the PR Until Ready to Merge
 
-**Do NOT create the PR prematurely.** Every push to `develop` while a PR is open triggers additional CI runs on the PR (quality gates + UAT approval check), creating unnecessary duplicate runs. Only create the PR when:
+**Do NOT create the PR prematurely.** Every push to `develop` while a PR is open triggers additional CI runs on the PR (quality gates + Release Approval Gate), creating unnecessary duplicate runs. Only create the PR when:
 
 - All development and iteration is complete
 - CI on `develop` is green
-- UAT verification has passed
-- Evidence is compiled and uploaded
-- DevAudit UAT approval is granted
+- UAT-environment verification has passed (only if Stage 3 Step 10 applied — opt-in by risk class)
+- Evidence is compiled, committed, and uploaded
+- **Release is approved in DevAudit** (status: `uat_approved` — backend enum kept as-is in v1.22.x for backwards-compat; renamed to `release_approved` in v1.23.0)
 
 The PR is the **merge request**, not the development workspace. Develop on `develop`, iterate until ready, then create the PR as the final step before merge.
 
 ## What Happens at This Stage
 
-When you create the PR, CI runs automatically — GitHub Actions re-executes the verification gates (TypeScript, SAST, dependency audit, E2E) independently. The DevAudit UAT approval check also runs, verifying the release has been approved for UAT in DevAudit. This produces tamper-resistant evidence verified by GitHub's infrastructure.
+When you create the PR, CI runs automatically — GitHub Actions re-executes the verification gates (TypeScript, SAST, dependency audit, E2E) independently. The `Release Approval Gate` workflow (renamed from `UAT Approval Gate` in sdlc-v1.22.0) also runs, verifying the release has been approved in DevAudit. This produces tamper-resistant evidence verified by GitHub's infrastructure.
 
-> **Note:** The UAT approval check will fail initially if the release hasn't been approved in DevAudit yet. This is expected. After approving the release in DevAudit, re-run the `UAT Approval Gate` workflow from GitHub Actions (or use `workflow_dispatch`) to update the check status. The PR cannot be merged until this check passes — it is a required status check.
+> **Note:** The Release Approval Gate check will fail initially if the release hasn't been approved in DevAudit yet. This is expected. After approving the release in DevAudit (Stage 3 Step 11), re-run the `Release Approval Gate` workflow from GitHub Actions (or use `workflow_dispatch`) to update the check status. The PR cannot be merged until this check passes — it is a required status check.
 
 What happens next depends on the risk level of the requirements in the PR:
 
@@ -42,8 +42,8 @@ If a PR contains requirements at multiple risk levels, the highest risk level de
 
 - All changes committed and pushed on `develop`
 - All local gates passing
-- **UAT verification passed** — health check, smoke test, feature verification recorded in evidence
-- **DevAudit UAT approval granted** — release status is `uat_approved` in DevAudit (required for the UAT approval check to pass on the PR)
+- **UAT-environment verification passed** (only if Stage 3 Step 10 applied to this requirement) — health check, smoke test, feature verification recorded in evidence
+- **Release approved in DevAudit** — release status is `uat_approved` in DevAudit (required for the Release Approval Gate check to pass on the PR)
 - For tracked requirements: RTM updated, release ticket created, evidence saved
 - **Know the risk level** of the requirement(s) — this determines whether a second reviewer is required
 
@@ -58,7 +58,8 @@ Before creating a PR, verify all prerequisites are met. **Do NOT skip this check
 - [ ] Latest CI run on `develop` is green: `gh run list --branch develop --limit 1`
 - [ ] CI is not stale (ran against the latest commit): compare CI commit SHA with `git rev-parse develop`
 - [ ] Working tree is clean: `git status`
-- [ ] UAT verification passed (if UAT configured)
+- [ ] UAT-environment verification passed (only if Stage 3 Step 10 applied to this requirement)
+- [ ] Release approved in DevAudit (Stage 3 Step 11)
 
 **For tracked requirements (REQ-XXX):**
 
@@ -252,7 +253,7 @@ EOF
 
 ### Step 4: Wait for CI and Report Honest Status (MANDATORY)
 
-After creating the PR, **do not hand off to the reviewer yet**. Required checks include `Compliance Validation` and `DevAudit UAT Approval` — both take time to run and can fail for reasons the local gates did not catch (e.g. a missing `RELEASE-TICKET-REQ-XXX.md` that only the PR-side validator sees).
+After creating the PR, **do not hand off to the reviewer yet**. Required checks include `Compliance Validation` and `Release Approval Gate` (the latter is named `DevAudit Release Approval` in the job-level UI) — both take time to run and can fail for reasons the local gates did not catch (e.g. a missing `RELEASE-TICKET-REQ-XXX.md` that only the PR-side validator sees).
 
 1. Wait ≥60 seconds for required checks to register.
 2. Verify status:

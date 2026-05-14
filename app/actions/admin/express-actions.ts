@@ -128,7 +128,13 @@ export async function expressSearchMenuAction(params: {
     await requireAdminSession();
     await connectDB();
 
-    const filter: Record<string, unknown> = { isAvailable: true };
+    // REQ-034 AC2: never surface kitchen-ingredient MenuItems on admin
+    // search either — admins place orders here, and a sellable item by
+    // definition has kind:'menu-item'.
+    const filter: Record<string, unknown> = {
+      isAvailable: true,
+      kind: 'menu-item',
+    };
 
     if (params.query) {
       filter.$or = [
@@ -224,8 +230,13 @@ export async function expressCreateOrderAction(params: {
     const menuItemIds = Array.from(
       new Set(params.items.map((i) => i.menuItemId))
     );
+    // REQ-034 AC2: validate that every submitted id resolves to a
+    // sellable menu-item (kitchen-ingredient ids are rejected — the
+    // existing length-mismatch guard below turns missing rows into a
+    // user-facing error).
     const menuItemDocs = await MenuItemModel.find({
       _id: { $in: menuItemIds },
+      kind: 'menu-item',
     }).lean();
     const menuMap = new Map<string, MenuItemForReconcile>(
       menuItemDocs.map((m: any) => [

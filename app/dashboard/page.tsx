@@ -154,20 +154,21 @@ async function RecentOrders() {
  */
 async function QuickStats() {
   // Fetch real statistics from database
-  const [pendingOrdersCount, lowStockCount, activeCustomersCount] = await Promise.all([
-    // Count pending/confirmed orders
-    OrderModel.countDocuments({
-      status: { $in: ['pending', 'confirmed'] },
-    }),
-    // Count low stock items
-    InventoryModel.countDocuments({
-      status: 'low-stock',
-    }),
-    // Count active customers (users who have placed at least one order)
-    UserModel.countDocuments({
-      role: 'customer',
-    }),
-  ]);
+  const [pendingOrdersCount, lowStockCount, activeCustomersCount] =
+    await Promise.all([
+      // Count pending/confirmed orders
+      OrderModel.countDocuments({
+        status: { $in: ['pending', 'confirmed'] },
+      }),
+      // Count low stock items
+      InventoryModel.countDocuments({
+        status: 'low-stock',
+      }),
+      // Count active customers (users who have placed at least one order)
+      UserModel.countDocuments({
+        role: 'customer',
+      }),
+    ]);
 
   const stats = [
     {

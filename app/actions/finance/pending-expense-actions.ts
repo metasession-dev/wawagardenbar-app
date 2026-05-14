@@ -2,6 +2,8 @@
 
 /**
  * @requirement REQ-026 - Pending expense group workflow
+ * @requirement REQ-034 - listKitchenIngredientInventoryAction populates the
+ *                        "Add to inventory" dropdown on the expense form
  *
  * Server actions for the pending expense group flow.
  * `createExpenseAction` in expense-actions.ts is intentionally unchanged
@@ -13,6 +15,9 @@ import { getIronSession } from 'iron-session';
 import { revalidatePath } from 'next/cache';
 import { sessionOptions, SessionData } from '@/lib/session';
 import { PendingExpenseGroupService } from '@/services/pending-expense-group-service';
+import { connectDB } from '@/lib/mongodb';
+import InventoryModel from '@/models/inventory-model';
+import '@/models/menu-item-model'; // ensure populate target is registered
 import {
   CreatePendingExpenseGroupDTO,
   UpdatePendingExpenseGroupDTO,
@@ -205,6 +210,44 @@ export async function confirmTransferAction(
       success: false,
       error:
         error instanceof Error ? error.message : 'Failed to confirm transfer',
+    };
+  }
+}
+
+/**
+ * REQ-034 AC5 — Kitchen-ingredient inventory rows for the expense form's
+ * "Add to inventory" dropdown. Returns id + display name + category so the
+ * form can render grouped options.
+ */
+export async function listKitchenIngredientInventoryAction() {
+  try {
+    const session = await getSession();
+    requireAdminOrAbove(session);
+    await connectDB();
+    const rows = await InventoryModel.find({ kind: 'kitchen-ingredient' })
+      .populate('menuItemId', 'name mainCategory category')
+      .sort({ currentStock: 1 })
+      .lean();
+    const items = rows.map((r) => {
+      const mi = r.menuItemId as unknown as
+        | { _id: { toString(): string }; name: string; category?: string }
+        | null
+        | undefined;
+      return {
+        id: r._id.toString(),
+        name: mi?.name ?? 'Unknown ingredient',
+        category: mi?.category ?? '',
+        unit: r.unit,
+      };
+    });
+    return { success: true as const, items };
+  } catch (error) {
+    return {
+      success: false as const,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to fetch kitchen-ingredient inventory',
     };
   }
 }

@@ -17,6 +17,12 @@ const ExpenseLineItemSchema = new Schema(
     unit: { type: String, required: true },
     unitCost: { type: Number, required: true, min: 0 },
     totalCost: { type: Number, required: true, min: 0 },
+    // REQ-034 AC5/AC6 — optional inventory link selected at submission.
+    linkedInventoryId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Inventory',
+      sparse: true,
+    },
   },
   { _id: false }
 );

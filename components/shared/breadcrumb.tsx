@@ -27,7 +27,10 @@ function generateBreadcrumbs(pathname: string): BreadcrumbItem[] {
     rewards: 'Rewards',
     settings: 'Settings',
     'audit-logs': 'Audit Logs',
-    kitchen: 'Kitchen Display',
+    kitchen: 'Kitchen',
+    'kitchen-display': 'Kitchen Display',
+    production: 'Production',
+    recipes: 'Recipes',
     analytics: 'Analytics',
     tabs: 'Tabs',
     new: 'New',
@@ -94,7 +97,10 @@ export function Breadcrumb() {
   }
 
   return (
-    <nav aria-label="Breadcrumb" className="flex items-center space-x-1 text-sm text-muted-foreground">
+    <nav
+      aria-label="Breadcrumb"
+      className="flex items-center space-x-1 text-sm text-muted-foreground"
+    >
       {/* Home/Dashboard Link */}
       <Link
         href="/dashboard"

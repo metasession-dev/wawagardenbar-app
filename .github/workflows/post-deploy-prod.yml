@@ -5,6 +5,13 @@
 #
 # Production verification is READ-ONLY.
 # No E2E tests, no database operations, no API mutations.
+#
+# In sdlc-v1.22.0+ the terminal release status is configurable via
+# sdlc-config.json `production_review.terminal_status`:
+#   - "prod_review" (default, Option A) — stop at prod_review; human in the
+#     portal clicks "Approve Production" then "Mark as Released" for an
+#     explicit audit trail. Closes #138.
+#   - "released" (Option B) — preserves v1.21.x auto-release behaviour.
 
 name: Post-Deploy Production Evidence
 
@@ -17,7 +24,7 @@ jobs:
     name: Production Evidence
     runs-on: self-hosted
     env:
-      META_COMPLY_BASE_URL: ${{ vars.META_COMPLY_BASE_URL }}
+      META_COMPLY_BASE_URL_VAR: ${{ vars.META_COMPLY_BASE_URL }}
       META_COMPLY_API_KEY: ${{ secrets.META_COMPLY_API_KEY }}
       PROD_URL: ${{ secrets.WAWAGARDENBAR_PROD_URL }}
       PROJECT_SLUG: wawagardenbar-app
@@ -27,13 +34,44 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate DevAudit env
+      - name: Resolve DevAudit base URL and post-deploy terminal status
         run: |
-          if [ -z "${META_COMPLY_BASE_URL}" ] || [ -z "${META_COMPLY_API_KEY}" ]; then
-            echo "::error::META_COMPLY_BASE_URL (variable) and META_COMPLY_API_KEY (secret) must both be set."
+          # Prefer sdlc-config.json (visible in PR review) over repo Variable.
+          CONFIG_URL=""
+          TERMINAL_STATUS="prod_review"
+          if [ -f sdlc-config.json ]; then
+            CONFIG_URL=$(jq -r '.devaudit.base_url // empty' sdlc-config.json 2>/dev/null || true)
+            CONFIG_TERMINAL=$(jq -r '.production_review.terminal_status // empty' sdlc-config.json 2>/dev/null || true)
+            if [ -n "$CONFIG_TERMINAL" ]; then
+              TERMINAL_STATUS="$CONFIG_TERMINAL"
+            fi
+          fi
+          if [ -n "$CONFIG_URL" ]; then
+            BASE="$CONFIG_URL"
+            echo "Using devaudit.base_url from sdlc-config.json: $BASE"
+          elif [ -n "$META_COMPLY_BASE_URL_VAR" ]; then
+            BASE="$META_COMPLY_BASE_URL_VAR"
+            echo "::warning::Using repo Variable META_COMPLY_BASE_URL (deprecated in v1.23.0). Move base_url to sdlc-config.json devaudit.base_url."
+          else
+            echo "::error::No DevAudit base URL configured. Set devaudit.base_url in sdlc-config.json."
             exit 1
           fi
-          echo "BASE=${META_COMPLY_BASE_URL%/}" >> "$GITHUB_ENV"
+          if [ -z "${META_COMPLY_API_KEY}" ]; then
+            echo "::error::META_COMPLY_API_KEY secret must be set."
+            exit 1
+          fi
+          case "$TERMINAL_STATUS" in
+            prod_review|released) ;;
+            *)
+              echo "::error::Invalid production_review.terminal_status '${TERMINAL_STATUS}'. Must be 'prod_review' or 'released'."
+              exit 1
+              ;;
+          esac
+          echo "Post-deploy terminal status: ${TERMINAL_STATUS}"
+          echo "BASE=${BASE%/}" >> "$GITHUB_ENV"
+          # Export for upload-evidence.sh, which reads $META_COMPLY_BASE_URL directly.
+          echo "META_COMPLY_BASE_URL=${BASE%/}" >> "$GITHUB_ENV"
+          echo "TERMINAL_STATUS=${TERMINAL_STATUS}" >> "$GITHUB_ENV"
 
       - name: Resolve current release
         id: release
@@ -97,16 +135,25 @@ jobs:
               ${FLAGS} || echo "Warning: Failed to upload smoke results"
           fi
 
-      - name: Mark release as released
+      - name: Advance release status (post-deploy)
         run: |
           RELEASE_ID="${{ steps.release.outputs.release_id }}"
-          if [ -n "$RELEASE_ID" ]; then
-            curl -s -o /dev/null -w "Release: HTTP %{http_code}\n" \
-              -X PATCH "${BASE}/api/ci/releases/${RELEASE_ID}" \
-              -H "Authorization: Bearer ${META_COMPLY_API_KEY}" \
-              -H "Content-Type: application/json" \
-              -d '{"status":"released"}'
-            echo "Release ${{ steps.release.outputs.version }} marked as released"
-          else
+          if [ -z "$RELEASE_ID" ]; then
             echo "::warning::No release_id resolved — skipping status patch"
+            exit 0
           fi
+          curl -s -o /dev/null -w "Release status patch: HTTP %{http_code}\n" \
+            -X PATCH "${BASE}/api/ci/releases/${RELEASE_ID}" \
+            -H "Authorization: Bearer ${META_COMPLY_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "{\"status\":\"${TERMINAL_STATUS}\"}"
+          case "$TERMINAL_STATUS" in
+            prod_review)
+              echo "Release ${{ steps.release.outputs.version }} → prod_review."
+              echo "Next: a human in the portal clicks 'Approve Production' (→ prod_approved), then 'Mark as Released' (→ released)."
+              echo "Audit trail captures both events with reviewer identity per compliance/risk-register.md."
+              ;;
+            released)
+              echo "Release ${{ steps.release.outputs.version }} → released (Option B: auto-release with no post-deploy human gate)."
+              ;;
+          esac

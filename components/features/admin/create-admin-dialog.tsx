@@ -27,7 +27,11 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PermissionsEditor } from './permissions-editor';
-import { IAdminPermissions, DEFAULT_ADMIN_PERMISSIONS, CSR_DEFAULT_PERMISSIONS } from '@/interfaces';
+import {
+  IAdminPermissions,
+  DEFAULT_ADMIN_PERMISSIONS,
+  CSR_DEFAULT_PERMISSIONS,
+} from '@/interfaces';
 
 const createAdminSchema = z
   .object({
@@ -50,7 +54,11 @@ const createAdminSchema = z
         'Password must contain at least one special character'
       ),
     confirmPassword: z.string(),
-    email: z.string().email('Invalid email address').optional().or(z.literal('')),
+    email: z
+      .string()
+      .email('Invalid email address')
+      .optional()
+      .or(z.literal('')),
     firstName: z.string().optional(),
     lastName: z.string().optional(),
     role: z.enum(['csr', 'admin', 'super-admin']),
@@ -70,7 +78,9 @@ export function CreateAdminDialog({ children }: CreateAdminDialogProps) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [permissions, setPermissions] = useState<IAdminPermissions>(DEFAULT_ADMIN_PERMISSIONS);
+  const [permissions, setPermissions] = useState<IAdminPermissions>(
+    DEFAULT_ADMIN_PERMISSIONS
+  );
 
   const {
     register,
@@ -100,7 +110,10 @@ export function CreateAdminDialog({ children }: CreateAdminDialogProps) {
         firstName: data.firstName || undefined,
         lastName: data.lastName || undefined,
         role: data.role,
-        permissions: data.role === 'admin' || data.role === 'csr' ? permissions : undefined,
+        permissions:
+          data.role === 'admin' || data.role === 'csr'
+            ? permissions
+            : undefined,
       });
 
       if (!result.success) {
@@ -252,7 +265,8 @@ export function CreateAdminDialog({ children }: CreateAdminDialogProps) {
               onValueChange={(value) => {
                 setValue('role', value as any);
                 if (value === 'csr') setPermissions(CSR_DEFAULT_PERMISSIONS);
-                else if (value === 'admin') setPermissions(DEFAULT_ADMIN_PERMISSIONS);
+                else if (value === 'admin')
+                  setPermissions(DEFAULT_ADMIN_PERMISSIONS);
               }}
               disabled={isLoading}
             >
@@ -269,12 +283,12 @@ export function CreateAdminDialog({ children }: CreateAdminDialogProps) {
               {role === 'csr'
                 ? 'Order management, customer communication, and refund requests'
                 : role === 'admin'
-                ? 'Customizable permissions for specific features'
-                : 'Full access to all dashboard features'}
+                  ? 'Customizable permissions for specific features'
+                  : 'Full access to all dashboard features'}
             </p>
           </div>
 
-          {/* Permissions - For CSR and Admin roles */}
+          {/* Permissions — for CSR and Admin roles (super-admin has full access). */}
           {(role === 'csr' || role === 'admin') && (
             <div className="space-y-2">
               <Label>Permissions</Label>

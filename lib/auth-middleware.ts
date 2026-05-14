@@ -10,7 +10,10 @@ import { IAdminPermissions } from '@/interfaces';
  */
 export async function requireAuth(): Promise<SessionData> {
   const cookieStore = await cookies();
-  const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+  const session = await getIronSession<SessionData>(
+    cookieStore,
+    sessionOptions
+  );
 
   if (!session.userId) {
     redirect('/login');
@@ -35,7 +38,7 @@ export async function requireRole(
 }
 
 /**
- * Check if user is admin
+ * Check if user is staff (admin-side surfaces).
  */
 export async function requireAdmin(): Promise<SessionData> {
   return requireRole(['csr', 'admin', 'super-admin']);
@@ -97,7 +100,10 @@ export async function requirePermission(
   // Debug logging
   console.log(`[Auth] Checking permission: ${permission}`);
   console.log(`[Auth] User Role: ${session.role}`);
-  console.log(`[Auth] Permissions:`, JSON.stringify(session.permissions, null, 2));
+  console.log(
+    `[Auth] Permissions:`,
+    JSON.stringify(session.permissions, null, 2)
+  );
 
   // Check if admin has the required permission
   if (!session.permissions || !session.permissions[permission]) {

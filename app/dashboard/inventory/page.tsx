@@ -6,6 +6,7 @@ import '@/models/menu-item-model'; // Import to ensure MenuItem model is registe
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InventoryItemsClient } from '@/components/features/admin/inventory-items-client';
+import type { InventoryKind } from '@/interfaces/inventory.interface';
 import {
   AlertTriangle,
   ArrowRightLeft,
@@ -14,12 +15,13 @@ import {
 } from 'lucide-react';
 
 /**
- * Get inventory items
+ * REQ-034 AC3: load inventory filtered by `kind` so the dashboard's
+ * Sellable / Kitchen tabs can be populated independently.
  */
-async function getInventory() {
+async function getInventoryByKind(kind: InventoryKind) {
   await connectDB();
 
-  const inventory = await InventoryModel.find()
+  const inventory = await InventoryModel.find({ kind })
     .populate('menuItemId', 'name mainCategory category')
     .sort({ currentStock: 1 })
     .lean();
@@ -27,6 +29,7 @@ async function getInventory() {
   // Serialize data for Client Component
   return inventory.map((item: any) => ({
     _id: item._id.toString(),
+    kind: (item.kind ?? 'menu-item') as InventoryKind,
     menuItemId: item.menuItemId
       ? {
           _id: item.menuItemId._id.toString(),
@@ -123,12 +126,20 @@ async function InventoryStats() {
 }
 
 /**
- * Inventory list
+ * Inventory list (Sellable / Kitchen tabs — REQ-034 AC3).
  */
 async function InventoryList() {
-  const inventory = await getInventory();
+  const [sellableInventory, kitchenInventory] = await Promise.all([
+    getInventoryByKind('menu-item'),
+    getInventoryByKind('kitchen-ingredient'),
+  ]);
 
-  return <InventoryItemsClient inventory={inventory} />;
+  return (
+    <InventoryItemsClient
+      sellableInventory={sellableInventory}
+      kitchenInventory={kitchenInventory}
+    />
+  );
 }
 
 /**

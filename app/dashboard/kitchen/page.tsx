@@ -1,45 +1,68 @@
-import { getOrdersAction } from '@/app/actions/admin/order-management-actions';
-import { KitchenOrderGrid } from '@/components/features/kitchen/kitchen-order-grid';
-import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ChefHat, Boxes } from 'lucide-react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 
 /**
- * Kitchen display page
- * Full-screen view for kitchen staff
+ * REQ-034 D9 — Kitchen management hub.
+ *
+ * Lightweight landing page that links to the two kitchen surfaces.
+ * Gated by the parent layout's `requirePermission('kitchenManagement')`.
+ * The legacy full-screen order-grid kitchen display moved to
+ * `/dashboard/kitchen-display`.
  */
-export default async function KitchenPage() {
-  // Get active orders (pending, confirmed, preparing, ready)
-  const result = await getOrdersAction(
-    {
-      status: 'pending,confirmed,preparing,ready',
-    },
-    1,
-    100
-  );
+export const dynamic = 'force-dynamic';
+export const metadata = { title: 'Kitchen' };
 
-  const orders = (result.data as any)?.orders || [];
-
+export default function KitchenLandingPage() {
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <Link href="/dashboard/orders">
-            <Button variant="outline" size="sm" className="bg-gray-800 border-gray-700">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Dashboard
-            </Button>
-          </Link>
-          <h1 className="text-3xl font-bold">Kitchen Display</h1>
-        </div>
-        <div className="text-lg text-gray-400">
-          {orders.length} Active {orders.length === 1 ? 'Order' : 'Orders'}
-        </div>
+    <div className="space-y-6 p-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Kitchen</h1>
+        <p className="text-muted-foreground">
+          Author recipes and record production batches.
+        </p>
       </div>
-
-      {/* Kitchen Order Grid */}
-      <KitchenOrderGrid initialOrders={orders} />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Link href="/dashboard/kitchen/recipes" className="group">
+          <Card className="h-full transition-colors group-hover:border-primary">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <ChefHat className="h-6 w-6 text-primary" />
+                <CardTitle>Recipes</CardTitle>
+              </div>
+              <CardDescription>
+                Define what kitchen ingredients each menu item consumes.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground">
+              Create, edit, activate, or deactivate recipes.
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/dashboard/kitchen/production" className="group">
+          <Card className="h-full transition-colors group-hover:border-primary">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <Boxes className="h-6 w-6 text-primary" />
+                <CardTitle>Production</CardTitle>
+              </div>
+              <CardDescription>
+                Run a batch and review recent production history.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground">
+              Each batch deducts ingredients and adds the yield to the target
+              menu item.
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
     </div>
   );
 }

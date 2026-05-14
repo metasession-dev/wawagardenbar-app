@@ -89,6 +89,7 @@ export const API_KEY_ROLE_LABELS: Record<ApiKeyRole, string> = {
 export const API_KEY_ROLE_DESCRIPTIONS: Record<ApiKeyRole, string> = {
   customer: 'Menu browsing, ordering, payments, and rewards',
   csr: 'Orders, customers, payments, rewards, and tab management',
-  admin: 'CSR scopes plus menu writes, inventory reads, analytics, and audit logs',
+  admin:
+    'CSR scopes plus menu writes, inventory reads, analytics, and audit logs',
   'super-admin': 'Full access to all API scopes',
 };

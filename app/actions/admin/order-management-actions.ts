@@ -385,7 +385,7 @@ export async function updateOrderStatusAction(
     );
 
     revalidatePath('/dashboard/orders');
-    revalidatePath('/dashboard/kitchen');
+    revalidatePath('/dashboard/kitchen-display');
     revalidatePath(`/orders/${orderId}`);
 
     return {
@@ -492,7 +492,7 @@ export async function batchUpdateOrdersAction(
     await emitBatchUpdateEvent(orderIds, action);
 
     revalidatePath('/dashboard/orders');
-    revalidatePath('/dashboard/kitchen');
+    revalidatePath('/dashboard/kitchen-display');
 
     return {
       success: true,
@@ -614,7 +614,7 @@ export async function cancelOrderAction(
     await emitOrderCancelledEvent(order._id.toString(), reason);
 
     revalidatePath('/dashboard/orders');
-    revalidatePath('/dashboard/kitchen');
+    revalidatePath('/dashboard/kitchen-display');
 
     return {
       success: true,

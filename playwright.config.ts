@@ -203,6 +203,12 @@ export default defineConfig({
       testMatch: /kitchen\/production-flow\.spec\.ts/,
       dependencies: ['auth-setup'],
     },
+    {
+      name: 'kitchen-daily-report-regression',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /kitchen\/daily-report-regression\.spec\.ts/,
+      dependencies: ['auth-setup'],
+    },
   ],
   /* Start dev server before tests (skipped when BASE_URL is set) */
   webServer: process.env.BASE_URL

@@ -16,6 +16,8 @@
 import { Types } from 'mongoose';
 import type { InventoryKind } from '@/interfaces/inventory.interface';
 import type { ExpenseType } from '@/interfaces/expense.interface';
+import type { UnitOfMeasurement } from '@/interfaces/unit-of-measurement.interface';
+import { convertToInventoryUnit } from '@/lib/dimension-conversion';
 
 export const DEFAULT_EXPENSE_QUANTITY = 1;
 
@@ -34,6 +36,64 @@ export function resolveExpenseQuantity(
     );
   }
   return quantity;
+}
+
+/**
+ * D10 — Convert an expense-entered quantity into the inventory's stored
+ * unit before applying it to currentStock. Wraps REQ-034 AC9's
+ * `convertToInventoryUnit` with two legacy-data fallbacks so the same
+ * helper can be threaded through every call-site safely:
+ *
+ *   - missing expenseUnit (e.g. expense saved before REQ-033) → identity
+ *   - same id on both sides → identity (no registry lookup needed)
+ *
+ * Cross-dimension or unknown-id errors surface as-is from the underlying
+ * REQ-033 helper — those should never pass UI validation, so a throw is
+ * the right signal that something has corrupted the data.
+ *
+ * Returns the converted quantity AND a `converted` flag the service uses
+ * to add a one-line note to StockMovement so an auditor can see "this
+ * row was unit-converted on write."
+ */
+export interface ExpenseToInventoryConversion {
+  /** Quantity expressed in the inventory's stored unit. */
+  quantity: number;
+  /** True iff a dimension conversion was applied (not identity). */
+  converted: boolean;
+  /** Human-readable note for audit trail (only set when converted). */
+  note?: string;
+}
+
+export function convertExpenseQuantityToInventoryUnit(input: {
+  expenseQuantity: number;
+  expenseUnit: string | undefined | null;
+  inventoryUnit: string;
+  registry: ReadonlyArray<UnitOfMeasurement>;
+}): ExpenseToInventoryConversion {
+  const { expenseQuantity, expenseUnit, inventoryUnit, registry } = input;
+
+  // Legacy / missing-data passthroughs.
+  if (!expenseUnit) {
+    return { quantity: expenseQuantity, converted: false };
+  }
+  if (!inventoryUnit) {
+    return { quantity: expenseQuantity, converted: false };
+  }
+  if (expenseUnit === inventoryUnit) {
+    return { quantity: expenseQuantity, converted: false };
+  }
+
+  const converted = convertToInventoryUnit({
+    value: expenseQuantity,
+    fromUnitId: expenseUnit,
+    toUnitId: inventoryUnit,
+    registry,
+  });
+  return {
+    quantity: converted,
+    converted: true,
+    note: `Converted ${expenseQuantity} ${expenseUnit} → ${converted} ${inventoryUnit}`,
+  };
 }
 
 /**

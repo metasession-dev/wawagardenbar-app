@@ -1,139 +1,80 @@
-# UAT Checklist — REQ-034
+# UAT Checklist — REQ-034 (D11-trimmed)
 
-**Requirement:** Recipes + Production + Kitchen-Ingredient Inventory + Kitchen/Bar/Waiting roles
+**Requirement:** Recipes + Production + Kitchen-Ingredient Inventory + Kitchen Management permission
 **Issue:** [#74](https://github.com/metasession-dev/wawagardenbar-app/issues/74)
-**Date:** 2026-05-09
+**Date:** 2026-05-09 (last revised 2026-05-14 for D11)
 **UAT environment:** `https://wawagardenbar-uat.up.railway.app/`
 
-## Pre-flight
+## What changed in D11
 
-- [ ] Backfill script run on UAT: `npx tsx scripts/backfill-inventory-kind.ts`. Inspect log — every existing Inventory row tagged `kind: 'menu-item'`. Re-run reports 0 updates (idempotent).
-- [ ] Confirm at least 3 `kind: 'kitchen-ingredient'` records added to UAT (e.g. goat meat, palm oil, salt).
-- [ ] Confirm at least one Recipe authored on UAT linking a MenuItem to those ingredients.
+The full feature surface — permission gating, kind filtering, inventory tabs,
+expense → inventory link (with D10 unit-conversion regression coverage),
+recipe builder validation, production deduction, and the production void
+rules — is now exercised end-to-end in Playwright. Each automated test
+**asserts numeric side effects** via the rendered UI (e.g. `currentStock`
+column on the Inventory dashboard), not just that pages render. See:
 
-## Phase A — kitchenManagement permission + Inventory.kind + Expense link
+- `e2e/kitchen/permission-gating.spec.ts` — Step 1
+- `e2e/kitchen/menu-kind-filter.spec.ts` — Step 2
+- `e2e/kitchen/inventory-tabs.spec.ts` — Step 3
+- `e2e/kitchen/expense-link.spec.ts` — Step 4 (incl. D10 regression)
+- `e2e/kitchen/recipe-validation.spec.ts` — Step 5
+- `e2e/kitchen/production-flow.spec.ts` — Step 6 + 7
+- `e2e/kitchen/recipe-and-production.spec.ts` — original surface smoke
 
-### Step 1 — Permission gating (post-D5 walkback, 2026-05-13)
+Steps 1–7 are no longer manual UAT work — they run on every CI green of
+develop. Residual manual UAT below.
 
-> AC4 was redesigned during UAT — see defect D5 in
-> `test-execution-summary.md`. The three originally-proposed roles
-> (`kitchen` / `bar` / `waiting`) were dropped in favour of a single
-> `kitchenManagement` feature-permission on the existing
-> csr / admin / super-admin role set.
+## Pre-flight (manual — ops procedure)
 
-- [ ] Settings → Admins → Create Admin (or edit an existing admin) →
-      **Permissions** section shows **Kitchen Management** as the 8th
-      toggle (ChefHat icon, "Author recipes and record production
-      batches"), after **Settings & Configuration**.
-- [ ] Sidebar shows a **Kitchen** entry (ChefHat icon) only when the
-      current user has `kitchenManagement` granted.
-  - [ ] As super-admin: Kitchen link visible by default.
-  - [ ] As an admin without kitchenManagement: Kitchen link absent.
-  - [ ] Grant the permission, log out + back in: Kitchen link
-        appears.
-- [ ] Create a test admin user **with** `kitchenManagement` enabled.
-  - [ ] Log in as that user → can hit `/dashboard/kitchen/recipes` and
-        `/dashboard/kitchen/production`.
-- [ ] Create a test admin user **without** `kitchenManagement`.
-  - [ ] Log in as that user → hitting `/dashboard/kitchen/recipes`
-        bounces to `/dashboard/forbidden` (or the equivalent
-        `requirePermission` redirect target).
-- [ ] As a csr user (no `kitchenManagement` by default): hitting
-      `/dashboard/kitchen/recipes` is denied.
+- [ ] Backfill script run on UAT: `npx tsx scripts/backfill-inventory-kind.ts`.
+      Inspect log — every existing Inventory row tagged `kind: 'menu-item'`.
+      Re-run reports 0 updates (idempotent). Logs captured to
+      `compliance/evidence/REQ-034/gates/uat-backfill-*.txt`.
+- [ ] D10 audit: `npx tsx scripts/audit-expense-link-units.ts`. Inspect
+      the report — any historical expense link whose `expense.unit` differs
+      from `inventory.unit` was applied pre-D10 and may have miscredited
+      stock. Flag those expenses for manual reconciliation.
 
-### Defunct items from the original checklist
-
-The following items were superseded by the D5 walk-back and no longer
-apply — the three roles they reference do not exist:
-
-- ~~"Settings > Admins: role dropdown lists Kitchen / Bar / Waiting"~~
-- ~~"Create test user B with role `bar`" / "test user C with role `waiting`"~~
-
-The orphaned kitchen-role test user created during the original
-walkthrough should be deleted from Settings → Admins.
-
-### Step 2 — Customer-menu kind filter
-
-- [ ] Public menu API (`GET /api/public/menu`) returns only `kind:'menu-item'` items. Verify by adding a kitchen-ingredient and confirming it does NOT appear.
-- [ ] Express create-order menu picker shows ONLY menu-item inventory. No kitchen ingredients leak.
-- [ ] Order-edit menu picker shows ONLY menu-item inventory.
-
-### Step 3 — Inventory dashboard tabs
-
-- [ ] `/dashboard/inventory` shows two tabs: Sellable (kind:menu-item) and Kitchen (kind:kitchen-ingredient).
-- [ ] Each tab filters its list correctly.
-
-### Step 4 — Expense → Inventory link
-
-- [ ] Expense form: when expense type = Direct Cost, "Add to inventory" dropdown is visible.
-- [ ] Dropdown options are limited to `kind:'kitchen-ingredient'` records, grouped by COGS category.
-- [ ] When expense type = Repairs / Salaries / etc., the dropdown is NOT visible.
-- [ ] Save an expense linked to "goat meat" with quantity 5 (kg). Verify:
-  - [ ] Inventory.currentStock for goat meat increased by 5.
-  - [ ] A new `InventoryItemCostHistory` row created with `cost = expense.amount / 5`.
-  - [ ] A `StockMovement` row created tagged with the expenseId.
-- [ ] Edit the same expense to quantity 4. Verify:
-  - [ ] Prior StockMovement voided (reversal entry created, original NOT physically deleted).
-  - [ ] New StockMovement created for the new quantity.
-  - [ ] Inventory.currentStock now reflects the diff.
-  - [ ] Cost history has another row.
-- [ ] Now record a production that consumes 2kg of goat meat (currentStock goes to 2).
-- [ ] Try to edit the expense quantity to 1 (would drive currentStock to -1). Verify:
-  - [ ] **BLOCKED** with error message explaining how much has been consumed.
-  - [ ] No reversal landed; inventory state unchanged.
-
-## Phase B — Recipes + Production
-
-### Step 5 — Recipe builder
-
-- [ ] `/dashboard/kitchen/recipes` lists existing recipes (empty on first load).
-- [ ] Click "New Recipe":
-  - [ ] Target menu item dropdown lists only `kind:'menu-item'` records.
-  - [ ] Yield portions input accepts > 0; rejects ≤ 0.
-  - [ ] Add ingredient row: dropdown lists only `kind:'kitchen-ingredient'`, grouped by COGS category.
-  - [ ] Quantity input + unit dropdown. Unit defaults to inventory's `unitId` but is overrideable to any same-dimension unit (e.g. ingredient stored as kg, recipe specifies g).
-  - [ ] Add second row of the SAME ingredient: rejected at submit ("duplicate ingredient").
-  - [ ] Specify ingredient unit `ml` against an inventory in `kg`: rejected at submit ("cross-dimension").
-  - [ ] Specify ingredient unit `bottles` against an inventory in `crates`: rejected at submit (count is strict-match).
-  - [ ] Save. Recipe appears in the list.
-- [ ] Edit recipe → toggle "Active" off. Save. Recipe still appears in list (with deactivated badge) but does NOT appear in "Make a batch" dropdown.
-
-### Step 6 — Production execution
-
-- [ ] `/dashboard/kitchen/production` shows production history (empty on first load).
-- [ ] Click "Make a batch":
-  - [ ] Recipe dropdown lists only ACTIVE recipes.
-  - [ ] Pick "Pepper Soup". Batch count default = 1. Expected yield read-only display = recipe.yieldPortions × 1.
-  - [ ] Actual yield input defaults to expected; can be overridden.
-  - [ ] Submit:
-    - [ ] Each ingredient deducted from currentStock per recipe quantity (with same-dimension conversion if needed).
-    - [ ] MenuItem inventory bumped by actualYield.
-    - [ ] Production row created with `ingredientsDeducted` snapshot in inventory units.
-    - [ ] N+1 `StockMovement` rows created (N deductions + 1 addition), all tagged with productionId.
-- [ ] Pre-flight: stage an ingredient at currentStock = 1 needed = 5. Submit:
-  - [ ] BLOCKED with clear error: "Insufficient X — needs 5, have 1".
-  - [ ] No partial deduction landed (verify other ingredients' currentStock unchanged).
-
-### Step 7 — Production void
-
-- [ ] As super-admin, void a production within 24h: succeeds, reasonNote optional.
-  - [ ] Reversal StockMovements created tagged with same productionId.
-  - [ ] Production status flips to `voided`.
-  - [ ] Ingredients refunded; MenuItem inventory reduced.
-- [ ] As super-admin, void a production older than 24h:
-  - [ ] Reason note input is required.
-  - [ ] Reason persisted on every reversal StockMovement.
-- [ ] As admin (not super-admin), try to void: BLOCKED.
-- [ ] As kitchen role, try to void: BLOCKED.
-
-### Step 8 — Daily Financial Report regression
+## Step 8 — Daily Financial Report regression (manual — visual)
 
 - [ ] Daily Financial Report for the test day still renders correctly.
 - [ ] `paymentBreakdown.total` (revenue) unchanged by production events.
-- [ ] Per-portion COGS calculation uses weighted-average cost from `InventoryItemCostHistory`.
+- [ ] Per-portion COGS calculation uses weighted-average cost from
+      `InventoryItemCostHistory`. (The math is unit-tested under
+      `__tests__/services/expense-inventory-link.test.ts` —
+      this UAT step is a visual sanity check.)
 
-## Sign-off
+## Sign-off (manual — procedural)
 
-- [ ] All checkboxes ticked
-- [ ] No defects logged blocking AC1–AC16
+- [ ] All manual checkboxes ticked
+- [ ] All E2E specs above are green on the develop CI run that feeds
+      META-COMPLY (DevAudit)
+- [ ] Operator has manually deleted any orphaned test rows in UAT
+      (kitchen-ingredient test fixtures named `E2E-…`) if they accumulated
 - [ ] DevAudit / META-COMPLY UAT approval recorded
+
+## Appendix — items removed from manual UAT in D11
+
+The following items moved to E2E. They are no longer manual checkboxes
+but the assertions still run on every CI green:
+
+| Former manual step                                    | Now asserted by                 |
+| ----------------------------------------------------- | ------------------------------- |
+| Permission toggle position + sidebar visibility       | `permission-gating.spec.ts`     |
+| Forbidden redirect for csr / no-permission admin      | `permission-gating.spec.ts`     |
+| Public menu API excludes kitchen ingredients          | `menu-kind-filter.spec.ts`      |
+| Order-create menu picker excludes kitchen ingredients | `menu-kind-filter.spec.ts`      |
+| Sellable / Kitchen tab counts                         | `inventory-tabs.spec.ts`        |
+| Direct Cost dropdown visibility + grouped categories  | `expense-link.spec.ts`          |
+| Non-direct-cost hides Add to inventory                | `expense-link.spec.ts`          |
+| 5 kg expense → 5000 g inventory (**D10 regression**)  | `expense-link.spec.ts`          |
+| Identity case: same unit on both sides                | `expense-link.spec.ts`          |
+| Recipe builder duplicate-ingredient rejection         | `recipe-validation.spec.ts`     |
+| Recipe builder cross-dimension rejection              | `recipe-validation.spec.ts`     |
+| Recipe target/ingredient kind filtering               | `recipe-validation.spec.ts`     |
+| Make-a-batch active-recipe filter                     | `production-flow.spec.ts`       |
+| Per-ingredient deduction with unit conversion         | `production-flow.spec.ts`       |
+| Pre-flight shortage error + no partial deduction      | `production-flow.spec.ts`       |
+| Admin (non-super-admin) cannot void a production      | `production-flow.spec.ts`       |
+| Super-admin sees Void buttons on history              | `recipe-and-production.spec.ts` |

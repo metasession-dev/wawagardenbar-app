@@ -22,12 +22,21 @@ import {
   buildCostHistoryRowFromExpense,
   resolveExpenseQuantity,
   validateReversalDoesNotNegate,
+  convertExpenseQuantityToInventoryUnit,
 } from '@/lib/expense-inventory-link';
+import { SystemSettingsService } from '@/services/system-settings-service';
 
 export interface ApplyExpenseLinkInput {
   expenseId: Types.ObjectId;
   linkedInventoryId: Types.ObjectId;
   quantity: number | undefined;
+  /**
+   * D10 — the unit-id the operator entered the quantity in (e.g. 'kg').
+   * Converted to the inventory's stored unit before any $inc / cost-history
+   * write. Missing value = legacy passthrough (treats quantity as
+   * already-inventory-unit; preserves pre-D10 callers).
+   */
+  expenseUnit?: string;
   amount: number;
   supplier?: string;
   notes?: string;
@@ -55,7 +64,7 @@ export async function applyExpenseInventoryLink(
 ): Promise<{ stockMovementId: Types.ObjectId }> {
   await connectDB();
 
-  const quantity = resolveExpenseQuantity(input.quantity);
+  const enteredQuantity = resolveExpenseQuantity(input.quantity);
 
   const inventory = await InventoryModel.findById(input.linkedInventoryId);
   if (!inventory) {
@@ -70,6 +79,25 @@ export async function applyExpenseInventoryLink(
     );
   }
 
+  // D10 — convert the operator-entered quantity into the inventory's
+  // stored unit. Pre-D10 callers without `expenseUnit` hit the legacy
+  // identity passthrough so existing behaviour is preserved for any
+  // single-unit ingredient.
+  const uomRegistry = await SystemSettingsService.getUnitsOfMeasurement();
+  const conversion = convertExpenseQuantityToInventoryUnit({
+    expenseQuantity: enteredQuantity,
+    expenseUnit: input.expenseUnit,
+    inventoryUnit: inventory.unit,
+    registry: uomRegistry,
+  });
+  const quantity = conversion.quantity;
+  const conversionNote = conversion.note;
+  const composedNotes = conversionNote
+    ? input.notes
+      ? `${input.notes}\n${conversionNote}`
+      : conversionNote
+    : input.notes;
+
   let stockMovementId: Types.ObjectId | null = null;
   let closedHistoryId: Types.ObjectId | null = null;
   let insertedHistoryId: Types.ObjectId | null = null;
@@ -82,7 +110,7 @@ export async function applyExpenseInventoryLink(
       quantity,
       amount: input.amount,
       supplier: input.supplier,
-      notes: input.notes,
+      notes: composedNotes,
       date: input.date,
       performedBy: input.performedBy,
       performedByName: input.performedByName,
@@ -161,6 +189,13 @@ export interface ReverseExpenseLinkInput {
   expenseId: Types.ObjectId;
   linkedInventoryId: Types.ObjectId;
   quantity: number | undefined;
+  /**
+   * D10 — the original expense's stored unit. Must match the unit used
+   * on the original apply call; we convert to inventory unit on the way
+   * back out so the reversal $inc deducts the exact same number that
+   * was added.
+   */
+  expenseUnit?: string;
   performedBy: string;
   performedByName?: string;
   reason: string;
@@ -186,7 +221,7 @@ export async function reverseExpenseInventoryLink(
 ): Promise<void> {
   await connectDB();
 
-  const quantity = resolveExpenseQuantity(input.quantity);
+  const enteredQuantity = resolveExpenseQuantity(input.quantity);
 
   const inventory = await InventoryModel.findById(input.linkedInventoryId);
   if (!inventory) {
@@ -194,6 +229,17 @@ export async function reverseExpenseInventoryLink(
       `Linked inventory ${input.linkedInventoryId.toString()} not found — cannot reverse`
     );
   }
+
+  // D10 — same conversion path the apply side uses, so the reversal
+  // unwinds the exact value that was incremented.
+  const uomRegistry = await SystemSettingsService.getUnitsOfMeasurement();
+  const conversion = convertExpenseQuantityToInventoryUnit({
+    expenseQuantity: enteredQuantity,
+    expenseUnit: input.expenseUnit,
+    inventoryUnit: inventory.unit,
+    registry: uomRegistry,
+  });
+  const quantity = conversion.quantity;
 
   validateReversalDoesNotNegate({
     inventoryName:

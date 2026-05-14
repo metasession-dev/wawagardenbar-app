@@ -48,6 +48,25 @@ vi.mock('@/models', () => ({
   },
 }));
 
+// D10 — service now loads the REQ-033 UoM registry to convert
+// expense-entered quantities into the inventory's stored unit.
+vi.mock('@/services/system-settings-service', () => ({
+  SystemSettingsService: {
+    getUnitsOfMeasurement: vi.fn().mockResolvedValue([
+      { id: 'g', label: 'Grams (g)', category: 'mass', isActive: true },
+      { id: 'kg', label: 'Kilograms (kg)', category: 'mass', isActive: true },
+      {
+        id: 'ml',
+        label: 'Millilitres (ml)',
+        category: 'volume',
+        isActive: true,
+      },
+      { id: 'litres', label: 'Litres', category: 'volume', isActive: true },
+      { id: 'eggs', label: 'Eggs', category: 'count', isActive: true },
+    ]),
+  },
+}));
+
 import InventoryModel from '@/models/inventory-model';
 import StockMovementModel from '@/models/stock-movement-model';
 import InventoryItemCostHistory from '@/models/inventory-item-cost-history-model';
@@ -298,6 +317,151 @@ describe('REQ-034 AC6 — applyExpenseInventoryLink save path', () => {
         performedBy,
       })
     ).rejects.toThrow(/not found/);
+  });
+});
+
+describe('REQ-034 D10 — unit conversion on expense → inventory link', () => {
+  it('converts 5 kg expense → 5000 g $inc when inventory unit is g', async () => {
+    const linkedInventoryId = new Types.ObjectId();
+    (InventoryModel.findById as ReturnType<typeof vi.fn>).mockResolvedValue({
+      _id: linkedInventoryId,
+      kind: 'kitchen-ingredient',
+      unit: 'g',
+      currentStock: 0,
+    });
+
+    await applyExpenseInventoryLink({
+      expenseId: new Types.ObjectId(),
+      linkedInventoryId,
+      quantity: 5,
+      expenseUnit: 'kg',
+      amount: 1000,
+      date: new Date(),
+      performedBy,
+    });
+
+    expect(InventoryModel.updateOne).toHaveBeenCalledWith(
+      { _id: linkedInventoryId },
+      expect.objectContaining({
+        $inc: expect.objectContaining({ currentStock: 5000 }),
+      })
+    );
+    const movement = (StockMovementModel.create as ReturnType<typeof vi.fn>)
+      .mock.calls[0][0];
+    expect(movement.quantity).toBe(5000);
+    // cost-per-gram = 1000 / 5000 = 0.2 (correctly per-inventory-unit)
+    expect(movement.costPerUnit).toBeCloseTo(0.2, 10);
+    expect(movement.totalCost).toBe(1000);
+    expect(movement.notes).toMatch(/5 kg.*5000 g/);
+  });
+
+  it('preserves identity when expenseUnit matches inventory unit (regression-proof)', async () => {
+    const linkedInventoryId = new Types.ObjectId();
+    (InventoryModel.findById as ReturnType<typeof vi.fn>).mockResolvedValue({
+      _id: linkedInventoryId,
+      kind: 'kitchen-ingredient',
+      unit: 'kg',
+      currentStock: 0,
+    });
+
+    await applyExpenseInventoryLink({
+      expenseId: new Types.ObjectId(),
+      linkedInventoryId,
+      quantity: 5,
+      expenseUnit: 'kg',
+      amount: 1000,
+      date: new Date(),
+      performedBy,
+    });
+
+    expect(InventoryModel.updateOne).toHaveBeenCalledWith(
+      { _id: linkedInventoryId },
+      expect.objectContaining({
+        $inc: expect.objectContaining({ currentStock: 5 }),
+      })
+    );
+    const movement = (StockMovementModel.create as ReturnType<typeof vi.fn>)
+      .mock.calls[0][0];
+    // No conversion note when units already match.
+    expect(movement.notes ?? '').not.toMatch(/Converted/);
+  });
+
+  it('converts 2 litres → 2000 ml on volume inventory', async () => {
+    const linkedInventoryId = new Types.ObjectId();
+    (InventoryModel.findById as ReturnType<typeof vi.fn>).mockResolvedValue({
+      _id: linkedInventoryId,
+      kind: 'kitchen-ingredient',
+      unit: 'ml',
+      currentStock: 100,
+    });
+
+    await applyExpenseInventoryLink({
+      expenseId: new Types.ObjectId(),
+      linkedInventoryId,
+      quantity: 2,
+      expenseUnit: 'litres',
+      amount: 500,
+      date: new Date(),
+      performedBy,
+    });
+
+    expect(InventoryModel.updateOne).toHaveBeenCalledWith(
+      { _id: linkedInventoryId },
+      expect.objectContaining({
+        $inc: expect.objectContaining({ currentStock: 2000 }),
+      })
+    );
+  });
+
+  it('throws (no writes land) on cross-dimension mismatch', async () => {
+    const linkedInventoryId = new Types.ObjectId();
+    (InventoryModel.findById as ReturnType<typeof vi.fn>).mockResolvedValue({
+      _id: linkedInventoryId,
+      kind: 'kitchen-ingredient',
+      unit: 'kg',
+      currentStock: 0,
+    });
+
+    await expect(
+      applyExpenseInventoryLink({
+        expenseId: new Types.ObjectId(),
+        linkedInventoryId,
+        quantity: 1,
+        expenseUnit: 'ml',
+        amount: 100,
+        date: new Date(),
+        performedBy,
+      })
+    ).rejects.toThrow(/cross-dimension/);
+    expect(InventoryModel.updateOne).not.toHaveBeenCalled();
+    expect(StockMovementModel.create).not.toHaveBeenCalled();
+  });
+
+  it('legacy passthrough: missing expenseUnit → treats quantity as-is (no conversion)', async () => {
+    const linkedInventoryId = new Types.ObjectId();
+    (InventoryModel.findById as ReturnType<typeof vi.fn>).mockResolvedValue({
+      _id: linkedInventoryId,
+      kind: 'kitchen-ingredient',
+      unit: 'g',
+      currentStock: 0,
+    });
+
+    await applyExpenseInventoryLink({
+      expenseId: new Types.ObjectId(),
+      linkedInventoryId,
+      quantity: 5,
+      // expenseUnit omitted — legacy expense from before D10
+      amount: 100,
+      date: new Date(),
+      performedBy,
+    });
+
+    expect(InventoryModel.updateOne).toHaveBeenCalledWith(
+      { _id: linkedInventoryId },
+      expect.objectContaining({
+        $inc: expect.objectContaining({ currentStock: 5 }),
+      })
+    );
   });
 });
 

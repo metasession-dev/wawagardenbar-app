@@ -294,6 +294,7 @@ export class PendingExpenseGroupService {
             expenseId: expenseDoc._id,
             linkedInventoryId: new Types.ObjectId(record.linkedInventoryId),
             quantity: record.quantity,
+            expenseUnit: record.unit,
             amount: record.amount,
             supplier: undefined,
             notes: record.notes,

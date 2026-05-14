@@ -26,6 +26,7 @@ export const routePermissions: Record<string, UserRole[]> = {
   '/dashboard/kitchen': ['admin', 'super-admin'],
   '/dashboard/kitchen/recipes': ['admin', 'super-admin'],
   '/dashboard/kitchen/production': ['admin', 'super-admin'],
+  '/dashboard/kitchen-display': ['csr', 'admin', 'super-admin'],
 };
 
 /**

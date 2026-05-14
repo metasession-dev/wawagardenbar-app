@@ -46,6 +46,24 @@ vi.mock('@/models', () => ({
   },
 }));
 
+// D10 — reverse path also loads the registry to compute the inventory-
+// unit-denominated reversal quantity.
+vi.mock('@/services/system-settings-service', () => ({
+  SystemSettingsService: {
+    getUnitsOfMeasurement: vi.fn().mockResolvedValue([
+      { id: 'g', label: 'Grams (g)', category: 'mass', isActive: true },
+      { id: 'kg', label: 'Kilograms (kg)', category: 'mass', isActive: true },
+      {
+        id: 'ml',
+        label: 'Millilitres (ml)',
+        category: 'volume',
+        isActive: true,
+      },
+      { id: 'litres', label: 'Litres', category: 'volume', isActive: true },
+    ]),
+  },
+}));
+
 import InventoryModel from '@/models/inventory-model';
 import StockMovementModel from '@/models/stock-movement-model';
 import InventoryItemCostHistory from '@/models/inventory-item-cost-history-model';
@@ -295,6 +313,88 @@ describe('REQ-034 AC7 — block-on-negative', () => {
     expect(InventoryModel.updateOne).toHaveBeenCalledWith(
       { _id: linkedInventoryId, currentStock: { $gte: 1 } },
       { $inc: { currentStock: -1, totalRestocked: -1 } }
+    );
+  });
+});
+
+describe('REQ-034 D10 — unit conversion on reversal path', () => {
+  it('reverses 5 kg expense as 5000 g $inc when inventory unit is g', async () => {
+    const linkedInventoryId = new Types.ObjectId();
+    (InventoryModel.findById as ReturnType<typeof vi.fn>).mockResolvedValue({
+      _id: linkedInventoryId,
+      kind: 'kitchen-ingredient',
+      unit: 'g',
+      currentStock: 5000,
+    });
+    (
+      InventoryItemCostHistory.findOne as ReturnType<typeof vi.fn>
+    ).mockReturnValue(chainableFindOne(null));
+
+    await reverseExpenseInventoryLink({
+      expenseId: new Types.ObjectId(),
+      linkedInventoryId,
+      quantity: 5,
+      expenseUnit: 'kg',
+      performedBy,
+      reason: 'edit',
+    });
+
+    expect(InventoryModel.updateOne).toHaveBeenCalledWith(
+      { _id: linkedInventoryId, currentStock: { $gte: 5000 } },
+      { $inc: { currentStock: -5000, totalRestocked: -5000 } }
+    );
+    const movement = (StockMovementModel.create as ReturnType<typeof vi.fn>)
+      .mock.calls[0][0];
+    expect(movement.quantity).toBe(-5000);
+  });
+
+  it('blocks reversal when converted quantity would drive currentStock below 0', async () => {
+    const linkedInventoryId = new Types.ObjectId();
+    (InventoryModel.findById as ReturnType<typeof vi.fn>).mockResolvedValue({
+      _id: linkedInventoryId,
+      kind: 'kitchen-ingredient',
+      unit: 'g',
+      currentStock: 2000, // only 2 kg on hand
+    });
+
+    await expect(
+      reverseExpenseInventoryLink({
+        expenseId: new Types.ObjectId(),
+        linkedInventoryId,
+        quantity: 5, // 5 kg = 5000 g — short by 3000 g
+        expenseUnit: 'kg',
+        performedBy,
+        reason: 'edit',
+      })
+    ).rejects.toThrow(/short by 3000/);
+    expect(InventoryModel.updateOne).not.toHaveBeenCalled();
+    expect(StockMovementModel.create).not.toHaveBeenCalled();
+  });
+
+  it('legacy passthrough: missing expenseUnit reverses raw quantity', async () => {
+    const linkedInventoryId = new Types.ObjectId();
+    (InventoryModel.findById as ReturnType<typeof vi.fn>).mockResolvedValue({
+      _id: linkedInventoryId,
+      kind: 'kitchen-ingredient',
+      unit: 'g',
+      currentStock: 5,
+    });
+    (
+      InventoryItemCostHistory.findOne as ReturnType<typeof vi.fn>
+    ).mockReturnValue(chainableFindOne(null));
+
+    await reverseExpenseInventoryLink({
+      expenseId: new Types.ObjectId(),
+      linkedInventoryId,
+      quantity: 5,
+      // expenseUnit omitted — legacy expense
+      performedBy,
+      reason: 'edit',
+    });
+
+    expect(InventoryModel.updateOne).toHaveBeenCalledWith(
+      { _id: linkedInventoryId, currentStock: { $gte: 5 } },
+      { $inc: { currentStock: -5, totalRestocked: -5 } }
     );
   });
 });

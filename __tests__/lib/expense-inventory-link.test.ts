@@ -17,8 +17,19 @@ import {
   buildCostHistoryRowFromExpense,
   computeWeightedAverageCost,
   validateReversalDoesNotNegate,
+  convertExpenseQuantityToInventoryUnit,
 } from '@/lib/expense-inventory-link';
 import type { InventoryKind } from '@/interfaces/inventory.interface';
+import type { UnitOfMeasurement } from '@/interfaces/unit-of-measurement.interface';
+
+const D10_REGISTRY: UnitOfMeasurement[] = [
+  { id: 'g', label: 'Grams (g)', category: 'mass', isActive: true },
+  { id: 'kg', label: 'Kilograms (kg)', category: 'mass', isActive: true },
+  { id: 'ml', label: 'Millilitres (ml)', category: 'volume', isActive: true },
+  { id: 'litres', label: 'Litres', category: 'volume', isActive: true },
+  { id: 'eggs', label: 'Eggs', category: 'count', isActive: true },
+  { id: 'pieces', label: 'Pieces', category: 'count', isActive: true },
+];
 
 describe('REQ-034 — resolveExpenseQuantity (REQ-032 default of 1)', () => {
   it('defaults a missing quantity to 1', () => {
@@ -207,6 +218,107 @@ describe('REQ-034 AC6 — computeWeightedAverageCost', () => {
       { costPerUnit: 999, quantity: Number.NaN },
     ]);
     expect(avg).toBe(200);
+  });
+});
+
+describe('REQ-034 D10 — convertExpenseQuantityToInventoryUnit', () => {
+  it('returns identity when expense unit is missing (legacy passthrough)', () => {
+    const out = convertExpenseQuantityToInventoryUnit({
+      expenseQuantity: 5,
+      expenseUnit: undefined,
+      inventoryUnit: 'g',
+      registry: D10_REGISTRY,
+    });
+    expect(out).toEqual({ quantity: 5, converted: false });
+  });
+
+  it('returns identity when expense unit equals inventory unit', () => {
+    const out = convertExpenseQuantityToInventoryUnit({
+      expenseQuantity: 5,
+      expenseUnit: 'kg',
+      inventoryUnit: 'kg',
+      registry: D10_REGISTRY,
+    });
+    expect(out).toEqual({ quantity: 5, converted: false });
+  });
+
+  it('converts kg → g (the D10 bug path): 5 kg = 5000 g, with audit note', () => {
+    const out = convertExpenseQuantityToInventoryUnit({
+      expenseQuantity: 5,
+      expenseUnit: 'kg',
+      inventoryUnit: 'g',
+      registry: D10_REGISTRY,
+    });
+    expect(out.quantity).toBe(5000);
+    expect(out.converted).toBe(true);
+    expect(out.note).toMatch(/5 kg/);
+    expect(out.note).toMatch(/5000 g/);
+  });
+
+  it('converts g → kg: 5000 g = 5 kg', () => {
+    const out = convertExpenseQuantityToInventoryUnit({
+      expenseQuantity: 5000,
+      expenseUnit: 'g',
+      inventoryUnit: 'kg',
+      registry: D10_REGISTRY,
+    });
+    expect(out.quantity).toBe(5);
+    expect(out.converted).toBe(true);
+  });
+
+  it('converts litres → ml: 2 litres = 2000 ml', () => {
+    const out = convertExpenseQuantityToInventoryUnit({
+      expenseQuantity: 2,
+      expenseUnit: 'litres',
+      inventoryUnit: 'ml',
+      registry: D10_REGISTRY,
+    });
+    expect(out.quantity).toBe(2000);
+    expect(out.converted).toBe(true);
+  });
+
+  it('converts ml → litres: 750 ml = 0.75 litres', () => {
+    const out = convertExpenseQuantityToInventoryUnit({
+      expenseQuantity: 750,
+      expenseUnit: 'ml',
+      inventoryUnit: 'litres',
+      registry: D10_REGISTRY,
+    });
+    expect(out.quantity).toBe(0.75);
+    expect(out.converted).toBe(true);
+  });
+
+  it('throws on cross-dimension (kg → ml): malformed data, surface not silent', () => {
+    expect(() =>
+      convertExpenseQuantityToInventoryUnit({
+        expenseQuantity: 1,
+        expenseUnit: 'kg',
+        inventoryUnit: 'ml',
+        registry: D10_REGISTRY,
+      })
+    ).toThrow(/cross-dimension/);
+  });
+
+  it('throws on count strict-mismatch (eggs → pieces): no fungible conversion', () => {
+    expect(() =>
+      convertExpenseQuantityToInventoryUnit({
+        expenseQuantity: 12,
+        expenseUnit: 'eggs',
+        inventoryUnit: 'pieces',
+        registry: D10_REGISTRY,
+      })
+    ).toThrow(/count.*no fungible/);
+  });
+
+  it('throws on unknown unit id (operator typo / stale data)', () => {
+    expect(() =>
+      convertExpenseQuantityToInventoryUnit({
+        expenseQuantity: 1,
+        expenseUnit: 'bushels',
+        inventoryUnit: 'kg',
+        registry: D10_REGISTRY,
+      })
+    ).toThrow(/'bushels' not in/);
   });
 });
 

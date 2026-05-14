@@ -80,6 +80,7 @@ export class ExpenseService {
           expenseId: expense._id as Types.ObjectId,
           linkedInventoryId: new Types.ObjectId(data.linkedInventoryId),
           quantity: data.quantity,
+          expenseUnit: data.unit,
           amount: data.amount,
           supplier: data.supplier,
           notes: data.notes,
@@ -276,6 +277,7 @@ export class ExpenseService {
         expenseId: prior._id as Types.ObjectId,
         linkedInventoryId: prior.linkedInventoryId as Types.ObjectId,
         quantity: prior.quantity,
+        expenseUnit: prior.unit,
         performedBy: updatedBy,
         reason: `Expense edit reversal (${prior._id.toString()})`,
         // Will reset `linkVoidedAt` below when we re-apply.
@@ -330,6 +332,7 @@ export class ExpenseService {
           expenseId: e._id as Types.ObjectId,
           linkedInventoryId: e.linkedInventoryId as Types.ObjectId,
           quantity: e.quantity,
+          expenseUnit: e.unit,
           amount: e.amount,
           supplier: e.supplier,
           notes: e.notes,
@@ -378,6 +381,7 @@ export class ExpenseService {
         expenseId: expense._id as Types.ObjectId,
         linkedInventoryId: expense.linkedInventoryId as Types.ObjectId,
         quantity: expense.quantity,
+        expenseUnit: expense.unit,
         performedBy: deletedBy,
         reason: `Expense delete reversal (${expense._id.toString()})`,
       });

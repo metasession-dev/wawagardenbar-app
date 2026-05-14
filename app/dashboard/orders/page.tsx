@@ -6,7 +6,13 @@ import { OrderQueue } from '@/components/features/admin/order-queue';
 import { OrderStats } from '@/components/features/admin/order-stats';
 import { CreateTabDialog } from '@/components/features/admin/tabs/create-tab-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
 import {
   ChefHat,
   BarChart3,
@@ -74,7 +80,9 @@ export default async function OrdersPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Orders Dashboard</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Orders Dashboard
+          </h1>
           <p className="text-muted-foreground">
             Manage and track all restaurant orders
           </p>
@@ -99,7 +107,7 @@ export default async function OrdersPage() {
           </Card>
         </Link>
 
-        <Link href="/dashboard/kitchen">
+        <Link href="/dashboard/kitchen-display">
           <Card className="hover:bg-accent/50 transition-all hover:shadow-md cursor-pointer h-full border-t-4 border-t-orange-500 group">
             <CardHeader className="space-y-4 py-8">
               <CardTitle className="flex flex-col items-center text-2xl text-center gap-4">
@@ -209,7 +217,7 @@ export default async function OrdersPage() {
           </Link>
 
           {/* Open a New Tab */}
-          <CreateTabDialog 
+          <CreateTabDialog
             trigger={
               <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full border-l-4 border-l-indigo-500 w-full text-left">
                 <CardHeader>
@@ -219,7 +227,8 @@ export default async function OrdersPage() {
                     <ArrowRight className="ml-auto h-4 w-4 opacity-50" />
                   </CardTitle>
                   <CardDescription>
-                    Create a new tab for a table. Cannot be created for existing tables.
+                    Create a new tab for a table. Cannot be created for existing
+                    tables.
                   </CardDescription>
                 </CardHeader>
               </Card>

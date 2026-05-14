@@ -1,0 +1,4 @@
+[dotenv@17.2.3] injecting env (50) from .env.local -- tip: 🔑 add access controls to secrets: https://dotenvx.com/ops
+[REQ-034] kind backfill starting (dry-run=true); connecting…
+[REQ-034] candidates without kind — inventory: 0, menu-items: 0
+[REQ-034] dry-run: no writes performed.

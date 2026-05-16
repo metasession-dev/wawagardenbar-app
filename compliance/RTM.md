@@ -664,6 +664,7 @@ This section tracks discrete change requests (REQ-001 through REQ-008) that repr
 | REQ-035 | #76   | HIGH   | compliance/evidence/REQ-035/ | APPROVED - DEPLOYED                                                                                                                                                                                   | ostendo-io      | 2026-05-08 |
 | REQ-036 | #77   | MEDIUM | compliance/evidence/REQ-036/ | APPROVED - DEPLOYED (add-on to REQ-035 #76; bundled merge PR #80)                                                                                                                                     | ostendo-io      | 2026-05-08 |
 | REQ-034 | #74   | HIGH   | compliance/evidence/REQ-034/ | RELEASED (PR #82 merged to main `b314ff3` 2026-05-14; prod backfill 112 inv + 98 menu-items; prod smoke walked 2026-05-15; 12 defects D1–D12 logged + resolved; ticket archived to approved-releases) | ostendo-io      | 2026-05-15 |
+| REQ-037 | #83   | MEDIUM | compliance/evidence/REQ-037/ | SCAFFOLDED (edit + delete kitchen ingredients with safe-removal guard for active recipes; soft-delete via `archivedAt`; 15-test E2E matrix covers all AC1–AC5; depends on REQ-034)                    | ostendo-io      | 2026-05-16 |
 
 ### Change Request Dependencies
 

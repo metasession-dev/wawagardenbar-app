@@ -1,9 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Eye, Pencil, Trash2 } from 'lucide-react';
 import { CategoryFilter } from './category-filter';
 import {
   InventoryTable,
@@ -89,6 +90,7 @@ export function InventoryItemsClient({
   kitchenInventory,
 }: InventoryItemsClientProps) {
   const [activeTab, setActiveTab] = useState<InventoryTab>('sellable');
+  const router = useRouter();
 
   // REQ-037 — Edit + Delete dialog state for the Kitchen tab. Single
   // shared state at this level so the row buttons just set the target.
@@ -98,12 +100,21 @@ export function InventoryItemsClient({
   );
 
   function renderKitchenRowActions(item: TableInventoryItem) {
+    const ingredientName = item.menuItemId?.name ?? 'ingredient';
     return (
       <div className="flex gap-1">
         <Button
           variant="ghost"
           size="sm"
-          aria-label={`Edit ${item.menuItemId?.name ?? 'ingredient'}`}
+          aria-label={`View details for ${ingredientName}`}
+          onClick={() => router.push(`/dashboard/inventory/${item._id}`)}
+        >
+          <Eye className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label={`Edit ${ingredientName}`}
           onClick={() => setEditTarget(item)}
         >
           <Pencil className="h-4 w-4" />
@@ -111,7 +122,7 @@ export function InventoryItemsClient({
         <Button
           variant="ghost"
           size="sm"
-          aria-label={`Delete ${item.menuItemId?.name ?? 'ingredient'}`}
+          aria-label={`Delete ${ingredientName}`}
           onClick={() => setDeleteTarget(item)}
           className="text-destructive hover:text-destructive"
         >

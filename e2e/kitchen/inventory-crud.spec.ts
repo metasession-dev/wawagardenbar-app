@@ -458,6 +458,60 @@ superAdminTest.describe(
       }
     );
 
+    // ─── AC1 — View Details preserved alongside Edit + Delete ───────────
+    //
+    // Kitchen rows still need a View Details button so operators can
+    // navigate to /dashboard/inventory/<id> to inspect StockMovement
+    // history and cost-history. Without this, soft-deleting an
+    // ingredient is the only "audit-trail" path — which is wrong.
+
+    superAdminTest(
+      'AC1 — Kitchen row exposes View Details, Edit, and Delete (3 actions)',
+      async ({ page }) => {
+        const name = uniqueLabel('E2E-Edit-ThreeActions');
+        await createKitchenIngredient(page, { name, unitLabel: 'Grams' });
+
+        await openInventoryKitchenTab(page);
+        const row = page.locator('tr', { hasText: name }).first();
+        await expect(row).toBeVisible();
+
+        // All three action buttons present, scoped to this row.
+        await expect(
+          row.getByRole('button', {
+            name: new RegExp(`View details for ${name}`, 'i'),
+          })
+        ).toBeVisible();
+        await expect(
+          row.getByRole('button', { name: new RegExp(`Edit ${name}`, 'i') })
+        ).toBeVisible();
+        await expect(
+          row.getByRole('button', { name: new RegExp(`Delete ${name}`, 'i') })
+        ).toBeVisible();
+      }
+    );
+
+    superAdminTest(
+      'AC1 — View Details on a kitchen row navigates to /dashboard/inventory/<id>',
+      async ({ page }) => {
+        const name = uniqueLabel('E2E-View-Details-Nav');
+        await createKitchenIngredient(page, { name, unitLabel: 'Grams' });
+
+        await openInventoryKitchenTab(page);
+        const row = page.locator('tr', { hasText: name }).first();
+        await row
+          .getByRole('button', {
+            name: new RegExp(`View details for ${name}`, 'i'),
+          })
+          .click();
+
+        // URL transitions to /dashboard/inventory/<24-hex-id>.
+        await page.waitForURL(/\/dashboard\/inventory\/[a-f0-9]{24}/, {
+          timeout: 10000,
+        });
+        expect(page.url()).toMatch(/\/dashboard\/inventory\/[a-f0-9]{24}/);
+      }
+    );
+
     // ─── AC5 meta — spec is registered (proven by virtue of running) ─────
 
     superAdminTest(

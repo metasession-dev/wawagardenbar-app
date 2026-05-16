@@ -50,23 +50,25 @@ E2E coverage target: every AC behaviour must be asserted via Playwright, not jus
 
 ### Playwright E2E (`e2e/kitchen/inventory-crud.spec.ts` — new spec)
 
-| AC      | Test                                                                                                                        |
-| ------- | --------------------------------------------------------------------------------------------------------------------------- |
-| AC1     | Edit dialog opens from Kitchen tab row with fields pre-filled with current values                                           |
-| AC1     | Unit dropdown in Edit dialog is **disabled** and shows the tooltip explaining the lock                                      |
-| AC1+AC2 | Happy-path: edit name → save → Kitchen tab row shows the new name                                                           |
-| AC1+AC2 | Happy-path: edit min/max stock → save → reload → new thresholds reflected                                                   |
-| AC2     | Validation surface: blank name → save shows the error inline; no row is updated                                             |
-| AC2     | Validation surface: max < min → save shows the error inline; no row is updated                                              |
-| AC3     | Delete confirmation dialog renders with the ingredient name + a destructive "Delete" button                                 |
-| AC3+AC4 | Happy-path: delete an ingredient with no recipe references → row disappears from Kitchen tab                                |
-| AC3     | Blocked: author a recipe referencing the ingredient, attempt delete → error names the recipe; row still present             |
-| AC3     | Recovery: deactivate the blocking recipe → retry delete → succeeds                                                          |
-| AC4     | Archived ingredient does NOT appear in the **Recipe builder** ingredient dropdown (after creating + deleting)               |
-| AC4     | Archived ingredient does NOT appear in the **Expense form** "Add to kitchen inventory" dropdown (after creating + deleting) |
-| AC4     | Archived ingredient does NOT appear in the **Inventory dashboard** Kitchen tab (after creating + deleting)                  |
-| AC4     | Sellable tab count is unchanged when a kitchen ingredient is archived (kitchen and sellable counts are independent)         |
-| AC5     | (Meta) the spec is registered as a Playwright project in `playwright.config.ts` so it runs in CI                            |
+| AC      | Test                                                                                                                         |
+| ------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| AC1     | Edit dialog opens from Kitchen tab row with fields pre-filled with current values                                            |
+| AC1     | Unit dropdown in Edit dialog is **disabled** and shows the tooltip explaining the lock                                       |
+| AC1     | Kitchen row exposes View Details, Edit, AND Delete (three actions — View Details preserved for StockMovement history access) |
+| AC1     | View Details on a kitchen row navigates to `/dashboard/inventory/<id>` (the StockMovement history page)                      |
+| AC1+AC2 | Happy-path: edit name → save → Kitchen tab row shows the new name                                                            |
+| AC1+AC2 | Happy-path: edit min/max stock → save → reload → new thresholds reflected                                                    |
+| AC2     | Validation surface: blank name → save shows the error inline; no row is updated                                              |
+| AC2     | Validation surface: max < min → save shows the error inline; no row is updated                                               |
+| AC3     | Delete confirmation dialog renders with the ingredient name + a destructive "Delete" button                                  |
+| AC3+AC4 | Happy-path: delete an ingredient with no recipe references → row disappears from Kitchen tab                                 |
+| AC3     | Blocked: author a recipe referencing the ingredient, attempt delete → error names the recipe; row still present              |
+| AC3     | Recovery: deactivate the blocking recipe → retry delete → succeeds                                                           |
+| AC4     | Archived ingredient does NOT appear in the **Recipe builder** ingredient dropdown (after creating + deleting)                |
+| AC4     | Archived ingredient does NOT appear in the **Expense form** "Add to kitchen inventory" dropdown (after creating + deleting)  |
+| AC4     | Archived ingredient does NOT appear in the **Inventory dashboard** Kitchen tab (after creating + deleting)                   |
+| AC4     | Sellable tab count is unchanged when a kitchen ingredient is archived (kitchen and sellable counts are independent)          |
+| AC5     | (Meta) the spec is registered as a Playwright project in `playwright.config.ts` so it runs in CI                             |
 
 ### Manual UAT (`uat-checklist.md`)
 

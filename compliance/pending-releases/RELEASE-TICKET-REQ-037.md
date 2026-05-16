@@ -42,7 +42,7 @@ Completes CRUD on the kitchen-ingredient surface shipped under REQ-034.
 - `components/features/admin/delete-kitchen-ingredient-dialog.tsx`
 - `__tests__/services/recipe-service.references.test.ts`
 - `__tests__/services/inventory-service.list-by-kind.test.ts` (archived-filter regression)
-- `e2e/kitchen/inventory-crud.spec.ts` (15 tests covering all AC1–AC5 surfaces)
+- `e2e/kitchen/inventory-crud.spec.ts` (17 tests covering all AC1–AC5 surfaces)
 
 ### Files Modified
 
@@ -77,7 +77,7 @@ See `compliance/evidence/REQ-037/test-plan.md`.
 
 - [ ] TypeScript: 0 errors (`tsc --noEmit`) — `gates/tsc.txt`
 - [ ] Unit tests: green (target ≥ +14 new tests over REQ-034-closure baseline) — `gates/vitest-summary.txt`
-- [ ] E2E: new `kitchen-inventory-crud` Playwright project — 15 tests covering AC1–AC5; CI run green
+- [ ] E2E: new `kitchen-inventory-crud` Playwright project — 17 tests covering AC1–AC5; CI run green
 - [ ] Build: `npm run build` green
 - [ ] Semgrep: 0 findings on changed paths — `gates/semgrep.json`
 - [ ] Dependency audit: 0 unaccepted high/critical — `gates/npm-audit.json`

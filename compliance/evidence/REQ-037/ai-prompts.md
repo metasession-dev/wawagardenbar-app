@@ -12,8 +12,9 @@
 Issue #83 was filed in response, with the AC set worked through in dialogue:
 
 - Edit scope: name, COGS category, min/max thresholds. **Unit and currentStock excluded** to preserve audit-trail integrity.
-- Delete is **soft** (`archivedAt`), **not physical**, so StockMovement / Expense / CostHistory back-refs remain valid.
-- **Active-recipe guard** on delete; named-recipe error so the operator can deactivate them first.
+- Archive is **soft** (`archivedAt`), **not physical**, so StockMovement / Expense / CostHistory back-refs remain valid. The verb in v1 became **Archive + Restore** (not Delete) after operator feedback during in-flight implementation surfaced that one-way deletion threw away the main advantage of soft-delete. Aligns with Recipe deactivate/reactivate from REQ-034.
+- **Active-recipe guard** on archive; named-recipe error so the operator can deactivate them first.
+- **Restore** unsets `archivedAt` on both paired rows; no guard needed because restore is additive.
 - Listing surfaces (Inventory tab, Recipe builder dropdown, Expense form dropdown) filter archived rows from a **single source** — `InventoryService.listByKind`.
 
 ## Implementation prompt
@@ -35,9 +36,9 @@ In response, the test-plan AC mapping was extended to enumerate **15 individual 
 - All five evidence files in `compliance/evidence/REQ-037/`
 - `compliance/pending-releases/RELEASE-TICKET-REQ-037.md`
 - Schema additions to `Inventory` + `MenuItem` models
-- `updateKitchenIngredientAction` + `deleteKitchenIngredientAction` in `app/actions/admin/kitchen-ingredient-actions.ts`
+- `updateKitchenIngredientAction` + `archiveKitchenIngredientAction` + `restoreKitchenIngredientAction` in `app/actions/admin/kitchen-ingredient-actions.ts`
 - `RecipeService.findActiveRecipesReferencingInventory`
-- `EditKitchenIngredientDialog` + `DeleteKitchenIngredientDialog` components
+- `EditKitchenIngredientDialog` + `ArchiveKitchenIngredientDialog` components, plus Show archived toggle + Restore action inside `inventory-items-client.tsx`
 - Filter additions to `InventoryService.listByKind` and `pending-expense-actions.ts`
 - All vitest + Playwright tests
 - All commit messages
@@ -46,7 +47,7 @@ In response, the test-plan AC mapping was extended to enumerate **15 individual 
 
 For the reviewer:
 
-1. **Soft-delete semantics** — confirm `archivedAt` is the right pattern (consistent with existing soft-archive elsewhere in the codebase?).
+1. **Archive + Restore semantics** — confirm `archivedAt` is the right pattern (consistent with existing soft-archive elsewhere in the codebase?) and that the operator-facing verb pairing (Archive / Restore) reads correctly to non-technical users.
 2. **Active-recipe guard** — confirm the recipe-reference lookup is correct: `Recipe.ingredients[].inventoryId` and `Recipe.isActive: true`.
 3. **Listing filter centralisation** — confirm `InventoryService.listByKind` is the right single-source for the archived filter, and that no direct `InventoryModel.find({ kind })` calls leak past it.
 4. **Auth gate parity** — confirm both new actions follow the same gate as the REQ-034 / D7 create action.

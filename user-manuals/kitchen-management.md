@@ -16,12 +16,14 @@ costing dishes, or running daily reports, this is the page you want.
 2. [Who can use it](#who-can-use-it) — turning the permission on
 3. [Two kinds of inventory](#two-kinds-of-inventory) — Sellable vs Kitchen
 4. [Adding a kitchen ingredient](#adding-a-kitchen-ingredient)
-5. [Restocking a kitchen ingredient from an expense](#restocking-a-kitchen-ingredient-from-an-expense)
-6. [Writing a recipe](#writing-a-recipe)
-7. [Recording a production batch](#recording-a-production-batch)
-8. [Voiding a production batch](#voiding-a-production-batch)
-9. [How this affects the Daily Financial Report](#how-this-affects-the-daily-financial-report)
-10. [Common questions and gotchas](#common-questions-and-gotchas)
+5. [Editing a kitchen ingredient](#editing-a-kitchen-ingredient)
+6. [Archiving and restoring a kitchen ingredient](#archiving-and-restoring-a-kitchen-ingredient)
+7. [Restocking a kitchen ingredient from an expense](#restocking-a-kitchen-ingredient-from-an-expense)
+8. [Writing a recipe](#writing-a-recipe)
+9. [Recording a production batch](#recording-a-production-batch)
+10. [Voiding a production batch](#voiding-a-production-batch)
+11. [How this affects the Daily Financial Report](#how-this-affects-the-daily-financial-report)
+12. [Common questions and gotchas](#common-questions-and-gotchas)
 
 ---
 
@@ -155,6 +157,94 @@ record so the inventory system can track stock the same way it does
 for sellables. The price is 0 because the item is not sold. You can
 ignore this internal pairing — there is no menu surface that would
 ever show it.
+
+---
+
+## Editing a kitchen ingredient
+
+Each row on the **Kitchen** tab has three icon actions:
+
+- **View details** (eye icon) — opens `/dashboard/inventory/<id>`, where
+  you can see the full stock-movement history and cost history for that
+  ingredient.
+- **Edit** (pencil icon) — opens a dialog where you can change the
+  ingredient's **Name**, **COGS category**, and **Min / Max stock**
+  thresholds.
+- **Archive** (folder icon) — soft-removes the ingredient (see next
+  section).
+
+The Edit dialog deliberately does **not** let you change the **Unit**
+or the **Current stock**:
+
+- **Unit is locked** because changing it retroactively would corrupt
+  every past expense link, stock movement, and recipe that referenced
+  this ingredient. If you genuinely need a different unit, archive the
+  ingredient and create a new one with the right unit.
+- **Current stock** is an inventory adjustment, not an edit — it's
+  managed by the Expense → Inventory link flow and (in the future) a
+  dedicated stock-adjustment surface. Editing it silently here would
+  bypass the audit trail.
+
+---
+
+## Archiving and restoring a kitchen ingredient
+
+Click the **Archive** icon on an ingredient's row to remove it from
+day-to-day pickers. The system is **soft-archive**, not destruction:
+
+- The ingredient disappears from the **Kitchen** tab's default view,
+  the **Recipe builder** ingredient dropdown, and the **Expense form**
+  "Add to kitchen inventory" dropdown.
+- Every historical record that references the ingredient — past stock
+  movements, expense links, cost history rows — still resolves and
+  renders correctly. Nothing is destroyed.
+- You can bring the ingredient back any time (see Restore below).
+
+### When archive is blocked
+
+If an **active recipe** uses the ingredient, the system refuses to
+archive it and tells you which recipe(s) are in the way:
+
+> _Cannot archive 'Goat meat': used in active recipe 'Pepper Soup'.
+> Deactivate that recipe first, or use Recipes → Deactivate._
+
+Two options:
+
+1. Go to **Recipes**, click **Deactivate** on the named recipe(s), then
+   retry the archive. (You can later re-activate the recipe — it stays
+   in the recipe list with a "Deactivated" badge.)
+2. Or just leave the ingredient in place — you wanted to remove it
+   precisely because something still uses it, so re-think first.
+
+Deactivated recipes are **not** a blocker — the system only blocks on
+active ones.
+
+### Restoring an archived ingredient
+
+On the **Kitchen** tab, click **Show archived (N)** at the top-left to
+reveal the archived ingredients section. Each archived row has:
+
+- **View details** — same destination as before; nothing about the
+  ingredient's history is lost while archived.
+- **Restore** (folder-arrow icon) — un-archives the ingredient in one
+  click. It immediately reappears on the active Kitchen tab list, in
+  the Recipe builder ingredient dropdown, and in the Expense form
+  "Add to kitchen inventory" dropdown.
+
+There's no confirmation step for Restore because it's harmless — if
+you change your mind, you can archive it again with no data loss.
+
+### Archive vs Delete: why we picked Archive
+
+The action is reversible by design, so calling it "Delete" would
+mislead. Operators using "Archive" know the data is preserved and
+that they can come back later. It matches how **Recipes** work
+(Deactivate / Reactivate) and avoids the historical-data-orphan class
+of bug that happens with a true delete.
+
+There is no hard-delete button in the UI. If you need to permanently
+remove an ingredient and its audit trail (very rare), contact
+engineering.
 
 ---
 
@@ -459,3 +549,22 @@ manual reconciliation.
 
 **I'm an admin with Kitchen Management on but I can't void a batch.**
 By design. Voiding is super-admin-only. Ask a super-admin to do it.
+
+**I archived an ingredient by mistake — can I get it back?**
+Yes. On the Kitchen tab, click **Show archived (N)** at the top. Find
+the ingredient and click **Restore**. It's back in every picker
+immediately. No data was lost — archive is reversible by design.
+
+**The Archive action says it's blocked by a recipe that I'm pretty
+sure I'm not using anymore.**
+Recipes can be deactivated separately from archived; "deactivated"
+means it doesn't appear in Make-a-batch but it's still a real recipe.
+The Archive guard only blocks on **active** recipes. Go to Recipes,
+find the named recipe, click **Deactivate**, then retry the Archive.
+
+**Why is there no "Delete" button — only Archive?**
+By design — Archive preserves your audit trail (every past expense
+link, stock movement, and cost-history row for the ingredient stays
+queryable). True deletion would orphan those records. If you genuinely
+need to permanently remove an ingredient and its history, contact
+engineering; it's deliberately not a one-click operation.

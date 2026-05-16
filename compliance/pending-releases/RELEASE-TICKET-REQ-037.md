@@ -1,9 +1,9 @@
-# Release Ticket: REQ-037 — Edit + delete kitchen ingredients (with safe-removal guard for active recipes)
+# Release Ticket: REQ-037 — Edit + archive + restore kitchen ingredients (with safe-removal guard for active recipes)
 
 **Status:** SCAFFOLDED
 **Date:** 2026-05-16
 **Requirement ID:** REQ-037
-**Risk Level:** MEDIUM (touches inventory data; soft-delete preserves audit-trail integrity; active-recipe guard is the load-bearing safety check)
+**Risk Level:** MEDIUM (touches inventory data; archive/restore preserve audit-trail integrity; active-recipe guard is the load-bearing safety check)
 **Issue:** [#83](https://github.com/metasession-dev/wawagardenbar-app/issues/83)
 **Depends on:** REQ-034 (#74) — Kitchen Management feature (closed 2026-05-15)
 **PR plan:** Single bundled PR develop → main after UAT (consistent with REQ-034 pattern)
@@ -23,7 +23,7 @@ Completes CRUD on the kitchen-ingredient surface shipped under REQ-034.
 ## AI Involvement
 
 - **AI Tool Used:** Claude Code (Claude Opus 4.7, 1M context)
-- **AI-Generated Files:** schema additions, server actions, service helper (`findActiveRecipesReferencingInventory`), Edit + Delete dialog components, archived-row filter additions, all SDLC artefacts, all tests, all commit messages.
+- **AI-Generated Files:** schema additions, server actions (update / archive / restore), service helpers (`findActiveRecipesReferencingInventory`, `listArchivedByKind`), Edit + Archive dialog components, Show archived toggle + Restore UI, archived-row filter additions, all SDLC artefacts, all tests, all commit messages.
 - **Human Reviewer of AI Code:** ostendo-io (1 reviewer per MEDIUM Risk-Tiered Review Policy)
 - **Components Regenerated:** None — every change is a targeted edit
 - **Prompt log:** `compliance/evidence/REQ-037/ai-prompts.md`
@@ -39,7 +39,7 @@ Completes CRUD on the kitchen-ingredient surface shipped under REQ-034.
 - `compliance/evidence/REQ-037/{test-plan,security-summary,ai-prompts,uat-checklist}.md`
 - `compliance/pending-releases/RELEASE-TICKET-REQ-037.md` (this file)
 - `components/features/admin/edit-kitchen-ingredient-dialog.tsx`
-- `components/features/admin/delete-kitchen-ingredient-dialog.tsx`
+- `components/features/admin/archive-kitchen-ingredient-dialog.tsx`
 - `__tests__/services/recipe-service.references.test.ts`
 - `__tests__/services/inventory-service.list-by-kind.test.ts` (archived-filter regression)
 - `e2e/kitchen/inventory-crud.spec.ts` (17 tests covering all AC1–AC5 surfaces)
@@ -51,7 +51,7 @@ Completes CRUD on the kitchen-ingredient surface shipped under REQ-034.
 - `interfaces/{inventory,menu-item}.interface.ts` (mirror)
 - `services/inventory-service.ts` (`listByKind` excludes archived)
 - `services/recipe-service.ts` (+ `findActiveRecipesReferencingInventory`)
-- `app/actions/admin/kitchen-ingredient-actions.ts` (+ `updateKitchenIngredientAction`, `deleteKitchenIngredientAction`)
+- `app/actions/admin/kitchen-ingredient-actions.ts` (+ `updateKitchenIngredientAction`, `archiveKitchenIngredientAction`, `restoreKitchenIngredientAction`)
 - `app/actions/finance/pending-expense-actions.ts` (kitchen-inventory list excludes archived)
 - `components/features/admin/inventory-items-client.tsx` (Edit + Delete row actions on Kitchen tab)
 - `__tests__/actions/admin/kitchen-ingredient-actions.test.ts` (extended)
@@ -104,7 +104,7 @@ If a defect surfaces in production after merge:
 - [ ] META-COMPLY / DevAudit UAT approval obtained
 - [ ] PR merged to main
 - [ ] Historical-data regression check on prod (UAT-checklist manual step)
-- [ ] Production smoke (operator creates an ingredient, edits it, attempts a blocked delete, completes a soft-delete)
+- [ ] Production smoke (operator creates an ingredient, edits it, attempts a blocked archive, completes an archive, restores from Show archived)
 
 ---
 

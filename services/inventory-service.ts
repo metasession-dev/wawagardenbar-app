@@ -390,6 +390,19 @@ class InventoryService {
   }
 
   /**
+   * REQ-037 AC7 — List ONLY archived inventory rows of a given kind.
+   * Drives the Kitchen tab's "Show archived" section + the Restore
+   * flow. Mirrors `listByKind` shape so the caller can re-use the
+   * same row-rendering code path.
+   */
+  static async listArchivedByKind(kind: InventoryKind) {
+    return InventoryModel.find({ kind, archivedAt: { $exists: true } })
+      .populate('menuItemId', 'name mainCategory category')
+      .sort({ archivedAt: -1 })
+      .lean();
+  }
+
+  /**
    * Get low stock items
    * Returns all items with status 'low-stock'
    */

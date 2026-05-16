@@ -245,7 +245,7 @@ export async function updateKitchenIngredientAction(
 }
 
 /**
- * REQ-037 AC3 + AC4 — Soft-delete a kitchen-ingredient pair.
+ * REQ-037 AC3 + AC4 — Archive a kitchen-ingredient pair.
  *
  * Blocks if any ACTIVE recipe references the inventory row (error names
  * the offending recipes so the operator knows what to deactivate first).
@@ -254,8 +254,14 @@ export async function updateKitchenIngredientAction(
  * Inventory row. The rows stay queryable by `_id` so historical
  * StockMovement / Expense / CostHistory back-refs continue to resolve;
  * the archive flag is purely a listing-side filter.
+ *
+ * Archived ingredients can be restored later via
+ * `restoreKitchenIngredientAction` — the operator-facing "Delete"
+ * verb is intentionally avoided in favour of "Archive" so the
+ * reversibility is honest. Aligns with the Recipe deactivate/reactivate
+ * pattern shipped under REQ-034.
  */
-export async function deleteKitchenIngredientAction(inventoryId: string) {
+export async function archiveKitchenIngredientAction(inventoryId: string) {
   try {
     const session = await getSession();
     requireInventoryManagement(session);
@@ -296,7 +302,7 @@ export async function deleteKitchenIngredientAction(inventoryId: string) {
       return {
         success: false as const,
         error:
-          `Cannot delete '${ingredientName}': used in active recipe${
+          `Cannot archive '${ingredientName}': used in active recipe${
             blockingRecipes.length === 1 ? '' : 's'
           } ${names}. ` +
           `Deactivate ${
@@ -350,7 +356,101 @@ export async function deleteKitchenIngredientAction(inventoryId: string) {
       error:
         error instanceof Error
           ? error.message
-          : 'Failed to delete kitchen ingredient',
+          : 'Failed to archive kitchen ingredient',
+    };
+  }
+}
+
+/**
+ * REQ-037 AC7 — Restore an archived kitchen-ingredient pair.
+ *
+ * Clears `archivedAt` on both the paired MenuItem and Inventory row,
+ * making the ingredient visible again on the Kitchen tab, in the
+ * Recipe builder dropdown, and in the Expense form "Add to kitchen
+ * inventory" dropdown.
+ *
+ * No active-recipe guard is needed on restore — restoring is purely
+ * additive (it doesn't change what any recipe currently references;
+ * the recipe's `inventoryId` link to this row never broke because the
+ * archive was soft).
+ *
+ * Idempotency: restoring a row that is NOT archived returns a clear
+ * error rather than silently no-op'ing, so the operator's intent is
+ * unambiguous.
+ */
+export async function restoreKitchenIngredientAction(inventoryId: string) {
+  try {
+    const session = await getSession();
+    requireInventoryManagement(session);
+
+    if (!inventoryId?.trim()) {
+      return { success: false as const, error: 'inventoryId is required' };
+    }
+
+    await connectDB();
+
+    const inventory = await InventoryModel.findById(inventoryId);
+    if (!inventory) {
+      return { success: false as const, error: 'Inventory row not found' };
+    }
+    if (inventory.kind !== 'kitchen-ingredient') {
+      return {
+        success: false as const,
+        error: 'This action only restores kitchen-ingredient inventory rows',
+      };
+    }
+    if (!inventory.archivedAt) {
+      return {
+        success: false as const,
+        error: 'This ingredient is not archived',
+      };
+    }
+
+    // Restore the MenuItem first. If this fails we never touch
+    // Inventory, so the pair stays in a consistent "archived" state.
+    try {
+      await MenuItemModel.findByIdAndUpdate(inventory.menuItemId, {
+        $unset: { archivedAt: '' },
+      });
+    } catch (err) {
+      return {
+        success: false as const,
+        error: `Failed to restore menu-item: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      };
+    }
+
+    try {
+      await InventoryModel.findByIdAndUpdate(inventoryId, {
+        $unset: { archivedAt: '' },
+      });
+    } catch (err) {
+      // Compensate: re-archive the MenuItem to keep the pair consistent.
+      await MenuItemModel.findByIdAndUpdate(inventory.menuItemId, {
+        archivedAt: inventory.archivedAt,
+      });
+      return {
+        success: false as const,
+        error: `Failed to restore inventory row: ${
+          err instanceof Error ? err.message : String(err)
+        }. Menu-item restore was reverted to keep the pair consistent.`,
+      };
+    }
+
+    revalidatePath('/dashboard/inventory');
+    return {
+      success: true as const,
+      inventoryId,
+      menuItemId: inventory.menuItemId.toString(),
+    };
+  } catch (error) {
+    return {
+      success: false as const,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to restore kitchen ingredient',
     };
   }
 }

@@ -1,7 +1,9 @@
 /**
- * @requirement REQ-037 — Edit + delete kitchen ingredients
+ * @requirement REQ-037 — Edit + archive + restore kitchen ingredients
  *
- * 15 E2E tests covering every AC1–AC5 behaviour. The user's instruction
+ * 20 E2E tests covering every AC1–AC7 behaviour (incl. archive + restore
+ * verb pair added when the operator pushed back on Delete framing). The
+ * user's instruction
  * (2026-05-16) was to maximise automated coverage — every operator-facing
  * surface gets a Playwright assertion here so manual UAT is reduced to
  * historical-data regression checks + the sign-off ceremony.
@@ -39,18 +41,24 @@ async function openEditDialogFor(page: Page, ingredientName: string) {
   return dialog;
 }
 
-async function openDeleteDialogFor(page: Page, ingredientName: string) {
+async function openArchiveDialogFor(page: Page, ingredientName: string) {
   await openInventoryKitchenTab(page);
   const row = page.locator('tr', { hasText: ingredientName }).first();
   await expect(row).toBeVisible();
   await row
-    .getByRole('button', { name: new RegExp(`Delete ${ingredientName}`, 'i') })
+    .getByRole('button', { name: new RegExp(`Archive ${ingredientName}`, 'i') })
     .click();
   const dialog = page.locator('[role="dialog"]', {
-    has: page.getByRole('heading', { name: /Delete kitchen ingredient/i }),
+    has: page.getByRole('heading', { name: /Archive kitchen ingredient/i }),
   });
   await expect(dialog).toBeVisible();
   return dialog;
+}
+
+async function showArchivedSection(page: Page) {
+  await openInventoryKitchenTab(page);
+  await page.getByRole('button', { name: /show archived/i }).click();
+  await expect(page.getByTestId('archived-kitchen-section')).toBeVisible();
 }
 
 async function authorRecipeReferencing(
@@ -87,7 +95,7 @@ async function deactivateRecipe(page: Page, recipeName: string) {
 }
 
 superAdminTest.describe(
-  'REQ-037 — Edit + delete kitchen ingredients (15 tests, all ACs)',
+  'REQ-037 — Edit + archive + restore kitchen ingredients (20 tests, all ACs)',
   () => {
     superAdminTest.beforeEach(async ({ page }, testInfo) => {
       if (!(await isAuthenticated(page))) {
@@ -240,30 +248,30 @@ superAdminTest.describe(
       }
     );
 
-    // ─── AC3 delete dialog + safe-removal guard ──────────────────────────
+    // ─── AC3 archive dialog + safe-removal guard ──────────────────────────
 
     superAdminTest(
-      'AC3 — Delete dialog renders the ingredient name + destructive button',
+      'AC3 — Archive dialog renders the ingredient name + Archive button',
       async ({ page }) => {
         const name = uniqueLabel('E2E-Delete-Confirm');
         await createKitchenIngredient(page, { name, unitLabel: 'Grams' });
 
-        const dialog = await openDeleteDialogFor(page, name);
+        const dialog = await openArchiveDialogFor(page, name);
         await expect(dialog).toContainText(name);
         await expect(
-          dialog.getByRole('button', { name: /^Delete$/i })
+          dialog.getByRole('button', { name: /^Archive$/i })
         ).toBeVisible();
       }
     );
 
     superAdminTest(
-      'AC3+AC4 — Delete with no recipe refs archives the row',
+      'AC3+AC4 — Archive with no recipe refs removes the row from active list',
       async ({ page }) => {
         const name = uniqueLabel('E2E-Delete-Happy');
         await createKitchenIngredient(page, { name, unitLabel: 'Grams' });
 
-        const dialog = await openDeleteDialogFor(page, name);
-        await dialog.getByRole('button', { name: /^Delete$/i }).click();
+        const dialog = await openArchiveDialogFor(page, name);
+        await dialog.getByRole('button', { name: /^Archive$/i }).click();
         await expect(dialog).toBeHidden({ timeout: 10000 });
 
         await openInventoryKitchenTab(page);
@@ -272,7 +280,7 @@ superAdminTest.describe(
     );
 
     superAdminTest(
-      'AC3 — Delete BLOCKED by active recipe; error names the recipe',
+      'AC3 — Archive BLOCKED by active recipe; error names the recipe',
       async ({ page }) => {
         const ingredient = uniqueLabel('E2E-Delete-Blocked-Ingr');
         const recipe = uniqueLabel('E2E-Delete-Blocked-Recipe');
@@ -286,11 +294,13 @@ superAdminTest.describe(
           ingredientName: ingredient,
         });
 
-        const dialog = await openDeleteDialogFor(page, ingredient);
-        await dialog.getByRole('button', { name: /^Delete$/i }).click();
+        const dialog = await openArchiveDialogFor(page, ingredient);
+        await dialog.getByRole('button', { name: /^Archive$/i }).click();
 
         const alert = dialog.locator('[role="alert"], .alert');
-        await expect(alert).toContainText(/Cannot delete/i, { timeout: 10000 });
+        await expect(alert).toContainText(/Cannot archive/i, {
+          timeout: 10000,
+        });
         await expect(alert).toContainText(recipe);
         await expect(alert).toContainText(/Deactivate/i);
 
@@ -304,7 +314,7 @@ superAdminTest.describe(
     );
 
     superAdminTest(
-      'AC3 — Deactivate the blocking recipe → retry delete succeeds',
+      'AC3 — Deactivate the blocking recipe → retry archive succeeds',
       async ({ page }) => {
         const ingredient = uniqueLabel('E2E-Delete-Recover-Ingr');
         const recipe = uniqueLabel('E2E-Delete-Recover-Recipe');
@@ -319,8 +329,8 @@ superAdminTest.describe(
         });
         await deactivateRecipe(page, recipe);
 
-        const dialog = await openDeleteDialogFor(page, ingredient);
-        await dialog.getByRole('button', { name: /^Delete$/i }).click();
+        const dialog = await openArchiveDialogFor(page, ingredient);
+        await dialog.getByRole('button', { name: /^Archive$/i }).click();
         await expect(dialog).toBeHidden({ timeout: 10000 });
 
         await openInventoryKitchenTab(page);
@@ -338,8 +348,8 @@ superAdminTest.describe(
         const name = uniqueLabel('E2E-Archive-KitchenTab');
         await createKitchenIngredient(page, { name, unitLabel: 'Grams' });
 
-        const dialog = await openDeleteDialogFor(page, name);
-        await dialog.getByRole('button', { name: /^Delete$/i }).click();
+        const dialog = await openArchiveDialogFor(page, name);
+        await dialog.getByRole('button', { name: /^Archive$/i }).click();
         await expect(dialog).toBeHidden({ timeout: 10000 });
 
         await openInventoryKitchenTab(page);
@@ -368,8 +378,8 @@ superAdminTest.describe(
         await page.keyboard.press('Escape');
 
         // Delete.
-        const dialog = await openDeleteDialogFor(page, name);
-        await dialog.getByRole('button', { name: /^Delete$/i }).click();
+        const dialog = await openArchiveDialogFor(page, name);
+        await dialog.getByRole('button', { name: /^Archive$/i }).click();
         await expect(dialog).toBeHidden({ timeout: 10000 });
 
         // Re-open the recipe builder; the ingredient is gone.
@@ -405,8 +415,8 @@ superAdminTest.describe(
         await page.waitForTimeout(300);
 
         // Delete the ingredient.
-        const delDialog = await openDeleteDialogFor(page, name);
-        await delDialog.getByRole('button', { name: /^Delete$/i }).click();
+        const delDialog = await openArchiveDialogFor(page, name);
+        await delDialog.getByRole('button', { name: /^Archive$/i }).click();
         await expect(delDialog).toBeHidden({ timeout: 10000 });
 
         // Re-open Add Expense; the ingredient is gone.
@@ -438,8 +448,8 @@ superAdminTest.describe(
 
         await createKitchenIngredient(page, { name, unitLabel: 'Grams' });
 
-        const dialog = await openDeleteDialogFor(page, name);
-        await dialog.getByRole('button', { name: /^Delete$/i }).click();
+        const dialog = await openArchiveDialogFor(page, name);
+        await dialog.getByRole('button', { name: /^Archive$/i }).click();
         await expect(dialog).toBeHidden({ timeout: 10000 });
 
         await page.goto('/dashboard/inventory');
@@ -458,7 +468,7 @@ superAdminTest.describe(
       }
     );
 
-    // ─── AC1 — View Details preserved alongside Edit + Delete ───────────
+    // ─── AC1 — View Details preserved alongside Edit + Archive ───────────
     //
     // Kitchen rows still need a View Details button so operators can
     // navigate to /dashboard/inventory/<id> to inspect StockMovement
@@ -466,7 +476,7 @@ superAdminTest.describe(
     // ingredient is the only "audit-trail" path — which is wrong.
 
     superAdminTest(
-      'AC1 — Kitchen row exposes View Details, Edit, and Delete (3 actions)',
+      'AC1 — Kitchen row exposes View Details, Edit, and Archive (3 actions)',
       async ({ page }) => {
         const name = uniqueLabel('E2E-Edit-ThreeActions');
         await createKitchenIngredient(page, { name, unitLabel: 'Grams' });
@@ -485,7 +495,7 @@ superAdminTest.describe(
           row.getByRole('button', { name: new RegExp(`Edit ${name}`, 'i') })
         ).toBeVisible();
         await expect(
-          row.getByRole('button', { name: new RegExp(`Delete ${name}`, 'i') })
+          row.getByRole('button', { name: new RegExp(`Archive ${name}`, 'i') })
         ).toBeVisible();
       }
     );
@@ -509,6 +519,92 @@ superAdminTest.describe(
           timeout: 10000,
         });
         expect(page.url()).toMatch(/\/dashboard\/inventory\/[a-f0-9]{24}/);
+      }
+    );
+
+    // ─── AC7 — Archive + Restore flow (the reversibility surface) ───────
+
+    superAdminTest(
+      'AC7 — Show archived toggle reveals an archived row with a Restore action',
+      async ({ page }) => {
+        const name = uniqueLabel('E2E-Restore-ShowArchived');
+        await createKitchenIngredient(page, { name, unitLabel: 'Grams' });
+
+        // Archive the ingredient first.
+        const dialog = await openArchiveDialogFor(page, name);
+        await dialog.getByRole('button', { name: /^Archive$/i }).click();
+        await expect(dialog).toBeHidden({ timeout: 10000 });
+
+        // Toggle "Show archived" → archived row appears with Restore button.
+        await showArchivedSection(page);
+        const archivedSection = page.getByTestId('archived-kitchen-section');
+        await expect(archivedSection).toContainText(name);
+        await expect(
+          archivedSection.getByRole('button', {
+            name: new RegExp(`Restore ${name}`, 'i'),
+          })
+        ).toBeVisible();
+      }
+    );
+
+    superAdminTest(
+      'AC7 — Restore brings the row back to active list AND back into Recipe builder dropdown',
+      async ({ page }) => {
+        const name = uniqueLabel('E2E-Restore-Round-Trip');
+        await createKitchenIngredient(page, { name, unitLabel: 'Grams' });
+
+        // Archive.
+        const dialog = await openArchiveDialogFor(page, name);
+        await dialog.getByRole('button', { name: /^Archive$/i }).click();
+        await expect(dialog).toBeHidden({ timeout: 10000 });
+
+        // Confirm: gone from active list.
+        await openInventoryKitchenTab(page);
+        await expect(page.locator('tr', { hasText: name })).toHaveCount(0);
+
+        // Restore via the archived section.
+        await showArchivedSection(page);
+        await page
+          .getByRole('button', { name: new RegExp(`Restore ${name}`, 'i') })
+          .first()
+          .click();
+        await page.waitForLoadState('networkidle');
+
+        // Back in active list.
+        await openInventoryKitchenTab(page);
+        await expect(
+          page.locator('tr', { hasText: name }).first()
+        ).toBeVisible();
+
+        // And back in the Recipe builder ingredient dropdown.
+        await page.goto('/dashboard/kitchen/recipes/new');
+        await page.waitForLoadState('networkidle');
+        await page.locator('button[role="combobox"]').nth(1).click();
+        await expect(
+          page.getByRole('option', { name: new RegExp(name, 'i') })
+        ).toBeVisible({ timeout: 5000 });
+      }
+    );
+
+    superAdminTest(
+      'AC7 — Archive button uses the Archive verb (not Delete) in the dialog title + button',
+      async ({ page }) => {
+        const name = uniqueLabel('E2E-Archive-Verb');
+        await createKitchenIngredient(page, { name, unitLabel: 'Grams' });
+
+        const dialog = await openArchiveDialogFor(page, name);
+        // Dialog heading uses Archive.
+        await expect(
+          dialog.getByRole('heading', { name: /Archive kitchen ingredient/i })
+        ).toBeVisible();
+        // Action button label says Archive.
+        await expect(
+          dialog.getByRole('button', { name: /^Archive$/i })
+        ).toBeVisible();
+        // No "Delete" anywhere in the visible dialog (button or copy).
+        await expect(
+          dialog.getByRole('button', { name: /^Delete$/i })
+        ).toHaveCount(0);
       }
     );
 

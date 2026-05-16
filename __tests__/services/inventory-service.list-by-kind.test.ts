@@ -66,3 +66,18 @@ describe('REQ-037 AC4 — InventoryService.listByKind excludes archived', () => 
     });
   });
 });
+
+describe('REQ-037 AC7 — InventoryService.listArchivedByKind', () => {
+  it('passes `archivedAt: { $exists: true }` for kitchen-ingredient queries', async () => {
+    (InventoryModel.find as ReturnType<typeof vi.fn>).mockReturnValue(
+      chainableFind([])
+    );
+
+    await InventoryService.listArchivedByKind('kitchen-ingredient');
+
+    expect(InventoryModel.find).toHaveBeenCalledWith({
+      kind: 'kitchen-ingredient',
+      archivedAt: { $exists: true },
+    });
+  });
+});

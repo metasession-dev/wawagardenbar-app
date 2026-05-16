@@ -74,7 +74,8 @@ import {
   createKitchenIngredientAction,
   getKitchenIngredientFormOptionsAction,
   updateKitchenIngredientAction,
-  deleteKitchenIngredientAction,
+  archiveKitchenIngredientAction,
+  restoreKitchenIngredientAction,
 } from '@/app/actions/admin/kitchen-ingredient-actions';
 
 const userId = new Types.ObjectId().toString();
@@ -458,10 +459,10 @@ describe('REQ-037 AC2 — updateKitchenIngredientAction validation + writes', ()
 });
 
 // ---------------------------------------------------------------------------
-// REQ-037 — Delete kitchen ingredient (deleteKitchenIngredientAction)
+// REQ-037 — Archive kitchen ingredient (archiveKitchenIngredientAction)
 // ---------------------------------------------------------------------------
 
-describe('REQ-037 AC3 + AC4 — deleteKitchenIngredientAction', () => {
+describe('REQ-037 AC3 + AC4 — archiveKitchenIngredientAction', () => {
   beforeEach(() => {
     mockSession({ role: 'super-admin' });
     (
@@ -473,7 +474,7 @@ describe('REQ-037 AC3 + AC4 — deleteKitchenIngredientAction', () => {
 
   it('rejects unauthenticated callers', async () => {
     mockSession({ isLoggedIn: false, role: undefined });
-    const r = await deleteKitchenIngredientAction(
+    const r = await archiveKitchenIngredientAction(
       new Types.ObjectId().toString()
     );
     expect(r.success).toBe(false);
@@ -482,7 +483,7 @@ describe('REQ-037 AC3 + AC4 — deleteKitchenIngredientAction', () => {
 
   it('rejects csr without inventoryManagement', async () => {
     mockSession({ role: 'csr', permissions: { inventoryManagement: false } });
-    const r = await deleteKitchenIngredientAction(
+    const r = await archiveKitchenIngredientAction(
       new Types.ObjectId().toString()
     );
     expect(r.success).toBe(false);
@@ -492,7 +493,7 @@ describe('REQ-037 AC3 + AC4 — deleteKitchenIngredientAction', () => {
     (InventoryModel.findById as ReturnType<typeof vi.fn>).mockResolvedValue(
       null
     );
-    const r = await deleteKitchenIngredientAction(
+    const r = await archiveKitchenIngredientAction(
       new Types.ObjectId().toString()
     );
     expect(r.success).toBe(false);
@@ -506,7 +507,7 @@ describe('REQ-037 AC3 + AC4 — deleteKitchenIngredientAction', () => {
       menuItemId: new Types.ObjectId().toString(),
       archived: true,
     });
-    const r = await deleteKitchenIngredientAction(invId);
+    const r = await archiveKitchenIngredientAction(invId);
     expect(r.success).toBe(false);
     if (!r.success) expect(r.error).toMatch(/already archived/i);
   });
@@ -518,7 +519,7 @@ describe('REQ-037 AC3 + AC4 — deleteKitchenIngredientAction', () => {
       menuItemId: new Types.ObjectId().toString(),
       kind: 'menu-item',
     });
-    const r = await deleteKitchenIngredientAction(invId);
+    const r = await archiveKitchenIngredientAction(invId);
     expect(r.success).toBe(false);
   });
 
@@ -538,7 +539,7 @@ describe('REQ-037 AC3 + AC4 — deleteKitchenIngredientAction', () => {
       name: 'Goat meat',
     });
 
-    const r = await deleteKitchenIngredientAction(invId);
+    const r = await archiveKitchenIngredientAction(invId);
     expect(r.success).toBe(false);
     if (!r.success) {
       expect(r.error).toMatch(/Goat meat/);
@@ -566,7 +567,7 @@ describe('REQ-037 AC3 + AC4 — deleteKitchenIngredientAction', () => {
       InventoryModel.findByIdAndUpdate as ReturnType<typeof vi.fn>
     ).mockResolvedValue({});
 
-    const r = await deleteKitchenIngredientAction(invId);
+    const r = await archiveKitchenIngredientAction(invId);
     expect(r.success).toBe(true);
   });
 
@@ -582,7 +583,7 @@ describe('REQ-037 AC3 + AC4 — deleteKitchenIngredientAction', () => {
       InventoryModel.findByIdAndUpdate as ReturnType<typeof vi.fn>
     ).mockResolvedValue({});
 
-    const r = await deleteKitchenIngredientAction(invId);
+    const r = await archiveKitchenIngredientAction(invId);
     expect(r.success).toBe(true);
 
     const menuItemCall = (
@@ -609,7 +610,7 @@ describe('REQ-037 AC3 + AC4 — deleteKitchenIngredientAction', () => {
       InventoryModel.findByIdAndUpdate as ReturnType<typeof vi.fn>
     ).mockRejectedValue(new Error('mongo timeout'));
 
-    const r = await deleteKitchenIngredientAction(invId);
+    const r = await archiveKitchenIngredientAction(invId);
     expect(r.success).toBe(false);
 
     // Second findByIdAndUpdate on MenuItem unsets archivedAt to revert.
@@ -618,6 +619,114 @@ describe('REQ-037 AC3 + AC4 — deleteKitchenIngredientAction', () => {
       MenuItemModel.findByIdAndUpdate as ReturnType<typeof vi.fn>
     ).mock.calls[1];
     expect(compensatingCall[1]).toEqual({ $unset: { archivedAt: '' } });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// REQ-037 — Restore kitchen ingredient (restoreKitchenIngredientAction)
+// ---------------------------------------------------------------------------
+
+describe('REQ-037 AC7 — restoreKitchenIngredientAction', () => {
+  beforeEach(() => {
+    mockSession({ role: 'super-admin' });
+  });
+
+  it('rejects unauthenticated callers', async () => {
+    mockSession({ isLoggedIn: false, role: undefined });
+    const r = await restoreKitchenIngredientAction(
+      new Types.ObjectId().toString()
+    );
+    expect(r.success).toBe(false);
+    expect(InventoryModel.findById).not.toHaveBeenCalled();
+  });
+
+  it('rejects csr without inventoryManagement', async () => {
+    mockSession({ role: 'csr', permissions: { inventoryManagement: false } });
+    const r = await restoreKitchenIngredientAction(
+      new Types.ObjectId().toString()
+    );
+    expect(r.success).toBe(false);
+  });
+
+  it('rejects when inventory row is not found', async () => {
+    (InventoryModel.findById as ReturnType<typeof vi.fn>).mockResolvedValue(
+      null
+    );
+    const r = await restoreKitchenIngredientAction(
+      new Types.ObjectId().toString()
+    );
+    expect(r.success).toBe(false);
+    if (!r.success) expect(r.error).toMatch(/not found/i);
+  });
+
+  it('rejects rows that are NOT archived (clear-intent surface)', async () => {
+    const invId = new Types.ObjectId().toString();
+    mockFoundInventory({
+      id: invId,
+      menuItemId: new Types.ObjectId().toString(),
+      archived: false,
+    });
+    const r = await restoreKitchenIngredientAction(invId);
+    expect(r.success).toBe(false);
+    if (!r.success) expect(r.error).toMatch(/not archived/i);
+  });
+
+  it('rejects non-kitchen-ingredient kind', async () => {
+    const invId = new Types.ObjectId().toString();
+    mockFoundInventory({
+      id: invId,
+      menuItemId: new Types.ObjectId().toString(),
+      archived: true,
+      kind: 'menu-item',
+    });
+    const r = await restoreKitchenIngredientAction(invId);
+    expect(r.success).toBe(false);
+  });
+
+  it('happy-path: $unset archivedAt on BOTH paired MenuItem and Inventory rows', async () => {
+    const invId = new Types.ObjectId().toString();
+    const menuItemId = new Types.ObjectId().toString();
+    mockFoundInventory({ id: invId, menuItemId, archived: true });
+    (
+      MenuItemModel.findByIdAndUpdate as ReturnType<typeof vi.fn>
+    ).mockResolvedValue({});
+    (
+      InventoryModel.findByIdAndUpdate as ReturnType<typeof vi.fn>
+    ).mockResolvedValue({});
+
+    const r = await restoreKitchenIngredientAction(invId);
+    expect(r.success).toBe(true);
+
+    const menuItemCall = (
+      MenuItemModel.findByIdAndUpdate as ReturnType<typeof vi.fn>
+    ).mock.calls[0];
+    const invCall = (
+      InventoryModel.findByIdAndUpdate as ReturnType<typeof vi.fn>
+    ).mock.calls[0];
+    expect(menuItemCall[1]).toEqual({ $unset: { archivedAt: '' } });
+    expect(invCall[1]).toEqual({ $unset: { archivedAt: '' } });
+  });
+
+  it('on Inventory write failure, re-archives the MenuItem to keep the pair consistent', async () => {
+    const invId = new Types.ObjectId().toString();
+    const menuItemId = new Types.ObjectId().toString();
+    mockFoundInventory({ id: invId, menuItemId, archived: true });
+    (MenuItemModel.findByIdAndUpdate as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({}) // initial unset
+      .mockResolvedValueOnce({}); // compensating re-archive
+    (
+      InventoryModel.findByIdAndUpdate as ReturnType<typeof vi.fn>
+    ).mockRejectedValue(new Error('mongo timeout'));
+
+    const r = await restoreKitchenIngredientAction(invId);
+    expect(r.success).toBe(false);
+
+    // The second call re-sets archivedAt on the MenuItem.
+    expect(MenuItemModel.findByIdAndUpdate).toHaveBeenCalledTimes(2);
+    const compensatingCall = (
+      MenuItemModel.findByIdAndUpdate as ReturnType<typeof vi.fn>
+    ).mock.calls[1];
+    expect(compensatingCall[1]).toHaveProperty('archivedAt');
   });
 });
 

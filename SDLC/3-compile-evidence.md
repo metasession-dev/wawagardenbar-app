@@ -73,6 +73,8 @@ npx playwright test
 
 All must pass. Evidence must reflect a green suite.
 
+> **Skill available:** for the E2E gate specifically, invoke the **`e2e-test-engineer`** skill (at `.claude/skills/e2e-test-engineer/SKILL.md`). It runs the suite, triages failures into flake / test-bug / app-defect / intended-visual-diff / unintended-visual-diff before taking any action, checks each acceptance criterion has a passing test, and files defects via whatever tracker the project uses (GitHub, GitLab, Jira, Linear, Azure DevOps; markdown report as fallback). See [`sdlc/SKILLS.md`](../sdlc/SKILLS.md) for the full list of available skills.
+
 ### Step 1a: Generate Test Execution Summary
 
 After confirming all gates pass, generate the test execution summary. This documents what ran, the results, and maps back to the test plan.
@@ -464,18 +466,52 @@ git push origin develop
 
 **If UAT-env verification fails:** Fix the issue on `develop`, re-run local gates, push, and repeat UAT-env verification. Do NOT proceed to Step 11 until UAT-env is green.
 
-### Step 11: Approve Release in DevAudit (MANDATORY)
+### Step 11: Submit for Review + Approve Release in DevAudit (MANDATORY)
 
-This is the **four-eyes release approval gate** — an authorised reviewer reviews the evidence on the release row in DevAudit and clicks Approve. This step is always required, whether or not Step 10 ran.
+This is the **four-eyes release approval gate**. It has two transitions:
 
-When ready:
+- **Step 11a. Submit for UAT review** (`draft → uat_review`) — the dev (or AI agent) signals the release is ready for review.
+- **Step 11b. Approve** (`uat_review → uat_approved`) — an authorised reviewer (a different person under `approval.mode: dual_actor`) reviews the evidence and clicks Approve.
 
-1. Open the release in DevAudit. The URL has the shape `https://[DEVAUDIT_BASE_URL]/projects/[PROJECT_SLUG]/releases/[releaseId]` and is posted as a comment on the develop branch by CI (look at the latest run of `Release Approval Gate` or `Compliance Evidence Upload`).
-2. Review:
+#### Step 11a — Submit for UAT review
+
+Two paths; do whichever fits the project's workflow:
+
+**Manual.** Open the release in DevAudit and click **Submit for UAT Review**. URL shape: `https://[DEVAUDIT_BASE_URL]/projects/[PROJECT_SLUG]/releases/[releaseId]` — posted as a comment on the develop branch by CI (look at the latest run of `Release Approval Gate` or `Compliance Evidence Upload`).
+
+**Scripted.** Run the bundled script (synced from META-COMPLY into every consuming project under `scripts/`):
+
+```bash
+./scripts/submit-for-uat-review.sh [PROJECT_SLUG] v2026.MM.DD
+```
+
+The script:
+
+1. Checks the working tree is clean and develop is up-to-date with origin.
+2. Checks a `RELEASE-TICKET-*.md` exists in `compliance/pending-releases/`.
+3. Checks CI gates are green on the current develop HEAD (via `gh run list`).
+4. Resolves the release id from DevAudit using `META_COMPLY_API_KEY` (existing).
+5. Submits with `META_COMPLY_USER_TOKEN` (Personal Access Token issued from `/settings/tokens` in DevAudit). The submission carries the issuing user's identity, so `isOwnRelease` keeps holding for Step 11b under `dual_actor`.
+6. Idempotent — if the release is already in `uat_review` (or later), exits 0 with a note rather than failing.
+
+Required environment variables for the scripted path:
+
+| Var                      | What it is                                                       | Where to set                                                                     |
+| ------------------------ | ---------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `META_COMPLY_USER_TOKEN` | Personal Access Token (`mctok_…`) attributed to the running user | Issue at `/settings/tokens`; store as a repo secret for CI or `.env` for local   |
+| `META_COMPLY_API_KEY`    | Project-scoped API key (existing)                                | Already set for evidence uploads                                                 |
+| `META_COMPLY_BASE_URL`   | DevAudit URL                                                     | Resolved by CI templates; locally read from `sdlc-config.json devaudit.base_url` |
+
+#### Step 11b — Approve
+
+After Step 11a completes (status: `uat_review`), an authorised reviewer:
+
+1. Opens the release in DevAudit (same URL as above).
+2. Reviews:
    - **Quality gate results** (TypeScript, SAST, dependency audit, E2E, coverage) — uploaded by CI on the Stage 2 implementation push.
    - **Compliance Markdowns** (RTM, release ticket, test-scope, test-execution-summary, security-summary, ai-prompts) — uploaded by Compliance Evidence Upload on the Step 9 push.
    - **UAT-environment verification record** (if Step 10 ran) — in `security-summary.md`.
-3. Click **Approve**. The release status transitions to `release_approved` (backend enum still `uat_approved` in v1.22.x for backwards-compat; renamed in v1.23.0).
+3. Clicks **Approve**. The release status transitions to `release_approved` (backend enum still `uat_approved` in v1.22.x for backwards-compat; renamed in v1.23.0).
 
 If something looks wrong, click **Reject** and add a comment. Return to Stage 2 to fix, then re-walk Stage 3 from Step 1.
 

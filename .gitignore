@@ -49,5 +49,9 @@ next-env.d.ts
 # Database backups
 /backups
 
-# Claude Code local state
-.claude/
+# Claude Code local state — but framework-distributed skills under
+# .claude/skills/ are checked in (they're versioned content from the
+# Metasession SDLC, not developer-local).
+# Use .claude/* (not .claude/) so the negation below can re-include skills/.
+.claude/*
+!.claude/skills/

@@ -20,7 +20,7 @@ interface InventoryLocation {
   currentStock: number;
 }
 
-interface InventoryItem {
+export interface InventoryItem {
   _id: string;
   menuItemId: {
     _id: string;
@@ -39,22 +39,44 @@ interface InventoryItem {
 
 interface InventoryTableProps {
   inventory: InventoryItem[];
+  /**
+   * REQ-037 — Optional override for the per-row Actions cell. The
+   * Inventory dashboard's Kitchen tab uses this to plug in Edit + Delete
+   * buttons for kitchen ingredients; the Sellable tab falls back to the
+   * default "View Details" link.
+   */
+  renderRowActions?: (item: InventoryItem) => React.ReactNode;
 }
 
 /**
  * Inventory table component
  */
-export function InventoryTable({ inventory }: InventoryTableProps) {
+export function InventoryTable({
+  inventory,
+  renderRowActions,
+}: InventoryTableProps) {
   const router = useRouter();
 
   function getStockStatus(item: InventoryItem) {
     if (item.currentStock === 0) {
-      return { label: 'Out of Stock', variant: 'destructive' as const, icon: AlertTriangle };
+      return {
+        label: 'Out of Stock',
+        variant: 'destructive' as const,
+        icon: AlertTriangle,
+      };
     }
     if (item.currentStock <= item.minStock) {
-      return { label: 'Low Stock', variant: 'secondary' as const, icon: AlertTriangle };
+      return {
+        label: 'Low Stock',
+        variant: 'secondary' as const,
+        icon: AlertTriangle,
+      };
     }
-    return { label: 'In Stock', variant: 'default' as const, icon: CheckCircle };
+    return {
+      label: 'In Stock',
+      variant: 'default' as const,
+      icon: CheckCircle,
+    };
   }
 
   function getStockPercentage(item: InventoryItem) {
@@ -83,7 +105,10 @@ export function InventoryTable({ inventory }: InventoryTableProps) {
           <TableBody>
             {inventory.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground">
+                <TableCell
+                  colSpan={8}
+                  className="text-center text-muted-foreground"
+                >
                   No inventory items found
                 </TableCell>
               </TableRow>
@@ -123,9 +148,16 @@ export function InventoryTable({ inventory }: InventoryTableProps) {
                       {item.trackByLocation && item.locations.length > 0 ? (
                         <div className="flex flex-col gap-1">
                           {item.locations.map((loc) => (
-                            <div key={loc.location} className="flex items-center justify-between gap-2 text-xs">
-                              <span className="text-muted-foreground truncate max-w-[80px]">{loc.locationName}</span>
-                              <span className="font-medium tabular-nums">{loc.currentStock}</span>
+                            <div
+                              key={loc.location}
+                              className="flex items-center justify-between gap-2 text-xs"
+                            >
+                              <span className="text-muted-foreground truncate max-w-[80px]">
+                                {loc.locationName}
+                              </span>
+                              <span className="font-medium tabular-nums">
+                                {loc.currentStock}
+                              </span>
                             </div>
                           ))}
                         </div>
@@ -144,8 +176,8 @@ export function InventoryTable({ inventory }: InventoryTableProps) {
                               percentage <= 20
                                 ? 'bg-destructive'
                                 : percentage <= 50
-                                ? 'bg-yellow-500'
-                                : 'bg-green-500'
+                                  ? 'bg-yellow-500'
+                                  : 'bg-green-500'
                             }`}
                             style={{ width: `${Math.min(percentage, 100)}%` }}
                           />
@@ -156,20 +188,29 @@ export function InventoryTable({ inventory }: InventoryTableProps) {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={status.variant} className="flex w-fit items-center gap-1">
+                      <Badge
+                        variant={status.variant}
+                        className="flex w-fit items-center gap-1"
+                      >
                         <StatusIcon className="h-3 w-3" />
                         {status.label}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => router.push(`/dashboard/inventory/${item._id}`)}
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        View Details
-                      </Button>
+                      {renderRowActions ? (
+                        renderRowActions(item)
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            router.push(`/dashboard/inventory/${item._id}`)
+                          }
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Details
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 );

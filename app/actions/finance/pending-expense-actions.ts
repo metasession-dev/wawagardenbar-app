@@ -224,7 +224,12 @@ export async function listKitchenIngredientInventoryAction() {
     const session = await getSession();
     requireAdminOrAbove(session);
     await connectDB();
-    const rows = await InventoryModel.find({ kind: 'kitchen-ingredient' })
+    // REQ-037 AC4 — exclude soft-archived ingredients from the Expense
+    // form's "Add to kitchen inventory" dropdown.
+    const rows = await InventoryModel.find({
+      kind: 'kitchen-ingredient',
+      archivedAt: { $exists: false },
+    })
       .populate('menuItemId', 'name mainCategory category')
       .sort({ currentStock: 1 })
       .lean();

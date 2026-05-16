@@ -209,6 +209,13 @@ export default defineConfig({
       testMatch: /kitchen\/daily-report-regression\.spec\.ts/,
       dependencies: ['auth-setup'],
     },
+    // REQ-037 — Edit + delete kitchen ingredients (15 tests covering AC1–AC5)
+    {
+      name: 'kitchen-inventory-crud',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /kitchen\/inventory-crud\.spec\.ts/,
+      dependencies: ['auth-setup'],
+    },
   ],
   /* Start dev server before tests (skipped when BASE_URL is set) */
   webServer: process.env.BASE_URL

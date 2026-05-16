@@ -79,6 +79,12 @@ const menuItemSchema = new Schema<IMenuItem>(
       quarterPortionSurcharge: { type: Number, default: 0, min: 0 },
     },
     allowManualPriceOverride: { type: Boolean, default: false },
+    /**
+     * REQ-037 — Soft-delete marker for the hidden MenuItem paired with a
+     * kitchen-ingredient inventory row. Mirrors `Inventory.archivedAt`.
+     * Never set on sellable menu items (those are not in REQ-037's scope).
+     */
+    archivedAt: { type: Date },
   },
   {
     timestamps: true,
@@ -101,6 +107,7 @@ menuItemSchema.index({ name: 'text', description: 'text', tags: 'text' });
 menuItemSchema.index({ mainCategory: 1, category: 1 });
 menuItemSchema.index({ isAvailable: 1, mainCategory: 1 });
 menuItemSchema.index({ kind: 1, isAvailable: 1 });
+menuItemSchema.index({ kind: 1, archivedAt: 1 });
 
 const MenuItemModel: Model<IMenuItem> =
   mongoose.models.MenuItem ||

@@ -19,6 +19,7 @@ import { connectDB } from '@/lib/mongodb';
 import MenuItemModel from '@/models/menu-item-model';
 import InventoryModel from '@/models/inventory-model';
 import { SystemSettingsService } from '@/services/system-settings-service';
+import { RecipeService } from '@/services/recipe-service';
 
 interface CreateKitchenIngredientInput {
   name: string;
@@ -118,6 +119,238 @@ export async function createKitchenIngredientAction(
         error instanceof Error
           ? error.message
           : 'Failed to create kitchen ingredient',
+    };
+  }
+}
+
+interface UpdateKitchenIngredientInput {
+  inventoryId: string;
+  name: string;
+  category: string;
+  minimumStock?: number;
+  maximumStock?: number;
+}
+
+/**
+ * REQ-037 AC2 — Edit a kitchen-ingredient pair.
+ *
+ * Updates the paired MenuItem (`name`, `category`) AND the Inventory row
+ * (`minimumStock`, `maximumStock`) atomically from the operator's view. If
+ * one write succeeds and the other fails the operator gets a clear error
+ * naming what didn't write — we DON'T roll back silently because that
+ * would mask the inconsistency. Out-of-scope by design: unit and
+ * currentStock are NOT editable here (changing them retroactively would
+ * corrupt audit-trail integrity).
+ */
+export async function updateKitchenIngredientAction(
+  input: UpdateKitchenIngredientInput
+) {
+  try {
+    const session = await getSession();
+    requireInventoryManagement(session);
+
+    if (!input.inventoryId?.trim()) {
+      return { success: false as const, error: 'inventoryId is required' };
+    }
+    if (!input.name?.trim()) {
+      return { success: false as const, error: 'Name is required' };
+    }
+    if (!input.category?.trim()) {
+      return { success: false as const, error: 'Category is required' };
+    }
+    const minimumStock = input.minimumStock ?? 0;
+    const maximumStock = input.maximumStock ?? 0;
+    if (minimumStock < 0 || maximumStock < 0) {
+      return {
+        success: false as const,
+        error: 'Stock fields must be non-negative',
+      };
+    }
+    if (maximumStock < minimumStock) {
+      return {
+        success: false as const,
+        error: 'Maximum stock must be ≥ minimum stock',
+      };
+    }
+
+    await connectDB();
+
+    const inventory = await InventoryModel.findById(input.inventoryId);
+    if (!inventory) {
+      return { success: false as const, error: 'Inventory row not found' };
+    }
+    if (inventory.kind !== 'kitchen-ingredient') {
+      return {
+        success: false as const,
+        error: 'This action only edits kitchen-ingredient inventory rows',
+      };
+    }
+    if (inventory.archivedAt) {
+      return {
+        success: false as const,
+        error:
+          'Cannot edit an archived ingredient — restore or recreate it first',
+      };
+    }
+
+    // Update MenuItem first. If this fails we never touch Inventory, so
+    // there's no partial-write to reconcile.
+    try {
+      await MenuItemModel.findByIdAndUpdate(inventory.menuItemId, {
+        name: input.name.trim(),
+        category: input.category.trim(),
+      });
+    } catch (err) {
+      return {
+        success: false as const,
+        error: `Failed to update menu-item: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      };
+    }
+
+    // Then Inventory thresholds. If THIS fails we surface the partial
+    // state explicitly rather than silently reverting the MenuItem.
+    try {
+      await InventoryModel.findByIdAndUpdate(input.inventoryId, {
+        minimumStock,
+        maximumStock,
+      });
+    } catch (err) {
+      return {
+        success: false as const,
+        error:
+          `Menu-item was updated but inventory thresholds failed to save: ${
+            err instanceof Error ? err.message : String(err)
+          }. ` +
+          `Reopen the ingredient and retry the thresholds; the name/category change already persisted.`,
+      };
+    }
+
+    revalidatePath('/dashboard/inventory');
+    return {
+      success: true as const,
+      inventoryId: input.inventoryId,
+      menuItemId: inventory.menuItemId.toString(),
+    };
+  } catch (error) {
+    return {
+      success: false as const,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to update kitchen ingredient',
+    };
+  }
+}
+
+/**
+ * REQ-037 AC3 + AC4 — Soft-delete a kitchen-ingredient pair.
+ *
+ * Blocks if any ACTIVE recipe references the inventory row (error names
+ * the offending recipes so the operator knows what to deactivate first).
+ *
+ * On success: stamps `archivedAt` on both the paired MenuItem and the
+ * Inventory row. The rows stay queryable by `_id` so historical
+ * StockMovement / Expense / CostHistory back-refs continue to resolve;
+ * the archive flag is purely a listing-side filter.
+ */
+export async function deleteKitchenIngredientAction(inventoryId: string) {
+  try {
+    const session = await getSession();
+    requireInventoryManagement(session);
+
+    if (!inventoryId?.trim()) {
+      return { success: false as const, error: 'inventoryId is required' };
+    }
+
+    await connectDB();
+
+    const inventory = await InventoryModel.findById(inventoryId);
+    if (!inventory) {
+      return { success: false as const, error: 'Inventory row not found' };
+    }
+    if (inventory.kind !== 'kitchen-ingredient') {
+      return {
+        success: false as const,
+        error: 'This action only deletes kitchen-ingredient inventory rows',
+      };
+    }
+    if (inventory.archivedAt) {
+      return {
+        success: false as const,
+        error: 'This ingredient is already archived',
+      };
+    }
+
+    // AC3 — safe-removal guard.
+    const blockingRecipes =
+      await RecipeService.findActiveRecipesReferencingInventory(inventoryId);
+    if (blockingRecipes.length > 0) {
+      const names = blockingRecipes.map((r) => `'${r.name}'`).join(', ');
+      // Look up the ingredient's display name from the paired MenuItem.
+      const menuItem = await MenuItemModel.findById(inventory.menuItemId, {
+        name: 1,
+      });
+      const ingredientName = menuItem?.name ?? 'this ingredient';
+      return {
+        success: false as const,
+        error:
+          `Cannot delete '${ingredientName}': used in active recipe${
+            blockingRecipes.length === 1 ? '' : 's'
+          } ${names}. ` +
+          `Deactivate ${
+            blockingRecipes.length === 1 ? 'that recipe' : 'those recipes'
+          } first, or use Recipes → Deactivate.`,
+      };
+    }
+
+    const now = new Date();
+
+    // Archive the MenuItem first. If this fails we don't touch the
+    // Inventory row, so the pair stays in a consistent state.
+    try {
+      await MenuItemModel.findByIdAndUpdate(inventory.menuItemId, {
+        archivedAt: now,
+      });
+    } catch (err) {
+      return {
+        success: false as const,
+        error: `Failed to archive menu-item: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      };
+    }
+
+    try {
+      await InventoryModel.findByIdAndUpdate(inventoryId, { archivedAt: now });
+    } catch (err) {
+      // Compensate: un-archive the MenuItem to keep the pair consistent.
+      await MenuItemModel.findByIdAndUpdate(inventory.menuItemId, {
+        $unset: { archivedAt: '' },
+      });
+      return {
+        success: false as const,
+        error: `Failed to archive inventory row: ${
+          err instanceof Error ? err.message : String(err)
+        }. Menu-item archive was reverted to keep the pair consistent.`,
+      };
+    }
+
+    revalidatePath('/dashboard/inventory');
+    return {
+      success: true as const,
+      inventoryId,
+      menuItemId: inventory.menuItemId.toString(),
+      archivedAt: now,
+    };
+  } catch (error) {
+    return {
+      success: false as const,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to delete kitchen ingredient',
     };
   }
 }

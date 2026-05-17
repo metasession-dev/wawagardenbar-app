@@ -3,7 +3,15 @@
 import { useState, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
-import { ArrowLeft, CheckCircle, XCircle, AlertTriangle, Edit, Save, X } from 'lucide-react';
+import {
+  ArrowLeft,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  Edit,
+  Save,
+  X,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -28,23 +36,55 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { computeMissingCost } from '@/lib/snapshot-missing-cost';
+
+// REQ-039: format the missing-cost figure for display.
+// Returns `—` when the snapshot has no frozen costs (legacy pre-REQ-039
+// snapshots) — honest about the gap, no false-precision £0.
+function formatMissingCostDisplay(
+  items: Array<{ costPerUnitAtSnapshot?: number }>
+): {
+  formatted: string;
+  isLegacy: boolean;
+  value: number;
+} {
+  const anyStamped = items.some(
+    (i) => typeof i.costPerUnitAtSnapshot === 'number'
+  );
+  if (!anyStamped) {
+    return { formatted: '—', isLegacy: true, value: 0 };
+  }
+  const value = computeMissingCost(items as any);
+  const formatted = new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency: 'NGN',
+  }).format(value);
+  return { formatted, isLegacy: false, value };
+}
 import {
   approveSnapshotAction,
   rejectSnapshotAction,
   updateSnapshotItemsAction,
 } from '@/app/actions/inventory/snapshot-actions';
-import type { IInventorySnapshot, IInventorySnapshotItem } from '@/interfaces/inventory-snapshot.interface';
+import type {
+  IInventorySnapshot,
+  IInventorySnapshotItem,
+} from '@/interfaces/inventory-snapshot.interface';
 
 interface SnapshotDetailsClientProps {
   snapshot: IInventorySnapshot;
 }
 
-export function SnapshotDetailsClient({ snapshot: initialSnapshot }: SnapshotDetailsClientProps) {
+export function SnapshotDetailsClient({
+  snapshot: initialSnapshot,
+}: SnapshotDetailsClientProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [snapshot, setSnapshot] = useState(initialSnapshot);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [editedItems, setEditedItems] = useState<IInventorySnapshotItem[]>(initialSnapshot.items);
+  const [editedItems, setEditedItems] = useState<IInventorySnapshotItem[]>(
+    initialSnapshot.items
+  );
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [notes, setNotes] = useState('');
@@ -52,9 +92,15 @@ export function SnapshotDetailsClient({ snapshot: initialSnapshot }: SnapshotDet
 
   const currentItems = isEditMode ? editedItems : snapshot.items;
   const totalItems = currentItems.length;
-  const noChangeItems = currentItems.filter((i) => !i.staffConfirmed && i.staffAdjustedCount === undefined).length;
-  const confirmedItems = currentItems.filter((i) => i.staffConfirmed && i.staffAdjustedCount === undefined).length;
-  const adjustmentItems = currentItems.filter((i) => i.staffAdjustedCount !== undefined).length;
+  const noChangeItems = currentItems.filter(
+    (i) => !i.staffConfirmed && i.staffAdjustedCount === undefined
+  ).length;
+  const confirmedItems = currentItems.filter(
+    (i) => i.staffConfirmed && i.staffAdjustedCount === undefined
+  ).length;
+  const adjustmentItems = currentItems.filter(
+    (i) => i.staffAdjustedCount !== undefined
+  ).length;
 
   function handleEditToggle() {
     if (isEditMode) {
@@ -66,84 +112,103 @@ export function SnapshotDetailsClient({ snapshot: initialSnapshot }: SnapshotDet
     }
   }
 
-  function handleItemChange(menuItemName: string, field: keyof IInventorySnapshotItem | 'locationBreakdown', value: any, locationId?: string) {
-    setEditedItems(prev => prev.map(item => {
-      if (item.menuItemName === menuItemName) {
-        if (locationId && item.locationBreakdown) {
-          // Handle location-specific update
-          const newBreakdown = item.locationBreakdown.map(loc => {
-            if (loc.location === locationId) {
-              const updatedLoc = { ...loc };
-              
-              if (field === 'staffAdjustedCount') {
-                const adjustedCount = value === '' || value === undefined ? undefined : Number(value);
-                updatedLoc.staffAdjustedCount = adjustedCount;
-                updatedLoc.staffConfirmed = false;
-              } else if (field === 'staffConfirmed') {
-                updatedLoc.staffConfirmed = value;
-                if (value) {
-                  updatedLoc.staffAdjustedCount = undefined;
+  function handleItemChange(
+    menuItemName: string,
+    field: keyof IInventorySnapshotItem | 'locationBreakdown',
+    value: any,
+    locationId?: string
+  ) {
+    setEditedItems((prev) =>
+      prev.map((item) => {
+        if (item.menuItemName === menuItemName) {
+          if (locationId && item.locationBreakdown) {
+            // Handle location-specific update
+            const newBreakdown = item.locationBreakdown.map((loc) => {
+              if (loc.location === locationId) {
+                const updatedLoc = { ...loc };
+
+                if (field === 'staffAdjustedCount') {
+                  const adjustedCount =
+                    value === '' || value === undefined
+                      ? undefined
+                      : Number(value);
+                  updatedLoc.staffAdjustedCount = adjustedCount;
+                  updatedLoc.staffConfirmed = false;
+                } else if (field === 'staffConfirmed') {
+                  updatedLoc.staffConfirmed = value;
+                  if (value) {
+                    updatedLoc.staffAdjustedCount = undefined;
+                  }
                 }
+                return updatedLoc;
               }
-              return updatedLoc;
-            }
-            return loc;
-          });
+              return loc;
+            });
 
-          // Recalculate parent values based on new breakdown
-          let totalAdjusted = 0;
-          let hasAdjustments = false;
-          let allConfirmed = true;
+            // Recalculate parent values based on new breakdown
+            let totalAdjusted = 0;
+            let hasAdjustments = false;
+            let allConfirmed = true;
 
-          newBreakdown.forEach((loc) => {
-            const finalCount = loc.staffAdjustedCount !== undefined ? loc.staffAdjustedCount : loc.currentStock;
-            totalAdjusted += finalCount;
-            if (loc.staffAdjustedCount !== undefined) hasAdjustments = true;
-            if (!loc.staffConfirmed) allConfirmed = false;
-          });
+            newBreakdown.forEach((loc) => {
+              const finalCount =
+                loc.staffAdjustedCount !== undefined
+                  ? loc.staffAdjustedCount
+                  : loc.currentStock;
+              totalAdjusted += finalCount;
+              if (loc.staffAdjustedCount !== undefined) hasAdjustments = true;
+              if (!loc.staffConfirmed) allConfirmed = false;
+            });
 
-          const discrepancy = hasAdjustments ? totalAdjusted - item.systemInventoryCount : 0;
+            const discrepancy = hasAdjustments
+              ? totalAdjusted - item.systemInventoryCount
+              : 0;
 
-          return {
-            ...item,
-            locationBreakdown: newBreakdown,
-            staffConfirmed: allConfirmed,
-            staffAdjustedCount: hasAdjustments ? totalAdjusted : undefined,
-            requiresAdjustment: hasAdjustments,
-            discrepancy,
-          };
-        }
-
-        // Handle top-level update (legacy behavior or non-location items)
-        const updated = { ...item, [field]: value };
-        
-        // Recalculate discrepancy and requiresAdjustment
-        if (field === 'staffAdjustedCount') {
-          const adjustedCount = value === '' || value === undefined ? undefined : Number(value);
-          updated.staffAdjustedCount = adjustedCount;
-          updated.discrepancy = adjustedCount !== undefined ? adjustedCount - item.systemInventoryCount : 0;
-          updated.requiresAdjustment = adjustedCount !== undefined;
-          updated.staffConfirmed = false;
-        } else if (field === 'staffConfirmed') {
-          updated.staffConfirmed = value;
-          if (value) {
-            updated.staffAdjustedCount = undefined;
-            updated.discrepancy = 0;
-            updated.requiresAdjustment = false;
+            return {
+              ...item,
+              locationBreakdown: newBreakdown,
+              staffConfirmed: allConfirmed,
+              staffAdjustedCount: hasAdjustments ? totalAdjusted : undefined,
+              requiresAdjustment: hasAdjustments,
+              discrepancy,
+            };
           }
+
+          // Handle top-level update (legacy behavior or non-location items)
+          const updated = { ...item, [field]: value };
+
+          // Recalculate discrepancy and requiresAdjustment
+          if (field === 'staffAdjustedCount') {
+            const adjustedCount =
+              value === '' || value === undefined ? undefined : Number(value);
+            updated.staffAdjustedCount = adjustedCount;
+            updated.discrepancy =
+              adjustedCount !== undefined
+                ? adjustedCount - item.systemInventoryCount
+                : 0;
+            updated.requiresAdjustment = adjustedCount !== undefined;
+            updated.staffConfirmed = false;
+          } else if (field === 'staffConfirmed') {
+            updated.staffConfirmed = value;
+            if (value) {
+              updated.staffAdjustedCount = undefined;
+              updated.discrepancy = 0;
+              updated.requiresAdjustment = false;
+            }
+          }
+
+          return updated;
         }
-        
-        return updated;
-      }
-      return item;
-    }));
+        return item;
+      })
+    );
   }
 
   async function handleSaveChanges() {
     setIsLoading(true);
     try {
       const result = await updateSnapshotItemsAction(snapshot._id, editedItems);
-      
+
       if (result.success && result.data) {
         setSnapshot(result.data);
         setEditedItems(result.data.items);
@@ -175,7 +240,10 @@ export function SnapshotDetailsClient({ snapshot: initialSnapshot }: SnapshotDet
   async function handleApprove() {
     setIsLoading(true);
     try {
-      const result = await approveSnapshotAction(snapshot._id, notes || undefined);
+      const result = await approveSnapshotAction(
+        snapshot._id,
+        notes || undefined
+      );
 
       if (result.success) {
         toast({
@@ -248,23 +316,47 @@ export function SnapshotDetailsClient({ snapshot: initialSnapshot }: SnapshotDet
   function getStatusBadge(status: string) {
     switch (status) {
       case 'pending':
-        return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">Pending</Badge>;
+        return (
+          <Badge
+            variant="outline"
+            className="bg-amber-50 text-amber-700 border-amber-200"
+          >
+            Pending
+          </Badge>
+        );
       case 'approved':
-        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Approved</Badge>;
+        return (
+          <Badge
+            variant="outline"
+            className="bg-green-50 text-green-700 border-green-200"
+          >
+            Approved
+          </Badge>
+        );
       case 'rejected':
-        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Rejected</Badge>;
+        return (
+          <Badge
+            variant="outline"
+            className="bg-red-50 text-red-700 border-red-200"
+          >
+            Rejected
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
   }
 
   // Group items by subcategory for display
-  const groupedItems = currentItems.reduce((acc, item) => {
-    const subcategory = item.category || 'Uncategorized';
-    if (!acc[subcategory]) acc[subcategory] = [];
-    acc[subcategory].push(item);
-    return acc;
-  }, {} as Record<string, IInventorySnapshotItem[]>);
+  const groupedItems = currentItems.reduce(
+    (acc, item) => {
+      const subcategory = item.category || 'Uncategorized';
+      if (!acc[subcategory]) acc[subcategory] = [];
+      acc[subcategory].push(item);
+      return acc;
+    },
+    {} as Record<string, IInventorySnapshotItem[]>
+  );
 
   return (
     <div className="space-y-6">
@@ -290,7 +382,14 @@ export function SnapshotDetailsClient({ snapshot: initialSnapshot }: SnapshotDet
           <CardContent className="space-y-3">
             <div>
               <p className="text-sm text-muted-foreground">Category</p>
-              <Badge variant="outline" className={snapshot.mainCategory === 'food' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-blue-50 text-blue-700 border-blue-200'}>
+              <Badge
+                variant="outline"
+                className={
+                  snapshot.mainCategory === 'food'
+                    ? 'bg-orange-50 text-orange-700 border-orange-200'
+                    : 'bg-blue-50 text-blue-700 border-blue-200'
+                }
+              >
                 {snapshot.mainCategory === 'food' ? 'Food' : 'Drinks'}
               </Badge>
             </div>
@@ -313,7 +412,10 @@ export function SnapshotDetailsClient({ snapshot: initialSnapshot }: SnapshotDet
                 <div>
                   <p className="text-sm text-muted-foreground">Reviewed At</p>
                   <p className="font-medium">
-                    {format(new Date(snapshot.reviewedAt!), 'MMM dd, yyyy HH:mm')}
+                    {format(
+                      new Date(snapshot.reviewedAt!),
+                      'MMM dd, yyyy HH:mm'
+                    )}
                   </p>
                 </div>
               </>
@@ -339,15 +441,50 @@ export function SnapshotDetailsClient({ snapshot: initialSnapshot }: SnapshotDet
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">No Change</p>
-                <p className="text-2xl font-bold text-gray-600">{noChangeItems}</p>
+                <p className="text-2xl font-bold text-gray-600">
+                  {noChangeItems}
+                </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Confirmed (No Change)</p>
-                <p className="text-2xl font-bold text-green-600">{confirmedItems}</p>
+                <p className="text-sm text-muted-foreground">
+                  Confirmed (No Change)
+                </p>
+                <p className="text-2xl font-bold text-green-600">
+                  {confirmedItems}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Adjusted</p>
-                <p className="text-2xl font-bold text-amber-600">{adjustmentItems}</p>
+                <p className="text-2xl font-bold text-amber-600">
+                  {adjustmentItems}
+                </p>
+              </div>
+              {/* REQ-039: total cost of inventory reported as missing.
+                 Frozen at submission time; later cost changes do not
+                 retroactively rewrite this figure. Legacy snapshots
+                 (no frozen costs) render as `—`. */}
+              <div
+                className="col-span-2"
+                data-testid="snapshot-detail-missing-cost"
+              >
+                <p className="text-sm text-muted-foreground">Missing Cost</p>
+                {(() => {
+                  const { formatted, isLegacy, value } =
+                    formatMissingCostDisplay(currentItems);
+                  return (
+                    <p
+                      className={`text-2xl font-bold ${
+                        isLegacy
+                          ? 'text-muted-foreground'
+                          : value > 0
+                            ? 'text-red-600'
+                            : 'text-gray-600'
+                      }`}
+                    >
+                      {formatted}
+                    </p>
+                  );
+                })()}
               </div>
             </div>
           </CardContent>
@@ -361,12 +498,12 @@ export function SnapshotDetailsClient({ snapshot: initialSnapshot }: SnapshotDet
               <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
               <div>
                 <p className="font-medium text-amber-900">
-                  {adjustmentItems} item{adjustmentItems !== 1 ? 's' : ''} require inventory
-                  adjustment
+                  {adjustmentItems} item{adjustmentItems !== 1 ? 's' : ''}{' '}
+                  require inventory adjustment
                 </p>
                 <p className="text-sm text-amber-700 mt-1">
-                  Review the adjusted counts carefully before approving. Approving will update
-                  the inventory records.
+                  Review the adjusted counts carefully before approving.
+                  Approving will update the inventory records.
                 </p>
               </div>
             </div>
@@ -422,206 +559,320 @@ export function SnapshotDetailsClient({ snapshot: initialSnapshot }: SnapshotDet
                   <TableHead className="w-[30%]">Menu Item</TableHead>
                   <TableHead className="w-[15%]">Category</TableHead>
                   <TableHead className="text-right w-[8%]">Sales</TableHead>
-                  <TableHead className="text-right w-[10%]">System Count</TableHead>
-                  <TableHead className="text-center w-[8%]">Confirmed</TableHead>
-                  <TableHead className="text-right w-[14%]">Adjusted Count</TableHead>
+                  <TableHead className="text-right w-[10%]">
+                    System Count
+                  </TableHead>
+                  <TableHead className="text-center w-[8%]">
+                    Confirmed
+                  </TableHead>
+                  <TableHead className="text-right w-[14%]">
+                    Adjusted Count
+                  </TableHead>
                   <TableHead className="text-center w-[7%]">Status</TableHead>
                   <TableHead className="w-[8%]">Notes</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {Object.entries(groupedItems).map(([subcategory, subcategoryItems]) => (
-                  <Fragment key={`group-${subcategory}`}>
-                    <TableRow className="bg-muted/50">
-                      <TableCell colSpan={8} className="font-semibold">
-                        {subcategory}
-                      </TableCell>
-                    </TableRow>
-                    {subcategoryItems.map((item) => {
-                      const hasAdjustment = item.staffAdjustedCount !== undefined;
-                      const isConfirmed = item.staffConfirmed && !hasAdjustment;
-                      const hasLocationBreakdown = !!(item.locationBreakdown && item.locationBreakdown.length > 0);
+                {Object.entries(groupedItems).map(
+                  ([subcategory, subcategoryItems]) => (
+                    <Fragment key={`group-${subcategory}`}>
+                      <TableRow className="bg-muted/50">
+                        <TableCell colSpan={8} className="font-semibold">
+                          {subcategory}
+                        </TableCell>
+                      </TableRow>
+                      {subcategoryItems.map((item) => {
+                        const hasAdjustment =
+                          item.staffAdjustedCount !== undefined;
+                        const isConfirmed =
+                          item.staffConfirmed && !hasAdjustment;
+                        const hasLocationBreakdown = !!(
+                          item.locationBreakdown &&
+                          item.locationBreakdown.length > 0
+                        );
 
-                      return (
-                        <Fragment key={item.menuItemId}>
-                          <TableRow
-                            className={
-                              hasAdjustment ? 'bg-amber-50/40' :
-                              isConfirmed ? 'bg-green-50/40' : ''
-                            }
-                          >
-                            <TableCell className="font-medium">{item.menuItemName}</TableCell>
-                            <TableCell className="text-muted-foreground">{item.category}</TableCell>
-                            <TableCell className="text-right">{item.todaySalesCount}</TableCell>
-                            <TableCell className="text-right font-medium">{item.systemInventoryCount}</TableCell>
-                            {/* Confirmed checkbox — disabled for location items (controlled per-location) */}
-                            <TableCell className="text-center">
-                              <Checkbox
-                                checked={item.staffConfirmed}
-                                onCheckedChange={(checked) =>
-                                  handleItemChange(item.menuItemName, 'staffConfirmed', checked)
-                                }
-                                disabled={
-                                  !isEditMode ||
-                                  hasLocationBreakdown ||
-                                  hasAdjustment
-                                }
-                              />
-                            </TableCell>
-                            {/* Adjusted count */}
-                            <TableCell className="text-right">
-                              {hasLocationBreakdown ? (
-                                <Input
-                                  type="text"
-                                  value={item.staffAdjustedCount !== undefined ? item.staffAdjustedCount : ''}
-                                  readOnly
-                                  className="w-24 bg-muted text-right ml-auto h-9"
-                                  placeholder="Sum"
-                                />
-                              ) : isEditMode ? (
-                                <div className="flex items-center justify-end gap-2">
-                                  <Input
-                                    type="number"
-                                    value={item.staffAdjustedCount ?? ''}
-                                    onChange={(e) =>
-                                      handleItemChange(item.menuItemName, 'staffAdjustedCount', e.target.value)
-                                    }
-                                    className="w-24 text-right ml-auto h-9"
-                                    placeholder="Adjust"
-                                    disabled={item.staffConfirmed}
-                                  />
-                                  {item.discrepancy !== 0 && item.staffAdjustedCount !== undefined && (
-                                    <span className={`text-xs font-medium w-8 text-right ${item.discrepancy > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                      {item.discrepancy > 0 ? '+' : ''}{item.discrepancy}
-                                    </span>
-                                  )}
-                                </div>
-                              ) : item.staffAdjustedCount !== undefined ? (
-                                <div className="flex items-center justify-end gap-2">
-                                  <span className="font-medium">{item.staffAdjustedCount}</span>
-                                  {item.discrepancy !== 0 && (
-                                    <span className={`text-xs font-medium ${item.discrepancy > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                      {item.discrepancy > 0 ? '+' : ''}{item.discrepancy}
-                                    </span>
-                                  )}
-                                </div>
-                              ) : (
-                                <span className="text-muted-foreground">-</span>
-                              )}
-                            </TableCell>
-                            {/* Status badge */}
-                            <TableCell className="text-center">
-                              {hasAdjustment ? (
-                                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                                  Adjusted
-                                </Badge>
-                              ) : isConfirmed ? (
-                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                  Confirmed
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200">
-                                  No change
-                                </Badge>
-                              )}
-                            </TableCell>
-                            {/* Notes */}
-                            <TableCell>
-                              {isEditMode ? (
-                                <Input
-                                  value={item.staffNotes || ''}
-                                  onChange={(e) =>
-                                    handleItemChange(item.menuItemName, 'staffNotes', e.target.value)
-                                  }
-                                  className="w-full"
-                                  placeholder="Add notes..."
-                                />
-                              ) : item.staffNotes ? (
-                                <span className="text-sm">{item.staffNotes}</span>
-                              ) : (
-                                <span className="text-muted-foreground">-</span>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                          {/* Per-location child rows */}
-                          {hasLocationBreakdown && item.locationBreakdown!.map((loc) => (
-                            <TableRow key={`${item.menuItemId}-${loc.location}`} className="bg-muted/10">
-                              <TableCell>
-                                <div className="pl-6 flex items-center gap-2">
-                                  <div className="w-4 border-l-2 border-b-2 border-muted-foreground/30 h-3 rounded-bl-sm" />
-                                  <span className="text-sm text-muted-foreground">{loc.locationName}</span>
-                                </div>
+                        return (
+                          <Fragment key={item.menuItemId}>
+                            <TableRow
+                              className={
+                                hasAdjustment
+                                  ? 'bg-amber-50/40'
+                                  : isConfirmed
+                                    ? 'bg-green-50/40'
+                                    : ''
+                              }
+                            >
+                              <TableCell className="font-medium">
+                                {item.menuItemName}
                               </TableCell>
-                              <TableCell />
-                              <TableCell />
+                              <TableCell className="text-muted-foreground">
+                                {item.category}
+                              </TableCell>
                               <TableCell className="text-right">
-                                <span className="text-sm text-muted-foreground">{loc.currentStock}</span>
+                                {item.todaySalesCount}
                               </TableCell>
+                              <TableCell className="text-right font-medium">
+                                {item.systemInventoryCount}
+                              </TableCell>
+                              {/* Confirmed checkbox — disabled for location items (controlled per-location) */}
                               <TableCell className="text-center">
                                 <Checkbox
-                                  checked={loc.staffConfirmed}
+                                  checked={item.staffConfirmed}
                                   onCheckedChange={(checked) =>
-                                    handleItemChange(item.menuItemName, 'staffConfirmed', checked, loc.location)
+                                    handleItemChange(
+                                      item.menuItemName,
+                                      'staffConfirmed',
+                                      checked
+                                    )
                                   }
-                                  disabled={!isEditMode}
+                                  disabled={
+                                    !isEditMode ||
+                                    hasLocationBreakdown ||
+                                    hasAdjustment
+                                  }
                                 />
                               </TableCell>
+                              {/* Adjusted count */}
                               <TableCell className="text-right">
-                                {isEditMode ? (
+                                {hasLocationBreakdown ? (
+                                  <Input
+                                    type="text"
+                                    value={
+                                      item.staffAdjustedCount !== undefined
+                                        ? item.staffAdjustedCount
+                                        : ''
+                                    }
+                                    readOnly
+                                    className="w-24 bg-muted text-right ml-auto h-9"
+                                    placeholder="Sum"
+                                  />
+                                ) : isEditMode ? (
                                   <div className="flex items-center justify-end gap-2">
                                     <Input
                                       type="number"
-                                      value={loc.staffAdjustedCount ?? ''}
+                                      value={item.staffAdjustedCount ?? ''}
                                       onChange={(e) =>
-                                        handleItemChange(item.menuItemName, 'staffAdjustedCount', e.target.value, loc.location)
+                                        handleItemChange(
+                                          item.menuItemName,
+                                          'staffAdjustedCount',
+                                          e.target.value
+                                        )
                                       }
-                                      className="w-24 text-right h-8 text-sm"
+                                      className="w-24 text-right ml-auto h-9"
                                       placeholder="Adjust"
-                                      disabled={loc.staffConfirmed}
+                                      disabled={item.staffConfirmed}
                                     />
-                                    {loc.staffAdjustedCount !== undefined && loc.staffAdjustedCount !== loc.currentStock && (
-                                      <span className={`text-xs font-medium w-8 text-right ${(loc.staffAdjustedCount - loc.currentStock) > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                        {(loc.staffAdjustedCount - loc.currentStock) > 0 ? '+' : ''}{loc.staffAdjustedCount - loc.currentStock}
-                                      </span>
-                                    )}
+                                    {item.discrepancy !== 0 &&
+                                      item.staffAdjustedCount !== undefined && (
+                                        <span
+                                          className={`text-xs font-medium w-8 text-right ${item.discrepancy > 0 ? 'text-green-600' : 'text-red-600'}`}
+                                        >
+                                          {item.discrepancy > 0 ? '+' : ''}
+                                          {item.discrepancy}
+                                        </span>
+                                      )}
                                   </div>
-                                ) : loc.staffAdjustedCount !== undefined ? (
+                                ) : item.staffAdjustedCount !== undefined ? (
                                   <div className="flex items-center justify-end gap-2">
-                                    <span className="font-medium text-sm">{loc.staffAdjustedCount}</span>
-                                    {loc.staffAdjustedCount !== loc.currentStock && (
-                                      <span className={`text-xs font-medium ${(loc.staffAdjustedCount - loc.currentStock) > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                        {(loc.staffAdjustedCount - loc.currentStock) > 0 ? '+' : ''}{loc.staffAdjustedCount - loc.currentStock}
+                                    <span className="font-medium">
+                                      {item.staffAdjustedCount}
+                                    </span>
+                                    {item.discrepancy !== 0 && (
+                                      <span
+                                        className={`text-xs font-medium ${item.discrepancy > 0 ? 'text-green-600' : 'text-red-600'}`}
+                                      >
+                                        {item.discrepancy > 0 ? '+' : ''}
+                                        {item.discrepancy}
                                       </span>
                                     )}
                                   </div>
                                 ) : (
-                                  <span className="text-muted-foreground text-sm">-</span>
+                                  <span className="text-muted-foreground">
+                                    -
+                                  </span>
                                 )}
                               </TableCell>
-                              {/* Status for location row */}
+                              {/* Status badge */}
                               <TableCell className="text-center">
-                                {loc.staffAdjustedCount !== undefined ? (
-                                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
+                                {hasAdjustment ? (
+                                  <Badge
+                                    variant="outline"
+                                    className="bg-amber-50 text-amber-700 border-amber-200"
+                                  >
                                     Adjusted
                                   </Badge>
-                                ) : loc.staffConfirmed ? (
-                                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
+                                ) : isConfirmed ? (
+                                  <Badge
+                                    variant="outline"
+                                    className="bg-green-50 text-green-700 border-green-200"
+                                  >
                                     Confirmed
                                   </Badge>
                                 ) : (
-                                  <Badge variant="outline" className="bg-gray-50 text-gray-500 border-gray-200 text-xs">
+                                  <Badge
+                                    variant="outline"
+                                    className="bg-gray-50 text-gray-600 border-gray-200"
+                                  >
                                     No change
                                   </Badge>
                                 )}
                               </TableCell>
-                              <TableCell />
+                              {/* Notes */}
+                              <TableCell>
+                                {isEditMode ? (
+                                  <Input
+                                    value={item.staffNotes || ''}
+                                    onChange={(e) =>
+                                      handleItemChange(
+                                        item.menuItemName,
+                                        'staffNotes',
+                                        e.target.value
+                                      )
+                                    }
+                                    className="w-full"
+                                    placeholder="Add notes..."
+                                  />
+                                ) : item.staffNotes ? (
+                                  <span className="text-sm">
+                                    {item.staffNotes}
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground">
+                                    -
+                                  </span>
+                                )}
+                              </TableCell>
                             </TableRow>
-                          ))}
-                        </Fragment>
-                      );
-                    })}
-                  </Fragment>
-                ))}
+                            {/* Per-location child rows */}
+                            {hasLocationBreakdown &&
+                              item.locationBreakdown!.map((loc) => (
+                                <TableRow
+                                  key={`${item.menuItemId}-${loc.location}`}
+                                  className="bg-muted/10"
+                                >
+                                  <TableCell>
+                                    <div className="pl-6 flex items-center gap-2">
+                                      <div className="w-4 border-l-2 border-b-2 border-muted-foreground/30 h-3 rounded-bl-sm" />
+                                      <span className="text-sm text-muted-foreground">
+                                        {loc.locationName}
+                                      </span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell />
+                                  <TableCell />
+                                  <TableCell className="text-right">
+                                    <span className="text-sm text-muted-foreground">
+                                      {loc.currentStock}
+                                    </span>
+                                  </TableCell>
+                                  <TableCell className="text-center">
+                                    <Checkbox
+                                      checked={loc.staffConfirmed}
+                                      onCheckedChange={(checked) =>
+                                        handleItemChange(
+                                          item.menuItemName,
+                                          'staffConfirmed',
+                                          checked,
+                                          loc.location
+                                        )
+                                      }
+                                      disabled={!isEditMode}
+                                    />
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    {isEditMode ? (
+                                      <div className="flex items-center justify-end gap-2">
+                                        <Input
+                                          type="number"
+                                          value={loc.staffAdjustedCount ?? ''}
+                                          onChange={(e) =>
+                                            handleItemChange(
+                                              item.menuItemName,
+                                              'staffAdjustedCount',
+                                              e.target.value,
+                                              loc.location
+                                            )
+                                          }
+                                          className="w-24 text-right h-8 text-sm"
+                                          placeholder="Adjust"
+                                          disabled={loc.staffConfirmed}
+                                        />
+                                        {loc.staffAdjustedCount !== undefined &&
+                                          loc.staffAdjustedCount !==
+                                            loc.currentStock && (
+                                            <span
+                                              className={`text-xs font-medium w-8 text-right ${loc.staffAdjustedCount - loc.currentStock > 0 ? 'text-green-600' : 'text-red-600'}`}
+                                            >
+                                              {loc.staffAdjustedCount -
+                                                loc.currentStock >
+                                              0
+                                                ? '+'
+                                                : ''}
+                                              {loc.staffAdjustedCount -
+                                                loc.currentStock}
+                                            </span>
+                                          )}
+                                      </div>
+                                    ) : loc.staffAdjustedCount !== undefined ? (
+                                      <div className="flex items-center justify-end gap-2">
+                                        <span className="font-medium text-sm">
+                                          {loc.staffAdjustedCount}
+                                        </span>
+                                        {loc.staffAdjustedCount !==
+                                          loc.currentStock && (
+                                          <span
+                                            className={`text-xs font-medium ${loc.staffAdjustedCount - loc.currentStock > 0 ? 'text-green-600' : 'text-red-600'}`}
+                                          >
+                                            {loc.staffAdjustedCount -
+                                              loc.currentStock >
+                                            0
+                                              ? '+'
+                                              : ''}
+                                            {loc.staffAdjustedCount -
+                                              loc.currentStock}
+                                          </span>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <span className="text-muted-foreground text-sm">
+                                        -
+                                      </span>
+                                    )}
+                                  </TableCell>
+                                  {/* Status for location row */}
+                                  <TableCell className="text-center">
+                                    {loc.staffAdjustedCount !== undefined ? (
+                                      <Badge
+                                        variant="outline"
+                                        className="bg-amber-50 text-amber-700 border-amber-200 text-xs"
+                                      >
+                                        Adjusted
+                                      </Badge>
+                                    ) : loc.staffConfirmed ? (
+                                      <Badge
+                                        variant="outline"
+                                        className="bg-green-50 text-green-700 border-green-200 text-xs"
+                                      >
+                                        Confirmed
+                                      </Badge>
+                                    ) : (
+                                      <Badge
+                                        variant="outline"
+                                        className="bg-gray-50 text-gray-500 border-gray-200 text-xs"
+                                      >
+                                        No change
+                                      </Badge>
+                                    )}
+                                  </TableCell>
+                                  <TableCell />
+                                </TableRow>
+                              ))}
+                          </Fragment>
+                        );
+                      })}
+                    </Fragment>
+                  )
+                )}
               </TableBody>
             </Table>
           </div>
@@ -679,7 +930,10 @@ export function SnapshotDetailsClient({ snapshot: initialSnapshot }: SnapshotDet
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsApproveDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsApproveDialogOpen(false)}
+            >
               Cancel
             </Button>
             <Button onClick={handleApprove} disabled={isLoading}>
@@ -694,8 +948,8 @@ export function SnapshotDetailsClient({ snapshot: initialSnapshot }: SnapshotDet
           <DialogHeader>
             <DialogTitle>Reject Snapshot</DialogTitle>
             <DialogDescription>
-              Please provide a reason for rejecting this snapshot. The staff member will be
-              notified.
+              Please provide a reason for rejecting this snapshot. The staff
+              member will be notified.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -712,7 +966,10 @@ export function SnapshotDetailsClient({ snapshot: initialSnapshot }: SnapshotDet
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsRejectDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsRejectDialogOpen(false)}
+            >
               Cancel
             </Button>
             <Button

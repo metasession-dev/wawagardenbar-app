@@ -667,6 +667,7 @@ This section tracks discrete change requests (REQ-001 through REQ-008) that repr
 | REQ-037 | #83   | MEDIUM | compliance/evidence/REQ-037/ | RELEASED (PR #86 merged to main `fac0e6c` 2026-05-17; prod smoke walked 2026-05-17 — create / edit / blocked-archive / archive / restore round-trip + historical-data regression; no defects logged; ticket archived to approved-releases) | ostendo-io      | 2026-05-17 |
 | REQ-040 | #89   | LOW    | compliance/evidence/REQ-040/ | SCAFFOLDED (D12 follow-up — scripts refuse mongodb:// URIs without database path; pure-helper `assertMongoUriHasDatabase`; wired into backfill-inventory-kind + audit-expense-link-units scripts; bundled with REQ-038 + REQ-039)          | ostendo-io      | 2026-05-17 |
 | REQ-039 | #88   | MEDIUM | compliance/evidence/REQ-039/ | SCAFFOLDED (missing-inventory cost on snapshot summaries; cost-per-unit frozen at submission; live total on submit form + Summary cell on detail + column on list; bundled with REQ-038 + REQ-040)                                         | ostendo-io      | 2026-05-17 |
+| REQ-038 | #84   | MEDIUM | compliance/evidence/REQ-038/ | SCAFFOLDED (restock sellable inventory from expense + per-MenuItem `expenseUnitOverride`; UoM-registry-sourced Purchase unit dropdown; service-side override enforcement; bundled with REQ-039 + REQ-040)                                  | ostendo-io      | 2026-05-17 |
 
 ### Change Request Dependencies
 

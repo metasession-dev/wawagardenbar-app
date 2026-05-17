@@ -665,6 +665,7 @@ This section tracks discrete change requests (REQ-001 through REQ-008) that repr
 | REQ-036 | #77   | MEDIUM | compliance/evidence/REQ-036/ | APPROVED - DEPLOYED (add-on to REQ-035 #76; bundled merge PR #80)                                                                                                                                                                          | ostendo-io      | 2026-05-08 |
 | REQ-034 | #74   | HIGH   | compliance/evidence/REQ-034/ | RELEASED (PR #82 merged to main `b314ff3` 2026-05-14; prod backfill 112 inv + 98 menu-items; prod smoke walked 2026-05-15; 12 defects D1–D12 logged + resolved; ticket archived to approved-releases)                                      | ostendo-io      | 2026-05-15 |
 | REQ-037 | #83   | MEDIUM | compliance/evidence/REQ-037/ | RELEASED (PR #86 merged to main `fac0e6c` 2026-05-17; prod smoke walked 2026-05-17 — create / edit / blocked-archive / archive / restore round-trip + historical-data regression; no defects logged; ticket archived to approved-releases) | ostendo-io      | 2026-05-17 |
+| REQ-040 | #89   | LOW    | compliance/evidence/REQ-040/ | SCAFFOLDED (D12 follow-up — scripts refuse mongodb:// URIs without database path; pure-helper `assertMongoUriHasDatabase`; wired into backfill-inventory-kind + audit-expense-link-units scripts; bundled with REQ-038 + REQ-039)          | ostendo-io      | 2026-05-17 |
 
 ### Change Request Dependencies
 

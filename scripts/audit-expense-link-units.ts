@@ -37,6 +37,7 @@ import {
   type UnitOfMeasurement,
 } from '../interfaces/unit-of-measurement.interface';
 import { convertExpenseQuantityToInventoryUnit } from '../lib/expense-inventory-link';
+import { assertMongoUriHasDatabase } from '../lib/mongo-uri';
 
 config({ path: path.resolve(__dirname, '../.env.local') });
 
@@ -64,7 +65,18 @@ async function main() {
     process.exit(2);
   }
 
+  // REQ-040 / D12 guard: refuse URIs without a database path BEFORE any
+  // mongoose.connect() call, so we never silently connect to the wrong DB.
+  let resolved: { uri: string; database: string };
+  try {
+    resolved = assertMongoUriHasDatabase(uri);
+  } catch (err) {
+    console.error(`[REQ-040] ${(err as Error).message}`);
+    process.exit(1);
+  }
+
   console.log('[REQ-034 D10] expense-link unit audit starting; connecting…');
+  console.log(`Connecting to database: ${resolved.database}`);
   await mongoose.connect(uri);
 
   // Read UoM registry directly via the model we already have an open

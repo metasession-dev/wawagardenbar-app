@@ -102,10 +102,10 @@ for REQ in $REQUIREMENTS; do
         fi
         # Try exact path; otherwise search the repo by basename, skipping
         # node_modules and build/coverage outputs. The previous
-        # `compgen -G "**/X"` form silently failed for files at depth ≥2
-        # because bash globstar is off by default, so `**` collapsed to `*`
-        # (single-level). Tests referenced by bare filename were therefore
-        # reported missing even when present. See METACOMPLY-XXX.
+        # `compgen -G "**/X"` form relied on bash globstar to recurse,
+        # but globstar is OFF by default — `**` collapsed to a single
+        # `*` (depth-1 wildcard), so any bare-filename reference whose
+        # actual file lived at depth ≥2 was falsely reported as missing.
         if [ ! -f "$TF" ] && ! find . \
              -type d \( -name node_modules -o -name .next -o -name .git \
                         -o -name playwright-report -o -name coverage \

@@ -1,5 +1,7 @@
 {
   "project_slug": "wawagardenbar-app",
+  "stack": "node",
+  "host": "railway",
   "production_url_secret": "WAWAGARDENBAR_PROD_URL",
   "node_version": 20,
   "runner": "self-hosted",

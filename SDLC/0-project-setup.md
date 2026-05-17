@@ -18,13 +18,31 @@ This guide configures a new project so that the five pipeline workflows can run 
 
 ---
 
+## Fast path (recommended): `sdlc-onboard.sh`
+
+If you're starting a new project from scratch, the DevAudit team maintains a one-shot onboarding script that automates almost all of this guide. It writes `sdlc-config.json`, creates the DevAudit project, issues an API key, sets the GitHub secrets and variables, installs the hook framework, configures branch protection, and runs the first template sync — in roughly 30 seconds.
+
+```bash
+# In DevAudit's working copy:
+export META_COMPLY_USER_TOKEN="mctok_..."   # Issued at https://devaudit.metasession.co/settings/tokens
+./scripts/sdlc-onboard.sh ../path/to/this-project
+```
+
+See [`docs/onboarding.md` in DevAudit](https://github.com/metasession-dev/devaudit/blob/main/docs/onboarding.md) for the full walkthrough.
+
+If you take the fast path, skip to Step 6 (Tier 1 docs reference) — Steps 1–5 are handled automatically. The remaining manual steps in this guide are still relevant: project-specific customisation of `INSTRUCTIONS.md` and `CLAUDE.md`, optional UAT-environment configuration, and verifying the first end-to-end release walks through Stages 1–5 cleanly.
+
+The steps below remain as the **manual reference** for cases where the script can't be used (e.g. no network access to DevAudit at setup time, or an unsupported stack/host combination). They produce the same end state as the script.
+
+---
+
 ## Prerequisites
 
 - GitHub repository created
-- Hosting platform configured (Railway, Vercel, AWS, etc.) with auto-deploy from `main` (production)
-- UAT environment configured (recommended) with auto-deploy from `develop`
+- Hosting platform configured (Railway, Vercel, Fly, etc.) with auto-deploy from `main` (production)
+- UAT environment configured (optional, opt-in by risk class — see Stage 3 Step 10)
 - Local development environment working (app builds and runs)
-- Node.js and npm installed
+- Stack toolchain: Node.js + npm (Node stack) OR Python 3.11+ + pip (Python stack)
 - GitHub CLI (`gh`) installed and authenticated
 
 ---

@@ -211,18 +211,13 @@ jobs:
       - name: Determine release version
         id: version
         run: |
-          DATE_PREFIX="v$(date +%Y.%m.%d)"
-          # Resolve the next sequence version via DevAudit's CI API.
-          # The endpoint preserves the legacy ci.yml semantics: each push
-          # gets its own release (vX.Y.Z, vX.Y.Z.2, vX.Y.Z.3, …).
-          RESP=$(curl -s -H "Authorization: Bearer ${META_COMPLY_API_KEY}" \
-            "${BASE}/api/ci/releases/resolve?projectSlug=wawagardenbar-app&versionPrefix=${DATE_PREFIX}")
-          VERSION=$(echo "$RESP" | jq -r '.nextSequenceVersion // empty')
-          if [ -z "$VERSION" ]; then
-            # If the resolve endpoint failed, fall back to the bare date.
-            # The route's findOrCreateRelease will dedupe.
-            VERSION="${DATE_PREFIX}"
-          fi
+          # Release identity is the REQ tag on the latest commit
+          # ([REQ-XXX] in subject, Ref: REQ-XXX in body), with a bare-date
+          # fallback for housekeeping commits. Both this workflow and
+          # compliance-evidence.yml call the same helper so a single
+          # feature converges on one release record. See DevAudit #310.
+          chmod +x scripts/derive-release-version.sh 2>/dev/null || true
+          VERSION=$(./scripts/derive-release-version.sh)
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "Release version: ${VERSION}"
 

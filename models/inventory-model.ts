@@ -61,6 +61,14 @@ const inventorySchema = new Schema<IInventory>(
     defaultSalesLocation: { type: String },
     crateSize: { type: Number, min: 1 },
     packagingType: { type: String },
+    /**
+     * REQ-037 — Soft-delete marker for kitchen-ingredient inventory rows.
+     * When set, the row stays queryable by `_id` (so historical
+     * StockMovement / Expense / CostHistory back-refs continue to resolve)
+     * but is filtered out of listing surfaces (Kitchen tab, Recipe builder
+     * dropdown, Expense form "Add to kitchen inventory" dropdown).
+     */
+    archivedAt: { type: Date },
   },
   {
     timestamps: true,
@@ -73,6 +81,7 @@ inventorySchema.index({ status: 1 });
 inventorySchema.index({ currentStock: 1 });
 inventorySchema.index({ 'locations.location': 1 });
 inventorySchema.index({ kind: 1 });
+inventorySchema.index({ kind: 1, archivedAt: 1 });
 
 inventorySchema.pre('save', function preSave(next) {
   // Sync currentStock with location totals if tracking by location

@@ -31,7 +31,11 @@ import path from 'path';
 import fs from 'fs';
 import { ExpenseModel } from '../models';
 import InventoryModel from '../models/inventory-model';
-import { SystemSettingsService } from '../services/system-settings-service';
+import SystemSettingsModel from '../models/system-settings-model';
+import {
+  DEFAULT_UNITS_OF_MEASUREMENT,
+  type UnitOfMeasurement,
+} from '../interfaces/unit-of-measurement.interface';
 import { convertExpenseQuantityToInventoryUnit } from '../lib/expense-inventory-link';
 
 config({ path: path.resolve(__dirname, '../.env.local') });
@@ -63,7 +67,16 @@ async function main() {
   console.log('[REQ-034 D10] expense-link unit audit starting; connecting…');
   await mongoose.connect(uri);
 
-  const registry = await SystemSettingsService.getUnitsOfMeasurement();
+  // Read UoM registry directly via the model we already have an open
+  // connection for — avoids `SystemSettingsService.getUnitsOfMeasurement`
+  // which internally calls `connectDB()` and would conflict with the
+  // explicit `mongoose.connect(uri)` above.
+  const setting = await SystemSettingsModel.findOne({
+    key: 'units-of-measurement',
+  }).lean();
+  const registry: UnitOfMeasurement[] =
+    (setting?.value as UnitOfMeasurement[] | undefined) ??
+    DEFAULT_UNITS_OF_MEASUREMENT;
 
   const expenses = await ExpenseModel.find({
     linkedInventoryId: { $ne: null },

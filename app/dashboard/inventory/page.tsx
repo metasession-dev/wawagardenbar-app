@@ -15,15 +15,21 @@ import {
 } from 'lucide-react';
 
 /**
- * REQ-034 AC3: load inventory filtered by `kind` so the dashboard's
- * Sellable / Kitchen tabs can be populated independently.
+ * REQ-034 AC3 / REQ-037 AC4: load inventory filtered by `kind`. The
+ * dashboard's Sellable + Kitchen tabs are populated independently.
+ * `archived` controls whether the result is the active rows (default)
+ * or the archived rows (used by the Kitchen tab's Show archived
+ * section under REQ-037).
  */
-async function getInventoryByKind(kind: InventoryKind) {
+async function getInventoryByKind(kind: InventoryKind, archived = false) {
   await connectDB();
 
-  const inventory = await InventoryModel.find({ kind })
+  const inventory = await InventoryModel.find({
+    kind,
+    archivedAt: { $exists: archived },
+  })
     .populate('menuItemId', 'name mainCategory category')
-    .sort({ currentStock: 1 })
+    .sort(archived ? { updatedAt: -1 } : { currentStock: 1 })
     .lean();
 
   // Serialize data for Client Component
@@ -129,15 +135,18 @@ async function InventoryStats() {
  * Inventory list (Sellable / Kitchen tabs — REQ-034 AC3).
  */
 async function InventoryList() {
-  const [sellableInventory, kitchenInventory] = await Promise.all([
-    getInventoryByKind('menu-item'),
-    getInventoryByKind('kitchen-ingredient'),
-  ]);
+  const [sellableInventory, kitchenInventory, archivedKitchenInventory] =
+    await Promise.all([
+      getInventoryByKind('menu-item'),
+      getInventoryByKind('kitchen-ingredient'),
+      getInventoryByKind('kitchen-ingredient', true),
+    ]);
 
   return (
     <InventoryItemsClient
       sellableInventory={sellableInventory}
       kitchenInventory={kitchenInventory}
+      archivedKitchenInventory={archivedKitchenInventory}
     />
   );
 }

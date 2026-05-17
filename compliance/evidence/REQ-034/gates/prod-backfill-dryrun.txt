@@ -1,0 +1,4 @@
+[dotenv@17.2.3] injecting env (50) from .env.local -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
+[REQ-034] kind backfill starting (dry-run=true); connecting…
+[REQ-034] candidates without kind — inventory: 112, menu-items: 98
+[REQ-034] dry-run: no writes performed.

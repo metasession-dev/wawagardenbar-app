@@ -375,11 +375,30 @@ class InventoryService {
    * REQ-034 AC3: List inventory rows filtered by `kind`. The Inventory dashboard
    * uses this to populate its Sellable / Kitchen tabs without leaking
    * kitchen-ingredient rows into the sellable tab (or vice versa).
+   *
+   * REQ-037 AC4: also filters out soft-archived rows (`archivedAt`
+   * present). This is the single source of truth for the
+   * "show kitchen ingredients" query — fixes the Inventory dashboard,
+   * the Recipe builder ingredient dropdown, and any other surface that
+   * goes through this method in one edit.
    */
   static async listByKind(kind: InventoryKind) {
-    return InventoryModel.find({ kind })
+    return InventoryModel.find({ kind, archivedAt: { $exists: false } })
       .populate('menuItemId', 'name mainCategory category')
       .sort({ currentStock: 1 })
+      .lean();
+  }
+
+  /**
+   * REQ-037 AC7 — List ONLY archived inventory rows of a given kind.
+   * Drives the Kitchen tab's "Show archived" section + the Restore
+   * flow. Mirrors `listByKind` shape so the caller can re-use the
+   * same row-rendering code path.
+   */
+  static async listArchivedByKind(kind: InventoryKind) {
+    return InventoryModel.find({ kind, archivedAt: { $exists: true } })
+      .populate('menuItemId', 'name mainCategory category')
+      .sort({ archivedAt: -1 })
       .lean();
   }
 

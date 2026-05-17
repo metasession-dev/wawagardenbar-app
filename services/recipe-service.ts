@@ -220,6 +220,36 @@ export class RecipeService {
   static async reactivateRecipe(id: string): Promise<IRecipe> {
     return this.updateRecipe(id, { isActive: true });
   }
+
+  /**
+   * REQ-037 AC3 — Find every ACTIVE recipe that consumes a given
+   * kitchen-ingredient inventory row. Used by the delete safe-removal
+   * guard so the operator gets a clear error naming exactly which
+   * recipes block the delete.
+   *
+   * Deactivated recipes are intentionally excluded — they don't drive
+   * Make-a-batch, so deleting the ingredient won't disrupt any active
+   * production flow. Historical Production records carry their own
+   * ingredient snapshot, so they remain valid post-delete regardless.
+   */
+  static async findActiveRecipesReferencingInventory(
+    inventoryId: string | Types.ObjectId
+  ): Promise<Pick<IRecipe, '_id' | 'name'>[]> {
+    await connectDB();
+    const objectId =
+      typeof inventoryId === 'string'
+        ? new Types.ObjectId(inventoryId)
+        : inventoryId;
+    return RecipeModel.find(
+      {
+        isActive: true,
+        'ingredients.inventoryId': objectId,
+      },
+      { _id: 1, name: 1 }
+    )
+      .sort({ name: 1 })
+      .lean() as Promise<Pick<IRecipe, '_id' | 'name'>[]>;
+  }
 }
 
 export default RecipeService;

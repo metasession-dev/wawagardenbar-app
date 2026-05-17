@@ -92,6 +92,12 @@ export interface IMenuItem {
     quarterPortionSurcharge: number;
   };
   allowManualPriceOverride: boolean;
+  /**
+   * REQ-037 — Soft-delete marker for the hidden MenuItem paired with a
+   * kitchen-ingredient inventory row. Mirrors `Inventory.archivedAt`.
+   * Never set on sellable menu items.
+   */
+  archivedAt?: Date;
   createdAt: string;
   updatedAt: string;
 }

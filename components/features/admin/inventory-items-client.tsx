@@ -1,10 +1,19 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Eye, Pencil, Archive, ArchiveRestore } from 'lucide-react';
 import { CategoryFilter } from './category-filter';
-import { InventoryTable } from './inventory-table';
+import {
+  InventoryTable,
+  type InventoryItem as TableInventoryItem,
+} from './inventory-table';
 import { AddKitchenIngredientDialog } from './add-kitchen-ingredient-dialog';
+import { EditKitchenIngredientDialog } from './edit-kitchen-ingredient-dialog';
+import { ArchiveKitchenIngredientDialog } from './archive-kitchen-ingredient-dialog';
+import { restoreKitchenIngredientAction } from '@/app/actions/admin/kitchen-ingredient-actions';
 import type { InventoryTab } from '@/lib/inventory-tabs';
 import type { InventoryKind } from '@/interfaces/inventory.interface';
 
@@ -35,9 +44,21 @@ interface InventoryItem {
 interface InventoryItemsClientProps {
   sellableInventory: InventoryItem[];
   kitchenInventory: InventoryItem[];
+  /**
+   * REQ-037 — Archived kitchen ingredients (soft-archived rows). Rendered
+   * inside the Kitchen tab when "Show archived" is toggled on; each row
+   * exposes a Restore action.
+   */
+  archivedKitchenInventory?: InventoryItem[];
 }
 
-function InventoryTabContent({ inventory }: { inventory: InventoryItem[] }) {
+function InventoryTabContent({
+  inventory,
+  renderRowActions,
+}: {
+  inventory: InventoryItem[];
+  renderRowActions?: (item: TableInventoryItem) => React.ReactNode;
+}) {
   const [selectedCategory, setSelectedCategory] = useState('');
 
   const categories = useMemo(() => {
@@ -63,7 +84,10 @@ function InventoryTabContent({ inventory }: { inventory: InventoryItem[] }) {
         selectedCategory={selectedCategory}
         onCategoryChange={setSelectedCategory}
       />
-      <InventoryTable inventory={filteredItems} />
+      <InventoryTable
+        inventory={filteredItems}
+        renderRowActions={renderRowActions}
+      />
     </div>
   );
 }
@@ -71,32 +95,177 @@ function InventoryTabContent({ inventory }: { inventory: InventoryItem[] }) {
 export function InventoryItemsClient({
   sellableInventory,
   kitchenInventory,
+  archivedKitchenInventory = [],
 }: InventoryItemsClientProps) {
   const [activeTab, setActiveTab] = useState<InventoryTab>('sellable');
+  const router = useRouter();
+
+  // REQ-037 — Edit + Archive dialog state for the Kitchen tab. Single
+  // shared state at this level so the row buttons just set the target.
+  const [editTarget, setEditTarget] = useState<TableInventoryItem | null>(null);
+  const [archiveTarget, setArchiveTarget] = useState<TableInventoryItem | null>(
+    null
+  );
+
+  // REQ-037 — "Show archived" reveals the archived sub-list with
+  // Restore actions per row. Hidden by default to keep the operator's
+  // attention on the active inventory.
+  const [showArchived, setShowArchived] = useState(false);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
+
+  async function onRestore(item: TableInventoryItem) {
+    setRestoringId(item._id);
+    const result = await restoreKitchenIngredientAction(item._id);
+    setRestoringId(null);
+    if (!result.success) {
+      alert(result.error);
+      return;
+    }
+    router.refresh();
+  }
+
+  function renderKitchenRowActions(item: TableInventoryItem) {
+    const ingredientName = item.menuItemId?.name ?? 'ingredient';
+    return (
+      <div className="flex gap-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label={`View details for ${ingredientName}`}
+          onClick={() => router.push(`/dashboard/inventory/${item._id}`)}
+        >
+          <Eye className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label={`Edit ${ingredientName}`}
+          onClick={() => setEditTarget(item)}
+        >
+          <Pencil className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label={`Archive ${ingredientName}`}
+          onClick={() => setArchiveTarget(item)}
+          className="text-muted-foreground hover:text-foreground"
+        >
+          <Archive className="h-4 w-4" />
+        </Button>
+      </div>
+    );
+  }
+
+  function renderArchivedRowActions(item: TableInventoryItem) {
+    const ingredientName = item.menuItemId?.name ?? 'ingredient';
+    const busy = restoringId === item._id;
+    return (
+      <div className="flex gap-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label={`View details for ${ingredientName}`}
+          onClick={() => router.push(`/dashboard/inventory/${item._id}`)}
+        >
+          <Eye className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label={`Restore ${ingredientName}`}
+          onClick={() => onRestore(item)}
+          disabled={busy}
+        >
+          <ArchiveRestore className="h-4 w-4" />
+        </Button>
+      </div>
+    );
+  }
 
   return (
-    <Tabs
-      value={activeTab}
-      onValueChange={(value) => setActiveTab(value as InventoryTab)}
-      className="space-y-4"
-    >
-      <TabsList>
-        <TabsTrigger value="sellable">
-          Sellable ({sellableInventory.length})
-        </TabsTrigger>
-        <TabsTrigger value="kitchen">
-          Kitchen ({kitchenInventory.length})
-        </TabsTrigger>
-      </TabsList>
-      <TabsContent value="sellable">
-        <InventoryTabContent inventory={sellableInventory} />
-      </TabsContent>
-      <TabsContent value="kitchen" className="space-y-3">
-        <div className="flex justify-end">
-          <AddKitchenIngredientDialog />
-        </div>
-        <InventoryTabContent inventory={kitchenInventory} />
-      </TabsContent>
-    </Tabs>
+    <>
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as InventoryTab)}
+        className="space-y-4"
+      >
+        <TabsList>
+          <TabsTrigger value="sellable">
+            Sellable ({sellableInventory.length})
+          </TabsTrigger>
+          <TabsTrigger value="kitchen">
+            Kitchen ({kitchenInventory.length})
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="sellable">
+          <InventoryTabContent inventory={sellableInventory} />
+        </TabsContent>
+        <TabsContent value="kitchen" className="space-y-3">
+          <div className="flex justify-between items-center">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowArchived((s) => !s)}
+              aria-pressed={showArchived}
+            >
+              {showArchived ? 'Hide archived' : 'Show archived'} (
+              {archivedKitchenInventory.length})
+            </Button>
+            <AddKitchenIngredientDialog />
+          </div>
+          <InventoryTabContent
+            inventory={kitchenInventory}
+            renderRowActions={renderKitchenRowActions}
+          />
+          {showArchived && (
+            <div
+              className="space-y-2 pt-4 border-t"
+              data-testid="archived-kitchen-section"
+            >
+              <h3 className="text-sm font-medium text-muted-foreground">
+                Archived ingredients ({archivedKitchenInventory.length})
+              </h3>
+              {archivedKitchenInventory.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">
+                  No archived ingredients.
+                </p>
+              ) : (
+                <InventoryTabContent
+                  inventory={archivedKitchenInventory}
+                  renderRowActions={renderArchivedRowActions}
+                />
+              )}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {editTarget && (
+        <EditKitchenIngredientDialog
+          open={!!editTarget}
+          onOpenChange={(o) => !o && setEditTarget(null)}
+          inventory={{
+            _id: editTarget._id,
+            name: editTarget.menuItemId?.name ?? '',
+            category: editTarget.menuItemId?.category ?? '',
+            unit: editTarget.unit,
+            minimumStock: editTarget.minStock,
+            maximumStock: editTarget.maxStock,
+          }}
+        />
+      )}
+
+      {archiveTarget && (
+        <ArchiveKitchenIngredientDialog
+          open={!!archiveTarget}
+          onOpenChange={(o) => !o && setArchiveTarget(null)}
+          inventory={{
+            _id: archiveTarget._id,
+            name: archiveTarget.menuItemId?.name ?? 'this ingredient',
+          }}
+        />
+      )}
+    </>
   );
 }

@@ -63,6 +63,13 @@ export interface IInventory {
   defaultSalesLocation?: string;
   crateSize?: number;
   packagingType?: string;
+  /**
+   * REQ-037 — Soft-delete marker. When set, the row stays queryable by
+   * `_id` for audit-trail integrity but is filtered out of listing
+   * surfaces (Kitchen tab, Recipe builder dropdown, Expense form
+   * "Add to kitchen inventory" dropdown).
+   */
+  archivedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }

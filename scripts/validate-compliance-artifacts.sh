@@ -100,8 +100,18 @@ for REQ in $REQUIREMENTS; do
           echo "  INFO: Skipping glob reference (not a file path): $TF"
           continue
         fi
-        # Try exact path, then search from repo root
-        if [ ! -f "$TF" ] && ! compgen -G "**/$TF" > /dev/null 2>&1; then
+        # Try exact path; otherwise search the repo by basename, skipping
+        # node_modules and build/coverage outputs. The previous
+        # `compgen -G "**/X"` form silently failed for files at depth ≥2
+        # because bash globstar is off by default, so `**` collapsed to `*`
+        # (single-level). Tests referenced by bare filename were therefore
+        # reported missing even when present. See METACOMPLY-XXX.
+        if [ ! -f "$TF" ] && ! find . \
+             -type d \( -name node_modules -o -name .next -o -name .git \
+                        -o -name playwright-report -o -name coverage \
+                        -o -name dist -o -name build -o -name 'test-results' \) -prune \
+             -o -type f -name "$(basename "$TF")" -print 2>/dev/null \
+             | grep -q .; then
           echo "  ERROR: Test file referenced in test-plan.md not found: $TF"
           MISSING_TESTS=$((MISSING_TESTS + 1))
         fi

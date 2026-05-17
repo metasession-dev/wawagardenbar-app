@@ -18,6 +18,7 @@ import {
   computeWeightedAverageCost,
   validateReversalDoesNotNegate,
   convertExpenseQuantityToInventoryUnit,
+  validateExpenseUnitAgainstOverride,
 } from '@/lib/expense-inventory-link';
 import type { InventoryKind } from '@/interfaces/inventory.interface';
 import type { UnitOfMeasurement } from '@/interfaces/unit-of-measurement.interface';
@@ -372,5 +373,89 @@ describe('REQ-034 AC7 — validateReversalDoesNotNegate', () => {
         reversalQuantity: 0,
       })
     ).toThrow(/finite/);
+  });
+});
+
+// ─── REQ-038 ─────────────────────────────────────────────────────────
+//
+// `validateExpenseUnitAgainstOverride` is the load-bearing server-side
+// guard that prevents a unit mismatch from silently writing to a
+// MenuItem whose Purchase unit is locked. The UI lock is defence in
+// depth; this helper is the gate.
+describe('validateExpenseUnitAgainstOverride (REQ-038)', () => {
+  it('no-ops when override is undefined (legacy "Any")', () => {
+    expect(() =>
+      validateExpenseUnitAgainstOverride({
+        expenseUnit: 'kg',
+        override: undefined,
+      })
+    ).not.toThrow();
+  });
+
+  it('no-ops when override is the explicit "any" sentinel', () => {
+    expect(() =>
+      validateExpenseUnitAgainstOverride({
+        expenseUnit: 'kg',
+        override: 'any',
+      })
+    ).not.toThrow();
+  });
+
+  it('no-ops when expenseUnit is undefined (legacy expense)', () => {
+    expect(() =>
+      validateExpenseUnitAgainstOverride({
+        expenseUnit: undefined,
+        override: 'bottles',
+      })
+    ).not.toThrow();
+  });
+
+  it('no-ops when expenseUnit matches override', () => {
+    expect(() =>
+      validateExpenseUnitAgainstOverride({
+        expenseUnit: 'bottles',
+        override: 'bottles',
+      })
+    ).not.toThrow();
+  });
+
+  it('throws on mismatch, naming both units and the override', () => {
+    expect(() =>
+      validateExpenseUnitAgainstOverride({
+        expenseUnit: 'kg',
+        override: 'bottles',
+        menuItemName: 'Heineken 330ml',
+      })
+    ).toThrow(/kg/);
+    expect(() =>
+      validateExpenseUnitAgainstOverride({
+        expenseUnit: 'kg',
+        override: 'bottles',
+        menuItemName: 'Heineken 330ml',
+      })
+    ).toThrow(/bottles/);
+    expect(() =>
+      validateExpenseUnitAgainstOverride({
+        expenseUnit: 'kg',
+        override: 'bottles',
+        menuItemName: 'Heineken 330ml',
+      })
+    ).toThrow(/Heineken 330ml/);
+  });
+
+  it('is generic over unit id — works for cans too (not bottles-hardcoded)', () => {
+    expect(() =>
+      validateExpenseUnitAgainstOverride({
+        expenseUnit: 'bottles',
+        override: 'cans',
+        menuItemName: 'Energy Drink',
+      })
+    ).toThrow(/cans/);
+    expect(() =>
+      validateExpenseUnitAgainstOverride({
+        expenseUnit: 'cans',
+        override: 'cans',
+      })
+    ).not.toThrow();
   });
 });

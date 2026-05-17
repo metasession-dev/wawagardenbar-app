@@ -79,14 +79,18 @@ jobs:
               ;;
           esac
 
-      - name: Determine release version (date-based)
+      - name: Determine release version
         id: version
         if: steps.resolve.outputs.skip != 'true'
         run: |
-          # One release per day; --create-release-if-missing on the
-          # first call of the day creates the draft, subsequent calls
-          # find and reuse it. No pre-flight Supabase lookup needed.
-          VERSION="v$(date +%Y.%m.%d)"
+          # Release identity is the REQ tag on the latest commit
+          # ([REQ-XXX] in subject, Ref: REQ-XXX in body), with a bare-date
+          # fallback for housekeeping commits. Both this workflow and
+          # ci.yml call the same helper so a single feature converges on
+          # one release record regardless of whether the push touched
+          # code or docs. See DevAudit #310.
+          chmod +x scripts/derive-release-version.sh 2>/dev/null || true
+          VERSION=$(./scripts/derive-release-version.sh)
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "Release version: ${VERSION}"
 

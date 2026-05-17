@@ -25,16 +25,34 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { getSnapshotHistoryAction } from '@/app/actions/inventory/snapshot-actions';
 import type { IInventorySnapshot } from '@/interfaces/inventory-snapshot.interface';
+import { computeMissingCost } from '@/lib/snapshot-missing-cost';
+
+// REQ-039: format the missing-cost figure for table display.
+// Returns `—` for legacy snapshots where no item has a frozen cost
+// (operator can't trust £0 because there's no data; "—" is honest).
+function formatMissingCost(snapshot: IInventorySnapshot): string {
+  const anyStamped = snapshot.items.some(
+    (i) => typeof i.costPerUnitAtSnapshot === 'number'
+  );
+  if (!anyStamped) return '—';
+  const total = computeMissingCost(snapshot.items);
+  return new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency: 'NGN',
+  }).format(total);
+}
 
 export function SnapshotsListClient() {
   const router = useRouter();
   const { toast } = useToast();
   const [snapshots, setSnapshots] = useState<IInventorySnapshot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>(
-    'all'
-  );
-  const [categoryFilter, setCategoryFilter] = useState<'all' | 'food' | 'drinks'>('all');
+  const [statusFilter, setStatusFilter] = useState<
+    'all' | 'pending' | 'approved' | 'rejected'
+  >('all');
+  const [categoryFilter, setCategoryFilter] = useState<
+    'all' | 'food' | 'drinks'
+  >('all');
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
 
@@ -77,11 +95,32 @@ export function SnapshotsListClient() {
   function getStatusBadge(status: string) {
     switch (status) {
       case 'pending':
-        return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">Pending</Badge>;
+        return (
+          <Badge
+            variant="outline"
+            className="bg-amber-50 text-amber-700 border-amber-200"
+          >
+            Pending
+          </Badge>
+        );
       case 'approved':
-        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Approved</Badge>;
+        return (
+          <Badge
+            variant="outline"
+            className="bg-green-50 text-green-700 border-green-200"
+          >
+            Approved
+          </Badge>
+        );
       case 'rejected':
-        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Rejected</Badge>;
+        return (
+          <Badge
+            variant="outline"
+            className="bg-red-50 text-red-700 border-red-200"
+          >
+            Rejected
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -149,13 +188,13 @@ export function SnapshotsListClient() {
 
       <Card>
         <CardHeader>
-          <CardTitle>
-            Snapshots ({total})
-          </CardTitle>
+          <CardTitle>Snapshots ({total})</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">Loading...</div>
+            <div className="text-center py-8 text-muted-foreground">
+              Loading...
+            </div>
           ) : snapshots.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               No snapshots found
@@ -172,6 +211,7 @@ export function SnapshotsListClient() {
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Total Items</TableHead>
                     <TableHead className="text-right">Adjustments</TableHead>
+                    <TableHead className="text-right">Missing Cost</TableHead>
                     <TableHead>Reviewed By</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -184,19 +224,36 @@ export function SnapshotsListClient() {
                     return (
                       <TableRow key={snapshot._id}>
                         <TableCell className="font-medium">
-                          {format(new Date(snapshot.snapshotDate), 'MMM dd, yyyy')}
+                          {format(
+                            new Date(snapshot.snapshotDate),
+                            'MMM dd, yyyy'
+                          )}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={snapshot.mainCategory === 'food' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-blue-50 text-blue-700 border-blue-200'}>
-                            {snapshot.mainCategory === 'food' ? 'Food' : 'Drinks'}
+                          <Badge
+                            variant="outline"
+                            className={
+                              snapshot.mainCategory === 'food'
+                                ? 'bg-orange-50 text-orange-700 border-orange-200'
+                                : 'bg-blue-50 text-blue-700 border-blue-200'
+                            }
+                          >
+                            {snapshot.mainCategory === 'food'
+                              ? 'Food'
+                              : 'Drinks'}
                           </Badge>
                         </TableCell>
                         <TableCell>{snapshot.submittedByName}</TableCell>
                         <TableCell>
-                          {format(new Date(snapshot.submittedAt), 'MMM dd, yyyy HH:mm')}
+                          {format(
+                            new Date(snapshot.submittedAt),
+                            'MMM dd, yyyy HH:mm'
+                          )}
                         </TableCell>
                         <TableCell>{getStatusBadge(snapshot.status)}</TableCell>
-                        <TableCell className="text-right">{snapshot.items.length}</TableCell>
+                        <TableCell className="text-right">
+                          {snapshot.items.length}
+                        </TableCell>
                         <TableCell className="text-right">
                           {adjustmentCount > 0 ? (
                             <span className="text-amber-600 font-medium">
@@ -205,6 +262,25 @@ export function SnapshotsListClient() {
                           ) : (
                             <span className="text-muted-foreground">0</span>
                           )}
+                        </TableCell>
+                        <TableCell
+                          className="text-right"
+                          data-testid="snapshot-list-missing-cost"
+                        >
+                          {(() => {
+                            const formatted = formatMissingCost(snapshot);
+                            return formatted === '—' ? (
+                              <span className="text-muted-foreground">—</span>
+                            ) : computeMissingCost(snapshot.items) > 0 ? (
+                              <span className="text-red-600 font-medium">
+                                {formatted}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">
+                                {formatted}
+                              </span>
+                            );
+                          })()}
                         </TableCell>
                         <TableCell>
                           {snapshot.reviewedByName || (
@@ -216,7 +292,9 @@ export function SnapshotsListClient() {
                             variant="ghost"
                             size="sm"
                             onClick={() =>
-                              router.push(`/dashboard/inventory/snapshots/${snapshot._id}`)
+                              router.push(
+                                `/dashboard/inventory/snapshots/${snapshot._id}`
+                              )
                             }
                           >
                             <Eye className="h-4 w-4 mr-2" />

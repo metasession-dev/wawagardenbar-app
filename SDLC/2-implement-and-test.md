@@ -130,6 +130,8 @@ npm test
 
 Write or update E2E tests **after** implementation. E2E tests need working UI/API to test against — writing Playwright tests against routes and selectors that don't exist is impractical.
 
+> **Skill available:** invoke the **`e2e-test-engineer`** skill for this step (at `.claude/skills/e2e-test-engineer/SKILL.md`). It derives scenarios from the requirement's acceptance criteria, reconciles with the existing test pack (flags obsoletes — but never deletes without confirmation), runs the suite, and files defects for failures or missed ACs. Framework-agnostic (Playwright, Cypress, pytest-playwright, etc.) and tracker-agnostic (GitHub, Linear, Jira, etc.). For projects with no e2e suite yet, the skill also covers bootstrapping one. See [`sdlc/SKILLS.md`](../sdlc/SKILLS.md) for the full list of available skills.
+
 **4a. Review the test plan for E2E items:**
 
 ```bash

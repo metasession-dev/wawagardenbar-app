@@ -108,6 +108,43 @@ export function shouldShowAddToInventoryDropdown(
 }
 
 /**
+ * REQ-038 — Server-side enforcement of `MenuItem.expenseUnitOverride`.
+ *
+ * When the operator links a Direct Cost expense to a sellable inventory
+ * row, the paired MenuItem may declare a "Purchase unit" override that
+ * locks the expense's `unit` to a specific UoM-registry id (e.g.
+ * 'bottles', 'cans', 'bags', 'pieces'). The UI also enforces this lock,
+ * but the service is the load-bearing check: even if the UI is bypassed
+ * or out-of-date, the apply path rejects mismatches.
+ *
+ * No-ops (return without throw) when:
+ *  - `override` is undefined (defaults to "Any"; legacy behaviour)
+ *  - `override` is the 'any' sentinel (explicit "Any")
+ *  - `expenseUnit` is undefined (legacy expense saved before REQ-033)
+ *
+ * Throws (naming both units + the override) on mismatch — error is
+ * generic over the unit id so a future REQ adding new units works
+ * without code change.
+ */
+export function validateExpenseUnitAgainstOverride(input: {
+  expenseUnit: string | undefined | null;
+  override: string | undefined | null;
+  menuItemName?: string;
+}): void {
+  const { expenseUnit, override, menuItemName } = input;
+  if (!override) return; // undefined → "Any" (legacy behaviour)
+  if (override === 'any') return; // explicit sentinel
+  if (!expenseUnit) return; // legacy passthrough
+  if (expenseUnit === override) return;
+  const target = menuItemName ? ` on '${menuItemName}'` : '';
+  throw new Error(
+    `Expense unit '${expenseUnit}' does not match the locked purchase unit ` +
+      `'${override}'${target}. Either change the expense unit to '${override}' ` +
+      `or update the menu item's Purchase unit setting.`
+  );
+}
+
+/**
  * AC5 (dropdown options): the selector only lists inventory rows whose
  * `kind` is `'kitchen-ingredient'`. Sellable inventory is never a valid
  * link target (a customer-menu item is restocked by sales returns, not

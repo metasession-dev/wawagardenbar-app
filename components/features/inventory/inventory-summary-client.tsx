@@ -36,9 +36,18 @@ import type {
   IInventorySnapshotItem,
   IInventorySnapshot,
 } from '@/interfaces/inventory-snapshot.interface';
+import { computeMissingCost } from '@/lib/snapshot-missing-cost';
 
 interface InventoryItemRow extends IInventorySnapshotItem {
   notes?: string;
+}
+
+// REQ-039: format the live missing-cost total for the submit form.
+function formatMissingCostNGN(value: number): string {
+  return new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency: 'NGN',
+  }).format(value);
 }
 
 export function InventorySummaryClient() {
@@ -342,6 +351,11 @@ export function InventorySummaryClient() {
   ).length;
   const requiredItemsRemaining =
     itemsWithSales.length - processedItemsWithSales;
+  // REQ-039: live missing-cost total. Computed from the in-memory items
+  // using the same helper the server uses for the frozen aggregate, so
+  // the operator sees the same number on the form as they will on the
+  // detail page after submit.
+  const liveMissingCost = computeMissingCost(items);
 
   return (
     <div className="space-y-6">
@@ -525,6 +539,31 @@ export function InventorySummaryClient() {
                     className={`text-2xl font-bold ${requiredItemsRemaining > 0 ? 'text-red-600' : 'text-green-600'}`}
                   >
                     {requiredItemsRemaining}
+                  </p>
+                </div>
+              </div>
+              {/* REQ-039: live missing-cost total. Updates as the operator
+                  enters staff-adjusted counts. Cost basis is the per-item
+                  live Inventory.costPerUnit stamped at form-load time; the
+                  value gets frozen on each item on submit. */}
+              <div
+                className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md"
+                data-testid="snapshot-submit-missing-cost"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-amber-900 font-medium">
+                      Missing Cost (live)
+                    </p>
+                    <p className="text-xs text-amber-800">
+                      Total cost of inventory reported as missing on this
+                      snapshot. Frozen at submission.
+                    </p>
+                  </div>
+                  <p
+                    className={`text-2xl font-bold ${liveMissingCost > 0 ? 'text-red-600' : 'text-amber-700'}`}
+                  >
+                    {formatMissingCostNGN(liveMissingCost)}
                   </p>
                 </div>
               </div>

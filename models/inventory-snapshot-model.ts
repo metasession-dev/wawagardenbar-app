@@ -3,7 +3,11 @@ import type { IInventorySnapshot } from '@/interfaces/inventory-snapshot.interfa
 
 const inventorySnapshotItemSchema = new Schema(
   {
-    menuItemId: { type: Schema.Types.ObjectId, ref: 'MenuItem', required: true },
+    menuItemId: {
+      type: Schema.Types.ObjectId,
+      ref: 'MenuItem',
+      required: true,
+    },
     menuItemName: { type: String, required: true },
     inventoryId: { type: Schema.Types.ObjectId, ref: 'Inventory' },
     mainCategory: { type: String, enum: ['food', 'drinks'], required: true },
@@ -15,13 +19,18 @@ const inventorySnapshotItemSchema = new Schema(
     staffNotes: { type: String },
     discrepancy: { type: Number, required: true, default: 0 },
     requiresAdjustment: { type: Boolean, required: true, default: false },
-    locationBreakdown: [{
-      location: { type: String, required: true },
-      locationName: { type: String, required: true },
-      currentStock: { type: Number, required: true },
-      staffConfirmed: { type: Boolean },
-      staffAdjustedCount: { type: Number }
-    }]
+    locationBreakdown: [
+      {
+        location: { type: String, required: true },
+        locationName: { type: String, required: true },
+        currentStock: { type: Number, required: true },
+        staffConfirmed: { type: Boolean },
+        staffAdjustedCount: { type: Number },
+      },
+    ],
+    // REQ-039: cost-per-unit frozen at submission time so historical
+    // missing-cost stays stable when Inventory.costPerUnit changes later.
+    costPerUnitAtSnapshot: { type: Number },
   },
   { _id: false }
 );
@@ -55,8 +64,14 @@ const inventorySnapshotSchema = new Schema<IInventorySnapshot>(
 inventorySnapshotSchema.index({ snapshotDate: -1, status: 1 });
 inventorySnapshotSchema.index({ submittedBy: 1, snapshotDate: -1 });
 inventorySnapshotSchema.index({ status: 1, submittedAt: -1 });
-inventorySnapshotSchema.index({ snapshotDate: 1, mainCategory: 1, submittedBy: 1 }, { unique: true });
+inventorySnapshotSchema.index(
+  { snapshotDate: 1, mainCategory: 1, submittedBy: 1 },
+  { unique: true }
+);
 
 export const InventorySnapshotModel: Model<IInventorySnapshot> =
   mongoose.models.InventorySnapshot ||
-  mongoose.model<IInventorySnapshot>('InventorySnapshot', inventorySnapshotSchema);
+  mongoose.model<IInventorySnapshot>(
+    'InventorySnapshot',
+    inventorySnapshotSchema
+  );

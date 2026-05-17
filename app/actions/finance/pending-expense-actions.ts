@@ -258,6 +258,62 @@ export async function listKitchenIngredientInventoryAction() {
 }
 
 /**
+ * REQ-038 AC3 — Sellable inventory rows for the expense form's "Update
+ * inventory count" dropdown. Mirrors `listKitchenIngredientInventoryAction`
+ * but for `kind: 'menu-item'` rows where `trackInventory: true`. Returns
+ * the paired MenuItem's `expenseUnitOverride` so the UI can lock the
+ * Unit field on selection. Excludes soft-archived items.
+ */
+export async function listSellableInventoryAction() {
+  try {
+    const session = await getSession();
+    requireAdminOrAbove(session);
+    await connectDB();
+    const rows = await InventoryModel.find({
+      kind: 'menu-item',
+      archivedAt: { $exists: false },
+    })
+      .populate(
+        'menuItemId',
+        'name mainCategory category trackInventory expenseUnitOverride'
+      )
+      .sort({ name: 1 })
+      .lean();
+    const items = rows
+      .map((r) => {
+        const mi = r.menuItemId as unknown as
+          | {
+              _id: { toString(): string };
+              name: string;
+              category?: string;
+              trackInventory?: boolean;
+              expenseUnitOverride?: string;
+            }
+          | null
+          | undefined;
+        if (!mi || mi.trackInventory !== true) return null;
+        return {
+          id: r._id.toString(),
+          name: mi.name ?? 'Unknown item',
+          category: mi.category ?? '',
+          unit: r.unit,
+          expenseUnitOverride: mi.expenseUnitOverride ?? undefined,
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+    return { success: true as const, items };
+  } catch (error) {
+    return {
+      success: false as const,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to fetch sellable inventory',
+    };
+  }
+}
+
+/**
  * List pending expense groups (excludes transferred).
  * Available to: admin, super-admin.
  */

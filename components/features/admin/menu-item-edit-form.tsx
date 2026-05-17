@@ -80,6 +80,10 @@ const menuItemSchema = z.object({
   packagingType: z.string().optional(),
   pointsRedeemable: z.boolean(),
   pointsValue: z.number().min(0).optional(),
+  // REQ-038: UoM-registry id locking the Expense form's Unit field when
+  // restocking this item. Empty string = "Any" (operator chooses at
+  // expense time). Generic over the registry.
+  expenseUnitOverride: z.string().optional(),
 });
 
 type MenuItemFormData = z.infer<typeof menuItemSchema>;
@@ -218,6 +222,10 @@ export function MenuItemEditForm({
       packagingType: menuItem.inventory?.packagingType || '',
       pointsRedeemable: menuItem.pointsRedeemable || false,
       pointsValue: menuItem.pointsValue || 0,
+      // REQ-038: Purchase unit override. Empty string sentinel = "Any";
+      // any other value is a UoM-registry id locking the expense form's
+      // Unit field on restock for this item.
+      expenseUnitOverride: menuItem.expenseUnitOverride || '',
     },
   });
 
@@ -324,6 +332,15 @@ export function MenuItemEditForm({
           formData.append('crateSize', data.crateSize.toString());
         if (data.packagingType)
           formData.append('packagingType', data.packagingType);
+      }
+      // REQ-038: Purchase unit override (independent of trackInventory
+      // because the locking semantics apply to the expense-link path,
+      // not the storage-tracking path). Empty string = "Any" — the
+      // server treats this as undefined.
+      if (data.expenseUnitOverride) {
+        formData.append('expenseUnitOverride', data.expenseUnitOverride);
+      } else {
+        formData.append('expenseUnitOverride', '');
       }
 
       // Add points redemption data
@@ -896,6 +913,46 @@ export function MenuItemEditForm({
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+
+                {/* REQ-038: Purchase unit override (locks the Expense form's
+                    Unit field when restocking this item from a Direct Cost
+                    expense). Default "Any" preserves the legacy
+                    operator-chooses behaviour. */}
+                <div className="space-y-2">
+                  <Label htmlFor="expenseUnitOverride">Purchase unit</Label>
+                  <Select
+                    value={watch('expenseUnitOverride') || 'any'}
+                    onValueChange={(value) =>
+                      setValue(
+                        'expenseUnitOverride',
+                        value === 'any' ? '' : value
+                      )
+                    }
+                    disabled={isLoading}
+                  >
+                    <SelectTrigger id="expenseUnitOverride">
+                      <SelectValue placeholder="Any (operator chooses at expense time)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="any">
+                        Any (operator chooses at expense time)
+                      </SelectItem>
+                      {getActiveUnits(unitsRegistry).map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    When set to a specific unit, every Direct Cost expense
+                    linked to this item will lock the unit to your chosen value
+                    — so you can&apos;t accidentally type &quot;5&quot; (5
+                    what?) into a quantity field. Use this for items you always
+                    buy in the same unit (drinks by the bottle, rice by the bag,
+                    eggs by the carton).
+                  </p>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">

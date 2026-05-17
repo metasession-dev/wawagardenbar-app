@@ -364,6 +364,17 @@ export async function updateMenuItemAction(
       ? parseFloat(formData.get('pointsValue') as string)
       : undefined;
 
+    // REQ-038: Purchase unit override. Empty string from the form means
+    // "Any" — clear the override field. Any non-empty UoM-registry id
+    // sets the field, locking the Expense form's Unit field on restock
+    // for this item.
+    const expenseUnitOverrideRaw = formData.get('expenseUnitOverride');
+    const expenseUnitOverride =
+      typeof expenseUnitOverrideRaw === 'string' &&
+      expenseUnitOverrideRaw.trim() !== ''
+        ? expenseUnitOverrideRaw.trim()
+        : undefined;
+
     // Update basic fields
     if (name) menuItem.name = name;
     if (description !== undefined) menuItem.description = description;
@@ -406,6 +417,15 @@ export async function updateMenuItemAction(
 
     // Update inventory tracking
     menuItem.trackInventory = trackInventory;
+
+    // REQ-038: assign Purchase unit override. undefined clears the field
+    // (operator-visible "Any" sentinel); a UoM-registry id locks the
+    // Expense form's Unit field for this item.
+    if (expenseUnitOverride === undefined) {
+      menuItem.expenseUnitOverride = undefined;
+    } else {
+      menuItem.expenseUnitOverride = expenseUnitOverride;
+    }
 
     // Update points redemption
     menuItem.pointsRedeemable = pointsRedeemable;

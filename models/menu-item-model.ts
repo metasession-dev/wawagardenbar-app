@@ -85,6 +85,14 @@ const menuItemSchema = new Schema<IMenuItem>(
      * Never set on sellable menu items (those are not in REQ-037's scope).
      */
     archivedAt: { type: Date },
+    /**
+     * REQ-038 — Optional UoM-registry id that, when set, locks the
+     * Expense form's Unit field whenever the operator chooses to
+     * restock this item from a Direct Cost expense. `undefined` means
+     * "Any" (operator chooses at expense time). Generic over the UoM
+     * registry; works for bottles, cans, crates, bags, etc.
+     */
+    expenseUnitOverride: { type: String },
   },
   {
     timestamps: true,

@@ -14,6 +14,7 @@
 import { Types } from 'mongoose';
 import { connectDB } from '@/lib/mongodb';
 import InventoryModel from '@/models/inventory-model';
+import MenuItemModel from '@/models/menu-item-model';
 import StockMovementModel from '@/models/stock-movement-model';
 import InventoryItemCostHistory from '@/models/inventory-item-cost-history-model';
 import { ExpenseModel } from '@/models';
@@ -23,6 +24,7 @@ import {
   resolveExpenseQuantity,
   validateReversalDoesNotNegate,
   convertExpenseQuantityToInventoryUnit,
+  validateExpenseUnitAgainstOverride,
 } from '@/lib/expense-inventory-link';
 import { SystemSettingsService } from '@/services/system-settings-service';
 
@@ -72,11 +74,35 @@ export async function applyExpenseInventoryLink(
       `Linked inventory ${input.linkedInventoryId.toString()} not found`
     );
   }
-  if (inventory.kind !== 'kitchen-ingredient') {
+  // REQ-038: relax the kind guard to accept both kitchen-ingredient
+  // and menu-item kinds. Sellable items now restock from expenses too;
+  // the financial write path (StockMovement + $inc + CostHistory +
+  // reversal) is identical for both. Any other kind is still rejected.
+  if (
+    inventory.kind !== 'kitchen-ingredient' &&
+    inventory.kind !== 'menu-item'
+  ) {
     throw new Error(
       `Inventory ${input.linkedInventoryId.toString()} has kind '${inventory.kind}', ` +
-        `expected 'kitchen-ingredient' — expense links target kitchen ingredients only`
+        `expected 'kitchen-ingredient' or 'menu-item' — expense links target sellable items or kitchen ingredients only`
     );
+  }
+
+  // REQ-038: server-side enforcement of MenuItem.expenseUnitOverride.
+  // Even if the UI lock is bypassed (out-of-date client, direct API
+  // call, etc.), the apply path rejects mismatches naming both units.
+  if (inventory.menuItemId) {
+    const paired = await MenuItemModel.findById(inventory.menuItemId)
+      .select('expenseUnitOverride name')
+      .lean();
+    if (paired) {
+      validateExpenseUnitAgainstOverride({
+        expenseUnit: input.expenseUnit,
+        override: (paired as { expenseUnitOverride?: string })
+          .expenseUnitOverride,
+        menuItemName: (paired as { name?: string }).name,
+      });
+    }
   }
 
   // D10 — convert the operator-entered quantity into the inventory's

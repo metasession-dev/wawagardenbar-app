@@ -25,6 +25,18 @@ vi.mock('@/models/inventory-model', () => ({
   },
 }));
 
+// REQ-038: service now looks up the paired MenuItem to enforce
+// expenseUnitOverride. Default mock returns null (no override) so
+// existing kitchen-ingredient tests are unaffected.
+vi.mock('@/models/menu-item-model', () => ({
+  default: {
+    findById: vi.fn(() => ({
+      select: vi.fn().mockReturnThis(),
+      lean: vi.fn().mockResolvedValue(null),
+    })),
+  },
+}));
+
 vi.mock('@/models/stock-movement-model', () => ({
   default: {
     create: vi.fn(),
@@ -68,6 +80,7 @@ vi.mock('@/services/system-settings-service', () => ({
 }));
 
 import InventoryModel from '@/models/inventory-model';
+import MenuItemModel from '@/models/menu-item-model';
 import StockMovementModel from '@/models/stock-movement-model';
 import InventoryItemCostHistory from '@/models/inventory-item-cost-history-model';
 import { ExpenseModel } from '@/models';
@@ -278,11 +291,81 @@ describe('REQ-034 AC6 — applyExpenseInventoryLink save path', () => {
     );
   });
 
-  it('rejects when the linked inventory has kind:menu-item', async () => {
+  it('REQ-038: accepts kind:menu-item (sellable restock path)', async () => {
+    // REQ-038 relaxed the kind guard to allow both kitchen-ingredient
+    // and menu-item kinds. Sellable items now restock from expenses
+    // too; the financial write path is identical for both.
     const linkedInventoryId = new Types.ObjectId();
     (InventoryModel.findById as ReturnType<typeof vi.fn>).mockResolvedValue({
       _id: linkedInventoryId,
       kind: 'menu-item',
+      currentStock: 0,
+      unit: 'bottles',
+    });
+
+    const result = await applyExpenseInventoryLink({
+      expenseId: new Types.ObjectId(),
+      linkedInventoryId,
+      quantity: 24,
+      amount: 5000,
+      date: new Date(),
+      performedBy,
+    });
+
+    expect(result.stockMovementId).toBeTruthy();
+    expect(StockMovementModel.create).toHaveBeenCalled();
+    expect(InventoryModel.updateOne).toHaveBeenCalled();
+  });
+
+  it('REQ-038: rejects when expense.unit mismatches paired MenuItem.expenseUnitOverride', async () => {
+    // Override enforcement at the service layer. UI lock is defence
+    // in depth; the service rejects the apply call when the paired
+    // MenuItem declares a Purchase unit and the expense's unit
+    // differs. Error message names both units AND the menu item.
+    const linkedInventoryId = new Types.ObjectId();
+    const menuItemId = new Types.ObjectId();
+    (InventoryModel.findById as ReturnType<typeof vi.fn>).mockResolvedValue({
+      _id: linkedInventoryId,
+      kind: 'menu-item',
+      currentStock: 0,
+      unit: 'bottles',
+      menuItemId,
+    });
+    (MenuItemModel.findById as ReturnType<typeof vi.fn>).mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      lean: vi.fn().mockResolvedValue({
+        _id: menuItemId,
+        name: 'Heineken 330ml',
+        expenseUnitOverride: 'bottles',
+      }),
+    });
+
+    await expect(
+      applyExpenseInventoryLink({
+        expenseId: new Types.ObjectId(),
+        linkedInventoryId,
+        quantity: 5,
+        amount: 1000,
+        date: new Date(),
+        performedBy,
+        expenseUnit: 'kg', // mismatch — bottles is locked
+      })
+    ).rejects.toThrow(/Heineken 330ml/);
+
+    expect(StockMovementModel.create).not.toHaveBeenCalled();
+    expect(InventoryModel.updateOne).not.toHaveBeenCalled();
+  });
+
+  it('REQ-038: rejects unsupported kind (forward-compat against new kinds)', async () => {
+    // Sanity check that the allowlist is still bounded. If a future REQ
+    // introduces a third InventoryKind value, this test surfaces the
+    // need to deliberately decide whether to extend the allowlist.
+    const linkedInventoryId = new Types.ObjectId();
+    (InventoryModel.findById as ReturnType<typeof vi.fn>).mockResolvedValue({
+      _id: linkedInventoryId,
+      // Cast to bypass the type narrow — production data shouldn't
+      // contain this value, but the guard's job is to defend if it does.
+      kind: 'some-future-kind' as unknown as 'menu-item',
       currentStock: 0,
     });
 
@@ -295,7 +378,7 @@ describe('REQ-034 AC6 — applyExpenseInventoryLink save path', () => {
         date: new Date(),
         performedBy,
       })
-    ).rejects.toThrow(/kitchen-ingredient/);
+    ).rejects.toThrow(/menu-item/);
 
     expect(StockMovementModel.create).not.toHaveBeenCalled();
     expect(InventoryModel.updateOne).not.toHaveBeenCalled();

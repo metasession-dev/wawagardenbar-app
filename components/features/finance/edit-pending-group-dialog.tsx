@@ -45,7 +45,14 @@ import { cn } from '@/lib/utils';
 import {
   updatePendingExpenseGroupAction,
   deletePendingExpenseGroupAction,
+  listKitchenIngredientInventoryAction,
+  listSellableInventoryAction,
 } from '@/app/actions/finance/pending-expense-actions';
+import {
+  InventoryLinkSection,
+  type KitchenInventoryOption,
+  type SellableInventoryOption,
+} from './inventory-link-section';
 import { getExpenseCategoriesAction } from '@/app/actions/finance/expense-categories-actions';
 import { getUnitsOfMeasurementAction } from '@/app/actions/units-actions';
 import {
@@ -71,6 +78,7 @@ const lineItemSchema = z.object({
   unit: z.string().min(1, 'Unit is required'),
   unitCost: z.number().min(0),
   totalCost: z.number().min(0),
+  linkedInventoryId: z.string().optional(),
 });
 
 const editSchema = z.object({
@@ -90,6 +98,7 @@ function makeDefaultItem() {
     unit: '',
     unitCost: 0,
     totalCost: 0,
+    linkedInventoryId: undefined as string | undefined,
   };
 }
 
@@ -118,6 +127,16 @@ export function EditPendingGroupDialog({
   const [unitsRegistry, setUnitsRegistry] = useState<UnitOfMeasurement[]>([
     ...DEFAULT_UNITS_OF_MEASUREMENT,
   ]);
+  const [kitchenInventory, setKitchenInventory] = useState<
+    KitchenInventoryOption[]
+  >([]);
+  const [sellableInventory, setSellableInventory] = useState<
+    SellableInventoryOption[]
+  >([]);
+  const [sellableLoaded, setSellableLoaded] = useState(false);
+  const [sellableLinkEnabled, setSellableLinkEnabled] = useState<
+    Record<number, boolean>
+  >({});
 
   const form = useForm<EditFormValues>({
     resolver: zodResolver(editSchema),
@@ -137,6 +156,10 @@ export function EditPendingGroupDialog({
     if (open) {
       fetchCategories();
       fetchUnits();
+      fetchKitchenInventory();
+      fetchSellableInventory();
+      setSellableLinkEnabled({});
+      setSellableLoaded(false);
       form.reset({
         date: new Date(group.date),
         items: group.items.map((i) => ({ ...i })),
@@ -144,6 +167,47 @@ export function EditPendingGroupDialog({
       });
     }
   }, [open, group]);
+
+  // Hydrate the kitchen-vs-sellable mutex from the loaded sellable list.
+  // Items whose linkedInventoryId matches a sellable row open in sellable
+  // mode; others (kitchen-ingredient links or no link) stay in kitchen mode.
+  useEffect(() => {
+    if (!sellableLoaded) return;
+    const next: Record<number, boolean> = {};
+    group.items.forEach((item, i) => {
+      if (
+        item.linkedInventoryId &&
+        sellableInventory.some((s) => s.id === item.linkedInventoryId)
+      ) {
+        next[i] = true;
+      }
+    });
+    setSellableLinkEnabled(next);
+  }, [sellableLoaded, sellableInventory, group]);
+
+  async function fetchKitchenInventory() {
+    try {
+      const result = await listKitchenIngredientInventoryAction();
+      if (result.success && result.items) {
+        setKitchenInventory(result.items);
+      }
+    } catch {
+      /* dropdown will simply be empty */
+    }
+  }
+
+  async function fetchSellableInventory() {
+    try {
+      const result = await listSellableInventoryAction();
+      if (result.success && result.items) {
+        setSellableInventory(result.items);
+      }
+    } catch {
+      /* dropdown will simply be empty */
+    } finally {
+      setSellableLoaded(true);
+    }
+  }
 
   async function fetchCategories() {
     try {
@@ -541,6 +605,20 @@ export function EditPendingGroupDialog({
                         </Button>
                       </div>
                     </div>
+                    <InventoryLinkSection
+                      form={form}
+                      index={index}
+                      expenseType={items[index]?.expenseType ?? ''}
+                      kitchenInventory={kitchenInventory}
+                      sellableInventory={sellableInventory}
+                      sellableLinkEnabled={sellableLinkEnabled[index] === true}
+                      setSellableLinkEnabled={(enabled) =>
+                        setSellableLinkEnabled((prev) => ({
+                          ...prev,
+                          [index]: enabled,
+                        }))
+                      }
+                    />
                   </div>
                 );
               })}

@@ -51,9 +51,7 @@ import {
   listKitchenIngredientInventoryAction,
   listSellableInventoryAction,
 } from '@/app/actions/finance/pending-expense-actions';
-import { Checkbox } from '@/components/ui/checkbox';
 import { getExpenseCategoriesAction } from '@/app/actions/finance/expense-categories-actions';
-import { shouldShowAddToInventoryDropdown } from '@/lib/expense-inventory-link';
 import { getUnitsOfMeasurementAction } from '@/app/actions/units-actions';
 import {
   DEFAULT_UNITS_OF_MEASUREMENT,
@@ -106,23 +104,11 @@ function makeDefaultItem() {
   };
 }
 
-interface KitchenInventoryOption {
-  id: string;
-  name: string;
-  category: string;
-  unit: string;
-}
-
-// REQ-038: sellable inventory option carries the paired MenuItem's
-// expenseUnitOverride so the UI can lock the line's Unit field on
-// selection.
-interface SellableInventoryOption {
-  id: string;
-  name: string;
-  category: string;
-  unit: string;
-  expenseUnitOverride?: string;
-}
+import {
+  InventoryLinkSection,
+  type KitchenInventoryOption,
+  type SellableInventoryOption,
+} from './inventory-link-section';
 
 interface ExpenseFormProps {
   open: boolean;
@@ -662,200 +648,22 @@ export function ExpenseForm({
                         </Button>
                       </div>
                     </div>
-                    {/* REQ-034 AC5: Add-to-inventory link — Direct Cost only */}
-                    {shouldShowAddToInventoryDropdown(
-                      items[index]?.expenseType
-                    ) && (
-                      <>
-                        <FormField
-                          control={form.control}
-                          name={`items.${index}.linkedInventoryId`}
-                          render={({ field: f }) => {
-                            // REQ-038 — value belongs to kitchen dropdown
-                            // only when the operator hasn't enabled the
-                            // sellable side. Otherwise the same field is
-                            // being driven by the sellable section below.
-                            const isSellableMode =
-                              sellableLinkEnabled[index] === true;
-                            return (
-                              <FormItem>
-                                <FormLabel className="text-xs text-muted-foreground">
-                                  Add to kitchen inventory (optional)
-                                </FormLabel>
-                                <Select
-                                  value={
-                                    isSellableMode
-                                      ? '__none__'
-                                      : (f.value ?? '__none__')
-                                  }
-                                  onValueChange={(v) => {
-                                    f.onChange(
-                                      v === '__none__' ? undefined : v
-                                    );
-                                    // Mutex: if the operator picks a kitchen
-                                    // ingredient, disable the sellable side.
-                                    if (v !== '__none__') {
-                                      setSellableLinkEnabled((prev) => ({
-                                        ...prev,
-                                        [index]: false,
-                                      }));
-                                    }
-                                  }}
-                                  disabled={isSellableMode}
-                                >
-                                  <FormControl>
-                                    <SelectTrigger className="h-8 text-sm">
-                                      <SelectValue placeholder="No inventory link" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="__none__">
-                                      No inventory link
-                                    </SelectItem>
-                                    {kitchenInventory.length === 0 ? (
-                                      <SelectItem value="__empty__" disabled>
-                                        No kitchen ingredients available
-                                      </SelectItem>
-                                    ) : (
-                                      kitchenInventory.map((opt) => (
-                                        <SelectItem key={opt.id} value={opt.id}>
-                                          {opt.name}
-                                          {opt.category
-                                            ? ` — ${opt.category}`
-                                            : ''}
-                                        </SelectItem>
-                                      ))
-                                    )}
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            );
-                          }}
-                        />
-
-                        {/* REQ-038 AC3 — "Update inventory count" checkbox
-                            and sellable-only dropdown. Mutually exclusive
-                            with the kitchen dropdown above (UI-level mutex
-                            via sellableLinkEnabled state). Service-side
-                            override enforcement is the load-bearing safety
-                            check (AC5). */}
-                        <div className="space-y-2 pt-1">
-                          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-                            <Checkbox
-                              checked={sellableLinkEnabled[index] === true}
-                              onCheckedChange={(checked) => {
-                                const enabled = checked === true;
-                                setSellableLinkEnabled((prev) => ({
-                                  ...prev,
-                                  [index]: enabled,
-                                }));
-                                if (enabled) {
-                                  // Clear any existing link (e.g. a
-                                  // kitchen selection) so the sellable
-                                  // dropdown starts clean.
-                                  form.setValue(
-                                    `items.${index}.linkedInventoryId`,
-                                    undefined
-                                  );
-                                } else {
-                                  // Disabling sellable mode clears the link.
-                                  form.setValue(
-                                    `items.${index}.linkedInventoryId`,
-                                    undefined
-                                  );
-                                }
-                              }}
-                            />
-                            Update inventory count (sellable item)
-                          </label>
-                          {sellableLinkEnabled[index] === true && (
-                            <FormField
-                              control={form.control}
-                              name={`items.${index}.linkedInventoryId`}
-                              render={({ field: f }) => {
-                                const picked = sellableInventory.find(
-                                  (opt) => opt.id === f.value
-                                );
-                                const lockedUnit = picked?.expenseUnitOverride;
-                                return (
-                                  <FormItem>
-                                    <FormLabel className="text-xs text-muted-foreground">
-                                      Sellable item to restock
-                                    </FormLabel>
-                                    <Select
-                                      value={f.value ?? '__none__'}
-                                      onValueChange={(v) => {
-                                        const newId =
-                                          v === '__none__' ? undefined : v;
-                                        f.onChange(newId);
-                                        // REQ-038 AC3 — when the picked
-                                        // sellable has a Purchase unit
-                                        // override, force the line's
-                                        // unit field to match.
-                                        if (newId) {
-                                          const opt = sellableInventory.find(
-                                            (x) => x.id === newId
-                                          );
-                                          if (opt?.expenseUnitOverride) {
-                                            form.setValue(
-                                              `items.${index}.unit`,
-                                              opt.expenseUnitOverride
-                                            );
-                                          }
-                                        }
-                                      }}
-                                    >
-                                      <FormControl>
-                                        <SelectTrigger className="h-8 text-sm">
-                                          <SelectValue placeholder="No sellable link" />
-                                        </SelectTrigger>
-                                      </FormControl>
-                                      <SelectContent>
-                                        <SelectItem value="__none__">
-                                          No sellable link
-                                        </SelectItem>
-                                        {sellableInventory.length === 0 ? (
-                                          <SelectItem
-                                            value="__empty__"
-                                            disabled
-                                          >
-                                            No sellable items available
-                                          </SelectItem>
-                                        ) : (
-                                          sellableInventory.map((opt) => (
-                                            <SelectItem
-                                              key={opt.id}
-                                              value={opt.id}
-                                            >
-                                              {opt.name}
-                                              {opt.category
-                                                ? ` — ${opt.category}`
-                                                : ''}
-                                              {opt.expenseUnitOverride
-                                                ? ` · locked to ${opt.expenseUnitOverride}`
-                                                : ''}
-                                            </SelectItem>
-                                          ))
-                                        )}
-                                      </SelectContent>
-                                    </Select>
-                                    {lockedUnit && (
-                                      <p className="text-xs text-amber-700">
-                                        Unit locked to{' '}
-                                        <strong>{lockedUnit}</strong> by this
-                                        menu item&apos;s Purchase unit setting.
-                                      </p>
-                                    )}
-                                    <FormMessage />
-                                  </FormItem>
-                                );
-                              }}
-                            />
-                          )}
-                        </div>
-                      </>
-                    )}
+                    {/* Inventory linking — Direct Cost only. Shared with
+                        the Edit Pending Group dialog via the same component. */}
+                    <InventoryLinkSection
+                      form={form}
+                      index={index}
+                      expenseType={items[index]?.expenseType ?? ''}
+                      kitchenInventory={kitchenInventory}
+                      sellableInventory={sellableInventory}
+                      sellableLinkEnabled={sellableLinkEnabled[index] === true}
+                      setSellableLinkEnabled={(enabled) =>
+                        setSellableLinkEnabled((prev) => ({
+                          ...prev,
+                          [index]: enabled,
+                        }))
+                      }
+                    />
                   </div>
                 );
               })}

@@ -313,3 +313,26 @@ export function validateReversalDoesNotNegate(input: {
     );
   }
 }
+
+/**
+ * Resolves the "locked unit" for an expense line item based on the
+ * currently picked sellable item's `expenseUnitOverride`. Returns
+ * `undefined` when no lock applies — either because the sellable flow is
+ * disabled for this row, no item is picked, or the picked item has no
+ * override (defaults to "Any").
+ *
+ * Used by both the Add Expense form and the Edit Pending Group dialog to
+ * decide whether to disable the line's Unit Select and sync its value.
+ */
+export function computeLockedUnit(
+  enabled: boolean,
+  linkedInventoryId: string | undefined,
+  sellableInventory: ReadonlyArray<{
+    id: string;
+    expenseUnitOverride?: string;
+  }>
+): string | undefined {
+  if (!enabled || !linkedInventoryId) return undefined;
+  const picked = sellableInventory.find((s) => s.id === linkedInventoryId);
+  return picked?.expenseUnitOverride;
+}

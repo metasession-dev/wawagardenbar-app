@@ -19,6 +19,7 @@ import {
   validateReversalDoesNotNegate,
   convertExpenseQuantityToInventoryUnit,
   validateExpenseUnitAgainstOverride,
+  computeLockedUnit,
 } from '@/lib/expense-inventory-link';
 import type { InventoryKind } from '@/interfaces/inventory.interface';
 import type { UnitOfMeasurement } from '@/interfaces/unit-of-measurement.interface';
@@ -457,5 +458,44 @@ describe('validateExpenseUnitAgainstOverride (REQ-038)', () => {
         override: 'cans',
       })
     ).not.toThrow();
+  });
+});
+
+describe('computeLockedUnit (#94 follow-up)', () => {
+  const sellableInventory = [
+    { id: 'inv-bottles', expenseUnitOverride: 'bottles' },
+    { id: 'inv-cans', expenseUnitOverride: 'cans' },
+    { id: 'inv-no-override' }, // no override → defaults to "Any"
+  ];
+
+  it('returns undefined when sellable mode is disabled', () => {
+    expect(
+      computeLockedUnit(false, 'inv-bottles', sellableInventory)
+    ).toBeUndefined();
+  });
+
+  it('returns undefined when no inventory is picked', () => {
+    expect(
+      computeLockedUnit(true, undefined, sellableInventory)
+    ).toBeUndefined();
+  });
+
+  it('returns the picked sellable item override when enabled and picked', () => {
+    expect(computeLockedUnit(true, 'inv-bottles', sellableInventory)).toBe(
+      'bottles'
+    );
+    expect(computeLockedUnit(true, 'inv-cans', sellableInventory)).toBe('cans');
+  });
+
+  it('returns undefined when the picked item has no override (Any)', () => {
+    expect(
+      computeLockedUnit(true, 'inv-no-override', sellableInventory)
+    ).toBeUndefined();
+  });
+
+  it('returns undefined when the picked id is not in the list (stale)', () => {
+    expect(
+      computeLockedUnit(true, 'inv-deleted', sellableInventory)
+    ).toBeUndefined();
   });
 });

@@ -53,6 +53,7 @@ import {
   type KitchenInventoryOption,
   type SellableInventoryOption,
 } from './inventory-link-section';
+import { computeLockedUnit } from '@/lib/expense-inventory-link';
 import { getExpenseCategoriesAction } from '@/app/actions/finance/expense-categories-actions';
 import { getUnitsOfMeasurementAction } from '@/app/actions/units-actions';
 import {
@@ -512,28 +513,39 @@ export function EditPendingGroupDialog({
                       <FormField
                         control={form.control}
                         name={`items.${index}.unit`}
-                        render={({ field: f }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs text-muted-foreground">
-                              Unit
-                            </FormLabel>
-                            <Select value={f.value} onValueChange={f.onChange}>
-                              <FormControl>
-                                <SelectTrigger className="h-8 text-sm">
-                                  <SelectValue placeholder="Select unit" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {getActiveUnits(unitsRegistry).map((u) => (
-                                  <SelectItem key={u.id} value={u.id}>
-                                    {u.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
+                        render={({ field: f }) => {
+                          const lockedUnit = computeLockedUnit(
+                            sellableLinkEnabled[index] === true,
+                            items[index]?.linkedInventoryId,
+                            sellableInventory
+                          );
+                          return (
+                            <FormItem>
+                              <FormLabel className="text-xs text-muted-foreground">
+                                Unit
+                              </FormLabel>
+                              <Select
+                                value={f.value}
+                                onValueChange={f.onChange}
+                                disabled={!!lockedUnit}
+                              >
+                                <FormControl>
+                                  <SelectTrigger className="h-8 text-sm">
+                                    <SelectValue placeholder="Select unit" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {getActiveUnits(unitsRegistry).map((u) => (
+                                    <SelectItem key={u.id} value={u.id}>
+                                      {u.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          );
+                        }}
                       />
                       <FormField
                         control={form.control}

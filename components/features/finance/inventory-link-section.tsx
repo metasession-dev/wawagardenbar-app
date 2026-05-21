@@ -22,6 +22,7 @@
  * Both flows write to the same `items.${index}.linkedInventoryId` field;
  * the service routes based on the linked inventory's `kind`.
  */
+import { useEffect } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -38,7 +39,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { shouldShowAddToInventoryDropdown } from '@/lib/expense-inventory-link';
+import {
+  computeLockedUnit,
+  shouldShowAddToInventoryDropdown,
+} from '@/lib/expense-inventory-link';
 
 export interface KitchenInventoryOption {
   id: string;
@@ -79,12 +83,40 @@ export function InventoryLinkSection({
   sellableLinkEnabled,
   setSellableLinkEnabled,
 }: InventoryLinkSectionProps) {
+  const linkedInventoryPath = `items.${index}.linkedInventoryId` as const;
+  const unitPath = `items.${index}.unit` as const;
+
+  // Watch the linked id so the locked-unit computation reacts to picks.
+  // Hooks must be called unconditionally — early-return below guards render
+  // output but not hook order.
+  const watchedLinkedId = form.watch(linkedInventoryPath);
+  const lockedUnit = computeLockedUnit(
+    sellableLinkEnabled,
+    typeof watchedLinkedId === 'string' ? watchedLinkedId : undefined,
+    sellableInventory
+  );
+
+  // Keep the line's Unit field in sync with the locked unit. The inline
+  // setValue inside the sellable Select's onValueChange wasn't reliably
+  // updating the displayed value (RHF Controller + Radix Select timing).
+  // A useEffect that fires on lockedUnit changes is the more robust
+  // approach. shouldDirty/shouldValidate ensure subscribers re-render.
+  useEffect(() => {
+    if (lockedUnit) {
+      form.setValue(unitPath, lockedUnit, {
+        shouldDirty: true,
+        shouldValidate: true,
+        shouldTouch: true,
+      });
+    }
+    // form is stable from useForm; unitPath is derived from props that
+    // don't change for a given row's lifecycle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lockedUnit]);
+
   if (!shouldShowAddToInventoryDropdown(expenseType)) {
     return null;
   }
-
-  const linkedInventoryPath = `items.${index}.linkedInventoryId` as const;
-  const unitPath = `items.${index}.unit` as const;
 
   return (
     <>
@@ -152,28 +184,18 @@ export function InventoryLinkSection({
             control={form.control}
             name={linkedInventoryPath}
             render={({ field: f }) => {
-              const picked = sellableInventory.find(
-                (opt) => opt.id === f.value
-              );
-              const lockedUnit = picked?.expenseUnitOverride;
               return (
                 <FormItem>
                   <FormLabel className="text-xs text-muted-foreground">
                     Sellable item to restock
                   </FormLabel>
                   <Select
-                    value={f.value ?? '__none__'}
+                    value={typeof f.value === 'string' ? f.value : '__none__'}
                     onValueChange={(v) => {
                       const newId = v === '__none__' ? undefined : v;
                       f.onChange(newId);
-                      if (newId) {
-                        const opt = sellableInventory.find(
-                          (x) => x.id === newId
-                        );
-                        if (opt?.expenseUnitOverride) {
-                          form.setValue(unitPath, opt.expenseUnitOverride);
-                        }
-                      }
+                      // Unit sync is handled by the useEffect at component
+                      // level — see lockedUnit / form.setValue above.
                     }}
                   >
                     <FormControl>

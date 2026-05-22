@@ -13,7 +13,9 @@ import { TabService } from '@/services';
 import { OrderService } from '@/services/order-service';
 import TabModel from '@/models/tab-model';
 import MenuItemModel from '@/models/menu-item-model';
+import InventoryModel from '@/models/inventory-model';
 import { ITab, IMenuItem } from '@/interfaces';
+import { computeInventoryStatus } from '@/lib/expense-inventory-link';
 import {
   reconcileAndValidateOrderLines,
   type MenuItemForReconcile,
@@ -118,12 +120,23 @@ export async function expressCreateTabAction(params: {
 }
 
 /**
- * Search menu items for the express order flow
+ * Search menu items for the express order flow.
+ *
+ * Each returned item is enriched with live stock info (computed from
+ * Inventory.currentStock + Inventory.minimumStock, NOT the cached
+ * Inventory.status field — see #98) so the order-creation UI can
+ * surface "Out of Stock" / "Low Stock (N left)" to staff. Items
+ * without a paired Inventory record default to `'in-stock'`.
  */
+export type ExpressMenuItem = IMenuItem & {
+  stockStatus: 'in-stock' | 'low-stock' | 'out-of-stock';
+  currentStock?: number;
+};
+
 export async function expressSearchMenuAction(params: {
   query?: string;
   category?: string;
-}): Promise<ActionResult<{ items: IMenuItem[] }>> {
+}): Promise<ActionResult<{ items: ExpressMenuItem[] }>> {
   try {
     await requireAdminSession();
     await connectDB();
@@ -152,9 +165,36 @@ export async function expressSearchMenuAction(params: {
       .sort({ mainCategory: 1, category: 1, name: 1 })
       .lean();
 
+    // One batched fetch of paired Inventory rows; avoids N+1 lookups.
+    const itemIds = items.map((i) => i._id);
+    const inventories = await InventoryModel.find(
+      { menuItemId: { $in: itemIds } },
+      'menuItemId currentStock minimumStock'
+    ).lean();
+    const invByMenuItem = new Map(
+      inventories.map((inv) => [
+        String((inv as { menuItemId: unknown }).menuItemId),
+        inv,
+      ])
+    );
+
+    const enriched = items.map((item) => {
+      const inv = invByMenuItem.get(String(item._id)) as
+        | { currentStock?: number; minimumStock?: number }
+        | undefined;
+      const stockStatus = inv
+        ? computeInventoryStatus(inv.currentStock ?? 0, inv.minimumStock ?? 0)
+        : 'in-stock';
+      return {
+        ...item,
+        stockStatus,
+        currentStock: inv?.currentStock,
+      };
+    });
+
     return {
       success: true,
-      data: { items: JSON.parse(JSON.stringify(items)) },
+      data: { items: JSON.parse(JSON.stringify(enriched)) },
     };
   } catch (error) {
     return {

@@ -46,6 +46,10 @@ interface MenuItem {
   mainCategory: string;
   description: string;
   isAvailable: boolean;
+  /** Computed stock status from currentStock + minimumStock (see #98). */
+  stockStatus: 'in-stock' | 'low-stock' | 'out-of-stock';
+  /** Live current stock from the paired Inventory row. */
+  currentStock?: number;
   portionOptions?: {
     halfPortionEnabled?: boolean;
     halfPortionSurcharge?: number;
@@ -382,10 +386,22 @@ function ExpressCreateOrderContent() {
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {menuItems.map((item) => {
               const qty = getCartQuantity(item._id);
+              const stock = item.currentStock;
+              const isOutOfStock = item.stockStatus === 'out-of-stock';
+              const isLowStock = item.stockStatus === 'low-stock';
+              // Visibility, not blocking — staff may still take the order
+              // (e.g. they have one in the back); the badge informs them
+              // before they tell the customer or add another to the cart.
               return (
                 <Card
                   key={item._id}
-                  className={`cursor-pointer transition-all ${qty > 0 ? 'ring-2 ring-primary' : 'hover:bg-accent/50'}`}
+                  className={`cursor-pointer transition-all ${
+                    qty > 0
+                      ? 'ring-2 ring-primary'
+                      : isOutOfStock
+                        ? 'opacity-60 hover:bg-accent/50'
+                        : 'hover:bg-accent/50'
+                  }`}
                   onClick={() => addToCart(item)}
                 >
                   <CardContent className="p-4">
@@ -398,6 +414,25 @@ function ExpressCreateOrderContent() {
                         <p className="font-bold mt-1">
                           ₦{item.price.toLocaleString()}
                         </p>
+                        {/* Stock visibility for staff. Doesn't block adding to
+                            cart — staff decides based on what's actually
+                            in the bar (e.g. a bottle in the back fridge that
+                            hasn't been counted). */}
+                        {(isOutOfStock || isLowStock) && (
+                          <p
+                            className={`text-xs mt-1 font-medium ${
+                              isOutOfStock
+                                ? 'text-destructive'
+                                : 'text-amber-700'
+                            }`}
+                          >
+                            {isOutOfStock
+                              ? typeof stock === 'number'
+                                ? `Out of Stock${stock <= 0 ? '' : ` (${stock} left)`}`
+                                : 'Out of Stock'
+                              : `Low Stock${typeof stock === 'number' ? ` — ${stock} left` : ''}`}
+                          </p>
+                        )}
                       </div>
                       {qty > 0 && (
                         <div

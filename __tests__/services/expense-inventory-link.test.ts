@@ -401,6 +401,63 @@ describe('REQ-034 AC6 — applyExpenseInventoryLink save path', () => {
       })
     ).rejects.toThrow(/not found/);
   });
+
+  it('#98: recomputes Inventory.status from the new currentStock + minimumStock', async () => {
+    // User scenario from #98: Tiger inventory at 0/15 (out-of-stock).
+    // Restocking 1 bottle should flip status to low-stock (NOT
+    // in-stock — still below min — and NOT stuck on out-of-stock).
+    const linkedInventoryId = new Types.ObjectId();
+    (InventoryModel.findById as ReturnType<typeof vi.fn>).mockResolvedValue({
+      _id: linkedInventoryId,
+      kind: 'menu-item',
+      currentStock: 0,
+      minimumStock: 15,
+      unit: 'bottles',
+    });
+
+    await applyExpenseInventoryLink({
+      expenseId: new Types.ObjectId(),
+      linkedInventoryId,
+      quantity: 1,
+      amount: 725,
+      date: new Date(),
+      performedBy,
+    });
+
+    expect(InventoryModel.updateOne).toHaveBeenCalledWith(
+      { _id: linkedInventoryId },
+      expect.objectContaining({
+        $set: expect.objectContaining({ status: 'low-stock' }),
+      })
+    );
+  });
+
+  it('#98: restock past minimum flips status to in-stock', async () => {
+    const linkedInventoryId = new Types.ObjectId();
+    (InventoryModel.findById as ReturnType<typeof vi.fn>).mockResolvedValue({
+      _id: linkedInventoryId,
+      kind: 'menu-item',
+      currentStock: 5,
+      minimumStock: 15,
+      unit: 'bottles',
+    });
+
+    await applyExpenseInventoryLink({
+      expenseId: new Types.ObjectId(),
+      linkedInventoryId,
+      quantity: 50,
+      amount: 5000,
+      date: new Date(),
+      performedBy,
+    });
+
+    expect(InventoryModel.updateOne).toHaveBeenCalledWith(
+      { _id: linkedInventoryId },
+      expect.objectContaining({
+        $set: expect.objectContaining({ status: 'in-stock' }),
+      })
+    );
+  });
 });
 
 describe('REQ-034 D10 — unit conversion on expense → inventory link', () => {

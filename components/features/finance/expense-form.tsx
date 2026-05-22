@@ -267,14 +267,13 @@ export function ExpenseForm({
   }
 
   // #104 — bidirectional auto-derive across {quantity, unitCost, totalCost}.
-  // The hook tracks which two fields the operator touched most recently
-  // and computes the third via deriveLineField. Replaces the old
-  // unidirectional `handleQtyOrCostChange` (qty + unit → total only).
-  const {
-    onFieldEdit,
-    getHint,
-    resetAll: resetAutoDerive,
-  } = useExpenseLineAutoDerive({ form });
+  // The hook tracks which of {unitCost, totalCost} was last edited per
+  // row and recomputes the other side when qty changes. Editing Unit
+  // Cost recomputes Total; editing Total recomputes Unit Cost. Qty is
+  // the anchor — if qty isn't > 0, nothing computes.
+  const { onFieldEdit, resetAll: resetAutoDerive } = useExpenseLineAutoDerive({
+    form,
+  });
 
   const groupTotal = items.reduce(
     (sum, item) => sum + (item.totalCost || 0),
@@ -664,21 +663,6 @@ export function ExpenseForm({
                         </Button>
                       </div>
                     </div>
-                    {/* #104 — auto-derive hint (e.g. "Enter a quantity
-                        above 0 to auto-compute unit cost"). Empty by
-                        default; populated by the hook only when the
-                        operator's entry pattern would otherwise hit a
-                        divide-by-zero. aria-live so screen readers hear
-                        the recalc / hint. */}
-                    {getHint(index) && (
-                      <p
-                        role="status"
-                        aria-live="polite"
-                        className="text-xs text-amber-700"
-                      >
-                        {getHint(index)}
-                      </p>
-                    )}
                     {/* Inventory linking — Direct Cost only. Shared with
                         the Edit Pending Group dialog via the same component. */}
                     <InventoryLinkSection

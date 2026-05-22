@@ -1,27 +1,33 @@
 'use client';
 
 /**
- * Per-row {qty, unit cost, total} auto-derivation hook for the expense
- * line item editor.
+ * Per-row auto-derive hook for the expense line item editor.
  *
- * Both the Add Expense form (expense-form.tsx) and the Edit Pending
- * Expense Group dialog (edit-pending-group-dialog.tsx) wire the same
- * three inputs through this hook. The hook owns the per-row edit-order
- * tracking (which two fields the operator touched most recently) and
- * does the round-trip into react-hook-form's `setValue`. Math + rules
- * live in `lib/expense-line-derivation.ts`.
+ * Rules (#104, simplified):
+ * - Qty is the anchor — if qty is not > 0, nothing computes.
+ * - User edits Unit Cost → Total recomputes as qty × unitCost. Unit Cost
+ *   becomes "last edited of {unitCost, totalCost}".
+ * - User edits Total → Unit Cost recomputes as total / qty. Total becomes
+ *   "last edited".
+ * - User edits Qty → recompute whichever of {Unit Cost, Total} is NOT the
+ *   last-edited one (so the operator's most recent number stays stable).
+ *   If neither has been edited yet, no-op.
  *
- * Hint string for the divide-by-zero edge cases is exposed via
- * `getHint(index)` so the parent form can render a non-blocking
- * `aria-live="polite"` message under the affected input.
+ * State per row: just one bit — `lastEdited: 'unitCost' | 'totalCost' | null`.
+ * No edit-order array, no pushEdit. The zero-value-clear ambiguity the
+ * earlier 3-field tracker was vulnerable to (#106) doesn't exist here
+ * because Qty isn't tracked at all.
+ *
+ * Both `expense-form.tsx` and `edit-pending-group-dialog.tsx` call
+ * `onFieldEdit(index, field)` from each input's onChange.
  *
  * Ref: #104
  */
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useCallback } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import {
-  deriveLineField,
-  pushEdit,
+  computeTotal,
+  computeUnitCost,
   type LineFieldName,
 } from '@/lib/expense-line-derivation';
 
@@ -30,13 +36,14 @@ interface UseExpenseLineAutoDeriveOptions {
   form: UseFormReturn<any>;
 }
 
+type LastEdited = 'unitCost' | 'totalCost' | null;
+
 export function useExpenseLineAutoDerive({
   form,
 }: UseExpenseLineAutoDeriveOptions) {
-  // Per-row edit-order. Kept in a ref so it doesn't trigger renders;
-  // hint state lives in React state because the UI needs to react.
-  const editOrderRef = useRef<Record<number, LineFieldName[]>>({});
-  const [hints, setHints] = useState<Record<number, string | undefined>>({});
+  // Per-row last-edited tracker. Kept in a ref so updates don't trigger
+  // renders — the form re-renders on its own when we call setValue.
+  const lastEditedRef = useRef<Record<number, LastEdited>>({});
 
   const onFieldEdit = useCallback(
     (index: number, field: LineFieldName) => {
@@ -44,73 +51,61 @@ export function useExpenseLineAutoDerive({
       const q = Number(item.quantity ?? 0);
       const u = Number(item.unitCost ?? 0);
       const t = Number(item.totalCost ?? 0);
-      const fieldValue =
-        field === 'quantity' ? q : field === 'unitCost' ? u : t;
 
-      // Edits with value 0 don't claim the field. Two reasons:
-      //
-      // 1. Per AC4, "the next blank/oldest recomputes" — blank = 0 here.
-      //    A field at 0 is by definition the recompute target candidate,
-      //    not a user-asserted constraint.
-      // 2. Clearing a field (backspacing 0.50 to empty) fires onChange
-      //    with value 0; that's a clear, not a "set to zero" assertion.
-      //    Without this guard, deriveLineField targets the wrong field —
-      //    see the UAT bug where Qty=2 + Total=70000 with a cleared
-      //    Unit Cost field wrongly targeted Quantity (asking the user
-      //    to "Enter a unit cost above 0 to auto-compute quantity"
-      //    instead of computing Unit Cost = 35000).
-      const prev = editOrderRef.current[index] ?? [];
-      const next =
-        fieldValue > 0
-          ? pushEdit(prev, field)
-          : prev.filter((f) => f !== field);
-      editOrderRef.current[index] = next;
-
-      const result = deriveLineField(
-        { quantity: q, unitCost: u, totalCost: t },
-        next
-      );
-
-      // Update the hint (clears when there's nothing to say).
-      setHints((h) => ({ ...h, [index]: result.hint }));
-
-      if (result.field && result.value !== null) {
-        form.setValue(`items.${index}.${result.field}`, result.value, {
+      const setIfNumber = (
+        target: 'unitCost' | 'totalCost',
+        value: number | null
+      ) => {
+        if (value === null) return;
+        form.setValue(`items.${index}.${target}`, value, {
           shouldDirty: true,
           shouldValidate: false,
           shouldTouch: false,
         });
+      };
+
+      if (field === 'unitCost') {
+        // Operator asserted Unit Cost. Recompute Total.
+        setIfNumber('totalCost', computeTotal(q, u));
+        lastEditedRef.current[index] = 'unitCost';
+        return;
+      }
+
+      if (field === 'totalCost') {
+        // Operator asserted Total. Recompute Unit Cost.
+        setIfNumber('unitCost', computeUnitCost(q, t));
+        lastEditedRef.current[index] = 'totalCost';
+        return;
+      }
+
+      // field === 'quantity'. Recompute the NON-last-edited of
+      // {unitCost, totalCost} so the operator's last-asserted figure
+      // stays stable. If neither has been edited yet, no-op.
+      const last = lastEditedRef.current[index] ?? null;
+      if (last === 'unitCost') {
+        setIfNumber('totalCost', computeTotal(q, u));
+      } else if (last === 'totalCost') {
+        setIfNumber('unitCost', computeUnitCost(q, t));
       }
     },
     [form]
   );
 
-  const getHint = useCallback(
-    (index: number): string | undefined => hints[index],
-    [hints]
-  );
-
   /**
    * Clears the tracking for an index — call when removing a row so a
-   * later row that re-uses that index doesn't inherit stale edits.
+   * later row that re-uses that index doesn't inherit stale state.
    */
   const resetRow = useCallback((index: number) => {
-    delete editOrderRef.current[index];
-    setHints((h) => {
-      const next = { ...h };
-      delete next[index];
-      return next;
-    });
+    delete lastEditedRef.current[index];
   }, []);
 
   /**
-   * Clears all edit tracking — call from the dialog's open effect so a
-   * fresh session doesn't inherit history from the previous open.
+   * Clears all tracking — call from the dialog's open effect so a fresh
+   * session doesn't inherit state from the previous open.
    */
   const resetAll = useCallback(() => {
-    editOrderRef.current = {};
-    setHints({});
+    lastEditedRef.current = {};
   }, []);
 
-  return { onFieldEdit, getHint, resetRow, resetAll };
+  return { onFieldEdit, resetRow, resetAll };
 }

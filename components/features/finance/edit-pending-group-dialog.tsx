@@ -252,14 +252,11 @@ export function EditPendingGroupDialog({
     0
   );
 
-  // #104 — bidirectional auto-derive across {quantity, unitCost,
-  // totalCost}. Same hook the Add Expense form uses; the math lives in
-  // lib/expense-line-derivation.ts.
-  const {
-    onFieldEdit,
-    getHint,
-    resetAll: resetAutoDerive,
-  } = useExpenseLineAutoDerive({ form });
+  // #104 — auto-derive across {quantity, unitCost, totalCost}. Same hook
+  // the Add Expense form uses; math lives in lib/expense-line-derivation.ts.
+  const { onFieldEdit, resetAll: resetAutoDerive } = useExpenseLineAutoDerive({
+    form,
+  });
 
   async function handleDelete() {
     setIsDeleting(true);
@@ -620,15 +617,6 @@ export function EditPendingGroupDialog({
                         </Button>
                       </div>
                     </div>
-                    {getHint(index) && (
-                      <p
-                        role="status"
-                        aria-live="polite"
-                        className="text-xs text-amber-700"
-                      >
-                        {getHint(index)}
-                      </p>
-                    )}
                     <InventoryLinkSection
                       form={form}
                       index={index}

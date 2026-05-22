@@ -2,7 +2,31 @@ import { connectDB } from '@/lib/mongodb';
 import MenuItem from '@/models/menu-item-model';
 import Inventory from '@/models/inventory-model';
 import { IMenuItem } from '@/interfaces/menu-item.interface';
+import { computeInventoryStatus } from '@/lib/expense-inventory-link';
 import { SystemSettingsService } from './system-settings-service';
+
+/**
+ * Resolve the stock status to display on customer-facing surfaces.
+ *
+ * Computes from live `currentStock` + `minimumStock` rather than reading
+ * the cached `status` field. The cached field can drift from reality if
+ * any write path updates currentStock without re-running the schema's
+ * pre('save') hook (e.g. `$inc` via `updateOne` — see #98). Computing
+ * fresh on every read means menu surfaces are always accurate even when
+ * older inventory documents have stale `status` from before #99.
+ *
+ * Items with no Inventory record (e.g. menu items without inventory
+ * tracking) default to `'in-stock'` to preserve prior behaviour.
+ */
+function resolveStockStatus(
+  inventory: { currentStock?: number; minimumStock?: number } | null | undefined
+): 'in-stock' | 'low-stock' | 'out-of-stock' {
+  if (!inventory) return 'in-stock';
+  return computeInventoryStatus(
+    inventory.currentStock ?? 0,
+    inventory.minimumStock ?? 0
+  );
+}
 
 export interface MenuItemWithStock extends IMenuItem {
   stockStatus: 'in-stock' | 'low-stock' | 'out-of-stock';
@@ -42,7 +66,7 @@ export class CategoryService {
         }).lean();
         return serializeMenuItem({
           ...item,
-          stockStatus: inventory?.status || 'in-stock',
+          stockStatus: resolveStockStatus(inventory),
           currentStock: inventory?.currentStock,
         });
       })
@@ -74,7 +98,7 @@ export class CategoryService {
         }).lean();
         return serializeMenuItem({
           ...item,
-          stockStatus: inventory?.status || 'in-stock',
+          stockStatus: resolveStockStatus(inventory),
           currentStock: inventory?.currentStock,
         });
       })
@@ -106,7 +130,7 @@ export class CategoryService {
         }).lean();
         return serializeMenuItem({
           ...item,
-          stockStatus: inventory?.status || 'in-stock',
+          stockStatus: resolveStockStatus(inventory),
           currentStock: inventory?.currentStock,
         });
       })
@@ -133,7 +157,7 @@ export class CategoryService {
 
     return serializeMenuItem({
       ...item,
-      stockStatus: inventory?.status || 'in-stock',
+      stockStatus: resolveStockStatus(inventory),
       currentStock: inventory?.currentStock,
     }) as MenuItemWithStock;
   }
@@ -222,7 +246,7 @@ export class CategoryService {
         }).lean();
         return serializeMenuItem({
           ...item,
-          stockStatus: inventory?.status || 'in-stock',
+          stockStatus: resolveStockStatus(inventory),
           currentStock: inventory?.currentStock,
         });
       })

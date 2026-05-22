@@ -8,7 +8,14 @@ import { Button } from '@/components/ui/button';
 import { StockAdjustmentActions } from '@/components/features/admin/stock-adjustment-actions';
 import { StockHistoryTable } from '@/components/features/admin/stock-history-table';
 import { LocationBreakdownCard } from '@/components/features/inventory/location-breakdown-card';
-import { Package, TrendingUp, TrendingDown, AlertTriangle, ArrowLeft } from 'lucide-react';
+import {
+  Package,
+  TrendingUp,
+  TrendingDown,
+  AlertTriangle,
+  ArrowLeft,
+} from 'lucide-react';
+import { computeInventoryStatus } from '@/lib/expense-inventory-link';
 
 interface Props {
   params: Promise<{
@@ -29,7 +36,16 @@ export default async function InventoryDetailPage({ params }: Props) {
   }
 
   const inventory = result.data as any;
-  const stockPercentage = (inventory.currentStock / inventory.maximumStock) * 100;
+  const stockPercentage =
+    (inventory.currentStock / inventory.maximumStock) * 100;
+  // Compute fresh from currentStock + minimumStock so a stale cached
+  // status from before #99 doesn't show a wrong badge here. The cached
+  // field is kept for non-display query convenience (low-stock alerts,
+  // etc.) but every display surface should compute live.
+  const stockStatus = computeInventoryStatus(
+    inventory.currentStock ?? 0,
+    inventory.minimumStock ?? 0
+  );
 
   // Get status badge variant
   const getStatusVariant = (status: string) => {
@@ -66,14 +82,21 @@ export default async function InventoryDetailPage({ params }: Props) {
               </Button>
             </Link>
           </div>
-          <h1 className="text-3xl font-bold">{inventory.menuItemId?.name || 'Unknown Item'}</h1>
+          <h1 className="text-3xl font-bold">
+            {inventory.menuItemId?.name || 'Unknown Item'}
+          </h1>
           <p className="text-muted-foreground">
-            {inventory.menuItemId?.mainCategory} • {inventory.menuItemId?.category}
-            {inventory.menuItemId?.price && ` • ₦${inventory.menuItemId.price.toLocaleString()}`}
+            {inventory.menuItemId?.mainCategory} •{' '}
+            {inventory.menuItemId?.category}
+            {inventory.menuItemId?.price &&
+              ` • ₦${inventory.menuItemId.price.toLocaleString()}`}
           </p>
         </div>
-        <Badge variant={getStatusVariant(inventory.status)} className="text-lg px-4 py-2">
-          {inventory.status.replace('-', ' ').toUpperCase()}
+        <Badge
+          variant={getStatusVariant(stockStatus)}
+          className="text-lg px-4 py-2"
+        >
+          {stockStatus.replace('-', ' ').toUpperCase()}
         </Badge>
       </div>
 
@@ -113,7 +136,8 @@ export default async function InventoryDetailPage({ params }: Props) {
           <CardContent>
             <div className="text-2xl font-bold">{inventory.totalWaste}</div>
             <p className="text-xs text-muted-foreground">
-              ₦{(inventory.totalWaste * inventory.costPerUnit).toLocaleString()} cost
+              ₦{(inventory.totalWaste * inventory.costPerUnit).toLocaleString()}{' '}
+              cost
             </p>
           </CardContent>
         </Card>
@@ -124,8 +148,13 @@ export default async function InventoryDetailPage({ params }: Props) {
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{Math.round(stockPercentage)}%</div>
-            <Progress value={stockPercentage} className={`mt-2 ${getProgressColor()}`} />
+            <div className="text-2xl font-bold">
+              {Math.round(stockPercentage)}%
+            </div>
+            <Progress
+              value={stockPercentage}
+              className={`mt-2 ${getProgressColor()}`}
+            />
           </CardContent>
         </Card>
       </div>
@@ -138,15 +167,23 @@ export default async function InventoryDetailPage({ params }: Props) {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Supplier</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Supplier
+              </p>
               <p className="text-lg">{inventory.supplier || 'Not specified'}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Cost Per Unit</p>
-              <p className="text-lg">₦{inventory.costPerUnit.toLocaleString()}</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Cost Per Unit
+              </p>
+              <p className="text-lg">
+                ₦{inventory.costPerUnit.toLocaleString()}
+              </p>
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Last Restocked</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Last Restocked
+              </p>
               <p className="text-lg">
                 {inventory.lastRestocked
                   ? new Date(inventory.lastRestocked).toLocaleDateString()
@@ -154,7 +191,9 @@ export default async function InventoryDetailPage({ params }: Props) {
               </p>
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Last Sale</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Last Sale
+              </p>
               <p className="text-lg">
                 {inventory.lastSaleDate
                   ? new Date(inventory.lastSaleDate).toLocaleDateString()
@@ -162,15 +201,22 @@ export default async function InventoryDetailPage({ params }: Props) {
               </p>
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Total Restocked</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Total Restocked
+              </p>
               <p className="text-lg">
                 {inventory.totalRestocked} {inventory.unit}
               </p>
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Stock Value</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Stock Value
+              </p>
               <p className="text-lg">
-                ₦{(inventory.currentStock * inventory.costPerUnit).toLocaleString()}
+                ₦
+                {(
+                  inventory.currentStock * inventory.costPerUnit
+                ).toLocaleString()}
               </p>
             </div>
           </div>
@@ -178,20 +224,25 @@ export default async function InventoryDetailPage({ params }: Props) {
       </Card>
 
       {/* Location Breakdown */}
-      {inventory.trackByLocation && inventory.locations && inventory.locations.length > 0 && (
-        <LocationBreakdownCard
-          locations={inventory.locations.map((loc: any) => ({
-            location: loc.location,
-            locationName: loc.locationName,
-            currentStock: loc.currentStock,
-            percentage: inventory.currentStock > 0
-              ? ((loc.currentStock / inventory.currentStock) * 100).toFixed(1)
-              : '0',
-          }))}
-          totalStock={inventory.currentStock}
-          unit={inventory.unit}
-        />
-      )}
+      {inventory.trackByLocation &&
+        inventory.locations &&
+        inventory.locations.length > 0 && (
+          <LocationBreakdownCard
+            locations={inventory.locations.map((loc: any) => ({
+              location: loc.location,
+              locationName: loc.locationName,
+              currentStock: loc.currentStock,
+              percentage:
+                inventory.currentStock > 0
+                  ? ((loc.currentStock / inventory.currentStock) * 100).toFixed(
+                      1
+                    )
+                  : '0',
+            }))}
+            totalStock={inventory.currentStock}
+            unit={inventory.unit}
+          />
+        )}
 
       {/* Stock Adjustment Actions */}
       <Card>
@@ -209,10 +260,10 @@ export default async function InventoryDetailPage({ params }: Props) {
           <CardTitle>Stock Movement History</CardTitle>
         </CardHeader>
         <CardContent>
-          <StockHistoryTable 
-            history={inventory.stockHistory} 
-            unit={inventory.unit} 
-            locations={inventory.configLocations || []} 
+          <StockHistoryTable
+            history={inventory.stockHistory}
+            unit={inventory.unit}
+            locations={inventory.configLocations || []}
           />
         </CardContent>
       </Card>

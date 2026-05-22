@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InventoryItemsClient } from '@/components/features/admin/inventory-items-client';
 import type { InventoryKind } from '@/interfaces/inventory.interface';
+import { computeInventoryStatus } from '@/lib/expense-inventory-link';
 import {
   AlertTriangle,
   ArrowRightLeft,
@@ -64,19 +65,36 @@ async function getInventoryByKind(kind: InventoryKind, archived = false) {
 }
 
 /**
- * Get inventory statistics
+ * Get inventory statistics.
+ *
+ * Counts are computed from live `currentStock` + `minimumStock` per row
+ * rather than counting on the cached `Inventory.status` field. The
+ * cached field can drift if any write path bypasses the schema's
+ * pre('save') hook (e.g. expense-link `$inc` before #99) — counting on
+ * it would inflate the Out of Stock / Low Stock badges. Single fetch +
+ * JS count is cheap for our inventory size (~150 rows).
  */
 async function getInventoryStats() {
   await connectDB();
 
-  const [totalItems, lowStockItems, outOfStockItems] = await Promise.all([
-    InventoryModel.countDocuments(),
-    InventoryModel.countDocuments({ status: 'low-stock' }),
-    InventoryModel.countDocuments({ status: 'out-of-stock' }),
-  ]);
+  const rows = await InventoryModel.find(
+    {},
+    'currentStock minimumStock'
+  ).lean();
+
+  let lowStockItems = 0;
+  let outOfStockItems = 0;
+  for (const r of rows) {
+    const s = computeInventoryStatus(
+      (r as { currentStock?: number }).currentStock ?? 0,
+      (r as { minimumStock?: number }).minimumStock ?? 0
+    );
+    if (s === 'low-stock') lowStockItems += 1;
+    else if (s === 'out-of-stock') outOfStockItems += 1;
+  }
 
   return {
-    totalItems,
+    totalItems: rows.length,
     lowStockItems,
     outOfStockItems,
   };

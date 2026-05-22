@@ -9,12 +9,22 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { MenuItemsClient } from '@/components/features/admin/menu-items-client';
 
 /**
- * Get all menu items
+ * Get all menu items (customer-facing only — kind:'menu-item').
+ *
+ * Kitchen-ingredient stubs (created as foreign-key targets for
+ * kitchen-ingredient Inventory rows in REQ-034) are excluded. They have
+ * no price / customer-availability / image, so they'd render as nearly-
+ * empty rows here, and they're already fully managed via the dedicated
+ * Inventory → Kitchen tab (add / edit / archive). Mirrors the kind
+ * gating already in place on every customer-facing query in
+ * services/category-service.ts.
+ *
+ * Closes #91.
  */
 async function getMenuItems() {
   await connectDB();
 
-  const menuItems = await MenuItemModel.find()
+  const menuItems = await MenuItemModel.find({ kind: 'menu-item' })
     .sort({ mainCategory: 1, category: 1, name: 1 })
     .lean();
 
@@ -34,17 +44,25 @@ async function getMenuItems() {
 }
 
 /**
- * Get menu statistics
+ * Get menu statistics (customer-facing items only).
  */
 async function getMenuStats() {
   await connectDB();
 
-  const [totalItems, availableItems, foodItems, drinkItems] = await Promise.all([
-    MenuItemModel.countDocuments(),
-    MenuItemModel.countDocuments({ isAvailable: true }),
-    MenuItemModel.countDocuments({ mainCategory: 'food' }),
-    MenuItemModel.countDocuments({ mainCategory: 'drinks' }),
-  ]);
+  const [totalItems, availableItems, foodItems, drinkItems] = await Promise.all(
+    [
+      MenuItemModel.countDocuments({ kind: 'menu-item' }),
+      MenuItemModel.countDocuments({ kind: 'menu-item', isAvailable: true }),
+      MenuItemModel.countDocuments({
+        kind: 'menu-item',
+        mainCategory: 'food',
+      }),
+      MenuItemModel.countDocuments({
+        kind: 'menu-item',
+        mainCategory: 'drinks',
+      }),
+    ]
+  );
 
   return {
     totalItems,

@@ -14,15 +14,18 @@
 import { Types } from 'mongoose';
 import { connectDB } from '@/lib/mongodb';
 import InventoryModel from '@/models/inventory-model';
+import MenuItemModel from '@/models/menu-item-model';
 import StockMovementModel from '@/models/stock-movement-model';
 import InventoryItemCostHistory from '@/models/inventory-item-cost-history-model';
 import { ExpenseModel } from '@/models';
 import {
   buildStockMovementFromExpense,
   buildCostHistoryRowFromExpense,
+  computeInventoryStatus,
   resolveExpenseQuantity,
   validateReversalDoesNotNegate,
   convertExpenseQuantityToInventoryUnit,
+  validateExpenseUnitAgainstOverride,
 } from '@/lib/expense-inventory-link';
 import { SystemSettingsService } from '@/services/system-settings-service';
 
@@ -72,11 +75,35 @@ export async function applyExpenseInventoryLink(
       `Linked inventory ${input.linkedInventoryId.toString()} not found`
     );
   }
-  if (inventory.kind !== 'kitchen-ingredient') {
+  // REQ-038: relax the kind guard to accept both kitchen-ingredient
+  // and menu-item kinds. Sellable items now restock from expenses too;
+  // the financial write path (StockMovement + $inc + CostHistory +
+  // reversal) is identical for both. Any other kind is still rejected.
+  if (
+    inventory.kind !== 'kitchen-ingredient' &&
+    inventory.kind !== 'menu-item'
+  ) {
     throw new Error(
       `Inventory ${input.linkedInventoryId.toString()} has kind '${inventory.kind}', ` +
-        `expected 'kitchen-ingredient' — expense links target kitchen ingredients only`
+        `expected 'kitchen-ingredient' or 'menu-item' — expense links target sellable items or kitchen ingredients only`
     );
+  }
+
+  // REQ-038: server-side enforcement of MenuItem.expenseUnitOverride.
+  // Even if the UI lock is bypassed (out-of-date client, direct API
+  // call, etc.), the apply path rejects mismatches naming both units.
+  if (inventory.menuItemId) {
+    const paired = await MenuItemModel.findById(inventory.menuItemId)
+      .select('expenseUnitOverride name')
+      .lean();
+    if (paired) {
+      validateExpenseUnitAgainstOverride({
+        expenseUnit: input.expenseUnit,
+        override: (paired as { expenseUnitOverride?: string })
+          .expenseUnitOverride,
+        menuItemName: (paired as { name?: string }).name,
+      });
+    }
   }
 
   // D10 — convert the operator-entered quantity into the inventory's
@@ -118,6 +145,13 @@ export async function applyExpenseInventoryLink(
     const movement = await StockMovementModel.create(movementPayload);
     stockMovementId = movement._id;
 
+    // #98 — Mongoose pre('save') hook is bypassed by updateOne/$inc, so
+    // recompute status manually from the known pre-write currentStock +
+    // quantity vs minimumStock. Single atomic write; no extra read.
+    const newStatus = computeInventoryStatus(
+      inventory.currentStock + quantity,
+      inventory.minimumStock
+    );
     const incResult = await InventoryModel.updateOne(
       { _id: input.linkedInventoryId },
       {
@@ -125,7 +159,7 @@ export async function applyExpenseInventoryLink(
           currentStock: quantity,
           totalRestocked: quantity,
         },
-        $set: { lastRestocked: input.date },
+        $set: { lastRestocked: input.date, status: newStatus },
       }
     );
     if (incResult.modifiedCount !== 1) {
@@ -265,12 +299,21 @@ export async function reverseExpenseInventoryLink(
     notes: `Expense link reversal (${input.expenseId.toString()})`,
   });
 
+  // #98 — same status-recompute requirement as the apply path. Reversal
+  // can leave stock below min or at 0; status must reflect the new level.
+  const reversedStatus = computeInventoryStatus(
+    inventory.currentStock - quantity,
+    inventory.minimumStock
+  );
   const incResult = await InventoryModel.updateOne(
     {
       _id: input.linkedInventoryId,
       currentStock: { $gte: quantity },
     },
-    { $inc: { currentStock: -quantity, totalRestocked: -quantity } }
+    {
+      $inc: { currentStock: -quantity, totalRestocked: -quantity },
+      $set: { status: reversedStatus },
+    }
   );
   if (incResult.modifiedCount !== 1) {
     // Race — inventory dropped below required threshold between the

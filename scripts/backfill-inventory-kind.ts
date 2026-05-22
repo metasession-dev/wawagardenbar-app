@@ -28,6 +28,7 @@ import path from 'path';
 import InventoryModel from '../models/inventory-model';
 import MenuItemModel from '../models/menu-item-model';
 import { INVENTORY_KIND_BACKFILL_FILTER } from '../lib/inventory-kind-backfill';
+import { assertMongoUriHasDatabase } from '../lib/mongo-uri';
 
 config({ path: path.resolve(__dirname, '../.env.local') });
 
@@ -45,9 +46,20 @@ async function main() {
     process.exit(2);
   }
 
+  // REQ-040 / D12 guard: refuse URIs without a database path BEFORE any
+  // mongoose.connect() call, so we never silently connect to the wrong DB.
+  let resolved: { uri: string; database: string };
+  try {
+    resolved = assertMongoUriHasDatabase(uri);
+  } catch (err) {
+    console.error(`[REQ-040] ${(err as Error).message}`);
+    process.exit(1);
+  }
+
   console.log(
     `[REQ-034] kind backfill starting (dry-run=${DRY_RUN}); connecting…`
   );
+  console.log(`Connecting to database: ${resolved.database}`);
   await mongoose.connect(uri);
 
   const inventoryCandidates = await InventoryModel.countDocuments(

@@ -108,6 +108,43 @@ export function shouldShowAddToInventoryDropdown(
 }
 
 /**
+ * REQ-038 — Server-side enforcement of `MenuItem.expenseUnitOverride`.
+ *
+ * When the operator links a Direct Cost expense to a sellable inventory
+ * row, the paired MenuItem may declare a "Purchase unit" override that
+ * locks the expense's `unit` to a specific UoM-registry id (e.g.
+ * 'bottles', 'cans', 'bags', 'pieces'). The UI also enforces this lock,
+ * but the service is the load-bearing check: even if the UI is bypassed
+ * or out-of-date, the apply path rejects mismatches.
+ *
+ * No-ops (return without throw) when:
+ *  - `override` is undefined (defaults to "Any"; legacy behaviour)
+ *  - `override` is the 'any' sentinel (explicit "Any")
+ *  - `expenseUnit` is undefined (legacy expense saved before REQ-033)
+ *
+ * Throws (naming both units + the override) on mismatch — error is
+ * generic over the unit id so a future REQ adding new units works
+ * without code change.
+ */
+export function validateExpenseUnitAgainstOverride(input: {
+  expenseUnit: string | undefined | null;
+  override: string | undefined | null;
+  menuItemName?: string;
+}): void {
+  const { expenseUnit, override, menuItemName } = input;
+  if (!override) return; // undefined → "Any" (legacy behaviour)
+  if (override === 'any') return; // explicit sentinel
+  if (!expenseUnit) return; // legacy passthrough
+  if (expenseUnit === override) return;
+  const target = menuItemName ? ` on '${menuItemName}'` : '';
+  throw new Error(
+    `Expense unit '${expenseUnit}' does not match the locked purchase unit ` +
+      `'${override}'${target}. Either change the expense unit to '${override}' ` +
+      `or update the menu item's Purchase unit setting.`
+  );
+}
+
+/**
  * AC5 (dropdown options): the selector only lists inventory rows whose
  * `kind` is `'kitchen-ingredient'`. Sellable inventory is never a valid
  * link target (a customer-menu item is restocked by sales returns, not
@@ -275,4 +312,51 @@ export function validateReversalDoesNotNegate(input: {
         `expense without unlinking.`
     );
   }
+}
+
+/**
+ * Resolves the "locked unit" for an expense line item based on the
+ * currently picked sellable item's `expenseUnitOverride`. Returns
+ * `undefined` when no lock applies — either because the sellable flow is
+ * disabled for this row, no item is picked, or the picked item has no
+ * override (defaults to "Any").
+ *
+ * Used by both the Add Expense form and the Edit Pending Group dialog to
+ * decide whether to disable the line's Unit Select and sync its value.
+ */
+export function computeLockedUnit(
+  enabled: boolean,
+  linkedInventoryId: string | undefined,
+  sellableInventory: ReadonlyArray<{
+    id: string;
+    expenseUnitOverride?: string;
+  }>
+): string | undefined {
+  if (!enabled || !linkedInventoryId) return undefined;
+  const picked = sellableInventory.find((s) => s.id === linkedInventoryId);
+  return picked?.expenseUnitOverride;
+}
+
+/**
+ * Mirrors the Inventory schema's pre('save') hook
+ * (`models/inventory-model.ts`) so the status field stays consistent
+ * regardless of which write path updates currentStock.
+ *
+ * Why this lives here: the expense-link service writes via
+ * `updateOne({ $inc })`, which bypasses Mongoose's save middleware. Both
+ * apply and reversal paths must therefore recompute status manually.
+ * Keeping the rule in one place (here, plus the schema hook) prevents
+ * drift.
+ *
+ * Ref: #98
+ */
+export type StockStatus = 'in-stock' | 'low-stock' | 'out-of-stock';
+
+export function computeInventoryStatus(
+  currentStock: number,
+  minimumStock: number
+): StockStatus {
+  if (currentStock <= 0) return 'out-of-stock';
+  if (currentStock <= minimumStock) return 'low-stock';
+  return 'in-stock';
 }

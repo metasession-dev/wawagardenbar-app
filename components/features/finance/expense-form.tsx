@@ -49,9 +49,9 @@ import { cn } from '@/lib/utils';
 import {
   createPendingExpenseGroupAction,
   listKitchenIngredientInventoryAction,
+  listSellableInventoryAction,
 } from '@/app/actions/finance/pending-expense-actions';
 import { getExpenseCategoriesAction } from '@/app/actions/finance/expense-categories-actions';
-import { shouldShowAddToInventoryDropdown } from '@/lib/expense-inventory-link';
 import { getUnitsOfMeasurementAction } from '@/app/actions/units-actions';
 import {
   DEFAULT_UNITS_OF_MEASUREMENT,
@@ -104,12 +104,12 @@ function makeDefaultItem() {
   };
 }
 
-interface KitchenInventoryOption {
-  id: string;
-  name: string;
-  category: string;
-  unit: string;
-}
+import {
+  InventoryLinkSection,
+  type KitchenInventoryOption,
+  type SellableInventoryOption,
+} from './inventory-link-section';
+import { computeLockedUnit } from '@/lib/expense-inventory-link';
 
 interface ExpenseFormProps {
   open: boolean;
@@ -149,6 +149,17 @@ export function ExpenseForm({
   const [kitchenInventory, setKitchenInventory] = useState<
     KitchenInventoryOption[]
   >([]);
+  // REQ-038 — sellable inventory rows for the per-line "Update inventory
+  // count" sellable dropdown.
+  const [sellableInventory, setSellableInventory] = useState<
+    SellableInventoryOption[]
+  >([]);
+  // REQ-038 — per-line "Update inventory count" checkbox state. Keyed by
+  // line index; not persisted in the form schema because the underlying
+  // field is the shared `linkedInventoryId`.
+  const [sellableLinkEnabled, setSellableLinkEnabled] = useState<
+    Record<number, boolean>
+  >({});
 
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseFormSchema),
@@ -172,6 +183,8 @@ export function ExpenseForm({
       fetchCategories();
       fetchUnits();
       fetchKitchenInventory();
+      fetchSellableInventory();
+      setSellableLinkEnabled({});
       form.reset({
         date: prefill?.date ?? new Date(),
         items:
@@ -219,6 +232,19 @@ export function ExpenseForm({
       const result = await listKitchenIngredientInventoryAction();
       if (result.success && result.items) {
         setKitchenInventory(result.items);
+      }
+    } catch {
+      /* dropdown will simply be empty */
+    }
+  }
+
+  // REQ-038: load sellable inventory rows for the "Update inventory
+  // count" dropdown.
+  async function fetchSellableInventory() {
+    try {
+      const result = await listSellableInventoryAction();
+      if (result.success && result.items) {
+        setSellableInventory(result.items);
       }
     } catch {
       /* dropdown will simply be empty */
@@ -528,28 +554,39 @@ export function ExpenseForm({
                       <FormField
                         control={form.control}
                         name={`items.${index}.unit`}
-                        render={({ field: f }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs text-muted-foreground">
-                              Unit
-                            </FormLabel>
-                            <Select value={f.value} onValueChange={f.onChange}>
-                              <FormControl>
-                                <SelectTrigger className="h-8 text-sm">
-                                  <SelectValue placeholder="Select unit" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {getActiveUnits(unitsRegistry).map((u) => (
-                                  <SelectItem key={u.id} value={u.id}>
-                                    {u.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
+                        render={({ field: f }) => {
+                          const lockedUnit = computeLockedUnit(
+                            sellableLinkEnabled[index] === true,
+                            items[index]?.linkedInventoryId,
+                            sellableInventory
+                          );
+                          return (
+                            <FormItem>
+                              <FormLabel className="text-xs text-muted-foreground">
+                                Unit
+                              </FormLabel>
+                              <Select
+                                value={f.value}
+                                onValueChange={f.onChange}
+                                disabled={!!lockedUnit}
+                              >
+                                <FormControl>
+                                  <SelectTrigger className="h-8 text-sm">
+                                    <SelectValue placeholder="Select unit" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {getActiveUnits(unitsRegistry).map((u) => (
+                                    <SelectItem key={u.id} value={u.id}>
+                                      {u.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          );
+                        }}
                       />
                       <FormField
                         control={form.control}
@@ -623,52 +660,22 @@ export function ExpenseForm({
                         </Button>
                       </div>
                     </div>
-                    {/* REQ-034 AC5: Add-to-inventory link — Direct Cost only */}
-                    {shouldShowAddToInventoryDropdown(
-                      items[index]?.expenseType
-                    ) && (
-                      <FormField
-                        control={form.control}
-                        name={`items.${index}.linkedInventoryId`}
-                        render={({ field: f }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs text-muted-foreground">
-                              Add to inventory (optional)
-                            </FormLabel>
-                            <Select
-                              value={f.value ?? '__none__'}
-                              onValueChange={(v) =>
-                                f.onChange(v === '__none__' ? undefined : v)
-                              }
-                            >
-                              <FormControl>
-                                <SelectTrigger className="h-8 text-sm">
-                                  <SelectValue placeholder="No inventory link" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="__none__">
-                                  No inventory link
-                                </SelectItem>
-                                {kitchenInventory.length === 0 ? (
-                                  <SelectItem value="__empty__" disabled>
-                                    No kitchen ingredients available
-                                  </SelectItem>
-                                ) : (
-                                  kitchenInventory.map((opt) => (
-                                    <SelectItem key={opt.id} value={opt.id}>
-                                      {opt.name}
-                                      {opt.category ? ` — ${opt.category}` : ''}
-                                    </SelectItem>
-                                  ))
-                                )}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    )}
+                    {/* Inventory linking — Direct Cost only. Shared with
+                        the Edit Pending Group dialog via the same component. */}
+                    <InventoryLinkSection
+                      form={form}
+                      index={index}
+                      expenseType={items[index]?.expenseType ?? ''}
+                      kitchenInventory={kitchenInventory}
+                      sellableInventory={sellableInventory}
+                      sellableLinkEnabled={sellableLinkEnabled[index] === true}
+                      setSellableLinkEnabled={(enabled) =>
+                        setSellableLinkEnabled((prev) => ({
+                          ...prev,
+                          [index]: enabled,
+                        }))
+                      }
+                    />
                   </div>
                 );
               })}

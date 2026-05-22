@@ -18,6 +18,9 @@ import {
   computeWeightedAverageCost,
   validateReversalDoesNotNegate,
   convertExpenseQuantityToInventoryUnit,
+  validateExpenseUnitAgainstOverride,
+  computeLockedUnit,
+  computeInventoryStatus,
 } from '@/lib/expense-inventory-link';
 import type { InventoryKind } from '@/interfaces/inventory.interface';
 import type { UnitOfMeasurement } from '@/interfaces/unit-of-measurement.interface';
@@ -372,5 +375,161 @@ describe('REQ-034 AC7 — validateReversalDoesNotNegate', () => {
         reversalQuantity: 0,
       })
     ).toThrow(/finite/);
+  });
+});
+
+// ─── REQ-038 ─────────────────────────────────────────────────────────
+//
+// `validateExpenseUnitAgainstOverride` is the load-bearing server-side
+// guard that prevents a unit mismatch from silently writing to a
+// MenuItem whose Purchase unit is locked. The UI lock is defence in
+// depth; this helper is the gate.
+describe('validateExpenseUnitAgainstOverride (REQ-038)', () => {
+  it('no-ops when override is undefined (legacy "Any")', () => {
+    expect(() =>
+      validateExpenseUnitAgainstOverride({
+        expenseUnit: 'kg',
+        override: undefined,
+      })
+    ).not.toThrow();
+  });
+
+  it('no-ops when override is the explicit "any" sentinel', () => {
+    expect(() =>
+      validateExpenseUnitAgainstOverride({
+        expenseUnit: 'kg',
+        override: 'any',
+      })
+    ).not.toThrow();
+  });
+
+  it('no-ops when expenseUnit is undefined (legacy expense)', () => {
+    expect(() =>
+      validateExpenseUnitAgainstOverride({
+        expenseUnit: undefined,
+        override: 'bottles',
+      })
+    ).not.toThrow();
+  });
+
+  it('no-ops when expenseUnit matches override', () => {
+    expect(() =>
+      validateExpenseUnitAgainstOverride({
+        expenseUnit: 'bottles',
+        override: 'bottles',
+      })
+    ).not.toThrow();
+  });
+
+  it('throws on mismatch, naming both units and the override', () => {
+    expect(() =>
+      validateExpenseUnitAgainstOverride({
+        expenseUnit: 'kg',
+        override: 'bottles',
+        menuItemName: 'Heineken 330ml',
+      })
+    ).toThrow(/kg/);
+    expect(() =>
+      validateExpenseUnitAgainstOverride({
+        expenseUnit: 'kg',
+        override: 'bottles',
+        menuItemName: 'Heineken 330ml',
+      })
+    ).toThrow(/bottles/);
+    expect(() =>
+      validateExpenseUnitAgainstOverride({
+        expenseUnit: 'kg',
+        override: 'bottles',
+        menuItemName: 'Heineken 330ml',
+      })
+    ).toThrow(/Heineken 330ml/);
+  });
+
+  it('is generic over unit id — works for cans too (not bottles-hardcoded)', () => {
+    expect(() =>
+      validateExpenseUnitAgainstOverride({
+        expenseUnit: 'bottles',
+        override: 'cans',
+        menuItemName: 'Energy Drink',
+      })
+    ).toThrow(/cans/);
+    expect(() =>
+      validateExpenseUnitAgainstOverride({
+        expenseUnit: 'cans',
+        override: 'cans',
+      })
+    ).not.toThrow();
+  });
+});
+
+describe('computeLockedUnit (#94 follow-up)', () => {
+  const sellableInventory = [
+    { id: 'inv-bottles', expenseUnitOverride: 'bottles' },
+    { id: 'inv-cans', expenseUnitOverride: 'cans' },
+    { id: 'inv-no-override' }, // no override → defaults to "Any"
+  ];
+
+  it('returns undefined when sellable mode is disabled', () => {
+    expect(
+      computeLockedUnit(false, 'inv-bottles', sellableInventory)
+    ).toBeUndefined();
+  });
+
+  it('returns undefined when no inventory is picked', () => {
+    expect(
+      computeLockedUnit(true, undefined, sellableInventory)
+    ).toBeUndefined();
+  });
+
+  it('returns the picked sellable item override when enabled and picked', () => {
+    expect(computeLockedUnit(true, 'inv-bottles', sellableInventory)).toBe(
+      'bottles'
+    );
+    expect(computeLockedUnit(true, 'inv-cans', sellableInventory)).toBe('cans');
+  });
+
+  it('returns undefined when the picked item has no override (Any)', () => {
+    expect(
+      computeLockedUnit(true, 'inv-no-override', sellableInventory)
+    ).toBeUndefined();
+  });
+
+  it('returns undefined when the picked id is not in the list (stale)', () => {
+    expect(
+      computeLockedUnit(true, 'inv-deleted', sellableInventory)
+    ).toBeUndefined();
+  });
+});
+
+describe('computeInventoryStatus (#98)', () => {
+  it('returns "out-of-stock" when stock is zero', () => {
+    expect(computeInventoryStatus(0, 15)).toBe('out-of-stock');
+  });
+
+  it('returns "out-of-stock" when stock is negative (defensive)', () => {
+    expect(computeInventoryStatus(-3, 15)).toBe('out-of-stock');
+  });
+
+  it('returns "low-stock" when stock equals the minimum', () => {
+    expect(computeInventoryStatus(15, 15)).toBe('low-stock');
+  });
+
+  it('returns "low-stock" when stock is below the minimum but positive', () => {
+    expect(computeInventoryStatus(5, 15)).toBe('low-stock');
+  });
+
+  it('returns "in-stock" when stock is above the minimum', () => {
+    expect(computeInventoryStatus(50, 15)).toBe('in-stock');
+  });
+
+  it('returns "in-stock" when minimum is zero and stock is positive', () => {
+    expect(computeInventoryStatus(1, 0)).toBe('in-stock');
+  });
+
+  it('matches the user-reported case: 1 bottle, min 15 → low-stock (not out-of-stock)', () => {
+    // Per #98: restocking Tiger from 0 to 1 bottle (min 15) should flip
+    // status from out-of-stock → low-stock so the customer menu picks
+    // up the restock.
+    expect(computeInventoryStatus(1, 15)).toBe('low-stock');
   });
 });

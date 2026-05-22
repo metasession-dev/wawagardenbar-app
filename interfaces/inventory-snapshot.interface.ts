@@ -22,6 +22,9 @@ export interface IInventorySnapshotItem {
   discrepancy: number;
   requiresAdjustment: boolean;
   locationBreakdown?: IInventoryLocationBreakdown[];
+  // REQ-039: cost-per-unit frozen at submission time so historical
+  // missing-cost stays stable when Inventory.costPerUnit changes later.
+  costPerUnitAtSnapshot?: number;
 }
 
 export interface IInventorySnapshot {
@@ -46,6 +49,10 @@ export interface IInventorySnapshotSummary {
   confirmedItems: number;
   adjustmentItems: number;
   totalDiscrepancy: number;
+  // REQ-039: total cost of inventory reported as missing
+  // (sum over items where discrepancy < 0 of
+  //  abs(discrepancy) × (costPerUnitAtSnapshot ?? 0)).
+  missingCost: number;
 }
 
 export interface ISubmitSnapshotData {

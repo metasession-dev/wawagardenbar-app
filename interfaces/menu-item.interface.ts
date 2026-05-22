@@ -98,6 +98,14 @@ export interface IMenuItem {
    * Never set on sellable menu items.
    */
   archivedAt?: Date;
+  /**
+   * REQ-038 — UoM-registry id that locks the Expense form's Unit field
+   * when restocking this item via "Update inventory count". Sourced
+   * from the active UoM registry (REQ-033). `undefined` (the default)
+   * means "Any (operator chooses at expense time)" — the legacy
+   * behaviour. Generic over unit id; not bottles-hardcoded.
+   */
+  expenseUnitOverride?: string;
   createdAt: string;
   updatedAt: string;
 }

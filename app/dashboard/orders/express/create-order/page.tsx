@@ -46,6 +46,10 @@ interface MenuItem {
   mainCategory: string;
   description: string;
   isAvailable: boolean;
+  /** Computed stock status from currentStock + minimumStock (see #98). */
+  stockStatus: 'in-stock' | 'low-stock' | 'out-of-stock';
+  /** Live current stock from the paired Inventory row. */
+  currentStock?: number;
   portionOptions?: {
     halfPortionEnabled?: boolean;
     halfPortionSurcharge?: number;
@@ -382,11 +386,29 @@ function ExpressCreateOrderContent() {
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {menuItems.map((item) => {
               const qty = getCartQuantity(item._id);
+              const stock = item.currentStock;
+              const isOutOfStock = item.stockStatus === 'out-of-stock';
+              const isLowStock = item.stockStatus === 'low-stock';
+              // Hard-block: out-of-stock items are not clickable from this
+              // grid. Staff who genuinely have stock in the back must
+              // adjust the count first via Inventory → Kitchen edit (or
+              // sellable item Add Stock on the detail page), then come
+              // back here. This keeps the inventory truthful.
               return (
                 <Card
                   key={item._id}
-                  className={`cursor-pointer transition-all ${qty > 0 ? 'ring-2 ring-primary' : 'hover:bg-accent/50'}`}
-                  onClick={() => addToCart(item)}
+                  aria-disabled={isOutOfStock}
+                  className={`transition-all ${
+                    isOutOfStock
+                      ? 'opacity-60 cursor-not-allowed'
+                      : `cursor-pointer ${
+                          qty > 0 ? 'ring-2 ring-primary' : 'hover:bg-accent/50'
+                        }`
+                  }`}
+                  onClick={() => {
+                    if (isOutOfStock) return;
+                    addToCart(item);
+                  }}
                 >
                   <CardContent className="p-4">
                     <div className="flex justify-between items-start">
@@ -398,6 +420,19 @@ function ExpressCreateOrderContent() {
                         <p className="font-bold mt-1">
                           ₦{item.price.toLocaleString()}
                         </p>
+                        {(isOutOfStock || isLowStock) && (
+                          <p
+                            className={`text-xs mt-1 font-medium ${
+                              isOutOfStock
+                                ? 'text-destructive'
+                                : 'text-amber-700'
+                            }`}
+                          >
+                            {isOutOfStock
+                              ? 'Out of Stock'
+                              : `Low Stock${typeof stock === 'number' ? ` — ${stock} left` : ''}`}
+                          </p>
+                        )}
                       </div>
                       {qty > 0 && (
                         <div

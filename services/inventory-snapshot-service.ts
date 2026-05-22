@@ -5,6 +5,7 @@ import InventoryModel from '@/models/inventory-model';
 import OrderModel from '@/models/order-model';
 import StockMovementModel from '@/models/stock-movement-model';
 import { AuditLogService } from '@/services/audit-log-service';
+import { computeMissingCost } from '@/lib/snapshot-missing-cost';
 import type {
   IInventorySnapshot,
   IInventorySnapshotItem,
@@ -23,9 +24,7 @@ export class InventorySnapshotService {
       query.mainCategory = mainCategory;
     }
 
-    const menuItems = await MenuItemModel.find(query)
-      .sort({ name: 1 })
-      .lean();
+    const menuItems = await MenuItemModel.find(query).sort({ name: 1 }).lean();
 
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
@@ -52,21 +51,34 @@ export class InventorySnapshotService {
     const items: IInventorySnapshotItem[] = [];
 
     for (const item of menuItems) {
-      const sales = salesData.find((s) => s._id.toString() === item._id.toString());
+      const sales = salesData.find(
+        (s) => s._id.toString() === item._id.toString()
+      );
       let inventoryCount = 0;
 
-      let locationBreakdown: { location: string; locationName: string; currentStock: number }[] = [];
+      let locationBreakdown: {
+        location: string;
+        locationName: string;
+        currentStock: number;
+      }[] = [];
 
       // Canonical lookup: find inventory by menuItemId
-      const inventory = await InventoryModel.findOne({ menuItemId: item._id }).lean() as any;
+      const inventory = (await InventoryModel.findOne({
+        menuItemId: item._id,
+      }).lean()) as any;
       let inventoryIdStr: string | undefined;
       if (inventory) {
         inventoryCount = inventory.currentStock || 0;
         inventoryIdStr = inventory._id.toString();
-        if (inventory.trackByLocation && Array.isArray(inventory.locations) && inventory.locations.length > 0) {
+        if (
+          inventory.trackByLocation &&
+          Array.isArray(inventory.locations) &&
+          inventory.locations.length > 0
+        ) {
           locationBreakdown = inventory.locations.map((loc: any) => ({
             location: loc.location,
-            locationName: loc.locationName || loc.location || 'Unknown Location',
+            locationName:
+              loc.locationName || loc.location || 'Unknown Location',
             currentStock: loc.currentStock ?? 0,
           }));
         }
@@ -84,21 +96,113 @@ export class InventorySnapshotService {
         discrepancy: 0,
         requiresAdjustment: false,
         ...(locationBreakdown.length > 0 && { locationBreakdown }),
+        // REQ-039: stamp the live cost on each row so the submit-form
+        // live-total + the eventual frozen value share the same basis.
+        ...(typeof inventory?.costPerUnit === 'number' && {
+          costPerUnitAtSnapshot: inventory.costPerUnit,
+        }),
       });
     }
 
     return items;
   }
 
-  private static sanitizeItems(items: IInventorySnapshotItem[]): IInventorySnapshotItem[] {
-    return items.map(item => {
+  // REQ-039: resolve the current Inventory.costPerUnit for a menuItemId.
+  // Used as a fallback at submit time when the form payload lacks a
+  // stamped value (e.g. submit path that bypasses generateSnapshotData).
+  private static async resolveLiveCost(
+    menuItemId: string
+  ): Promise<number | undefined> {
+    if (!menuItemId || !Types.ObjectId.isValid(menuItemId)) return undefined;
+    const inv = await InventoryModel.findOne({
+      menuItemId: new Types.ObjectId(menuItemId),
+    })
+      .select('costPerUnit')
+      .lean();
+    return typeof (inv as { costPerUnit?: number } | null)?.costPerUnit ===
+      'number'
+      ? (inv as { costPerUnit: number }).costPerUnit
+      : undefined;
+  }
+
+  // REQ-039: ensure every item with a staffAdjustedCount has a frozen
+  // cost stamp. Items without a decision (staffAdjustedCount undefined)
+  // contribute nothing to missingCost so the stamp is optional.
+  private static async stampMissingCostsAtSubmit(
+    items: IInventorySnapshotItem[]
+  ): Promise<IInventorySnapshotItem[]> {
+    const out: IInventorySnapshotItem[] = [];
+    for (const it of items) {
+      if (
+        it.staffAdjustedCount !== undefined &&
+        it.costPerUnitAtSnapshot === undefined
+      ) {
+        const live = await this.resolveLiveCost(it.menuItemId);
+        out.push({
+          ...it,
+          ...(typeof live === 'number' && { costPerUnitAtSnapshot: live }),
+        });
+      } else {
+        out.push(it);
+      }
+    }
+    return out;
+  }
+
+  // REQ-039: edit-time re-stamp guard. Re-stamp the cost ONLY on items
+  // whose staffAdjustedCount changed vs the previously-persisted
+  // snapshot. Untouched rows keep their original frozen cost so an
+  // unrelated edit doesn't silently shift the cost basis.
+  private static async restampCostsOnChangedItems(
+    newItems: IInventorySnapshotItem[],
+    previousItems: IInventorySnapshotItem[]
+  ): Promise<IInventorySnapshotItem[]> {
+    const prevByKey = new Map(previousItems.map((p) => [p.menuItemId, p]));
+    const out: IInventorySnapshotItem[] = [];
+    for (const it of newItems) {
+      const prev = prevByKey.get(it.menuItemId);
+      const adjustmentChanged =
+        prev?.staffAdjustedCount !== it.staffAdjustedCount;
+      if (adjustmentChanged && it.staffAdjustedCount !== undefined) {
+        // Adjustment is a fresh decision — stamp at the current live cost.
+        const live = await this.resolveLiveCost(it.menuItemId);
+        out.push({
+          ...it,
+          ...(typeof live === 'number'
+            ? { costPerUnitAtSnapshot: live }
+            : prev?.costPerUnitAtSnapshot !== undefined
+              ? { costPerUnitAtSnapshot: prev.costPerUnitAtSnapshot }
+              : {}),
+        });
+      } else if (
+        prev?.costPerUnitAtSnapshot !== undefined &&
+        it.costPerUnitAtSnapshot === undefined
+      ) {
+        // Untouched row whose previous stamp is being dropped by the
+        // caller — preserve the frozen cost.
+        out.push({
+          ...it,
+          costPerUnitAtSnapshot: prev.costPerUnitAtSnapshot,
+        });
+      } else {
+        out.push(it);
+      }
+    }
+    return out;
+  }
+
+  private static sanitizeItems(
+    items: IInventorySnapshotItem[]
+  ): IInventorySnapshotItem[] {
+    return items.map((item) => {
       if (item.locationBreakdown && item.locationBreakdown.length > 0) {
         return {
           ...item,
-          locationBreakdown: item.locationBreakdown.map(loc => ({
+          locationBreakdown: item.locationBreakdown.map((loc) => ({
             ...loc,
-            locationName: loc.locationName || loc.location || 'Unknown Location'
-          }))
+            locationName:
+              loc.locationName || loc.location || 'Unknown Location',
+          })),
         };
       }
       return item;
@@ -121,10 +225,15 @@ export class InventorySnapshotService {
     });
 
     if (existingSnapshot && existingSnapshot.status !== 'rejected') {
-      throw new Error(`A ${mainCategory} snapshot for this date has already been submitted`);
+      throw new Error(
+        `A ${mainCategory} snapshot for this date has already been submitted`
+      );
     }
 
     const sanitizedItems = this.sanitizeItems(data.items);
+    // REQ-039: belt-and-braces — ensure every adjusted item has a
+    // frozen cost stamp before persistence.
+    const stampedItems = await this.stampMissingCostsAtSubmit(sanitizedItems);
 
     const snapshot = await InventorySnapshotModel.create({
       snapshotDate,
@@ -132,7 +241,7 @@ export class InventorySnapshotService {
       submittedBy: new Types.ObjectId(userId),
       submittedByName: userName,
       status: 'pending',
-      items: sanitizedItems,
+      items: stampedItems,
     });
 
     await AuditLogService.createLog({
@@ -145,8 +254,11 @@ export class InventorySnapshotService {
       details: {
         snapshotDate: snapshotDate.toISOString(),
         mainCategory,
-        totalItems: sanitizedItems.length,
-        adjustmentItems: sanitizedItems.filter((i) => i.requiresAdjustment).length,
+        totalItems: stampedItems.length,
+        adjustmentItems: stampedItems.filter((i) => i.requiresAdjustment)
+          .length,
+        // REQ-039: cost of inventory reported as missing on this submission
+        missingCost: computeMissingCost(stampedItems),
       },
     });
 
@@ -223,7 +335,11 @@ export class InventorySnapshotService {
           }
 
           // Update location-specific stock if tracking is enabled
-          if (inventory.trackByLocation && item.locationBreakdown && item.locationBreakdown.length > 0) {
+          if (
+            inventory.trackByLocation &&
+            item.locationBreakdown &&
+            item.locationBreakdown.length > 0
+          ) {
             for (const locSnapshot of item.locationBreakdown) {
               const inventoryLocation = inventory.locations.find(
                 (l: any) => l.location === locSnapshot.location
@@ -232,9 +348,10 @@ export class InventorySnapshotService {
               if (inventoryLocation) {
                 // If adjusted, use the adjusted count. Otherwise use the snapshot's captured stock.
                 // This effectively "resets" the location stock to what was counted/confirmed.
-                const newLocStock = locSnapshot.staffAdjustedCount !== undefined 
-                  ? locSnapshot.staffAdjustedCount 
-                  : locSnapshot.currentStock;
+                const newLocStock =
+                  locSnapshot.staffAdjustedCount !== undefined
+                    ? locSnapshot.staffAdjustedCount
+                    : locSnapshot.currentStock;
 
                 if (inventoryLocation.currentStock !== newLocStock) {
                   inventoryLocation.currentStock = newLocStock;
@@ -269,7 +386,8 @@ export class InventorySnapshotService {
         snapshotDate: snapshot.snapshotDate.toISOString(),
         mainCategory: snapshot.mainCategory,
         submittedBy: snapshot.submittedByName,
-        adjustmentCount: snapshot.items.filter((i) => i.requiresAdjustment).length,
+        adjustmentCount: snapshot.items.filter((i) => i.requiresAdjustment)
+          .length,
         notes,
       },
     });
@@ -372,7 +490,9 @@ export class InventorySnapshotService {
     };
   }
 
-  static async getStaffSubmissionHistory(userId: string): Promise<IInventorySnapshot[]> {
+  static async getStaffSubmissionHistory(
+    userId: string
+  ): Promise<IInventorySnapshot[]> {
     if (!Types.ObjectId.isValid(userId)) {
       return [];
     }
@@ -387,10 +507,16 @@ export class InventorySnapshotService {
     return snapshots;
   }
 
-  static calculateSummary(snapshot: IInventorySnapshot): IInventorySnapshotSummary {
+  static calculateSummary(
+    snapshot: IInventorySnapshot
+  ): IInventorySnapshotSummary {
     const totalItems = snapshot.items.length;
-    const confirmedItems = snapshot.items.filter((i) => i.staffConfirmed).length;
-    const adjustmentItems = snapshot.items.filter((i) => i.requiresAdjustment).length;
+    const confirmedItems = snapshot.items.filter(
+      (i) => i.staffConfirmed
+    ).length;
+    const adjustmentItems = snapshot.items.filter(
+      (i) => i.requiresAdjustment
+    ).length;
     const totalDiscrepancy = snapshot.items.reduce(
       (sum, item) => sum + Math.abs(item.discrepancy),
       0
@@ -401,6 +527,10 @@ export class InventorySnapshotService {
       confirmedItems,
       adjustmentItems,
       totalDiscrepancy,
+      // REQ-039: total cost of inventory reported as missing.
+      // Single source of truth: shared helper used by submit-form
+      // live total + this server-side aggregate.
+      missingCost: computeMissingCost(snapshot.items),
     };
   }
 
@@ -441,7 +571,14 @@ export class InventorySnapshotService {
     }
 
     const sanitizedItems = this.sanitizeItems(items);
-    snapshot.items = sanitizedItems;
+    // REQ-039: re-stamp the cost ONLY on items whose staffAdjustedCount
+    // changed since the previous save — untouched rows keep their
+    // original frozen cost so the cost basis doesn't silently shift.
+    const stampedItems = await this.restampCostsOnChangedItems(
+      sanitizedItems,
+      snapshot.items as unknown as IInventorySnapshotItem[]
+    );
+    snapshot.items = stampedItems;
     await snapshot.save();
 
     await AuditLogService.createLog({
@@ -454,8 +591,11 @@ export class InventorySnapshotService {
       details: {
         snapshotDate: snapshot.snapshotDate.toISOString(),
         mainCategory: snapshot.mainCategory,
-        totalItems: sanitizedItems.length,
-        adjustmentItems: sanitizedItems.filter((i) => i.requiresAdjustment).length,
+        totalItems: stampedItems.length,
+        adjustmentItems: stampedItems.filter((i) => i.requiresAdjustment)
+          .length,
+        // REQ-039: cost of inventory reported as missing after this edit
+        missingCost: computeMissingCost(stampedItems),
       },
     });
 
@@ -486,8 +626,17 @@ export class InventorySnapshotService {
     }
 
     const sanitizedItems = this.sanitizeItems(data.items);
+    // REQ-039: same re-stamp guard as updateSnapshotItems — re-stamp
+    // cost only on items whose staffAdjustedCount changed since the
+    // previous (rejected) save. Then top up any items missing the
+    // stamp entirely (e.g. fresh adjustments added on resubmit).
+    const restampedItems = await this.restampCostsOnChangedItems(
+      sanitizedItems,
+      snapshot.items as unknown as IInventorySnapshotItem[]
+    );
+    const stampedItems = await this.stampMissingCostsAtSubmit(restampedItems);
 
-    snapshot.items = sanitizedItems;
+    snapshot.items = stampedItems;
     snapshot.status = 'pending';
     snapshot.submittedAt = new Date();
     snapshot.reviewedAt = undefined;
@@ -505,9 +654,12 @@ export class InventorySnapshotService {
       details: {
         snapshotDate: snapshot.snapshotDate.toISOString(),
         mainCategory: snapshot.mainCategory,
-        totalItems: sanitizedItems.length,
-        adjustmentItems: sanitizedItems.filter((i) => i.requiresAdjustment).length,
+        totalItems: stampedItems.length,
+        adjustmentItems: stampedItems.filter((i) => i.requiresAdjustment)
+          .length,
         resubmission: true,
+        // REQ-039: cost of inventory reported as missing on this resubmission
+        missingCost: computeMissingCost(stampedItems),
       },
     });
 

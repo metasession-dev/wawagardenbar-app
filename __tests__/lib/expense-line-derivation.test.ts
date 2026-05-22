@@ -130,6 +130,22 @@ describe('deriveLineField — override / ordering rules', () => {
     expect(r.field).toBeNull();
     expect(r.value).toBeNull();
   });
+
+  it('UAT regression: cleared field drops out of order → target stays on the right field', () => {
+    // The hook now strips zero-valued fields from editOrder before
+    // calling deriveLineField. So a user scenario of: type 2 in qty,
+    // touch unitCost and clear it, type 70000 in total → final
+    // editOrder is ['totalCost', 'quantity'] (unitCost dropped by the
+    // hook's `fieldValue > 0` guard). deriveLineField with these inputs
+    // correctly targets unitCost.
+    const r = deriveLineField({ quantity: 2, unitCost: 0, totalCost: 70000 }, [
+      'totalCost',
+      'quantity',
+    ]);
+    expect(r.field).toBe('unitCost');
+    expect(r.value).toBe(35000);
+    expect(r.hint).toBeUndefined();
+  });
 });
 
 describe('deriveLineField — divide-by-zero guards (AC5)', () => {

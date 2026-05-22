@@ -618,5 +618,69 @@ superAdminTest.describe(
         expect(true).toBe(true);
       }
     );
+
+    // ─── #101 — Edit Kitchen Ingredient dialog can adjust stock level ────
+    //
+    // The dialog now has a Stock level section: change New stock value +
+    // provide a reason → save → adjustStockAction fires + currentStock
+    // changes. Without a reason, the save is blocked.
+
+    superAdminTest(
+      '#101: Stock level section blocks save when reason is empty',
+      async ({ page }) => {
+        const ingredientName = uniqueLabel('E2E-AdjustStock-Reason');
+        await createKitchenIngredient(page, {
+          name: ingredientName,
+          unitLabel: 'Grams',
+          initialStock: 100,
+        });
+
+        await openEditDialogFor(page, ingredientName);
+        const dialog = page.locator('[role="dialog"]', {
+          hasText: /Edit Kitchen Ingredient/i,
+        });
+
+        // Change New stock without providing a reason.
+        await dialog.locator('#edit-ki-new-stock').fill('50');
+        await dialog.getByRole('button', { name: /^Save changes$/ }).click();
+
+        // Inline error mentioning the missing reason should appear.
+        await expect(
+          dialog.locator('text=/reason is required/i').first()
+        ).toBeVisible({ timeout: 5000 });
+
+        // currentStock unchanged because save was blocked.
+        await dialog.getByRole('button', { name: /^Cancel$/ }).click();
+        await expect(dialog).toBeHidden();
+        expect(await readKitchenStock(page, ingredientName)).toBe(100);
+      }
+    );
+
+    superAdminTest(
+      '#101: New stock + reason → currentStock updates via adjustStockAction',
+      async ({ page }) => {
+        const ingredientName = uniqueLabel('E2E-AdjustStock-Success');
+        await createKitchenIngredient(page, {
+          name: ingredientName,
+          unitLabel: 'Grams',
+          initialStock: 100,
+        });
+
+        await openEditDialogFor(page, ingredientName);
+        const dialog = page.locator('[role="dialog"]', {
+          hasText: /Edit Kitchen Ingredient/i,
+        });
+
+        await dialog.locator('#edit-ki-new-stock').fill('250');
+        await dialog
+          .locator('#edit-ki-adjust-reason')
+          .fill('E2E physical count');
+        await dialog.getByRole('button', { name: /^Save changes$/ }).click();
+        await expect(dialog).toBeHidden({ timeout: 10000 });
+        await page.waitForLoadState('networkidle');
+
+        expect(await readKitchenStock(page, ingredientName)).toBe(250);
+      }
+    );
   }
 );

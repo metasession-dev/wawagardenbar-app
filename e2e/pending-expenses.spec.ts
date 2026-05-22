@@ -475,6 +475,128 @@ adminTest.describe('REQ-026: Navigation', () => {
 });
 
 // ===========================================================================
+// #94 — Edit Pending Group preserves linkedInventoryId across saves
+// ===========================================================================
+//
+// Regression test for the silent-data-loss bug fixed in #94: the Edit
+// Pending Expense Group dialog had no linkedInventoryId field on its
+// schema, so any save wiped the kitchen/sellable link off every line.
+// Approval + transfer then fired with no inventory adjustment.
+//
+// The vitest preservation suite covers the service path
+// (__tests__/services/pending-expense-group-link-preservation.test.ts).
+// This E2E pins the UI: open Edit on a group that already has a link,
+// touch nothing inventory-related, save, reopen — link still set.
+
+adminTest.describe('#94: Edit Pending Group preserves inventory link', () => {
+  adminTest(
+    'kitchen-ingredient link survives an edit + save round-trip',
+    async ({ page }) => {
+      // ── 1. Create a fresh kitchen ingredient so we have something to
+      //      link against.
+      const ingredientLabel = `E2E-Linkpres-${Date.now()}`;
+      await page.goto('/dashboard/inventory');
+      await page.waitForLoadState('networkidle');
+      await page.getByRole('tab', { name: /^Kitchen/ }).click();
+      await page
+        .getByRole('button', { name: /add kitchen ingredient/i })
+        .click();
+      const addDialog = page.locator('[role="dialog"]');
+      await expect(addDialog).toBeVisible();
+      await addDialog.locator('#ki-name').fill(ingredientLabel);
+      const addSelects = addDialog.locator('button[role="combobox"]');
+      await addSelects.nth(0).click();
+      await page
+        .getByRole('option', { name: /meat|protein/i })
+        .first()
+        .click();
+      await addSelects.nth(1).click();
+      await page.getByRole('option', { name: /grams/i }).first().click();
+      await addDialog
+        .getByRole('button', { name: /^create ingredient/i })
+        .click();
+      await expect(addDialog).toBeHidden({ timeout: 10000 });
+
+      // ── 2. Submit a pending expense linked to the new ingredient.
+      const expenseDesc = `E2E-LinkpresExpense-${Date.now()}`;
+      await openExpenseForm(page);
+      const expenseDialog = page.locator('[role="dialog"]');
+      await expenseDialog.locator('button[role="combobox"]').nth(1).click();
+      await page
+        .getByRole('option', { name: /meat|protein/i })
+        .first()
+        .click();
+      await expenseDialog
+        .locator('input[name="items.0.description"]')
+        .fill(expenseDesc);
+      await expenseDialog.locator('input[name="items.0.quantity"]').fill('100');
+      // Pick Grams as the line unit so the inventory link matches.
+      await expenseDialog.locator('button[role="combobox"]').nth(2).click();
+      await page.getByRole('option', { name: /grams/i }).first().click();
+      await expenseDialog.locator('input[name="items.0.unitCost"]').fill('2');
+      // Pick the kitchen ingredient in the per-line dropdown.
+      await expenseDialog.locator('button[role="combobox"]').nth(3).click();
+      await page
+        .getByRole('option', { name: new RegExp(ingredientLabel, 'i') })
+        .first()
+        .click();
+      await expenseDialog
+        .getByRole('button', { name: /^Save Expense$/ })
+        .click();
+      await expect(expenseDialog).toBeHidden({ timeout: 10000 });
+
+      // ── 3. Open Edit Pending Group on the just-created row.
+      await page.goto('/dashboard/finance/expenses/pending');
+      await page.waitForLoadState('networkidle');
+      const groupRow = page.locator('tr', { hasText: expenseDesc }).first();
+      await expect(groupRow).toBeVisible({ timeout: 10000 });
+      await groupRow.locator('button', { hasText: /edit/i }).first().click();
+      const editDialog = page.locator('[role="dialog"]', {
+        hasText: /edit expense group/i,
+      });
+      await expect(editDialog).toBeVisible();
+
+      // ── 4. Confirm the kitchen dropdown is pre-selected. Use the trigger's
+      //      visible text — the chosen option label should include our
+      //      ingredient name.
+      const kitchenTrigger = editDialog
+        .locator('button[role="combobox"]', {
+          hasText: new RegExp(ingredientLabel, 'i'),
+        })
+        .first();
+      await expect(kitchenTrigger).toBeVisible({ timeout: 5000 });
+
+      // ── 5. Make a small, non-inventory-related edit (description) and save.
+      await editDialog
+        .locator('input[name="items.0.description"]')
+        .fill(`${expenseDesc}-edited`);
+      await editDialog.getByRole('button', { name: /^Save Changes$/ }).click();
+      await expect(editDialog).toBeHidden({ timeout: 10000 });
+
+      // ── 6. Reopen Edit; the link should still be selected on the row.
+      const editedRow = page
+        .locator('tr', { hasText: `${expenseDesc}-edited` })
+        .first();
+      await expect(editedRow).toBeVisible({ timeout: 10000 });
+      await editedRow.locator('button', { hasText: /edit/i }).first().click();
+      const editDialog2 = page.locator('[role="dialog"]', {
+        hasText: /edit expense group/i,
+      });
+      await expect(editDialog2).toBeVisible();
+      const kitchenTrigger2 = editDialog2
+        .locator('button[role="combobox"]', {
+          hasText: new RegExp(ingredientLabel, 'i'),
+        })
+        .first();
+      // The bug being prevented: kitchenTrigger2 would show "No inventory
+      // link" placeholder text instead of the ingredient name. Pinning
+      // the visible-text match is the regression guard.
+      await expect(kitchenTrigger2).toBeVisible({ timeout: 5000 });
+    }
+  );
+});
+
+// ===========================================================================
 // AC-3: Access control — customer redirect
 // ===========================================================================
 

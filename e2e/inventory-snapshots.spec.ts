@@ -357,3 +357,60 @@ superAdminTest.describe(
     );
   }
 );
+
+// ═══════════════════════════════════════════════════════════════════════════
+// REQ-039 — Missing-inventory cost on snapshot summaries (#7 gap)
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Two assertions:
+//   1. The snapshots list page renders a "Missing Cost" column. Existing
+//      pre-REQ-039 snapshots render "—" (legacy fallback); REQ-039+
+//      snapshots render the £ figure.
+//   2. The snapshot detail page Summary Statistics card renders a
+//      "Missing Cost" cell.
+//
+// The cost-freeze invariant + multi-row arithmetic are covered by the
+// vitest pure-helper suite (__tests__/lib/snapshot-missing-cost.test.ts).
+// This spec is the UI regression guard — if either column or cell stops
+// rendering, this fails loudly.
+
+superAdminTest.describe('REQ-039 — Missing Cost on snapshot summaries', () => {
+  superAdminTest.beforeEach(async ({ page }, testInfo) => {
+    if (!(await isAuthenticated(page))) {
+      testInfo.skip(true, 'Super-admin login failed');
+    }
+  });
+
+  superAdminTest(
+    'snapshots list page renders the Missing Cost column',
+    async ({ page }) => {
+      await page.goto('/dashboard/inventory/snapshots');
+      await page.waitForLoadState('networkidle');
+      // Column header (or accessible-name) should include "Missing Cost".
+      // Robust to capitalisation and exact wrapper.
+      await expect(
+        page.locator('th', { hasText: /Missing Cost/i }).first()
+      ).toBeVisible({ timeout: 10000 });
+    }
+  );
+
+  superAdminTest(
+    'snapshot detail page Summary card includes Missing Cost',
+    async ({ page }, testInfo) => {
+      await page.goto('/dashboard/inventory/snapshots');
+      await page.waitForLoadState('networkidle');
+      // Drill into the most recent snapshot row, if any exist.
+      const firstRow = page.locator('tbody tr').first();
+      if ((await firstRow.count()) === 0) {
+        testInfo.skip(true, 'No snapshots seeded — skipping detail assertion');
+        return;
+      }
+      await firstRow.click();
+      await page.waitForLoadState('networkidle');
+      // Summary Statistics card should have a Missing Cost cell.
+      await expect(page.locator('text=/Missing Cost/i').first()).toBeVisible({
+        timeout: 10000,
+      });
+    }
+  );
+});

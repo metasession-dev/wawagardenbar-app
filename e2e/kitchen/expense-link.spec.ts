@@ -222,5 +222,108 @@ superAdminTest.describe(
         ).toHaveCount(0);
       }
     );
+
+    // ──────────────────────────────────────────────────────────────────
+    // #99 — Inventory.status recomputes after an expense-link $inc.
+    //
+    // Mongoose pre('save') is bypassed by updateOne/$inc; the service
+    // path now adds `status: <computed>` to the $set explicitly. This
+    // regression test pins that path: walk a kitchen ingredient from
+    // out-of-stock through restock, confirm the dashboard badge flips.
+    // ──────────────────────────────────────────────────────────────────
+    superAdminTest(
+      '#99: restocking via expense flips status from out-of-stock back to in-stock',
+      async ({ page }) => {
+        const ingredientName = uniqueLabel('E2E-StatusRecompute');
+        await createKitchenIngredient(page, {
+          name: ingredientName,
+          unitLabel: 'Grams',
+          initialStock: 0,
+          minStock: 100,
+          maxStock: 1000,
+        });
+        // currentStock = 0 + min = 100 → schema pre('save') hook on create
+        // initialises status='out-of-stock'.
+
+        // Open the inventory dashboard, find the ingredient row, confirm
+        // the row-level badge reads Out of Stock.
+        await page.goto('/dashboard/inventory');
+        await page.waitForLoadState('networkidle');
+        await page.getByRole('tab', { name: /^Kitchen/ }).click();
+        const beforeRow = page
+          .locator('tr', { hasText: ingredientName })
+          .first();
+        await expect(beforeRow).toBeVisible({ timeout: 10000 });
+        await expect(
+          beforeRow.locator('text=/Out of Stock/i').first()
+        ).toBeVisible();
+
+        // Now add an expense restocking 500 g → currentStock=500, still
+        // below min=1000, so status should flip to LOW STOCK (NOT
+        // in-stock, which would be the bug if the rule isn't applied;
+        // and NOT stuck at out-of-stock, the pre-fix behaviour).
+        await page.goto('/dashboard/finance/expenses');
+        await page.waitForLoadState('networkidle');
+        await page.getByRole('button', { name: /^Add Expense$/ }).click();
+        const dialog = page.locator('[role="dialog"]');
+        await dialog.locator('button[role="combobox"]').nth(1).click();
+        await page
+          .getByRole('option', { name: /Meat|Protein/i })
+          .first()
+          .click();
+        await dialog
+          .locator('input[name="items.0.description"]')
+          .fill(`E2E restock for ${ingredientName}`);
+        await dialog.locator('input[name="items.0.quantity"]').fill('500');
+        await dialog.locator('button[role="combobox"]').nth(2).click();
+        await page.getByRole('option', { name: /grams/i }).first().click();
+        await dialog.locator('input[name="items.0.unitCost"]').fill('2');
+        // Pick the kitchen ingredient in the per-line dropdown.
+        await dialog.locator('button[role="combobox"]').nth(3).click();
+        await page
+          .getByRole('option', { name: new RegExp(ingredientName, 'i') })
+          .first()
+          .click();
+        await dialog.getByRole('button', { name: /^Save Expense$/ }).click();
+        await expect(dialog).toBeHidden({ timeout: 10000 });
+
+        // Approve + transfer so the $inc + status recompute actually
+        // fire on the inventory document.
+        await page.goto('/dashboard/finance/expenses/pending');
+        await page.waitForLoadState('networkidle');
+        const groupRow = page
+          .locator('tr', { hasText: `E2E restock for ${ingredientName}` })
+          .first();
+        await groupRow.locator('input[type="checkbox"]').first().check();
+        await page.getByRole('button', { name: /^Approve$/ }).click();
+        await page.waitForLoadState('networkidle');
+        await groupRow.locator('input[type="checkbox"]').first().check();
+        await page.getByRole('button', { name: /confirm transfer/i }).click();
+        const transferDialog = page.locator('[role="dialog"]', {
+          hasText: /transfer/i,
+        });
+        await transferDialog
+          .locator('input')
+          .first()
+          .fill(`E2E-ref-${Date.now()}`);
+        await transferDialog
+          .getByRole('button', { name: /confirm|transfer|continue/i })
+          .first()
+          .click();
+        await expect(transferDialog).toBeHidden({ timeout: 10000 });
+        await page.waitForLoadState('networkidle');
+
+        // ── Verify currentStock = 500 g.
+        expect(await readKitchenStock(page, ingredientName)).toBe(500);
+
+        // ── Verify status flipped to Low Stock (not Out of Stock).
+        const afterRow = page
+          .locator('tr', { hasText: ingredientName })
+          .first();
+        await expect(
+          afterRow.locator('text=/Low Stock/i').first()
+        ).toBeVisible();
+      }
+    );
   }
 );

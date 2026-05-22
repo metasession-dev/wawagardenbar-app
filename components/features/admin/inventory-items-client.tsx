@@ -250,6 +250,7 @@ export function InventoryItemsClient({
             name: editTarget.menuItemId?.name ?? '',
             category: editTarget.menuItemId?.category ?? '',
             unit: editTarget.unit,
+            currentStock: editTarget.currentStock,
             minimumStock: editTarget.minStock,
             maximumStock: editTarget.maxStock,
           }}

@@ -1,16 +1,18 @@
 'use client';
 
 /**
- * REQ-037 AC1 — Edit Kitchen Ingredient dialog.
+ * Edit Kitchen Ingredient dialog (REQ-037 AC1, extended).
  *
- * Pre-filled. Allows editing the name, COGS category, and min/max stock
- * thresholds. Unit is rendered as a disabled display-only field with a
- * tooltip explaining the lock (changing the unit retroactively would
- * corrupt every StockMovement, CostHistory row, and Recipe row that
- * references this ingredient).
+ * Pre-filled. Allows editing the name, COGS category, min/max stock
+ * thresholds, AND the current stock level. Unit is rendered as a
+ * disabled display-only field with a tooltip explaining the lock
+ * (changing the unit retroactively would corrupt every StockMovement,
+ * CostHistory row, and Recipe row that references this ingredient).
  *
- * currentStock is NOT editable here — that's an inventory adjustment
- * with its own audit-trail requirements; out of scope for REQ-037.
+ * Stock level adjustment goes through `adjustStockAction`, which writes
+ * a StockMovement audit record — same audit trail as the sellable item
+ * detail page's Add/Deduct/Adjust controls. A reason is required when
+ * the new stock value differs from the current value.
  */
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -25,6 +27,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -41,6 +44,7 @@ import {
   getKitchenIngredientFormOptionsAction,
   updateKitchenIngredientAction,
 } from '@/app/actions/admin/kitchen-ingredient-actions';
+import { adjustStockAction } from '@/app/actions/admin/inventory-actions';
 import { buildDropdownSections } from '@/lib/expense-categories-display';
 import type { CategoryGroup } from '@/interfaces/expense.interface';
 
@@ -58,6 +62,7 @@ export interface EditKitchenIngredientDialogProps {
     name: string;
     category: string;
     unit: string;
+    currentStock: number;
     minimumStock: number;
     maximumStock: number;
   };
@@ -80,6 +85,13 @@ export function EditKitchenIngredientDialog({
   const [maximumStock, setMaximumStock] = useState<string>(
     String(inventory.maximumStock ?? 0)
   );
+  // Stock-adjustment fields. Default `newStock` to the current value so
+  // leaving them untouched is a no-op (no adjustStockAction call). A
+  // reason is required only when the new value differs from current.
+  const [newStock, setNewStock] = useState<string>(
+    String(inventory.currentStock ?? 0)
+  );
+  const [adjustReason, setAdjustReason] = useState<string>('');
 
   const [categories, setCategories] = useState<string[]>([]);
   const [categoryGroups, setCategoryGroups] = useState<CategoryGroup[]>([]);
@@ -92,6 +104,8 @@ export function EditKitchenIngredientDialog({
       setCategory(inventory.category);
       setMinimumStock(String(inventory.minimumStock ?? 0));
       setMaximumStock(String(inventory.maximumStock ?? 0));
+      setNewStock(String(inventory.currentStock ?? 0));
+      setAdjustReason('');
       setError(null);
     }
   }, [open, inventory]);
@@ -119,21 +133,62 @@ export function EditKitchenIngredientDialog({
   const lockedUnitLabel =
     units.find((u) => u.id === inventory.unit)?.label ?? inventory.unit;
 
+  const parsedNewStock = newStock === '' ? NaN : Number(newStock);
+  const stockChanged =
+    Number.isFinite(parsedNewStock) &&
+    parsedNewStock !== (inventory.currentStock ?? 0);
+
   async function onSubmit() {
     setBusy(true);
     setError(null);
-    const result = await updateKitchenIngredientAction({
+
+    // Validate stock adjustment fields before touching the server.
+    if (stockChanged) {
+      if (parsedNewStock < 0) {
+        setError('New stock cannot be negative');
+        setBusy(false);
+        return;
+      }
+      if (!adjustReason.trim()) {
+        setError(
+          'A reason is required when changing the stock level (writes to the audit trail)'
+        );
+        setBusy(false);
+        return;
+      }
+    }
+
+    // Two writes: metadata first, then the stock adjustment. Both use
+    // their own server actions; either can fail independently and we
+    // surface the error.
+    const metadataResult = await updateKitchenIngredientAction({
       inventoryId: inventory._id,
       name,
       category,
       minimumStock: minimumStock === '' ? 0 : Number(minimumStock),
       maximumStock: maximumStock === '' ? 0 : Number(maximumStock),
     });
-    setBusy(false);
-    if (!result.success) {
-      setError(result.error);
+    if (!metadataResult.success) {
+      setError(metadataResult.error);
+      setBusy(false);
       return;
     }
+
+    if (stockChanged) {
+      const adjustResult = await adjustStockAction(inventory._id, {
+        newStock: parsedNewStock,
+        reason: adjustReason.trim(),
+      });
+      if (!adjustResult.success) {
+        setError(
+          `Metadata saved but stock adjustment failed: ${adjustResult.error}`
+        );
+        setBusy(false);
+        return;
+      }
+    }
+
+    setBusy(false);
     onOpenChange(false);
     router.refresh();
   }
@@ -144,9 +199,9 @@ export function EditKitchenIngredientDialog({
         <DialogHeader>
           <DialogTitle>Edit Kitchen Ingredient</DialogTitle>
           <DialogDescription>
-            Update the ingredient's display name, COGS category, or stock
-            thresholds. The unit cannot be changed here — see the lock icon for
-            why.
+            Update the ingredient&apos;s display name, COGS category, stock
+            thresholds, or current stock level. The unit cannot be changed here
+            — see the lock icon for why.
           </DialogDescription>
         </DialogHeader>
 
@@ -246,6 +301,51 @@ export function EditKitchenIngredientDialog({
                 onChange={(e) => setMaximumStock(e.target.value)}
               />
             </div>
+          </div>
+
+          <div className="border-t pt-3 space-y-2">
+            <div className="flex items-baseline justify-between">
+              <Label className="text-sm font-medium">Stock level</Label>
+              <p className="text-xs text-muted-foreground">
+                Current: {inventory.currentStock} {lockedUnitLabel}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="edit-ki-new-stock">New stock</Label>
+                <Input
+                  id="edit-ki-new-stock"
+                  type="number"
+                  min={0}
+                  step="any"
+                  value={newStock}
+                  onChange={(e) => setNewStock(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="edit-ki-adjust-reason">
+                  Reason{' '}
+                  {stockChanged && (
+                    <span className="text-destructive">(required)</span>
+                  )}
+                </Label>
+                <Textarea
+                  id="edit-ki-adjust-reason"
+                  placeholder="e.g. physical count, correction, waste"
+                  className="resize-none"
+                  rows={2}
+                  value={adjustReason}
+                  onChange={(e) => setAdjustReason(e.target.value)}
+                  disabled={!stockChanged}
+                />
+              </div>
+            </div>
+            {stockChanged && (
+              <p className="text-xs text-muted-foreground">
+                Writes a StockMovement audit record. Same trail as the sellable
+                item Add / Deduct / Adjust controls.
+              </p>
+            )}
           </div>
         </div>
 

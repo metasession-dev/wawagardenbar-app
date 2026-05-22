@@ -110,6 +110,7 @@ import {
   type SellableInventoryOption,
 } from './inventory-link-section';
 import { computeLockedUnit } from '@/lib/expense-inventory-link';
+import { useExpenseLineAutoDerive } from '@/hooks/use-expense-line-auto-derive';
 
 interface ExpenseFormProps {
   open: boolean;
@@ -185,6 +186,7 @@ export function ExpenseForm({
       fetchKitchenInventory();
       fetchSellableInventory();
       setSellableLinkEnabled({});
+      resetAutoDerive();
       form.reset({
         date: prefill?.date ?? new Date(),
         items:
@@ -194,6 +196,7 @@ export function ExpenseForm({
         notes: '',
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   async function fetchCategories() {
@@ -263,15 +266,15 @@ export function ExpenseForm({
     return buildDropdownSections(categories, groups);
   }
 
-  function handleQtyOrCostChange(index: number) {
-    const item = form.getValues(`items.${index}`);
-    const qty = item.quantity ?? 0;
-    const cost = item.unitCost ?? 0;
-    form.setValue(
-      `items.${index}.totalCost`,
-      parseFloat((qty * cost).toFixed(2))
-    );
-  }
+  // #104 — bidirectional auto-derive across {quantity, unitCost, totalCost}.
+  // The hook tracks which two fields the operator touched most recently
+  // and computes the third via deriveLineField. Replaces the old
+  // unidirectional `handleQtyOrCostChange` (qty + unit → total only).
+  const {
+    onFieldEdit,
+    getHint,
+    resetAll: resetAutoDerive,
+  } = useExpenseLineAutoDerive({ form });
 
   const groupTotal = items.reduce(
     (sum, item) => sum + (item.totalCost || 0),
@@ -542,7 +545,7 @@ export function ExpenseForm({
                                       ? parseFloat(e.target.value)
                                       : 0
                                   );
-                                  handleQtyOrCostChange(index);
+                                  onFieldEdit(index, 'quantity');
                                 }}
                                 value={f.value ?? ''}
                               />
@@ -600,7 +603,7 @@ export function ExpenseForm({
                               <Input
                                 className="h-8 text-sm"
                                 type="number"
-                                step="0.01"
+                                step="0.0001"
                                 placeholder="0.00"
                                 {...f}
                                 onChange={(e) => {
@@ -609,7 +612,7 @@ export function ExpenseForm({
                                       ? parseFloat(e.target.value)
                                       : 0
                                   );
-                                  handleQtyOrCostChange(index);
+                                  onFieldEdit(index, 'unitCost');
                                 }}
                                 value={f.value ?? ''}
                               />
@@ -633,13 +636,14 @@ export function ExpenseForm({
                                 step="0.01"
                                 placeholder="0.00"
                                 {...f}
-                                onChange={(e) =>
+                                onChange={(e) => {
                                   f.onChange(
                                     e.target.value
                                       ? parseFloat(e.target.value)
                                       : 0
-                                  )
-                                }
+                                  );
+                                  onFieldEdit(index, 'totalCost');
+                                }}
                                 value={f.value ?? ''}
                               />
                             </FormControl>
@@ -660,6 +664,21 @@ export function ExpenseForm({
                         </Button>
                       </div>
                     </div>
+                    {/* #104 — auto-derive hint (e.g. "Enter a quantity
+                        above 0 to auto-compute unit cost"). Empty by
+                        default; populated by the hook only when the
+                        operator's entry pattern would otherwise hit a
+                        divide-by-zero. aria-live so screen readers hear
+                        the recalc / hint. */}
+                    {getHint(index) && (
+                      <p
+                        role="status"
+                        aria-live="polite"
+                        className="text-xs text-amber-700"
+                      >
+                        {getHint(index)}
+                      </p>
+                    )}
                     {/* Inventory linking — Direct Cost only. Shared with
                         the Edit Pending Group dialog via the same component. */}
                     <InventoryLinkSection

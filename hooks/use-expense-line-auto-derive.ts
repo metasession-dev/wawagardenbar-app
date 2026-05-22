@@ -40,17 +40,34 @@ export function useExpenseLineAutoDerive({
 
   const onFieldEdit = useCallback(
     (index: number, field: LineFieldName) => {
+      const item = form.getValues(`items.${index}`) ?? {};
+      const q = Number(item.quantity ?? 0);
+      const u = Number(item.unitCost ?? 0);
+      const t = Number(item.totalCost ?? 0);
+      const fieldValue =
+        field === 'quantity' ? q : field === 'unitCost' ? u : t;
+
+      // Edits with value 0 don't claim the field. Two reasons:
+      //
+      // 1. Per AC4, "the next blank/oldest recomputes" — blank = 0 here.
+      //    A field at 0 is by definition the recompute target candidate,
+      //    not a user-asserted constraint.
+      // 2. Clearing a field (backspacing 0.50 to empty) fires onChange
+      //    with value 0; that's a clear, not a "set to zero" assertion.
+      //    Without this guard, deriveLineField targets the wrong field —
+      //    see the UAT bug where Qty=2 + Total=70000 with a cleared
+      //    Unit Cost field wrongly targeted Quantity (asking the user
+      //    to "Enter a unit cost above 0 to auto-compute quantity"
+      //    instead of computing Unit Cost = 35000).
       const prev = editOrderRef.current[index] ?? [];
-      const next = pushEdit(prev, field);
+      const next =
+        fieldValue > 0
+          ? pushEdit(prev, field)
+          : prev.filter((f) => f !== field);
       editOrderRef.current[index] = next;
 
-      const item = form.getValues(`items.${index}`) ?? {};
       const result = deriveLineField(
-        {
-          quantity: Number(item.quantity ?? 0),
-          unitCost: Number(item.unitCost ?? 0),
-          totalCost: Number(item.totalCost ?? 0),
-        },
+        { quantity: q, unitCost: u, totalCost: t },
         next
       );
 

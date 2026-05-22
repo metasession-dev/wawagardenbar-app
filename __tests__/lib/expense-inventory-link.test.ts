@@ -20,6 +20,7 @@ import {
   convertExpenseQuantityToInventoryUnit,
   validateExpenseUnitAgainstOverride,
   computeLockedUnit,
+  computeInventoryStatus,
 } from '@/lib/expense-inventory-link';
 import type { InventoryKind } from '@/interfaces/inventory.interface';
 import type { UnitOfMeasurement } from '@/interfaces/unit-of-measurement.interface';
@@ -497,5 +498,38 @@ describe('computeLockedUnit (#94 follow-up)', () => {
     expect(
       computeLockedUnit(true, 'inv-deleted', sellableInventory)
     ).toBeUndefined();
+  });
+});
+
+describe('computeInventoryStatus (#98)', () => {
+  it('returns "out-of-stock" when stock is zero', () => {
+    expect(computeInventoryStatus(0, 15)).toBe('out-of-stock');
+  });
+
+  it('returns "out-of-stock" when stock is negative (defensive)', () => {
+    expect(computeInventoryStatus(-3, 15)).toBe('out-of-stock');
+  });
+
+  it('returns "low-stock" when stock equals the minimum', () => {
+    expect(computeInventoryStatus(15, 15)).toBe('low-stock');
+  });
+
+  it('returns "low-stock" when stock is below the minimum but positive', () => {
+    expect(computeInventoryStatus(5, 15)).toBe('low-stock');
+  });
+
+  it('returns "in-stock" when stock is above the minimum', () => {
+    expect(computeInventoryStatus(50, 15)).toBe('in-stock');
+  });
+
+  it('returns "in-stock" when minimum is zero and stock is positive', () => {
+    expect(computeInventoryStatus(1, 0)).toBe('in-stock');
+  });
+
+  it('matches the user-reported case: 1 bottle, min 15 → low-stock (not out-of-stock)', () => {
+    // Per #98: restocking Tiger from 0 to 1 bottle (min 15) should flip
+    // status from out-of-stock → low-stock so the customer menu picks
+    // up the restock.
+    expect(computeInventoryStatus(1, 15)).toBe('low-stock');
   });
 });

@@ -148,7 +148,9 @@ describe('REQ-034 AC7 — Expense → Inventory reversal: edit / delete flow', (
         _id: linkedInventoryId,
         currentStock: { $gte: 5 },
       },
-      { $inc: { currentStock: -5, totalRestocked: -5 } }
+      expect.objectContaining({
+        $inc: { currentStock: -5, totalRestocked: -5 },
+      })
     );
   });
 
@@ -228,6 +230,61 @@ describe('REQ-034 AC7 — Expense → Inventory reversal: edit / delete flow', (
     });
 
     expect(ExpenseModel.updateOne).not.toHaveBeenCalled();
+  });
+
+  it('#98: recomputes Inventory.status from the new currentStock + minimumStock', async () => {
+    // Reversal of a restock that put stock above min: removing the
+    // restocked quantity should drop the status back to low-stock or
+    // out-of-stock depending on the remaining level.
+    const linkedInventoryId = new Types.ObjectId();
+    (InventoryModel.findById as ReturnType<typeof vi.fn>).mockResolvedValue({
+      _id: linkedInventoryId,
+      kind: 'menu-item',
+      currentStock: 16, // post-restock level
+      minimumStock: 15,
+      unit: 'bottles',
+    });
+
+    await reverseExpenseInventoryLink({
+      expenseId: new Types.ObjectId(),
+      linkedInventoryId,
+      quantity: 12, // reversing 12 leaves 4 (below min)
+      performedBy,
+      reason: 'edit',
+    });
+
+    expect(InventoryModel.updateOne).toHaveBeenCalledWith(
+      expect.objectContaining({ _id: linkedInventoryId }),
+      expect.objectContaining({
+        $set: expect.objectContaining({ status: 'low-stock' }),
+      })
+    );
+  });
+
+  it('#98: full reversal back to zero flips status to out-of-stock', async () => {
+    const linkedInventoryId = new Types.ObjectId();
+    (InventoryModel.findById as ReturnType<typeof vi.fn>).mockResolvedValue({
+      _id: linkedInventoryId,
+      kind: 'menu-item',
+      currentStock: 5,
+      minimumStock: 15,
+      unit: 'bottles',
+    });
+
+    await reverseExpenseInventoryLink({
+      expenseId: new Types.ObjectId(),
+      linkedInventoryId,
+      quantity: 5,
+      performedBy,
+      reason: 'delete',
+    });
+
+    expect(InventoryModel.updateOne).toHaveBeenCalledWith(
+      expect.objectContaining({ _id: linkedInventoryId }),
+      expect.objectContaining({
+        $set: expect.objectContaining({ status: 'out-of-stock' }),
+      })
+    );
   });
 });
 
@@ -312,7 +369,9 @@ describe('REQ-034 AC7 — block-on-negative', () => {
 
     expect(InventoryModel.updateOne).toHaveBeenCalledWith(
       { _id: linkedInventoryId, currentStock: { $gte: 1 } },
-      { $inc: { currentStock: -1, totalRestocked: -1 } }
+      expect.objectContaining({
+        $inc: { currentStock: -1, totalRestocked: -1 },
+      })
     );
   });
 });
@@ -341,7 +400,9 @@ describe('REQ-034 D10 — unit conversion on reversal path', () => {
 
     expect(InventoryModel.updateOne).toHaveBeenCalledWith(
       { _id: linkedInventoryId, currentStock: { $gte: 5000 } },
-      { $inc: { currentStock: -5000, totalRestocked: -5000 } }
+      expect.objectContaining({
+        $inc: { currentStock: -5000, totalRestocked: -5000 },
+      })
     );
     const movement = (StockMovementModel.create as ReturnType<typeof vi.fn>)
       .mock.calls[0][0];
@@ -394,7 +455,9 @@ describe('REQ-034 D10 — unit conversion on reversal path', () => {
 
     expect(InventoryModel.updateOne).toHaveBeenCalledWith(
       { _id: linkedInventoryId, currentStock: { $gte: 5 } },
-      { $inc: { currentStock: -5, totalRestocked: -5 } }
+      expect.objectContaining({
+        $inc: { currentStock: -5, totalRestocked: -5 },
+      })
     );
   });
 });

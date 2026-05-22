@@ -336,3 +336,27 @@ export function computeLockedUnit(
   const picked = sellableInventory.find((s) => s.id === linkedInventoryId);
   return picked?.expenseUnitOverride;
 }
+
+/**
+ * Mirrors the Inventory schema's pre('save') hook
+ * (`models/inventory-model.ts`) so the status field stays consistent
+ * regardless of which write path updates currentStock.
+ *
+ * Why this lives here: the expense-link service writes via
+ * `updateOne({ $inc })`, which bypasses Mongoose's save middleware. Both
+ * apply and reversal paths must therefore recompute status manually.
+ * Keeping the rule in one place (here, plus the schema hook) prevents
+ * drift.
+ *
+ * Ref: #98
+ */
+export type StockStatus = 'in-stock' | 'low-stock' | 'out-of-stock';
+
+export function computeInventoryStatus(
+  currentStock: number,
+  minimumStock: number
+): StockStatus {
+  if (currentStock <= 0) return 'out-of-stock';
+  if (currentStock <= minimumStock) return 'low-stock';
+  return 'in-stock';
+}

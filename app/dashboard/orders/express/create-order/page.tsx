@@ -389,20 +389,26 @@ function ExpressCreateOrderContent() {
               const stock = item.currentStock;
               const isOutOfStock = item.stockStatus === 'out-of-stock';
               const isLowStock = item.stockStatus === 'low-stock';
-              // Visibility, not blocking — staff may still take the order
-              // (e.g. they have one in the back); the badge informs them
-              // before they tell the customer or add another to the cart.
+              // Hard-block: out-of-stock items are not clickable from this
+              // grid. Staff who genuinely have stock in the back must
+              // adjust the count first via Inventory → Kitchen edit (or
+              // sellable item Add Stock on the detail page), then come
+              // back here. This keeps the inventory truthful.
               return (
                 <Card
                   key={item._id}
-                  className={`cursor-pointer transition-all ${
-                    qty > 0
-                      ? 'ring-2 ring-primary'
-                      : isOutOfStock
-                        ? 'opacity-60 hover:bg-accent/50'
-                        : 'hover:bg-accent/50'
+                  aria-disabled={isOutOfStock}
+                  className={`transition-all ${
+                    isOutOfStock
+                      ? 'opacity-60 cursor-not-allowed'
+                      : `cursor-pointer ${
+                          qty > 0 ? 'ring-2 ring-primary' : 'hover:bg-accent/50'
+                        }`
                   }`}
-                  onClick={() => addToCart(item)}
+                  onClick={() => {
+                    if (isOutOfStock) return;
+                    addToCart(item);
+                  }}
                 >
                   <CardContent className="p-4">
                     <div className="flex justify-between items-start">
@@ -414,10 +420,6 @@ function ExpressCreateOrderContent() {
                         <p className="font-bold mt-1">
                           ₦{item.price.toLocaleString()}
                         </p>
-                        {/* Stock visibility for staff. Doesn't block adding to
-                            cart — staff decides based on what's actually
-                            in the bar (e.g. a bottle in the back fridge that
-                            hasn't been counted). */}
                         {(isOutOfStock || isLowStock) && (
                           <p
                             className={`text-xs mt-1 font-medium ${
@@ -427,9 +429,7 @@ function ExpressCreateOrderContent() {
                             }`}
                           >
                             {isOutOfStock
-                              ? typeof stock === 'number'
-                                ? `Out of Stock${stock <= 0 ? '' : ` (${stock} left)`}`
-                                : 'Out of Stock'
+                              ? 'Out of Stock'
                               : `Low Stock${typeof stock === 'number' ? ` — ${stock} left` : ''}`}
                           </p>
                         )}

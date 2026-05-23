@@ -17,6 +17,8 @@ import {
   CheckCircle2,
   FolderOpen,
   Plus,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import Link from 'next/link';
@@ -56,18 +58,34 @@ interface Tab {
 
 interface DashboardTabsListClientProps {
   initialTabs: Tab[];
+  initialTotal: number;
+  pageSize: number;
+  stats: {
+    totalTabs: number;
+    totalOpenTabs: number;
+    totalOrders: number;
+  };
   staffPotBalance: number;
 }
 
 /**
- * Client component for dashboard tabs list with filtering
+ * Client component for dashboard tabs list with server-paginated
+ * filtering. The filter component is the single source of truth for the
+ * current filter (it also persists to localStorage); this component
+ * reacts to filter / page changes and fetches the matching slice from
+ * the server.
  */
 export function DashboardTabsListClient({
   initialTabs,
+  initialTotal,
+  pageSize,
+  stats,
   staffPotBalance,
 }: DashboardTabsListClientProps) {
   const { toast } = useToast();
   const [tabs, setTabs] = useState<Tab[]>(initialTabs);
+  const [total, setTotal] = useState<number>(initialTotal);
+  const [page, setPage] = useState<number>(1);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedTab, setSelectedTab] = useState<Tab | null>(null);
   const [showPayDialog, setShowPayDialog] = useState(false);
@@ -76,29 +94,30 @@ export function DashboardTabsListClient({
     dateRange?: DateRange;
     reconciled?: 'all' | 'reconciled' | 'not-reconciled';
   }>({
-    statuses: [],
+    // Match the server's first-paint default so an immediate page change
+    // (without a filter touch) still fires the right query.
+    statuses: ['open'],
     dateRange: undefined,
     reconciled: undefined,
   });
 
-  const handleFilterChange = async (filters: {
-    statuses: string[];
-    dateRange?: DateRange;
-    reconciled?: 'all' | 'reconciled' | 'not-reconciled';
-  }) => {
-    setCurrentFilters(filters);
+  // Single fetcher used by both filter and page changes.
+  const fetchPage = async (
+    filters: typeof currentFilters,
+    nextPage: number
+  ) => {
     setIsLoading(true);
-
     try {
       const result = await getDashboardFilteredTabsAction({
         statuses: filters.statuses.length > 0 ? filters.statuses : undefined,
         startDate: filters.dateRange?.from?.toISOString(),
         endDate: filters.dateRange?.to?.toISOString(),
         reconciled: filters.reconciled,
+        skip: (nextPage - 1) * pageSize,
+        limit: pageSize,
       });
 
       if (result.success && result.data) {
-        // Serialize tabs to match Tab interface
         const serializedTabs = result.data.tabs.map((tab: any) => ({
           _id: tab._id.toString(),
           tabNumber: tab.tabNumber,
@@ -122,6 +141,8 @@ export function DashboardTabsListClient({
           reconciled: tab.reconciled || false,
         }));
         setTabs(serializedTabs);
+        setTotal(result.data.total);
+        setPage(nextPage);
       } else {
         toast({
           title: 'Error',
@@ -139,6 +160,20 @@ export function DashboardTabsListClient({
       setIsLoading(false);
     }
   };
+
+  const handleFilterChange = async (filters: {
+    statuses: string[];
+    dateRange?: DateRange;
+    reconciled?: 'all' | 'reconciled' | 'not-reconciled';
+  }) => {
+    setCurrentFilters(filters);
+    // Filter change resets pagination to page 1.
+    await fetchPage(filters, 1);
+  };
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const canPrev = page > 1;
+  const canNext = page < totalPages;
 
   const getStatusBadge = (status: string) => {
     const variants: Record<
@@ -160,12 +195,9 @@ export function DashboardTabsListClient({
     );
   };
 
-  const totalOrders = tabs.reduce((sum, tab) => sum + tab.orders.length, 0);
-  const totalOpenTabs = tabs.filter((tab) => tab.status === 'open').length;
-
   return (
     <div className="space-y-6" data-testid="tabs-dashboard">
-      {/* Stats Cards */}
+      {/* Stats Cards — server-computed, independent of filter/page state */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -173,7 +205,7 @@ export function DashboardTabsListClient({
             <Receipt className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{tabs.length}</div>
+            <div className="text-2xl font-bold">{stats.totalTabs}</div>
           </CardContent>
         </Card>
 
@@ -183,7 +215,7 @@ export function DashboardTabsListClient({
             <Receipt className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalOrders}</div>
+            <div className="text-2xl font-bold">{stats.totalOrders}</div>
           </CardContent>
         </Card>
 
@@ -195,7 +227,7 @@ export function DashboardTabsListClient({
             <FolderOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalOpenTabs}</div>
+            <div className="text-2xl font-bold">{stats.totalOpenTabs}</div>
             <p className="text-xs text-muted-foreground mt-1">
               Currently active
             </p>
@@ -358,6 +390,40 @@ export function DashboardTabsListClient({
                 </div>
               ))}
             </div>
+            {/* Pagination — server-paginated 25 per page. */}
+            {total > pageSize && (
+              <div className="flex items-center justify-between pt-4 mt-4 border-t">
+                <p className="text-sm text-muted-foreground">
+                  Showing {(page - 1) * pageSize + 1}–
+                  {Math.min(page * pageSize, total)} of {total}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fetchPage(currentFilters, page - 1)}
+                    disabled={!canPrev || isLoading}
+                    aria-label="Previous page"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Prev
+                  </Button>
+                  <span className="text-sm" aria-live="polite">
+                    Page {page} of {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fetchPage(currentFilters, page + 1)}
+                    disabled={!canNext || isLoading}
+                    aria-label="Next page"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       ) : null}

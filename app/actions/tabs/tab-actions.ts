@@ -322,7 +322,9 @@ export async function getDashboardFilteredTabsAction(filters: {
   startDate?: string;
   endDate?: string;
   reconciled?: 'all' | 'reconciled' | 'not-reconciled';
-}): Promise<ActionResult<{ tabs: ITab[] }>> {
+  skip?: number;
+  limit?: number;
+}): Promise<ActionResult<{ tabs: ITab[]; total: number }>> {
   try {
     const cookieStore = await cookies();
     const session = await getIronSession<SessionData>(
@@ -340,16 +342,18 @@ export async function getDashboardFilteredTabsAction(filters: {
       };
     }
 
-    const tabs = await TabService.listAllTabsWithFilters({
+    const { tabs, total } = await TabService.listAllTabsWithFilters({
       statuses: filters.statuses,
       startDate: filters.startDate ? new Date(filters.startDate) : undefined,
       endDate: filters.endDate ? new Date(filters.endDate) : undefined,
       reconciled: filters.reconciled,
+      skip: filters.skip,
+      limit: filters.limit,
     });
 
     return {
       success: true,
-      data: { tabs },
+      data: { tabs, total },
     };
   } catch (error) {
     console.error('Error getting filtered tabs:', error);

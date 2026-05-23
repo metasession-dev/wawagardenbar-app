@@ -1,16 +1,27 @@
 'use client';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LineChart, BarChart3 } from 'lucide-react';
 import type { ProfitabilityReport } from '@/services/profitability-analytics-service';
+import { ORDER_TYPE_LABELS } from '@/lib/order-type-labels';
+import type { OrderType } from '@/interfaces/order.interface';
 
 interface ProfitabilityChartsProps {
   report: ProfitabilityReport | null;
   isLoading: boolean;
 }
 
-export function ProfitabilityCharts({ report, isLoading }: ProfitabilityChartsProps) {
+export function ProfitabilityCharts({
+  report,
+  isLoading,
+}: ProfitabilityChartsProps) {
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -41,7 +52,9 @@ export function ProfitabilityCharts({ report, isLoading }: ProfitabilityChartsPr
             <LineChart className="h-5 w-5" />
             Revenue vs Cost vs Profit
           </CardTitle>
-          <CardDescription>Daily trends over the selected period</CardDescription>
+          <CardDescription>
+            Daily trends over the selected period
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -52,9 +65,12 @@ export function ProfitabilityCharts({ report, isLoading }: ProfitabilityChartsPr
             ) : (
               <div className="space-y-2">
                 {trends.daily.slice(-14).map((day) => {
-                  const revenueWidth = maxValue > 0 ? (day.revenue / maxValue) * 100 : 0;
-                  const costWidth = maxValue > 0 ? (day.costs / maxValue) * 100 : 0;
-                  const profitWidth = maxValue > 0 ? (day.profit / maxValue) * 100 : 0;
+                  const revenueWidth =
+                    maxValue > 0 ? (day.revenue / maxValue) * 100 : 0;
+                  const costWidth =
+                    maxValue > 0 ? (day.costs / maxValue) * 100 : 0;
+                  const profitWidth =
+                    maxValue > 0 ? (day.profit / maxValue) * 100 : 0;
 
                   return (
                     <div key={day.date} className="space-y-1">
@@ -65,11 +81,15 @@ export function ProfitabilityCharts({ report, isLoading }: ProfitabilityChartsPr
                             day: 'numeric',
                           })}
                         </span>
-                        <span className="font-medium">₦{day.revenue.toLocaleString()}</span>
+                        <span className="font-medium">
+                          ₦{day.revenue.toLocaleString()}
+                        </span>
                       </div>
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <div className="w-16 text-xs text-muted-foreground">Revenue</div>
+                          <div className="w-16 text-xs text-muted-foreground">
+                            Revenue
+                          </div>
                           <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                             <div
                               className="h-full bg-blue-500"
@@ -78,7 +98,9 @@ export function ProfitabilityCharts({ report, isLoading }: ProfitabilityChartsPr
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <div className="w-16 text-xs text-muted-foreground">Cost</div>
+                          <div className="w-16 text-xs text-muted-foreground">
+                            Cost
+                          </div>
                           <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                             <div
                               className="h-full bg-red-500"
@@ -87,7 +109,9 @@ export function ProfitabilityCharts({ report, isLoading }: ProfitabilityChartsPr
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <div className="w-16 text-xs text-muted-foreground">Profit</div>
+                          <div className="w-16 text-xs text-muted-foreground">
+                            Profit
+                          </div>
                           <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                             <div
                               className="h-full bg-green-500"
@@ -112,7 +136,9 @@ export function ProfitabilityCharts({ report, isLoading }: ProfitabilityChartsPr
             <BarChart3 className="h-5 w-5" />
             Profitability by Order Type
           </CardTitle>
-          <CardDescription>Compare performance across order types</CardDescription>
+          <CardDescription>
+            Compare performance across order types
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -122,22 +148,34 @@ export function ProfitabilityCharts({ report, isLoading }: ProfitabilityChartsPr
               </p>
             ) : (
               byOrderType.map((type) => {
-                const maxTypeRevenue = Math.max(...byOrderType.map((t) => t.totalRevenue));
-                const width = maxTypeRevenue > 0 ? (type.totalRevenue / maxTypeRevenue) * 100 : 0;
+                const maxTypeRevenue = Math.max(
+                  ...byOrderType.map((t) => t.totalRevenue)
+                );
+                const width =
+                  maxTypeRevenue > 0
+                    ? (type.totalRevenue / maxTypeRevenue) * 100
+                    : 0;
 
+                const label =
+                  ORDER_TYPE_LABELS[type.orderType as OrderType] ??
+                  type.orderType;
                 return (
                   <div key={type.orderType} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-medium capitalize">{type.orderType}</p>
+                        <p className="font-medium">{label}</p>
                         <p className="text-xs text-muted-foreground">
                           {type.orderCount} orders · Avg: ₦
                           {type.averageOrderValue.toLocaleString()}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold">₦{type.totalRevenue.toLocaleString()}</p>
-                        <p className="text-xs text-green-600">{type.profitMargin.toFixed(1)}%</p>
+                        <p className="font-bold">
+                          ₦{type.totalRevenue.toLocaleString()}
+                        </p>
+                        <p className="text-xs text-green-600">
+                          {type.profitMargin.toFixed(1)}%
+                        </p>
                       </div>
                     </div>
                     <div className="h-3 bg-muted rounded-full overflow-hidden">

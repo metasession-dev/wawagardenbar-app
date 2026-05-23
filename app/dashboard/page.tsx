@@ -16,6 +16,10 @@ import {
   Package,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  ORDER_TYPE_LABELS,
+  ORDER_TYPE_DISPLAY_ORDER,
+} from '@/lib/order-type-labels';
 
 export const dynamic = 'force-dynamic';
 
@@ -81,27 +85,82 @@ async function DashboardMetrics() {
   ];
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      {cards.map((card) => {
-        const Icon = card.icon;
-        return (
-          <Card key={card.title}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                {card.title}
-              </CardTitle>
-              <Icon className={`h-4 w-4 ${card.color}`} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{card.value}</div>
-              <p className="text-xs text-muted-foreground">
-                {card.description}
-              </p>
-            </CardContent>
-          </Card>
-        );
-      })}
+    <div className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {cards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <Card key={card.title}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {card.title}
+                </CardTitle>
+                <Icon className={`h-4 w-4 ${card.color}`} />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{card.value}</div>
+                <p className="text-xs text-muted-foreground">
+                  {card.description}
+                </p>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+      <TodaysRevenueByType
+        revenueByType={metrics.today.revenueByType}
+        ordersByType={metrics.today.ordersByType}
+        totalRevenue={metrics.today.totalRevenue}
+      />
     </div>
+  );
+}
+
+/**
+ * Per-order-type breakdown for today's revenue. Sourced from
+ * `OrderService.getOrderStats(today)`. Operator-friendly labels via
+ * `lib/order-type-labels`.
+ */
+function TodaysRevenueByType({
+  revenueByType,
+  ordersByType,
+  totalRevenue,
+}: {
+  revenueByType: Record<string, number>;
+  ordersByType: Record<string, number>;
+  totalRevenue: number;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">
+          Today&apos;s revenue by type
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {ORDER_TYPE_DISPLAY_ORDER.map((type) => {
+            const revenue = revenueByType[type] ?? 0;
+            const count = ordersByType[type] ?? 0;
+            const pct = totalRevenue > 0 ? (revenue / totalRevenue) * 100 : 0;
+            return (
+              <div key={type} className="space-y-1">
+                <p className="text-xs text-muted-foreground">
+                  {ORDER_TYPE_LABELS[type]}
+                </p>
+                <p className="text-lg font-semibold">
+                  ₦{revenue.toLocaleString()}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {count} {count === 1 ? 'order' : 'orders'}
+                  {totalRevenue > 0 ? ` · ${pct.toFixed(0)}%` : ''}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

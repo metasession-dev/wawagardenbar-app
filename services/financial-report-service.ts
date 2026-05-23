@@ -8,6 +8,7 @@ import OrderModel from '@/models/order-model';
 import TabModel from '@/models/tab-model';
 import { ExpenseModel } from '@/models/expense-model';
 import MenuItemModel from '@/models/menu-item-model';
+import type { OrderType } from '@/interfaces/order.interface';
 
 /**
  * WAT (West Africa Time) is UTC+1.
@@ -52,6 +53,16 @@ export interface DailySummaryReport {
       }>;
       totalRevenue: number;
     };
+    /**
+     * Order-type breakdown — revenue and order count per OrderType. Source
+     * is `Order.orderType` on each order in the period; bucketed by sum
+     * of `order.total` and a 1-per-order count. The bucket sums to the
+     * orders' raw total (not paymentBreakdown.total, which subtracts
+     * partial payments to track cash-flow). Use this to answer
+     * "how much sit-in vs takeaway today" rather than "how much cash
+     * came in by channel".
+     */
+    byOrderType: Record<OrderType, { revenue: number; orderCount: number }>;
     totalRevenue: number;
   };
   costs: {
@@ -237,6 +248,12 @@ export class FinancialReportService {
       revenue: {
         food: { items: [], totalRevenue: 0 },
         drink: { items: [], totalRevenue: 0 },
+        byOrderType: {
+          'dine-in': { revenue: 0, orderCount: 0 },
+          delivery: { revenue: 0, orderCount: 0 },
+          pickup: { revenue: 0, orderCount: 0 },
+          'pay-now': { revenue: 0, orderCount: 0 },
+        },
         totalRevenue: 0,
       },
       costs: {
@@ -331,6 +348,18 @@ export class FinancialReportService {
     for (const order of orders) {
       let amount = order.total || 0;
       const method = order.paymentMethod as string | undefined;
+
+      // Bucket order by orderType BEFORE the partial-payment subtraction.
+      // The orderType breakdown answers "what was sold per type today",
+      // which uses each order's full total — not the cash-flow-adjusted
+      // amount that paymentBreakdown tracks.
+      const orderTotalForType = order.total || 0;
+      const orderType = (order.orderType ?? 'pay-now') as OrderType;
+      const bucket = report.revenue.byOrderType[orderType];
+      if (bucket) {
+        bucket.revenue += orderTotalForType;
+        bucket.orderCount += 1;
+      }
 
       // If this order belongs to a tab with partial payments, subtract the
       // partial payment total so only the final payment portion is attributed
@@ -547,6 +576,12 @@ export class FinancialReportService {
       revenue: {
         food: { items: [], totalRevenue: 0 },
         drink: { items: [], totalRevenue: 0 },
+        byOrderType: {
+          'dine-in': { revenue: 0, orderCount: 0 },
+          delivery: { revenue: 0, orderCount: 0 },
+          pickup: { revenue: 0, orderCount: 0 },
+          'pay-now': { revenue: 0, orderCount: 0 },
+        },
         totalRevenue: 0,
       },
       costs: {
@@ -633,6 +668,16 @@ export class FinancialReportService {
     for (const order of orders) {
       let amount = order.total || 0;
       const method = order.paymentMethod as string | undefined;
+
+      // Bucket by orderType BEFORE the partial-payment subtraction — see
+      // the matching block in generateDailySummary for the rationale.
+      const orderTotalForType = order.total || 0;
+      const orderType = (order.orderType ?? 'pay-now') as OrderType;
+      const bucket = report.revenue.byOrderType[orderType];
+      if (bucket) {
+        bucket.revenue += orderTotalForType;
+        bucket.orderCount += 1;
+      }
 
       if (order.tabId) {
         const tabId = order.tabId.toString();

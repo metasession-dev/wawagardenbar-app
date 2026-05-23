@@ -25,6 +25,7 @@ import {
 } from '@/app/actions/reports/report-actions';
 import type { DailySummaryReport } from '@/services/financial-report-service';
 import { RevenueSection } from '@/components/features/reports/revenue-section';
+import { OrdersByTypeSection } from '@/components/features/reports/orders-by-type-section';
 import { CostSection } from '@/components/features/reports/cost-section';
 import { ProfitSection } from '@/components/features/reports/profit-section';
 import { ExpensesSection } from '@/components/features/reports/expenses-section';
@@ -523,6 +524,7 @@ export function DailyReportClient() {
 
             <TabsContent value="revenue" className="space-y-4">
               <RevenueSection report={report} />
+              <OrdersByTypeSection report={report} />
             </TabsContent>
 
             <TabsContent value="costs" className="space-y-4">

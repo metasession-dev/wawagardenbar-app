@@ -53,7 +53,12 @@ export function ProfitabilityFilters({
                 type="date"
                 value={startDate}
                 onChange={(e) =>
-                  onFilterChange({ startDate: e.target.value, endDate, orderType, category })
+                  onFilterChange({
+                    startDate: e.target.value,
+                    endDate,
+                    orderType,
+                    category,
+                  })
                 }
                 disabled={isLoading}
               />
@@ -65,7 +70,12 @@ export function ProfitabilityFilters({
                 type="date"
                 value={endDate}
                 onChange={(e) =>
-                  onFilterChange({ startDate, endDate: e.target.value, orderType, category })
+                  onFilterChange({
+                    startDate,
+                    endDate: e.target.value,
+                    orderType,
+                    category,
+                  })
                 }
                 disabled={isLoading}
               />
@@ -78,7 +88,12 @@ export function ProfitabilityFilters({
             <Select
               value={orderType || 'all'}
               onValueChange={(value) =>
-                onFilterChange({ startDate, endDate, orderType: value === 'all' ? '' : value, category })
+                onFilterChange({
+                  startDate,
+                  endDate,
+                  orderType: value === 'all' ? '' : value,
+                  category,
+                })
               }
               disabled={isLoading}
             >
@@ -87,9 +102,10 @@ export function ProfitabilityFilters({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All order types</SelectItem>
-                <SelectItem value="dine-in">Dine-in</SelectItem>
+                <SelectItem value="dine-in">Sit-in</SelectItem>
+                <SelectItem value="delivery">Takeaway</SelectItem>
                 <SelectItem value="pickup">Pickup</SelectItem>
-                <SelectItem value="delivery">Delivery</SelectItem>
+                <SelectItem value="pay-now">Pay-now</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -100,7 +116,12 @@ export function ProfitabilityFilters({
             <Select
               value={category || 'all'}
               onValueChange={(value) =>
-                onFilterChange({ startDate, endDate, orderType, category: value === 'all' ? '' : value })
+                onFilterChange({
+                  startDate,
+                  endDate,
+                  orderType,
+                  category: value === 'all' ? '' : value,
+                })
               }
               disabled={isLoading}
             >
@@ -122,7 +143,11 @@ export function ProfitabilityFilters({
 
           {/* Export Button */}
           <div className="flex items-end">
-            <Button onClick={handleExportCSV} variant="outline" disabled={isLoading}>
+            <Button
+              onClick={handleExportCSV}
+              variant="outline"
+              disabled={isLoading}
+            >
               <Download className="mr-2 h-4 w-4" />
               Export CSV
             </Button>

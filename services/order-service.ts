@@ -527,6 +527,13 @@ export class OrderService {
     averageOrderValue: number;
     ordersByStatus: Record<OrderStatus, number>;
     ordersByType: Record<OrderType, number>;
+    /**
+     * Per-type revenue (sum of `Order.total` grouped by `Order.orderType`).
+     * Companion to `ordersByType` — counts answer "how many", this answers
+     * "how much". Every enum value is present (0 when absent) so the
+     * caller can iterate the canonical display order without null-checks.
+     */
+    revenueByType: Record<OrderType, number>;
   }> {
     await connectDB();
 
@@ -562,12 +569,15 @@ export class OrderService {
           },
         },
       ]),
+      // Single pipeline returns both count + revenue per orderType.
+      // One round-trip; no extra query vs the previous count-only shape.
       Order.aggregate([
         { $match: dateQuery },
         {
           $group: {
             _id: '$orderType',
             count: { $sum: 1 },
+            revenue: { $sum: '$total' },
           },
         },
       ]),
@@ -581,13 +591,25 @@ export class OrderService {
       },
       {} as Record<OrderStatus, number>
     );
-    const ordersByType = typeStats.reduce(
-      (acc, item) => {
-        acc[item._id as OrderType] = item.count;
-        return acc;
-      },
-      {} as Record<OrderType, number>
-    );
+    const ordersByType: Record<OrderType, number> = {
+      'dine-in': 0,
+      delivery: 0,
+      pickup: 0,
+      'pay-now': 0,
+    };
+    const revenueByType: Record<OrderType, number> = {
+      'dine-in': 0,
+      delivery: 0,
+      pickup: 0,
+      'pay-now': 0,
+    };
+    for (const item of typeStats) {
+      const t = item._id as OrderType | null;
+      if (t && t in ordersByType) {
+        ordersByType[t] = item.count ?? 0;
+        revenueByType[t] = item.revenue ?? 0;
+      }
+    }
 
     return {
       totalOrders: stats.totalOrders,
@@ -596,6 +618,7 @@ export class OrderService {
         stats.totalOrders > 0 ? stats.totalRevenue / stats.totalOrders : 0,
       ordersByStatus,
       ordersByType,
+      revenueByType,
     };
   }
 

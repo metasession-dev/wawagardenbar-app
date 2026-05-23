@@ -910,90 +910,129 @@ export class TabService {
   }
 
   /**
-   * Delete a tab
-   * Requirements:
-   * - Tab must not be closed/paid (status must be 'open' or 'settling')
-   * - All orders on the tab must be cancelled first
+   * Delete a tab.
+   *
+   * Default path (admin): tab must not be closed+paid, and all linked
+   * orders must already be cancelled. Hard-deletes the tab and writes a
+   * `tab.delete` audit log.
+   *
+   * Super-admin path (`opts.superAdminOverride === true`): bypasses both
+   * guards. If `opts.revertItems === true`, each non-cancelled linked
+   * order is set to `cancelled` and — if inventory was deducted — its
+   * stock is restored via `InventoryService.restoreStockForOrder`. Each
+   * such order gets its own `order.cancel` audit log. The role gate for
+   * the override lives in the calling action (`deleteTabAction`).
    */
-  static async deleteTab(tabId: string, deletedBy: string): Promise<void> {
+  static async deleteTab(
+    tabId: string,
+    deletedBy: string,
+    opts?: { superAdminOverride?: boolean; revertItems?: boolean }
+  ): Promise<void> {
     await connectDB();
 
-    console.log('deleteTab called with:', { tabId, deletedBy });
+    const superAdminOverride = opts?.superAdminOverride === true;
+    const revertItems = opts?.revertItems === true;
 
     const tab = await TabModel.findById(tabId);
     if (!tab) {
       throw new Error('Tab not found');
     }
 
-    console.log('Tab found:', {
-      status: tab.status,
-      paymentStatus: tab.paymentStatus,
-      orderCount: tab.orders.length,
-    });
-
-    // Check if tab is already closed/paid
-    if (tab.status === 'closed' && tab.paymentStatus === 'paid') {
+    if (
+      !superAdminOverride &&
+      tab.status === 'closed' &&
+      tab.paymentStatus === 'paid'
+    ) {
       throw new Error(
         'Cannot delete a closed/paid tab. Only open or unpaid tabs can be deleted.'
       );
     }
 
-    // Get all orders on this tab
     const orders = await OrderModel.find({
       _id: { $in: tab.orders },
     });
 
-    console.log(
-      'Orders found:',
-      orders.map((o) => ({ id: o._id, status: o.status }))
-    );
-
-    // Check if any orders are not cancelled
     const nonCancelledOrders = orders.filter(
       (order) => order.status !== 'cancelled'
     );
-    if (nonCancelledOrders.length > 0) {
-      console.log(
-        'Non-cancelled orders found:',
-        nonCancelledOrders.map((o) => ({ id: o._id, status: o.status }))
-      );
+    if (!superAdminOverride && nonCancelledOrders.length > 0) {
       throw new Error(
         `Cannot delete tab. Please cancel all ${nonCancelledOrders.length} order(s) on this tab first.`
       );
     }
 
-    console.log('All orders are cancelled, proceeding with deletion');
+    const AuditLogService = (await import('./audit-log-service'))
+      .AuditLogService;
 
-    // Create audit log before deletion
-    try {
-      const AuditLogService = (await import('./audit-log-service'))
-        .AuditLogService;
-      console.log('Creating audit log with userId:', deletedBy);
-      await AuditLogService.createLog({
-        userId: deletedBy,
-        userEmail: tab.customerEmail || 'unknown',
-        userRole: 'admin',
-        action: 'tab.delete',
-        resource: 'tab',
-        resourceId: tabId,
-        details: {
-          tabNumber: tab.tabNumber,
-          tableNumber: tab.tableNumber,
-          orderCount: orders.length,
-          deletedBy,
-        },
-      });
-      console.log('Audit log created successfully');
-    } catch (auditError) {
-      console.error('Error creating audit log:', auditError);
-      throw new Error(
-        `Failed to create audit log: ${auditError instanceof Error ? auditError.message : 'Unknown error'}`
-      );
+    const revertedOrderIds: string[] = [];
+    let inventoryRestoredCount = 0;
+    if (superAdminOverride && revertItems && nonCancelledOrders.length > 0) {
+      const InventoryService = (await import('./inventory-service')).default;
+      for (const order of nonCancelledOrders) {
+        const orderId = order._id.toString();
+        const previousStatus = order.status;
+        const wasDeducted = order.inventoryDeducted === true;
+
+        if (wasDeducted) {
+          await InventoryService.restoreStockForOrder(orderId);
+          inventoryRestoredCount += 1;
+        }
+
+        await OrderModel.updateOne(
+          { _id: order._id },
+          {
+            $set: { status: 'cancelled' },
+            $push: {
+              statusHistory: {
+                status: 'cancelled',
+                timestamp: new Date(),
+                note: 'Tab deleted by super-admin (revert items)',
+              },
+            },
+          }
+        );
+        revertedOrderIds.push(orderId);
+
+        await AuditLogService.createLog({
+          userId: deletedBy,
+          userEmail: tab.customerEmail || 'unknown',
+          userRole: 'super-admin',
+          action: 'order.cancel',
+          resource: 'order',
+          resourceId: orderId,
+          details: {
+            previousStatus,
+            reason: 'Tab deleted by super-admin',
+            viaTabDelete: true,
+            inventoryRestored: wasDeducted,
+          },
+        });
+      }
     }
 
-    // Delete the tab
-    console.log('Deleting tab from database');
+    await AuditLogService.createLog({
+      userId: deletedBy,
+      userEmail: tab.customerEmail || 'unknown',
+      userRole: superAdminOverride ? 'super-admin' : 'admin',
+      action: 'tab.delete',
+      resource: 'tab',
+      resourceId: tabId,
+      details: {
+        tabNumber: tab.tabNumber,
+        tableNumber: tab.tableNumber,
+        orderCount: orders.length,
+        deletedBy,
+        ...(superAdminOverride
+          ? {
+              superAdminOverride: true,
+              revertItems,
+              ordersAffected: revertedOrderIds,
+              inventoryRestored: inventoryRestoredCount,
+            }
+          : {}),
+      },
+    });
+
     await TabModel.findByIdAndDelete(tabId);
-    console.log('Tab deleted successfully from database');
   }
 }

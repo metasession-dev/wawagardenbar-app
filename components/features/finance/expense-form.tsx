@@ -110,6 +110,7 @@ import {
   type SellableInventoryOption,
 } from './inventory-link-section';
 import { computeLockedUnit } from '@/lib/expense-inventory-link';
+import { useExpenseLineAutoDerive } from '@/hooks/use-expense-line-auto-derive';
 
 interface ExpenseFormProps {
   open: boolean;
@@ -185,6 +186,7 @@ export function ExpenseForm({
       fetchKitchenInventory();
       fetchSellableInventory();
       setSellableLinkEnabled({});
+      resetAutoDerive();
       form.reset({
         date: prefill?.date ?? new Date(),
         items:
@@ -194,6 +196,7 @@ export function ExpenseForm({
         notes: '',
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   async function fetchCategories() {
@@ -263,15 +266,14 @@ export function ExpenseForm({
     return buildDropdownSections(categories, groups);
   }
 
-  function handleQtyOrCostChange(index: number) {
-    const item = form.getValues(`items.${index}`);
-    const qty = item.quantity ?? 0;
-    const cost = item.unitCost ?? 0;
-    form.setValue(
-      `items.${index}.totalCost`,
-      parseFloat((qty * cost).toFixed(2))
-    );
-  }
+  // #104 — bidirectional auto-derive across {quantity, unitCost, totalCost}.
+  // The hook tracks which of {unitCost, totalCost} was last edited per
+  // row and recomputes the other side when qty changes. Editing Unit
+  // Cost recomputes Total; editing Total recomputes Unit Cost. Qty is
+  // the anchor — if qty isn't > 0, nothing computes.
+  const { onFieldEdit, resetAll: resetAutoDerive } = useExpenseLineAutoDerive({
+    form,
+  });
 
   const groupTotal = items.reduce(
     (sum, item) => sum + (item.totalCost || 0),
@@ -542,7 +544,7 @@ export function ExpenseForm({
                                       ? parseFloat(e.target.value)
                                       : 0
                                   );
-                                  handleQtyOrCostChange(index);
+                                  onFieldEdit(index, 'quantity');
                                 }}
                                 value={f.value ?? ''}
                               />
@@ -600,7 +602,7 @@ export function ExpenseForm({
                               <Input
                                 className="h-8 text-sm"
                                 type="number"
-                                step="0.01"
+                                step="0.0001"
                                 placeholder="0.00"
                                 {...f}
                                 onChange={(e) => {
@@ -609,7 +611,7 @@ export function ExpenseForm({
                                       ? parseFloat(e.target.value)
                                       : 0
                                   );
-                                  handleQtyOrCostChange(index);
+                                  onFieldEdit(index, 'unitCost');
                                 }}
                                 value={f.value ?? ''}
                               />
@@ -633,13 +635,14 @@ export function ExpenseForm({
                                 step="0.01"
                                 placeholder="0.00"
                                 {...f}
-                                onChange={(e) =>
+                                onChange={(e) => {
                                   f.onChange(
                                     e.target.value
                                       ? parseFloat(e.target.value)
                                       : 0
-                                  )
-                                }
+                                  );
+                                  onFieldEdit(index, 'totalCost');
+                                }}
                                 value={f.value ?? ''}
                               />
                             </FormControl>

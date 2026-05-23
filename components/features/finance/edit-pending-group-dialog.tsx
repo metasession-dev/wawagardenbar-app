@@ -54,6 +54,7 @@ import {
   type SellableInventoryOption,
 } from './inventory-link-section';
 import { computeLockedUnit } from '@/lib/expense-inventory-link';
+import { useExpenseLineAutoDerive } from '@/hooks/use-expense-line-auto-derive';
 import { getExpenseCategoriesAction } from '@/app/actions/finance/expense-categories-actions';
 import { getUnitsOfMeasurementAction } from '@/app/actions/units-actions';
 import {
@@ -161,12 +162,14 @@ export function EditPendingGroupDialog({
       fetchSellableInventory();
       setSellableLinkEnabled({});
       setSellableLoaded(false);
+      resetAutoDerive();
       form.reset({
         date: new Date(group.date),
         items: group.items.map((i) => ({ ...i })),
         notes: group.notes ?? '',
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, group]);
 
   // Hydrate the kitchen-vs-sellable mutex from the loaded sellable list.
@@ -249,15 +252,11 @@ export function EditPendingGroupDialog({
     0
   );
 
-  function handleQtyOrCostChange(index: number) {
-    const item = form.getValues(`items.${index}`);
-    const qty = item.quantity ?? 0;
-    const cost = item.unitCost ?? 0;
-    form.setValue(
-      `items.${index}.totalCost`,
-      parseFloat((qty * cost).toFixed(2))
-    );
-  }
+  // #104 — auto-derive across {quantity, unitCost, totalCost}. Same hook
+  // the Add Expense form uses; math lives in lib/expense-line-derivation.ts.
+  const { onFieldEdit, resetAll: resetAutoDerive } = useExpenseLineAutoDerive({
+    form,
+  });
 
   async function handleDelete() {
     setIsDeleting(true);
@@ -501,7 +500,7 @@ export function EditPendingGroupDialog({
                                       ? parseFloat(e.target.value)
                                       : 0
                                   );
-                                  handleQtyOrCostChange(index);
+                                  onFieldEdit(index, 'quantity');
                                 }}
                                 value={f.value ?? ''}
                               />
@@ -559,7 +558,7 @@ export function EditPendingGroupDialog({
                               <Input
                                 className="h-8 text-sm"
                                 type="number"
-                                step="0.01"
+                                step="0.0001"
                                 {...f}
                                 onChange={(e) => {
                                   f.onChange(
@@ -567,7 +566,7 @@ export function EditPendingGroupDialog({
                                       ? parseFloat(e.target.value)
                                       : 0
                                   );
-                                  handleQtyOrCostChange(index);
+                                  onFieldEdit(index, 'unitCost');
                                 }}
                                 value={f.value ?? ''}
                               />
@@ -590,13 +589,14 @@ export function EditPendingGroupDialog({
                                 type="number"
                                 step="0.01"
                                 {...f}
-                                onChange={(e) =>
+                                onChange={(e) => {
                                   f.onChange(
                                     e.target.value
                                       ? parseFloat(e.target.value)
                                       : 0
-                                  )
-                                }
+                                  );
+                                  onFieldEdit(index, 'totalCost');
+                                }}
                                 value={f.value ?? ''}
                               />
                             </FormControl>

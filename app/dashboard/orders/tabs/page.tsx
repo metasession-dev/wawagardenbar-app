@@ -1,15 +1,29 @@
 /**
  * @requirement REQ-012 - Pass partial payments data to tabs list
  * @requirement REQ-023 - Pass Staff Pot balance to tabs list
+ *
+ * Renders the Tabs Management dashboard. Pages 25 tabs at a time
+ * (server-side) so the page stays fast at >1500 tabs. Stats are
+ * computed server-side independent of the current page / filter.
  */
 import { TabService } from '@/services';
 import { getStaffPotDataAction } from '@/app/actions/admin/staff-pot-actions';
 import { DashboardTabsListClient } from '@/components/features/admin/tabs/dashboard-tabs-list-client';
 
-async function getAllTabs() {
-  const tabs = await TabService.listAllTabsWithFilters({});
+const PAGE_SIZE = 25;
 
-  // Fully serialize tabs to plain objects
+async function getInitialPage() {
+  // First-visit default: open tabs only, newest first, first 25.
+  // Operator can override via the filter UI which writes to localStorage
+  // and persists across visits. The localStorage default-fallback also
+  // hits this same "status: open" implicit default — see the filter
+  // component for details.
+  const { tabs, total } = await TabService.listAllTabsWithFilters({
+    statuses: ['open'],
+    skip: 0,
+    limit: PAGE_SIZE,
+  });
+
   const serializedTabs = tabs.map((tab: any) => ({
     _id: tab._id.toString(),
     tabNumber: tab.tabNumber,
@@ -44,12 +58,13 @@ async function getAllTabs() {
     reconciled: tab.reconciled || false,
   }));
 
-  return { tabs: serializedTabs };
+  return { tabs: serializedTabs, total };
 }
 
 export default async function DashboardTabsPage() {
-  const [{ tabs }, staffPotResult] = await Promise.all([
-    getAllTabs(),
+  const [{ tabs, total }, stats, staffPotResult] = await Promise.all([
+    getInitialPage(),
+    TabService.getTabStats(),
     getStaffPotDataAction().catch(() => ({ success: false as const })),
   ]);
 
@@ -70,6 +85,9 @@ export default async function DashboardTabsPage() {
 
       <DashboardTabsListClient
         initialTabs={tabs}
+        initialTotal={total}
+        pageSize={PAGE_SIZE}
+        stats={stats}
         staffPotBalance={staffPotBalance}
       />
     </div>

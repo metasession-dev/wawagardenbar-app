@@ -172,6 +172,11 @@ tabSchema.index({ userId: 1, status: 1 });
 tabSchema.index({ openedAt: -1 });
 tabSchema.index({ businessDate: 1 });
 tabSchema.index({ tableNumber: 1, status: 1 });
+// Default Tabs Management page query: find({status:'open'}).sort({openedAt:-1}).
+// Compound covers the filter + sort + (skip/limit) without scanning every
+// tab. Builds in background; existing single-field openedAt index stays
+// for date-range queries that don't filter on status.
+tabSchema.index({ status: 1, openedAt: -1 });
 
 // REQ-035 — tab-level `tipAmount` is a derived sum of partial-payment
 // tips. Recompute on every save so callers cannot drift the two apart.

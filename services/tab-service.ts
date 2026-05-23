@@ -468,14 +468,24 @@ export class TabService {
   }
 
   /**
-   * List all tabs (admin/staff) with filtering options
+   * List all tabs (admin/staff) with filtering + offset pagination.
+   *
+   * `skip` + `limit` follow the same pattern as `AuditLogService.getLogs`
+   * and `OrderService.getOrdersByUserId`. Default page size is 25; pass
+   * `limit: 0` (or no pagination args) to get the legacy "all rows"
+   * behaviour for callers that still need it.
+   *
+   * Returns `{ tabs, total }` so the UI can render Page X of Y without
+   * a second count round-trip.
    */
   static async listAllTabsWithFilters(filters: {
     statuses?: string[];
     startDate?: Date;
     endDate?: Date;
     reconciled?: 'all' | 'reconciled' | 'not-reconciled';
-  }): Promise<ITab[]> {
+    skip?: number;
+    limit?: number;
+  }): Promise<{ tabs: ITab[]; total: number }> {
     await connectDB();
 
     const query: any = {};
@@ -506,10 +516,51 @@ export class TabService {
       query.reconciled = { $ne: true };
     }
 
-    const tabs = await TabModel.find(query).sort({ openedAt: -1 }).lean();
+    const skip = filters.skip ?? 0;
+    const limit = filters.limit ?? 0;
+
+    const [tabs, total] = await Promise.all([
+      (limit > 0
+        ? TabModel.find(query).sort({ openedAt: -1 }).skip(skip).limit(limit)
+        : TabModel.find(query).sort({ openedAt: -1 })
+      ).lean(),
+      TabModel.countDocuments(query),
+    ]);
 
     // Ensure complete serialization to prevent client component errors
-    return JSON.parse(JSON.stringify(tabs));
+    return {
+      tabs: JSON.parse(JSON.stringify(tabs)) as ITab[],
+      total,
+    };
+  }
+
+  /**
+   * Top-of-page stats for the Tabs Management dashboard.
+   *
+   * Three counts in parallel, independent of any operator filter +
+   * pagination state. The Total Orders figure is the sum of each tab's
+   * `orders.length` — done as a single aggregate so we don't ship 1500+
+   * documents just to count the array sizes.
+   */
+  static async getTabStats(): Promise<{
+    totalTabs: number;
+    totalOpenTabs: number;
+    totalOrders: number;
+  }> {
+    await connectDB();
+    const [totalTabs, totalOpenTabs, totalOrdersAgg] = await Promise.all([
+      TabModel.countDocuments({}),
+      TabModel.countDocuments({ status: 'open' }),
+      TabModel.aggregate<{ _id: null; sum: number }>([
+        { $project: { count: { $size: { $ifNull: ['$orders', []] } } } },
+        { $group: { _id: null, sum: { $sum: '$count' } } },
+      ]),
+    ]);
+    return {
+      totalTabs,
+      totalOpenTabs,
+      totalOrders: totalOrdersAgg[0]?.sum ?? 0,
+    };
   }
 
   /**

@@ -634,12 +634,20 @@ export async function createAdminTabAction(params: {
 }
 
 /**
- * Delete a tab
- * Requirements:
- * - Tab must not be closed/paid
- * - All orders on the tab must be cancelled first
+ * Delete a tab.
+ *
+ * Default (admin or super-admin): tab must not be closed+paid and all
+ * linked orders must be cancelled (enforced inside `TabService.deleteTab`).
+ *
+ * Super-admin override (`opts.superAdminOverride === true`): bypasses
+ * both guards. Requires `session.role === 'super-admin'` here — admin
+ * cannot override. `opts.revertItems === true` restocks inventory and
+ * cancels each linked non-cancelled order.
  */
-export async function deleteTabAction(tabId: string): Promise<ActionResult> {
+export async function deleteTabAction(
+  tabId: string,
+  opts?: { superAdminOverride?: boolean; revertItems?: boolean }
+): Promise<ActionResult> {
   try {
     const cookieStore = await cookies();
     const session = await getIronSession<SessionData>(
@@ -654,7 +662,13 @@ export async function deleteTabAction(tabId: string): Promise<ActionResult> {
       };
     }
 
-    // Only admin and super-admin can delete tabs
+    if (opts?.superAdminOverride && session.role !== 'super-admin') {
+      return {
+        success: false,
+        error: 'Only super-admin can override tab-delete guards',
+      };
+    }
+
     if (session.role !== 'admin' && session.role !== 'super-admin') {
       return {
         success: false,
@@ -662,9 +676,7 @@ export async function deleteTabAction(tabId: string): Promise<ActionResult> {
       };
     }
 
-    console.log('Attempting to delete tab:', tabId, 'by user:', session.userId);
-    await TabService.deleteTab(tabId, session.userId);
-    console.log('Tab deleted successfully:', tabId);
+    await TabService.deleteTab(tabId, session.userId, opts);
 
     revalidatePath('/dashboard/orders/tabs');
     revalidatePath(`/dashboard/orders/tabs/${tabId}`);
@@ -675,10 +687,6 @@ export async function deleteTabAction(tabId: string): Promise<ActionResult> {
     };
   } catch (error) {
     console.error('Error deleting tab:', error);
-    console.error(
-      'Error stack:',
-      error instanceof Error ? error.stack : 'No stack trace'
-    );
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to delete tab',

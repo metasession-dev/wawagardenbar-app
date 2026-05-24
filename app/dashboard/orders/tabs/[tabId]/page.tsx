@@ -115,14 +115,18 @@ async function getTabDetails(tabId: string) {
     })
   );
 
-  return { tab: serializedTab, orders: serializedOrders };
+  return {
+    tab: serializedTab,
+    orders: serializedOrders,
+    isSuperAdmin: session.role === 'super-admin',
+  };
 }
 
 export default async function DashboardTabDetailsPage({
   params,
 }: DashboardTabDetailsPageProps) {
   const { tabId } = await params;
-  const { tab, orders } = await getTabDetails(tabId);
+  const { tab, orders, isSuperAdmin } = await getTabDetails(tabId);
 
   // Count non-cancelled orders
   const nonCancelledOrderCount = orders.filter(
@@ -180,6 +184,7 @@ export default async function DashboardTabDetailsPage({
               paymentStatus={tab.paymentStatus}
               orderCount={orders.length}
               nonCancelledOrderCount={nonCancelledOrderCount}
+              isSuperAdmin={isSuperAdmin}
             />
           </div>
         </div>

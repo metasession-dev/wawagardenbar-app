@@ -116,7 +116,7 @@ jobs:
       - name: Dependency Audit
         run: |
           npm audit --json > dependency-audit.json 2>&1 || true
-          ACCEPTED="xlsx"
+          ACCEPTED=""
           UNACCEPTED=$(python3 -c "
           import json
           with open('dependency-audit.json') as f:

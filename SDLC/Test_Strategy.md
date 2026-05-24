@@ -86,24 +86,24 @@ Specific tools implementing these gates are defined in the Test Architecture.
 
 Defined in the Periodic Security Review Schedule:
 
-| Activity                          | Frequency |
-| --------------------------------- | --------- |
-| Full codebase SAST review         | Quarterly |
-| Dependency deep audit             | Quarterly |
-| Access control review             | Quarterly |
-| Audit log integrity review        | Quarterly |
-| Penetration testing (third party) | Annually  |
-| Disaster recovery test            | Annually  |
-| Third-party security assessment   | Annually  |
+| Activity | Frequency |
+|---|---|
+| Full codebase SAST review | Quarterly |
+| Dependency deep audit | Quarterly |
+| Access control review | Quarterly |
+| Audit log integrity review | Quarterly |
+| Penetration testing (third party) | Annually |
+| Disaster recovery test | Annually |
+| Third-party security assessment | Annually |
 
 ### Remediation SLAs
 
-| Severity | Per-Commit Gate               | Periodic Finding      |
-| -------- | ----------------------------- | --------------------- |
-| Critical | Block merge, fix immediately  | 7 days                |
-| High     | Block merge, fix immediately  | 30 days               |
-| Medium   | Document and plan remediation | 90 days               |
-| Low      | Track for next review         | Next quarterly review |
+| Severity | Per-Commit Gate | Periodic Finding |
+|---|---|---|
+| Critical | Block merge, fix immediately | 7 days |
+| High | Block merge, fix immediately | 30 days |
+| Medium | Document and plan remediation | 90 days |
+| Low | Track for next review | Next quarterly review |
 
 ---
 
@@ -115,22 +115,22 @@ This section implements the AI governance commitments from the Test Policy with 
 
 AI involvement is a factor in risk classification:
 
-| Code Category                                   | Base Risk | AI Adjustment      |
-| ----------------------------------------------- | --------- | ------------------ |
-| Internal tools, no regulated data               | Low       | Remains Low        |
-| User-facing features, API changes, PII handling | Medium    | Remains Medium     |
-| Auth, payments, RBAC, crypto, data validation   | High      | Remains High       |
-| Any of the above with AI regeneration           | Any       | Raise by one level |
+| Code Category | Base Risk | AI Adjustment |
+|---|---|---|
+| Internal tools, no regulated data | Low | Remains Low |
+| User-facing features, API changes, PII handling | Medium | Remains Medium |
+| Auth, payments, RBAC, crypto, data validation | High | Remains High |
+| Any of the above with AI regeneration | Any | Raise by one level |
 
 ### Mandatory Human Review Process
 
 **Review scope by risk level:**
 
-| Risk Level | Reviewer                                 | Focus                                                |
-| ---------- | ---------------------------------------- | ---------------------------------------------------- |
-| Low        | Any team member with domain knowledge    | Functional correctness, obvious security issues      |
-| Medium     | Developer experienced in affected area   | Above + security implications, dependency validation |
-| High       | Senior developer + security-aware review | Above + independent verification, threat modeling    |
+| Risk Level | Reviewer | Focus |
+|---|---|---|
+| Low | Any team member with domain knowledge | Functional correctness, obvious security issues |
+| Medium | Developer experienced in affected area | Above + security implications, dependency validation |
+| High | Senior developer + security-aware review | Above + independent verification, threat modeling |
 
 **Every reviewer checks AI-generated code for:**
 
@@ -155,11 +155,11 @@ Incremental AI-assisted edits follow standard testing gates.
 
 ### AI Documentation Requirements
 
-| Risk Level | Commit Tag           | Evidence              | Prompts                      |
-| ---------- | -------------------- | --------------------- | ---------------------------- |
-| Low        | `Co-Authored-By` tag | Not required          | Not required                 |
-| Medium     | `Co-Authored-By` tag | Summary of generation | Summary of prompts           |
-| High       | `Co-Authored-By` tag | Detailed AI record    | Detailed prompts and outputs |
+| Risk Level | Commit Tag | Evidence | Prompts |
+|---|---|---|---|
+| Low | `Co-Authored-By` tag | Not required | Not required |
+| Medium | `Co-Authored-By` tag | Summary of generation | Summary of prompts |
+| High | `Co-Authored-By` tag | Detailed AI record | Detailed prompts and outputs |
 
 ---
 
@@ -177,18 +177,18 @@ Risk level is determined at planning time for each requirement:
 
 ### Testing Depth by Risk Level
 
-| Activity               | Low            | Medium        | High          |
-| ---------------------- | -------------- | ------------- | ------------- |
-| Unit tests             | Required       | Required      | Required      |
-| Integration tests      | As applicable  | Required      | Required      |
-| E2E tests              | Critical paths | Full coverage | Full coverage |
-| SAST scan              | Required       | Required      | Required      |
-| Dependency audit       | Required       | Required      | Required      |
-| Access control testing | If applicable  | Required      | Required      |
-| Audit log testing      | If applicable  | Required      | Required      |
-| Performance testing    | Not required   | If applicable | Required      |
-| Penetration testing    | Not required   | Not required  | Consider      |
-| Independent review     | Not required   | Not required  | Required      |
+| Activity | Low | Medium | High |
+|---|---|---|---|
+| Unit tests | Required | Required | Required |
+| Integration tests | As applicable | Required | Required |
+| E2E tests | Critical paths | Full coverage | Full coverage |
+| SAST scan | Required | Required | Required |
+| Dependency audit | Required | Required | Required |
+| Access control testing | If applicable | Required | Required |
+| Audit log testing | If applicable | Required | Required |
+| Performance testing | Not required | If applicable | Required |
+| Penetration testing | Not required | Not required | Consider |
+| Independent review | Not required | Not required | Required |
 
 ---
 
@@ -293,28 +293,28 @@ Tracked requirements include: `Ref: REQ-XXX`
 
 ### Required Artifact Types
 
-| Category      | Artifacts                                                               |
-| ------------- | ----------------------------------------------------------------------- |
-| Planning      | Test Policy, Test Strategy, Project Test Plans                          |
-| Specification | BDD feature files, test case specifications, security scenarios         |
-| Execution     | Test logs, CI/CD logs, SAST/SCA reports, AI use records, defect reports |
-| Reporting     | Status reports, completion reports, security summaries                  |
+| Category | Artifacts |
+|---|---|
+| Planning | Test Policy, Test Strategy, Project Test Plans |
+| Specification | BDD feature files, test case specifications, security scenarios |
+| Execution | Test logs, CI/CD logs, SAST/SCA reports, AI use records, defect reports |
+| Reporting | Status reports, completion reports, security summaries |
 
 ---
 
 ## Agile Artifact Mapping
 
-| ISO Artifact               | Metasession Implementation                                  |
-| -------------------------- | ----------------------------------------------------------- |
-| Test Policy                | This document hierarchy (Policy + Strategy + Architecture)  |
-| Requirements Specification | Product backlog with acceptance criteria                    |
-| Test Plan                  | Project-specific Test Plan + sprint planning                |
-| Test Case Specification    | BDD feature files (Gherkin Given/When/Then)                 |
-| Test Execution Log         | CI/CD pipeline logs, test management tool records           |
-| Defect Reports             | Issue tracker with severity labels and workflows            |
-| Traceability Matrix        | Requirement-test-defect linkage (RTM or tool-based)         |
-| Security Evidence          | SAST/SCA results, dependency audits, security summaries     |
-| AI Audit Trail             | Co-Authored-By tags, evidence directory records, PR history |
+| ISO Artifact | Metasession Implementation |
+|---|---|
+| Test Policy | This document hierarchy (Policy + Strategy + Architecture) |
+| Requirements Specification | Product backlog with acceptance criteria |
+| Test Plan | Project-specific Test Plan + sprint planning |
+| Test Case Specification | BDD feature files (Gherkin Given/When/Then) |
+| Test Execution Log | CI/CD pipeline logs, test management tool records |
+| Defect Reports | Issue tracker with severity labels and workflows |
+| Traceability Matrix | Requirement-test-defect linkage (RTM or tool-based) |
+| Security Evidence | SAST/SCA results, dependency audits, security summaries |
+| AI Audit Trail | Co-Authored-By tags, evidence directory records, PR history |
 
 ---
 
@@ -344,11 +344,11 @@ Sprint retrospectives, quarterly metric reviews, and incident lessons learned fe
 
 ## Document Control
 
-| Version | Date         | Author  | Changes                                                                                                                         |
-| ------- | ------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| 1.0     | January 2026 | QA Team | Initial creation                                                                                                                |
-| 2.0     | March 2026   | QA Team | Added AI methodology, security methodology, V&V                                                                                 |
-| 3.0     | March 2026   | QA Team | Clean boundary split — moved specific tools, code patterns, CI config to Test Architecture. Strategy now owns methodology only. |
+| Version | Date | Author | Changes |
+|---|---|---|---|
+| 1.0 | January 2026 | QA Team | Initial creation |
+| 2.0 | March 2026 | QA Team | Added AI methodology, security methodology, V&V |
+| 3.0 | March 2026 | QA Team | Clean boundary split — moved specific tools, code patterns, CI config to Test Architecture. Strategy now owns methodology only. |
 
 **Next Review Date:** March 2027
 

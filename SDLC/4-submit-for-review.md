@@ -14,7 +14,6 @@ description: Create a PR from develop to main — triggers CI independent verifi
 ## IMPORTANT: Do NOT Create the PR Until Ready to Merge
 
 **Do NOT create the PR prematurely.** Every push to `develop` while a PR is open triggers additional CI runs on the PR (quality gates + Release Approval Gate), creating unnecessary duplicate runs. Only create the PR when:
-
 - All development and iteration is complete
 - CI on `develop` is green
 - UAT-environment verification has passed (only if Stage 3 Step 10 applied — opt-in by risk class)
@@ -54,7 +53,6 @@ If a PR contains requirements at multiple risk levels, the highest risk level de
 Before creating a PR, verify all prerequisites are met. **Do NOT skip this checklist.**
 
 **Pipeline state:**
-
 - [ ] Latest CI run on `develop` is green: `gh run list --branch develop --limit 1`
 - [ ] CI is not stale (ran against the latest commit): compare CI commit SHA with `git rev-parse develop`
 - [ ] Working tree is clean: `git status`
@@ -62,7 +60,6 @@ Before creating a PR, verify all prerequisites are met. **Do NOT skip this check
 - [ ] Release approved in DevAudit (Stage 3 Step 11)
 
 **For tracked requirements (REQ-XXX):**
-
 - [ ] `compliance/evidence/REQ-XXX/test-scope.md` exists and all items addressed
 - [ ] `compliance/evidence/REQ-XXX/implementation-plan.md` exists (MEDIUM/HIGH risk)
 - [ ] `compliance/evidence/REQ-XXX/ai-prompts.md` exists (if AI was used on MEDIUM/HIGH risk)
@@ -71,7 +68,6 @@ Before creating a PR, verify all prerequisites are met. **Do NOT skip this check
 - [ ] Evidence uploaded to DevAudit (or saved locally if git-based)
 
 **Risk-tier reminder:**
-
 - LOW risk → self-merge permitted after CI passes
 - MEDIUM/HIGH risk → second human reviewer required, self-merge NOT permitted
 
@@ -296,7 +292,6 @@ gh pr list --head develop --json number --jq '.[0].number'
 ```
 
 Add to release ticket and push:
-
 ```bash
 # Edit RELEASE-TICKET-REQ-XXX.md to add PR link
 git add compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md
@@ -318,7 +313,6 @@ gh pr merge [PR-NUMBER] --merge --delete-branch=false
 **For MEDIUM/HIGH risk (second reviewer required):**
 
 The reviewer sees:
-
 1. **CI results** — independent pass/fail from GitHub (green checks)
 2. **Code changes** — in the Files changed tab
 3. **Test changes** — in the PR description ("Test Changes" section) and in the Files changed tab (look for `e2e/`, `__tests__/`, `*.spec.ts`, `*.test.ts` files)
@@ -344,14 +338,12 @@ git push origin develop
 The verification model is risk-tiered to satisfy separation of duties (ISO 27001 A.5.3, SOC 2 CC6.1/CC8.1) where it matters:
 
 **LOW risk — CI-verified self-merge:**
-
 1. **CI** — GitHub confirms gates passed (tamper-resistant, independent)
 2. **Developer** — Confirms code quality and compliance (author verification)
 
 CI provides the independent verification source. The developer's self-merge is acceptable because the risk classification is LOW and the automated gates provide objective verification.
 
 **MEDIUM/HIGH risk — second human reviewer required:**
-
 1. **CI** — GitHub confirms gates passed (tamper-resistant, independent)
 2. **Human reviewer** — Confirms code quality, security, compliance, test scope (judgment-based, independent)
 

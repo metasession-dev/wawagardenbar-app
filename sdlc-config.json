@@ -5,9 +5,7 @@
   "database_service": "mongodb",
   "database_image": "mongo:7",
   "database_port": "27017:27017",
-  "database_env": {
-    "MONGODB_DB_NAME": "wawagardenbar_test"
-  },
+  "database_env": {},
   "app_env": {
     "MONGODB_DB_NAME": "wawagardenbar_test",
     "NEXT_PUBLIC_API_URL": "http://localhost:3000/api",

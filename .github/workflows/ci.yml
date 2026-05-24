@@ -46,7 +46,7 @@ jobs:
           - 27017:27017
 
     env:
-      MONGODB_DB_NAME: wawagardenbar_test
+
       MONGODB_DB_NAME: wawagardenbar_test
       NEXT_PUBLIC_API_URL: http://localhost:3000/api
       NEXT_PUBLIC_APP_URL: http://localhost:3000

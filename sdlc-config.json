@@ -1,7 +1,7 @@
 {
   "runner": "ubuntu-latest",
   "sast_baseline": 0,
-  "accepted_dep_risks": "xlsx",
+  "accepted_dep_risks": "",
   "database_service": "mongodb",
   "database_image": "mongo:7",
   "database_port": "27017:27017",

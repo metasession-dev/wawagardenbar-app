@@ -177,34 +177,53 @@ export function DeleteTabDialog({
           <RadioGroup
             value={revertChoice}
             onValueChange={(v) => setRevertChoice(v as RevertChoice)}
-            className="gap-3"
+            className="gap-2"
           >
-            <div className="flex items-start gap-2">
+            <Label
+              htmlFor="revert-items"
+              className={`flex items-start gap-3 rounded-md border p-3 cursor-pointer transition-colors font-normal ${
+                revertChoice === 'revert'
+                  ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                  : 'border-border hover:bg-muted/50'
+              }`}
+            >
               <RadioGroupItem
                 value="revert"
                 id="revert-items"
-                className="mt-1"
+                className="mt-0.5"
               />
-              <Label htmlFor="revert-items" className="font-normal">
-                <span className="font-medium">Revert items</span>
-                <br />
-                <span className="text-xs text-muted-foreground">
+              <span className="flex-1">
+                <span className="flex items-center gap-2">
+                  <span className="font-semibold">Revert items</span>
+                  <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">
+                    Recommended
+                  </span>
+                </span>
+                <span className="mt-0.5 block text-xs text-muted-foreground">
                   Restock inventory for each order on this tab and cancel those
-                  orders.
+                  orders. Use this for accidental opens, voided sales, or any
+                  delete where the items did not actually leave the bar.
                 </span>
-              </Label>
-            </div>
-            <div className="flex items-start gap-2">
-              <RadioGroupItem value="keep" id="keep-items" className="mt-1" />
-              <Label htmlFor="keep-items" className="font-normal">
-                <span className="font-medium">Leave as-is</span>
-                <br />
-                <span className="text-xs text-muted-foreground">
-                  Orders keep their current status and data. Inventory is not
-                  adjusted.
+              </span>
+            </Label>
+            <Label
+              htmlFor="keep-items"
+              className={`flex items-start gap-3 rounded-md border p-3 cursor-pointer transition-colors font-normal ${
+                revertChoice === 'keep'
+                  ? 'border-destructive bg-destructive/5 ring-1 ring-destructive'
+                  : 'border-border hover:bg-muted/50'
+              }`}
+            >
+              <RadioGroupItem value="keep" id="keep-items" className="mt-0.5" />
+              <span className="flex-1">
+                <span className="font-semibold">Leave as-is</span>
+                <span className="mt-0.5 block text-xs text-muted-foreground">
+                  Orders keep their current status and inventory stays
+                  decremented. Only pick this if the items were actually
+                  served/consumed and you just want to delete the tab record.
                 </span>
-              </Label>
-            </div>
+              </span>
+            </Label>
           </RadioGroup>
         )}
 

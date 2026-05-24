@@ -30,7 +30,6 @@ When a workflow step requires detailed commands or templates, read the full work
 ### For ALL Code Changes (including bug fixes)
 
 Even if a change doesn't need a REQ entry:
-
 1. Review existing tests that cover the changed code
 2. Update or add tests BEFORE committing
 3. Run all gates locally — do not push without verifying no regressions
@@ -43,7 +42,6 @@ What needs a REQ entry: New features → always. Bug fixes affecting financial d
 When creating an issue via `gh issue create`, ALWAYS append this to the body:
 
 ## SDLC Checklist
-
 - [ ] Requirement: RTM entry created (or confirmed trivial)
 - [ ] Planning: test-scope.md and test-plan.md created (or confirmed trivial)
 - [ ] Tests: existing tests reviewed, tests updated/added
@@ -82,7 +80,6 @@ Read `SDLC/2-implement-and-test.md` for full details. Summary:
 ### Before Pushing
 
 Run ALL gates — every one must pass:
-
 ```
 npx tsc --noEmit                    # 0 errors
 semgrep scan --config auto src/     # 0 high/critical
@@ -105,11 +102,9 @@ Do NOT proceed to evidence compilation or PR creation until CI is green. If CI f
 Markdown stays in git. Binary/JSON evidence goes to DevAudit portal.
 
 Upload to DevAudit (NEVER commit to git):
-
 - E2E results (JSON), screenshots (PNG/JPG), SAST results (JSON), dependency audit (JSON), unit test output (TXT), test reports (HTML)
 
 Keep in git (small markdown, needs PR review):
-
 - compliance/RTM.md, test-scope.md, security-summary.md, ai-use-note.md, ai-prompts.md, release tickets
 
 ### After Implementation
@@ -133,7 +128,6 @@ Read `SDLC/3-compile-evidence.md` for full details, including release ticket tem
 **Do NOT create the PR until ready to merge.** Every push to `develop` while a PR is open triggers duplicate CI runs. The PR is the merge request, not the development workspace.
 
 Before creating a PR, verify ALL of the following:
-
 - [ ] All development and iteration is complete
 - [ ] CI green on develop (not stale): `gh run list --branch develop --limit 1`
 - [ ] Working tree clean: `git status`

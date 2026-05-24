@@ -21,24 +21,20 @@ export async function evidenceShot(
   page: Page,
   reqId: string,
   slug: string,
-  opts: { fullPage?: boolean } = {}
+  opts: { fullPage?: boolean } = {},
 ): Promise<void> {
   if (!SLUG_RE.test(reqId)) {
-    throw new Error(
-      `evidenceShot: invalid reqId "${reqId}" (must match ${SLUG_RE})`
-    );
+    throw new Error(`evidenceShot: invalid reqId "${reqId}" (must match ${SLUG_RE})`);
   }
   if (!SLUG_RE.test(slug)) {
-    throw new Error(
-      `evidenceShot: invalid slug "${slug}" (must match ${SLUG_RE})`
-    );
+    throw new Error(`evidenceShot: invalid slug "${slug}" (must match ${SLUG_RE})`);
   }
   const out = path.join(
     process.cwd(),
     'compliance/evidence',
     reqId,
     'screenshots',
-    `${slug}.png`
+    `${slug}.png`,
   );
   await page.screenshot({ path: out, fullPage: opts.fullPage ?? true });
 }

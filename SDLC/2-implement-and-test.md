@@ -36,7 +36,6 @@ grep 'REQ-XXX' compliance/RTM.md
 **If any file does not exist:** STOP. Run `1-plan-requirement.md` first. Do NOT proceed to implementation without a committed test scope and test plan.
 
 For MEDIUM/HIGH risk, also verify:
-
 ```bash
 # Implementation plan must exist (created during planning stage)
 ls compliance/evidence/REQ-XXX/implementation-plan.md
@@ -58,19 +57,16 @@ If not: `git checkout develop && git pull origin develop`
 Write or update unit tests **before** implementing the code. You know the expected interfaces and behaviour from the implementation plan and test plan.
 
 **2a. Review the test plan:**
-
 ```bash
 cat compliance/evidence/REQ-XXX/test-plan.md
 ```
 
 **2b. Write unit tests** listed in the "Tests to Add" section:
-
 - New business logic → unit tests for services, utilities, validators
 - New API endpoints → auth enforcement tests, response format tests
 - Tests should initially **fail** (the implementation doesn't exist yet)
 
 **2c. Update existing unit tests** listed in the "Tests to Update" section:
-
 - API response shape changed? → Update assertions
 - Business logic changed? → Update unit test expectations
 
@@ -79,7 +75,6 @@ cat compliance/evidence/REQ-XXX/test-plan.md
 ### WAIT CHECKPOINT: Unit Test Coverage
 
 Verify the unit tests cover the test plan:
-
 ```bash
 cat compliance/evidence/REQ-XXX/test-plan.md
 # Check: have all unit test items in "Tests to Add" been implemented?
@@ -119,7 +114,6 @@ Per Test Strategy: regeneration triggers full retest.
 ### WAIT CHECKPOINT: Unit Tests Green
 
 All unit tests must pass before proceeding:
-
 ```bash
 npm test
 ```
@@ -133,19 +127,16 @@ Write or update E2E tests **after** implementation. E2E tests need working UI/AP
 > **Skill available:** invoke the **`e2e-test-engineer`** skill for this step (at `.claude/skills/e2e-test-engineer/SKILL.md`). It derives scenarios from the requirement's acceptance criteria, reconciles with the existing test pack (flags obsoletes — but never deletes without confirmation), runs the suite, and files defects for failures or missed ACs. Framework-agnostic (Playwright, Cypress, pytest-playwright, etc.) and tracker-agnostic (GitHub, Linear, Jira, etc.). For projects with no e2e suite yet, the skill also covers bootstrapping one. See [`sdlc/SKILLS.md`](../sdlc/SKILLS.md) for the full list of available skills.
 
 **4a. Review the test plan for E2E items:**
-
 ```bash
 cat compliance/evidence/REQ-XXX/test-plan.md
 ```
 
 **4b. Add new E2E tests** listed in the "Tests to Add" section:
-
 - New pages → route protection tests (unauthenticated redirect)
 - New user flows → Playwright tests for critical paths
 - UI components changed? → Update selectors and expected content
 
 **4c. Update existing E2E tests** listed in the "Tests to Update" section:
-
 - New routes added? → Add them to route protection test arrays
 - UI flow changed? → Update selectors and assertions
 
@@ -154,7 +145,6 @@ cat compliance/evidence/REQ-XXX/test-plan.md
 ### WAIT CHECKPOINT: E2E Tests Green
 
 All E2E tests must pass:
-
 ```bash
 npx playwright test
 ```
@@ -193,20 +183,17 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`, `compliance`, `securi
 ### Step 7: Run All Local Gates (Mandatory)
 
 #### Gate 1: TypeScript
-
 ```bash
 npx tsc --noEmit
 ```
 
 #### Gate 2: Security (SAST + Dependencies)
-
 ```bash
 semgrep scan --config auto [SOURCE_DIR]/ --severity ERROR --severity WARNING
 npm audit --audit-level=high
 ```
 
 If new dependencies added:
-
 ```bash
 git diff origin/main -- package.json package-lock.json | grep '^\+'
 npm audit
@@ -214,25 +201,23 @@ npm audit
 ```
 
 #### Gate 3: E2E Tests
-
 ```bash
 npx playwright test
 ```
 
 #### Exit Criteria
 
-| Gate                         | Threshold         |
-| ---------------------------- | ----------------- |
-| TypeScript                   | 0 errors          |
-| SAST (high/critical)         | 0 findings        |
+| Gate | Threshold |
+|---|---|
+| TypeScript | 0 errors |
+| SAST (high/critical) | 0 findings |
 | Dependencies (high/critical) | 0 vulnerabilities |
-| E2E tests                    | All pass          |
-| Severity-1 defects           | 0 open            |
+| E2E tests | All pass |
+| Severity-1 defects | 0 open |
 
 For Medium/High risk, also verify access control and audit log tests pass (see Test Plan and test-scope.md).
 
 **If SAST finds issues:**
-
 ```bash
 echo "SAST finding: [rule-id] in [file] — [fixed/false-positive: reason]" >> compliance/evidence/REQ-XXX/sast-review.md
 ```
@@ -244,7 +229,6 @@ git push origin develop
 ```
 
 If rejected:
-
 ```bash
 git pull --rebase origin develop
 # Re-run ALL local gates after rebase

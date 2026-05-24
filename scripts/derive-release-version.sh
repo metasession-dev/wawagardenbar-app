@@ -6,12 +6,18 @@
 #   VERSION=$(./scripts/derive-release-version.sh)
 #
 # Priority:
-#   1. REQ tag in commit subject: "[REQ-037] feat(kitchen): ..." -> REQ-037
-#   2. Ref in commit body:        "Ref: REQ-037"                 -> REQ-037
-#   3. Fallback:                  bare date                      -> v2026.05.17
+#   1. REQ tag in commit subject:   "[REQ-037] feat(kitchen): ..." -> REQ-037
+#   2. Ref in commit body:          "Ref: REQ-037"                 -> REQ-037
+#   3. Bracketed tag in commit body: merge commit whose body is the PR title
+#                                    "... [REQ-037] ..."           -> REQ-037
+#   4. Fallback:                    bare date                      -> v2026.05.17
 #
-# Multi-REQ commits: first match wins; subject takes priority over body.
-# Output: single line on stdout. Exit 0 in all normal cases.
+# The id is taken from a bracketed [REQ-XXX] tag (subject or body) or the
+# `Ref:` line — NOT from unbracketed prose (e.g. "target close: REQ-002" must
+# not win over "Ref: REQ-001"). Step 3 exists because a "Merge pull request"
+# commit carries the PR title (with its [REQ-XXX] tag) in the body, not the
+# subject — without it, PR-merged work falls through to the date fallback and
+# fragments onto a phantom date release. Output: single line on stdout.
 #
 # This ties a release record (project_id, version) to the feature the
 # commits belong to, so all CI uploads for one REQ converge on one
@@ -24,17 +30,28 @@ set -euo pipefail
 SUBJECT=$(git log -1 --format='%s' 2>/dev/null || echo '')
 BODY=$(git log -1 --format='%b' 2>/dev/null || echo '')
 
-# 1. Subject: [REQ-XXX]
+# 1. Subject: [REQ-XXX] — the bracketed tag only, not other REQ mentions.
 if echo "$SUBJECT" | grep -qE '\[REQ-[0-9]+\]'; then
-  echo "$SUBJECT" | grep -oE 'REQ-[0-9]+' | head -1
+  echo "$SUBJECT" | grep -oE '\[REQ-[0-9]+\]' | head -1 | grep -oE 'REQ-[0-9]+'
   exit 0
 fi
 
-# 2. Body: Ref: REQ-XXX (case-insensitive on "Ref" and "REQ")
+# 2. Body: the id on the `Ref:` line only (case-insensitive on "Ref"/"REQ").
+# Scoping to the Ref: line prevents a prose mention earlier in the body
+# (e.g. "target close: REQ-002") from being picked over the real ref.
 if echo "$BODY" | grep -qiE 'Ref:[[:space:]]*REQ-[0-9]+'; then
-  echo "$BODY" | grep -ioE 'REQ-[0-9]+' | head -1 | tr '[:lower:]' '[:upper:]'
+  echo "$BODY" | grep -ioE 'Ref:[[:space:]]*REQ-[0-9]+' | head -1 | grep -oiE 'REQ-[0-9]+' | tr '[:lower:]' '[:upper:]'
   exit 0
 fi
 
-# 3. Fallback: bare date in UTC
+# 3. Body: a bracketed [REQ-XXX] anywhere in the body. Catches a merge commit
+# whose body is the PR title — e.g. subject "Merge pull request #7 from …",
+# body "chore(deps): [REQ-002] …". Bracketed-only, so an unbracketed prose
+# mention ("target close: REQ-002") still cannot win over a real Ref: above.
+if echo "$BODY" | grep -qE '\[REQ-[0-9]+\]'; then
+  echo "$BODY" | grep -oE '\[REQ-[0-9]+\]' | head -1 | grep -oE 'REQ-[0-9]+'
+  exit 0
+fi
+
+# 4. Fallback: bare date in UTC
 echo "v$(date -u +%Y.%m.%d)"

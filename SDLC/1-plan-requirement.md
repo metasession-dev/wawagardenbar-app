@@ -25,7 +25,7 @@ description: Define a new requirement in the RTM, classify risk, create implemen
 
 ### Step 1: Identify the GitHub Issue
 
-Every tracked change starts from a GitHub Issue. The issue provides the _what_ and _why_; the RTM provides the compliance audit trail.
+Every tracked change starts from a GitHub Issue. The issue provides the *what* and *why*; the RTM provides the compliance audit trail.
 
 - If the user references an issue number (e.g., `#123`): fetch its title, description, and labels using `gh issue view 123`.
 - If the user describes work without an issue: ask **"Is there a GitHub Issue for this, or should we create one?"**
@@ -42,11 +42,11 @@ The next ID is one higher (e.g., if the last is REQ-007, use REQ-008).
 
 ### Step 3: Classify Risk Level
 
-| Risk Level | Criteria                                                         |
-| ---------- | ---------------------------------------------------------------- |
-| **Low**    | Internal tools, no regulated data, no auth changes               |
+| Risk Level | Criteria |
+|---|---|
+| **Low** | Internal tools, no regulated data, no auth changes |
 | **Medium** | Touches PII, user-facing features, API changes, new dependencies |
-| **High**   | Security, payments, RBAC, data handling, authentication          |
+| **High** | Security, payments, RBAC, data handling, authentication |
 
 AI involvement raises risk by one level when touching Medium or High categories. See Test Policy for the full risk matrix.
 
@@ -68,12 +68,11 @@ mkdir -p compliance/evidence/REQ-XXX
 
 ### Step 6: Implementation Plan (MEDIUM/HIGH Risk — Required)
 
-For MEDIUM and HIGH risk requirements, create an implementation plan before defining test scope. The implementation plan defines _what code changes are needed_ — the test scope is then derived from it.
+For MEDIUM and HIGH risk requirements, create an implementation plan before defining test scope. The implementation plan defines *what code changes are needed* — the test scope is then derived from it.
 
 **Skip this step** for LOW risk requirements — proceed directly to Step 7.
 
 **6a. Explore the codebase:**
-
 - Understand existing patterns, models, services, and API routes relevant to the change
 - Identify files that will be created, modified, or affected
 
@@ -90,32 +89,25 @@ Create `compliance/evidence/REQ-XXX/implementation-plan.md`:
 **Date:** [YYYY-MM-DD]
 
 ## Approach
-
 [1-3 sentences describing the overall approach]
 
 ## Files to Create
-
 - `path/to/new-file.ts` — [purpose]
 
 ## Files to Modify
-
 - `path/to/existing-file.ts` — [what changes and why]
 
 ## Architecture Decisions
-
 - [Key decision 1 and rationale]
 - [Key decision 2 and rationale]
 
 ## Dependencies
-
 - [New packages needed, or "None"]
 
 ## Risks / Considerations
-
 - [Anything that could go wrong or needs special attention]
 
 ## Post-Deploy Actions
-
 - [Data migrations, backfill scripts, schema changes — or "None"]
 - [If any: create script in `scripts/`, document exact command and target environment]
 ```
@@ -123,7 +115,6 @@ Create `compliance/evidence/REQ-XXX/implementation-plan.md`:
 ### WAIT CHECKPOINT: Implementation Plan Review
 
 **Present the implementation plan to the developer.** Summarize:
-
 - Approach and rationale
 - Files to create/modify
 - Architecture decisions
@@ -284,7 +275,6 @@ EOF
 ### WAIT CHECKPOINT: Test Scope Review
 
 **Present the test scope to the developer.** Summarize:
-
 - Risk classification and rationale
 - Test approach (which additional testing applies)
 - Acceptance criteria
@@ -340,7 +330,6 @@ EOF
 ### WAIT CHECKPOINT: Test Plan Review
 
 **Present the test plan to the developer.** Summarize:
-
 - Tests to add, update, and remove
 - How acceptance criteria map to specific tests
 - Any non-functional testing required

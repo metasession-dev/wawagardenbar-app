@@ -15,6 +15,30 @@ import type { InventoryKind } from '@/interfaces/inventory.interface';
  */
 class InventoryService {
   /**
+   * Apply a stock delta from an order operation (positive = restore on
+   * cancel, negative = deduction on sale). For trackByLocation items,
+   * mutate `locations[0]` so the model's pre-save hook (which recomputes
+   * `currentStock = sum(locations[].currentStock)` for location-tracked
+   * rows) reflects the change. Without this routing, direct assignments
+   * to `currentStock` on a location-tracked row are silently overwritten
+   * by the hook, leaving stock counts frozen at the last manual update.
+   */
+  private static applyOrderStockDelta(
+    inventory: InstanceType<typeof InventoryModel>,
+    delta: number
+  ): void {
+    if (inventory.trackByLocation && inventory.locations.length > 0) {
+      const loc = inventory.locations[0];
+      loc.currentStock = Math.max(0, loc.currentStock + delta);
+      loc.lastUpdated = new Date();
+      loc.updatedBy = new mongoose.Types.ObjectId('000000000000000000000000');
+      loc.updatedByName = 'System';
+    } else {
+      inventory.currentStock = Math.max(0, inventory.currentStock + delta);
+    }
+  }
+
+  /**
    * Deduct stock for completed order
    * Called when order status changes to 'completed'
    */
@@ -42,10 +66,7 @@ class InventoryService {
         });
 
         if (inventory) {
-          inventory.currentStock = Math.max(
-            0,
-            inventory.currentStock - actualQuantity
-          );
+          InventoryService.applyOrderStockDelta(inventory, -actualQuantity);
 
           let reason = 'Sale';
           let notes: string | undefined;
@@ -105,10 +126,7 @@ class InventoryService {
         if (!linkedInv) continue;
 
         const linkedAmount = actualQuantity * deductionPerUnit;
-        linkedInv.currentStock = Math.max(
-          0,
-          linkedInv.currentStock - linkedAmount
-        );
+        InventoryService.applyOrderStockDelta(linkedInv, -linkedAmount);
 
         await StockMovementModel.create({
           inventoryId: linkedInv._id,
@@ -177,7 +195,7 @@ class InventoryService {
         });
 
         if (inventory) {
-          inventory.currentStock += actualQuantity;
+          InventoryService.applyOrderStockDelta(inventory, actualQuantity);
 
           let notes: string | undefined;
           if (item.portionSize === 'half') {
@@ -228,7 +246,7 @@ class InventoryService {
         if (!linkedInv) continue;
 
         const linkedAmount = actualQuantity * deductionPerUnit;
-        linkedInv.currentStock += linkedAmount;
+        InventoryService.applyOrderStockDelta(linkedInv, linkedAmount);
 
         await StockMovementModel.create({
           inventoryId: linkedInv._id,

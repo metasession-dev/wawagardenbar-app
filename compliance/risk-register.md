@@ -6,23 +6,25 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 
 ## Open
 
-### R-001 — Pre-onboarding baseline: REQ-038/039/040 deployed before the DevAudit gated flow
+### R-001 — Pre-onboarding baseline: REQ-038/039/040 + REQ-042/043/044/045 deployed before the DevAudit gated flow
 
-**Accepted:** 2026-05-24 (at DevAudit re-onboarding)
-**Severity:** Medium aggregate (2 × MEDIUM + 1 × LOW)
+**Accepted:** 2026-05-24 (at DevAudit re-onboarding); **scope expanded** 2026-05-25 to cover a second batch.
+**Severity:** Medium aggregate
 **Owner:** WGB maintainer
 
-**The gap:** REQ-038 (#84, MEDIUM), REQ-039 (#88, MEDIUM) and REQ-040 (#89, LOW) — a bundled set — were implemented and **merged to `main` (production) on 2026-05-17**, during the window when WGB's DevAudit integration had been removed. They therefore have repo-side evidence (`compliance/evidence/REQ-038|039|040/`) and release tickets, but **no DevAudit release record, no four-eyes review, and no uploaded gate evidence**. The deploy was not gated by the SDLC pipeline.
+**The gap (batch 1, 2026-05-17):** REQ-038 (#84, MEDIUM), REQ-039 (#88, MEDIUM) and REQ-040 (#89, LOW) — a bundled set — were implemented and **merged to `main` (production) on 2026-05-17**, during the window when WGB's DevAudit integration had been removed. They have repo-side evidence (`compliance/evidence/REQ-038|039|040/`) and release tickets, but **no DevAudit release record, no four-eyes review, and no uploaded gate evidence**.
 
-**Decision:** Grandfather them as a **pre-onboarding baseline** rather than fabricate a retroactive "gated" approval (which would be dishonest — the gate did not run before deploy). RTM rows for these three are marked `PRE-ONBOARDING BASELINE` referencing this entry.
+**The gap (batch 2, 2026-05-23):** REQ-042 (#113, MEDIUM — super-admin tab delete with optional inventory revert), REQ-043 (#114, LOW — delete-dialog radio UX), REQ-044 (#115, MEDIUM — `trackByLocation` inventory routing fix), and REQ-045 (#116, LOW — the release PR bundling the above) were **merged to `main` on 2026-05-23** via release PR #116 (`bba04c8`), still within the pre-re-onboarding window. They had neither repo-side evidence nor release tickets at deploy time — they were authored on the false assumption (stale assistant memory) that the SDLC had been retired permanently. RTM scaffolding has been **backfilled retroactively** on 2026-05-25 (rows added with `PRE-ONBOARDING BASELINE` markers; minimal evidence placeholders).
+
+**Decision:** Grandfather both batches as a pre-onboarding baseline rather than fabricate a retroactive "gated" approval (which would be dishonest — the gate did not run before deploy). RTM rows for all seven REQs are marked `PRE-ONBOARDING BASELINE` referencing this entry.
 
 **Compensating controls:**
 
-1. Code is in `main` and observed in production since 2026-05-17 (no incidents attributed).
-2. Repo-side evidence (test-scope/plan, release tickets) exists for traceability.
-3. The DevAudit gated flow (CI gates → UAT four-eyes → prod four-eyes → released) is now active and **applies to every requirement from REQ-041 onward**. No further work ships ungated.
+1. Code is in `main` and observed in production (batch 1 since 2026-05-17, batch 2 since 2026-05-23) — no incidents attributed.
+2. Batch 1 has repo-side evidence; batch 2 has retroactive RTM scaffolding + the PR descriptions themselves (which carry detailed change rationale, test plans, and UAT walk-throughs preserved on GitHub).
+3. The DevAudit gated flow (CI gates → UAT four-eyes → prod four-eyes → released) is now active and applies to **every new requirement from REQ-046 onward**. No further work ships ungated. REQ-046 (PR #124, IG-1 cadence schema) is the first post-batch-2 gated REQ.
 
-**Target close:** N/A (historical baseline). Bounded — applies only to REQ-038/039/040.
+**Target close:** N/A (historical baseline). Bounded — applies only to REQ-038/039/040 and REQ-042/043/044/045.
 
 ---
 

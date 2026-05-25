@@ -47,6 +47,9 @@ const formSchema = z.object({
     maxPostsPerPeriod: z.coerce.number().min(1),
     periodType: z.enum(['weekly', 'monthly', 'campaign_duration']),
     pointsAwarded: z.coerce.number().min(1),
+    postsRequired: z.coerce.number().int().min(1).optional(),
+    windowDays: z.coerce.number().int().min(1).optional(),
+    requireMention: z.boolean().optional(),
   }).optional(),
   rewardType: z.enum(['discount-percentage', 'discount-fixed', 'free-item', 'loyalty-points']),
   rewardValue: z.coerce.number().positive('Must be positive'),
@@ -168,6 +171,9 @@ export function RewardRuleForm({
         maxPostsPerPeriod: initialData.socialConfig.maxPostsPerPeriod,
         periodType: initialData.socialConfig.periodType,
         pointsAwarded: initialData.socialConfig.pointsAwarded,
+        postsRequired: initialData.socialConfig.postsRequired,
+        windowDays: initialData.socialConfig.windowDays,
+        requireMention: initialData.socialConfig.requireMention ?? true,
       } : undefined,
       rewardType: initialData?.rewardType || 'discount-percentage',
       rewardValue: initialData?.rewardValue || 10,
@@ -471,6 +477,77 @@ export function RewardRuleForm({
               
                {/* Hidden field to set platform */}
                <input type="hidden" {...register('socialConfig.platform')} value="instagram" />
+            </div>
+
+            <div className="mt-6 space-y-4 rounded-md border border-dashed p-4">
+              <div>
+                <h4 className="text-sm font-semibold">
+                  Cadence (optional)
+                </h4>
+                <p className="text-xs text-muted-foreground">
+                  Use these to require N qualifying posts within a rolling
+                  window before a customer earns the points (e.g. &ldquo;3
+                  posts in 7 days&rdquo;). Leave blank for the legacy
+                  one-award-per-post behaviour.
+                </p>
+              </div>
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="socialConfig.postsRequired">
+                    Posts required
+                  </Label>
+                  <Input
+                    id="socialConfig.postsRequired"
+                    type="number"
+                    min="1"
+                    placeholder="3"
+                    {...register('socialConfig.postsRequired')}
+                  />
+                  {errors.socialConfig?.postsRequired && (
+                    <p className="text-sm text-red-600">
+                      {errors.socialConfig.postsRequired.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="socialConfig.windowDays">
+                    Window (days)
+                  </Label>
+                  <Input
+                    id="socialConfig.windowDays"
+                    type="number"
+                    min="1"
+                    placeholder="7"
+                    {...register('socialConfig.windowDays')}
+                  />
+                  {errors.socialConfig?.windowDays && (
+                    <p className="text-sm text-red-600">
+                      {errors.socialConfig.windowDays.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="socialConfig.requireMention"
+                    className="flex items-center justify-between"
+                  >
+                    <span>Require @mention</span>
+                    <Switch
+                      id="socialConfig.requireMention"
+                      checked={watch('socialConfig.requireMention') ?? true}
+                      onCheckedChange={(checked) =>
+                        setValue('socialConfig.requireMention', checked)
+                      }
+                    />
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    When on, a qualifying post must tag the bar&apos;s
+                    Instagram Business account.
+                  </p>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>

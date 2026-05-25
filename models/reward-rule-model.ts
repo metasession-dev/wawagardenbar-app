@@ -19,6 +19,12 @@ const rewardRuleSchema = new Schema<IRewardRule>(
       maxPostsPerPeriod: { type: Number },
       periodType: { type: String, enum: ['weekly', 'monthly', 'campaign_duration'] },
       pointsAwarded: { type: Number },
+      // Cadence model: N qualifying posts in a rolling window triggers
+      // one award. See ISocialRewardConfig docs for the relationship
+      // to maxPostsPerPeriod.
+      postsRequired: { type: Number, min: 1 },
+      windowDays: { type: Number, min: 1 },
+      requireMention: { type: Boolean, default: true },
     },
     rewardType: {
       type: String,

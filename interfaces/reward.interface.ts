@@ -10,9 +10,29 @@ export interface ISocialRewardConfig {
   platform: 'instagram';
   hashtag: string;
   minViews: number;
+  /**
+   * Cap on how many separate awards a single customer can receive
+   * within `periodType`. Distinct from the cadence-threshold model
+   * below — `maxPostsPerPeriod` limits repeat awards; `postsRequired`
+   * is the number of qualifying posts needed to trigger one award.
+   */
   maxPostsPerPeriod: number;
   periodType: 'weekly' | 'monthly' | 'campaign_duration';
   pointsAwarded: number;
+  /**
+   * Cadence model: customer must produce `postsRequired` qualifying
+   * posts within a rolling `windowDays`-day window to trigger one
+   * `pointsAwarded` grant. Optional — when absent, the rule behaves
+   * as the legacy per-post / capped model.
+   */
+  postsRequired?: number;
+  windowDays?: number;
+  /**
+   * When true, a qualifying post must @-mention the bar's Instagram
+   * Business account (in addition to the optional `hashtag` filter).
+   * Default true once the cadence fields are in use.
+   */
+  requireMention?: boolean;
 }
 
 export interface IRewardRule {

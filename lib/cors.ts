@@ -26,14 +26,15 @@ export function applyCors(
 ): void {
   const origin = request.headers.get('origin') ?? '';
   const allowedOrigins = getAllowedOrigins();
-
-  const isAllowed =
-    allowedOrigins.length === 0
-      ? false
-      : allowedOrigins.includes(origin) || allowedOrigins.includes('*');
-
-  if (isAllowed) {
-    response.headers.set('Access-Control-Allow-Origin', origin);
+  // Reflect only an exact allow-list match, and echo the configured literal
+  // (matchedOrigin) rather than the raw request header — the response is then
+  // driven by configured values, not user input. A '*' entry is deliberately
+  // NOT honoured: reflecting an arbitrary origin together with
+  // Access-Control-Allow-Credentials: true lets any site make credentialed
+  // cross-origin calls (CORS misconfiguration). Ref: REQ-047.
+  const matchedOrigin = allowedOrigins.find((allowed) => allowed === origin);
+  if (matchedOrigin) {
+    response.headers.set('Access-Control-Allow-Origin', matchedOrigin);
     response.headers.set('Vary', 'Origin');
   }
 

@@ -50,6 +50,21 @@
 
 ---
 
+## D4 — `socialConfig.periodType` not persisted; blank-cadence save still blocked
+
+**Reported by:** maintainer, UAT verification of the D3 fix (2026-05-25)
+**Symptom:** On `/dashboard/rewards/rules/new`, saving a `social_instagram` rule with the Cadence fields left blank (the D3 scenario) still fails with a red toast: *"Couldn't save: form has errors — Check the 'socialConfig.periodType' field."* The D3 fix correctly unblocked the cadence count fields and the nested-path toast works, but a different field — Period Type — now surfaces as the blocker.
+
+**Root cause:** The Period Type `<Select>` renders its value as `watch('socialConfig.periodType') || 'weekly'`, so the UI always *shows* "Weekly", but that fallback is display-only — it is never written into react-hook-form state. On a fresh rule an operator who accepts the shown default (never opens the select) submits `periodType: undefined`, which fails the required `z.enum(['weekly','monthly','campaign_duration'])`. This is the same class as D1 (`platform` shown but not in form state); D3's documented verification masked it by instructing the tester to set periodType manually. `periodType` is genuinely required per `ISocialRewardConfig` (it scopes the `maxPostsPerPeriod` repeat-award cap), so it must be persisted, not made optional.
+
+**Fix (this PR):**
+- Changed the schema field to `z.enum([...]).default('weekly')` in `reward-rule-form.tsx`, so the displayed default is the value persisted on submit (zodResolver applies it) while an edited rule still loads its stored value first.
+- Added a `periodType default (REQ-046 D4)` describe block to `__tests__/components/reward-rule-form-schema.test.ts` (3 cases): undefined → defaults to `weekly`; an explicit `monthly` is preserved (no clobber on edit); an invalid value is still rejected.
+
+**Severity:** MEDIUM (blocks the same blank-cadence flow D3 targeted; no data loss). Client-side only.
+
+---
+
 ## Verification on UAT after the fix lands
 
 1. Log in as super-admin → `/dashboard/rewards/rules/new`.
@@ -61,8 +76,10 @@
 7. Create a `triggerType: transaction` rule (no socialConfig). Save succeeds (regression).
 8. Negative case: try saving a `social_instagram` rule with hashtag blank. Expect a visible "Couldn't save: form has errors" toast (D1 surfacing fix), not silent no-op.
 9. **D3:** Set `triggerType: social_instagram`, fill the required fields, **leave all three Cadence fields blank**, click **Save**. Expect success (rule created with no cadence). Negative: enter `postsRequired: 0` → toast reads *"Check the 'socialConfig.postsRequired' field"* (nested path), not just `socialConfig`.
+10. **D4:** Repeat step 9 but **do not open the Period Type select** (accept the shown "Weekly"). Click **Save**. Expect success — the rule persists with `periodType: weekly`. Before the fix this failed with *"Check the 'socialConfig.periodType' field"*.
 
 ## Suite at fix-PR push
 
 - D1/D2 PR (#127): `npx vitest run` → 816 pass / 4 skipped (was 813; +3 on the action)
-- D3 PR (this branch): `npx tsc --noEmit` → clean; `npx vitest run` → 828 pass / 4 skipped (+7 new in `__tests__/components/reward-rule-form-schema.test.ts`)
+- D3 PR (#131): `npx tsc --noEmit` → clean; `npx vitest run` → 828 pass / 4 skipped (+7 new in `__tests__/components/reward-rule-form-schema.test.ts`)
+- D4 PR (this branch): +3 cases in `__tests__/components/reward-rule-form-schema.test.ts` (periodType default); CI is the verification source (no local node_modules).

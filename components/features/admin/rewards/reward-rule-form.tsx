@@ -59,7 +59,13 @@ export const formSchema = z.object({
     hashtag: z.string().min(2, 'Hashtag required'),
     minViews: z.coerce.number().min(0),
     maxPostsPerPeriod: z.coerce.number().min(1),
-    periodType: z.enum(['weekly', 'monthly', 'campaign_duration']),
+    // REQ-046 D4: the Period Type <Select> renders "weekly" as a display
+    // fallback (value={watch(...) || 'weekly'}) but never writes it to
+    // react-hook-form state, so an untouched select submits periodType:
+    // undefined and the required enum aborts the save (same class as the D1
+    // platform bug above). Default to 'weekly' so the displayed value is the
+    // one persisted; an edited rule still loads its stored value first.
+    periodType: z.enum(['weekly', 'monthly', 'campaign_duration']).default('weekly'),
     pointsAwarded: z.coerce.number().min(1),
     postsRequired: optionalCount,
     windowDays: optionalCount,

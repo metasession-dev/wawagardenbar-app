@@ -14,6 +14,13 @@
  * save. The schema now defaults periodType to 'weekly'; these tests lock in
  * that an untouched select parses to 'weekly' while explicit/invalid values
  * behave correctly.
+ *
+ * REQ-046 D5: the optional "Max Redemptions Per User" field hit the same
+ * blank-"" -> coerce -> 0 trap as D3. Because a top-level z.preprocess
+ * breaks react-hook-form's handleSubmit typing, the blank is normalised to
+ * null at the register() layer (setValueAs) instead; the schema keeps its
+ * .nullable().optional() shape, so these tests assert it accepts null /
+ * omitted as unlimited and still rejects 0.
  */
 import { describe, it, expect } from 'vitest';
 import {
@@ -131,6 +138,32 @@ describe('reward-rule-form formSchema — periodType default (REQ-046 D4)', () =
       socialConfig: { ...baseSocialRule.socialConfig, periodType: 'daily' },
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe('reward-rule-form formSchema — maxRedemptionsPerUser optional (REQ-046 D5)', () => {
+  // The blank "" the input emits is normalised to null at the register()
+  // layer (setValueAs), so the schema only ever sees null | undefined |
+  // number. These assert the schema accepts the "unlimited" representations
+  // and still rejects an invalid concrete value.
+  it('accepts null maxRedemptionsPerUser as unlimited', () => {
+    const result = formSchema.safeParse({ ...baseSocialRule, maxRedemptionsPerUser: null });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.maxRedemptionsPerUser).toBeNull();
+  });
+
+  it('accepts an omitted maxRedemptionsPerUser as unlimited (undefined)', () => {
+    const result = formSchema.safeParse({ ...baseSocialRule });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.maxRedemptionsPerUser).toBeUndefined();
+  });
+
+  it('coerces a numeric string limit and still rejects 0', () => {
+    const ok = formSchema.safeParse({ ...baseSocialRule, maxRedemptionsPerUser: '5' });
+    expect(ok.success).toBe(true);
+    if (ok.success) expect(ok.data.maxRedemptionsPerUser).toBe(5);
+    const zero = formSchema.safeParse({ ...baseSocialRule, maxRedemptionsPerUser: '0' });
+    expect(zero.success).toBe(false);
   });
 });
 

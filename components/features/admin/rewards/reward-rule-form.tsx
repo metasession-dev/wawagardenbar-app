@@ -207,6 +207,18 @@ export function RewardRuleForm({
     }
   }, [triggerType, setValue]);
 
+  // D1 fix (REQ-046): the hidden <input value="instagram" /> approach below
+  // doesn't reliably push the value into react-hook-form state on a fresh
+  // rule (no DOM change event fires, defaultValues.socialConfig is
+  // undefined). Without this, `socialConfig.platform` arrives at validation
+  // as undefined, the platform enum check fails, and react-hook-form's
+  // handleSubmit silently aborts (the "nothing happens on Save" symptom).
+  useEffect(() => {
+    if (triggerType === 'social_instagram') {
+      setValue('socialConfig.platform', 'instagram');
+    }
+  }, [triggerType, setValue]);
+
   // Update form values when date ranges change
   useEffect(() => {
     if (dateRanges.length > 0) {
@@ -262,7 +274,25 @@ export function RewardRuleForm({
   };
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+    <form
+      onSubmit={handleSubmit(handleFormSubmit, (validationErrors) => {
+        // REQ-046 D1 follow-up: surface client-side validation failures so
+        // operators see *why* Save isn't progressing instead of nothing
+        // happening at all. react-hook-form silently swallows them by
+        // default.
+        const firstField = Object.keys(validationErrors)[0];
+        const detail =
+          firstField && typeof firstField === 'string'
+            ? `Check the "${firstField}" field`
+            : 'Some fields are invalid';
+        toast({
+          title: "Couldn't save: form has errors",
+          description: detail,
+          variant: 'destructive',
+        });
+      })}
+      className="space-y-6"
+    >
       {/* Basic Information */}
       <Card>
         <CardHeader>

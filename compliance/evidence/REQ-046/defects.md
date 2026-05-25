@@ -34,6 +34,22 @@
 
 ---
 
+## D3 — Blank cadence fields rejected; toast names only `socialConfig`
+
+**Reported by:** maintainer, UAT smoke (2026-05-25)
+**Symptom:** On `/dashboard/rewards/rules/new`, saving a `social_instagram` rule with the **Cadence (optional)** fields left blank fails with a red toast: *"Couldn't save: form has errors — Check the 'socialConfig' field."* The Cadence subsection's own help text tells operators to leave the fields blank for legacy one-award-per-post behaviour, so the rule is unsaveable by following the on-screen guidance.
+
+**Root cause:** An empty number `<input>` submits `""` (not `undefined`). `z.coerce.number()` coerces `""` → `0` (`Number("") === 0`), so the original `postsRequired`/`windowDays` definition `z.coerce.number().int().min(1).optional()` fails `.min(1)` on the `0` — the `.optional()` branch only engages for `undefined`, never `""`. Confirmed empirically (`safeParse` of a blank-cadence social rule fails on `postsRequired` and `windowDays`). Separately, the D1 `onInvalid` toast read `Object.keys(validationErrors)[0]`, which for a nested error is the parent key `socialConfig`, hiding the real sub-field.
+
+**Fix (this PR):**
+- Added an `optionalCount` preprocessor in `reward-rule-form.tsx` that maps `"" | null | undefined → undefined` before `z.coerce.number().int().min(1).optional()`, and used it for `postsRequired` + `windowDays`. Blank now parses as omitted (not `0`); genuinely invalid values (`0`, negative, non-integer) are still rejected.
+- Replaced the toast's top-level key lookup with a recursive `firstErrorPath()` helper that returns the dotted leaf path (e.g. `socialConfig.postsRequired`).
+- Exported `formSchema` + `firstErrorPath` and added `__tests__/components/reward-rule-form-schema.test.ts` (7 cases): blank cadence parses + is omitted; valid `3/7` coerces to numbers; `0` and `2.5` rejected; nested-error path resolution.
+
+**Severity:** MEDIUM (blocks the headline REQ-046 cadence feature when used as documented; no data loss). Client-side only — server schema already accepts `undefined` for the optional fields.
+
+---
+
 ## Verification on UAT after the fix lands
 
 1. Log in as super-admin → `/dashboard/rewards/rules/new`.
@@ -44,8 +60,9 @@
 6. Edit, change postsRequired to 5, save, re-open. Persistence verified.
 7. Create a `triggerType: transaction` rule (no socialConfig). Save succeeds (regression).
 8. Negative case: try saving a `social_instagram` rule with hashtag blank. Expect a visible "Couldn't save: form has errors" toast (D1 surfacing fix), not silent no-op.
+9. **D3:** Set `triggerType: social_instagram`, fill the required fields, **leave all three Cadence fields blank**, click **Save**. Expect success (rule created with no cadence). Negative: enter `postsRequired: 0` → toast reads *"Check the 'socialConfig.postsRequired' field"* (nested path), not just `socialConfig`.
 
 ## Suite at fix-PR push
 
-- `npx tsc --noEmit` → clean
-- `npx vitest run` → 816 pass / 4 skipped (was 813; +3 new on the action)
+- D1/D2 PR (#127): `npx vitest run` → 816 pass / 4 skipped (was 813; +3 on the action)
+- D3 PR (this branch): `npx tsc --noEmit` → clean; `npx vitest run` → 828 pass / 4 skipped (+7 new in `__tests__/components/reward-rule-form-schema.test.ts`)

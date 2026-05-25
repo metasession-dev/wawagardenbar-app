@@ -26,3 +26,15 @@
 - semgrep: `cors-misconfiguration` cleared → **0 findings** (baseline 0) on the develop CI run.
 - No new findings introduced.
 - Credentials are now only ever paired with an explicitly configured origin.
+
+## UAT Verification — 2026-05-25
+
+Exercised against the deployed UAT environment (Stage 3 Step 10; `uat.required_risk_classes: ["*"]`).
+
+- UAT Health check: PASS — `GET /api/public/health` → 200.
+- UAT Smoke test: PASS — `GET /` → 200, `GET /api/public/health` → 200.
+- Feature verification: PASS — CORS origin reflection confirmed on the live deployment via `OPTIONS /api/public/health` preflights:
+  - Non-allow-listed `Origin: https://evil.example.com` → **no** `Access-Control-Allow-Origin` header returned (arbitrary origin not reflected).
+  - Configured `Origin: https://wawagardenbar-app-uat.up.railway.app` → echoed back exactly with `Vary: Origin`.
+  - `Access-Control-Allow-Credentials: true` is therefore only ever paired with an explicitly configured origin — confirming the `lib/cors.ts` hardening holds in the deployed environment, not just unit tests.
+- UAT URL: https://wawagardenbar-app-uat.up.railway.app/

@@ -50,12 +50,13 @@ Pending — to be executed by maintainer after PR #124 merges to develop and dep
 
 ## Defects logged
 
-Two defects found during UAT smoke on 2026-05-25 (both fixed in the follow-up PR; see `defects.md`):
+Three defects found during UAT smoke on 2026-05-25 (all fixed; see `defects.md`):
 
 - **D1** — `socialConfig.platform` not populated on a fresh `social_instagram` rule; client-side Zod failed on the platform enum and react-hook-form silently aborted submit ("nothing happens on Save"). MEDIUM. Fixed via a `useEffect` in `reward-rule-form.tsx` + a visible `onInvalid` toast for future failures.
 - **D2** — Server-side `rewardRuleSchema` (in `app/actions/admin/reward-rules-actions.ts`) silently stripped `triggerType` and `socialConfig`. Pre-existing — affected `createRewardRuleAction` and `updateRewardRuleAction`. MEDIUM. Fixed by extending both Zod schemas with the social-rule fields; 3 new vitest cases lock in the regression.
+- **D3** — Blank Cadence fields (`postsRequired`/`windowDays`) rejected on save because `z.coerce.number()` turns `""` into `0` and `.min(1)` fails, despite the UI inviting operators to leave them blank; toast named only `socialConfig`. MEDIUM. Fixed with an `optionalCount` preprocessor (`"" → undefined`) and a recursive `firstErrorPath()` for the toast; 7 new vitest cases in `__tests__/components/reward-rule-form-schema.test.ts`.
 
-Post-fix suite: 816 pass / 4 skipped (delta +3 from 813).
+Post-fix suite (D3 branch off develop): 828 pass / 4 skipped, including the 7 new D3 cases. `npx tsc --noEmit` clean.
 
 ## Conclusion
 

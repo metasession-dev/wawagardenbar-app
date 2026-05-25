@@ -32,9 +32,23 @@ import { useToast } from '@/hooks/use-toast';
 import { IRewardRule } from '@/interfaces';
 
 /**
+ * Optional positive-integer field for cadence inputs.
+ *
+ * REQ-046 D3 fix: an empty number `<input>` submits "" (not undefined), and
+ * `z.coerce.number()` coerces "" → 0, so a plain `.min(1).optional()` rejects a
+ * *blank* cadence field even though the UI invites operators to leave it blank.
+ * Preprocess empty/null → undefined first so the `.optional()` branch engages
+ * and the field is omitted from the payload.
+ */
+const optionalCount = z.preprocess(
+  (v) => (v === '' || v === null || v === undefined ? undefined : v),
+  z.coerce.number().int().min(1).optional()
+);
+
+/**
  * Form validation schema
  */
-const formSchema = z.object({
+export const formSchema = z.object({
   name: z.string().min(3, 'Name must be at least 3 characters').max(100),
   description: z.string().min(10, 'Description must be at least 10 characters').max(500),
   isActive: z.boolean(),
@@ -47,8 +61,8 @@ const formSchema = z.object({
     maxPostsPerPeriod: z.coerce.number().min(1),
     periodType: z.enum(['weekly', 'monthly', 'campaign_duration']),
     pointsAwarded: z.coerce.number().min(1),
-    postsRequired: z.coerce.number().int().min(1).optional(),
-    windowDays: z.coerce.number().int().min(1).optional(),
+    postsRequired: optionalCount,
+    windowDays: optionalCount,
     requireMention: z.boolean().optional(),
   }).optional(),
   rewardType: z.enum(['discount-percentage', 'discount-fixed', 'free-item', 'loyalty-points']),
@@ -66,6 +80,26 @@ const formSchema = z.object({
 });
 
 type FormData = z.infer<typeof formSchema>;
+
+/**
+ * Walk a react-hook-form error tree and return the dotted path of the first
+ * leaf error (e.g. "socialConfig.postsRequired"). RHF nests errors to mirror
+ * the form shape; a leaf is the node carrying a string `message`.
+ */
+export function firstErrorPath(
+  errors: Record<string, unknown>,
+  prefix = ''
+): string | undefined {
+  for (const key of Object.keys(errors)) {
+    const node = errors[key] as Record<string, unknown> | undefined;
+    if (!node || typeof node !== 'object') continue;
+    const path = prefix ? `${prefix}.${key}` : key;
+    if (typeof node.message === 'string') return path;
+    const nested = firstErrorPath(node, path);
+    if (nested) return nested;
+  }
+  return undefined;
+}
 
 /**
  * Reward type options with metadata
@@ -280,11 +314,12 @@ export function RewardRuleForm({
         // operators see *why* Save isn't progressing instead of nothing
         // happening at all. react-hook-form silently swallows them by
         // default.
-        const firstField = Object.keys(validationErrors)[0];
-        const detail =
-          firstField && typeof firstField === 'string'
-            ? `Check the "${firstField}" field`
-            : 'Some fields are invalid';
+        // REQ-046 D3 follow-up: drill into nested errors (e.g. socialConfig.*)
+        // so the toast names the actual sub-field, not just the parent object.
+        const firstField = firstErrorPath(validationErrors);
+        const detail = firstField
+          ? `Check the "${firstField}" field`
+          : 'Some fields are invalid';
         toast({
           title: "Couldn't save: form has errors",
           description: detail,

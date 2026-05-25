@@ -14,6 +14,10 @@
  * save. The schema now defaults periodType to 'weekly'; these tests lock in
  * that an untouched select parses to 'weekly' while explicit/invalid values
  * behave correctly.
+ *
+ * REQ-046 D5: the optional "Max Redemptions Per User" field hit the same
+ * blank-"" -> coerce -> 0 trap as D3; it now reuses the optionalCount
+ * preprocessor so a blank value parses as unlimited (undefined).
  */
 import { describe, it, expect } from 'vitest';
 import {
@@ -131,6 +135,28 @@ describe('reward-rule-form formSchema — periodType default (REQ-046 D4)', () =
       socialConfig: { ...baseSocialRule.socialConfig, periodType: 'daily' },
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe('reward-rule-form formSchema — maxRedemptionsPerUser optional (REQ-046 D5)', () => {
+  it('accepts a blank ("") maxRedemptionsPerUser as unlimited (undefined)', () => {
+    const result = formSchema.safeParse({ ...baseSocialRule, maxRedemptionsPerUser: '' });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.maxRedemptionsPerUser).toBeUndefined();
+  });
+
+  it('accepts null maxRedemptionsPerUser as unlimited (undefined)', () => {
+    const result = formSchema.safeParse({ ...baseSocialRule, maxRedemptionsPerUser: null });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.maxRedemptionsPerUser).toBeUndefined();
+  });
+
+  it('coerces a numeric string limit and still rejects 0', () => {
+    const ok = formSchema.safeParse({ ...baseSocialRule, maxRedemptionsPerUser: '5' });
+    expect(ok.success).toBe(true);
+    if (ok.success) expect(ok.data.maxRedemptionsPerUser).toBe(5);
+    const zero = formSchema.safeParse({ ...baseSocialRule, maxRedemptionsPerUser: '0' });
+    expect(zero.success).toBe(false);
   });
 });
 

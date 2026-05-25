@@ -75,7 +75,13 @@ export const formSchema = z.object({
   rewardValue: z.coerce.number().positive('Must be positive'),
   freeItemId: z.string().nullable().optional(),
   probability: z.coerce.number().min(0).max(100),
-  maxRedemptionsPerUser: z.coerce.number().int().positive().nullable().optional(),
+  // REQ-046 D5: "Max Redemptions Per User (Optional) — leave empty for
+  // unlimited" submits "" which z.coerce.number() turns into 0, so
+  // .positive() rejected a *blank* field. Reuse the optionalCount
+  // preprocessor ("" | null -> undefined) so blank parses as unlimited
+  // (undefined); the submit handler and server schema already treat
+  // undefined as unlimited. Same root cause as D3's cadence fields.
+  maxRedemptionsPerUser: optionalCount,
   validityDays: z.coerce.number().int().positive('Must be positive'),
   startDate: z.string().nullable().optional(),
   endDate: z.string().nullable().optional(),

@@ -7,6 +7,13 @@
  * legacy one-award-per-post behaviour"). These tests lock in that blank cadence
  * parses cleanly while genuinely invalid values are still rejected, and that
  * the validation toast can name the nested sub-field.
+ *
+ * REQ-046 D4: the Period Type select shows "weekly" as a display fallback but
+ * never wrote it to form state, so an untouched select submitted
+ * periodType:undefined and the required enum blocked the same blank-cadence
+ * save. The schema now defaults periodType to 'weekly'; these tests lock in
+ * that an untouched select parses to 'weekly' while explicit/invalid values
+ * behave correctly.
  */
 import { describe, it, expect } from 'vitest';
 import {
@@ -88,6 +95,40 @@ describe('reward-rule-form formSchema — cadence fields (REQ-046 D3)', () => {
         ...baseSocialRule.socialConfig,
         windowDays: '2.5',
       },
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('reward-rule-form formSchema — periodType default (REQ-046 D4)', () => {
+  it('defaults periodType to "weekly" when the select is untouched (undefined)', () => {
+    const result = formSchema.safeParse({
+      ...baseSocialRule,
+      socialConfig: {
+        platform: 'instagram' as const,
+        hashtag: '#wawa',
+        minViews: 0,
+        maxPostsPerPeriod: 5,
+        pointsAwarded: 100,
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.socialConfig?.periodType).toBe('weekly');
+  });
+
+  it('preserves an explicitly chosen periodType (does not clobber on edit)', () => {
+    const result = formSchema.safeParse({
+      ...baseSocialRule,
+      socialConfig: { ...baseSocialRule.socialConfig, periodType: 'monthly' as const },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.socialConfig?.periodType).toBe('monthly');
+  });
+
+  it('still rejects an invalid periodType value', () => {
+    const result = formSchema.safeParse({
+      ...baseSocialRule,
+      socialConfig: { ...baseSocialRule.socialConfig, periodType: 'daily' },
     });
     expect(result.success).toBe(false);
   });

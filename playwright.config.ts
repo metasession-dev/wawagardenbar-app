@@ -216,6 +216,13 @@ export default defineConfig({
       testMatch: /kitchen\/inventory-crud\.spec\.ts/,
       dependencies: ['auth-setup'],
     },
+    // REQ-046 — reward-rule form: blank optional fields must save (D3–D5)
+    {
+      name: 'reward-rule-form',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /rewards\/reward-rule-cadence\.spec\.ts/,
+      dependencies: ['auth-setup'],
+    },
   ],
   /* Start dev server before tests (skipped when BASE_URL is set) */
   webServer: process.env.BASE_URL

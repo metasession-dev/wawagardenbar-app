@@ -65,6 +65,21 @@
 
 ---
 
+## D5 — `maxRedemptionsPerUser` (optional) rejects a blank value
+
+**Reported by:** maintainer, UAT verification after the D4 fix landed (2026-05-25)
+**Symptom:** With D4 deployed (periodType no longer blocks), saving a rule with **Max Redemptions Per User (Optional)** left blank fails: the field shows *"Number must be greater than 0"* and the save is blocked — despite the field's own help text *"Leave empty for unlimited redemptions."*
+
+**Root cause:** Identical class to D3. The empty `<input>` submits `""`; `z.coerce.number()` turns `""` into `0` (`Number("") === 0`), so `z.coerce.number().int().positive().nullable().optional()` failed `.positive()` on the `0` — `.optional()`/`.nullable()` only engage for `undefined`/`null`, never `""`. The submit handler (`data.maxRedemptionsPerUser || undefined`) and the server schema already treat `undefined` as unlimited, so only the client-side coercion was wrong. Surfaced after D4 because it is the next optional-number field in the form below the now-unblocked socialConfig.
+
+**Fix (this PR):**
+- Normalise the blank value to `null` at the `register()` layer via `setValueAs` (`"" | null | undefined → null`), so `.nullable()` accepts it as "unlimited" without coercion; the submit handler already maps it to `undefined`. A `z.preprocess` in the schema (the D3 approach) was rejected here because a **top-level** ZodEffects makes `z.input !== z.output` and breaks react-hook-form's `handleSubmit` typing (caught by `tsc` on the first CI dispatch — `TS2345` on the submit handler, `TS2322` on the `null` default). The schema keeps its original `z.coerce.number().int().positive().nullable().optional()` shape.
+- Added a `maxRedemptionsPerUser optional (REQ-046 D5)` describe block to `__tests__/components/reward-rule-form-schema.test.ts` (3 cases): `null` → null (unlimited); omitted → undefined; `'5'` → 5 and `'0'` rejected. The `""` → `null` mapping is the `register` layer's job (verified on UAT, step 11) since it is not visible to `formSchema.safeParse`.
+
+**Severity:** MEDIUM (blocks saving any rule that uses the documented "leave blank for unlimited"; affects transaction rules too, not just social). Client-side only. This is the last optional-number field with the blank-coercion trap; the cadence fields (D3) and this field now share the `optionalCount` preprocessor.
+
+---
+
 ## Verification on UAT after the fix lands
 
 1. Log in as super-admin → `/dashboard/rewards/rules/new`.
@@ -77,9 +92,10 @@
 8. Negative case: try saving a `social_instagram` rule with hashtag blank. Expect a visible "Couldn't save: form has errors" toast (D1 surfacing fix), not silent no-op.
 9. **D3:** Set `triggerType: social_instagram`, fill the required fields, **leave all three Cadence fields blank**, click **Save**. Expect success (rule created with no cadence). Negative: enter `postsRequired: 0` → toast reads *"Check the 'socialConfig.postsRequired' field"* (nested path), not just `socialConfig`.
 10. **D4:** Repeat step 9 but **do not open the Period Type select** (accept the shown "Weekly"). Click **Save**. Expect success — the rule persists with `periodType: weekly`. Before the fix this failed with *"Check the 'socialConfig.periodType' field"*.
+11. **D5:** Repeat step 10 and **leave Max Redemptions Per User blank** ("Unlimited"). Click **Save**. Expect success — the rule persists with no per-user cap. Before the fix the field showed *"Number must be greater than 0"* on a blank value.
 
 ## Suite at fix-PR push
 
 - D1/D2 PR (#127): `npx vitest run` → 816 pass / 4 skipped (was 813; +3 on the action)
 - D3 PR (#131): `npx tsc --noEmit` → clean; `npx vitest run` → 828 pass / 4 skipped (+7 new in `__tests__/components/reward-rule-form-schema.test.ts`)
-- D4 PR (this branch): +3 cases in `__tests__/components/reward-rule-form-schema.test.ts` (periodType default); CI is the verification source (no local node_modules).
+- D4+D5 PR (this branch): +3 cases (periodType default) +3 cases (maxRedemptionsPerUser optional) in `__tests__/components/reward-rule-form-schema.test.ts`; CI is the verification source (no local node_modules).

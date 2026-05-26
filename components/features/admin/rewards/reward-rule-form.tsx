@@ -75,6 +75,13 @@ export const formSchema = z.object({
   rewardValue: z.coerce.number().positive('Must be positive'),
   freeItemId: z.string().nullable().optional(),
   probability: z.coerce.number().min(0).max(100),
+  // REQ-046 D5: "Max Redemptions Per User (Optional) — leave empty for
+  // unlimited" submits "" which z.coerce.number() turns into 0, so
+  // .positive() rejected a *blank* field. The blank -> null normalisation is
+  // done at the register() layer via setValueAs rather than a z.preprocess
+  // here: a top-level ZodEffects makes z.input !== z.output and breaks
+  // react-hook-form's handleSubmit typing. .nullable() then accepts the null
+  // without coercing it; the submit handler maps it to undefined (unlimited).
   maxRedemptionsPerUser: z.coerce.number().int().positive().nullable().optional(),
   validityDays: z.coerce.number().int().positive('Must be positive'),
   startDate: z.string().nullable().optional(),
@@ -762,7 +769,13 @@ export function RewardRuleForm({
               type="number"
               min="1"
               placeholder="Unlimited"
-              {...register('maxRedemptionsPerUser')}
+              {...register('maxRedemptionsPerUser', {
+                // REQ-046 D5: a blank input submits "" (→ 0 under z.coerce);
+                // map empty/null to null so .nullable() accepts it as
+                // "unlimited" instead of failing .positive().
+                setValueAs: (v) =>
+                  v === '' || v === null || v === undefined ? null : v,
+              })}
             />
             {errors.maxRedemptionsPerUser && (
               <p className="text-sm text-red-600">

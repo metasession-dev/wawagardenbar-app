@@ -34,12 +34,10 @@
     "scripts/check-requirement-jsdoc.sh"
   ],
   "uat": {
-    "enabled": false,
-    "url": "",
+    "enabled": true,
+    "url": "https://wawagardenbar-app-uat.up.railway.app/",
     "required_risk_classes": [
-      "payment",
-      "destructive_migration",
-      "realtime"
+      "*"
     ]
   },
   "approval": {

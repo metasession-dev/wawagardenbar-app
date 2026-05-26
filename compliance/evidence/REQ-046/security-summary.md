@@ -43,3 +43,14 @@ These do **not** apply to REQ-046 but are flagged for IG-3/IG-4 scoping:
 ## Conclusion
 
 No new security surface. Additive configuration fields, identical authorization to the existing fields, no PII or payment data involved.
+
+## UAT Verification — 2026-05-26
+
+Exercised against the deployed UAT environment (Stage 3 Step 10; `uat.required_risk_classes: ["*"]`), on the build carrying D3–D5.
+
+- UAT Health check: PASS — `GET /api/public/health` → 200.
+- UAT Smoke test: PASS — `GET /` → 200; `GET /dashboard/rewards/rules/new` → 307 (admin-gated route present, redirects to login).
+- Feature verification (manual, super-admin on UAT): PASS — created a Social/Instagram reward rule with the **Cadence fields left blank**, the **Period Type select untouched** (default "Weekly"), and **Max Redemptions Per User blank**, then **Save**. The rule saved and persisted. This confirms on the deployed build: D3 (blank cadence omitted), D4 (`periodType` defaults to `weekly`), and D5 (blank Max Redemptions = unlimited) — the three blank-optional-field defects surfaced during earlier UAT rounds.
+- UAT URL: https://wawagardenbar-app-uat.up.railway.app/
+
+Negative paths (e.g. `0` in a cadence field rejected with a toast naming `socialConfig.postsRequired`) are covered by the vitest schema suite (`__tests__/components/reward-rule-form-schema.test.ts`). Full UI coverage of AC1–AC4 is encoded in `e2e/rewards/reward-rule-cadence.spec.ts` (PR #135), which runs in CI once the report-only authenticated-e2e gate (DevAudit-Installer#54) ships and `e2e_projects` is configured; until then this manual UAT smoke is the verification of record.

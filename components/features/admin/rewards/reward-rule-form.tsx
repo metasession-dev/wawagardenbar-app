@@ -32,9 +32,23 @@ import { useToast } from '@/hooks/use-toast';
 import { IRewardRule } from '@/interfaces';
 
 /**
+ * Optional positive-integer field for cadence inputs.
+ *
+ * REQ-046 D3 fix: an empty number `<input>` submits "" (not undefined), and
+ * `z.coerce.number()` coerces "" → 0, so a plain `.min(1).optional()` rejects a
+ * *blank* cadence field even though the UI invites operators to leave it blank.
+ * Preprocess empty/null → undefined first so the `.optional()` branch engages
+ * and the field is omitted from the payload.
+ */
+const optionalCount = z.preprocess(
+  (v) => (v === '' || v === null || v === undefined ? undefined : v),
+  z.coerce.number().int().min(1).optional()
+);
+
+/**
  * Form validation schema
  */
-const formSchema = z.object({
+export const formSchema = z.object({
   name: z.string().min(3, 'Name must be at least 3 characters').max(100),
   description: z.string().min(10, 'Description must be at least 10 characters').max(500),
   isActive: z.boolean(),
@@ -45,13 +59,29 @@ const formSchema = z.object({
     hashtag: z.string().min(2, 'Hashtag required'),
     minViews: z.coerce.number().min(0),
     maxPostsPerPeriod: z.coerce.number().min(1),
-    periodType: z.enum(['weekly', 'monthly', 'campaign_duration']),
+    // REQ-046 D4: the Period Type <Select> renders "weekly" as a display
+    // fallback (value={watch(...) || 'weekly'}) but never writes it to
+    // react-hook-form state, so an untouched select submits periodType:
+    // undefined and the required enum aborts the save (same class as the D1
+    // platform bug above). Default to 'weekly' so the displayed value is the
+    // one persisted; an edited rule still loads its stored value first.
+    periodType: z.enum(['weekly', 'monthly', 'campaign_duration']).default('weekly'),
     pointsAwarded: z.coerce.number().min(1),
+    postsRequired: optionalCount,
+    windowDays: optionalCount,
+    requireMention: z.boolean().optional(),
   }).optional(),
   rewardType: z.enum(['discount-percentage', 'discount-fixed', 'free-item', 'loyalty-points']),
   rewardValue: z.coerce.number().positive('Must be positive'),
   freeItemId: z.string().nullable().optional(),
   probability: z.coerce.number().min(0).max(100),
+  // REQ-046 D5: "Max Redemptions Per User (Optional) — leave empty for
+  // unlimited" submits "" which z.coerce.number() turns into 0, so
+  // .positive() rejected a *blank* field. The blank -> null normalisation is
+  // done at the register() layer via setValueAs rather than a z.preprocess
+  // here: a top-level ZodEffects makes z.input !== z.output and breaks
+  // react-hook-form's handleSubmit typing. .nullable() then accepts the null
+  // without coercing it; the submit handler maps it to undefined (unlimited).
   maxRedemptionsPerUser: z.coerce.number().int().positive().nullable().optional(),
   validityDays: z.coerce.number().int().positive('Must be positive'),
   startDate: z.string().nullable().optional(),
@@ -63,6 +93,26 @@ const formSchema = z.object({
 });
 
 type FormData = z.infer<typeof formSchema>;
+
+/**
+ * Walk a react-hook-form error tree and return the dotted path of the first
+ * leaf error (e.g. "socialConfig.postsRequired"). RHF nests errors to mirror
+ * the form shape; a leaf is the node carrying a string `message`.
+ */
+export function firstErrorPath(
+  errors: Record<string, unknown>,
+  prefix = ''
+): string | undefined {
+  for (const key of Object.keys(errors)) {
+    const node = errors[key] as Record<string, unknown> | undefined;
+    if (!node || typeof node !== 'object') continue;
+    const path = prefix ? `${prefix}.${key}` : key;
+    if (typeof node.message === 'string') return path;
+    const nested = firstErrorPath(node, path);
+    if (nested) return nested;
+  }
+  return undefined;
+}
 
 /**
  * Reward type options with metadata
@@ -168,6 +218,9 @@ export function RewardRuleForm({
         maxPostsPerPeriod: initialData.socialConfig.maxPostsPerPeriod,
         periodType: initialData.socialConfig.periodType,
         pointsAwarded: initialData.socialConfig.pointsAwarded,
+        postsRequired: initialData.socialConfig.postsRequired,
+        windowDays: initialData.socialConfig.windowDays,
+        requireMention: initialData.socialConfig.requireMention ?? true,
       } : undefined,
       rewardType: initialData?.rewardType || 'discount-percentage',
       rewardValue: initialData?.rewardValue || 10,
@@ -198,6 +251,18 @@ export function RewardRuleForm({
   useEffect(() => {
     if (triggerType === 'social_instagram') {
       setValue('rewardType', 'loyalty-points');
+    }
+  }, [triggerType, setValue]);
+
+  // D1 fix (REQ-046): the hidden <input value="instagram" /> approach below
+  // doesn't reliably push the value into react-hook-form state on a fresh
+  // rule (no DOM change event fires, defaultValues.socialConfig is
+  // undefined). Without this, `socialConfig.platform` arrives at validation
+  // as undefined, the platform enum check fails, and react-hook-form's
+  // handleSubmit silently aborts (the "nothing happens on Save" symptom).
+  useEffect(() => {
+    if (triggerType === 'social_instagram') {
+      setValue('socialConfig.platform', 'instagram');
     }
   }, [triggerType, setValue]);
 
@@ -256,7 +321,26 @@ export function RewardRuleForm({
   };
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+    <form
+      onSubmit={handleSubmit(handleFormSubmit, (validationErrors) => {
+        // REQ-046 D1 follow-up: surface client-side validation failures so
+        // operators see *why* Save isn't progressing instead of nothing
+        // happening at all. react-hook-form silently swallows them by
+        // default.
+        // REQ-046 D3 follow-up: drill into nested errors (e.g. socialConfig.*)
+        // so the toast names the actual sub-field, not just the parent object.
+        const firstField = firstErrorPath(validationErrors);
+        const detail = firstField
+          ? `Check the "${firstField}" field`
+          : 'Some fields are invalid';
+        toast({
+          title: "Couldn't save: form has errors",
+          description: detail,
+          variant: 'destructive',
+        });
+      })}
+      className="space-y-6"
+    >
       {/* Basic Information */}
       <Card>
         <CardHeader>
@@ -472,6 +556,77 @@ export function RewardRuleForm({
                {/* Hidden field to set platform */}
                <input type="hidden" {...register('socialConfig.platform')} value="instagram" />
             </div>
+
+            <div className="mt-6 space-y-4 rounded-md border border-dashed p-4">
+              <div>
+                <h4 className="text-sm font-semibold">
+                  Cadence (optional)
+                </h4>
+                <p className="text-xs text-muted-foreground">
+                  Use these to require N qualifying posts within a rolling
+                  window before a customer earns the points (e.g. &ldquo;3
+                  posts in 7 days&rdquo;). Leave blank for the legacy
+                  one-award-per-post behaviour.
+                </p>
+              </div>
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="socialConfig.postsRequired">
+                    Posts required
+                  </Label>
+                  <Input
+                    id="socialConfig.postsRequired"
+                    type="number"
+                    min="1"
+                    placeholder="3"
+                    {...register('socialConfig.postsRequired')}
+                  />
+                  {errors.socialConfig?.postsRequired && (
+                    <p className="text-sm text-red-600">
+                      {errors.socialConfig.postsRequired.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="socialConfig.windowDays">
+                    Window (days)
+                  </Label>
+                  <Input
+                    id="socialConfig.windowDays"
+                    type="number"
+                    min="1"
+                    placeholder="7"
+                    {...register('socialConfig.windowDays')}
+                  />
+                  {errors.socialConfig?.windowDays && (
+                    <p className="text-sm text-red-600">
+                      {errors.socialConfig.windowDays.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="socialConfig.requireMention"
+                    className="flex items-center justify-between"
+                  >
+                    <span>Require @mention</span>
+                    <Switch
+                      id="socialConfig.requireMention"
+                      checked={watch('socialConfig.requireMention') ?? true}
+                      onCheckedChange={(checked) =>
+                        setValue('socialConfig.requireMention', checked)
+                      }
+                    />
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    When on, a qualifying post must tag the bar&apos;s
+                    Instagram Business account.
+                  </p>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -614,7 +769,13 @@ export function RewardRuleForm({
               type="number"
               min="1"
               placeholder="Unlimited"
-              {...register('maxRedemptionsPerUser')}
+              {...register('maxRedemptionsPerUser', {
+                // REQ-046 D5: a blank input submits "" (→ 0 under z.coerce);
+                // map empty/null to null so .nullable() accepts it as
+                // "unlimited" instead of failing .positive().
+                setValueAs: (v) =>
+                  v === '' || v === null || v === undefined ? null : v,
+              })}
             />
             {errors.maxRedemptionsPerUser && (
               <p className="text-sm text-red-600">

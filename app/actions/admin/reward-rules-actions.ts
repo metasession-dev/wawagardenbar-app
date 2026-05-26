@@ -35,6 +35,22 @@ const rewardRuleSchema = z.object({
   description: z.string().min(10, 'Description must be at least 10 characters').max(500, 'Description must be less than 500 characters'),
   isActive: z.boolean().default(true),
   spendThreshold: z.number().min(0, 'Spend threshold must be 0 or greater'),
+  // REQ-046 D2 fix: the social-rule fields (triggerType, socialConfig,
+  // campaignDates) were silently stripped here by Zod's default-strip
+  // behaviour, so even a fully-filled social_instagram form created a
+  // transaction rule with no socialConfig. Add them so they persist.
+  triggerType: z.enum(['transaction', 'social_instagram']).optional(),
+  socialConfig: z.object({
+    platform: z.enum(['instagram']),
+    hashtag: z.string().min(2, 'Hashtag required'),
+    minViews: z.number().min(0),
+    maxPostsPerPeriod: z.number().min(1),
+    periodType: z.enum(['weekly', 'monthly', 'campaign_duration']),
+    pointsAwarded: z.number().min(1),
+    postsRequired: z.number().int().min(1).optional(),
+    windowDays: z.number().int().min(1).optional(),
+    requireMention: z.boolean().optional(),
+  }).optional(),
   rewardType: z.enum(['discount-percentage', 'discount-fixed', 'free-item', 'loyalty-points']),
   rewardValue: z.number().positive('Reward value must be positive'),
   freeItemId: z.string().nullable().optional(),
@@ -43,6 +59,10 @@ const rewardRuleSchema = z.object({
   validityDays: z.number().int().positive('Validity days must be positive'),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
+  campaignDates: z.array(z.object({
+    from: z.string(),
+    to: z.string(),
+  })).optional(),
 }).refine(
   (data) => {
     // If free-item, freeItemId is required
@@ -138,12 +158,26 @@ export async function updateRewardRuleAction(
     // Verify admin access
     await requireAdmin();
 
-    // Validate input (skip refinements for partial updates)
+    // Validate input (skip refinements for partial updates).
+    // REQ-046 D2: same social-rule fields as createRewardRuleAction so edits
+    // to a social_instagram rule actually persist socialConfig changes.
     const baseSchema = z.object({
       name: z.string().min(3).max(100).optional(),
       description: z.string().min(10).max(500).optional(),
       isActive: z.boolean().optional(),
       spendThreshold: z.number().min(0).optional(),
+      triggerType: z.enum(['transaction', 'social_instagram']).optional(),
+      socialConfig: z.object({
+        platform: z.enum(['instagram']),
+        hashtag: z.string().min(2),
+        minViews: z.number().min(0),
+        maxPostsPerPeriod: z.number().min(1),
+        periodType: z.enum(['weekly', 'monthly', 'campaign_duration']),
+        pointsAwarded: z.number().min(1),
+        postsRequired: z.number().int().min(1).optional(),
+        windowDays: z.number().int().min(1).optional(),
+        requireMention: z.boolean().optional(),
+      }).optional(),
       rewardType: z.enum(['discount-percentage', 'discount-fixed', 'free-item', 'loyalty-points']).optional(),
       rewardValue: z.number().positive().optional(),
       freeItemId: z.string().nullable().optional(),
@@ -152,6 +186,10 @@ export async function updateRewardRuleAction(
       validityDays: z.number().int().positive().optional(),
       startDate: z.string().optional(),
       endDate: z.string().optional(),
+      campaignDates: z.array(z.object({
+        from: z.string(),
+        to: z.string(),
+      })).optional(),
     });
     const validatedData = baseSchema.parse(input);
 

@@ -1,11 +1,11 @@
 # Release Ticket: REQ-046 — IG-1 cadence schema + IG-6 admin form fields
 
 **Status:** TESTED - PENDING SIGN-OFF
-**Date:** 2026-05-25
+**Date:** 2026-05-25 (last updated 2026-05-26)
 **Requirement ID:** REQ-046
 **Risk Level:** LOW
 **GitHub Issue:** [#117](https://github.com/metasession-dev/wawagardenbar-app/issues/117) (IG band, items IG-1 + IG-6)
-**Implementation PR:** [#124](https://github.com/metasession-dev/wawagardenbar-app/pull/124)
+**Implementation PR:** [#124](https://github.com/metasession-dev/wawagardenbar-app/pull/124) (IG-1 schema + IG-6 form), followed by UAT defect fixes [#127](https://github.com/metasession-dev/wawagardenbar-app/pull/127) (D1+D2), [#131](https://github.com/metasession-dev/wawagardenbar-app/pull/131) (D3), [#133](https://github.com/metasession-dev/wawagardenbar-app/pull/133) (D4), [#134](https://github.com/metasession-dev/wawagardenbar-app/pull/134) (D5)
 **Release PR:** Will be linked when the develop → main PR is created
 **DevAudit Release:** `https://devaudit.metasession.co/projects/wgb/` (release version `REQ-046`)
 
@@ -19,6 +19,7 @@ First slice of issue #117's **IG band** — Instagram engagement campaigns confi
 
 - **AI Tool Used:** Claude Opus 4.7 via Claude Code (CLI)
 - **AI-Generated Changes:** `interfaces/reward.interface.ts` (three new optional fields on `ISocialRewardConfig`), `models/reward-rule-model.ts` (matching Mongoose paths), `components/features/admin/rewards/reward-rule-form.tsx` (Zod schema + form inputs), `__tests__/services/reward-rule-cadence-schema.test.ts` (4 schema-introspection cases), all REQ-046 compliance markdown. See `compliance/evidence/REQ-046/ai-prompts.md` and `compliance/evidence/REQ-046/ai-use-note.md`.
+- **Follow-up defect fixes (D1–D5):** also AI-assisted (Claude Opus 4.7 via Claude Code) — `app/actions/admin/reward-rules-actions.ts` (server schema), `components/features/admin/rewards/reward-rule-form.tsx` (`optionalCount` preprocessor, `firstErrorPath`, `periodType`/`maxRedemptionsPerUser` defaults), and tests `__tests__/components/reward-rule-form-schema.test.ts` + `__tests__/actions/admin/reward-rules-actions.social-instagram.test.ts`. See `compliance/evidence/REQ-046/defects.md`.
 - **Human Reviewer:** Stage 3 `dual_actor` approver (independent of submitter).
 
 ## Implementation Details
@@ -37,11 +38,16 @@ Customer-side IG handle capture (IG-2) was already in place at `components/featu
 
 ## Verification
 
-- **Unit (vitest)** — 4 new cases on the schema (`__tests__/services/reward-rule-cadence-schema.test.ts`) introspect that the new paths are registered with the right types/validators + a regression check on the legacy fields. All green.
-- **Full suite** — `npx vitest run` → 813 pass / 4 skipped (was 809; +4 from new file). No collateral regressions.
+- **Unit (vitest)** — schema introspection (`__tests__/services/reward-rule-cadence-schema.test.ts`), client form-schema cases (`__tests__/components/reward-rule-form-schema.test.ts`, incl. blank-cadence + periodType-default + nested-error-path), and server-action cases (`__tests__/actions/admin/reward-rules-actions.social-instagram.test.ts`, proving `socialConfig` persists through `create`/`update`). All green.
+- **Full suite** — `npx vitest run` → 828 pass / 4 skipped on `develop` (@ `ddfc151`). No collateral regressions.
 - **Type check** — `npx tsc --noEmit` clean.
-- **CI** — PR #124 expected to pass `ci.yml` Quality Gates and the Release Approval Gate (after DevAudit approval is captured).
-- **Manual UAT** — to be executed by maintainer after merge to develop and UAT deploy. Steps documented in `compliance/evidence/REQ-046/test-plan.md` (create a `social_instagram` rule with the new cadence inputs, confirm save + re-hydrate; regression on transaction-trigger and legacy social rules).
+- **CI** — `ci.yml` Quality Gates green on `develop` @ `ddfc151` (current HEAD, not stale).
+- **Defects (UAT smoke)** — five defects found and fixed during UAT, all documented in `compliance/evidence/REQ-046/defects.md`. The first save attempt failed end-to-end; each fix exposed the next instance of the same "displayed default / blank value not persisted to form state" class:
+  - **D1+D2** (#127) — social-rule `platform` autofill (client) + server-side Zod now accepts `triggerType`/`socialConfig` instead of stripping them.
+  - **D3** (#131) — blank Cadence fields (`postsRequired`/`windowDays`) now save via an `optionalCount` preprocessor (`"" → undefined`); error toast names the nested sub-field.
+  - **D4** (#133) — `periodType` default (`weekly`) persisted, so an untouched Period Type select no longer blocks the save.
+  - **D5** (#134) — `maxRedemptionsPerUser` "leave blank for unlimited" now accepted (reuses the `optionalCount` preprocessor); also fixes transaction rules.
+- **UAT-environment verification** — **PASSED** on the deployed UAT build (https://wawagardenbar-app-uat.up.railway.app/) carrying D3–D5; recorded in #136 (commit `7e0e928`). A Social rule with Cadence blank, Period Type untouched, and Max Redemptions blank saves and persists; confirmed in the UAT database (`social_instagram` rule "test insta", `periodType=weekly`, `postsRequired`/`windowDays` omitted, `requireMention=true`). Health + smoke PASS. Satisfies Stage 3 Step 10 (`uat.required_risk_classes: ["*"]`).
 
 ## Residual Risk
 

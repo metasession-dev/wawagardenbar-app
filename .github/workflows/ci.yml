@@ -189,6 +189,7 @@ jobs:
             sast-results.json
             dependency-audit.json
             e2e-results.json
+            e2e-auth-results.json
             playwright-report/
             coverage/coverage-summary.json
           retention-days: 90

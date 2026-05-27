@@ -3,6 +3,7 @@ import { parse } from 'url';
 import next from 'next';
 import { initSocketServer } from './lib/socket-server';
 import { connectDB } from './lib/mongodb';
+import { startScheduledJobs } from './lib/scheduled-jobs';
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = process.env.HOSTNAME || 'localhost';
@@ -28,7 +29,9 @@ app.prepare().then(() => {
     initSocketServer(httpServer);
     console.log('✅ Socket.IO server initialized successfully');
     console.log(`   Path: /api/socket`);
-    console.log(`   CORS origin: ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}`);
+    console.log(
+      `   CORS origin: ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}`
+    );
   } catch (error) {
     console.error('❌ Failed to initialize Socket.IO:', error);
   }
@@ -46,6 +49,8 @@ app.prepare().then(() => {
     );
     // Non-blocking MongoDB warmup — runs AFTER server is listening (healthcheck passes)
     warmupMongoDB();
+    // In-process scheduled jobs (reward expiry, etc.) — REQ-048 / #117 P0 #3
+    startScheduledJobs();
   });
 });
 
@@ -64,10 +69,15 @@ async function warmupMongoDB(): Promise<void> {
       return;
     } catch (error) {
       if (attempt < MAX_RETRIES) {
-        console.warn(`⚠️ MongoDB warmup attempt ${attempt}/${MAX_RETRIES} failed, retrying in ${RETRY_DELAY_MS / 1000}s...`);
+        console.warn(
+          `⚠️ MongoDB warmup attempt ${attempt}/${MAX_RETRIES} failed, retrying in ${RETRY_DELAY_MS / 1000}s...`
+        );
         await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
       } else {
-        console.error('⚠️ MongoDB warmup failed after all retries (will retry on first request):', error);
+        console.error(
+          '⚠️ MongoDB warmup failed after all retries (will retry on first request):',
+          error
+        );
       }
     }
   }

@@ -22,9 +22,9 @@ export class PointsService {
     description?: string
   ): Promise<IPointsTransaction> {
     await connectDB();
-    
+
     const userIdObj = new Types.ObjectId(userId as string);
-    
+
     // Update user's points balance
     const user = await UserModel.findByIdAndUpdate(
       userIdObj,
@@ -36,11 +36,11 @@ export class PointsService {
       },
       { new: true }
     );
-    
+
     if (!user) {
       throw new Error('User not found');
     }
-    
+
     // Create transaction record
     const transaction = await PointsTransactionModel.create({
       userId: userIdObj,
@@ -51,10 +51,10 @@ export class PointsService {
       description: description || `Earned ${amount} points`,
       balanceAfter: user.loyaltyPoints,
     });
-    
+
     return transaction;
   }
-  
+
   /**
    * Deduct points from a user
    */
@@ -65,20 +65,20 @@ export class PointsService {
     description?: string
   ): Promise<IPointsTransaction> {
     await connectDB();
-    
+
     const userIdObj = new Types.ObjectId(userId as string);
-    
+
     // Check if user has sufficient points
     const user = await UserModel.findById(userIdObj);
-    
+
     if (!user) {
       throw new Error('User not found');
     }
-    
+
     if (user.loyaltyPoints < amount) {
       throw new Error('Insufficient points balance');
     }
-    
+
     // Update user's points balance
     const updatedUser = await UserModel.findByIdAndUpdate(
       userIdObj,
@@ -90,11 +90,11 @@ export class PointsService {
       },
       { new: true }
     );
-    
+
     if (!updatedUser) {
       throw new Error('Failed to update user points');
     }
-    
+
     // Create transaction record
     const transaction = await PointsTransactionModel.create({
       userId: userIdObj,
@@ -104,10 +104,79 @@ export class PointsService {
       description: description || `Spent ${amount} points`,
       balanceAfter: updatedUser.loyaltyPoints,
     });
-    
+
     return transaction;
   }
-  
+
+  /**
+   * Reverse the points movements of a cancelled order (REQ-048 / #117 P0 #2).
+   *
+   * Refunds points the customer spent on the order and claws back points the
+   * order earned, in a single compensating `adjusted` transaction linked to
+   * the order. Idempotent: a no-op if a reversal for this order already exists,
+   * or if the order had no points movements (e.g. cancelled before earning).
+   */
+  static async reverseOrderTransactions(
+    userId: Types.ObjectId | string,
+    orderId: Types.ObjectId | string
+  ): Promise<IPointsTransaction | null> {
+    await connectDB();
+
+    const userIdObj = new Types.ObjectId(userId as string);
+    const orderIdObj = new Types.ObjectId(orderId as string);
+
+    // Idempotency: an `adjusted` txn carrying an orderId is a prior reversal
+    // (admin adjustments never set orderId).
+    const existing = await PointsTransactionModel.findOne({
+      orderId: orderIdObj,
+      type: 'adjusted' as PointsTransactionType,
+    });
+    if (existing) {
+      return null;
+    }
+
+    const txns = await PointsTransactionModel.find({
+      orderId: orderIdObj,
+      type: { $in: ['earned', 'spent'] as PointsTransactionType[] },
+    });
+    if (txns.length === 0) {
+      return null;
+    }
+
+    // earned amounts are stored positive; spent amounts negative.
+    const earnedSum = txns
+      .filter((t) => t.type === 'earned')
+      .reduce((sum, t) => sum + t.amount, 0);
+    const spentSum = txns
+      .filter((t) => t.type === 'spent')
+      .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    const reversal = spentSum - earnedSum;
+
+    const user = await UserModel.findByIdAndUpdate(
+      userIdObj,
+      {
+        $inc: {
+          loyaltyPoints: reversal,
+          totalPointsEarned: -earnedSum,
+          totalPointsSpent: -spentSum,
+        },
+      },
+      { new: true }
+    );
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    return PointsTransactionModel.create({
+      userId: userIdObj,
+      type: 'adjusted' as PointsTransactionType,
+      amount: reversal,
+      orderId: orderIdObj,
+      description: `Reversal: order ${orderIdObj.toString()} cancelled`,
+      balanceAfter: user.loyaltyPoints,
+    });
+  }
+
   /**
    * Get user's points balance
    */
@@ -119,16 +188,17 @@ export class PointsService {
     conversionRate: number;
   }> {
     await connectDB();
-    
+
     const user = await UserModel.findById(userId);
-    
+
     if (!user) {
       throw new Error('User not found');
     }
-    
-    const conversionRate = await SystemSettingsService.getPointsConversionRate();
+
+    const conversionRate =
+      await SystemSettingsService.getPointsConversionRate();
     const nairaValue = user.loyaltyPoints / conversionRate;
-    
+
     return {
       balance: user.loyaltyPoints,
       totalEarned: user.totalPointsEarned,
@@ -137,7 +207,7 @@ export class PointsService {
       conversionRate,
     };
   }
-  
+
   /**
    * Get user's points transaction history
    */
@@ -150,9 +220,9 @@ export class PointsService {
     total: number;
   }> {
     await connectDB();
-    
+
     const userIdObj = new Types.ObjectId(userId as string);
-    
+
     const [transactions, total] = await Promise.all([
       PointsTransactionModel.find({ userId: userIdObj })
         .sort({ createdAt: -1 })
@@ -162,21 +232,22 @@ export class PointsService {
         .populate('rewardId', 'code rewardType'),
       PointsTransactionModel.countDocuments({ userId: userIdObj }),
     ]);
-    
+
     return {
       transactions,
       total,
     };
   }
-  
+
   /**
    * Calculate points required for a menu item
    */
   static async calculatePointsForItem(price: number): Promise<number> {
-    const conversionRate = await SystemSettingsService.getPointsConversionRate();
+    const conversionRate =
+      await SystemSettingsService.getPointsConversionRate();
     return price * conversionRate;
   }
-  
+
   /**
    * Check if user can redeem an item with points
    */
@@ -185,16 +256,16 @@ export class PointsService {
     pointsRequired: number
   ): Promise<boolean> {
     await connectDB();
-    
+
     const user = await UserModel.findById(userId);
-    
+
     if (!user) {
       return false;
     }
-    
+
     return user.loyaltyPoints >= pointsRequired;
   }
-  
+
   /**
    * Get eligible items for points redemption
    */
@@ -208,20 +279,20 @@ export class PointsService {
     }>
   > {
     await connectDB();
-    
+
     const MenuItemModel = (await import('@/models/menu-item-model')).default;
-    
+
     const user = await UserModel.findById(userId);
-    
+
     if (!user) {
       throw new Error('User not found');
     }
-    
+
     const items = await MenuItemModel.find({
       pointsRedeemable: true,
       isAvailable: true,
     }).select('name price pointsValue');
-    
+
     return items.map((item) => ({
       itemId: item._id.toString(),
       name: item.name,
@@ -230,7 +301,7 @@ export class PointsService {
       canRedeem: user.loyaltyPoints >= (item.pointsValue || 0),
     }));
   }
-  
+
   /**
    * Adjust points (admin only)
    */
@@ -241,25 +312,27 @@ export class PointsService {
     _adminUserId: Types.ObjectId | string
   ): Promise<IPointsTransaction> {
     await connectDB();
-    
+
     const userIdObj = new Types.ObjectId(userId as string);
-    
+
     // Update user's points balance
     const user = await UserModel.findByIdAndUpdate(
       userIdObj,
       {
         $inc: {
           loyaltyPoints: amount,
-          ...(amount > 0 ? { totalPointsEarned: amount } : { totalPointsSpent: Math.abs(amount) }),
+          ...(amount > 0
+            ? { totalPointsEarned: amount }
+            : { totalPointsSpent: Math.abs(amount) }),
         },
       },
       { new: true }
     );
-    
+
     if (!user) {
       throw new Error('User not found');
     }
-    
+
     // Create transaction record
     const transaction = await PointsTransactionModel.create({
       userId: userIdObj,
@@ -268,7 +341,7 @@ export class PointsService {
       description: `Admin adjustment: ${reason}`,
       balanceAfter: user.loyaltyPoints,
     });
-    
+
     return transaction;
   }
 }

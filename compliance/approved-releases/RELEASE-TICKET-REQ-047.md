@@ -1,11 +1,13 @@
 # Release Ticket: REQ-047 — Harden CORS origin reflection
 
-**Status:** TESTED - PENDING SIGN-OFF
-**Date:** 2026-05-25
+**Status:** RELEASED
+**Date:** 2026-05-25 (released 2026-05-27)
 **Requirement ID:** REQ-047
 **Risk Level:** LOW
 **GitHub Issue:** [#128](https://github.com/metasession-dev/wawagardenbar-app/issues/128)
+**Release PR:** [#138](https://github.com/metasession-dev/wawagardenbar-app/pull/138) (develop → main, production deploy)
 **DevAudit Release:** `https://devaudit.metasession.co/projects/wgb/` (release version `REQ-047`)
+**Sign-off (dual-actor):** UAT approved + Production approved on the DevAudit portal (`released`); post-deploy production smoke evidence captured (`environment=production`). Close-out: ticket → `approved-releases/`, RTM row → `RELEASED`.
 
 ---
 

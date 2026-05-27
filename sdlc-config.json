@@ -70,5 +70,7 @@
     "base_url": "https://devaudit.metasession.co",
     "project_slug": "wgb",
     "api_key_secret": "DEVAUDIT_API_KEY"
-  }
+  },
+  "integration_branch": "develop",
+  "release_branch": "main"
 }

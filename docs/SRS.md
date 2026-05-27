@@ -55,7 +55,7 @@
 
 - **Playwright** — `playwright.config.ts`, `testDir: ./e2e`, baseURL `http://localhost:3000`. **~33 spec files / ~25 projects.**
 - **Vitest** — unit/service tests under `__tests__/`.
-- **CI reality:** the CI gate (`.github/workflows/ci.yml`, Gate 4) runs **only `--project=chromium`** (i.e. `requirements-verification.spec.ts`). All authenticated projects are registered but **dormant in CI** — they run locally/ad-hoc only. The **Suite** column below reflects intended placement, not current CI execution. See [§3.4](#34-running) and [Appendix B](#appendix-b--e2e-test-environment).
+- **CI execution:** `ci.yml` Gate 4 seeds the test DB and runs the **`smoke`** project (fast critical-path subset) on every develop push + PR; the project-owned **`e2e-regression.yml`** runs the full **`regression`** project on PRs to `main` and nightly. The **Suite** column below drives membership: `smoke`-tier specs live in `e2e/smoke/`, everything else runs in `regression`. See [§3.4](#34-running) and [Appendix B](#appendix-b--e2e-test-environment).
 
 ### 1.5 Domain model (key collections)
 
@@ -1057,15 +1057,15 @@ Excluded from the E2E suite this cycle, with rationale:
 
 ```bash
 npm run dev                                   # or rely on webServer
-npx tsx scripts/seed-e2e-admins.ts            # seed admin/super-admin/CSR
-npx playwright test                           # all projects
-npx playwright test --project=chromium        # unauthenticated only (the CI gate)
-npx playwright test --project=authenticated   # runs auth-setup first
-npx playwright test -g "menu page loads"      # by title
-BASE_URL=https://wawagardenbar-app-uat.up.railway.app npx playwright test   # against UAT
+npx tsx scripts/seed-e2e-admins.ts            # seed admin/super-admin/CSR (+ menu/inventory seeds)
+npx playwright test --project=smoke           # fast critical-path subset (CI per-push gate)
+npx playwright test --project=regression      # full suite (PR→main + nightly)
+npx playwright test e2e/kitchen/...spec.ts    # one spec by path
+npx playwright test -g "REQ-034"              # by title/REQ id
+BASE_URL=https://wawagardenbar-app-uat.up.railway.app npx playwright test --project=regression   # against UAT
 ```
 
-**CI caveat:** the pipeline gate runs **only `--project=chromium`**. Authenticated projects must be run locally/ad-hoc until the gate is extended to seed data + run them (the same auth-in-CI work flagged in Appendix A). New authenticated specs authored from this SRS will not execute in CI until then.
+**CI gating (current reality):** `ci.yml` Gate 4 seeds the test DB and runs **`--project=smoke`** on every develop push and PR (fast gate). The project-owned **`.github/workflows/e2e-regression.yml`** runs the full **`--project=regression`** suite on PRs to `main` and nightly. Seeding + E2E credentials are wired via `sdlc-config.json` (`e2e_setup_command` / `e2e_env`, regenerated into `ci.yml` — requires devaudit ≥ 0.1.16). In CI a missing/failed login **fails** the run (no silent skips); locally it skips gracefully when admins aren't seeded.
 
 ### 3.5 Recommended additions (conventions for new tests authored from this SRS)
 

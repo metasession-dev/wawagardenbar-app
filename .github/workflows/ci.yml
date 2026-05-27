@@ -146,11 +146,35 @@ jobs:
           DB_PORT="${{ job.services.mongodb.ports['27017:27017'] }}"
           echo "MONGODB_WAWAGARDENBAR_APP_URI=mongodb://localhost:${DB_PORT}" >> "$GITHUB_ENV"
           echo "Database on port: ${DB_PORT}"
+      - name: E2E setup
+        env:
+          MONGODB_URI: mongodb://localhost:27017
+          MONGODB_DB_NAME: wawagardenbar_test
+          E2E_ADMIN_USERNAME: e2e-admin
+          E2E_ADMIN_PASSWORD: E2eTest@2026!
+          E2E_SUPER_ADMIN_USERNAME: e2e-superadmin
+          E2E_SUPER_ADMIN_PASSWORD: E2eTest@2026!
+          E2E_CSR_USERNAME: e2e-csr
+          E2E_CSR_PASSWORD: E2eTest@2026!
+        run: |
+          npx tsx scripts/seed-e2e-admins.ts
+          npx tsx scripts/seed-food-menu.ts
+          npx tsx scripts/seed-drinks-menu.ts
+          npx tsx scripts/seed-inventory.ts
 
       - name: Kill stale dev server
         run: lsof -ti:3000 | xargs kill -9 2>/dev/null || true
 
       - name: Start dev server
+        env:
+          MONGODB_URI: mongodb://localhost:27017
+          MONGODB_DB_NAME: wawagardenbar_test
+          E2E_ADMIN_USERNAME: e2e-admin
+          E2E_ADMIN_PASSWORD: E2eTest@2026!
+          E2E_SUPER_ADMIN_USERNAME: e2e-superadmin
+          E2E_SUPER_ADMIN_PASSWORD: E2eTest@2026!
+          E2E_CSR_USERNAME: e2e-csr
+          E2E_CSR_PASSWORD: E2eTest@2026!
         run: npm run dev &
 
       - name: Wait for dev server
@@ -165,7 +189,15 @@ jobs:
           # lands in playwright-report/.
           PLAYWRIGHT_HTML_REPORTER_OPEN: never
           PLAYWRIGHT_JSON_OUTPUT_NAME: e2e-results.json
-        run: npx playwright test --project=chromium --reporter=json,html
+          MONGODB_URI: mongodb://localhost:27017
+          MONGODB_DB_NAME: wawagardenbar_test
+          E2E_ADMIN_USERNAME: e2e-admin
+          E2E_ADMIN_PASSWORD: E2eTest@2026!
+          E2E_SUPER_ADMIN_USERNAME: e2e-superadmin
+          E2E_SUPER_ADMIN_PASSWORD: E2eTest@2026!
+          E2E_CSR_USERNAME: e2e-csr
+          E2E_CSR_PASSWORD: E2eTest@2026!
+        run: npx playwright test --project=smoke --reporter=json,html
 
       # ── Gate 5: Build ──
 

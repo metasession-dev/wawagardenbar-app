@@ -317,6 +317,8 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 
 - **Given** a customer with an active reward code, **When** they apply it on the summary, **Then** the discount/points reduce the total; removing it restores the total.
 
+> ⚠ **Known gap (#117 P0#4):** the **dine-in tab** checkout path does not surface eligible rewards — `services/tab-service.ts:256` returns `eligibleRewards: []` as a hardcoded TODO. This requirement is therefore testable only for the standalone-order path today; see [§4](#4-roadmap--cross-reference-to-issue-117).
+
 ---
 
 ## Feature Area 4 — Order Tracking & Customer Tabs (ORDER)
@@ -329,6 +331,8 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 **Behaviour:** The page shows order number, items, total, estimated wait, a status timeline, and a live-connection indicator; status updates arrive over Socket.IO. Pending-payment and confirmed/paid states show distinct alerts.
 
 - **Given** an order page open, **When** the order status changes server-side, **Then** the timeline advances without a manual reload.
+
+> ⚠ **Known gap (#117 P1#7):** the page also renders a "Receipt" download button (`orders/[orderId]/page.tsx:68`) that is a **dead stub** (no handler) — do not write a test asserting it works. Tracked in [§4](#4-roadmap--cross-reference-to-issue-117).
 
 #### REQ-ORDER-002 — Orders & Tabs list (auth) · **Must** · smoke
 
@@ -349,6 +353,8 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 **Source:** `app/(customer)/orders/tabs/[tabId]/checkout/`
 
 - **Given** an open tab owned by the customer, **When** they choose "Pay & Close Tab" and complete payment, **Then** the tab moves to settling→closed and the orders are marked paid.
+
+> ⚠ **Known gap (#117 P0#4):** rewards cannot be applied on this tab path — eligible rewards come back empty (see REQ-CHECKOUT-009). Test the close-tab/payment flow without expecting a rewards step.
 
 ---
 
@@ -501,6 +507,8 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 **Source:** `app/actions/admin/order-management-actions.ts`
 
 - **Given** an unpaid order, **When** the admin cancels with a reason, **Then** the order is cancelled, its tab total recalculates, and it is audit-logged; cancelling a paid/settling order is blocked.
+
+> ⚠ **Known defect (#117 P0#2):** cancellation does **not** reverse loyalty — `services/order-service.ts` `cancelOrder()` restores inventory but writes no reversal `PointsTransaction` and does not re-activate `appliedRewards`. Do not assert points/rewards are restored on cancel until this is fixed; see [§4](#4-roadmap--cross-reference-to-issue-117).
 
 #### REQ-ORDMGT-006 — Manual payment · **Should** · regression
 
@@ -907,6 +915,8 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 
 - **Given** a valid Monnify webhook for an order, **When** received with a correct hash, **Then** the order's `paymentStatus`/`transactionReference`/`paidAt` update and an audit entry is written.
 
+> ⚠ **Known defect (#117 P0#1):** webhook handlers have **no idempotency guard** — a replayed event re-deducts inventory and re-grants points/rewards. A regression test for replay-safety will currently fail (expected, until fixed); see [§4](#4-roadmap--cross-reference-to-issue-117).
+
 #### REQ-PAY-003 — Reject invalid signature · **Must** · regression
 
 **Source:** `app/api/webhooks/{monnify,whatsapp,paystack}/route.ts` (HMAC; WhatsApp `x-hub-signature-256` :8)
@@ -1063,6 +1073,26 @@ BASE_URL=https://wawagardenbar-app-uat.up.railway.app npx playwright test   # ag
 - Map each test to its `REQ-<AREA>-NNN` ID in a comment/title so traceability back to this SRS (and onward to `compliance/RTM.md`) is mechanical.
 - Prioritize by Suite: cover **Must/smoke** first (auth, menu→cart→checkout→order, RBAC, API auth, security headers), then **Should/regression**, then **Could/extended**.
 - Prefer seeding state via scripts/DB over driving long UI prerequisites.
+
+---
+
+## 4. Roadmap & cross-reference to issue #117
+
+[Issue #117](https://github.com/metasession-dev/wawagardenbar-app/issues/117) is the prioritized **customer-facing backlog** (WhatsApp-first comms, Instagram campaigns, P0 correctness bugs, P1–P4 features). It and this SRS play different roles, managed as follows.
+
+**Management model.** This SRS documents **implemented, observable** behaviour — the basis for E2E tests. #117 is the **forward backlog** of mostly-unbuilt work. They join through the repo's existing pipeline: a #117 item is scoped into a `REQ-XXX` change request → gets an `RTM.md` row → and, when it ships, its SRS requirement is **added or upgraded** (new feature areas get new sections; bug-fix items update the affected requirement and clear its known-gap note), citing the implementing `REQ-XXX` in the Source line. The SRS is **not** a place to pre-list unbuilt work — that would create untestable "requirements" and duplicate the backlog. (Note #117 is itself partly stale, e.g. its "no customer points surface" item is already built — REQ-REWARDC-001/002 — which is why the SRS, not the backlog, is the source of truth for current behaviour.)
+
+**Known gaps / defects in documented behaviour.** Items where the SRS describes behaviour that is currently a stub or carries a known bug — test authors should not assert these until the linked #117 item ships:
+
+| SRS requirement                                | #117 item | Nature                                                               |
+| ---------------------------------------------- | --------- | -------------------------------------------------------------------- |
+| REQ-ORDER-001 (receipt download button)        | P1#7      | Stub — dead button, no handler                                       |
+| REQ-CHECKOUT-009 / REQ-ORDER-004 (tab rewards) | P0#4      | Stub — `tab-service.ts:256` returns `eligibleRewards: []`            |
+| REQ-PAY-002 / REQ-PAY-003 (webhooks)           | P0#1      | Defect — no idempotency guard; replay re-grants                      |
+| REQ-ORDMGT-005 (cancel order)                  | P0#2      | Defect — points/rewards not reversed on cancel                       |
+| (reward expiry enforcement)                    | P0#3      | Defect — `RewardsService.expireOldRewards()` has no scheduled caller |
+
+**Planned areas not yet in the SRS.** These enter the SRS as new requirements/areas only when built (each is a #117 band): WhatsApp transactional comms (WA), Instagram engagement campaigns (IG), order reviews, support tickets/queue, real provider-side refunds, reservations/table booking, self-service data export, cookie consent, the `/contact` page, the reorder action, business-hours gate at checkout, max-delivery-distance validation, and the pickup-time slot picker.
 
 ---
 

@@ -45,19 +45,21 @@
 
 ## Purpose
 
-This Requirements Traceability Matrix provides bidirectional traceability between the requirements documented in `docs/REQUIREMENTS.md` (27 sections), the E2E test cases that verify them, and the change requests (REQ-001 through REQ-007) that track implementation work. It ensures compliance with SOC 2, ISO 27001, and regulatory audit requirements.
+This Requirements Traceability Matrix provides bidirectional traceability between the requirements documented in the Software Requirements Specification (`docs/SRS.md`, which supersedes the former 27-section `docs/REQUIREMENTS.md`), the E2E test cases that verify them, and the change requests (REQ-XXX) that track implementation work. It ensures compliance with SOC 2, ISO 27001, and regulatory audit requirements.
+
+> **Note:** The section-based forward-traceability in Part A below predates the SRS and is still organised around the former `docs/REQUIREMENTS.md` 27-section layout. Reconciling the RTM with the SRS's feature-area `REQ-<AREA>-NNN` IDs is tracked in DevAudit-Installer#64.
 
 ---
 
 ## Related Documents
 
-| Document                   | Location                            | Description                                         |
-| -------------------------- | ----------------------------------- | --------------------------------------------------- |
-| Test Plan                  | `compliance/test-plan.md`           | Test strategy, risk assessment, entry/exit criteria |
-| Test Case Specifications   | `compliance/test-cases.md`          | 181 formal test case specifications                 |
-| Test Summary Report        | `compliance/test-summary-report.md` | Execution results, defect log, residual risk        |
-| Comprehensive Requirements | `docs/REQUIREMENTS.md`              | 27-section requirements document                    |
-| E2E Test Guide             | `docs/E2E-TEST-GUIDE.md`            | Setup, run, and troubleshooting guide               |
+| Document                   | Location                            | Description                                              |
+| -------------------------- | ----------------------------------- | -------------------------------------------------------- |
+| Test Plan                  | `compliance/test-plan.md`           | Test strategy, risk assessment, entry/exit criteria      |
+| Test Case Specifications   | `compliance/test-cases.md`          | 181 formal test case specifications                      |
+| Test Summary Report        | `compliance/test-summary-report.md` | Execution results, defect log, residual risk             |
+| Software Requirements Spec | `docs/SRS.md`                       | Current requirements (supersedes `docs/REQUIREMENTS.md`) |
+| E2E Test Guide             | `docs/E2E-TEST-GUIDE.md`            | Setup, run, and troubleshooting guide                    |
 
 ---
 
@@ -673,8 +675,8 @@ This section tracks discrete change requests (REQ-001 through REQ-008) that repr
 | REQ-043 | #114  | LOW    | compliance/evidence/REQ-043/ | PRE-ONBOARDING BASELINE — deployed to main 2026-05-23 (release PR #116 `bba04c8`), before DevAudit re-onboarding (2026-05-24); not gated by DevAudit, control gap accepted per risk-register R-001. Original scope: visual emphasis on Revert items radio option in super-admin delete-tab dialog — bordered cards with coloured ring on selection + "Recommended" pill on Revert; copy-only / styling-only fix preventing accidental Leave-as-is selection observed in UAT.                                                                  | ostendo-io      | 2026-05-23 |
 | REQ-044 | #115  | MEDIUM | compliance/evidence/REQ-044/ | PRE-ONBOARDING BASELINE — deployed to main 2026-05-23 (release PR #116 `bba04c8`), before DevAudit re-onboarding (2026-05-24); not gated by DevAudit, control gap accepted per risk-register R-001. Original scope: route inventory deduct/restore via `locations[0]` for `trackByLocation` rows — pre-save hook recomputes `currentStock = sum(locations[].currentStock)` and was silently overwriting direct `currentStock` assignments. Behaviour change: sales of every location-tracked item now actually move stock for the first time. | ostendo-io      | 2026-05-23 |
 | REQ-045 | #116  | LOW    | compliance/evidence/REQ-045/ | PRE-ONBOARDING BASELINE — release PR (develop→main) bundling REQ-042/043/044 to production 2026-05-23 (merge commit `bba04c8`), before DevAudit re-onboarding (2026-05-24); not gated by DevAudit, control gap accepted per risk-register R-001. No new code — release coordination only.                                                                                                                                                                                                                                                     | ostendo-io      | 2026-05-23 |
-| REQ-046 | #124  | LOW    | compliance/evidence/REQ-046/ | RELEASED (first slice of issue #117 IG band — extends `RewardRule.socialConfig` with `postsRequired`, `windowDays`, `requireMention` cadence fields + matching admin form subsection. Pure additive schema + UI; no runtime behaviour change yet — the Meta Graph API polling job that consumes the new fields is deferred to a follow-up REQ.)                                                                                                                                                                                             | ostendo-io      | 2026-05-25 |
-| REQ-047 | #128  | LOW    | compliance/evidence/REQ-047/ | RELEASED (harden CORS: reflect only exact allow-list matches, drop '*' branch, echo configured literal; closes the `cors-misconfiguration` finding exposed when the SAST gate was restored via DevAudit-Installer #48) | ostendo-io      | 2026-05-25 |
+| REQ-046 | #124  | LOW    | compliance/evidence/REQ-046/ | RELEASED (first slice of issue #117 IG band — extends `RewardRule.socialConfig` with `postsRequired`, `windowDays`, `requireMention` cadence fields + matching admin form subsection. Pure additive schema + UI; no runtime behaviour change yet — the Meta Graph API polling job that consumes the new fields is deferred to a follow-up REQ.)                                                                                                                                                                                               | ostendo-io      | 2026-05-25 |
+| REQ-047 | #128  | LOW    | compliance/evidence/REQ-047/ | RELEASED (harden CORS: reflect only exact allow-list matches, drop '\*' branch, echo configured literal; closes the `cors-misconfiguration` finding exposed when the SAST gate was restored via DevAudit-Installer #48)                                                                                                                                                                                                                                                                                                                       | ostendo-io      | 2026-05-25 |
 
 ### Change Request Dependencies
 

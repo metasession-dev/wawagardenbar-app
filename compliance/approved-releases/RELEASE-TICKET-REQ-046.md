@@ -1,13 +1,14 @@
 # Release Ticket: REQ-046 — IG-1 cadence schema + IG-6 admin form fields
 
-**Status:** TESTED - PENDING SIGN-OFF
-**Date:** 2026-05-25 (last updated 2026-05-26)
+**Status:** RELEASED
+**Date:** 2026-05-25 (released 2026-05-27)
 **Requirement ID:** REQ-046
 **Risk Level:** LOW
 **GitHub Issue:** [#117](https://github.com/metasession-dev/wawagardenbar-app/issues/117) (IG band, items IG-1 + IG-6)
 **Implementation PR:** [#124](https://github.com/metasession-dev/wawagardenbar-app/pull/124) (IG-1 schema + IG-6 form), followed by UAT defect fixes [#127](https://github.com/metasession-dev/wawagardenbar-app/pull/127) (D1+D2), [#131](https://github.com/metasession-dev/wawagardenbar-app/pull/131) (D3), [#133](https://github.com/metasession-dev/wawagardenbar-app/pull/133) (D4), [#134](https://github.com/metasession-dev/wawagardenbar-app/pull/134) (D5)
-**Release PR:** Will be linked when the develop → main PR is created
+**Release PR:** [#138](https://github.com/metasession-dev/wawagardenbar-app/pull/138) (develop → main, production deploy)
 **DevAudit Release:** `https://devaudit.metasession.co/projects/wgb/` (release version `REQ-046`)
+**Sign-off (dual-actor):** UAT approved + Production approved on the DevAudit portal (`released`); post-deploy production smoke evidence captured (`environment=production`). Close-out: ticket → `approved-releases/`, RTM row → `RELEASED`.
 
 ---
 

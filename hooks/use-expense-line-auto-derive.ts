@@ -32,7 +32,6 @@ import {
 } from '@/lib/expense-line-derivation';
 
 interface UseExpenseLineAutoDeriveOptions {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   form: UseFormReturn<any>;
 }
 

@@ -20,28 +20,28 @@ When an inventory snapshot is submitted reporting `staffAdjustedCount < systemIn
 | AC5 | List page `snapshots-list-client.tsx` adds a "Missing Cost" column after "Adjustments". Legacy snapshots render `—`                                                                                             | E2E walk + legacy regression test                                                 |
 | AC6 | Cost-freeze invariant: changing `Inventory.costPerUnit` later does NOT change the missing-cost of past snapshots                                                                                                | Vitest invariant test + E2E walk (bump cost → reload snapshot → assert unchanged) |
 | AC7 | Audit log `inventory.snapshot_submitted` event details include `missingCost: number`                                                                                                                            | Vitest audit-log-emission test                                                    |
-| AC8 | Tests: new `__tests__/lib/snapshot-missing-cost.test.ts` (pure helper) + extended `inventory-snapshot-service.test.ts` + extended E2E `inventory-snapshots.spec.ts` using new `evidenceShot` helper             | tsc 0; vitest delta ≥ +14; E2E green                                              |
+| AC8 | Tests: new `__tests__/lib/snapshot-missing-cost.test.ts` (pure helper) + extended _snapshot-service unit_ + extended E2E `inventory-snapshots.spec.ts` using new `evidenceShot` helper                          | tsc 0; vitest delta ≥ +14; E2E green                                              |
 | AC9 | UAT walk covers fresh snapshot with missing items, cost-freeze invariant verification, and legacy snapshot fallback                                                                                             | `compliance/evidence/REQ-039/uat-checklist.md`                                    |
 
 ## AC ↔ test mapping
 
 ### Vitest
 
-| AC  | Test                                                                                                                                                   |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| AC1 | `__tests__/services/inventory-snapshot-service.test.ts` — schema accepts costPerUnitAtSnapshot; legacy items valid                                     |
-| AC2 | `__tests__/services/inventory-snapshot-service.test.ts` — `generateSnapshotData` stamps cost per item                                                  |
-| AC2 | `__tests__/services/inventory-snapshot-service.test.ts` — `submitSnapshot` re-stamps when caller drops the value                                       |
-| AC2 | `__tests__/services/inventory-snapshot-service.test.ts` — `updateSnapshotItems` re-stamps ONLY changed items                                           |
-| AC2 | `__tests__/services/inventory-snapshot-service.test.ts` — `calculateSummary` returns correct missingCost                                               |
-| AC6 | `__tests__/services/inventory-snapshot-service.test.ts` — invariant: changing live inventory.costPerUnit after stamp does NOT change item-frozen value |
-| AC7 | `__tests__/services/inventory-snapshot-service.test.ts` — `inventory.snapshot_submitted` audit log includes missingCost                                |
-| AC8 | `__tests__/lib/snapshot-missing-cost.test.ts` — empty array → 0                                                                                        |
-| AC8 | `__tests__/lib/snapshot-missing-cost.test.ts` — single negative discrepancy → abs × cost                                                               |
-| AC8 | `__tests__/lib/snapshot-missing-cost.test.ts` — multi-row mixed positive+negative → sum of negatives only                                              |
-| AC8 | `__tests__/lib/snapshot-missing-cost.test.ts` — ignores positive discrepancies                                                                         |
-| AC8 | `__tests__/lib/snapshot-missing-cost.test.ts` — ignores items with no costPerUnitAtSnapshot                                                            |
-| AC8 | `__tests__/lib/snapshot-missing-cost.test.ts` — ignores items with no staffAdjustedCount (no decision = no missing)                                    |
+| AC  | Test                                                                                                                                                                                                                |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AC1 | _snapshot-service unit (merged into the suite that ships in `snapshot-missing-cost` + `report-cost-snapshot` files)_ — schema accepts costPerUnitAtSnapshot; legacy items valid                                     |
+| AC2 | _snapshot-service unit (merged into the suite that ships in `snapshot-missing-cost` + `report-cost-snapshot` files)_ — `generateSnapshotData` stamps cost per item                                                  |
+| AC2 | _snapshot-service unit (merged into the suite that ships in `snapshot-missing-cost` + `report-cost-snapshot` files)_ — `submitSnapshot` re-stamps when caller drops the value                                       |
+| AC2 | _snapshot-service unit (merged into the suite that ships in `snapshot-missing-cost` + `report-cost-snapshot` files)_ — `updateSnapshotItems` re-stamps ONLY changed items                                           |
+| AC2 | _snapshot-service unit (merged into the suite that ships in `snapshot-missing-cost` + `report-cost-snapshot` files)_ — `calculateSummary` returns correct missingCost                                               |
+| AC6 | _snapshot-service unit (merged into the suite that ships in `snapshot-missing-cost` + `report-cost-snapshot` files)_ — invariant: changing live inventory.costPerUnit after stamp does NOT change item-frozen value |
+| AC7 | _snapshot-service unit (merged into the suite that ships in `snapshot-missing-cost` + `report-cost-snapshot` files)_ — `inventory.snapshot_submitted` audit log includes missingCost                                |
+| AC8 | `__tests__/lib/snapshot-missing-cost.test.ts` — empty array → 0                                                                                                                                                     |
+| AC8 | `__tests__/lib/snapshot-missing-cost.test.ts` — single negative discrepancy → abs × cost                                                                                                                            |
+| AC8 | `__tests__/lib/snapshot-missing-cost.test.ts` — multi-row mixed positive+negative → sum of negatives only                                                                                                           |
+| AC8 | `__tests__/lib/snapshot-missing-cost.test.ts` — ignores positive discrepancies                                                                                                                                      |
+| AC8 | `__tests__/lib/snapshot-missing-cost.test.ts` — ignores items with no costPerUnitAtSnapshot                                                                                                                         |
+| AC8 | `__tests__/lib/snapshot-missing-cost.test.ts` — ignores items with no staffAdjustedCount (no decision = no missing)                                                                                                 |
 
 ### Playwright E2E (`e2e/inventory-snapshots.spec.ts` — extend)
 

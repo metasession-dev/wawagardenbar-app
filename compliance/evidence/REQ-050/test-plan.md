@@ -24,7 +24,7 @@ Vitest, fully mocked per `__tests__/services/*.test.ts` convention. 50 cases pas
 - **`replayMovements`** — additions count positive (regardless of stored sign); deductions count negative (regardless of stored sign); adjustments take face value; mixed run yields expected total; empty history → 0.
 - **`computeDriftPlan`** — zero drift → `skip-no-drift`; negative replay → `manual-review-required` (unrecorded initial stock); trackByLocation drift → `apply` to receiving location; trackByLocation without default → falls back to `locations[0]`; non-trackByLocation drift → `apply` top-level; negative-location floor → `Math.max(0, …)`.
 
-### 3. Existing REQ-034 tests — `__tests__/services/expense-inventory-link.test.ts` + `…reversal.test.ts`
+### 3. Existing REQ-034 tests — `__tests__/services/expense-inventory-link.test.ts` + `__tests__/services/expense-inventory-link.reversal.test.ts`
 
 Updated to assert via `inventory.save()` instead of `InventoryModel.updateOne $inc`. The observable behaviour is the same; the mock-assertion mechanism changed. 33 cases pass.
 

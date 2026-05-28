@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
+import { recordWebhookEvent } from '@/lib/webhook-idempotency';
 import Order from '@/models/order-model';
 import TabModel from '@/models/tab-model';
 import { PaystackService } from '@/services/paystack-service';
@@ -47,6 +48,31 @@ export async function POST(request: NextRequest) {
 
     // Connect to database
     await connectDB();
+
+    // Idempotency guard (REQ-049 / #117 P0 #1) — runs AFTER signature
+    // verification and the non-`charge.success` filter, BEFORE any side
+    // effect (inventory deduction, reward issuance, tab close). A duplicate
+    // delivery returns 200 with no business-logic execution.
+    const eventId = String(
+      (data as { id?: unknown }).id ?? data.reference ?? ''
+    );
+    if (eventId) {
+      const dedup = await recordWebhookEvent({
+        provider: 'paystack',
+        eventId,
+        paymentReference: String(data.reference ?? ''),
+        eventType: String(event ?? ''),
+      });
+      if (dedup === 'duplicate') {
+        console.warn(
+          `[REQ-049] Paystack replay ignored: event=${eventId} ref=${data.reference}`
+        );
+        return NextResponse.json(
+          { message: 'Event already processed' },
+          { status: 200 }
+        );
+      }
+    }
 
     // Find order by payment reference
     const order = await Order.findOne({

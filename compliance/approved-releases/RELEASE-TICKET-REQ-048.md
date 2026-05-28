@@ -1,12 +1,14 @@
 # Release Ticket: REQ-048 — Rewards-ledger correctness bundle (#117 P0 #2/#3/#4)
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-05-28
 **Requirement ID:** REQ-048
 **Risk Level:** MEDIUM
 **GitHub Issue:** [#155](https://github.com/metasession-dev/wawagardenbar-app/issues/155)
 **PR:** [#156](https://github.com/metasession-dev/wawagardenbar-app/pull/156) — merged to develop `68ba72d` (2026-05-28). The develop → main release PR is currently [#152](https://github.com/metasession-dev/wawagardenbar-app/pull/152) (bundled with the v2026.05.27 non-tracked batch).
+**Release PR:** #152
 **DevAudit Release:** `https://devaudit.metasession.co/projects/wgb/` (release version `REQ-048`)
+**Sign-off (dual-actor):** UAT approved + Production approved on the DevAudit portal (`released`); post-deploy production smoke evidence captured. Closed out 2026-05-28.
 
 ---
 

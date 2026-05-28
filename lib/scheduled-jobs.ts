@@ -1,10 +1,11 @@
 /**
- * In-process scheduled jobs for the persistent Railway server (REQ-048 / #117 P0 #3).
+ * @requirement REQ-048 — In-process reward-expiry scheduler (#117 P0 #3)
  *
- * The app runs as a long-lived custom Node server (`server.ts`), not serverless,
- * so a simple in-process scheduler is the lightest mechanism — no external cron
- * service, no new dependency. This module is the registry future scheduled jobs
- * hook into (e.g. the Instagram campaign poller, #117 IG-5).
+ * In-process scheduled jobs for the persistent Railway server. The app runs as
+ * a long-lived custom Node server (`server.ts`), not serverless, so a simple
+ * in-process scheduler is the lightest mechanism — no external cron service,
+ * no new dependency. This module is the registry future scheduled jobs hook
+ * into (e.g. the Instagram campaign poller, #117 IG-5).
  *
  * Single-instance assumption: if multiple Railway replicas run, each runs these
  * jobs — so every job here MUST be idempotent and duplicate runs harmless.

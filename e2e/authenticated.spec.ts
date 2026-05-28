@@ -113,7 +113,11 @@ superAdminTest.describe('Section 11: Dashboard Overview', () => {
   superAdminTest('dashboard shows recent orders section', async ({ page }) => {
     await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');
-    await expect(page.locator('text=Recent Orders')).toBeVisible();
+    // Scope to <main> — the dashboard layout has duplicate desktop+mobile nav
+    // so a bare text= matches twice (strict-mode violation).
+    await expect(
+      page.locator('main').getByText('Recent Orders').first()
+    ).toBeVisible();
   });
 });
 
@@ -271,9 +275,12 @@ superAdminTest.describe('Section 15: Financial Management', () => {
     async ({ page }) => {
       await page.goto('/dashboard/finance/expenses');
       await page.waitForLoadState('networkidle');
-      const pendingBtn = page.locator(
-        'a[href="/dashboard/finance/expenses/pending"]'
-      );
+      // Scope to <main> — the sidebar nav also links to the same href, so a
+      // bare attribute selector matches twice (strict-mode violation).
+      const pendingBtn = page
+        .locator('main')
+        .locator('a[href="/dashboard/finance/expenses/pending"]')
+        .first();
       await expect(pendingBtn).toBeVisible();
     }
   );
@@ -335,9 +342,9 @@ superAdminTest.describe('Section 16: Reports & Analytics', () => {
 // ===========================================================================
 adminTest.describe('Section 17: Kitchen Display System', () => {
   adminTest('kitchen display loads with dark theme', async ({ page }) => {
-    await page.goto('/dashboard/kitchen');
+    await page.goto('/dashboard/kitchen-display');
     await page.waitForLoadState('networkidle');
-    expect(page.url()).toContain('/dashboard/kitchen');
+    expect(page.url()).toContain('/dashboard/kitchen-display');
     await expect(
       page.locator('h1', { hasText: 'Kitchen Display' })
     ).toBeVisible();
@@ -347,14 +354,14 @@ adminTest.describe('Section 17: Kitchen Display System', () => {
   });
 
   adminTest('kitchen display shows active order count', async ({ page }) => {
-    await page.goto('/dashboard/kitchen');
+    await page.goto('/dashboard/kitchen-display');
     await page.waitForLoadState('networkidle');
     const body = await page.textContent('body');
     expect(body).toMatch(/Active Order/i);
   });
 
   adminTest('kitchen display has back button to orders', async ({ page }) => {
-    await page.goto('/dashboard/kitchen');
+    await page.goto('/dashboard/kitchen-display');
     await page.waitForLoadState('networkidle');
     await expect(
       page.getByRole('link', { name: 'Back to Dashboard' })

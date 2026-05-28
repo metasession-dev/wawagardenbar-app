@@ -33,7 +33,19 @@ jobs:
       PROJECT_SLUG: wgb
 
     steps:
+      # Checkout the PR's head SHA (e.g. develop's HEAD for a develop→main
+      # release PR) instead of the default `refs/pull/<N>/merge` synthetic
+      # merge commit. derive-release-version.sh runs `git log -1` against the
+      # checked-out HEAD; the synthetic merge commit GitHub auto-creates for a
+      # PR carries neither the source-branch's [REQ-XXX] subject nor the PR
+      # title in its body, so derive falls through to the date fallback —
+      # which then collides with whatever housekeeping date-prefix release
+      # exists (or doesn't) in the portal. Pointing at head.sha gives derive
+      # the actual integration-side HEAD whose body carries [REQ-XXX] from the
+      # merge of feat/REQ-XXX into the integration branch.
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Resolve DevAudit base URL
         run: |

@@ -149,17 +149,6 @@ jobs:
               | head -1 || true)
             [ -n "$TITLE" ] && printf -- '--release-title %q ' "$TITLE"
             [ -n "$CT" ] && printf -- '--change-type %q ' "$CT"
-            # The function's exit status is the exit of its last command. The
-            # last `[ -n … ] && printf` returns 1 whenever the bracket-test is
-            # false (e.g. CT="" — the common case under `actions/checkout@v4`'s
-            # default `fetch-depth: 1`, where `git log --grep` sees only the
-            # HEAD merge commit whose subject never carries `[REQ-XXX]`). Under
-            # the workflow's `set -e` mode, `VAR=$(req_meta_args …)` then exits
-            # the whole shell silently — the symptom on develop after 0.1.21:
-            # doc uploads succeed, ticket loop never starts, workflow dies with
-            # bare `exit 1`. Force a clean return so the conditional printfs
-            # remain advisory.
-            return 0
           }
 
           # Upload release tickets (pending only)

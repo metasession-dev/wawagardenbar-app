@@ -1,4 +1,11 @@
-// Service layer for business logic
+/**
+ * Service layer for business logic.
+ *
+ * Barrel re-export for the project's services. Each service owns the
+ * domain-specific orchestration between routes/actions and the underlying
+ * Mongoose models (e.g. `OrderService.cancelOrder` composes inventory
+ * restore + points reversal + reward restore).
+ */
 export { CategoryService } from './category-service';
 export { OrderService } from './order-service';
 export { PaymentService } from './payment-service';

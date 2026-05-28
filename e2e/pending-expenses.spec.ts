@@ -248,8 +248,11 @@ adminTest.describe('REQ-026: Edit pending group', () => {
       }
       await page.locator('button[title="Edit"]').first().click();
       await expect(page.locator('[role="dialog"]')).toBeVisible();
+      // Playwright doesn't accept `[role="dialog"] text=…` (mixing CSS attr
+      // selector with the `text=` engine in one string). Split into a scoped
+      // locator + getByText.
       await expect(
-        page.locator('[role="dialog"] text=Edit Expense Group')
+        page.locator('[role="dialog"]').getByText('Edit Expense Group')
       ).toBeVisible();
     }
   );
@@ -463,7 +466,9 @@ adminTest.describe('REQ-026: Navigation', () => {
     async ({ page }) => {
       await page.goto('/dashboard/finance/expenses');
       await page.waitForLoadState('networkidle');
+      // Scope to <main> — sidebar nav also links to the same href.
       const pendingBtn = page
+        .locator('main')
         .locator('a[href="/dashboard/finance/expenses/pending"]')
         .first();
       await expect(pendingBtn).toBeVisible();

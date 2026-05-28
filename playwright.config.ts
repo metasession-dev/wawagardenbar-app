@@ -6,8 +6,24 @@ import path from 'path';
 config({ path: path.resolve(__dirname, '.env.local'), override: false });
 
 /**
- * Playwright configuration for Wawa Garden Bar E2E tests
- * @requirement REQ-007 - Comprehensive Requirements Document verification
+ * Playwright configuration for Wawa Garden Bar E2E tests.
+ *
+ * Suite selection is by PROJECT, each project scoping which specs run:
+ *
+ *   npx playwright test --project=smoke        # fast critical-path subset — CI per-push gate
+ *   npx playwright test --project=regression   # full suite — PR→main + nightly
+ *
+ * Suite membership is by location (low-churn, self-service):
+ *   - `smoke`     → e2e/smoke/**.spec.ts + requirements-verification.spec.ts
+ *   - `regression`→ every *.spec.ts (smoke + the authenticated feature specs)
+ *
+ * New critical-path tests go under e2e/smoke/. Feature/regression specs live in
+ * e2e/ (and its area subdirs). Run one spec/area directly with a file path or
+ * --grep "REQ-034". Authenticated specs apply their own session via
+ * base.extend({ storageState }) (see e2e/kitchen/helpers.ts); the projects only
+ * order `auth-setup` first.
+ *
+ * @requirement REQ-007 — Comprehensive Requirements Document verification
  */
 export default defineConfig({
   testDir: './e2e',
@@ -27,193 +43,26 @@ export default defineConfig({
     video: 'on-first-retry', // Also capture video on retry for evidence
   },
   projects: [
-    // Unauthenticated tests — no login required
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: /requirements-verification\.spec\.ts/,
-    },
-    // Auth setup — logs in as admin and super-admin, saves storageState
+    // Auth setup — logs in as csr/admin/super-admin, saves storageState to
+    // .auth/*.json. Runs first as a dependency of the suites below.
     {
       name: 'auth-setup',
       testMatch: /auth\.setup\.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
-    // Authenticated tests — reuse saved sessions
+    // Smoke — fast critical-path subset. CI per-push gate.
     {
-      name: 'authenticated',
+      name: 'smoke',
       use: { ...devices['Desktop Chrome'] },
-      testMatch: /authenticated\.spec\.ts/,
+      testMatch: [/e2e\/smoke\/.*\.spec\.ts$/, /requirements-verification\.spec\.ts$/],
       dependencies: ['auth-setup'],
     },
-    // CSR role UAT tests
+    // Regression — the full suite (smoke + authenticated feature specs).
+    // Runs on PR→main and nightly.
     {
-      name: 'csr-uat',
+      name: 'regression',
       use: { ...devices['Desktop Chrome'] },
-      testMatch: /csr-uat\.spec\.ts/,
-      dependencies: ['auth-setup'],
-    },
-    // Partial payment tests (REQ-012)
-    {
-      name: 'partial-payments',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: /partial-payments\.spec\.ts/,
-      dependencies: ['auth-setup'],
-    },
-    // Daily report payment accuracy (REQ-013)
-    {
-      name: 'daily-report-payments',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: /daily-report-payments\.spec\.ts/,
-      dependencies: ['auth-setup'],
-    },
-    // Reconciliation checkbox (REQ-014)
-    {
-      name: 'reconciliation',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: /reconciliation\.spec\.ts/,
-      dependencies: ['auth-setup'],
-    },
-    // Staff Pot (REQ-015)
-    {
-      name: 'staff-pot',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: /staff-pot\.spec\.ts/,
-      dependencies: ['auth-setup'],
-    },
-    // Inventory Snapshots (REQ-018)
-    {
-      name: 'inventory-snapshots',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: /inventory-snapshots\.spec\.ts/,
-      dependencies: ['auth-setup'],
-    },
-    // Restock Recommendations (REQ-019)
-    {
-      name: 'restock-recommendations',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: /restock-recommendations\.spec\.ts/,
-      dependencies: ['auth-setup'],
-    },
-    // Cost Snapshot integrity (REQ-022)
-    {
-      name: 'cost-snapshot',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: /cost-snapshot\.spec\.ts/,
-      dependencies: ['auth-setup'],
-    },
-    // Business Day Cutoff (REQ-025)
-    {
-      name: 'business-day-cutoff',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: /business-day-cutoff\.spec\.ts/,
-      dependencies: ['auth-setup'],
-    },
-    // Express order & tab flows — revenue reporting accuracy
-    {
-      name: 'express-order-report',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: /express-order-report\.spec\.ts/,
-      dependencies: ['auth-setup'],
-    },
-    // Dashboard revenue consistency
-    {
-      name: 'dashboard-revenue',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: /dashboard-revenue\.spec\.ts/,
-      dependencies: ['auth-setup'],
-    },
-    // User deletion and re-creation (REQ-027)
-    {
-      name: 'user-deletion-recreation',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: /user-deletion-recreation\.spec\.ts/,
-      dependencies: ['auth-setup'],
-    },
-    // Grouped expense category dropdown (REQ-028)
-    {
-      name: 'expense-category-groups',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: /expense-category-groups\.spec\.ts/,
-      dependencies: ['auth-setup'],
-    },
-    // Pending expense group workflow (REQ-026 — added retroactively in REQ-033 since
-    // the spec was authored but never registered; CI was silently skipping it).
-    {
-      name: 'pending-expenses',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: /pending-expenses\.spec\.ts/,
-      dependencies: ['auth-setup'],
-    },
-    // Create pending expense group from existing expenses (REQ-032)
-    {
-      name: 'create-pending-from-expenses',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: /create-pending-from-expenses\.spec\.ts/,
-      dependencies: ['auth-setup'],
-    },
-    // Units of Measurement registry (REQ-033)
-    {
-      name: 'units-of-measurement',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: /units-of-measurement\.spec\.ts/,
-      dependencies: ['auth-setup'],
-    },
-    // Kitchen recipes + production (REQ-034)
-    {
-      name: 'kitchen-recipe-and-production',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: /kitchen\/recipe-and-production\.spec\.ts/,
-      dependencies: ['auth-setup'],
-    },
-    // REQ-034 D11 — UAT-checklist backfill (Steps 1–7)
-    {
-      name: 'kitchen-permission-gating',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: /kitchen\/permission-gating\.spec\.ts/,
-      dependencies: ['auth-setup'],
-    },
-    {
-      name: 'kitchen-menu-kind-filter',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: /kitchen\/menu-kind-filter\.spec\.ts/,
-      dependencies: ['auth-setup'],
-    },
-    {
-      name: 'kitchen-inventory-tabs',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: /kitchen\/inventory-tabs\.spec\.ts/,
-      dependencies: ['auth-setup'],
-    },
-    {
-      name: 'kitchen-expense-link',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: /kitchen\/expense-link\.spec\.ts/,
-      dependencies: ['auth-setup'],
-    },
-    {
-      name: 'kitchen-recipe-validation',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: /kitchen\/recipe-validation\.spec\.ts/,
-      dependencies: ['auth-setup'],
-    },
-    {
-      name: 'kitchen-production-flow',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: /kitchen\/production-flow\.spec\.ts/,
-      dependencies: ['auth-setup'],
-    },
-    {
-      name: 'kitchen-daily-report-regression',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: /kitchen\/daily-report-regression\.spec\.ts/,
-      dependencies: ['auth-setup'],
-    },
-    // REQ-037 — Edit + delete kitchen ingredients (15 tests covering AC1–AC5)
-    {
-      name: 'kitchen-inventory-crud',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: /kitchen\/inventory-crud\.spec\.ts/,
+      testMatch: /\.spec\.ts$/,
       dependencies: ['auth-setup'],
     },
   ],

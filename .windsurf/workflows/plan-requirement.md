@@ -21,7 +21,7 @@ This workflow creates a tracked requirement before implementation begins. It est
 
 ### Step 1: Identify the GitHub Issue
 
-Every tracked change starts from a GitHub Issue. The issue provides the *what* and *why*; the RTM provides the compliance audit trail.
+Every tracked change starts from a GitHub Issue. The issue provides the _what_ and _why_; the RTM provides the compliance audit trail.
 
 - If the user references an issue number (e.g., `#123`): fetch it with `gh issue view 123`.
 - If the user describes work without an issue: ask **"Is there a GitHub Issue for this, or should we create one?"**
@@ -52,12 +52,12 @@ mkdir -p compliance/evidence/REQ-XXX
 
 ### Step 5: Update Requirements Document (If Applicable)
 
-If the requirement adds or modifies a feature documented in `docs/REQUIREMENTS.md`, update that document to reflect the intended change. This establishes the "what should it do" before "what did we build."
+If the requirement adds or modifies observable behaviour, update the Software Requirements Specification (`docs/SRS.md` — which supersedes the former `docs/REQUIREMENTS.md`) to reflect the intended change. This establishes the "what should it do" before "what did we build."
 
 ### Step 6: Commit the Plan
 
 ```bash
-git add compliance/RTM.md compliance/evidence/REQ-XXX docs/REQUIREMENTS.md
+git add compliance/RTM.md compliance/evidence/REQ-XXX docs/SRS.md
 git commit -m "compliance: [REQ-XXX] define requirement - [brief description]"
 ```
 

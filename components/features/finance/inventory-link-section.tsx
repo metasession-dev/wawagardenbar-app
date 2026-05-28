@@ -64,7 +64,6 @@ interface InventoryLinkSectionProps {
   // reused by two forms with different overall schemas; the only fields
   // it touches are `items.${index}.linkedInventoryId` and
   // `items.${index}.unit`, which both forms guarantee.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   form: UseFormReturn<any>;
   index: number;
   expenseType: string;

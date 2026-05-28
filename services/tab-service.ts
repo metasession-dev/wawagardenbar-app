@@ -5,10 +5,11 @@ import { Types } from 'mongoose';
 import { connectDB } from '@/lib/mongodb';
 import TabModel from '@/models/tab-model';
 import OrderModel from '@/models/order-model';
-import { ITab, IOrder } from '@/interfaces';
+import { ITab, IOrder, IRewardRule } from '@/interfaces';
 import SettingsService from './settings-service';
 import { deriveBusinessDate } from '@/lib/business-date';
 import { SystemSettingsService } from './system-settings-service';
+import { RewardsService } from './rewards-service';
 
 /**
  * Tab Service
@@ -231,7 +232,7 @@ export class TabService {
     tipAmount: number = 0
   ): Promise<{
     tab: ITab;
-    eligibleRewards: any[];
+    eligibleRewards: IRewardRule[];
   }> {
     await connectDB();
 
@@ -253,9 +254,10 @@ export class TabService {
     // Get updated tab
     const updatedTab = await TabModel.findById(tabId).lean();
 
-    // TODO: Get eligible rewards based on tab subtotal
-    // This will be implemented when rewards service is extended
-    const eligibleRewards: any[] = [];
+    // Eligible reward rules for this tab's subtotal (REQ-048 / #117 P0 #4).
+    const eligibleRewards = await RewardsService.getEligibleRules(
+      updatedTab!.subtotal
+    );
 
     return JSON.parse(
       JSON.stringify({

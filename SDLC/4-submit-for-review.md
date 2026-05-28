@@ -93,6 +93,8 @@ git diff origin/main..develop -- package.json | grep '^\+'
 
 ### Step 3: Create the PR
 
+> The `--base main --head develop` below is the develop-first default. The branches are project-configured in `sdlc-config.json` — `release_branch` (default `main`) and `integration_branch` (default `develop`); a trunk-only project sets both to `main` and opens the feature branch directly against `main`.
+
 **For tracked requirements:**
 
 ```bash
@@ -160,6 +162,7 @@ CI runs automatically on this PR. The following gates must pass before merge:
 
 ## Compliance Artifacts
 - [ ] RTM updated with risk level
+- [ ] SRS updated if observable behaviour changed (`docs/SRS.md`, or `docs/REQUIREMENTS.md` if not yet adopted) — or N/A
 - [ ] Test scope addressed (all items in test-scope.md completed)
 - [ ] Implementation plan present and matches implementation (MEDIUM/HIGH risk)
 - [ ] Release ticket created
@@ -201,6 +204,7 @@ CI runs automatically on this PR. The following gates must pass before merge:
 
 **Compliance**
 - [ ] RTM status: TESTED - PENDING SIGN-OFF
+- [ ] SRS updated if observable behaviour changed (or correctly N/A)
 - [ ] Release ticket accurate
 - [ ] Security evidence present and clean
 

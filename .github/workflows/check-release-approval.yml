@@ -33,7 +33,19 @@ jobs:
       PROJECT_SLUG: wgb
 
     steps:
+      # Checkout the PR's head SHA (e.g. develop's HEAD for a develop→main
+      # release PR) instead of the default `refs/pull/<N>/merge` synthetic
+      # merge commit. derive-release-version.sh runs `git log -1` against the
+      # checked-out HEAD; the synthetic merge commit GitHub auto-creates for a
+      # PR carries neither the source-branch's [REQ-XXX] subject nor the PR
+      # title in its body, so derive falls through to the date fallback —
+      # which then collides with whatever housekeeping date-prefix release
+      # exists (or doesn't) in the portal. Pointing at head.sha gives derive
+      # the actual integration-side HEAD whose body carries [REQ-XXX] from the
+      # merge of feat/REQ-XXX into the integration branch.
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Resolve DevAudit base URL
         run: |
@@ -70,8 +82,18 @@ jobs:
           esac
           # Bootstrap probe (#301): project may not exist in DevAudit yet —
           # the first compliance-evidence.yml run auto-creates it. A 404 here
-          # means we're on the introducing PR; pass with a notice. 401/403
+          # means we're on the introducing PR; pass with a warning. 401/403
           # means the API key is invalid → fail (not bootstrap).
+          #
+          # Defense in depth (#74): if /api/ci/projects/<slug> 404s we
+          # cross-check against /api/ci/releases/resolve — a known-good
+          # read endpoint scoped to the same project. If THAT returns 2xx
+          # the project clearly exists, and the projects-endpoint 404 is a
+          # portal-side bug. Failing closed beats silently passing the
+          # four-eyes gate. The original "GET /api/ci/projects/<slug>"
+          # endpoint didn't exist on the portal before metasession-dev/
+          # devaudit#NN, so this exact false-positive was the universal
+          # state of the gate across every consumer.
           PROJ_CODE=$(curl -s -o /dev/null -w "%{http_code}" -m 10 \
             -H "Authorization: Bearer ${DEVAUDIT_API_KEY}" \
             "${BASE%/}/api/ci/projects/${PROJECT_SLUG}" || echo "000")
@@ -80,9 +102,34 @@ jobs:
               echo "DevAudit project '${PROJECT_SLUG}' confirmed (HTTP ${PROJ_CODE})"
               ;;
             404)
-              echo "::notice::DevAudit project '${PROJECT_SLUG}' does not exist yet (HTTP 404) — bootstrap mode. Gate passes. The project will be auto-created by the first compliance-evidence.yml run; enforcement kicks in on the next PR after that."
-              echo "BOOTSTRAP_MODE=true" >> "$GITHUB_ENV"
-              exit 0
+              # Cross-check: does the project actually exist? versionPrefix=v
+              # matches every release version shape (REQ-XXX, vYYYY.MM.DD,
+              # vX.Y.Z) — we don't care about the body, only whether the
+              # endpoint authorises the project. Endpoint returns 200 even
+              # when no releases match the prefix (just with latest: null).
+              CROSS_CODE=$(curl -s -o /dev/null -w "%{http_code}" -m 10 \
+                -H "Authorization: Bearer ${DEVAUDIT_API_KEY}" \
+                "${BASE%/}/api/ci/releases/resolve?projectSlug=${PROJECT_SLUG}&versionPrefix=v" \
+                || echo "000")
+              case "$CROSS_CODE" in
+                2*)
+                  echo "::error::Portal /api/ci/projects/${PROJECT_SLUG} returned 404 but releases/resolve confirms the project exists (HTTP ${CROSS_CODE}). This is a portal-side issue (missing or broken endpoint), not a bootstrap. Failing closed to avoid silently bypassing the four-eyes gate. Triage at metasession-dev/devaudit (and/or DevAudit-Installer#75)."
+                  exit 1
+                  ;;
+                404)
+                  echo "::warning::DevAudit project '${PROJECT_SLUG}' does not exist yet (HTTP 404 from both /api/ci/projects and /api/ci/releases/resolve) — bootstrap mode. Gate passes. The project will be auto-created by the first compliance-evidence.yml run; enforcement kicks in on the next PR after that."
+                  echo "BOOTSTRAP_MODE=true" >> "$GITHUB_ENV"
+                  exit 0
+                  ;;
+                401|403)
+                  echo "::error::DevAudit returned HTTP ${CROSS_CODE} for releases/resolve on project '${PROJECT_SLUG}' (cross-check after the projects endpoint 404'd) — API key is invalid or lacks access. Verify DEVAUDIT_API_KEY belongs to the right project."
+                  exit 1
+                  ;;
+                *)
+                  echo "::error::Cross-check endpoint /api/ci/releases/resolve returned unexpected HTTP ${CROSS_CODE} after the projects endpoint 404'd. Investigate before retrying."
+                  exit 1
+                  ;;
+              esac
               ;;
             401|403)
               echo "::error::DevAudit returned HTTP ${PROJ_CODE} for project '${PROJECT_SLUG}' — API key is invalid or lacks access. Verify DEVAUDIT_API_KEY belongs to the right project."
@@ -103,8 +150,34 @@ jobs:
         id: release
         if: env.BOOTSTRAP_MODE != 'true'
         run: |
-          DATE_PREFIX="v$(date +%Y.%m.%d)"
-          RESOLVE_URL="${BASE}/api/ci/releases/resolve?projectSlug=${PROJECT_SLUG}&versionPrefix=${DATE_PREFIX}"
+          # Pick the release prefix the portal should look up. Priority:
+          #
+          #   1. `[REQ-XXX]` in the PR title — for a tracked-release PR
+          #      (e.g. "release: [REQ-050] expense-restock stock-leak …"),
+          #      look up the `REQ-XXX` release record directly. This is the
+          #      release that compliance-evidence.yml populates per-REQ; it
+          #      is the same identifier `derive-release-version.sh` returns
+          #      for develop pushes carrying the `[REQ-XXX]` tag.
+          #   2. Date prefix `v$(date +%Y.%m.%d)` — fallback for untracked /
+          #      housekeeping release PRs without a `[REQ-XXX]` title.
+          #
+          # The previous behaviour hardcoded the date prefix, which collided
+          # with the per-REQ release shape: the date-prefix release was
+          # empty (its requirement matrix never got populated, because
+          # uploads went to `REQ-XXX`), so the portal correctly refused to
+          # UAT-approve it, and the gate stayed red even after the actual
+          # tracked release (`REQ-XXX`) was approved. Reading from the PR
+          # title aligns the gate with the release that operators actually
+          # work in. Upstream issue to follow on DevAudit-Installer.
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          if echo "$PR_TITLE" | grep -qE '\[REQ-[0-9]+\]'; then
+            LOOKUP_PREFIX=$(echo "$PR_TITLE" | grep -oE '\[REQ-[0-9]+\]' | head -1 | grep -oE 'REQ-[0-9]+')
+            echo "Resolved release prefix from PR title: ${LOOKUP_PREFIX}"
+          else
+            LOOKUP_PREFIX="v$(date +%Y.%m.%d)"
+            echo "No [REQ-XXX] in PR title; falling back to date prefix: ${LOOKUP_PREFIX}"
+          fi
+          RESOLVE_URL="${BASE}/api/ci/releases/resolve?projectSlug=${PROJECT_SLUG}&versionPrefix=${LOOKUP_PREFIX}"
           # Retry: register-release in ci.yml may still be racing with us.
           MAX_ATTEMPTS=6
           WAIT_SECONDS=10
@@ -116,13 +189,13 @@ jobs:
               break
             fi
             if [ "$ATTEMPT" -lt "$MAX_ATTEMPTS" ]; then
-              echo "Attempt ${ATTEMPT}/${MAX_ATTEMPTS}: no release for ${DATE_PREFIX} yet — waiting ${WAIT_SECONDS}s..."
+              echo "Attempt ${ATTEMPT}/${MAX_ATTEMPTS}: no release for ${LOOKUP_PREFIX} yet — waiting ${WAIT_SECONDS}s..."
               sleep $WAIT_SECONDS
             fi
           done
           VERSION=$(echo "$RESP" | jq -r '.latest.version // empty')
           if [ -z "$VERSION" ]; then
-            echo "::error::No release found for ${DATE_PREFIX} after ${MAX_ATTEMPTS} attempts. Push to develop first to create the release."
+            echo "::error::No release found for ${LOOKUP_PREFIX} after ${MAX_ATTEMPTS} attempts. Push to develop first to create the release."
             exit 1
           fi
           RELEASE_ID=$(echo "$RESP" | jq -r '.latest.id')

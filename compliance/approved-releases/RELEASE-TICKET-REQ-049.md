@@ -1,13 +1,14 @@
 # Release Ticket: REQ-049 — Webhook idempotency guard (Paystack + Monnify)
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-05-28
 **Requirement ID:** REQ-049
 **Risk Level:** HIGH
 **GitHub Issue:** [#166](https://github.com/metasession-dev/wawagardenbar-app/issues/166)
 **Integration PR:** [#167](https://github.com/metasession-dev/wawagardenbar-app/pull/167) — merged to develop `2a1dac8` (2026-05-28).
-**Release PR:** Will be linked when the develop → main PR is created.
+**Release PR:** #169
 **DevAudit Release:** `https://devaudit.metasession.co/projects/wgb/` (release version `REQ-049`)
+**Sign-off (dual-actor):** UAT approved + Production approved on the DevAudit portal (`released`); post-deploy production smoke evidence captured. Closed out 2026-05-28.
 
 ---
 

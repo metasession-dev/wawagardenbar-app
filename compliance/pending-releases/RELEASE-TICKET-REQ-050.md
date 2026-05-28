@@ -42,6 +42,7 @@ Ships with `scripts/reconcile-track-by-location-stock.ts` to systematically reco
 - Semgrep (`--severity ERROR`) → 0 findings on REQ-050 code.
 - E2E: N/A by scope (service-layer fix; UI reflects state).
 - CI Pipeline ran on develop-push merging `4f0cbeb` — `derive-release-version.sh` returned `REQ-050` ✓; gate evidence uploaded at `environment=uat` under `--release REQ-050`.
+- Compliance Evidence Upload initially failed silently on the post-`4f0cbeb` develop pushes (the v0.1.21 sync introduced a `set -e` + bash-function-last-command bug in `req_meta_args`). Fixed via PR #182 (`return 0` guard in the helper); workflow now successfully uploads the REQ-050 release ticket + 7 evidence files to the `REQ-050` release record (verified end-to-end on `workflow_dispatch` run `26583892811`, 12 uploads in 9s). Upstream issue [DevAudit-Installer#77](https://github.com/metasession-dev/DevAudit-Installer/issues/77) tracks the permanent fix in the next sync.
 
 ## Operational repair (separate from this code release)
 

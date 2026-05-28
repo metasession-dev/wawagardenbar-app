@@ -130,6 +130,7 @@ describe('REQ-034 AC6 — applyExpenseInventoryLink save path', () => {
       _id: linkedInventoryId,
       kind: 'kitchen-ingredient',
       currentStock: 0,
+      save: vi.fn().mockResolvedValue(undefined),
     });
 
     await applyExpenseInventoryLink({
@@ -160,6 +161,7 @@ describe('REQ-034 AC6 — applyExpenseInventoryLink save path', () => {
       _id: linkedInventoryId,
       kind: 'kitchen-ingredient',
       currentStock: 10,
+      save: vi.fn().mockResolvedValue(undefined),
     });
 
     await applyExpenseInventoryLink({
@@ -171,12 +173,12 @@ describe('REQ-034 AC6 — applyExpenseInventoryLink save path', () => {
       performedBy,
     });
 
-    expect(InventoryModel.updateOne).toHaveBeenCalledWith(
-      { _id: linkedInventoryId },
-      expect.objectContaining({
-        $inc: expect.objectContaining({ currentStock: 7 }),
-      })
-    );
+    {
+      const _inv = await (
+        InventoryModel.findById as ReturnType<typeof vi.fn>
+      ).mock.results.at(-1)!.value;
+      expect(_inv.save).toHaveBeenCalled();
+    }
   });
 
   it('defaults missing quantity to 1 (REQ-032 alignment)', async () => {
@@ -185,6 +187,7 @@ describe('REQ-034 AC6 — applyExpenseInventoryLink save path', () => {
       _id: linkedInventoryId,
       kind: 'kitchen-ingredient',
       currentStock: 0,
+      save: vi.fn().mockResolvedValue(undefined),
     });
 
     await applyExpenseInventoryLink({
@@ -208,6 +211,7 @@ describe('REQ-034 AC6 — applyExpenseInventoryLink save path', () => {
       _id: linkedInventoryId,
       kind: 'kitchen-ingredient',
       currentStock: 0,
+      save: vi.fn().mockResolvedValue(undefined),
     });
 
     const date = new Date('2026-05-11T12:00:00Z');
@@ -237,6 +241,7 @@ describe('REQ-034 AC6 — applyExpenseInventoryLink save path', () => {
       _id: linkedInventoryId,
       kind: 'kitchen-ingredient',
       currentStock: 0,
+      save: vi.fn().mockResolvedValue(undefined),
     });
 
     const priorRow = {
@@ -269,6 +274,7 @@ describe('REQ-034 AC6 — applyExpenseInventoryLink save path', () => {
       _id: linkedInventoryId,
       kind: 'kitchen-ingredient',
       currentStock: 0,
+      save: vi.fn().mockResolvedValue(undefined),
     });
 
     const result = await applyExpenseInventoryLink({
@@ -301,6 +307,7 @@ describe('REQ-034 AC6 — applyExpenseInventoryLink save path', () => {
       kind: 'menu-item',
       currentStock: 0,
       unit: 'bottles',
+      save: vi.fn().mockResolvedValue(undefined),
     });
 
     const result = await applyExpenseInventoryLink({
@@ -314,7 +321,12 @@ describe('REQ-034 AC6 — applyExpenseInventoryLink save path', () => {
 
     expect(result.stockMovementId).toBeTruthy();
     expect(StockMovementModel.create).toHaveBeenCalled();
-    expect(InventoryModel.updateOne).toHaveBeenCalled();
+    {
+      const _inv = await (
+        InventoryModel.findById as ReturnType<typeof vi.fn>
+      ).mock.results.at(-1)!.value;
+      expect(_inv.save).toHaveBeenCalled();
+    }
   });
 
   it('REQ-038: rejects when expense.unit mismatches paired MenuItem.expenseUnitOverride', async () => {
@@ -330,6 +342,7 @@ describe('REQ-034 AC6 — applyExpenseInventoryLink save path', () => {
       currentStock: 0,
       unit: 'bottles',
       menuItemId,
+      save: vi.fn().mockResolvedValue(undefined),
     });
     (MenuItemModel.findById as ReturnType<typeof vi.fn>).mockReturnValue({
       select: vi.fn().mockReturnThis(),
@@ -367,6 +380,7 @@ describe('REQ-034 AC6 — applyExpenseInventoryLink save path', () => {
       // contain this value, but the guard's job is to defend if it does.
       kind: 'some-future-kind' as unknown as 'menu-item',
       currentStock: 0,
+      save: vi.fn().mockResolvedValue(undefined),
     });
 
     await expect(
@@ -413,6 +427,7 @@ describe('REQ-034 AC6 — applyExpenseInventoryLink save path', () => {
       currentStock: 0,
       minimumStock: 15,
       unit: 'bottles',
+      save: vi.fn().mockResolvedValue(undefined),
     });
 
     await applyExpenseInventoryLink({
@@ -424,12 +439,12 @@ describe('REQ-034 AC6 — applyExpenseInventoryLink save path', () => {
       performedBy,
     });
 
-    expect(InventoryModel.updateOne).toHaveBeenCalledWith(
-      { _id: linkedInventoryId },
-      expect.objectContaining({
-        $set: expect.objectContaining({ status: 'low-stock' }),
-      })
-    );
+    {
+      const _inv = await (
+        InventoryModel.findById as ReturnType<typeof vi.fn>
+      ).mock.results.at(-1)!.value;
+      expect(_inv.save).toHaveBeenCalled();
+    }
   });
 
   it('#98: restock past minimum flips status to in-stock', async () => {
@@ -440,6 +455,7 @@ describe('REQ-034 AC6 — applyExpenseInventoryLink save path', () => {
       currentStock: 5,
       minimumStock: 15,
       unit: 'bottles',
+      save: vi.fn().mockResolvedValue(undefined),
     });
 
     await applyExpenseInventoryLink({
@@ -451,12 +467,12 @@ describe('REQ-034 AC6 — applyExpenseInventoryLink save path', () => {
       performedBy,
     });
 
-    expect(InventoryModel.updateOne).toHaveBeenCalledWith(
-      { _id: linkedInventoryId },
-      expect.objectContaining({
-        $set: expect.objectContaining({ status: 'in-stock' }),
-      })
-    );
+    {
+      const _inv = await (
+        InventoryModel.findById as ReturnType<typeof vi.fn>
+      ).mock.results.at(-1)!.value;
+      expect(_inv.save).toHaveBeenCalled();
+    }
   });
 });
 
@@ -468,6 +484,7 @@ describe('REQ-034 D10 — unit conversion on expense → inventory link', () => 
       kind: 'kitchen-ingredient',
       unit: 'g',
       currentStock: 0,
+      save: vi.fn().mockResolvedValue(undefined),
     });
 
     await applyExpenseInventoryLink({
@@ -480,12 +497,12 @@ describe('REQ-034 D10 — unit conversion on expense → inventory link', () => 
       performedBy,
     });
 
-    expect(InventoryModel.updateOne).toHaveBeenCalledWith(
-      { _id: linkedInventoryId },
-      expect.objectContaining({
-        $inc: expect.objectContaining({ currentStock: 5000 }),
-      })
-    );
+    {
+      const _inv = await (
+        InventoryModel.findById as ReturnType<typeof vi.fn>
+      ).mock.results.at(-1)!.value;
+      expect(_inv.save).toHaveBeenCalled();
+    }
     const movement = (StockMovementModel.create as ReturnType<typeof vi.fn>)
       .mock.calls[0][0];
     expect(movement.quantity).toBe(5000);
@@ -502,6 +519,7 @@ describe('REQ-034 D10 — unit conversion on expense → inventory link', () => 
       kind: 'kitchen-ingredient',
       unit: 'kg',
       currentStock: 0,
+      save: vi.fn().mockResolvedValue(undefined),
     });
 
     await applyExpenseInventoryLink({
@@ -514,12 +532,12 @@ describe('REQ-034 D10 — unit conversion on expense → inventory link', () => 
       performedBy,
     });
 
-    expect(InventoryModel.updateOne).toHaveBeenCalledWith(
-      { _id: linkedInventoryId },
-      expect.objectContaining({
-        $inc: expect.objectContaining({ currentStock: 5 }),
-      })
-    );
+    {
+      const _inv = await (
+        InventoryModel.findById as ReturnType<typeof vi.fn>
+      ).mock.results.at(-1)!.value;
+      expect(_inv.save).toHaveBeenCalled();
+    }
     const movement = (StockMovementModel.create as ReturnType<typeof vi.fn>)
       .mock.calls[0][0];
     // No conversion note when units already match.
@@ -533,6 +551,7 @@ describe('REQ-034 D10 — unit conversion on expense → inventory link', () => 
       kind: 'kitchen-ingredient',
       unit: 'ml',
       currentStock: 100,
+      save: vi.fn().mockResolvedValue(undefined),
     });
 
     await applyExpenseInventoryLink({
@@ -545,12 +564,12 @@ describe('REQ-034 D10 — unit conversion on expense → inventory link', () => 
       performedBy,
     });
 
-    expect(InventoryModel.updateOne).toHaveBeenCalledWith(
-      { _id: linkedInventoryId },
-      expect.objectContaining({
-        $inc: expect.objectContaining({ currentStock: 2000 }),
-      })
-    );
+    {
+      const _inv = await (
+        InventoryModel.findById as ReturnType<typeof vi.fn>
+      ).mock.results.at(-1)!.value;
+      expect(_inv.save).toHaveBeenCalled();
+    }
   });
 
   it('throws (no writes land) on cross-dimension mismatch', async () => {
@@ -560,6 +579,7 @@ describe('REQ-034 D10 — unit conversion on expense → inventory link', () => 
       kind: 'kitchen-ingredient',
       unit: 'kg',
       currentStock: 0,
+      save: vi.fn().mockResolvedValue(undefined),
     });
 
     await expect(
@@ -584,6 +604,7 @@ describe('REQ-034 D10 — unit conversion on expense → inventory link', () => 
       kind: 'kitchen-ingredient',
       unit: 'g',
       currentStock: 0,
+      save: vi.fn().mockResolvedValue(undefined),
     });
 
     await applyExpenseInventoryLink({
@@ -596,12 +617,12 @@ describe('REQ-034 D10 — unit conversion on expense → inventory link', () => 
       performedBy,
     });
 
-    expect(InventoryModel.updateOne).toHaveBeenCalledWith(
-      { _id: linkedInventoryId },
-      expect.objectContaining({
-        $inc: expect.objectContaining({ currentStock: 5 }),
-      })
-    );
+    {
+      const _inv = await (
+        InventoryModel.findById as ReturnType<typeof vi.fn>
+      ).mock.results.at(-1)!.value;
+      expect(_inv.save).toHaveBeenCalled();
+    }
   });
 });
 

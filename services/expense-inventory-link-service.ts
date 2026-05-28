@@ -21,13 +21,64 @@ import { ExpenseModel } from '@/models';
 import {
   buildStockMovementFromExpense,
   buildCostHistoryRowFromExpense,
-  computeInventoryStatus,
   resolveExpenseQuantity,
   validateReversalDoesNotNegate,
   convertExpenseQuantityToInventoryUnit,
   validateExpenseUnitAgainstOverride,
 } from '@/lib/expense-inventory-link';
 import { SystemSettingsService } from '@/services/system-settings-service';
+
+/**
+ * @requirement REQ-050 — Expense-restock stock-leak fix for trackByLocation
+ *
+ * Apply a stock delta from an expense-link operation (positive = restock,
+ * negative = reversal). For `trackByLocation` items, mutate the receiving
+ * location's `currentStock` (chosen via `defaultReceivingLocation` if set,
+ * else `locations[0]`) so the inventory model's pre-save hook (which
+ * recomputes `currentStock = sum(locations[].currentStock)`) reflects the
+ * change. Without this routing, direct top-level `currentStock` assignments
+ * to a location-tracked row are silently overwritten by the hook — exactly
+ * the bug REQ-044 fixed for the order path and REQ-050 fixes here.
+ *
+ * Throws on negative-result (AC7-style block): an expense reversal cannot
+ * drive the receiving location's stock below 0. The caller's surrounding
+ * try/catch — including `runReversalPass` for the apply path — handles
+ * the throw and surfaces the audit-trail-incomplete error to the operator.
+ */
+function applyExpenseStockDelta(
+  inventory: InstanceType<typeof InventoryModel>,
+  delta: number,
+  performedById: Types.ObjectId,
+  performedByName: string | undefined,
+  when: Date
+): void {
+  if (inventory.trackByLocation && inventory.locations.length > 0) {
+    const receivingId =
+      inventory.defaultReceivingLocation ?? inventory.locations[0].location;
+    const loc =
+      inventory.locations.find((l) => l.location === receivingId) ??
+      inventory.locations[0];
+    const next = loc.currentStock + delta;
+    if (next < 0) {
+      throw new Error(
+        `Receiving location "${loc.location}" would go negative ` +
+          `(${loc.currentStock} + ${delta} = ${next})`
+      );
+    }
+    loc.currentStock = next;
+    loc.lastUpdated = when;
+    loc.updatedBy = performedById;
+    loc.updatedByName = performedByName;
+  } else {
+    const next = inventory.currentStock + delta;
+    if (next < 0) {
+      throw new Error(
+        `currentStock would go negative (${inventory.currentStock} + ${delta} = ${next})`
+      );
+    }
+    inventory.currentStock = next;
+  }
+}
 
 export interface ApplyExpenseLinkInput {
   expenseId: Types.ObjectId;
@@ -145,32 +196,27 @@ export async function applyExpenseInventoryLink(
     const movement = await StockMovementModel.create(movementPayload);
     stockMovementId = movement._id;
 
-    // #98 — Mongoose pre('save') hook is bypassed by updateOne/$inc, so
-    // recompute status manually from the known pre-write currentStock +
-    // quantity vs minimumStock. Single atomic write; no extra read.
-    const newStatus = computeInventoryStatus(
-      inventory.currentStock + quantity,
-      inventory.minimumStock
+    // REQ-050 — switched from `updateOne $inc` to doc-mutation + save so the
+    // pre-save hook can recompute `currentStock = sum(locations)` for
+    // `trackByLocation` items. The previous $inc bypassed the hook and left
+    // top-level `currentStock` out of sync with `locations[*]`, which the
+    // next unrelated save() then silently clobbered. See #175 + the
+    // implementation plan for the full mechanism. Status is set by the
+    // pre-save hook based on the new currentStock vs minimumStock.
+    const performedById = new Types.ObjectId(input.performedBy);
+    applyExpenseStockDelta(
+      inventory,
+      quantity,
+      performedById,
+      input.performedByName,
+      input.date
     );
-    const incResult = await InventoryModel.updateOne(
-      { _id: input.linkedInventoryId },
-      {
-        $inc: {
-          currentStock: quantity,
-          totalRestocked: quantity,
-        },
-        $set: { lastRestocked: input.date, status: newStatus },
-      }
-    );
-    if (incResult.modifiedCount !== 1) {
-      throw new Error(
-        `Inventory ${input.linkedInventoryId.toString()} not updated (race or deleted mid-flight)`
-      );
-    }
+    inventory.totalRestocked += quantity;
+    inventory.lastRestocked = input.date;
+    await inventory.save();
     stockIncremented = true;
 
     // Close the previously-open cost history row, if any.
-    const performedById = new Types.ObjectId(input.performedBy);
     const open = await InventoryItemCostHistory.findOne({
       inventoryItemId: input.linkedInventoryId,
       effectiveTo: { $exists: false },
@@ -275,12 +321,28 @@ export async function reverseExpenseInventoryLink(
   });
   const quantity = conversion.quantity;
 
+  // REQ-050 — for trackByLocation items, the AC7 gate checks the
+  // RECEIVING location's stock (the one a reversal would actually deduct
+  // from), not the top-level `sum(locations)`. Otherwise a sufficient
+  // sum-across-locations could pass while the receiving location alone
+  // goes negative — and the helper below would throw AFTER the
+  // compensating StockMovement is already written. Non-tracked items keep
+  // the original top-level check.
+  const receivingStockForCheck =
+    inventory.trackByLocation && inventory.locations.length > 0
+      ? (inventory.locations.find(
+          (l) =>
+            l.location ===
+            (inventory.defaultReceivingLocation ??
+              inventory.locations[0].location)
+        )?.currentStock ?? inventory.locations[0].currentStock)
+      : inventory.currentStock;
   validateReversalDoesNotNegate({
     inventoryName:
       (
         inventory as { _id: Types.ObjectId; menuItemId?: Types.ObjectId }
       ).menuItemId?.toString() ?? inventory._id.toString(),
-    currentStock: inventory.currentStock,
+    currentStock: receivingStockForCheck,
     reversalQuantity: quantity,
   });
 
@@ -299,30 +361,20 @@ export async function reverseExpenseInventoryLink(
     notes: `Expense link reversal (${input.expenseId.toString()})`,
   });
 
-  // #98 — same status-recompute requirement as the apply path. Reversal
-  // can leave stock below min or at 0; status must reflect the new level.
-  const reversedStatus = computeInventoryStatus(
-    inventory.currentStock - quantity,
-    inventory.minimumStock
+  // REQ-050 — switched from `updateOne $inc` to doc-mutation + save (same
+  // reason as the apply path; see #175). The helper's negative-result guard
+  // replaces the previous `$gte` race guard for the receiving location.
+  // Concurrent-write race safety is now via Mongoose's `__v` versioning —
+  // a concurrent save loses with VersionError, surfaced as a thrown error.
+  applyExpenseStockDelta(
+    inventory,
+    -quantity,
+    performedById,
+    input.performedByName,
+    new Date()
   );
-  const incResult = await InventoryModel.updateOne(
-    {
-      _id: input.linkedInventoryId,
-      currentStock: { $gte: quantity },
-    },
-    {
-      $inc: { currentStock: -quantity, totalRestocked: -quantity },
-      $set: { status: reversedStatus },
-    }
-  );
-  if (incResult.modifiedCount !== 1) {
-    // Race — inventory dropped below required threshold between the
-    // pre-check and the $inc. Surface the AC7 error to the caller.
-    throw new Error(
-      `Reversal race: inventory ${input.linkedInventoryId.toString()} ` +
-        `currentStock dropped below ${quantity} between validation and write`
-    );
-  }
+  inventory.totalRestocked -= quantity;
+  await inventory.save();
 
   // Close any still-open cost-history row tied to this inventory. The
   // weighted-average reader naturally excludes closed rows from "current"
@@ -393,17 +445,27 @@ async function runReversalPass(input: ReversalPassInput): Promise<void> {
   }
 
   // 3. Undo the inventory bump.
+  // REQ-050 — re-load the doc and mutate + save (mirroring the apply path's
+  // pattern) so the pre-save hook keeps locations + top-level currentStock
+  // in sync for trackByLocation items. Best-effort: any failure is logged,
+  // not re-thrown (consistent with the surrounding cleanup steps).
   if (input.quantityToUndo > 0) {
     try {
-      await InventoryModel.updateOne(
-        { _id: input.inventoryId },
-        {
-          $inc: {
-            currentStock: -input.quantityToUndo,
-            totalRestocked: -input.quantityToUndo,
-          },
-        }
-      );
+      const inv = await InventoryModel.findById(input.inventoryId);
+      if (inv) {
+        applyExpenseStockDelta(
+          inv,
+          -input.quantityToUndo,
+          new Types.ObjectId(input.performedBy),
+          input.performedByName,
+          input.now
+        );
+        inv.totalRestocked = Math.max(
+          0,
+          inv.totalRestocked - input.quantityToUndo
+        );
+        await inv.save();
+      }
     } catch (err) {
       console.error(
         '[expense-inventory-link] reversal: stock decrement failed',

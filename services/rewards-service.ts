@@ -24,9 +24,7 @@ export class RewardsService {
   /**
    * Get all active reward rules that match the spend threshold
    */
-  static async getEligibleRules(
-    spendAmount: number
-  ): Promise<IRewardRule[]> {
+  static async getEligibleRules(spendAmount: number): Promise<IRewardRule[]> {
     await connectDB();
 
     const now = new Date();
@@ -41,10 +39,7 @@ export class RewardsService {
           ],
         },
         {
-          $or: [
-            { endDate: { $exists: false } },
-            { endDate: { $gte: now } },
-          ],
+          $or: [{ endDate: { $exists: false } }, { endDate: { $gte: now } }],
         },
       ],
     })
@@ -64,14 +59,14 @@ export class RewardsService {
     referenceId: string
   ): Promise<void> {
     await connectDB();
-    
+
     // Dynamically import PointsService to avoid circular dependencies if any
     const { PointsService } = await import('./points-service');
-    
+
     // Use a "system" ID or generic ID for the order/rule reference since this is social
     // For now we pass undefined for orderId and a new ObjectId for rule/reference
-    const refObjectId = new Types.ObjectId(); 
-    
+    const refObjectId = new Types.ObjectId();
+
     await PointsService.awardPoints(
       userId,
       points,
@@ -131,9 +126,7 @@ export class RewardsService {
   /**
    * Select a random rule based on probability
    */
-  private static selectRandomRule(
-    rules: IRewardRule[]
-  ): IRewardRule | null {
+  private static selectRandomRule(rules: IRewardRule[]): IRewardRule | null {
     // Generate random number between 0 and 1
     const random = Math.random();
 
@@ -213,7 +206,7 @@ export class RewardsService {
     // Add loyalty points if applicable
     if (reward.rewardType === 'loyalty-points') {
       const PointsService = (await import('./points-service')).PointsService;
-      
+
       // Use PointsService to properly track points
       await PointsService.awardPoints(
         userId,
@@ -251,7 +244,9 @@ export class RewardsService {
    * Get available reward rules for customer display
    * Filters by user eligibility based on max redemptions
    */
-  static async getAvailableRulesForUser(userId: string): Promise<IRewardRule[]> {
+  static async getAvailableRulesForUser(
+    userId: string
+  ): Promise<IRewardRule[]> {
     await connectDB();
 
     const now = new Date();
@@ -265,10 +260,7 @@ export class RewardsService {
           ],
         },
         {
-          $or: [
-            { endDate: { $exists: false } },
-            { endDate: { $gte: now } },
-          ],
+          $or: [{ endDate: { $exists: false } }, { endDate: { $gte: now } }],
         },
       ],
     })
@@ -336,7 +328,10 @@ export class RewardsService {
     }
 
     if (reward.status !== 'active') {
-      return { valid: false, message: 'This reward has already been used or expired' };
+      return {
+        valid: false,
+        message: 'This reward has already been used or expired',
+      };
     }
 
     const now = new Date();
@@ -387,10 +382,7 @@ export class RewardsService {
   /**
    * Calculate discount amount based on reward
    */
-  static calculateDiscountAmount(
-    reward: IReward,
-    subtotal: number
-  ): number {
+  static calculateDiscountAmount(reward: IReward, subtotal: number): number {
     switch (reward.rewardType) {
       case 'discount-percentage':
         return Math.round(subtotal * (reward.rewardValue / 100));
@@ -487,6 +479,29 @@ export class RewardsService {
   }
 
   /**
+   * Restore rewards that were redeemed in a now-cancelled order (REQ-048 /
+   * #117 P0 #2). Flips `redeemed` rewards for the order back to `active` and
+   * clears the redemption stamps. Idempotent — only matches rewards still
+   * marked redeemed for this order. Returns how many were restored.
+   */
+  static async restoreRedeemedRewards(
+    orderId: Types.ObjectId | string
+  ): Promise<number> {
+    await connectDB();
+
+    const orderIdObj = new Types.ObjectId(orderId as string);
+    const result = await Reward.updateMany(
+      { redeemedInOrderId: orderIdObj, status: 'redeemed' },
+      {
+        $set: { status: 'active' },
+        $unset: { redeemedAt: '', redeemedInOrderId: '' },
+      }
+    );
+
+    return result.modifiedCount;
+  }
+
+  /**
    * Admin: Create reward rule
    */
   static async createRewardRule(
@@ -504,9 +519,7 @@ export class RewardsService {
   static async getAllRewardRules(): Promise<IRewardRule[]> {
     await connectDB();
 
-    const rules = await RewardRule.find()
-      .sort({ spendThreshold: 1 })
-      .lean();
+    const rules = await RewardRule.find().sort({ spendThreshold: 1 }).lean();
 
     return rules as IRewardRule[];
   }
@@ -616,14 +629,14 @@ export class RewardsService {
 
     // Generate unique code
     const code = this.generateRewardCode();
-    
+
     // Calculate expiry date
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + validityDays);
 
     // Create a temporary order ID for manual rewards (using a special marker)
     const manualOrderId = new Types.ObjectId();
-    
+
     // Create a temporary rule ID for manual rewards
     const manualRuleId = new Types.ObjectId();
 
@@ -650,7 +663,7 @@ export class RewardsService {
       // Add loyalty points if applicable
       if (rewardType === 'loyalty-points') {
         const PointsService = (await import('./points-service')).PointsService;
-        
+
         await PointsService.awardPoints(
           userId,
           rewardValue,

@@ -446,6 +446,31 @@ export class OrderService {
       }
     }
 
+    // Reverse loyalty points spent/earned on the order (REQ-048 / #117 P0 #2).
+    // Logged, not swallowed silently: a failure here is lost customer value.
+    if (order.userId) {
+      try {
+        const { PointsService } = await import('./points-service');
+        await PointsService.reverseOrderTransactions(order.userId, orderId);
+      } catch (error) {
+        console.error(
+          `[REQ-048] Failed to reverse points for cancelled order ${orderId}:`,
+          error
+        );
+      }
+    }
+
+    // Restore any rewards redeemed in the order back to active (REQ-048).
+    try {
+      const { RewardsService } = await import('./rewards-service');
+      await RewardsService.restoreRedeemedRewards(orderId);
+    } catch (error) {
+      console.error(
+        `[REQ-048] Failed to restore rewards for cancelled order ${orderId}:`,
+        error
+      );
+    }
+
     return order.toObject();
   }
 

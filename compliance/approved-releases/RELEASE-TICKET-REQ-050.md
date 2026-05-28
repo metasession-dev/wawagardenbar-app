@@ -1,13 +1,14 @@
 # Release Ticket: REQ-050 — Expense-restock stock-leak fix for `trackByLocation` inventory
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-05-28
 **Requirement ID:** REQ-050
 **Risk Level:** HIGH
 **GitHub Issue:** [#175](https://github.com/metasession-dev/wawagardenbar-app/issues/175)
 **Integration PR:** [#177](https://github.com/metasession-dev/wawagardenbar-app/pull/177) — merged to develop `4f0cbeb` (2026-05-28).
-**Release PR:** Will be linked when the develop → main PR is created.
+**Release PR:** #180
 **DevAudit Release:** `https://devaudit.metasession.co/projects/wgb/` (release version `REQ-050`)
+**Sign-off (dual-actor):** UAT approved + Production approved on the DevAudit portal (`released`); post-deploy production smoke evidence captured. Closed out 2026-05-28.
 
 ---
 

@@ -86,14 +86,18 @@ adminTest.describe('REQ-026: Expense Form — Multi-line submission', () => {
 
   adminTest('can remove a line item row', async ({ page }) => {
     await openExpenseForm(page);
-    await page.locator('button', { hasText: /Add Item/ }).click();
-    const descInputs = page.locator(
-      '[role="dialog"] input[placeholder="e.g., Goat"]'
-    );
+    // Scope the Add Item click to the dialog; the sibling 'can add a second
+    // line item row' test follows the same pattern and passes consistently.
+    // The unscoped page-level locator is theoretically equivalent here (only
+    // one 'Add Item' button on the page), but the scoped form pins the
+    // intent and tends to be more reliable inside Radix's portal layout.
+    const dialog = page.locator('[role="dialog"]').first();
+    await dialog.locator('button', { hasText: /Add Item/ }).click();
+    const descInputs = dialog.locator('input[placeholder="e.g., Goat"]');
     await expect(descInputs).toHaveCount(2);
     // Click the remove button on the first row (enabled when 2+ rows exist)
-    await page
-      .locator('[role="dialog"] button')
+    await dialog
+      .locator('button')
       .filter({ has: page.locator('svg.lucide-trash-2') })
       .first()
       .click();

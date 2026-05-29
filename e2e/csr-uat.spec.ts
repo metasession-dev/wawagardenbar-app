@@ -291,12 +291,14 @@ superAdminTest.describe('UAT: Admin List — CSR Role Visible', () => {
       // (the dialog we just opened).
       const dialog = page.locator('[role="dialog"]').first();
       await expect(dialog).toBeVisible();
-      // Open role selector — it's the first interactive Select in the dialog,
-      // near the top. The previous "scroll to bottom" line moved this select
-      // off-screen and Playwright's auto-scroll-into-view inside Radix's
-      // overflow container didn't bring it back, so the click hit the wrong
-      // element and the option list never opened.
-      await dialog.getByRole('combobox', { name: /Role/i }).click();
+      // Open role selector. There is exactly one Radix Select in the dialog
+      // (the Role one — Permissions below it are Switches, not Selects), so
+      // the first `role="combobox"` is unambiguously the role trigger.
+      // `getByRole('combobox', { name: /Role/i })` should also work but
+      // Playwright's accessible-name computation for shadcn's FormLabel-
+      // linked Select renders as the *value* ('Admin') rather than the label
+      // ('Role'), so the name-match misses. Direct DOM locator is robust.
+      await dialog.locator('button[role="combobox"]').first().click();
       // CSR option should be visible
       await expect(
         page.getByRole('option', { name: 'Customer Service Rep' })

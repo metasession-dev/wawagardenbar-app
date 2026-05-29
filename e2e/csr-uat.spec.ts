@@ -284,9 +284,13 @@ superAdminTest.describe('UAT: Admin List — CSR Role Visible', () => {
       await page.waitForLoadState('networkidle');
       // Click the create admin button
       await page.locator('button', { hasText: /Create Admin/ }).click();
-      // Wait for dialog to open
-      await expect(page.locator('[role="dialog"]')).toBeVisible();
-      const dialog = page.locator('[role="dialog"]');
+      // Wait for dialog to open. The admin page now has two `role="dialog"`
+      // elements present at the same time (likely the Create Admin one we
+      // just opened plus a pre-existing Radix portal/overlay), so the
+      // unqualified locator strict-mode violates. Anchor to the first match
+      // (the dialog we just opened).
+      const dialog = page.locator('[role="dialog"]').first();
+      await expect(dialog).toBeVisible();
       // Open role selector — it's the first interactive Select in the dialog,
       // near the top. The previous "scroll to bottom" line moved this select
       // off-screen and Playwright's auto-scroll-into-view inside Radix's

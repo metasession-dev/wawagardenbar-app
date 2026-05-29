@@ -169,10 +169,15 @@ adminTest.describe('REQ-026: Expense Form — Multi-line submission', () => {
         timeout: 10000,
       });
 
-      // Toast confirms pending submission
-      await expect(page.locator('text=/pending/i')).toBeVisible({
-        timeout: 5000,
-      });
+      // Toast confirms pending submission. The text `/pending/i` matches
+      // many things on the dashboard (sidebar 'Pending Expenses' link,
+      // the 'Pending Expenses' button on this page, the toast region,
+      // etc.) — at least 4 hits in practice — so the unqualified locator
+      // strict-mode violates. Scope to the toast region via [role="status"]
+      // which is exactly the notification surface.
+      await expect(
+        page.locator('[role="status"]', { hasText: /pending/i })
+      ).toBeVisible({ timeout: 5000 });
 
       // Navigate to pending page — group must appear
       await page.goto('/dashboard/finance/expenses/pending');

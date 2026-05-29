@@ -53,8 +53,12 @@ superAdminTest.describe('REQ-033: Units of Measurement registry', () => {
     'AC1: Settings shows the Units of Measurement section to super-admin',
     async ({ page }) => {
       await gotoSettings(page);
+      // The section title renders inside a shadcn `CardTitle`, which is a
+      // `<div>` (not a semantic heading), so `getByRole('heading')` never
+      // matches. Use the same `text=` locator `gotoSettings` already uses
+      // to scroll the section into view.
       await expect(
-        page.getByRole('heading', { name: /Units of Measurement/i })
+        page.locator('text=Units of Measurement').first()
       ).toBeVisible();
       // Default seeded units are visible
       await expect(page.locator('input[value="kg"]')).toBeVisible();

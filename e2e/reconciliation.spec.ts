@@ -150,8 +150,12 @@ test.describe('REQ-014: Orders Page — Reconciliation', () => {
     await expect(payNowBtn).toBeVisible({ timeout: 5000 });
     await payNowBtn.click();
 
-    // Select Cash payment method
-    const cashBtn = page.locator('button').filter({ hasText: 'Cash' });
+    // Select Cash payment method. `filter({ hasText: 'Cash' })` over `button`
+    // now matches two elements (strict-mode violation), so we anchor on the
+    // accessible name being exactly "Cash" — the picker is a plain-labelled
+    // button; any other button containing the substring (e.g. a card with a
+    // longer label) won't match.
+    const cashBtn = page.getByRole('button', { name: /^Cash$/i });
     await expect(cashBtn).toBeVisible({ timeout: 5000 });
     await cashBtn.click();
 

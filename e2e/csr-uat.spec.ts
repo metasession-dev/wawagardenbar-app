@@ -286,14 +286,16 @@ superAdminTest.describe('UAT: Admin List — CSR Role Visible', () => {
       await page.locator('button', { hasText: /Create Admin/ }).click();
       // Wait for dialog to open
       await expect(page.locator('[role="dialog"]')).toBeVisible();
-      // Scroll dialog to make role selector visible
       const dialog = page.locator('[role="dialog"]');
-      await dialog.evaluate((el) => (el.scrollTop = el.scrollHeight));
-      // Open role selector — it's inside the dialog
-      await dialog.locator('button[role="combobox"]').click();
+      // Open role selector — it's the first interactive Select in the dialog,
+      // near the top. The previous "scroll to bottom" line moved this select
+      // off-screen and Playwright's auto-scroll-into-view inside Radix's
+      // overflow container didn't bring it back, so the click hit the wrong
+      // element and the option list never opened.
+      await dialog.getByRole('combobox', { name: /Role/i }).click();
       // CSR option should be visible
       await expect(
-        page.locator('[role="option"]', { hasText: 'Customer Service Rep' })
+        page.getByRole('option', { name: 'Customer Service Rep' })
       ).toBeVisible();
     }
   );

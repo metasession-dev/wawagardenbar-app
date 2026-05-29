@@ -91,4 +91,13 @@ jobs:
           path: |
             e2e-regression-results.json
             playwright-report/
+            # Playwright writes per-test traces, videos, screenshots and
+            # error-context.md to test-results/<spec>-<title>[-retry<N>]/
+            # — spec-named, unlike playwright-report/data/<hash>.zip. Include
+            # them so failed-test triage doesn't need to walk the hash index
+            # in the HTML report: `npx playwright show-trace
+            # test-results/<spec-test>/trace.zip` resolves the failure in one
+            # step. Storage cost is a duplicate of the data already in
+            # playwright-report/data/, accepted for the debuggability win.
+            test-results/
           retention-days: 30

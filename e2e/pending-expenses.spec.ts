@@ -86,15 +86,19 @@ adminTest.describe('REQ-026: Expense Form — Multi-line submission', () => {
 
   adminTest('can remove a line item row', async ({ page }) => {
     await openExpenseForm(page);
-    await page.locator('button', { hasText: /Add Item/ }).click();
-    const descInputs = page.locator(
-      '[role="dialog"] input[placeholder="e.g., Goat"]'
-    );
+    // Scope the Add Item click to the dialog; the sibling 'can add a second
+    // line item row' test follows the same pattern and passes consistently.
+    // The unscoped page-level locator is theoretically equivalent here (only
+    // one 'Add Item' button on the page), but the scoped form pins the
+    // intent and tends to be more reliable inside Radix's portal layout.
+    const dialog = page.locator('[role="dialog"]').first();
+    await dialog.locator('button', { hasText: /Add Item/ }).click();
+    const descInputs = dialog.locator('input[placeholder="e.g., Goat"]');
     await expect(descInputs).toHaveCount(2);
     // Click the remove button on the first row (enabled when 2+ rows exist)
-    await page
-      .locator('[role="dialog"] button')
-      .filter({ has: page.locator('svg.lucide-trash-2') })
+    await dialog
+      .locator('button')
+      .filter({ has: page.locator('svg.lucide-trash2') })
       .first()
       .click();
     await expect(descInputs).toHaveCount(1);
@@ -122,36 +126,45 @@ adminTest.describe('REQ-026: Expense Form — Multi-line submission', () => {
       await openExpenseForm(page);
       const dialog = page.locator('[role="dialog"]');
 
-      // Select expense type
-      await dialog.locator('button[role="combobox"]').nth(0).click();
-      await page.locator('[role="option"]', { hasText: /Direct Cost/ }).click();
-
-      // Select category
-      await dialog.locator('button[role="combobox"]').nth(1).click();
-      await page.locator('[role="option"]').first().click();
-
-      // Fill first line item
+      // Each line item now has FOUR Selects (Type, Category, Unit, and the
+      // newly-added "Add to kitchen inventory" Select from the kitchen-link
+      // feature), each of which renders TWO `role="combobox"` elements in
+      // the DOM (Radix's visible trigger + hidden a11y combobox). The old
+      // positional nth(N) indexing assumed 3 comboboxes per line and
+      // collapsed onto the wrong target after the kitchen-link Select was
+      // added. Switch to accessible-name locators scoped by row index —
+      // robust against future field-order changes.
+      const typeSelects = dialog.getByRole('combobox', { name: 'Type' });
+      const categorySelects = dialog.getByRole('combobox', {
+        name: 'Category',
+      });
+      const unitSelects = dialog.getByRole('combobox', { name: 'Unit' });
       const descInputs = dialog.locator('input[placeholder="e.g., Goat"]');
-      await descInputs.nth(0).fill('Goat for pepper soup');
       const numInputs = dialog.locator('input[type="number"]');
+
+      // Line 0 — Direct Cost
+      await typeSelects.nth(0).click();
+      await page.getByRole('option', { name: /Direct Cost/ }).click();
+      await categorySelects.nth(0).click();
+      await page.getByRole('option').first().click();
+      await descInputs.nth(0).fill('Goat for pepper soup');
       await numInputs.nth(0).fill('1'); // qty
-      // REQ-033: unit field is now a Select sourced from the UoM registry.
-      // Each line has 3 comboboxes (expenseType, category, unit); the unit
-      // for line 0 is the 3rd combobox (index 2).
-      await dialog.locator('button[role="combobox"]').nth(2).click();
-      await page.locator('[role="option"]').first().click();
+      await unitSelects.nth(0).click();
+      await page.getByRole('option').first().click();
       await numInputs.nth(1).fill('25000'); // unitCost → totalCost auto = 25000
 
-      // Add second line item
+      // Line 1 — add it, then fill the Zod-required fields (Type is
+      // per-line; without setting it the form refuses to submit and the
+      // dialog stays open — which is the bug retry1 trace showed).
       await dialog.locator('button', { hasText: /Add Item/ }).click();
       await descInputs.nth(1).fill('Palm Oil for cooking');
       await numInputs.nth(3).fill('2'); // qty row 2
-      // Line 1's combobox indexes are 3 (expenseType), 4 (category), 5 (unit).
-      // Set category + unit so the Zod-required fields are populated.
-      await dialog.locator('button[role="combobox"]').nth(4).click();
-      await page.locator('[role="option"]').first().click();
-      await dialog.locator('button[role="combobox"]').nth(5).click();
-      await page.locator('[role="option"]').first().click();
+      await typeSelects.nth(1).click();
+      await page.getByRole('option', { name: /Direct Cost/ }).click();
+      await categorySelects.nth(1).click();
+      await page.getByRole('option').first().click();
+      await unitSelects.nth(1).click();
+      await page.getByRole('option').first().click();
       await numInputs.nth(4).fill('3500'); // unitCost row 2
 
       // Submit
@@ -160,10 +173,15 @@ adminTest.describe('REQ-026: Expense Form — Multi-line submission', () => {
         timeout: 10000,
       });
 
-      // Toast confirms pending submission
-      await expect(page.locator('text=/pending/i')).toBeVisible({
-        timeout: 5000,
-      });
+      // Toast confirms pending submission. The text `/pending/i` matches
+      // many things on the dashboard (sidebar 'Pending Expenses' link,
+      // the 'Pending Expenses' button on this page, the toast region,
+      // etc.) — at least 4 hits in practice — so the unqualified locator
+      // strict-mode violates. Scope to the toast region via [role="status"]
+      // which is exactly the notification surface.
+      await expect(
+        page.locator('[role="status"]', { hasText: /pending/i })
+      ).toBeVisible({ timeout: 5000 });
 
       // Navigate to pending page — group must appear
       await page.goto('/dashboard/finance/expenses/pending');
@@ -473,7 +491,15 @@ adminTest.describe('REQ-026: Navigation', () => {
         .first();
       await expect(pendingBtn).toBeVisible();
       await pendingBtn.click();
-      await page.waitForLoadState('networkidle');
+      // Next.js client-side navigation doesn't necessarily trigger network
+      // requests, so `waitForLoadState('networkidle')` returns immediately
+      // (often before the URL actually changes). The trace from run
+      // `26637929237` showed the page reached the pending route fine — the
+      // assertion just fired too early. `waitForURL` explicitly waits for
+      // the URL change.
+      await page.waitForURL('**/dashboard/finance/expenses/pending', {
+        timeout: 5000,
+      });
       expect(page.url()).toContain('/dashboard/finance/expenses/pending');
     }
   );

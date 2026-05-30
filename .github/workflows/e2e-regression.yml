@@ -70,12 +70,15 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium 2>/dev/null || npx playwright install chromium
 
-      - name: Seed test database (admins + menu + inventory)
+      - name: Seed test database (admins + menu + inventory + fixtures)
         run: |
           npx tsx scripts/seed-e2e-admins.ts
           npx tsx scripts/seed-food-menu.ts
           npx tsx scripts/seed-drinks-menu.ts
           npx tsx scripts/seed-inventory.ts
+          # Non-empty initial state for tests that depend on existing
+          # records (snapshot list/detail, expenses-search clearing).
+          npx tsx scripts/seed-e2e-fixtures.ts
 
       - name: Start dev server
         run: npm run dev &

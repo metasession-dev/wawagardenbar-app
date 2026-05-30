@@ -114,9 +114,15 @@ superAdminTest.describe('REQ-034 — Kitchen recipe + production E2E', () => {
       await page.waitForLoadState('networkidle');
       await expect(page.locator('th', { hasText: 'When' })).toBeVisible();
       await expect(page.locator('th', { hasText: 'Status' })).toBeVisible();
+      // In the empty-state case the page renders a single
+      // `<tr><td>No production batches yet.</td></tr>`, so the empty-text
+      // locator strict-mode-matches both the row and the cell. `anyRow`
+      // also matches the same row. `.first()` on the union keeps the
+      // semantic — at least one of them is visible — and satisfies
+      // strict-mode regardless of which case we're in.
       const empty = page.locator('text=/No production batches yet/i');
       const anyRow = page.locator('tbody tr').first();
-      await expect(empty.or(anyRow)).toBeVisible();
+      await expect(empty.or(anyRow).first()).toBeVisible();
     }
   );
 });

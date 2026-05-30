@@ -9,6 +9,8 @@ import TabModel from '@/models/tab-model';
 import { ExpenseModel } from '@/models/expense-model';
 import MenuItemModel from '@/models/menu-item-model';
 import type { OrderType } from '@/interfaces/order.interface';
+import { businessDayRange } from '@/lib/business-date';
+import { SystemSettingsService } from '@/services/system-settings-service';
 
 /**
  * WAT (West Africa Time) is UTC+1.
@@ -225,8 +227,13 @@ export class FinancialReportService {
   static async generateDailySummary(date: Date): Promise<DailySummaryReport> {
     await connectDB();
 
-    const startDate = startOfDayWAT(date);
-    const endDate = endOfDayWAT(date);
+    // REQ-051 — query by the business day containing `date`, not the WAT
+    // calendar day. The calendar-day approach returned ₦0 for any DFR
+    // opened before the cutoff because orders' businessDate is attributed
+    // to the previous business day (which runs from yesterday-cutoff to
+    // today-cutoff). See compliance/plans/REQ-051/implementation-plan.md.
+    const cutoff = await SystemSettingsService.getBusinessDayCutoff();
+    const { start: startDate, end: endDate } = businessDayRange(date, cutoff);
 
     // Fetch all paid orders attributed to this business date.
     // Fall back to paidAt for records that pre-date the businessDate backfill.

@@ -59,6 +59,14 @@ vi.mock('@/models/menu-item-model', () => ({
   },
 }));
 
+// REQ-051 — generateDailySummary now awaits the business-day-cutoff setting.
+// Stub to '15:00' (the production default) so existing tests behave as before.
+vi.mock('@/services/system-settings-service', () => ({
+  SystemSettingsService: {
+    getBusinessDayCutoff: vi.fn().mockResolvedValue('15:00'),
+  },
+}));
+
 import { FinancialReportService } from '@/services/financial-report-service';
 
 beforeEach(() => {

@@ -91,3 +91,25 @@ export function previousBusinessDayLabel(
     timeZone: 'UTC',
   });
 }
+
+/**
+ * REQ-051 — Range of the business day containing `date`.
+ *
+ * Returns the inclusive range [start, end] of the business day that
+ * contains the WAT clock-time of `date`, given the cutoff. The start is
+ * the business day's midnight WAT expressed as UTC; the end is one
+ * millisecond before the next business day begins (24h − 1ms after start).
+ *
+ * Use this to build "current business day" report queries —
+ * `FinancialReportService.generateDailySummary` is the canonical caller.
+ * It corrects a class of bug where calendar-day query ranges returned
+ * ₦0.00 for any DFR opened before the cutoff, even after a busy night.
+ */
+export function businessDayRange(
+  date: Date,
+  cutoffTime: string
+): { start: Date; end: Date } {
+  const start = deriveBusinessDate(date, cutoffTime);
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
+  return { start, end };
+}

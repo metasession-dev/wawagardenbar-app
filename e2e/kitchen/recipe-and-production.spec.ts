@@ -82,10 +82,15 @@ superAdminTest.describe('REQ-034 — Kitchen recipe + production E2E', () => {
     async ({ page }) => {
       await page.goto('/dashboard/kitchen/recipes');
       await page.waitForLoadState('networkidle');
-      // Empty-state OR populated table — either is valid.
+      // Empty-state OR populated table — either is valid. Same strict-mode
+      // shape as AC13 below: the empty-state row renders as
+      // `<tr><td>No recipes yet — create one to get started.</td></tr>` so
+      // the text-regex matches both the row and the cell. The PR #197
+      // focused run surfaced this — full regression masked it because
+      // earlier specs create recipes via the UI, populating the table.
       const empty = page.locator('text=/No recipes yet/i');
       const anyRow = page.locator('tbody tr').first();
-      await expect(empty.or(anyRow)).toBeVisible();
+      await expect(empty.or(anyRow).first()).toBeVisible();
       // Status header is always present on the list.
       await expect(page.locator('th', { hasText: 'Status' })).toBeVisible();
     }

@@ -54,15 +54,7 @@ placed between the existing mocks and the service import. Without this, `generat
 
 ### 4. E2E — focused regression on the 7 affected specs
 
-Dispatched on the feature branch:
-
-```bash
-gh workflow run e2e-regression.yml --ref feat/REQ-051-dfr-business-day-range \
-  --field specs='e2e/daily-report-payments.spec.ts e2e/dashboard-revenue.spec.ts \
-                 e2e/express-order-report.spec.ts \
-                 e2e/kitchen/daily-report-regression.spec.ts \
-                 e2e/orders/express-tip-capture.spec.ts'
-```
+Dispatched on the feature branch via `gh workflow run e2e-regression.yml` with the project's `inputs.specs` knob, scoping the run to the five spec files that contain the seven affected tests: _daily-report-payments_, _dashboard-revenue_, _express-order-report_, _kitchen/daily-report-regression_, and _orders/express-tip-capture_ (paths under `e2e/`).
 
 Result (run [`26678721792`](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/26678721792)): **48 expected, 4 unexpected, 0 flaky, 0 skipped**. Of the 7 originally-failing targeted by REQ-051:
 

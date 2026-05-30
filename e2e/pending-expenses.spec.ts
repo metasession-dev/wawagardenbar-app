@@ -98,7 +98,7 @@ adminTest.describe('REQ-026: Expense Form — Multi-line submission', () => {
     // Click the remove button on the first row (enabled when 2+ rows exist)
     await dialog
       .locator('button')
-      .filter({ has: page.locator('svg.lucide-trash-2') })
+      .filter({ has: page.locator('svg.lucide-trash2') })
       .first()
       .click();
     await expect(descInputs).toHaveCount(1);

@@ -98,8 +98,17 @@ test.describe('REQ-014: Tabs Page — Reconciliation', () => {
     await page.goto('/dashboard/orders/tabs');
     await page.waitForLoadState('networkidle');
 
-    // Open the filter panel
-    await page.getByText('Filter Tabs', { exact: true }).first().click();
+    // Open the filter panel. The DashboardTabsFilter `CardTitle` is the
+    // collapsible trigger and renders an icon + 'Filter Tabs' + a count
+    // badge (the badge shows whenever activeFilterCount > 0, and the
+    // default state has statuses=['open'] so the count is 1 on first
+    // load). `getByText('Filter Tabs', { exact: true })` therefore can't
+    // match the title because the visible-text container also includes
+    // the badge. Use the role+name pattern instead.
+    await page
+      .getByRole('button', { name: /Filter Tabs/i })
+      .first()
+      .click();
 
     // Reconciliation label should be visible in the filter panel
     await expect(
@@ -150,8 +159,12 @@ test.describe('REQ-014: Orders Page — Reconciliation', () => {
     await expect(payNowBtn).toBeVisible({ timeout: 5000 });
     await payNowBtn.click();
 
-    // Select Cash payment method
-    const cashBtn = page.locator('button').filter({ hasText: 'Cash' });
+    // Select Cash payment method. `filter({ hasText: 'Cash' })` over `button`
+    // now matches two elements (strict-mode violation), so we anchor on the
+    // accessible name being exactly "Cash" — the picker is a plain-labelled
+    // button; any other button containing the substring (e.g. a card with a
+    // longer label) won't match.
+    const cashBtn = page.getByRole('button', { name: /^Cash$/i });
     await expect(cashBtn).toBeVisible({ timeout: 5000 });
     await cashBtn.click();
 

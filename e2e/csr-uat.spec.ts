@@ -284,16 +284,24 @@ superAdminTest.describe('UAT: Admin List — CSR Role Visible', () => {
       await page.waitForLoadState('networkidle');
       // Click the create admin button
       await page.locator('button', { hasText: /Create Admin/ }).click();
-      // Wait for dialog to open
-      await expect(page.locator('[role="dialog"]')).toBeVisible();
-      // Scroll dialog to make role selector visible
-      const dialog = page.locator('[role="dialog"]');
-      await dialog.evaluate((el) => (el.scrollTop = el.scrollHeight));
-      // Open role selector — it's inside the dialog
-      await dialog.locator('button[role="combobox"]').click();
+      // Wait for dialog to open. The admin page now has two `role="dialog"`
+      // elements present at the same time (likely the Create Admin one we
+      // just opened plus a pre-existing Radix portal/overlay), so the
+      // unqualified locator strict-mode violates. Anchor to the first match
+      // (the dialog we just opened).
+      const dialog = page.locator('[role="dialog"]').first();
+      await expect(dialog).toBeVisible();
+      // Open role selector. There is exactly one Radix Select in the dialog
+      // (the Role one — Permissions below it are Switches, not Selects), so
+      // the first `role="combobox"` is unambiguously the role trigger.
+      // `getByRole('combobox', { name: /Role/i })` should also work but
+      // Playwright's accessible-name computation for shadcn's FormLabel-
+      // linked Select renders as the *value* ('Admin') rather than the label
+      // ('Role'), so the name-match misses. Direct DOM locator is robust.
+      await dialog.locator('button[role="combobox"]').first().click();
       // CSR option should be visible
       await expect(
-        page.locator('[role="option"]', { hasText: 'Customer Service Rep' })
+        page.getByRole('option', { name: 'Customer Service Rep' })
       ).toBeVisible();
     }
   );

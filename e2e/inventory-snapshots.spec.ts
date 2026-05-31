@@ -98,10 +98,14 @@ superAdminTest.describe('REQ-018: Inventory Snapshot — Submission', () => {
         const totalText = await totalItemsEl.textContent();
         expect(Number(totalText)).toBeGreaterThan(0);
       } else {
-        // Snapshot already exists — verify items are shown from existing snapshot
-        const snapshotStatus = page.getByText(
-          /Snapshot (Pending|Approved|Rejected)/
-        );
+        // Snapshot already exists — verify items are shown from existing
+        // snapshot. The status string also appears in the notifications
+        // panel and the aria-live announcer when the page surfaces a
+        // toast at load time, so the unscoped getByText strict-mode-
+        // violates; anchor to <main> for the page-content status.
+        const snapshotStatus = page
+          .getByRole('main')
+          .getByText(/Snapshot (Pending|Approved|Rejected)/);
         await expect(snapshotStatus).toBeVisible({ timeout: 5000 });
       }
     }

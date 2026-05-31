@@ -17,6 +17,12 @@ name: E2E Regression
 
 on:
   workflow_dispatch:
+    inputs:
+      specs:
+        description: 'Space-separated spec paths or --grep pattern. Empty = full regression. Used during fix-and-verify iterations to keep the loop fast (~5 min vs ~35 min).'
+        required: false
+        type: string
+        default: ''
   pull_request:
     branches: [main]
   schedule:
@@ -64,12 +70,15 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium 2>/dev/null || npx playwright install chromium
 
-      - name: Seed test database (admins + menu + inventory)
+      - name: Seed test database (admins + menu + inventory + fixtures)
         run: |
           npx tsx scripts/seed-e2e-admins.ts
           npx tsx scripts/seed-food-menu.ts
           npx tsx scripts/seed-drinks-menu.ts
           npx tsx scripts/seed-inventory.ts
+          # Non-empty initial state for tests that depend on existing
+          # records (snapshot list/detail, expenses-search clearing).
+          npx tsx scripts/seed-e2e-fixtures.ts
 
       - name: Start dev server
         run: npm run dev &
@@ -81,7 +90,20 @@ jobs:
         env:
           PLAYWRIGHT_HTML_REPORTER_OPEN: never
           PLAYWRIGHT_JSON_OUTPUT_NAME: e2e-regression-results.json
-        run: npx playwright test --project=regression --reporter=json,html
+          # When this workflow is dispatched with `specs` set, scope the
+          # invocation to just those specs (or a --grep pattern) to keep
+          # fix-and-verify iterations fast. PR / nightly / schedule paths
+          # leave it empty and run the full --project=regression suite as
+          # before.
+          SPECS: ${{ inputs.specs }}
+        run: |
+          if [ -n "$SPECS" ]; then
+            echo "::notice::Running scoped regression — specs: $SPECS"
+            # shellcheck disable=SC2086
+            npx playwright test --project=regression --reporter=json,html $SPECS
+          else
+            npx playwright test --project=regression --reporter=json,html
+          fi
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -91,4 +113,13 @@ jobs:
           path: |
             e2e-regression-results.json
             playwright-report/
+            # Playwright writes per-test traces, videos, screenshots and
+            # error-context.md to test-results/<spec>-<title>[-retry<N>]/
+            # — spec-named, unlike playwright-report/data/<hash>.zip. Include
+            # them so failed-test triage doesn't need to walk the hash index
+            # in the HTML report: `npx playwright show-trace
+            # test-results/<spec-test>/trace.zip` resolves the failure in one
+            # step. Storage cost is a duplicate of the data already in
+            # playwright-report/data/, accepted for the debuggability win.
+            test-results/
           retention-days: 30

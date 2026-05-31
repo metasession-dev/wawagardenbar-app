@@ -185,3 +185,92 @@ describe('REQ-025: shouldShowPreviousDayCheckbox', () => {
     expect(shouldShowPreviousDayCheckbox(before3pm, 'abc')).toBe(true);
   });
 });
+
+// ── businessDayRange (REQ-051) ────────────────────────────────────────────────
+// The library helper that financial-report-service uses to build the DFR
+// query range. Tested against the real exported implementation rather than
+// the inlined deriveBusinessDate above.
+
+import { businessDayRange } from '@/lib/business-date';
+
+describe('REQ-051: businessDayRange', () => {
+  const CUTOFF = '15:00';
+
+  it('start equals deriveBusinessDate(date, cutoff)', () => {
+    // For 07:00 WAT on Apr 12 (before cutoff), the business day is Apr 11
+    // (it started Apr 11 at 15:00 WAT and runs to Apr 12 at 14:59).
+    const now = watTime(2026, 4, 12, 7, 0);
+    const { start } = businessDayRange(now, CUTOFF);
+    expect(start.toISOString()).toBe(watMidnightUTC(2026, 4, 11).toISOString());
+  });
+
+  it('end is 24h - 1ms after start', () => {
+    const now = watTime(2026, 4, 12, 7, 0);
+    const { start, end } = businessDayRange(now, CUTOFF);
+    expect(end.getTime() - start.getTime()).toBe(24 * 60 * 60 * 1000 - 1);
+  });
+
+  it('AC1: 07:00 WAT (before cutoff) → range is the previous business day', () => {
+    const now = watTime(2026, 4, 12, 7, 0);
+    const { start, end } = businessDayRange(now, CUTOFF);
+    expect(start.toISOString()).toBe(watMidnightUTC(2026, 4, 11).toISOString());
+    // End just before midnight WAT of Apr 12 → 22:59:59.999 UTC on Apr 11
+    expect(end.toISOString()).toBe('2026-04-11T22:59:59.999Z');
+  });
+
+  it('AC2: 16:00 WAT (after cutoff) → range is the current business day', () => {
+    const now = watTime(2026, 4, 12, 16, 0);
+    const { start, end } = businessDayRange(now, CUTOFF);
+    expect(start.toISOString()).toBe(watMidnightUTC(2026, 4, 12).toISOString());
+    expect(end.toISOString()).toBe('2026-04-12T22:59:59.999Z');
+  });
+
+  it('boundary: 14:59:59.999 WAT → previous business day', () => {
+    const now = new Date(
+      watTime(2026, 4, 12, 14, 59).getTime() + 59 * 1000 + 999
+    );
+    const { start } = businessDayRange(now, CUTOFF);
+    expect(start.toISOString()).toBe(watMidnightUTC(2026, 4, 11).toISOString());
+  });
+
+  it('boundary: 15:00:00.000 WAT → current business day', () => {
+    const now = watTime(2026, 4, 12, 15, 0);
+    const { start } = businessDayRange(now, CUTOFF);
+    expect(start.toISOString()).toBe(watMidnightUTC(2026, 4, 12).toISOString());
+  });
+
+  it('falls back to 15:00 default on invalid cutoff', () => {
+    const now = watTime(2026, 4, 12, 7, 0);
+    const withInvalid = businessDayRange(now, 'bad-value');
+    const withDefault = businessDayRange(now, '15:00');
+    expect(withInvalid.start.toISOString()).toBe(
+      withDefault.start.toISOString()
+    );
+    expect(withInvalid.end.toISOString()).toBe(withDefault.end.toISOString());
+  });
+
+  it('an order created at `now` has its businessDate inside the range', () => {
+    // The whole point of the helper: a row whose `businessDate` was set by
+    // `deriveBusinessDate(now, cutoff)` must be returned by a query for
+    // `businessDate ∈ [start, end]` built with the same `now`. This is the
+    // real invariant — the helper's "range" is keyed by the businessDate
+    // VALUE (midnight WAT of the business day), not by the wall-clock span.
+    const now = watTime(2026, 4, 12, 7, 0);
+    const businessDate = (function deriveLocal(): Date {
+      // Inline call to the inlined deriveBusinessDate at the top of this
+      // file (the production import is verified by other tests above).
+      return deriveBusinessDate(now, CUTOFF);
+    })();
+    const { start, end } = businessDayRange(now, CUTOFF);
+    expect(businessDate.getTime()).toBeGreaterThanOrEqual(start.getTime());
+    expect(businessDate.getTime()).toBeLessThanOrEqual(end.getTime());
+  });
+
+  it('consecutive moments at boundary land in adjacent ranges', () => {
+    const before = new Date(watTime(2026, 4, 12, 15, 0).getTime() - 1);
+    const after = watTime(2026, 4, 12, 15, 0);
+    const r1 = businessDayRange(before, CUTOFF);
+    const r2 = businessDayRange(after, CUTOFF);
+    expect(r1.end.getTime() + 1).toBe(r2.start.getTime());
+  });
+});

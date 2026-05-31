@@ -33,19 +33,18 @@ jobs:
       PROJECT_SLUG: wgb
 
     steps:
-      # Checkout the PR's head SHA (e.g. develop's HEAD for a develop→main
-      # release PR) instead of the default `refs/pull/<N>/merge` synthetic
-      # merge commit. derive-release-version.sh runs `git log -1` against the
-      # checked-out HEAD; the synthetic merge commit GitHub auto-creates for a
-      # PR carries neither the source-branch's [REQ-XXX] subject nor the PR
-      # title in its body, so derive falls through to the date fallback —
-      # which then collides with whatever housekeeping date-prefix release
-      # exists (or doesn't) in the portal. Pointing at head.sha gives derive
-      # the actual integration-side HEAD whose body carries [REQ-XXX] from the
-      # merge of feat/REQ-XXX into the integration branch.
       - uses: actions/checkout@v4
         with:
+          # The default `pull_request` checkout is a synthetic merge commit
+          # with an empty body, so `derive-release-version.sh` can't see the
+          # `[REQ-XXX]` tag on the integration-side commit. Pull the head
+          # commit directly + full history so the same derivation script the
+          # uploaders use (compliance-evidence.yml, ci.yml's register-release)
+          # produces the same release identity here (#81 — release-identity
+          # coherence; was hardcoded to `v$(date +%Y.%m.%d)` which never
+          # matched the `REQ-XXX` records the uploaders wrote).
           ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
 
       - name: Resolve DevAudit base URL
         run: |
@@ -150,33 +149,14 @@ jobs:
         id: release
         if: env.BOOTSTRAP_MODE != 'true'
         run: |
-          # Pick the release prefix the portal should look up. Priority:
-          #
-          #   1. `[REQ-XXX]` in the PR title — for a tracked-release PR
-          #      (e.g. "release: [REQ-050] expense-restock stock-leak …"),
-          #      look up the `REQ-XXX` release record directly. This is the
-          #      release that compliance-evidence.yml populates per-REQ; it
-          #      is the same identifier `derive-release-version.sh` returns
-          #      for develop pushes carrying the `[REQ-XXX]` tag.
-          #   2. Date prefix `v$(date +%Y.%m.%d)` — fallback for untracked /
-          #      housekeeping release PRs without a `[REQ-XXX]` title.
-          #
-          # The previous behaviour hardcoded the date prefix, which collided
-          # with the per-REQ release shape: the date-prefix release was
-          # empty (its requirement matrix never got populated, because
-          # uploads went to `REQ-XXX`), so the portal correctly refused to
-          # UAT-approve it, and the gate stayed red even after the actual
-          # tracked release (`REQ-XXX`) was approved. Reading from the PR
-          # title aligns the gate with the release that operators actually
-          # work in. Upstream issue to follow on DevAudit-Installer.
-          PR_TITLE="${{ github.event.pull_request.title }}"
-          if echo "$PR_TITLE" | grep -qE '\[REQ-[0-9]+\]'; then
-            LOOKUP_PREFIX=$(echo "$PR_TITLE" | grep -oE '\[REQ-[0-9]+\]' | head -1 | grep -oE 'REQ-[0-9]+')
-            echo "Resolved release prefix from PR title: ${LOOKUP_PREFIX}"
-          else
-            LOOKUP_PREFIX="v$(date +%Y.%m.%d)"
-            echo "No [REQ-XXX] in PR title; falling back to date prefix: ${LOOKUP_PREFIX}"
-          fi
+          # Derive the same release prefix the uploaders write to. The script
+          # priority is: subject `[REQ-XXX]` → body `Ref: REQ-XXX` → body
+          # `[REQ-XXX]` (merge-commit case) → bare-date fallback. Reusing it
+          # here makes the gate and the uploaders agree on release identity
+          # (#81). The 8 scenarios are covered by derive-release-version.test.sh.
+          chmod +x scripts/derive-release-version.sh 2>/dev/null || true
+          LOOKUP_PREFIX=$(bash scripts/derive-release-version.sh)
+          echo "Resolving release for prefix: ${LOOKUP_PREFIX}"
           RESOLVE_URL="${BASE}/api/ci/releases/resolve?projectSlug=${PROJECT_SLUG}&versionPrefix=${LOOKUP_PREFIX}"
           # Retry: register-release in ci.yml may still be racing with us.
           MAX_ATTEMPTS=6

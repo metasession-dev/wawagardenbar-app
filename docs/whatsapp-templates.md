@@ -20,7 +20,7 @@ The strategic frame for this doc: **templates aren't a script the bar reads to e
 
 | Customer state on inbound message                      | What the handler does                               | Template used?               |
 | ------------------------------------------------------ | --------------------------------------------------- | ---------------------------- |
-| Unknown phone, no User in DB                           | Send welcome with menu / order / event-booking CTAs | `welcome_new_user` ✅        |
+| Unknown phone, no User in DB                           | Send welcome with order / event-booking / chat CTAs | `welcome_new_user` ✅        |
 | User exists, `phoneVerified: false` (abandoned signup) | Same welcome — implicit prompt to re-engage         | `welcome_new_user` ✅        |
 | Known active user, recent `lastLoginAt`                | **Free-form reply** (staff / bot)                   | **None** — no template fires |
 | Known dormant user (>30d silent)                       | Welcome-back nudge                                  | `welcome_back` ✅            |
@@ -345,7 +345,7 @@ params = [amount, accountNumber, accountName, bankName, expiresInHours]
 
 **Strategic note — value-first, not signup-first.** This is the _first reply_ a new customer sees. We don't push signup here — we show what they can do (browse menu, order, book an event). Signup happens **just-in-time** at checkout (where REQ-053's PIN flow handles it). Conversion is materially higher this way than forcing a sign-up gate at first message.
 
-**Button strategy:** Meta caps templates at 3 buttons. We use all 3 for revenue-driving actions (menu / order / book event); "Chat with Staff" doesn't need a button because the customer is **already in WhatsApp** — they can text and WA-3 routes their message to your support queue. The 24-hour customer-service window means staff can reply free-form for the next 24h without any template.
+**Button strategy:** Meta caps templates at 3 buttons. Order → Book → Chat in that order: primary revenue first, secondary revenue (event hosting) second, human escape hatch third. The Chat button is a **Quick Reply** rather than a URL — tapping it sends a free-form message to the bar's WABA, opens Meta's 24-hour customer-service window, and lets staff respond in plain text without any template until the window closes. The button mainly carries **signalling value** ("you can reach humans here") that customers may not infer from a chat thread alone.
 
 **Code mapping** (expected, set by WA-3 webhook handler):
 
@@ -354,15 +354,15 @@ params = [openTime, closeTime]
 // e.g. ['11am', '11pm'] — read from system settings business hours
 ```
 
-| Field    | Value                                                                                                                                                                                                              |
-| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Name     | `welcome_new_user`                                                                                                                                                                                                 |
-| Category | **UTILITY**                                                                                                                                                                                                        |
-| Language | `en`                                                                                                                                                                                                               |
-| Header   | TEXT: `Welcome to Wawa Garden Bar 🌿`                                                                                                                                                                              |
-| Body     | `Hi 👋 thanks for reaching out. We're a garden bar + kitchen serving food, drinks and good times. Tap below to see today's menu, place an order, or book a private event with us. We're here from {{1}} to {{2}}.` |
-| Footer   | `Wawa Garden Bar`                                                                                                                                                                                                  |
-| Buttons  | URL `📖 See Menu` → `https://wawagardenbar.com/menu` · URL `🛒 Order Now` → `https://wawagardenbar.com/order` · URL `🎉 Book an Event` → `https://wawagardenbar.com/events/book`                                   |
+| Field    | Value                                                                                                                                                                                            |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Name     | `welcome_new_user`                                                                                                                                                                               |
+| Category | **UTILITY**                                                                                                                                                                                      |
+| Language | `en`                                                                                                                                                                                             |
+| Header   | TEXT: `Welcome to Wawa Garden Bar 🌿`                                                                                                                                                            |
+| Body     | `Hi 👋 thanks for reaching out. We're a garden bar + kitchen serving food, drinks and good times. Place an order, book a private event, or chat with our team — we're here from {{1}} to {{2}}.` |
+| Footer   | `Wawa Garden Bar`                                                                                                                                                                                |
+| Buttons  | URL `🛒 Order Now` → `https://wawagardenbar.com/order` · URL `🎉 Book an Event` → `https://wawagardenbar.com/events/book` · Quick reply `💬 Chat with Staff`                                     |
 
 **Examples:**
 
@@ -376,7 +376,7 @@ params = [openTime, closeTime]
 
 **Sent when:** WA-3's webhook receives a message from a known customer who's been dormant (>30 days `lastLoginAt`), OR as a proactive re-engagement outside the 24h window (e.g. "we've missed you" campaign).
 
-**Same button strategy as `welcome_new_user`** — three revenue actions, no signup ask (customer's already signed up).
+**Same button strategy as `welcome_new_user`** — Order Now / Book an Event / Chat with Staff, in that order. Returning customers are already signed up, so no signup ask anywhere.
 
 **Code mapping** (expected):
 
@@ -386,15 +386,15 @@ params = [customerFirstName]
 //   free-form message within the 24h window opened by the template send.
 ```
 
-| Field    | Value                                                                                                                                                                            |
-| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Name     | `welcome_back`                                                                                                                                                                   |
-| Category | **UTILITY**                                                                                                                                                                      |
-| Language | `en`                                                                                                                                                                             |
-| Header   | TEXT: `Welcome back 👋`                                                                                                                                                          |
-| Body     | `Hi {{1}}, we've missed you at Wawa Garden Bar. Tap below to see what's new on the menu, place a quick order with your saved details, or book your next celebration with us.`    |
-| Footer   | `Wawa Garden Bar`                                                                                                                                                                |
-| Buttons  | URL `📖 See Menu` → `https://wawagardenbar.com/menu` · URL `🛒 Order Now` → `https://wawagardenbar.com/order` · URL `🎉 Book an Event` → `https://wawagardenbar.com/events/book` |
+| Field    | Value                                                                                                                                                        |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Name     | `welcome_back`                                                                                                                                               |
+| Category | **UTILITY**                                                                                                                                                  |
+| Language | `en`                                                                                                                                                         |
+| Header   | TEXT: `Welcome back 👋`                                                                                                                                      |
+| Body     | `Hi {{1}}, we've missed you at Wawa Garden Bar. Place a quick order with your saved details, book your next celebration, or reach out to our team.`          |
+| Footer   | `Wawa Garden Bar`                                                                                                                                            |
+| Buttons  | URL `🛒 Order Now` → `https://wawagardenbar.com/order` · URL `🎉 Book an Event` → `https://wawagardenbar.com/events/book` · Quick reply `💬 Chat with Staff` |
 
 **Examples:**
 

@@ -17,9 +17,19 @@ interface VerifyWhatsAppPinResult {
   userId?: string;
 }
 
+/**
+ * REQ-053 — see `verify-pin.ts:PinOptInPayload`. Shared shape; re-declared
+ * locally to keep each verify-action self-contained.
+ */
+export interface WhatsAppPinOptInPayload {
+  whatsappTransactional: boolean;
+  whatsappMarketing: boolean;
+}
+
 export async function verifyWhatsAppPinAction(
   phone: string,
-  pin: string
+  pin: string,
+  optIn?: WhatsAppPinOptInPayload
 ): Promise<VerifyWhatsAppPinResult> {
   try {
     if (!phone || !pin) {
@@ -71,6 +81,23 @@ export async function verifyWhatsAppPinAction(
         success: false,
         message: 'Invalid PIN',
       };
+    }
+
+    // REQ-053 — persist WhatsApp opt-in ONLY on truly first verification
+    // (no verified channel yet). See `verify-pin.ts` for the rationale.
+    if (optIn && !user.phoneVerified && !user.emailVerified) {
+      // Mongoose's schema defaults supply `preferences.communicationPreferences`
+      // on every read, so the nested chain is guaranteed at runtime —
+      // narrow it locally for TS via `set` on the doc which also marks
+      // the path dirty so the save persists.
+      user.set(
+        'preferences.communicationPreferences.whatsappTransactional',
+        optIn.whatsappTransactional
+      );
+      user.set(
+        'preferences.communicationPreferences.whatsappMarketing',
+        optIn.whatsappMarketing
+      );
     }
 
     // PIN is valid - update user

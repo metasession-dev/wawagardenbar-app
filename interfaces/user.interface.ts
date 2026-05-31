@@ -26,6 +26,13 @@ export interface IPreferences {
     email: boolean;
     sms: boolean;
     push: boolean;
+    // REQ-053 — WhatsApp opt-in surface. Transactional defaults to true
+    // (order updates, receipts, support replies); marketing defaults to
+    // false (offers, promotions). Persisted only on FIRST PIN verification
+    // (when phoneVerified was false). Subsequent verifies don't overwrite
+    // profile-set preferences.
+    whatsappTransactional: boolean;
+    whatsappMarketing: boolean;
   };
   language: string;
 }

@@ -32,6 +32,10 @@ export async function sendEmailPinAction(
 
     // Find user by phone if provided, otherwise by email
     let targetUser;
+    // REQ-053 — track whether a new user doc was created in this action;
+    // returned to the client so the PIN-entry form can decide whether to
+    // render the WhatsApp opt-in checkbox.
+    let isNewUser = false;
 
     if (phone) {
       const sanitizedPhone = sanitizePhone(phone);
@@ -77,6 +81,7 @@ export async function sendEmailPinAction(
             phoneVerified: false,
             isGuest: false,
           });
+          isNewUser = true;
         }
       }
     } else {
@@ -126,6 +131,7 @@ export async function sendEmailPinAction(
     return {
       success: true,
       message: 'Verification PIN sent to your email',
+      isNewUser,
     };
   } catch (error) {
     console.error('Send email PIN error:', error);

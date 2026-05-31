@@ -135,12 +135,18 @@ superAdminTest.describe(
           .first();
         await expect(transferButton).toBeVisible({ timeout: 5000 });
         await transferButton.click();
-        // Confirmation dialog.
+        // Confirmation dialog. The Confirm Transfer button is
+        // `disabled={!transferReference.trim()}` per
+        // `components/features/finance/transfer-confirmation-dialog.tsx`,
+        // so fill the required Transfer Reference (#transferRef) before
+        // clicking.
         const confirmDialog = page.locator('[role="dialog"]');
         await expect(confirmDialog).toBeVisible({ timeout: 5000 });
         await confirmDialog
-          .getByRole('button', { name: /confirm|transfer|continue/i })
-          .first()
+          .locator('#transferRef')
+          .fill(`E2E-TRF-${Date.now()}`);
+        await confirmDialog
+          .getByRole('button', { name: /^Confirm Transfer$/i })
           .click();
         await expect(confirmDialog).toBeHidden({ timeout: 10000 });
         await page.waitForLoadState('networkidle');
@@ -217,11 +223,15 @@ superAdminTest.describe(
           .first();
         await expect(transferButton).toBeVisible({ timeout: 5000 });
         await transferButton.click();
+        // Confirmation dialog — same Transfer Reference gate as the 5kg test
+        // above.
         const confirmDialog = page.locator('[role="dialog"]');
         await expect(confirmDialog).toBeVisible({ timeout: 5000 });
         await confirmDialog
-          .getByRole('button', { name: /confirm|transfer|continue/i })
-          .first()
+          .locator('#transferRef')
+          .fill(`E2E-TRF-${Date.now()}`);
+        await confirmDialog
+          .getByRole('button', { name: /^Confirm Transfer$/i })
           .click();
         await expect(confirmDialog).toBeHidden({ timeout: 10000 });
         await page.waitForLoadState('networkidle');

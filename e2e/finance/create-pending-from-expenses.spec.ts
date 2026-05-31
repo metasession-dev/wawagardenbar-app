@@ -103,11 +103,20 @@ superAdminTest.describe(
 
         // The date field shows today (format: 'PPP' = "April 30th, 2026" style;
         // assert by month-name match instead of full string).
+        //
+        // Scope to the dialog: a page-wide `getByText('May')` hits 3
+        // elements in May (current-month strict-mode violation — the page
+        // can show "May" in the expense rows + a date picker dropdown +
+        // the dialog's own date display). Strict mode fails before the
+        // dialog match wins. Anchor inside `[role="dialog"]` so the
+        // dialog's currently-rendered date string is the only match.
         const monthShort = new Date().toLocaleDateString('en-US', {
           month: 'short',
         });
+        const dialog = page.locator('[role="dialog"]');
+        await expect(dialog).toBeVisible({ timeout: 5000 });
         await expect(
-          page.getByText(monthShort, { exact: false })
+          dialog.getByText(monthShort, { exact: false }).first()
         ).toBeVisible();
       }
     );

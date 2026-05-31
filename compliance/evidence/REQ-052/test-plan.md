@@ -7,13 +7,13 @@
 
 ## Acceptance criteria → tests
 
-| AC  | Statement                                                                                             | Unit test                                                                                            | E2E                                                         |
-| --- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| AC1 | `recordPartialPayment` on a tab with no `businessDate` sets it via `deriveBusinessDate(now, cutoff)`. | `tab-service.business-date.test.ts` — "AC1 — open tab with no businessDate"                          | `daily-report-payments.spec.ts:partial payment on open tab` |
-| AC2 | `recordPartialPayment` on a tab that already has `businessDate` does NOT overwrite.                   | `tab-service.business-date.test.ts` — "AC2 — tab with existing businessDate"                         | n/a — covered by unit boundary                              |
-| AC3 | `#202` regression spec passes deterministically.                                                      | n/a                                                                                                  | `daily-report-payments.spec.ts:partial payment on open tab` |
-| AC4 | No regression in closed-tab flows or other tab-service tests.                                         | `tab-service.tip.test.ts`, `tab-service.tip-method.test.ts`, full `__tests__/services/tab-service.*` | full e2e regression suite                                   |
-| AC5 | No DB migration; `tab.businessDate` field type unchanged.                                             | n/a — verified by type-check and code inspection                                                     | n/a                                                         |
+| AC  | Statement                                                                                             | Unit test                                                                                            | E2E                                                                 |
+| --- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| AC1 | `recordPartialPayment` on a tab with no `businessDate` sets it via `deriveBusinessDate(now, cutoff)`. | `tab-service.business-date.test.ts` — "AC1 — open tab with no businessDate"                          | `e2e/daily-report-payments.spec.ts` — "partial payment on open tab" |
+| AC2 | `recordPartialPayment` on a tab that already has `businessDate` does NOT overwrite.                   | `tab-service.business-date.test.ts` — "AC2 — tab with existing businessDate"                         | n/a — covered by unit boundary                                      |
+| AC3 | `#202` regression spec passes deterministically.                                                      | n/a                                                                                                  | `e2e/daily-report-payments.spec.ts` — "partial payment on open tab" |
+| AC4 | No regression in closed-tab flows or other tab-service tests.                                         | `tab-service.tip.test.ts`, `tab-service.tip-method.test.ts`, full `__tests__/services/tab-service.*` | full e2e regression suite                                           |
+| AC5 | No DB migration; `tab.businessDate` field type unchanged.                                             | n/a — verified by type-check and code inspection                                                     | n/a                                                                 |
 
 ## Test environment
 

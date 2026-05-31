@@ -40,21 +40,35 @@ async function gotoDailyReport(page: Page): Promise<void> {
 }
 
 async function readTotalRevenueText(page: Page): Promise<string> {
-  const card = page.locator(
-    'div:has(> :is(div, h3):text-matches("^\\s*Total Revenue\\s*$", "i"))'
-  );
-  // Fallback to a less-strict locator if the project's Card markup changes.
-  const fallback = page.locator(
-    'div', // Card root
-    { has: page.getByText(/^\s*Total Revenue\s*$/i) }
-  );
-  const target = (await card.count()) > 0 ? card : fallback;
-  await expect(target.first()).toBeVisible({ timeout: 10000 });
-  // Total Revenue value is the only `text-2xl font-bold` child of the card.
-  const value = target
-    .first()
-    .locator('div.text-2xl.font-bold, div.font-bold')
+  // The DFR's Total Revenue card is rendered by
+  // components/features/admin/profitability-overview-cards.tsx as a shadcn
+  // Card with the label in CardHeader and the value in a sibling CardContent:
+  //
+  //   <Card>
+  //     <CardHeader>
+  //       <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+  //       <DollarSign />
+  //     </CardHeader>
+  //     <CardContent>
+  //       <div className="text-2xl font-bold">₦{value.toLocaleString()}</div>
+  //       <p className="text-xs">N order(s)</p>
+  //     </CardContent>
+  //   </Card>
+  //
+  // shadcn's CardTitle is a `<div>` (see PR #191 for the precedent — same
+  // gotcha hit the UoM test). The previous helper's CSS:has selector matched
+  // the CardHeader and then looked for `div.text-2xl.font-bold` INSIDE the
+  // header — but the value div lives in the sibling CardContent. Walk up to
+  // the Card root (two ancestors: CardTitle → CardHeader → Card) and pick
+  // the value from there. Filter out the 'Total Revenue:' label in
+  // revenue-section.tsx (different component, different layout).
+  const title = page
+    .getByText(/^\s*Total Revenue\s*$/)
+    .filter({ hasNotText: ':' })
     .first();
+  await expect(title).toBeVisible({ timeout: 10000 });
+  const card = title.locator('xpath=ancestor::div[2]');
+  const value = card.locator('div.text-2xl.font-bold').first();
   await expect(value).toBeVisible();
   return (await value.innerText()).trim();
 }

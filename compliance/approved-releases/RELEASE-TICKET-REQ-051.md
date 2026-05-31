@@ -1,13 +1,14 @@
 # Release Ticket: REQ-051 — DFR aggregation queries by business-day range, not calendar-day range
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-05-30
 **Requirement ID:** REQ-051
 **Risk Level:** HIGH
 **GitHub Issue:** [#196](https://github.com/metasession-dev/wawagardenbar-app/issues/196)
 **Integration PR:** [#199](https://github.com/metasession-dev/wawagardenbar-app/pull/199) — will be merged to develop once the focused regression is reviewed.
-**Release PR:** Will be linked when the develop → main PR is created.
+**Release PR:** #203
 **DevAudit Release:** `https://devaudit.metasession.co/projects/wgb/` (release version `REQ-051`)
+**Sign-off (dual-actor):** UAT approved + Production approved on the DevAudit portal (`released`); post-deploy production smoke evidence captured. Closed out 2026-05-31.
 
 ---
 

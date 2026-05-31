@@ -129,16 +129,24 @@ test.describe.serial('REQ-035: express order tip capture', () => {
     await tipInput.fill(String(TIP));
     // Tip method dropdown defaults to the bill method (POS / 'card');
     // override to 'cash' to exercise AC4.
+    //
+    // The previous locator was `[id="tip-amount"] ~ * button` (CSS general-
+    // sibling), but `#tip-amount` is the <Input> itself, and the Select
+    // trigger button is a sibling of the input's *parent* div in the
+    // TipInputRow grid (components/features/orders/tip-input-row.tsx). The
+    // locator matched 0 elements, `isVisible()` returned false, the
+    // `if`-fallback silently skipped the override, the tip recorded under
+    // the bill's method (card), and AC7 read 0 cash tips. Use a
+    // document-order XPath to find the first combobox after the input, and
+    // fail loudly if the override path is missing.
     const tipMethodTrigger = page
-      .locator('[id="tip-amount"] ~ * button')
-      .first();
-    if (await tipMethodTrigger.isVisible().catch(() => false)) {
-      await tipMethodTrigger.click();
-      const cashOption = page.getByRole('option', { name: /^Cash$/ });
-      if (await cashOption.isVisible().catch(() => false)) {
-        await cashOption.click();
-      }
-    }
+      .locator('#tip-amount')
+      .locator('xpath=following::button[@role="combobox"][1]');
+    await expect(tipMethodTrigger).toBeVisible({ timeout: 5000 });
+    await tipMethodTrigger.click();
+    const cashOption = page.getByRole('option', { name: /^Cash$/ });
+    await expect(cashOption).toBeVisible({ timeout: 5000 });
+    await cashOption.click();
 
     // Submit.
     const payBtn = page.getByRole('button', { name: /Pay ₦/i });

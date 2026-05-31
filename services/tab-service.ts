@@ -673,6 +673,16 @@ export class TabService {
       throw new Error('tipAmount must be a non-negative number');
     }
 
+    // REQ-052 — first partial payment locks the tab's businessDate so the
+    // DFR's aggregatePartialPayments query can find this tab (every branch
+    // of that query keys on tab.businessDate or tab.paidAt). Subsequent
+    // partials don't overwrite — the tab's "business day" is anchored to
+    // the first cash event.
+    if (!tab.businessDate) {
+      const cutoff = await SystemSettingsService.getBusinessDayCutoff();
+      tab.businessDate = deriveBusinessDate(new Date(), cutoff);
+    }
+
     // Record the partial payment
     tab.partialPayments.push({
       amount: params.amount,

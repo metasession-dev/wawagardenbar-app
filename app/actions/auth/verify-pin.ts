@@ -17,9 +17,21 @@ interface VerifyPinResult {
   userId?: string;
 }
 
+/**
+ * REQ-053 — WhatsApp opt-in payload. Sent by the PIN-entry form when the
+ * user is new (the checkbox is only rendered then). Persisted on first
+ * verification only — subsequent verifies don't overwrite the user's
+ * profile-set preferences.
+ */
+export interface PinOptInPayload {
+  whatsappTransactional: boolean;
+  whatsappMarketing: boolean;
+}
+
 export async function verifyPinAction(
   phone: string,
-  pin: string
+  pin: string,
+  optIn?: PinOptInPayload
 ): Promise<VerifyPinResult> {
   try {
     if (!phone || !pin) {
@@ -71,6 +83,24 @@ export async function verifyPinAction(
         success: false,
         message: 'Invalid PIN',
       };
+    }
+
+    // REQ-053 — persist WhatsApp opt-in ONLY on truly first verification
+    // (no verified channel yet). Strict gate so a returning user who
+    // verifies a *different* channel (e.g. email-first signup, then phone
+    // PIN later) doesn't have their existing prefs overwritten by a stale
+    // optIn payload from the client.
+    if (optIn && !user.phoneVerified && !user.emailVerified) {
+      // Use Mongoose `.set('path')` — schema defaults guarantee the path
+      // exists at runtime and `set` marks it dirty so the save persists.
+      user.set(
+        'preferences.communicationPreferences.whatsappTransactional',
+        optIn.whatsappTransactional
+      );
+      user.set(
+        'preferences.communicationPreferences.whatsappMarketing',
+        optIn.whatsappMarketing
+      );
     }
 
     const sessionToken = generateSessionToken();

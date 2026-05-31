@@ -75,8 +75,16 @@ export async function createKitchenIngredient(
 
   await selects.nth(1).click();
   const unitToPick = opts.unitLabel ?? 'Grams';
+  // ANCHOR the regex — default UoM registry orders `Kilograms (kg)`
+  // BEFORE `Grams (g)`, and an unanchored /Grams/i pattern matches
+  // "Kilograms" case-insensitively (since "kilograms" contains "grams").
+  // `.first()` then picked Kilograms, so every test calling this with
+  // `unitLabel: 'Grams'` silently created a **kg-unit** ingredient.
+  // That's the actual root cause of all 4 #159 failures — what looked
+  // like a kg→g conversion bug was test data being kg→kg (or g→kg).
+  // Anchor with `^` so `^Grams` doesn't match `Kilograms`.
   await page
-    .getByRole('option', { name: new RegExp(unitToPick, 'i') })
+    .getByRole('option', { name: new RegExp(`^${unitToPick}\\b`, 'i') })
     .first()
     .click();
 
@@ -108,11 +116,25 @@ export async function readKitchenStock(
   await page.getByRole('tab', { name: /^Kitchen/ }).click();
   const row = page.locator('tr', { hasText: ingredientName }).first();
   if ((await row.count()) === 0) return null;
-  // The inventory table renders currentStock in a column; pick the first
-  // numeric-looking cell that follows the name cell. Robust enough for the
-  // current table shape; refine if the markup changes.
-  const text = await row.innerText();
-  const match = text.match(/\b(\d+(?:\.\d+)?)\b/);
+  // `InventoryTable` (components/features/admin/inventory-table.tsx) renders
+  // 8 columns: Name, Category, Current Stock, Locations, Min/Max, Stock
+  // Level, Status, Actions. Current Stock is the 3rd TD (0-indexed: 2),
+  // formatted as `{currentStock} {unit}` (e.g. `0 g`, `5000 g`).
+  //
+  // Earlier this helper read row.innerText() and ran
+  // /\b(\d+(?:\.\d+)?)\b/ over the whole row — but `uniqueLabel(prefix)`
+  // appends Date.now() to ingredient names (e.g.
+  // `E2E-D10-Goat-1780242429276`), and that timestamp is the FIRST
+  // numeric token in the row's text. The regex grabbed the timestamp
+  // instead of the stock cell, making every `expect(stock).toBe(0)`
+  // assertion fail with `Received: 1780242429276` (#159).
+  //
+  // Scope to the Current Stock cell directly, then parse the leading
+  // number. Min/Max styling (`0/0`) and the trailing unit code are
+  // handled by anchoring the regex to the start of the cell text.
+  const stockCell = row.locator('td').nth(2);
+  const text = (await stockCell.innerText()).trim();
+  const match = text.match(/^\s*(\d+(?:\.\d+)?)/);
   if (!match) return null;
   return Number(match[1]);
 }

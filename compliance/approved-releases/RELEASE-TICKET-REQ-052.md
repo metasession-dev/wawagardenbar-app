@@ -1,14 +1,14 @@
 # Release Ticket: REQ-052 — `recordPartialPayment` sets `tab.businessDate` on the first partial payment
 
-**Status:** IN PROGRESS
+**Status:** RELEASED
 **Date:** 2026-05-31
 **Requirement ID:** REQ-052
 **Risk Level:** MEDIUM
 **GitHub Issue:** [#202](https://github.com/metasession-dev/wawagardenbar-app/issues/202)
-**Integration PR:** (opened in this push — link added once gh returns the number)
-**Release PR:** (opened after integration merges develop → main)
-**DevAudit Release:** `https://devaudit.metasession.co/projects/wgb/` (release version `REQ-052`)
-**Sign-off (dual-actor):** pending — UAT review on the portal, then Production approval, then Marked as Released.
+**Integration PR:** [#207](https://github.com/metasession-dev/wawagardenbar-app/pull/207) — merged to develop 2026-05-31 (commit `e667e70`).
+**Release PR:** [#208](https://github.com/metasession-dev/wawagardenbar-app/pull/208) — admin-merged to main 2026-05-31 (commit `2d8b920`), E2E gate non-blocking (7 pre-existing failures, REQ-052 target test passed; REQ-050 PR #180 precedent).
+**DevAudit Release:** [`devaudit.metasession.co/projects/wgb/`](https://devaudit.metasession.co/projects/wgb/) — release version `REQ-052`, status `released`.
+**Sign-off (dual-actor):** UAT approved + Production approved on the DevAudit portal (`released`); post-deploy production smoke evidence captured via [`post-deploy-prod.yml` run 26718742731](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/26718742731). Closed out 2026-05-31.
 
 ---
 

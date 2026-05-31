@@ -53,5 +53,20 @@ if echo "$BODY" | grep -qE '\[REQ-[0-9]+\]'; then
   exit 0
 fi
 
-# 4. Fallback: bare date in UTC
+# 4. Pending-release ticket fallback (REQ-053 release patch — also
+#    proposed upstream as DevAudit-Installer#92 Layer 1). When HEAD is a
+#    housekeeping commit (chore: sync, ci: fix, docs:) that doesn't carry
+#    the REQ tag, but there's exactly one open release ticket on disk
+#    naming a REQ, treat that as the in-progress release. Multiple
+#    pending tickets → ambiguous → stay with the bare-date fallback below.
+if [ -d compliance/pending-releases ]; then
+  PENDING=$(find compliance/pending-releases -maxdepth 1 -name 'RELEASE-TICKET-REQ-*.md' -type f 2>/dev/null)
+  COUNT=$(echo "$PENDING" | grep -c . || true)
+  if [ "$COUNT" -eq 1 ]; then
+    basename "$PENDING" .md | grep -oE 'REQ-[0-9]+'
+    exit 0
+  fi
+fi
+
+# 5. Fallback: bare date in UTC
 echo "v$(date -u +%Y.%m.%d)"

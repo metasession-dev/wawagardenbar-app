@@ -103,26 +103,50 @@ superAdminTest.describe(
           .click();
         await expect(dialog).toBeHidden({ timeout: 10000 });
 
-        // ── 3. Transfer pending group to confirmed expenses.
+        // ── 3. Approve, then Transfer pending group to confirmed expenses.
+        // `pending-expense-group-list.tsx` (GroupRow) gates Approve on
+        // `group.status === 'pending'` and Transfer on
+        // `group.status === 'approved'` — submission lands the group in
+        // 'pending', so we have to Approve it first before Transfer
+        // renders. (Earlier #159 failure traced to this missing step.)
+        //
+        // Note: we can't filter by ingredientName here — GroupRow's
+        // collapsed header shows only date / type / item-count; the item
+        // description (which carries the ingredient name) is hidden until
+        // the row is expanded. Each test creates one fresh pending group
+        // and the list is time-sorted newest-first, so `.first()` picks
+        // our group.
         await page.goto('/dashboard/finance/expenses/pending');
         await page.waitForLoadState('networkidle');
-        // Find the row that contains our unique ingredient/description text.
-        const pendingRow = page
-          .locator('tr,div', { hasText: ingredientName })
+        // Approve the (most recent) group — Approve button is only shown
+        // while status === 'pending' (and to super-admins; test runs
+        // as super-admin).
+        const approveButton = page
+          .getByRole('button', { name: /^Approve$/i })
           .first();
-        await expect(pendingRow).toBeVisible({ timeout: 5000 });
-        // Trigger the transfer for this group. UI exposes a "Transfer" action
-        // on the group; the bulk-select / single-action paths both work.
+        await expect(approveButton).toBeVisible({ timeout: 5000 });
+        await approveButton.click();
+        await page.waitForLoadState('networkidle');
+        // Trigger the transfer for the now-approved group. UI exposes a
+        // "Transfer" action on the group; the bulk-select / single-action
+        // paths both work.
         const transferButton = page
           .getByRole('button', { name: /^Transfer/i })
           .first();
+        await expect(transferButton).toBeVisible({ timeout: 5000 });
         await transferButton.click();
-        // Confirmation dialog.
+        // Confirmation dialog. The Confirm Transfer button is
+        // `disabled={!transferReference.trim()}` per
+        // `components/features/finance/transfer-confirmation-dialog.tsx`,
+        // so fill the required Transfer Reference (#transferRef) before
+        // clicking.
         const confirmDialog = page.locator('[role="dialog"]');
         await expect(confirmDialog).toBeVisible({ timeout: 5000 });
         await confirmDialog
-          .getByRole('button', { name: /confirm|transfer|continue/i })
-          .first()
+          .locator('#transferRef')
+          .fill(`E2E-TRF-${Date.now()}`);
+        await confirmDialog
+          .getByRole('button', { name: /^Confirm Transfer$/i })
           .click();
         await expect(confirmDialog).toBeHidden({ timeout: 10000 });
         await page.waitForLoadState('networkidle');
@@ -182,18 +206,32 @@ superAdminTest.describe(
           .click();
         await expect(dialog).toBeHidden({ timeout: 10000 });
 
-        // Transfer.
+        // Approve, then Transfer. Same locator strategy as the 5kg test
+        // above — pick the most recent (top-most) pending group by
+        // `.first()` rather than filtering on ingredientName (the
+        // GroupRow's collapsed header doesn't render item descriptions).
         await page.goto('/dashboard/finance/expenses/pending');
         await page.waitForLoadState('networkidle');
-        await page
+        const approveButton = page
+          .getByRole('button', { name: /^Approve$/i })
+          .first();
+        await expect(approveButton).toBeVisible({ timeout: 5000 });
+        await approveButton.click();
+        await page.waitForLoadState('networkidle');
+        const transferButton = page
           .getByRole('button', { name: /^Transfer/i })
-          .first()
-          .click();
+          .first();
+        await expect(transferButton).toBeVisible({ timeout: 5000 });
+        await transferButton.click();
+        // Confirmation dialog — same Transfer Reference gate as the 5kg test
+        // above.
         const confirmDialog = page.locator('[role="dialog"]');
         await expect(confirmDialog).toBeVisible({ timeout: 5000 });
         await confirmDialog
-          .getByRole('button', { name: /confirm|transfer|continue/i })
-          .first()
+          .locator('#transferRef')
+          .fill(`E2E-TRF-${Date.now()}`);
+        await confirmDialog
+          .getByRole('button', { name: /^Confirm Transfer$/i })
           .click();
         await expect(confirmDialog).toBeHidden({ timeout: 10000 });
         await page.waitForLoadState('networkidle');

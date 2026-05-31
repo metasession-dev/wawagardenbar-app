@@ -20,6 +20,9 @@ const preferencesSchema = z.object({
     email: z.boolean(),
     sms: z.boolean(),
     push: z.boolean(),
+    // REQ-053 — WhatsApp opt-in surface.
+    whatsappTransactional: z.boolean(),
+    whatsappMarketing: z.boolean(),
   }),
   language: z.string(),
 });
@@ -63,6 +66,10 @@ export function PreferencesTab({ preferences }: PreferencesTabProps) {
         email: true,
         sms: false,
         push: false,
+        // REQ-053 — WhatsApp opt-in defaults (transactional consent
+        // assumed, marketing requires explicit opt-in).
+        whatsappTransactional: true,
+        whatsappMarketing: false,
       },
       language: preferences?.language || 'en',
     },
@@ -88,7 +95,7 @@ export function PreferencesTab({ preferences }: PreferencesTabProps) {
 
   const addCustomRestriction = () => {
     if (!customRestriction.trim()) return;
-    
+
     const current = dietaryRestrictions || [];
     if (!current.includes(customRestriction.trim())) {
       setValue('dietaryRestrictions', [...current, customRestriction.trim()], {
@@ -142,7 +149,8 @@ export function PreferencesTab({ preferences }: PreferencesTabProps) {
         <div>
           <h3 className="text-lg font-semibold">Dietary Restrictions</h3>
           <p className="text-sm text-muted-foreground">
-            Select your dietary preferences to help us recommend suitable menu items
+            Select your dietary preferences to help us recommend suitable menu
+            items
           </p>
         </div>
 
@@ -152,7 +160,9 @@ export function PreferencesTab({ preferences }: PreferencesTabProps) {
             <Badge
               key={restriction}
               variant={
-                dietaryRestrictions?.includes(restriction) ? 'default' : 'outline'
+                dietaryRestrictions?.includes(restriction)
+                  ? 'default'
+                  : 'outline'
               }
               className="cursor-pointer"
               onClick={() => toggleRestriction(restriction)}
@@ -229,11 +239,9 @@ export function PreferencesTab({ preferences }: PreferencesTabProps) {
               id="email-notifications"
               checked={communicationPreferences.email}
               onCheckedChange={(checked) =>
-                setValue(
-                  'communicationPreferences.email',
-                  checked,
-                  { shouldDirty: true }
-                )
+                setValue('communicationPreferences.email', checked, {
+                  shouldDirty: true,
+                })
               }
             />
           </div>
@@ -250,11 +258,9 @@ export function PreferencesTab({ preferences }: PreferencesTabProps) {
               id="sms-notifications"
               checked={communicationPreferences.sms}
               onCheckedChange={(checked) =>
-                setValue(
-                  'communicationPreferences.sms',
-                  checked,
-                  { shouldDirty: true }
-                )
+                setValue('communicationPreferences.sms', checked, {
+                  shouldDirty: true,
+                })
               }
             />
           </div>
@@ -271,8 +277,54 @@ export function PreferencesTab({ preferences }: PreferencesTabProps) {
               id="push-notifications"
               checked={communicationPreferences.push}
               onCheckedChange={(checked) =>
+                setValue('communicationPreferences.push', checked, {
+                  shouldDirty: true,
+                })
+              }
+            />
+          </div>
+
+          {/* REQ-053 — WhatsApp transactional opt-in */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="whatsapp-transactional">
+                WhatsApp — order updates &amp; receipts
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Receive order confirmations, status updates and receipts via
+                WhatsApp.
+              </p>
+            </div>
+            <Switch
+              id="whatsapp-transactional"
+              checked={communicationPreferences.whatsappTransactional}
+              onCheckedChange={(checked) =>
                 setValue(
-                  'communicationPreferences.push',
+                  'communicationPreferences.whatsappTransactional',
+                  checked,
+                  { shouldDirty: true }
+                )
+              }
+            />
+          </div>
+
+          {/* REQ-053 — WhatsApp marketing opt-in */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="whatsapp-marketing">
+                WhatsApp — offers &amp; promotions
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Receive promotional offers, loyalty updates and reward
+                expirations via WhatsApp.
+              </p>
+            </div>
+            <Switch
+              id="whatsapp-marketing"
+              checked={communicationPreferences.whatsappMarketing}
+              onCheckedChange={(checked) =>
+                setValue(
+                  'communicationPreferences.whatsappMarketing',
                   checked,
                   { shouldDirty: true }
                 )

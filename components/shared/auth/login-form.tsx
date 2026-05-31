@@ -5,19 +5,37 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Smartphone, Mail, AlertCircle, MessageCircle } from 'lucide-react';
+import {
+  Loader2,
+  Smartphone,
+  Mail,
+  AlertCircle,
+  MessageCircle,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
-import { sendPinAction, verifyPinAction, sendEmailPinAction, verifyEmailPinAction, sendWhatsAppPinAction, verifyWhatsAppPinAction } from '@/app/actions/auth';
+import {
+  sendPinAction,
+  verifyPinAction,
+  sendEmailPinAction,
+  verifyEmailPinAction,
+  sendWhatsAppPinAction,
+  verifyWhatsAppPinAction,
+} from '@/app/actions/auth';
 import { sanitizePhone } from '@/lib/auth-utils';
 
 const phoneSchema = z.object({
-  phone: z.string().min(10, 'Phone number must be at least 10 digits').max(15, 'Phone number too long').regex(/^[\d+\s-]+$/, 'Invalid phone format'),
+  phone: z
+    .string()
+    .min(10, 'Phone number must be at least 10 digits')
+    .max(15, 'Phone number too long')
+    .regex(/^[\d+\s-]+$/, 'Invalid phone format'),
 });
 
 const emailSchema = z.object({
@@ -25,7 +43,10 @@ const emailSchema = z.object({
 });
 
 const pinSchema = z.object({
-  pin: z.string().length(4, 'PIN must be 4 digits').regex(/^\d+$/, 'PIN must contain only numbers'),
+  pin: z
+    .string()
+    .length(4, 'PIN must be 4 digits')
+    .regex(/^\d+$/, 'PIN must contain only numbers'),
 });
 
 type PhoneFormData = z.infer<typeof phoneSchema>;
@@ -38,13 +59,29 @@ interface LoginFormProps {
 }
 
 export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
-  const [step, setStep] = useState<'method' | 'phone' | 'email' | 'pin'>('method');
-  const [authMethod, setAuthMethod] = useState<'sms' | 'email' | 'whatsapp'>('whatsapp');
+  const [step, setStep] = useState<'method' | 'phone' | 'email' | 'pin'>(
+    'method'
+  );
+  const [authMethod, setAuthMethod] = useState<'sms' | 'email' | 'whatsapp'>(
+    'whatsapp'
+  );
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [deliveryError, setDeliveryError] = useState<{ message: string; canRetryWithSMS?: boolean; canRetryWithEmail?: boolean } | null>(null);
+  const [deliveryError, setDeliveryError] = useState<{
+    message: string;
+    canRetryWithSMS?: boolean;
+    canRetryWithEmail?: boolean;
+  } | null>(null);
   const [countdown, setCountdown] = useState(0);
+  // REQ-053 — Tracked from the send-pin response so the PIN-entry step
+  // can decide whether to render the WhatsApp opt-in checkbox. Only new
+  // users see the consent surface; returning users skip it.
+  const [isNewUser, setIsNewUser] = useState(false);
+  // REQ-053 — The single PIN-verification checkbox is wired to both
+  // WhatsApp consent fields per AC3. Default checked: opt-in for order
+  // updates + offers; unchecking opts out of both.
+  const [whatsappOptIn, setWhatsappOptIn] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
   const { refreshSession } = useAuth();
@@ -88,15 +125,17 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
     setCountdown(60);
     try {
       let result;
-      
+
       if (authMethod === 'whatsapp') {
         result = await sendWhatsAppPinAction(data.phone);
       } else {
         result = await sendPinAction(data.phone);
       }
-      
+
       if (result.success) {
         setPhone(sanitizePhone(data.phone));
+        // REQ-053 — capture the new-user flag for the PIN-entry checkbox.
+        setIsNewUser(result.isNewUser === true);
         setStep('pin');
         toast({
           title: 'PIN Sent',
@@ -106,7 +145,7 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
         // Check if we can retry with other methods
         if (result.canRetryWithSMS || result.canRetryWithEmail) {
           setPhone(sanitizePhone(data.phone));
-          
+
           setDeliveryError({
             message: result.message,
             canRetryWithSMS: result.canRetryWithSMS,
@@ -135,10 +174,12 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
     setIsLoading(true);
     try {
       const result = await sendEmailPinAction(data.email, phone);
-      
+
       if (result.success) {
         setEmail(data.email);
         setAuthMethod('email');
+        // REQ-053 — capture the new-user flag for the PIN-entry checkbox.
+        setIsNewUser(result.isNewUser === true);
         setStep('pin');
         toast({
           title: 'PIN Sent',
@@ -176,24 +217,34 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
     setIsLoading(true);
     try {
       let result;
-      
+      // REQ-053 — Send the WhatsApp opt-in payload only for new users;
+      // the backend further gates persistence on `!phoneVerified &&
+      // !emailVerified`, so a stale payload from a returning user is a
+      // no-op even if it slips through.
+      const optInPayload = isNewUser
+        ? {
+            whatsappTransactional: whatsappOptIn,
+            whatsappMarketing: whatsappOptIn,
+          }
+        : undefined;
+
       if (authMethod === 'whatsapp') {
-        result = await verifyWhatsAppPinAction(phone, data.pin);
+        result = await verifyWhatsAppPinAction(phone, data.pin, optInPayload);
       } else if (authMethod === 'sms') {
-        result = await verifyPinAction(phone, data.pin);
+        result = await verifyPinAction(phone, data.pin, optInPayload);
       } else {
-        result = await verifyEmailPinAction(email, data.pin);
+        result = await verifyEmailPinAction(email, data.pin, optInPayload);
       }
-      
+
       if (result.success) {
         toast({
           title: 'Success',
           description: result.message,
         });
-        
+
         // Refresh session to update auth state
         refreshSession();
-        
+
         if (onSuccess) {
           onSuccess();
         } else {
@@ -223,7 +274,7 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
     setIsLoading(true);
     try {
       let result;
-      
+
       if (authMethod === 'whatsapp') {
         result = await sendWhatsAppPinAction(phone);
       } else if (authMethod === 'sms') {
@@ -231,9 +282,14 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
       } else {
         result = await sendEmailPinAction(email, phone);
       }
-      
+
       if (result.success) {
-        const methodText = authMethod === 'whatsapp' ? 'WhatsApp' : authMethod === 'sms' ? 'phone' : 'email';
+        const methodText =
+          authMethod === 'whatsapp'
+            ? 'WhatsApp'
+            : authMethod === 'sms'
+              ? 'phone'
+              : 'email';
         toast({
           title: 'PIN Resent',
           description: `A new PIN has been sent to your ${methodText}.`,
@@ -343,41 +399,50 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
 
   if (step === 'phone') {
     return (
-      <form onSubmit={phoneForm.handleSubmit(handlePhoneSubmit)} className="space-y-4">
-        {deliveryError && (deliveryError.canRetryWithSMS || deliveryError.canRetryWithEmail) && (
-          <Alert variant="destructive" className="border-destructive/50 bg-destructive/10">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription className="ml-2">
-              <p className="mb-3 font-medium">{deliveryError.message}</p>
-              <div className="flex gap-2">
-                {deliveryError.canRetryWithSMS && authMethod === 'whatsapp' && (
-                  <Button
-                    type="button"
-                    variant="default"
-                    size="sm"
-                    onClick={handleTrySMS}
-                    className="flex-1"
-                  >
-                    <Smartphone className="mr-2 h-4 w-4" />
-                    Try SMS
-                  </Button>
-                )}
-                {deliveryError.canRetryWithEmail && (
-                  <Button
-                    type="button"
-                    variant="default"
-                    size="sm"
-                    onClick={handleTryEmail}
-                    className="flex-1"
-                  >
-                    <Mail className="mr-2 h-4 w-4" />
-                    Try Email
-                  </Button>
-                )}
-              </div>
-            </AlertDescription>
-          </Alert>
-        )}
+      <form
+        onSubmit={phoneForm.handleSubmit(handlePhoneSubmit)}
+        className="space-y-4"
+      >
+        {deliveryError &&
+          (deliveryError.canRetryWithSMS ||
+            deliveryError.canRetryWithEmail) && (
+            <Alert
+              variant="destructive"
+              className="border-destructive/50 bg-destructive/10"
+            >
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="ml-2">
+                <p className="mb-3 font-medium">{deliveryError.message}</p>
+                <div className="flex gap-2">
+                  {deliveryError.canRetryWithSMS &&
+                    authMethod === 'whatsapp' && (
+                      <Button
+                        type="button"
+                        variant="default"
+                        size="sm"
+                        onClick={handleTrySMS}
+                        className="flex-1"
+                      >
+                        <Smartphone className="mr-2 h-4 w-4" />
+                        Try SMS
+                      </Button>
+                    )}
+                  {deliveryError.canRetryWithEmail && (
+                    <Button
+                      type="button"
+                      variant="default"
+                      size="sm"
+                      onClick={handleTryEmail}
+                      className="flex-1"
+                    >
+                      <Mail className="mr-2 h-4 w-4" />
+                      Try Email
+                    </Button>
+                  )}
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
 
         <div className="space-y-2">
           <Label htmlFor="phone">Phone Number</Label>
@@ -399,13 +464,18 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
           )}
         </div>
 
-        <Button type="submit" className="w-full" disabled={isLoading || countdown > 0}>
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={isLoading || countdown > 0}
+        >
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {countdown > 0 ? `Wait ${countdown}s` : 'Continue'}
         </Button>
 
         <p className="text-center text-sm text-muted-foreground">
-          We'll send a 4-digit PIN via {authMethod === 'whatsapp' ? 'WhatsApp' : 'SMS'}
+          We'll send a 4-digit PIN via{' '}
+          {authMethod === 'whatsapp' ? 'WhatsApp' : 'SMS'}
         </p>
 
         <button
@@ -422,7 +492,10 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
 
   if (step === 'email') {
     return (
-      <form onSubmit={emailForm.handleSubmit(handleEmailSubmit)} className="space-y-4">
+      <form
+        onSubmit={emailForm.handleSubmit(handleEmailSubmit)}
+        className="space-y-4"
+      >
         <Alert>
           <Mail className="h-4 w-4" />
           <AlertDescription className="ml-2">
@@ -472,7 +545,10 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
   }
 
   return (
-    <form onSubmit={pinForm.handleSubmit(handlePinSubmit)} className="space-y-4">
+    <form
+      onSubmit={pinForm.handleSubmit(handlePinSubmit)}
+      className="space-y-4"
+    >
       <div className="space-y-2">
         <Label htmlFor="pin">Verification PIN</Label>
         <Input
@@ -492,9 +568,36 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
           </p>
         )}
         <p className="text-sm text-muted-foreground">
-          Enter the 4-digit PIN sent via {authMethod === 'whatsapp' ? 'WhatsApp' : authMethod === 'sms' ? 'SMS' : 'Email'} to {authMethod === 'email' ? email : phone}
+          Enter the 4-digit PIN sent via{' '}
+          {authMethod === 'whatsapp'
+            ? 'WhatsApp'
+            : authMethod === 'sms'
+              ? 'SMS'
+              : 'Email'}{' '}
+          to {authMethod === 'email' ? email : phone}
         </p>
       </div>
+
+      {/* REQ-053 — WhatsApp opt-in checkbox; only rendered for new users
+          (send-pin reported isNewUser === true). Default checked: consent
+          for both transactional + marketing. Unchecking opts out of both
+          per AC3. Returning users skip this surface entirely. */}
+      {isNewUser && (
+        <div className="flex items-start gap-2 rounded-md border bg-muted/40 p-3">
+          <Checkbox
+            id="whatsapp-opt-in"
+            checked={whatsappOptIn}
+            onCheckedChange={(checked) => setWhatsappOptIn(checked === true)}
+            disabled={isLoading}
+          />
+          <Label
+            htmlFor="whatsapp-opt-in"
+            className="text-sm leading-tight cursor-pointer"
+          >
+            Get order updates and offers via WhatsApp — recommended
+          </Label>
+        </div>
+      )}
 
       <Button type="submit" className="w-full" disabled={isLoading}>
         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -528,7 +631,8 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
           <Alert className="bg-amber-50 border-amber-200 shadow-sm">
             <Mail className="h-5 w-5 text-amber-600" />
             <AlertDescription className="ml-3 text-base text-amber-900">
-              Having trouble receiving the {authMethod === 'whatsapp' ? 'WhatsApp message' : 'SMS'}? You can{' '}
+              Having trouble receiving the{' '}
+              {authMethod === 'whatsapp' ? 'WhatsApp message' : 'SMS'}? You can{' '}
               <button
                 type="button"
                 onClick={() => {
@@ -539,8 +643,8 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
                 disabled={isLoading}
               >
                 verify via email
-              </button>
-              {' '}instead.
+              </button>{' '}
+              instead.
             </AlertDescription>
           </Alert>
         </div>

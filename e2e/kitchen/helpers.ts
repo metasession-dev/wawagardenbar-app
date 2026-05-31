@@ -75,8 +75,16 @@ export async function createKitchenIngredient(
 
   await selects.nth(1).click();
   const unitToPick = opts.unitLabel ?? 'Grams';
+  // ANCHOR the regex — default UoM registry orders `Kilograms (kg)`
+  // BEFORE `Grams (g)`, and an unanchored /Grams/i pattern matches
+  // "Kilograms" case-insensitively (since "kilograms" contains "grams").
+  // `.first()` then picked Kilograms, so every test calling this with
+  // `unitLabel: 'Grams'` silently created a **kg-unit** ingredient.
+  // That's the actual root cause of all 4 #159 failures — what looked
+  // like a kg→g conversion bug was test data being kg→kg (or g→kg).
+  // Anchor with `^` so `^Grams` doesn't match `Kilograms`.
   await page
-    .getByRole('option', { name: new RegExp(unitToPick, 'i') })
+    .getByRole('option', { name: new RegExp(`^${unitToPick}\\b`, 'i') })
     .first()
     .click();
 

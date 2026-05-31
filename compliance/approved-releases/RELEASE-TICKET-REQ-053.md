@@ -1,14 +1,14 @@
 # Release Ticket: REQ-053 — WhatsApp opt-in surface at signup + profile
 
-**Status:** IN PROGRESS
+**Status:** RELEASED
 **Date:** 2026-05-31
 **Requirement ID:** REQ-053
 **Risk Level:** MEDIUM
 **GitHub Issue:** [#117 WA-4](https://github.com/metasession-dev/wawagardenbar-app/issues/117)
-**Integration PR:** (opened in this push — link added once gh returns the number)
-**Release PR:** (opened after integration merges develop → main)
-**DevAudit Release:** `https://devaudit.metasession.co/projects/wgb/` (release version `REQ-053`)
-**Sign-off (dual-actor):** pending — UAT review on the portal, then Production approval, then Marked as Released.
+**Integration PR:** [#214](https://github.com/metasession-dev/wawagardenbar-app/pull/214) — merged to develop 2026-05-31 (commit `5934ff1`).
+**Release PR:** [#215](https://github.com/metasession-dev/wawagardenbar-app/pull/215) — admin-merged to main 2026-05-31 (commit `a1d637b`); E2E gate non-blocking after a redundant retry was cancelled mid-run (prior E2E on the actual product commits passed 393/26/1-flaky/0-fail per [run 26723095491](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/26723095491); same precedent as REQ-050 PR #180 / REQ-052 PR #208).
+**DevAudit Release:** [`devaudit.metasession.co/projects/wgb/`](https://devaudit.metasession.co/projects/wgb/) — release version `REQ-053`, status `released`.
+**Sign-off (dual-actor):** UAT approved + Production approved on the DevAudit portal (`released`); post-deploy production smoke evidence captured via [`post-deploy-prod.yml` run 26724928761](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/26724928761). Closed out 2026-05-31.
 
 ---
 

@@ -8,7 +8,45 @@ This document is the **paste-into-Meta-Business-Manager reference**. Each sectio
 
 > [business.facebook.com/wa/manage/message-templates](https://business.facebook.com/wa/manage/message-templates)
 
-Submission usually takes 24–48 hours per template. Submit all 7 in one session — Meta processes them in parallel.
+Submission usually takes 24–48 hours per template. Submit all 12 in one session — Meta processes them in parallel.
+
+---
+
+## Conversation architecture (Option A — WhatsApp triggers, browser completes)
+
+The strategic frame for this doc: **templates aren't a script the bar reads to every customer.** They're canned messages WA-3's webhook handler picks from based on user state.
+
+### Customer state → response (WA-3 routing logic)
+
+| Customer state on inbound message                      | What the handler does                               | Template used?               |
+| ------------------------------------------------------ | --------------------------------------------------- | ---------------------------- |
+| Unknown phone, no User in DB                           | Send welcome with menu / order / event-booking CTAs | `welcome_new_user` ✅        |
+| User exists, `phoneVerified: false` (abandoned signup) | Same welcome — implicit prompt to re-engage         | `welcome_new_user` ✅        |
+| Known active user, recent `lastLoginAt`                | **Free-form reply** (staff / bot)                   | **None** — no template fires |
+| Known dormant user (>30d silent)                       | Welcome-back nudge                                  | `welcome_back` ✅            |
+| Phone-mismatch (number not on customer's account)      | Recovery prompt                                     | `account_recovery` ✅        |
+
+### Why "first reply is value-first, not signup-first"
+
+Forcing signup at first message tanks conversion. The bar can take orders, show the menu, accept event-booking enquiries, even handle support — all without signup. Signup happens **just-in-time** at checkout (REQ-053's PIN flow), when the customer commits to delivering somewhere or saving a card.
+
+### The Meta 24-hour customer-service window
+
+Once a customer messages the bar, Meta opens a **24-hour window** in which the bar can reply with free-form messages (no template required). Outside the window, only approved templates can be sent. This means:
+
+- **Most returning-customer conversations never touch a template.** Staff or bot replies are plain text within the 24h window.
+- **Templates are for first contact + outside-window re-engagement** (e.g. abandoned-cart, "we miss you" after 60d).
+- **Marketing templates** (`reward_earned`, `reward_expiring_soon`) require the `whatsappMarketing` consent REQ-053 gates on.
+
+### Net templates after this doc
+
+- 4 reused from existing code (`order_confirmation`, `order_status_update`) and required for upcoming WA-2 / WA-6 work (`receipt`, `support_reply`).
+- 2 marketing rewards (`reward_earned`, `reward_expiring_soon`).
+- 3 Paystack (`payment_link`, `payment_confirmation`, `bank_transfer_details`).
+- 3 signup / inbound routing (`welcome_new_user`, `welcome_back`, `account_recovery`).
+- 1 already approved (`verification_pin`).
+
+**= 12 templates to submit + 1 already approved = 13 active.**
 
 ---
 
@@ -239,6 +277,163 @@ params = [customerFirstName, ticketSubject, replyBody]
 
 ---
 
+## 8. `payment_confirmation` — UTILITY
+
+**Sent when:** a returning customer with a saved Paystack `authorization_code` is about to be direct-charged. The customer's `YES` reply (handled by WA-3's webhook) triggers the actual server-side charge. Without WA-3 this template can't complete the round-trip — but submitting now lets Meta start the 24–48h review clock.
+
+**Code mapping** (expected, after WA-2 + WA-3 land):
+
+```
+params = [amount, cardLast4]
+// Customer reply 'YES' → server calls Paystack /transaction/charge_authorization
+//   with the stored authorization_code, then sends payment_received / receipt.
+```
+
+| Field    | Value                                                                                                                           |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Name     | `payment_confirmation`                                                                                                          |
+| Category | **UTILITY**                                                                                                                     |
+| Language | `en`                                                                                                                            |
+| Header   | TEXT: `Confirm payment`                                                                                                         |
+| Body     | `You're about to be charged {{1}} via your card ending in {{2}}. Reply YES to confirm or NO to cancel. Link expires in 1 hour.` |
+| Footer   | `Wawa Garden Bar`                                                                                                               |
+| Buttons  | Quick reply: `✅ YES, charge me` · Quick reply: `❌ NO, cancel`                                                                 |
+
+**Examples:**
+
+| `{{1}}`   | `{{2}}` |
+| --------- | ------- |
+| `₦12,500` | `1234`  |
+
+---
+
+## 9. `bank_transfer_details` — UTILITY
+
+**Sent when:** customer chooses bank transfer at checkout. Paystack's **Virtual Accounts** product generates a one-off NUBAN; we forward the details via WhatsApp so the customer can pay from any bank app (no card needed).
+
+**Prerequisite:** Paystack Virtual Accounts enabled on the bar's Paystack account. Confirm with Paystack support before submitting this template — they require KYC + a request via the dashboard.
+
+**Code mapping** (expected):
+
+```
+params = [amount, accountNumber, accountName, bankName, expiresInHours]
+// Generated server-side via Paystack /dedicated_account or /transaction/initialize
+//   with channels: ['bank_transfer']. Webhook confirms inbound on virtual account.
+```
+
+| Field    | Value                                                                                                                                                                   |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Name     | `bank_transfer_details`                                                                                                                                                 |
+| Category | **UTILITY**                                                                                                                                                             |
+| Language | `en`                                                                                                                                                                    |
+| Header   | TEXT: `Bank transfer details`                                                                                                                                           |
+| Body     | `Transfer {{1}} to the account below within {{5}} hours:\n\nAccount: {{2}}\nName: {{3}}\nBank: {{4}}\n\nYour order is confirmed automatically once we receive payment.` |
+| Footer   | `Wawa Garden Bar`                                                                                                                                                       |
+| Buttons  | Quick reply: `📋 Copy details`                                                                                                                                          |
+
+**Examples:**
+
+| `{{1}}`   | `{{2}}`      | `{{3}}`           | `{{4}}`     | `{{5}}` |
+| --------- | ------------ | ----------------- | ----------- | ------- |
+| `₦12,500` | `9019823745` | `Wawa Garden Bar` | `Wema Bank` | `2`     |
+
+---
+
+## 10. `welcome_new_user` — UTILITY
+
+**Sent when:** WA-3's webhook receives an inbound message from a phone we don't recognise (no User in DB, or `phoneVerified: false`).
+
+**Strategic note — value-first, not signup-first.** This is the _first reply_ a new customer sees. We don't push signup here — we show what they can do (browse menu, order, book an event). Signup happens **just-in-time** at checkout (where REQ-053's PIN flow handles it). Conversion is materially higher this way than forcing a sign-up gate at first message.
+
+**Button strategy:** Meta caps templates at 3 buttons. We use all 3 for revenue-driving actions (menu / order / book event); "Chat with Staff" doesn't need a button because the customer is **already in WhatsApp** — they can text and WA-3 routes their message to your support queue. The 24-hour customer-service window means staff can reply free-form for the next 24h without any template.
+
+**Code mapping** (expected, set by WA-3 webhook handler):
+
+```
+params = [openTime, closeTime]
+// e.g. ['11am', '11pm'] — read from system settings business hours
+```
+
+| Field    | Value                                                                                                                                                                                                              |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Name     | `welcome_new_user`                                                                                                                                                                                                 |
+| Category | **UTILITY**                                                                                                                                                                                                        |
+| Language | `en`                                                                                                                                                                                                               |
+| Header   | TEXT: `Welcome to Wawa Garden Bar 🌿`                                                                                                                                                                              |
+| Body     | `Hi 👋 thanks for reaching out. We're a garden bar + kitchen serving food, drinks and good times. Tap below to see today's menu, place an order, or book a private event with us. We're here from {{1}} to {{2}}.` |
+| Footer   | `Wawa Garden Bar`                                                                                                                                                                                                  |
+| Buttons  | URL `📖 See Menu` → `https://wawagardenbar.com/menu` · URL `🛒 Order Now` → `https://wawagardenbar.com/order` · URL `🎉 Book an Event` → `https://wawagardenbar.com/events/book`                                   |
+
+**Examples:**
+
+| `{{1}}` | `{{2}}` |
+| ------- | ------- |
+| `11am`  | `11pm`  |
+
+---
+
+## 11. `welcome_back` — UTILITY
+
+**Sent when:** WA-3's webhook receives a message from a known customer who's been dormant (>30 days `lastLoginAt`), OR as a proactive re-engagement outside the 24h window (e.g. "we've missed you" campaign).
+
+**Same button strategy as `welcome_new_user`** — three revenue actions, no signup ask (customer's already signed up).
+
+**Code mapping** (expected):
+
+```
+params = [customerFirstName]
+// Address / saved card / order count could be tucked into a follow-up
+//   free-form message within the 24h window opened by the template send.
+```
+
+| Field    | Value                                                                                                                                                                            |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Name     | `welcome_back`                                                                                                                                                                   |
+| Category | **UTILITY**                                                                                                                                                                      |
+| Language | `en`                                                                                                                                                                             |
+| Header   | TEXT: `Welcome back 👋`                                                                                                                                                          |
+| Body     | `Hi {{1}}, we've missed you at Wawa Garden Bar. Tap below to see what's new on the menu, place a quick order with your saved details, or book your next celebration with us.`    |
+| Footer   | `Wawa Garden Bar`                                                                                                                                                                |
+| Buttons  | URL `📖 See Menu` → `https://wawagardenbar.com/menu` · URL `🛒 Order Now` → `https://wawagardenbar.com/order` · URL `🎉 Book an Event` → `https://wawagardenbar.com/events/book` |
+
+**Examples:**
+
+| `{{1}}`  |
+| -------- |
+| `Adaeze` |
+
+---
+
+## 12. `account_recovery` — UTILITY
+
+**Sent when:** WA-3's webhook receives a message from a phone that doesn't match the customer's account-on-file (e.g. they're texting from a borrowed phone, or they've switched numbers). The reply (`YES` or `NEW`) routes the customer to either merge the number or start fresh.
+
+**Code mapping** (expected):
+
+```
+params = [originalPhoneLastFour]
+// e.g. '4567' — the last 4 digits of the phone number on file
+// Customer reply 'YES' / 'NEW' handled by WA-3's webhook.
+```
+
+| Field    | Value                                                                                                                                                                                                                     |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Name     | `account_recovery`                                                                                                                                                                                                        |
+| Category | **UTILITY**                                                                                                                                                                                                               |
+| Language | `en`                                                                                                                                                                                                                      |
+| Header   | TEXT: `New number detected`                                                                                                                                                                                               |
+| Body     | `Hi, it looks like you're messaging us from a new number. Your existing Wawa Garden Bar account is registered to a phone ending in {{1}}. Reply YES to add this number to that account, or NEW to start a fresh account.` |
+| Footer   | (none)                                                                                                                                                                                                                    |
+| Buttons  | Quick reply: `✅ YES, link to existing` · Quick reply: `🆕 NEW account`                                                                                                                                                   |
+
+**Examples:**
+
+| `{{1}}` |
+| ------- |
+| `4567`  |
+
+---
+
 ## After submission — wiring checklist
 
 Once Meta approves each template (you'll see them flip from `IN REVIEW` to `APPROVED` in the WABA template manager):
@@ -247,9 +442,11 @@ Once Meta approves each template (you'll see them flip from `IN REVIEW` to `APPR
 
 2. **Set the `WHATSAPP_PIN_TEMPLATE_NAME` env var** if the signup OTP template differs (it's overridable — see `lib/whatsapp.ts:209`).
 
-3. **Update the WA bundle checklist on [#117](https://github.com/metasession-dev/wawagardenbar-app/issues/117)** — tick WA-1 once all 7 are approved.
+3. **Update the WA bundle checklist on [#117](https://github.com/metasession-dev/wawagardenbar-app/issues/117)** — tick WA-1 once all 12 are approved.
 
-4. **Trigger WA-2** — that's the next code item in the bundle (`NotificationService.send` wrapper). It will gate sends on the consent state REQ-053 just added (`whatsappTransactional` for UTILITY templates, `whatsappMarketing` for MARKETING).
+4. **Trigger WA-2** — `NotificationService.send` wrapper. It will gate sends on the consent state REQ-053 just added (`whatsappTransactional` for UTILITY templates, `whatsappMarketing` for MARKETING).
+
+5. **Confirm event-booking page exists.** `welcome_new_user` + `welcome_back` link to `https://wawagardenbar.com/events/book`. If the page isn't live, those buttons will 404. See the issue filed alongside this doc.
 
 ---
 

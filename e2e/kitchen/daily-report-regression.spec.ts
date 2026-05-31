@@ -40,21 +40,25 @@ async function gotoDailyReport(page: Page): Promise<void> {
 }
 
 async function readTotalRevenueText(page: Page): Promise<string> {
-  const card = page.locator(
-    'div:has(> :is(div, h3):text-matches("^\\s*Total Revenue\\s*$", "i"))'
-  );
-  // Fallback to a less-strict locator if the project's Card markup changes.
-  const fallback = page.locator(
-    'div', // Card root
-    { has: page.getByText(/^\s*Total Revenue\s*$/i) }
-  );
-  const target = (await card.count()) > 0 ? card : fallback;
-  await expect(target.first()).toBeVisible({ timeout: 10000 });
-  // Total Revenue value is the only `text-2xl font-bold` child of the card.
-  const value = target
-    .first()
-    .locator('div.text-2xl.font-bold, div.font-bold')
+  // The Total Revenue row in components/features/reports/profit-section.tsx
+  // renders as a flex row of two spans:
+  //
+  //   <div class="flex justify-between items-center py-2">
+  //     <span class="font-semibold">Total Revenue</span>
+  //     <span class="text-lg font-bold text-primary">{formatCurrency(...)}</span>
+  //   </div>
+  //
+  // The previous helper looked for the label as a `div`/`h3` and the value as
+  // a `div.text-2xl.font-bold` — neither matches the actual markup, so the
+  // helper returned ₦0.00 / failed visibility every time. Find the label by
+  // exact text (excluding the colon-suffixed 'Total Revenue:' label in
+  // revenue-section.tsx) and read its sibling span.
+  const label = page
+    .getByText(/^\s*Total Revenue\s*$/)
+    .filter({ hasNotText: ':' })
     .first();
+  await expect(label).toBeVisible({ timeout: 10000 });
+  const value = label.locator('xpath=following-sibling::span[1]');
   await expect(value).toBeVisible();
   return (await value.innerText()).trim();
 }

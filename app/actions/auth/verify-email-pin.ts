@@ -12,9 +12,19 @@ interface VerifyEmailPinResult {
   message: string;
 }
 
+/**
+ * REQ-053 — see `verify-pin.ts:PinOptInPayload`. Shared shape; re-declared
+ * locally to keep each verify-action self-contained.
+ */
+export interface EmailPinOptInPayload {
+  whatsappTransactional: boolean;
+  whatsappMarketing: boolean;
+}
+
 export async function verifyEmailPinAction(
   email: string,
-  pin: string
+  pin: string,
+  optIn?: EmailPinOptInPayload
 ): Promise<VerifyEmailPinResult> {
   try {
     if (!email || !validateEmail(email)) {
@@ -74,6 +84,19 @@ export async function verifyEmailPinAction(
         success: false,
         message: 'Invalid PIN. Please try again.',
       };
+    }
+
+    // REQ-053 — persist WhatsApp opt-in ONLY on truly first verification
+    // (no verified channel yet). See `verify-pin.ts` for the rationale.
+    if (optIn && !user.phoneVerified && !user.emailVerified) {
+      user.set(
+        'preferences.communicationPreferences.whatsappTransactional',
+        optIn.whatsappTransactional
+      );
+      user.set(
+        'preferences.communicationPreferences.whatsappMarketing',
+        optIn.whatsappMarketing
+      );
     }
 
     // PIN is valid - mark email as verified and clear PIN

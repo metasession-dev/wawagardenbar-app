@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { ProfileService, OrderService, TabService } from '@/services';
 import { sessionOptions, SessionData } from '@/lib/session';
-import { IUser, IAddress } from '@/interfaces';
+import { IUser, IAddress, IPreferences } from '@/interfaces';
 import { AuditLogService } from '@/services/audit-log-service';
 
 /**
@@ -24,7 +24,10 @@ interface ActionResult<T = unknown> {
 const updateProfileSchema = z.object({
   firstName: z.string().min(1).max(50).optional(),
   lastName: z.string().min(1).max(50).optional(),
-  phone: z.string().regex(/^\+?[1-9]\d{1,14}$/).optional(), // E.164 format
+  phone: z
+    .string()
+    .regex(/^\+?[1-9]\d{1,14}$/)
+    .optional(), // E.164 format
   instagramHandle: z.string().max(30).optional().or(z.literal('')),
 });
 
@@ -37,19 +40,29 @@ const addressSchema = z.object({
   country: z.string().min(2).max(100).default('Nigeria'),
   deliveryInstructions: z.string().max(500).optional(),
   isDefault: z.boolean().default(false),
-  coordinates: z.object({
-    lat: z.number(),
-    lng: z.number(),
-  }).optional(),
+  coordinates: z
+    .object({
+      lat: z.number(),
+      lng: z.number(),
+    })
+    .optional(),
 });
 
 const preferencesSchema = z.object({
   dietaryRestrictions: z.array(z.string()).optional(),
-  communicationPreferences: z.object({
-    email: z.boolean(),
-    sms: z.boolean(),
-    push: z.boolean(),
-  }).optional(),
+  communicationPreferences: z
+    .object({
+      email: z.boolean(),
+      sms: z.boolean(),
+      push: z.boolean(),
+      // REQ-053 — optional during rollout so client payloads from older
+      // builds (without the WhatsApp fields) still validate. When the
+      // mobile app + web are both on the new build this can be tightened
+      // to required.
+      whatsappTransactional: z.boolean().optional(),
+      whatsappMarketing: z.boolean().optional(),
+    })
+    .optional(),
   language: z.string().optional(),
 });
 
@@ -59,7 +72,10 @@ const preferencesSchema = z.object({
 export async function getUserProfileAction(): Promise<ActionResult<IUser>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     if (!session.isLoggedIn || !session.userId) {
       return {
@@ -101,7 +117,10 @@ export async function updateProfileAction(
 ): Promise<ActionResult<IUser>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     if (!session.isLoggedIn || !session.userId) {
       return {
@@ -125,16 +144,18 @@ export async function updateProfileAction(
       const handle = validated.instagramHandle.trim();
       if (handle) {
         // Remove @ if present
-        const cleanHandle = handle.startsWith('@') ? handle.substring(1) : handle;
+        const cleanHandle = handle.startsWith('@')
+          ? handle.substring(1)
+          : handle;
         updateData.socialProfiles = {
           instagram: {
             handle: cleanHandle,
             lastCheckedAt: new Date(), // Reset check time on update
-            verified: false
-          }
+            verified: false,
+          },
         };
       } else {
-        // If empty string provided, we might want to remove it or set to empty? 
+        // If empty string provided, we might want to remove it or set to empty?
         // For now, if explicit empty string, we can clear it or just update.
         // Current ProfileService logic updates partials.
         // To clear it, we might need to pass empty handle.
@@ -198,7 +219,10 @@ export async function updatePreferencesAction(
 ): Promise<ActionResult<IUser>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     if (!session.isLoggedIn || !session.userId) {
       return {
@@ -210,11 +234,29 @@ export async function updatePreferencesAction(
     // Validate input
     const validated = preferencesSchema.parse(data);
 
+    // REQ-053 — the schema accepts the new WhatsApp fields as optional
+    // during rollout (older client builds may not send them). Default
+    // any unsent field here so the persisted preferences object matches
+    // the strict IPreferences shape downstream.
+    const normalisedPreferences: Partial<IPreferences> =
+      validated.communicationPreferences
+        ? {
+            ...validated,
+            communicationPreferences: {
+              ...validated.communicationPreferences,
+              whatsappTransactional:
+                validated.communicationPreferences.whatsappTransactional ??
+                true,
+              whatsappMarketing:
+                validated.communicationPreferences.whatsappMarketing ?? false,
+            },
+          }
+        : (validated as Partial<IPreferences>);
+
     // Update profile
-    const updatedProfile = await ProfileService.updateProfile(
-      session.userId,
-      { preferences: validated }
-    );
+    const updatedProfile = await ProfileService.updateProfile(session.userId, {
+      preferences: normalisedPreferences,
+    });
 
     if (!updatedProfile) {
       return {
@@ -255,7 +297,10 @@ export async function uploadProfilePictureAction(
 ): Promise<ActionResult<{ url: string }>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     if (!session.isLoggedIn || !session.userId) {
       return {
@@ -272,7 +317,10 @@ export async function uploadProfilePictureAction(
       };
     }
 
-    const result = await ProfileService.uploadProfilePicture(session.userId, file);
+    const result = await ProfileService.uploadProfilePicture(
+      session.userId,
+      file
+    );
 
     if (!result.success) {
       return {
@@ -314,7 +362,10 @@ export async function addAddressAction(
 ): Promise<ActionResult<IUser>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     if (!session.isLoggedIn || !session.userId) {
       return {
@@ -383,7 +434,10 @@ export async function updateAddressAction(
 ): Promise<ActionResult<IUser>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     if (!session.isLoggedIn || !session.userId) {
       return {
@@ -443,7 +497,10 @@ export async function deleteAddressAction(
 ): Promise<ActionResult<IUser>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     if (!session.isLoggedIn || !session.userId) {
       return {
@@ -502,7 +559,10 @@ export async function setDefaultAddressAction(
 ): Promise<ActionResult<IUser>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     if (!session.isLoggedIn || !session.userId) {
       return {
@@ -545,10 +605,15 @@ export async function setDefaultAddressAction(
 /**
  * Get user addresses
  */
-export async function getUserAddressesAction(): Promise<ActionResult<IAddress[]>> {
+export async function getUserAddressesAction(): Promise<
+  ActionResult<IAddress[]>
+> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     if (!session.isLoggedIn || !session.userId) {
       return {
@@ -583,7 +648,10 @@ export async function claimGuestOrdersAction(
 ): Promise<ActionResult<{ ordersLinked: number }>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     if (!session.isLoggedIn || !session.userId) {
       return {
@@ -637,7 +705,10 @@ export async function requestDataDeletionAction(
 ): Promise<ActionResult<{ ticketId: string }>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     if (!session.isLoggedIn || !session.userId) {
       return {
@@ -651,20 +722,30 @@ export async function requestDataDeletionAction(
     if (openTab) {
       return {
         success: false,
-        error: 'You have an open tab. Please settle your tab before requesting data deletion.',
+        error:
+          'You have an open tab. Please settle your tab before requesting data deletion.',
       };
     }
 
     // Check for active orders
-    const { orders } = await OrderService.getOrdersByUserId(session.userId, { limit: 20 });
-    const activeOrders = orders.filter(order => 
-      ['pending', 'confirmed', 'preparing', 'ready', 'out-for-delivery'].includes(order.status)
+    const { orders } = await OrderService.getOrdersByUserId(session.userId, {
+      limit: 20,
+    });
+    const activeOrders = orders.filter((order) =>
+      [
+        'pending',
+        'confirmed',
+        'preparing',
+        'ready',
+        'out-for-delivery',
+      ].includes(order.status)
     );
 
     if (activeOrders.length > 0) {
       return {
         success: false,
-        error: 'You have active orders. Please wait for them to be completed before requesting data deletion.',
+        error:
+          'You have active orders. Please wait for them to be completed before requesting data deletion.',
       };
     }
 

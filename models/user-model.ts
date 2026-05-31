@@ -53,6 +53,12 @@ const preferencesSchema = new Schema<IPreferences>(
       email: { type: Boolean, default: true },
       sms: { type: Boolean, default: false },
       push: { type: Boolean, default: false },
+      // REQ-053 — WhatsApp opt-in surface. Defaults are surfaced at the
+      // schema level so existing user docs persisted before REQ-053
+      // read these fields correctly via Mongoose default-fill at access
+      // time; they're persisted on the next save.
+      whatsappTransactional: { type: Boolean, default: true },
+      whatsappMarketing: { type: Boolean, default: false },
     },
     language: { type: String, default: 'en' },
   },

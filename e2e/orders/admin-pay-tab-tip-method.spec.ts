@@ -120,16 +120,25 @@ test.describe.serial('REQ-036: card bill + cash tip on tab close', () => {
 
     // Tip method dropdown defaults to the bill type ('card').
     // Override to 'cash' to exercise AC1's independence.
+    //
+    // The previous locator was `[id="tab-close-tip"] ~ * button` (CSS
+    // general-sibling), but `#tab-close-tip` is the <Input> itself, and
+    // the Select trigger button is a sibling of the input's *parent* div
+    // in the TipInputRow grid (components/features/orders/tip-input-row.tsx).
+    // The locator matched 0 elements, the silent `if (isVisible)` fallback
+    // skipped the override, the tip recorded under the bill's method
+    // (card), and AC8 read 0 cash tips. Same root cause and fix as
+    // PR #206 for express-tip-capture (#201) — use a document-order
+    // XPath to find the first combobox after the input, and fail
+    // loudly if the override path is missing.
     const tipMethodTrigger = page
-      .locator('[id="tab-close-tip"] ~ * button')
-      .first();
-    if (await tipMethodTrigger.isVisible().catch(() => false)) {
-      await tipMethodTrigger.click();
-      const cashOption = page.getByRole('option', { name: /^Cash$/ });
-      if (await cashOption.isVisible().catch(() => false)) {
-        await cashOption.click();
-      }
-    }
+      .locator('#tab-close-tip')
+      .locator('xpath=following::button[@role="combobox"][1]');
+    await expect(tipMethodTrigger).toBeVisible({ timeout: 5000 });
+    await tipMethodTrigger.click();
+    const cashOption = page.getByRole('option', { name: /^Cash$/ });
+    await expect(cashOption).toBeVisible({ timeout: 5000 });
+    await cashOption.click();
 
     // Submit close-tab.
     await page.getByRole('button', { name: /Pay ₦.*Close Tab/i }).click();

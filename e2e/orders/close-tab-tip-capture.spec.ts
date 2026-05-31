@@ -81,6 +81,14 @@ async function openTodayReport(page: Page) {
 
 test.describe.serial('REQ-035: close-tab tip capture', () => {
   let baselineCashTips = 0;
+  // Shared flag — AC2 silently `test.skip`s when UAT has no open tab to
+  // close. The Daily Report still renders a "Tips Received" heading
+  // regardless, so AC7's existing heading-based skip fallback can't tell
+  // the difference between "AC2 was skipped" and "AC2 ran but the tip
+  // didn't land". AC7 then assertion-failed with `Received: 0` because
+  // baseline stayed at the AC2-init value. Use a positive flag so AC7
+  // only asserts when AC2 actually closed a tab.
+  let tabClosedInThisRun = false;
   const TIP = 250;
 
   test.beforeEach(async ({ page }, testInfo) => {
@@ -128,20 +136,24 @@ test.describe.serial('REQ-035: close-tab tip capture', () => {
 
     // Toast / refresh.
     await page.waitForLoadState('networkidle');
+    // Mark the tab as actually closed only after the submit completes;
+    // AC7 reads this to decide whether to assert or skip.
+    tabClosedInThisRun = true;
   });
 
   test('AC7 — Daily Report Tips Received cash card increased', async ({
     page,
   }) => {
+    // If AC2 silent-skipped (no open tab on UAT), there's no tip to
+    // verify — skip rather than fail with `Received: 0`.
+    test.skip(
+      !tabClosedInThisRun,
+      'AC2 was skipped (no open tab to close) — nothing to assert in AC7'
+    );
+
     await openTodayReport(page);
     const heading = page.locator('h3').filter({ hasText: /Tips Received/i });
-    if (!(await heading.isVisible().catch(() => false))) {
-      test.skip(
-        true,
-        'Tips section absent — likely the prior test was skipped or no tip recorded'
-      );
-      return;
-    }
+    await expect(heading).toBeVisible({ timeout: 15000 });
     const { cash } = await readTipsBreakdown(page);
     expect(cash - baselineCashTips).toBeGreaterThanOrEqual(TIP);
   });

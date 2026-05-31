@@ -26,13 +26,39 @@ import {
   readKitchenStock,
 } from './helpers';
 
+/**
+ * Map a long unit label (the shape the kitchen-ingredient form uses,
+ * coming from `getUnitsOfMeasurement()` → `'Kilograms (kg)'`, `'Grams (g)'`)
+ * to the short code the recipe-builder Select renders.
+ *
+ * `recipe-builder.tsx:59` hardcodes `DEFAULT_UNIT_CHOICES = ['g', 'kg',
+ * 'ml', 'litres', 'eggs', 'pieces']`. The earlier helper passed the long
+ * label straight into a `getByRole('option', { name: /Kilograms/i })`
+ * lookup — no such option exists in the recipe-builder dropdown, so the
+ * click timed out and #159 failures #4/#5 surfaced.
+ *
+ * Accept either form at call sites (the long label keeps the call sites
+ * self-documenting); convert here.
+ */
+function toRecipeBuilderUnitCode(unitLabel: string): string {
+  const lower = unitLabel.trim().toLowerCase();
+  // Long → short.
+  if (/^kilograms?\b/.test(lower)) return 'kg';
+  if (/^grams?\b/.test(lower)) return 'g';
+  if (/^litres?\b/.test(lower)) return 'litres';
+  if (/^millilitres?\b/.test(lower)) return 'ml';
+  // Already a short code or one of the count-style codes the dropdown
+  // also renders verbatim (eggs, pieces).
+  return unitLabel;
+}
+
 async function authorRecipe(
   page: import('@playwright/test').Page,
   opts: {
     recipeName: string;
     ingredientName: string;
     quantity: number;
-    unitLabel: string; // e.g. 'Kilograms' to test cross-unit conversion
+    unitLabel: string; // 'Kilograms' / 'Grams' / 'kg' / 'g' / etc.
   }
 ) {
   await page.goto('/dashboard/kitchen/recipes/new');
@@ -51,8 +77,11 @@ async function authorRecipe(
     .click();
   await page.locator('input[type="number"]').nth(1).fill(String(opts.quantity));
   await combos.nth(2).click();
+  // Recipe-builder Select renders short codes — match exactly so `g`
+  // doesn't accidentally grab `Grams (g)` or `gel` first.
+  const unitCode = toRecipeBuilderUnitCode(opts.unitLabel);
   await page
-    .getByRole('option', { name: new RegExp(opts.unitLabel, 'i') })
+    .getByRole('option', { name: new RegExp(`^${unitCode}$`, 'i') })
     .first()
     .click();
   await page.getByRole('button', { name: /create recipe/i }).click();

@@ -103,7 +103,11 @@ superAdminTest.describe(
           .click();
         await expect(dialog).toBeHidden({ timeout: 10000 });
 
-        // ── 3. Transfer pending group to confirmed expenses.
+        // ── 3. Approve, then Transfer pending group to confirmed expenses.
+        // `pending-expense-group-list.tsx` gates the Transfer button on
+        // `group.status === 'approved'` — submission lands the group in
+        // 'pending', so we have to Approve it first before Transfer
+        // renders. (Earlier #159 failure traced to this missing step.)
         await page.goto('/dashboard/finance/expenses/pending');
         await page.waitForLoadState('networkidle');
         // Find the row that contains our unique ingredient/description text.
@@ -111,11 +115,21 @@ superAdminTest.describe(
           .locator('tr,div', { hasText: ingredientName })
           .first();
         await expect(pendingRow).toBeVisible({ timeout: 5000 });
-        // Trigger the transfer for this group. UI exposes a "Transfer" action
-        // on the group; the bulk-select / single-action paths both work.
+        // Approve the group — the Approve button is in the group's action
+        // strip while status is 'pending'.
+        const approveButton = pendingRow
+          .getByRole('button', { name: /^Approve$/i })
+          .first();
+        await expect(approveButton).toBeVisible({ timeout: 5000 });
+        await approveButton.click();
+        await page.waitForLoadState('networkidle');
+        // Trigger the transfer for the now-approved group. UI exposes a
+        // "Transfer" action on the group; the bulk-select / single-action
+        // paths both work.
         const transferButton = page
           .getByRole('button', { name: /^Transfer/i })
           .first();
+        await expect(transferButton).toBeVisible({ timeout: 5000 });
         await transferButton.click();
         // Confirmation dialog.
         const confirmDialog = page.locator('[role="dialog"]');
@@ -182,13 +196,26 @@ superAdminTest.describe(
           .click();
         await expect(dialog).toBeHidden({ timeout: 10000 });
 
-        // Transfer.
+        // Approve, then Transfer. See the 5kg test above for the
+        // Approve-before-Transfer rationale (`pending-expense-group-list.tsx`
+        // gates Transfer on `group.status === 'approved'`).
         await page.goto('/dashboard/finance/expenses/pending');
         await page.waitForLoadState('networkidle');
-        await page
+        const pendingRow = page
+          .locator('tr,div', { hasText: ingredientName })
+          .first();
+        await expect(pendingRow).toBeVisible({ timeout: 5000 });
+        const approveButton = pendingRow
+          .getByRole('button', { name: /^Approve$/i })
+          .first();
+        await expect(approveButton).toBeVisible({ timeout: 5000 });
+        await approveButton.click();
+        await page.waitForLoadState('networkidle');
+        const transferButton = page
           .getByRole('button', { name: /^Transfer/i })
-          .first()
-          .click();
+          .first();
+        await expect(transferButton).toBeVisible({ timeout: 5000 });
+        await transferButton.click();
         const confirmDialog = page.locator('[role="dialog"]');
         await expect(confirmDialog).toBeVisible({ timeout: 5000 });
         await confirmDialog

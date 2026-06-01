@@ -1,13 +1,14 @@
 # Release Ticket: REQ-058 — Schedule Instagram-rewards in-process (IG-5)
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-06-01
 **Requirement ID:** REQ-058
 **Risk Level:** LOW
 **GitHub Issue:** [#117 IG-5](https://github.com/metasession-dev/wawagardenbar-app/issues/117)
 **Integration PR:** [#240](https://github.com/metasession-dev/wawagardenbar-app/pull/240) — merged to develop 2026-06-01 (commit `b33bd2d`).
-**Release PR:** pending — to be opened `develop → main` after this evidence pack lands.
+**Release PR:** #242
 **DevAudit Release:** [`devaudit.metasession.co/projects/wgb/`](https://devaudit.metasession.co/projects/wgb/) — release version `REQ-058`, status `draft` → `uat_review` on this evidence push.
+**Sign-off (dual-actor):** UAT approved + Production approved on the DevAudit portal (`released`); post-deploy production smoke evidence captured. Closed out 2026-06-01.
 
 ---
 

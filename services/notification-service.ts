@@ -41,6 +41,7 @@ import {
   TEMPLATE_CATEGORIES,
   type NotificationCategory,
 } from '@/lib/notification-templates';
+import { NotificationLogService } from '@/services/notification-log-service';
 
 export type NotificationChannel = 'whatsapp' | 'email' | 'sms';
 
@@ -49,6 +50,10 @@ export interface NotificationAttempt {
   success: boolean;
   error?: string;
   durationMs?: number;
+  /** REQ-055 — Meta's wamid from a successful WhatsApp send; null for
+   *  email/SMS or for failed WA sends. Persisted on the audit log
+   *  so delivery-status webhook callbacks can find the row later. */
+  messageId?: string | null;
 }
 
 export interface NotificationResult {
@@ -129,8 +134,23 @@ function logAttempt(
       success: attempt.success,
       durationMs: attempt.durationMs,
       error: attempt.error,
+      messageId: attempt.messageId,
     })
   );
+
+  // REQ-055 — additionally persist to the NotificationLog collection
+  // for forensic queries + delivery-status webhook reconciliation.
+  // Non-blocking: persistence failures inside recordAttempt are
+  // swallowed there; we don't await defensively beyond the catch().
+  void NotificationLogService.recordAttempt({
+    templateKey,
+    userId: userId ?? null,
+    channel: attempt.channel,
+    success: attempt.success,
+    messageId: attempt.messageId ?? null,
+    failureReason: attempt.error ?? null,
+    durationMs: attempt.durationMs ?? null,
+  }).catch(() => undefined);
 }
 
 export class NotificationService {
@@ -184,6 +204,8 @@ export class NotificationService {
           success: result.success,
           error: result.success ? undefined : result.message,
           durationMs: Date.now() - t0,
+          // REQ-055 — capture Meta's wamid for delivery-status reconciliation.
+          messageId: result.success ? (result.messageId ?? null) : null,
         };
         attempts.push(attempt);
         logAttempt(opts.templateKey, opts.userId, attempt);

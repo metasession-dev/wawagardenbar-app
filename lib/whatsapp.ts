@@ -48,7 +48,8 @@ export class WhatsAppService {
   }
 
   private static get apiUrl(): string {
-    const baseUrl = process.env.WHATSAPP_API_URL || 'https://graph.facebook.com';
+    const baseUrl =
+      process.env.WHATSAPP_API_URL || 'https://graph.facebook.com';
     return `${baseUrl}/${this.apiVersion}/${this.phoneNumberId}/messages`;
   }
 
@@ -206,7 +207,8 @@ export class WhatsAppService {
     phone: string,
     pin: string
   ): Promise<WhatsAppResult> {
-    const templateName = process.env.WHATSAPP_PIN_TEMPLATE_NAME || 'verification_pin';
+    const templateName =
+      process.env.WHATSAPP_PIN_TEMPLATE_NAME || 'verification_pin';
     return this.sendMessage(phone, templateName, [pin]);
   }
 
@@ -234,7 +236,10 @@ export class WhatsAppService {
    */
   static async handleWebhook(payload: any): Promise<void> {
     try {
-      console.log('WhatsApp webhook received:', JSON.stringify(payload, null, 2));
+      console.log(
+        'WhatsApp webhook received:',
+        JSON.stringify(payload, null, 2)
+      );
 
       // Check if this is a status update
       if (payload.entry?.[0]?.changes?.[0]?.value?.statuses) {
@@ -264,19 +269,44 @@ export class WhatsAppService {
             });
 
             // TODO: Implement retry logic or notification to admin
-            // Could update a database record or send alert
           }
 
           // Handle delivered messages
           if (statusType === 'delivered') {
             console.log('WhatsApp message delivered successfully:', messageId);
-            // TODO: Update delivery tracking in database if needed
           }
 
           // Handle read messages
           if (statusType === 'read') {
             console.log('WhatsApp message read by user:', messageId);
-            // TODO: Update read status in database if needed
+          }
+
+          // REQ-055 — reconcile NotificationLog row by messageId.
+          // Lazy import avoids a circular: lib/whatsapp ↔ services depend
+          // on each other through NotificationService. The lazy load also
+          // means the WA module remains importable in test contexts
+          // without the model boundary mocked.
+          try {
+            const { NotificationLogService } = await import(
+              '@/services/notification-log-service'
+            );
+            const failureReason =
+              statusType === 'failed'
+                ? (status.errors?.[0]?.title ?? null)
+                : null;
+            await NotificationLogService.updateStatus(
+              messageId,
+              statusType,
+              failureReason
+            );
+          } catch (error) {
+            // Persistence failures are already swallowed inside
+            // NotificationLogService; this outer catch protects against
+            // import errors in misconfigured environments.
+            console.warn(
+              '[WhatsApp] NotificationLog status update skipped:',
+              error instanceof Error ? error.message : String(error)
+            );
           }
         }
       }

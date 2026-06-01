@@ -1,14 +1,14 @@
 # Release Ticket: REQ-055 — NotificationLog persistent audit log
 
-**Status:** IN PROGRESS
+**Status:** RELEASED
 **Date:** 2026-06-01
 **Requirement ID:** REQ-055
 **Risk Level:** LOW-MEDIUM
 **GitHub Issue:** [#117 WA-5](https://github.com/metasession-dev/wawagardenbar-app/issues/117)
-**Integration PR:** (opened in this push — link added once gh returns the number)
-**Release PR:** (opened after integration merges develop → main)
-**DevAudit Release:** `https://devaudit.metasession.co/projects/wgb/` (release version `REQ-055`)
-**Sign-off (dual-actor):** pending — UAT review on the portal, then Production approval, then Marked as Released.
+**Integration PR:** [#226](https://github.com/metasession-dev/wawagardenbar-app/pull/226) — merged to develop 2026-06-01 (commit `6240a08`).
+**Release PR:** [#227](https://github.com/metasession-dev/wawagardenbar-app/pull/227) — merged to main 2026-06-01 (commit `fa7df86`); **normal merge** — no admin override, all 6 required gates green (Compliance Validation, DevAudit Release Approval, Quality Gates, Register Release, Upload Compliance Evidence, Upload Evidence, Railway UAT). Develop branch preserved per the saved memory (no `--delete-branch` on release PR).
+**DevAudit Release:** [`devaudit.metasession.co/projects/wgb/`](https://devaudit.metasession.co/projects/wgb/) — release version `REQ-055`, status `released`.
+**Sign-off (dual-actor):** UAT approved + Production approved on the DevAudit portal (`released`); post-deploy production smoke evidence captured via [`post-deploy-prod.yml` run 26756912246](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/26756912246). Closed out 2026-06-01.
 
 ---
 

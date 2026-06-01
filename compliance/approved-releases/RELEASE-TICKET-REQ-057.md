@@ -1,13 +1,14 @@
 # Release Ticket: REQ-057 — Instagram engagement foundation (IG-1 + IG-2)
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-06-01
 **Requirement ID:** REQ-057
 **Risk Level:** LOW
 **GitHub Issue:** [#117 IG-1 + IG-2](https://github.com/metasession-dev/wawagardenbar-app/issues/117)
 **Integration PR:** [#236](https://github.com/metasession-dev/wawagardenbar-app/pull/236) — merged to develop 2026-06-01 (commit `c9d8c04` via merge `4eaa2b8`).
-**Release PR:** pending — to be opened `develop → main` after this evidence pack lands.
+**Release PR:** #238
 **DevAudit Release:** [`devaudit.metasession.co/projects/wgb/`](https://devaudit.metasession.co/projects/wgb/) — release version `REQ-057`, status `draft` → `uat_review` on this evidence push.
+**Sign-off (dual-actor):** UAT approved + Production approved on the DevAudit portal (`released`); post-deploy production smoke evidence captured. Closed out 2026-06-01.
 
 ---
 

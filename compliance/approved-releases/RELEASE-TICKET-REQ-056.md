@@ -1,13 +1,14 @@
 # Release Ticket: REQ-056 — WhatsApp inbound-message router
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-06-01
 **Requirement ID:** REQ-056
 **Risk Level:** MEDIUM-HIGH
 **GitHub Issue:** [#117 WA-3](https://github.com/metasession-dev/wawagardenbar-app/issues/117)
 **Integration PR:** [#229](https://github.com/metasession-dev/wawagardenbar-app/pull/229) — merged to develop 2026-06-01 (commit `8b39326` via merge `c3c470d`).
-**Release PR:** [#232](https://github.com/metasession-dev/wawagardenbar-app/pull/232) — open develop → main; awaiting UAT + Production approval on the DevAudit portal.
+**Release PR:** #232
 **DevAudit Release:** [`devaudit.metasession.co/projects/wgb/`](https://devaudit.metasession.co/projects/wgb/) — release version `REQ-056`, status `draft` → `uat_review` on this evidence push.
+**Sign-off (dual-actor):** UAT approved + Production approved on the DevAudit portal (`released`); post-deploy production smoke evidence captured. Closed out 2026-06-01.
 
 ---
 

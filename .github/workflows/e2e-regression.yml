@@ -23,13 +23,15 @@ on:
         required: false
         type: string
         default: ''
-  pull_request:
-    branches: [main]
-  # Nightly cron DISABLED until #117 (WhatsApp + customer-facing
-  # backlog) is delivered. Operator policy during #117 work: only
-  # targeted runs (workflow_dispatch with `specs`) plus the full
-  # regression on the release PR to main (which is "delivery").
-  # Re-enable by uncommenting the schedule block below once #117 closes.
+  # Auto-triggers DISABLED during #117 (WhatsApp + customer-facing
+  # backlog). Operator policy: "delivery" = when #117 as a whole closes,
+  # not when each intermediate REQ-XXX inside #117 ships. Until then:
+  #   - workflow_dispatch with `specs` for targeted iteration (above)
+  #   - workflow_dispatch with empty `specs` for the one-time full pack
+  #     at #117 close (manual op)
+  # Re-enable both blocks below by uncommenting once #117 closes.
+  # pull_request:
+  #   branches: [main]
   # schedule:
   #   - cron: '0 2 * * *' # nightly 02:00 UTC
 

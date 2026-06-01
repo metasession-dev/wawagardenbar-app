@@ -14,6 +14,7 @@ import {
 } from '@/lib/email';
 import { SMSService } from '@/lib/sms';
 import { emitOrderStatusUpdate, emitOrderChange } from '@/lib/socket-server';
+import { NotificationService } from '@/services/notification-service';
 
 export interface ActionResult<T = unknown> {
   success: boolean;
@@ -37,7 +38,7 @@ export async function sendOrderConfirmationAction(
 
     // Check notification preferences
     const settings = await SystemSettingsService.getNotificationSettings();
-    
+
     // Get phone number
     let phone = order.guestPhone;
     if (!phone && order.userId) {
@@ -47,8 +48,9 @@ export async function sendOrderConfirmationAction(
 
     // Send SMS if enabled
     if (
-      settings.smsEnabled && 
-      (settings.channels.orders === 'sms' || settings.channels.orders === 'both') &&
+      settings.smsEnabled &&
+      (settings.channels.orders === 'sms' ||
+        settings.channels.orders === 'both') &&
       phone
     ) {
       const smsResult = await SMSService.sendOrderConfirmationSMS(
@@ -57,7 +59,7 @@ export async function sendOrderConfirmationAction(
         order.total,
         order.estimatedWaitTime
       );
-      
+
       if (!smsResult.success) {
         console.error('Failed to send order confirmation SMS:', smsResult);
       }
@@ -65,28 +67,54 @@ export async function sendOrderConfirmationAction(
 
     // Send Email if enabled/fallback
     if (
-      settings.channels.orders === 'email' || 
+      settings.channels.orders === 'email' ||
       settings.channels.orders === 'both' ||
       !settings.smsEnabled
     ) {
-      const email = order.userId ? order.guestEmail || '' : order.guestEmail || '';
-      
+      const email = order.userId
+        ? order.guestEmail || ''
+        : order.guestEmail || '';
+
       if (!email) {
         // Only fail if email was strictly required or no phone was available for SMS
         if (!phone || settings.channels.orders === 'email') {
-           return { success: false, error: 'No email address found' };
+          return { success: false, error: 'No email address found' };
         }
       } else {
-        await sendOrderConfirmationEmail(email, {
-          orderNumber: order.orderNumber,
-          orderType: order.orderType,
-          items: order.items.map((item) => ({
-            name: item.name,
-            quantity: item.quantity,
-            price: item.subtotal,
-          })),
-          total: order.total,
-          estimatedWaitTime: order.estimatedWaitTime,
+        // REQ-054 — route through NotificationService so WhatsApp can
+        // fire first (when the user is signed in, their
+        // whatsappTransactional consent is on, and the order_confirmation
+        // template is approved). Falls back to email otherwise — same
+        // UX as today when ENABLE_WHATSAPP_NOTIFICATIONS is off or the
+        // template isn't approved yet. Caller still owns the email
+        // content shape via the closure.
+        await NotificationService.send({
+          userId: order.userId ? String(order.userId) : null,
+          templateKey: 'order_confirmation',
+          whatsapp:
+            order.userId && phone
+              ? {
+                  params: [
+                    order.orderNumber,
+                    `₦${order.total.toLocaleString()}`,
+                    order.estimatedWaitTime
+                      ? `${order.estimatedWaitTime} minutes`
+                      : 'Soon',
+                  ],
+                }
+              : undefined,
+          email: () =>
+            sendOrderConfirmationEmail(email, {
+              orderNumber: order.orderNumber,
+              orderType: order.orderType,
+              items: order.items.map((item) => ({
+                name: item.name,
+                quantity: item.quantity,
+                price: item.subtotal,
+              })),
+              total: order.total,
+              estimatedWaitTime: order.estimatedWaitTime,
+            }),
         });
       }
     }
@@ -129,7 +157,7 @@ export async function sendOrderStatusNotificationAction(
 
     // Check notification preferences
     const settings = await SystemSettingsService.getNotificationSettings();
-    
+
     // Get phone number
     let phone = order.guestPhone;
     if (!phone && order.userId) {
@@ -139,8 +167,9 @@ export async function sendOrderStatusNotificationAction(
 
     // Send SMS if enabled
     if (
-      settings.smsEnabled && 
-      (settings.channels.orders === 'sms' || settings.channels.orders === 'both') &&
+      settings.smsEnabled &&
+      (settings.channels.orders === 'sms' ||
+        settings.channels.orders === 'both') &&
       phone
     ) {
       const smsResult = await SMSService.sendOrderStatusSMS(
@@ -148,7 +177,7 @@ export async function sendOrderStatusNotificationAction(
         order.orderNumber,
         newStatus
       );
-      
+
       if (!smsResult.success) {
         console.error('Failed to send status update SMS:', smsResult);
       }
@@ -156,12 +185,14 @@ export async function sendOrderStatusNotificationAction(
 
     // Send email notification
     if (
-      settings.channels.orders === 'email' || 
+      settings.channels.orders === 'email' ||
       settings.channels.orders === 'both' ||
       !settings.smsEnabled
     ) {
-      const email = order.userId ? order.guestEmail || '' : order.guestEmail || '';
-      
+      const email = order.userId
+        ? order.guestEmail || ''
+        : order.guestEmail || '';
+
       if (email) {
         const statusMessages: Record<string, string> = {
           confirmed: 'Your order has been confirmed and is being prepared.',
@@ -176,7 +207,9 @@ export async function sendOrderStatusNotificationAction(
           email,
           order.orderNumber,
           newStatus,
-          note || statusMessages[newStatus] || 'Your order status has been updated.'
+          note ||
+            statusMessages[newStatus] ||
+            'Your order status has been updated.'
         );
       }
     }
@@ -199,13 +232,21 @@ export async function sendOrderStatusNotificationAction(
  */
 export async function requestOrderModificationAction(input: {
   orderId: string;
-  modificationType: 'add-items' | 'remove-items' | 'change-time' | 'change-address' | 'other';
+  modificationType:
+    | 'add-items'
+    | 'remove-items'
+    | 'change-time'
+    | 'change-address'
+    | 'other';
   details: string;
 }): Promise<ActionResult<{ requestId: string }>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
-    
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
+
     const order = await OrderService.getOrderById(input.orderId);
 
     if (!order) {
@@ -240,7 +281,8 @@ export async function requestOrderModificationAction(input: {
 
     return {
       success: true,
-      message: 'Modification request submitted. Our team will contact you shortly.',
+      message:
+        'Modification request submitted. Our team will contact you shortly.',
       data: { requestId },
     };
   } catch (error) {
@@ -261,8 +303,11 @@ export async function cancelOrderWithRefundAction(input: {
 }): Promise<ActionResult<{ refundAmount: number }>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
-    
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
+
     const order = await OrderService.getOrderById(input.orderId);
 
     if (!order) {
@@ -310,7 +355,7 @@ export async function cancelOrderWithRefundAction(input: {
       try {
         // TODO: Implement PaymentService.initiateRefund when Monnify refund API is available
         // For now, just update payment status to refunded
-        
+
         // Update payment status
         await OrderService.updatePaymentStatus(input.orderId, {
           paymentStatus: 'refunded',
@@ -322,8 +367,10 @@ export async function cancelOrderWithRefundAction(input: {
     }
 
     // Send notifications
-    const email = order.userId ? order.guestEmail || '' : order.guestEmail || '';
-    
+    const email = order.userId
+      ? order.guestEmail || ''
+      : order.guestEmail || '';
+
     if (email) {
       await sendOrderCancellationEmail(
         email,
@@ -345,9 +392,10 @@ export async function cancelOrderWithRefundAction(input: {
 
     return {
       success: true,
-      message: refundAmount > 0
-        ? `Order cancelled. Refund of ₦${refundAmount.toLocaleString()} will be processed within 5-7 business days.`
-        : 'Order cancelled successfully.',
+      message:
+        refundAmount > 0
+          ? `Order cancelled. Refund of ₦${refundAmount.toLocaleString()} will be processed within 5-7 business days.`
+          : 'Order cancelled successfully.',
       data: { refundAmount },
     };
   } catch (error) {
@@ -363,15 +411,24 @@ export async function cancelOrderWithRefundAction(input: {
  * Submit support ticket
  */
 export async function submitSupportTicketAction(input: {
-  category: 'order-issue' | 'payment-issue' | 'delivery-issue' | 'account-issue' | 'feedback' | 'other';
+  category:
+    | 'order-issue'
+    | 'payment-issue'
+    | 'delivery-issue'
+    | 'account-issue'
+    | 'feedback'
+    | 'other';
   subject: string;
   message: string;
   orderId?: string;
 }): Promise<ActionResult<{ ticketNumber: string }>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
-    
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
+
     // Generate ticket number
     const ticketNumber = `TKT-${Date.now()}`;
 
@@ -397,7 +454,8 @@ export async function submitSupportTicketAction(input: {
 
     return {
       success: true,
-      message: 'Support ticket submitted successfully. We will respond within 24 hours.',
+      message:
+        'Support ticket submitted successfully. We will respond within 24 hours.',
       data: { ticketNumber },
     };
   } catch (error) {
@@ -419,8 +477,11 @@ export async function submitOrderReviewAction(input: {
 }): Promise<ActionResult> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
-    
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
+
     if (!session.userId) {
       return { success: false, error: 'User must be logged in' };
     }
@@ -461,11 +522,7 @@ export async function submitOrderReviewAction(input: {
     }
 
     // Add review
-    await OrderService.addReview(
-      input.orderId,
-      input.rating,
-      input.review
-    );
+    await OrderService.addReview(input.orderId, input.rating, input.review);
 
     revalidatePath(`/orders/${input.orderId}`);
     revalidatePath('/orders/history');

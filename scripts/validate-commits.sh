@@ -22,14 +22,9 @@ echo "Comparing: $BASE_BRANCH...HEAD"
 echo ""
 
 # Conventional Commit regex: type(optional-scope): description
-#
-# Scope grammar widened (REQ-053 release): the Conventional Commits spec
-# permits any noun-like scope; the previous `[a-zA-Z0-9_-]+` rejected
-# legitimate multi-scope forms like `feat(auth,profile):`, blocking the
-# REQ-053 release. Match anything that's not `)` so commas + slashes are
-# accepted (existing scopes stay valid). Filed upstream as a small
-# DevAudit-Installer follow-up so the next `devaudit update` carries the
-# same widening and the local patch can be removed.
+# Scope accepts anything except `)` so multi-scope subjects like
+# `feat(auth,profile):` and `fix(rewards/expiry):` validate. The closing-paren
+# guard prevents pathological inputs. DevAudit-Installer#93.
 CC_REGEX='^(feat|fix|docs|test|refactor|chore|compliance|security|perf|ci|build|revert)(\([^)]+\))?!?: .+'
 
 COMMITS=$(git log "$BASE_BRANCH"..HEAD --format='%H' || true)

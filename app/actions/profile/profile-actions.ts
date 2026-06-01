@@ -21,6 +21,31 @@ interface ActionResult<T = unknown> {
 /**
  * Validation schemas
  */
+
+/**
+ * @requirement REQ-057 — Instagram handle zod pipe (IG-2).
+ *
+ * Exported so the client form schema can mirror it and both layers
+ * apply the SAME transform + refine — no drift between client and
+ * server.
+ *
+ * Pipe stages:
+ *   1. `.max(30)` — guard the input size before the transform allocates.
+ *   2. `.transform(strip-`@`-and-trim)` — normalise common paste shapes
+ *      so the user can paste `@foo` or ` foo ` and have it just work.
+ *   3. `.refine(IG-char-regex)` — validates the POST-strip handle
+ *      against Instagram's actual handle character set
+ *      (`[a-zA-Z0-9._]{1,30}`). Empty-string `''` is the explicit
+ *      "clear handle" sentinel and is allowed through.
+ */
+export const instagramHandleSchema = z
+  .string()
+  .max(30, 'Handle is too long')
+  .transform((v) => v.replace(/^@/, '').trim())
+  .refine((v) => v === '' || /^[a-zA-Z0-9._]{1,30}$/.test(v), {
+    message: 'Only letters, numbers, periods, and underscores; max 30 chars',
+  });
+
 const updateProfileSchema = z.object({
   firstName: z.string().min(1).max(50).optional(),
   lastName: z.string().min(1).max(50).optional(),
@@ -28,7 +53,7 @@ const updateProfileSchema = z.object({
     .string()
     .regex(/^\+?[1-9]\d{1,14}$/)
     .optional(), // E.164 format
-  instagramHandle: z.string().max(30).optional().or(z.literal('')),
+  instagramHandle: instagramHandleSchema.optional().or(z.literal('')),
 });
 
 const addressSchema = z.object({
@@ -139,28 +164,17 @@ export async function updateProfileAction(
       phone: validated.phone,
     };
 
-    // Handle Instagram Profile
-    if (validated.instagramHandle !== undefined) {
-      const handle = validated.instagramHandle.trim();
-      if (handle) {
-        // Remove @ if present
-        const cleanHandle = handle.startsWith('@')
-          ? handle.substring(1)
-          : handle;
-        updateData.socialProfiles = {
-          instagram: {
-            handle: cleanHandle,
-            lastCheckedAt: new Date(), // Reset check time on update
-            verified: false,
-          },
-        };
-      } else {
-        // If empty string provided, we might want to remove it or set to empty?
-        // For now, if explicit empty string, we can clear it or just update.
-        // Current ProfileService logic updates partials.
-        // To clear it, we might need to pass empty handle.
-        // Let's assume we just update what's passed.
-      }
+    // Handle Instagram Profile — the zod pipe already stripped a
+    // leading `@` and trimmed whitespace (REQ-057), so `validated.
+    // instagramHandle` is canonical at this point.
+    if (validated.instagramHandle) {
+      updateData.socialProfiles = {
+        instagram: {
+          handle: validated.instagramHandle,
+          lastCheckedAt: new Date(), // Reset check time on update
+          verified: false,
+        },
+      };
     }
 
     // Update profile

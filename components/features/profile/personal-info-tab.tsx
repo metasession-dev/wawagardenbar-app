@@ -10,17 +10,26 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { IUser } from '@/interfaces';
-import { updateProfileAction } from '@/app/actions/profile/profile-actions';
+import {
+  updateProfileAction,
+  instagramHandleSchema,
+} from '@/app/actions/profile/profile-actions';
 
 const profileSchema = z.object({
   firstName: z.string().min(1, 'First name is required').max(50),
   lastName: z.string().min(1, 'Last name is required').max(50),
   phone: z
     .string()
-    .regex(/^\+?[1-9]\d{1,14}$/, 'Invalid phone number format (use E.164 format)')
+    .regex(
+      /^\+?[1-9]\d{1,14}$/,
+      'Invalid phone number format (use E.164 format)'
+    )
     .optional()
     .or(z.literal('')),
-  instagramHandle: z.string().max(30, 'Handle is too long').optional().or(z.literal('')),
+  // REQ-057 — Instagram handle pipe shared with the server-side schema
+  // so client + server apply the same transform (strip leading `@`,
+  // trim) and the same character-set refine.
+  instagramHandle: instagramHandleSchema.optional().or(z.literal('')),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -108,7 +117,9 @@ export function PersonalInfoTab({ profile }: PersonalInfoTabProps) {
             placeholder="Enter your first name"
           />
           {errors.firstName && (
-            <p className="text-sm text-destructive">{errors.firstName.message}</p>
+            <p className="text-sm text-destructive">
+              {errors.firstName.message}
+            </p>
           )}
         </div>
 
@@ -123,7 +134,9 @@ export function PersonalInfoTab({ profile }: PersonalInfoTabProps) {
             placeholder="Enter your last name"
           />
           {errors.lastName && (
-            <p className="text-sm text-destructive">{errors.lastName.message}</p>
+            <p className="text-sm text-destructive">
+              {errors.lastName.message}
+            </p>
           )}
         </div>
 
@@ -151,7 +164,9 @@ export function PersonalInfoTab({ profile }: PersonalInfoTabProps) {
             Instagram Handle
           </Label>
           <div className="relative">
-            <span className="absolute left-3 top-2.5 text-muted-foreground">@</span>
+            <span className="absolute left-3 top-2.5 text-muted-foreground">
+              @
+            </span>
             <Input
               id="instagramHandle"
               {...register('instagramHandle')}
@@ -160,10 +175,13 @@ export function PersonalInfoTab({ profile }: PersonalInfoTabProps) {
             />
           </div>
           {errors.instagramHandle && (
-            <p className="text-sm text-destructive">{errors.instagramHandle.message}</p>
+            <p className="text-sm text-destructive">
+              {errors.instagramHandle.message}
+            </p>
           )}
           <p className="text-xs text-muted-foreground">
-            Add your Instagram handle to participate in social rewards!
+            Required to earn points on Instagram tagging campaigns — we use this
+            to match your tags to your account.
           </p>
         </div>
 

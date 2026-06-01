@@ -203,7 +203,7 @@ export class WhatsAppService {
   /**
    * Send a free-form text message via WhatsApp.
    *
-   * REQ-056 — Used by the inbound router for STOP opt-out
+   * @requirement REQ-056 — Used by the inbound router for STOP opt-out
    * confirmations. Meta allows free-form replies inside the 24-hour
    * customer-service window that opens when a customer messages us, so
    * a STOP confirmation does not need a template approval. Same error

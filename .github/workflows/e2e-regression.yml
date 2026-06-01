@@ -25,8 +25,13 @@ on:
         default: ''
   pull_request:
     branches: [main]
-  schedule:
-    - cron: '0 2 * * *' # nightly 02:00 UTC
+  # Nightly cron DISABLED until #117 (WhatsApp + customer-facing
+  # backlog) is delivered. Operator policy during #117 work: only
+  # targeted runs (workflow_dispatch with `specs`) plus the full
+  # regression on the release PR to main (which is "delivery").
+  # Re-enable by uncommenting the schedule block below once #117 closes.
+  # schedule:
+  #   - cron: '0 2 * * *' # nightly 02:00 UTC
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

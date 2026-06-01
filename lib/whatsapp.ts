@@ -201,6 +201,85 @@ export class WhatsAppService {
   }
 
   /**
+   * Send a free-form text message via WhatsApp.
+   *
+   * @requirement REQ-056 — Used by the inbound router for STOP opt-out
+   * confirmations. Meta allows free-form replies inside the 24-hour
+   * customer-service window that opens when a customer messages us, so
+   * a STOP confirmation does not need a template approval. Same error
+   * mapping shape as `sendMessage` so callers don't need to branch.
+   */
+  static async sendTextMessage(
+    to: string,
+    body: string
+  ): Promise<WhatsAppResult> {
+    if (!this.isEnabled) {
+      console.warn('WhatsApp service is disabled');
+      return {
+        success: false,
+        message: 'WhatsApp service is currently disabled',
+        errorCode: 'SERVICE_DISABLED',
+      };
+    }
+
+    if (!this.accessToken || !this.phoneNumberId) {
+      console.error('WhatsApp API credentials are missing');
+      return {
+        success: false,
+        message: 'WhatsApp service is not configured properly',
+        errorCode: 'MISSING_CREDENTIALS',
+      };
+    }
+
+    try {
+      const formattedPhone = to.replace(/\D/g, '');
+      const payload = {
+        messaging_product: 'whatsapp',
+        to: formattedPhone,
+        type: 'text',
+        text: { body },
+      };
+
+      const response = await fetch(this.apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.accessToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const errorData = data as WhatsAppErrorResponse;
+        console.error('WhatsApp text-message API Error:', errorData);
+        return {
+          success: false,
+          message: errorData.error?.message || 'Failed to send WhatsApp text',
+          errorCode: 'API_ERROR',
+          details: errorData,
+        };
+      }
+
+      const successData = data as WhatsAppMessageResponse;
+      return {
+        success: true,
+        message: 'WhatsApp text sent successfully',
+        messageId: successData.messages[0]?.id,
+      };
+    } catch (error) {
+      console.error('WhatsApp text-message Service Error:', error);
+      return {
+        success: false,
+        message: 'An unexpected error occurred while sending WhatsApp text',
+        errorCode: 'UNKNOWN_ERROR',
+        details: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
    * Send Verification PIN via WhatsApp
    */
   static async sendVerificationPinWhatsApp(
@@ -313,7 +392,8 @@ export class WhatsAppService {
 
       // Check if this is an incoming message (user reply)
       if (payload.entry?.[0]?.changes?.[0]?.value?.messages) {
-        const messages = payload.entry[0].changes[0].value.messages;
+        const value = payload.entry[0].changes[0].value;
+        const messages = value.messages;
 
         for (const message of messages) {
           const from = message.from;
@@ -328,9 +408,21 @@ export class WhatsAppService {
             timestamp,
           });
 
-          // We don't expect replies for PIN verification, but log them
-          if (messageType === 'text') {
-            console.log('User sent text message:', message.text?.body);
+          // REQ-056 — route inbound through the state-machine. Lazy
+          // import avoids the lib/whatsapp ↔ services circular (the
+          // inbound service depends on NotificationService, which
+          // depends back on this module). Same pattern REQ-055 uses
+          // for NotificationLog status updates above.
+          try {
+            const { WhatsAppInboundService } = await import(
+              '@/services/whatsapp-inbound-service'
+            );
+            await WhatsAppInboundService.handle(message, value);
+          } catch (error) {
+            console.warn(
+              '[WhatsApp] inbound routing skipped:',
+              error instanceof Error ? error.message : String(error)
+            );
           }
         }
       }

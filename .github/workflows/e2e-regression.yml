@@ -23,10 +23,17 @@ on:
         required: false
         type: string
         default: ''
-  pull_request:
-    branches: [main]
-  schedule:
-    - cron: '0 2 * * *' # nightly 02:00 UTC
+  # Auto-triggers DISABLED during #117 (WhatsApp + customer-facing
+  # backlog). Operator policy: "delivery" = when #117 as a whole closes,
+  # not when each intermediate REQ-XXX inside #117 ships. Until then:
+  #   - workflow_dispatch with `specs` for targeted iteration (above)
+  #   - workflow_dispatch with empty `specs` for the one-time full pack
+  #     at #117 close (manual op)
+  # Re-enable both blocks below by uncommenting once #117 closes.
+  # pull_request:
+  #   branches: [main]
+  # schedule:
+  #   - cron: '0 2 * * *' # nightly 02:00 UTC
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

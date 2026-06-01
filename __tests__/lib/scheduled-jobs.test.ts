@@ -1,5 +1,6 @@
 /**
  * @requirement REQ-048 — Reward-expiry job scheduled in-process (#117 P0 #3)
+ * @requirement REQ-058 — Instagram-rewards job scheduled in-process (#117 IG-5)
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
@@ -8,7 +9,18 @@ vi.mock('@/services/rewards-service', () => ({
   RewardsService: { expireOldRewards: (...a: unknown[]) => mockExpire(...a) },
 }));
 
-import { runRewardExpiryJob, startScheduledJobs } from '@/lib/scheduled-jobs';
+const mockProcessIG = vi.fn();
+vi.mock('@/services/instagram-service', () => ({
+  InstagramService: {
+    processInstagramRewards: (...a: unknown[]) => mockProcessIG(...a),
+  },
+}));
+
+import {
+  runRewardExpiryJob,
+  runInstagramRewardsJob,
+  startScheduledJobs,
+} from '@/lib/scheduled-jobs';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -32,16 +44,34 @@ describe('REQ-048: runRewardExpiryJob', () => {
   });
 });
 
-describe('REQ-048: startScheduledJobs', () => {
+describe('REQ-058: runInstagramRewardsJob', () => {
+  it('calls processInstagramRewards', async () => {
+    mockProcessIG.mockResolvedValue(undefined);
+    await runInstagramRewardsJob();
+    expect(mockProcessIG).toHaveBeenCalledOnce();
+  });
+
+  it('swallows errors and does not throw (a tick must not crash the server)', async () => {
+    mockProcessIG.mockRejectedValue(new Error('graph api down'));
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await expect(runInstagramRewardsJob()).resolves.toBeUndefined();
+    expect(errSpy).toHaveBeenCalled();
+    errSpy.mockRestore();
+  });
+});
+
+describe('REQ-048 + REQ-058: startScheduledJobs', () => {
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it('registers the hourly interval once and is idempotent', () => {
+  it('registers TWO hourly intervals (reward-expiry + instagram-rewards) and is idempotent', () => {
     vi.useFakeTimers();
     const intervalSpy = vi.spyOn(global, 'setInterval');
     startScheduledJobs();
-    startScheduledJobs(); // second call must not stack another interval
-    expect(intervalSpy).toHaveBeenCalledTimes(1);
+    startScheduledJobs(); // second call must not stack intervals
+    // REQ-048 reward-expiry + REQ-058 instagram-rewards = 2 intervals.
+    // Idempotency guard prevents stacking on the second call.
+    expect(intervalSpy).toHaveBeenCalledTimes(2);
   });
 });

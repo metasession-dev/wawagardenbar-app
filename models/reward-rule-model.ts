@@ -17,13 +17,19 @@ const rewardRuleSchema = new Schema<IRewardRule>(
       hashtag: { type: String },
       minViews: { type: Number },
       maxPostsPerPeriod: { type: Number },
-      periodType: { type: String, enum: ['weekly', 'monthly', 'campaign_duration'] },
+      periodType: {
+        type: String,
+        enum: ['weekly', 'monthly', 'campaign_duration'],
+      },
       pointsAwarded: { type: Number },
       // Cadence model: N qualifying posts in a rolling window triggers
       // one award. See ISocialRewardConfig docs for the relationship
-      // to maxPostsPerPeriod.
-      postsRequired: { type: Number, min: 1 },
-      windowDays: { type: Number, min: 1 },
+      // to maxPostsPerPeriod. REQ-057 — defaults bring new rules to
+      // a sane "3 posts in 7 days" cadence without explicit operator
+      // input; the paired-validity pre-validate hook below rejects
+      // half-set cadence pairs.
+      postsRequired: { type: Number, min: 1, default: 3 },
+      windowDays: { type: Number, min: 1, default: 7 },
       requireMention: { type: Boolean, default: true },
     },
     rewardType: {
@@ -60,23 +66,42 @@ const rewardRuleSchema = new Schema<IRewardRule>(
 rewardRuleSchema.index({ isActive: 1, spendThreshold: 1 });
 rewardRuleSchema.index({ startDate: 1, endDate: 1 });
 
-rewardRuleSchema.methods.isCurrentlyActive = function isCurrentlyActive(): boolean {
-  if (!this.isActive) return false;
-  const now = new Date();
-  
-  // Check new campaignDates format (multiple ranges)
-  if (this.campaignDates && this.campaignDates.length > 0) {
-    // Rule is active if current date falls within any of the date ranges
-    return this.campaignDates.some(
-      (range: { from: Date; to: Date }) => now >= range.from && now <= range.to
+// REQ-057 — paired-field validity. Either both cadence fields are
+// configured (new model) or neither is (legacy maxPostsPerPeriod
+// model). Half-state rejected. Explicit-null on either field defeats
+// the schema default so this hook still fires on degenerate writes.
+rewardRuleSchema.pre('validate', function pairedSocialConfig() {
+  const sc = this.socialConfig;
+  if (!sc) return;
+  const hasPosts = sc.postsRequired !== undefined && sc.postsRequired !== null;
+  const hasWindow = sc.windowDays !== undefined && sc.windowDays !== null;
+  if (hasPosts !== hasWindow) {
+    this.invalidate(
+      'socialConfig',
+      'socialConfig.postsRequired and windowDays must be set together'
     );
   }
-  
-  // Fallback to legacy startDate/endDate (single range)
-  if (this.startDate && now < this.startDate) return false;
-  if (this.endDate && now > this.endDate) return false;
-  return true;
-};
+});
+
+rewardRuleSchema.methods.isCurrentlyActive =
+  function isCurrentlyActive(): boolean {
+    if (!this.isActive) return false;
+    const now = new Date();
+
+    // Check new campaignDates format (multiple ranges)
+    if (this.campaignDates && this.campaignDates.length > 0) {
+      // Rule is active if current date falls within any of the date ranges
+      return this.campaignDates.some(
+        (range: { from: Date; to: Date }) =>
+          now >= range.from && now <= range.to
+      );
+    }
+
+    // Fallback to legacy startDate/endDate (single range)
+    if (this.startDate && now < this.startDate) return false;
+    if (this.endDate && now > this.endDate) return false;
+    return true;
+  };
 
 const RewardRuleModel: Model<IRewardRule> =
   mongoose.models.RewardRule ||

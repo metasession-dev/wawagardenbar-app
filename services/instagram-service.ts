@@ -40,6 +40,23 @@ export type ProcessQualifyingPostAction =
   | 'award_failed';
 
 /**
+ * @requirement REQ-060 — Customer-facing Instagram campaign progress card.
+ *
+ * Read-side aggregator for `/profile/rewards`. Returns the customer's
+ * progress against every currently-active social_instagram campaign.
+ * Empty array → no cards rendered.
+ */
+export interface UserCampaignProgress {
+  ruleId: string;
+  ruleName: string;
+  hashtag: string;
+  postsRequired: number;
+  windowDays: number;
+  pointsAwarded: number;
+  currentProgress: number;
+}
+
+/**
  * Service to handle Instagram API integration and reward processing
  */
 export class InstagramService {
@@ -362,6 +379,78 @@ export class InstagramService {
         error
       );
       return { action: 'award_failed' };
+    }
+  }
+
+  /**
+   * REQ-060 — Returns the customer's progress against every currently-
+   * active social_instagram campaign. Reads from REQ-059's
+   * InstagramPostCredit ledger. Empty array → no cards rendered on the
+   * customer rewards page (silent empty state).
+   *
+   * Defensive: DB failures log via `console.error` and return `[]`
+   * rather than throwing — the customer page must never crash because
+   * the IG aggregator went wrong.
+   */
+  static async getActiveCampaignsForUser(
+    userId: string
+  ): Promise<UserCampaignProgress[]> {
+    try {
+      const rules = await RewardRuleModel.find({
+        isActive: true,
+        triggerType: 'social_instagram',
+        'socialConfig.platform': 'instagram',
+      }).exec();
+
+      const activeRules = rules.filter((r) =>
+        (
+          r as unknown as { isCurrentlyActive?: () => boolean }
+        ).isCurrentlyActive?.()
+      );
+      if (activeRules.length === 0) return [];
+
+      const results: UserCampaignProgress[] = [];
+      for (const rule of activeRules) {
+        const sc = (
+          rule as unknown as {
+            socialConfig?: {
+              hashtag?: string;
+              postsRequired?: number;
+              windowDays?: number;
+              pointsAwarded?: number;
+            };
+          }
+        ).socialConfig;
+        if (!sc) continue;
+        const postsRequired = sc.postsRequired ?? 3;
+        const windowDays = sc.windowDays ?? 7;
+        const pointsAwarded = sc.pointsAwarded ?? 0;
+        const windowStart = new Date(Date.now() - windowDays * DAY_MS);
+
+        const pending = await InstagramPostCreditModel.countDocuments({
+          userId,
+          ruleId: (rule as unknown as { _id: Types.ObjectId })._id,
+          status: 'pending',
+          postedAt: { $gte: windowStart },
+        });
+
+        results.push({
+          ruleId: (rule as unknown as { _id: Types.ObjectId })._id.toString(),
+          ruleName: (rule as unknown as { name: string }).name,
+          hashtag: sc.hashtag ?? '',
+          postsRequired,
+          windowDays,
+          pointsAwarded,
+          currentProgress: pending,
+        });
+      }
+      return results;
+    } catch (error) {
+      console.error(
+        '[InstagramService] getActiveCampaignsForUser failed:',
+        error
+      );
+      return [];
     }
   }
 }

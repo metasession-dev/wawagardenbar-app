@@ -1,13 +1,14 @@
 # Release Ticket: REQ-060 — Customer-facing Instagram campaign progress card (IG-7)
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-06-02
 **Requirement ID:** REQ-060
 **Risk Level:** LOW
 **GitHub Issue:** [#117 IG-7](https://github.com/metasession-dev/wawagardenbar-app/issues/117)
 **Integration PR:** [#250](https://github.com/metasession-dev/wawagardenbar-app/pull/250) — merged to develop 2026-06-02 (commit `be82d31`).
-**Release PR:** pending — to be opened `develop → main` after this evidence pack lands.
+**Release PR:** #253
 **DevAudit Release:** [`devaudit.metasession.co/projects/wgb/`](https://devaudit.metasession.co/projects/wgb/) — release version `REQ-060`, status `draft` → `uat_review` on this evidence push.
+**Sign-off (dual-actor):** UAT approved + Production approved on the DevAudit portal (`released`); post-deploy production smoke evidence captured. Closed out 2026-06-02.
 
 ---
 

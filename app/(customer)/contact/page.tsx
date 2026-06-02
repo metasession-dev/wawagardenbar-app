@@ -4,6 +4,11 @@ import { Phone, Mail, MessageCircle, Clock } from 'lucide-react';
 import { SettingsService } from '@/services/settings-service';
 import { SupportForm } from '@/components/features/communication/support-form';
 
+// REQ-062 — Force dynamic rendering. SettingsService.getSettings() hits
+// Mongo, so static pre-render at build time fails (no DB available during
+// `next build`). Marking the route dynamic skips the pre-render attempt.
+export const dynamic = 'force-dynamic';
+
 /**
  * @requirement REQ-062 — Contact page (P1 #11).
  *

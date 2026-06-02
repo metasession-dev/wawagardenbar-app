@@ -1,6 +1,43 @@
+import { Types } from 'mongoose';
 import UserModel from '@/models/user-model';
 import RewardRuleModel from '@/models/reward-rule-model';
+import InstagramPostCreditModel from '@/models/instagram-post-credit-model';
 import { RewardsService } from './rewards-service';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * @requirement REQ-059 — InstagramPostCredit sliding-window ledger.
+ *
+ * Per-post ledger decision: dedup (ledger first, legacy fallback during
+ * the transition period), insert pending credit if new, count pending
+ * credits within the rule's rolling `windowDays`, fire award + flip
+ * pending→awarded when the threshold is reached. Race-safe via the unique
+ * `postId` index on `InstagramPostCredit`.
+ *
+ * Exposed as a static method (rather than inline in `processRule`) so the
+ * ledger logic is directly testable without mocking the Graph API path.
+ */
+export interface ProcessQualifyingPostArgs {
+  user: { _id: Types.ObjectId };
+  rule: {
+    _id: Types.ObjectId;
+    socialConfig: {
+      hashtag?: string;
+      postsRequired?: number;
+      windowDays?: number;
+      pointsAwarded?: number;
+    };
+  };
+  post: { id: string; timestamp: string };
+}
+
+export type ProcessQualifyingPostAction =
+  | 'skipped_already_seen'
+  | 'inserted_legacy_fallback'
+  | 'inserted_pending'
+  | 'awarded'
+  | 'award_failed';
 
 /**
  * Service to handle Instagram API integration and reward processing
@@ -127,24 +164,17 @@ export class InstagramService {
         // For the sake of this implementation, we will skip the complex history check and assume
         // we have a method `hasProcessedPost(mediaId)` (stubbed).
 
-        const isProcessed = await this.hasProcessedPost(post.id);
-        if (isProcessed) continue;
-
-        // 7. Award Points
-        console.log(`Awarding points to ${user.email} for post ${post.id}`);
-        await RewardsService.awardSocialPoints(
-          user._id.toString(),
-          rule.socialConfig.pointsAwarded,
-          `Instagram Reward: #${hashtag}`,
-          post.id
-        );
-
-        // 8. Mark post as processed
-        await this.markPostAsProcessed(
-          post.id,
-          user._id.toString(),
-          rule._id.toString()
-        );
+        // REQ-059 — delegate per-post ledger decision (dedup → insert →
+        // window-count → award). Replaces the old hasProcessedPost +
+        // immediate-award flow with the sliding-window cadence model.
+        await this.processQualifyingPost({
+          user: { _id: user._id as Types.ObjectId },
+          rule: {
+            _id: rule._id as Types.ObjectId,
+            socialConfig: rule.socialConfig,
+          },
+          post: { id: post.id, timestamp: post.timestamp },
+        });
       }
     } catch (error) {
       console.error(`Error processing rule ${rule.name}:`, error);
@@ -204,31 +234,134 @@ export class InstagramService {
     }
   }
 
-  // --- Persistence Helpers (Stubbed/Simplified) ---
+  // --- Persistence Helpers ---
 
-  private static async hasProcessedPost(mediaId: string): Promise<boolean> {
-    // Check PointsTransaction or a new SocialEngagementLog model
-    // For now, we'll assume we check if a transaction exists with this reference
+  /**
+   * REQ-059 AC3 — Legacy fallback dedup check. Pre-REQ-059, post-dedup
+   * was a naive regex match against `PointsTransaction.description`.
+   * REQ-059 promoted `InstagramPostCredit` to the primary dedup; this
+   * method stays as the transition-period fallback for posts that were
+   * awarded before the ledger landed. Retire after one full `windowDays`
+   * cycle has run with the new ledger in place.
+   */
+  static async hasProcessedPost(mediaId: string): Promise<boolean> {
     const PointsTransactionModel = (
       await import('@/models/points-transaction-model')
     ).default;
-    // Assuming PointsTransaction has a 'metadata' or 'reference' field.
-    // Looking at the codebase, we might need to add one or use description.
-    // Let's use description for now as a naive check.
     const exists = await PointsTransactionModel.findOne({
       description: { $regex: mediaId },
     });
     return !!exists;
   }
 
-  private static async markPostAsProcessed(
-    _mediaId: string,
-    _userId: string,
-    _ruleId: string
-  ) {
-    // This happens automatically when we create the PointsTransaction in `awardSocialPoints`
-    // if we include the mediaId in the reason/metadata.
-    // See hasProcessedPost above.
-    // Function kept for structural clarity or future specific logging logic
+  /**
+   * REQ-059 — Per-post ledger decision. See `ProcessQualifyingPostArgs`
+   * docstring above for the orchestration shape. Returns the action tag
+   * so callers (and tests) can branch on the outcome.
+   */
+  static async processQualifyingPost(
+    args: ProcessQualifyingPostArgs
+  ): Promise<{ action: ProcessQualifyingPostAction }> {
+    const { user, rule, post } = args;
+    const postedAt = new Date(post.timestamp);
+
+    // 1. Primary dedup — InstagramPostCredit ledger.
+    const ledgered = await InstagramPostCreditModel.exists({ postId: post.id });
+    if (ledgered) {
+      return { action: 'skipped_already_seen' };
+    }
+
+    // 2. Transition-period fallback — legacy description-regex dedup.
+    // Posts awarded pre-REQ-059 have a PointsTransaction row but no
+    // ledger row. Insert an `awarded` credit so future ticks treat the
+    // post as fully accounted for; skip re-awarding.
+    const inLegacy = await this.hasProcessedPost(post.id);
+    if (inLegacy) {
+      try {
+        await InstagramPostCreditModel.create({
+          userId: user._id,
+          ruleId: rule._id,
+          postId: post.id,
+          postedAt,
+          status: 'awarded',
+          awardedAt: new Date(),
+        });
+      } catch (error) {
+        // E11000 race with another tick — fine; the other tick won.
+        if (
+          !(error instanceof Error) ||
+          (error as { code?: number }).code !== 11000
+        ) {
+          console.error(
+            '[InstagramService] legacy-fallback credit insert failed:',
+            error
+          );
+        }
+      }
+      return { action: 'inserted_legacy_fallback' };
+    }
+
+    // 3. New post — insert pending credit.
+    try {
+      await InstagramPostCreditModel.create({
+        userId: user._id,
+        ruleId: rule._id,
+        postId: post.id,
+        postedAt,
+        status: 'pending',
+      });
+    } catch (error) {
+      // Concurrent tick inserted the same postId first — treat as no-op.
+      if (
+        error instanceof Error &&
+        (error as { code?: number }).code === 11000
+      ) {
+        return { action: 'skipped_already_seen' };
+      }
+      throw error;
+    }
+
+    // 4. Sliding-window count of pending credits for this (user, rule).
+    const postsRequired = rule.socialConfig.postsRequired ?? 3;
+    const windowDays = rule.socialConfig.windowDays ?? 7;
+    const windowStart = new Date(Date.now() - windowDays * DAY_MS);
+    const pendingCount = await InstagramPostCreditModel.countDocuments({
+      userId: user._id,
+      ruleId: rule._id,
+      status: 'pending',
+      postedAt: { $gte: windowStart },
+    });
+
+    if (pendingCount < postsRequired) {
+      return { action: 'inserted_pending' };
+    }
+
+    // 5. Threshold reached — fire award + flip pending → awarded.
+    const pointsAwarded = rule.socialConfig.pointsAwarded ?? 100;
+    const hashtag = rule.socialConfig.hashtag ?? '';
+    try {
+      await RewardsService.awardSocialPoints(
+        user._id.toString(),
+        pointsAwarded,
+        `Instagram Reward: cadence completion #${hashtag}`,
+        post.id
+      );
+      await InstagramPostCreditModel.updateMany(
+        {
+          userId: user._id,
+          ruleId: rule._id,
+          status: 'pending',
+          postedAt: { $gte: windowStart },
+        },
+        { $set: { status: 'awarded', awardedAt: new Date() } }
+      );
+      return { action: 'awarded' };
+    } catch (error) {
+      console.error(
+        `[InstagramService] award failed for postId=${post.id}:`,
+        error
+      );
+      return { action: 'award_failed' };
+    }
   }
 }

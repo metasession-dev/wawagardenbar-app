@@ -46,78 +46,86 @@ export async function sendOrderConfirmationAction(
       if (user) phone = user.phone;
     }
 
-    // Send SMS if enabled
-    if (
+    // REQ-062 — All three channels (WhatsApp, email, SMS) go through
+    // NotificationService.send so every channel honours the customer's
+    // consent flags (whatsappTransactional, email, sms). Previously the
+    // SMS branch called SMSService.sendOrderConfirmationSMS directly,
+    // bypassing the `cp.sms === true` gate. With this change, customers
+    // without explicit sms opt-in stop receiving SMS confirmations —
+    // aligned with the WhatsApp consent posture REQ-054 introduced.
+    const email = order.guestEmail || '';
+
+    // Honour the admin-side notification settings: only enable the
+    // channels the admin actually configured for order notifications.
+    const wantSms =
       settings.smsEnabled &&
       (settings.channels.orders === 'sms' ||
-        settings.channels.orders === 'both') &&
-      phone
-    ) {
-      const smsResult = await SMSService.sendOrderConfirmationSMS(
-        phone,
-        order.orderNumber,
-        order.total,
-        order.estimatedWaitTime
-      );
-
-      if (!smsResult.success) {
-        console.error('Failed to send order confirmation SMS:', smsResult);
-      }
-    }
-
-    // Send Email if enabled/fallback
-    if (
+        settings.channels.orders === 'both');
+    const wantEmail =
       settings.channels.orders === 'email' ||
       settings.channels.orders === 'both' ||
-      !settings.smsEnabled
-    ) {
-      const email = order.userId
-        ? order.guestEmail || ''
-        : order.guestEmail || '';
+      !settings.smsEnabled;
 
-      if (!email) {
-        // Only fail if email was strictly required or no phone was available for SMS
-        if (!phone || settings.channels.orders === 'email') {
-          return { success: false, error: 'No email address found' };
-        }
-      } else {
-        // REQ-054 — route through NotificationService so WhatsApp can
-        // fire first (when the user is signed in, their
-        // whatsappTransactional consent is on, and the order_confirmation
-        // template is approved). Falls back to email otherwise — same
-        // UX as today when ENABLE_WHATSAPP_NOTIFICATIONS is off or the
-        // template isn't approved yet. Caller still owns the email
-        // content shape via the closure.
-        await NotificationService.send({
-          userId: order.userId ? String(order.userId) : null,
-          templateKey: 'order_confirmation',
-          whatsapp:
-            order.userId && phone
-              ? {
-                  params: [
-                    order.orderNumber,
-                    `₦${order.total.toLocaleString()}`,
-                    order.estimatedWaitTime
-                      ? `${order.estimatedWaitTime} minutes`
-                      : 'Soon',
-                  ],
-                }
-              : undefined,
-          email: () =>
-            sendOrderConfirmationEmail(email, {
-              orderNumber: order.orderNumber,
-              orderType: order.orderType,
-              items: order.items.map((item) => ({
-                name: item.name,
-                quantity: item.quantity,
-                price: item.subtotal,
-              })),
-              total: order.total,
-              estimatedWaitTime: order.estimatedWaitTime,
-            }),
-        });
-      }
+    if (!email && !phone) {
+      return {
+        success: false,
+        error: 'No contact channel available (email + phone both missing)',
+      };
     }
+
+    await NotificationService.send({
+      userId: order.userId ? String(order.userId) : null,
+      templateKey: 'order_confirmation',
+      whatsapp:
+        order.userId && phone
+          ? {
+              params: [
+                order.orderNumber,
+                `₦${order.total.toLocaleString()}`,
+                order.estimatedWaitTime
+                  ? `${order.estimatedWaitTime} minutes`
+                  : 'Soon',
+              ],
+            }
+          : undefined,
+      email:
+        wantEmail && email
+          ? () =>
+              sendOrderConfirmationEmail(email, {
+                orderNumber: order.orderNumber,
+                orderType: order.orderType,
+                items: order.items.map((item) => ({
+                  name: item.name,
+                  quantity: item.quantity,
+                  price: item.subtotal,
+                })),
+                // REQ-062 — itemized breakdown fields. Backwards-compat:
+                // any undefined fields render as omitted rows.
+                subtotal: (order as { subtotal?: number }).subtotal,
+                tax: (order as { tax?: number }).tax,
+                serviceFee: (order as { serviceFee?: number }).serviceFee,
+                deliveryFee: (order as { deliveryFee?: number }).deliveryFee,
+                tip: (order as { tip?: number }).tip,
+                pointsEarned: (order as { pointsEarned?: number }).pointsEarned,
+                paymentMethod: (order as { paymentMethod?: string })
+                  .paymentMethod,
+                total: order.total,
+                estimatedWaitTime: order.estimatedWaitTime,
+              })
+          : undefined,
+      sms:
+        wantSms && phone
+          ? async () => {
+              const r = await SMSService.sendOrderConfirmationSMS(
+                phone!,
+                order.orderNumber,
+                order.total,
+                order.estimatedWaitTime
+              );
+              return { success: r.success, message: r.message };
+            }
+          : undefined,
+    });
 
     return {
       success: true,

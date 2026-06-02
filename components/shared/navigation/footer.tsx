@@ -13,7 +13,8 @@ const footerLinks: {
   company: [
     // TODO: Create these pages
     // { label: 'About Us', href: '/about' },
-    // { label: 'Contact', href: '/contact' },
+    // REQ-062 — /contact page now exists.
+    { label: 'Contact', href: '/contact' },
     // { label: 'Careers', href: '/careers' },
   ],
   support: [
@@ -130,7 +131,9 @@ export function Footer() {
         <Separator className="my-8" />
 
         <div className="flex flex-col items-center justify-between space-y-4 text-sm text-muted-foreground md:flex-row md:space-y-0">
-          <p>© {new Date().getFullYear()} Wawa Garden Bar. All rights reserved.</p>
+          <p>
+            © {new Date().getFullYear()} Wawa Garden Bar. All rights reserved.
+          </p>
           <p>Made with ❤️ in Nigeria</p>
         </div>
       </div>

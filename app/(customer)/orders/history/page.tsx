@@ -9,21 +9,28 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Clock, Package } from 'lucide-react';
 import { OrderStatus } from '@/interfaces';
+import { ReorderButton } from '@/components/features/orders/reorder-button';
 
 /**
  * Order history page for authenticated users
  */
 export default async function OrderHistoryPage() {
   const cookieStore = await cookies();
-  const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+  const session = await getIronSession<SessionData>(
+    cookieStore,
+    sessionOptions
+  );
 
   if (!session.userId) {
     redirect('/login?redirect=/orders/history');
   }
 
-  const { orders, total } = await OrderService.getOrdersByUserId(session.userId, {
-    limit: 20,
-  });
+  const { orders, total } = await OrderService.getOrdersByUserId(
+    session.userId,
+    {
+      limit: 20,
+    }
+  );
 
   return (
     <div className="container mx-auto max-w-4xl px-4 py-8">
@@ -35,7 +42,7 @@ export default async function OrderHistoryPage() {
             {total} order{total !== 1 ? 's' : ''} total
           </p>
         </div>
-        
+
         <Link href="/menu">
           <Button variant="outline">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -61,7 +68,10 @@ export default async function OrderHistoryPage() {
       ) : (
         <div className="space-y-4">
           {orders.map((order) => (
-            <Card key={order._id.toString()} className="transition-shadow hover:shadow-md">
+            <Card
+              key={order._id.toString()}
+              className="transition-shadow hover:shadow-md"
+            >
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div>
@@ -78,11 +88,11 @@ export default async function OrderHistoryPage() {
                       })}
                     </p>
                   </div>
-                  
+
                   <OrderStatusBadge status={order.status} />
                 </div>
               </CardHeader>
-              
+
               <CardContent>
                 <div className="space-y-4">
                   {/* Order items */}
@@ -96,9 +106,12 @@ export default async function OrderHistoryPage() {
                         } else if (item.portionSize === 'quarter') {
                           quantityDisplay = `${item.quantity} × 1/4x`;
                         }
-                        
+
                         return (
-                          <p key={index} className="text-sm text-muted-foreground">
+                          <p
+                            key={index}
+                            className="text-sm text-muted-foreground"
+                          >
                             {quantityDisplay} {item.name}
                           </p>
                         );
@@ -121,15 +134,17 @@ export default async function OrderHistoryPage() {
                           {order.orderType.replace('-', ' ')}
                         </span>
                       </div>
-                      
-                      {order.estimatedWaitTime && order.status !== 'completed' && order.status !== 'cancelled' && (
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          <span>{order.estimatedWaitTime} min</span>
-                        </div>
-                      )}
+
+                      {order.estimatedWaitTime &&
+                        order.status !== 'completed' &&
+                        order.status !== 'cancelled' && (
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <span>{order.estimatedWaitTime} min</span>
+                          </div>
+                        )}
                     </div>
-                    
+
                     <p className="text-lg font-semibold">
                       ₦{order.total.toLocaleString()}
                     </p>
@@ -137,24 +152,33 @@ export default async function OrderHistoryPage() {
 
                   {/* Actions */}
                   <div className="flex gap-2 border-t pt-4">
-                    <Link href={`/orders/${order._id.toString()}`} className="flex-1">
+                    <Link
+                      href={`/orders/${order._id.toString()}`}
+                      className="flex-1"
+                    >
                       <Button variant="outline" className="w-full">
                         View Details
                       </Button>
                     </Link>
-                    
+
                     {order.status === 'completed' && !order.rating && (
-                      <Link href={`/orders/${order._id.toString()}/review`} className="flex-1">
+                      <Link
+                        href={`/orders/${order._id.toString()}/review`}
+                        className="flex-1"
+                      >
                         <Button variant="default" className="w-full">
                           Leave Review
                         </Button>
                       </Link>
                     )}
-                    
+
                     {order.status === 'completed' && (
-                      <Button variant="outline">
-                        Reorder
-                      </Button>
+                      <ReorderButton
+                        order={{
+                          items: order.items,
+                          orderNumber: order.orderNumber,
+                        }}
+                      />
                     )}
                   </div>
                 </div>
@@ -178,7 +202,13 @@ export default async function OrderHistoryPage() {
  * Order status badge component
  */
 function OrderStatusBadge({ status }: { status: OrderStatus }) {
-  const variants: Record<OrderStatus, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {
+  const variants: Record<
+    OrderStatus,
+    {
+      variant: 'default' | 'secondary' | 'destructive' | 'outline';
+      label: string;
+    }
+  > = {
     pending: { variant: 'secondary', label: 'Pending' },
     confirmed: { variant: 'default', label: 'Confirmed' },
     preparing: { variant: 'default', label: 'Preparing' },

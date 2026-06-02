@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import {
   FormControl,
@@ -14,9 +15,31 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { UtensilsCrossed, Package, Truck, MapPin, Clock, Zap } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  UtensilsCrossed,
+  Package,
+  Truck,
+  MapPin,
+  Clock,
+  Zap,
+} from 'lucide-react';
+import { BusinessHoursBanner } from './business-hours-banner';
 
 import { ITab } from '@/interfaces';
+
+// REQ-061 — pickup slot returned by /api/settings/pickup-slots
+interface PickupSlot {
+  value: string;
+  label: string;
+  date: string;
+}
 
 interface OrderDetailsStepProps {
   form: UseFormReturn<any>;
@@ -26,16 +49,51 @@ interface OrderDetailsStepProps {
   isTabOccupied?: boolean;
 }
 
-export function OrderDetailsStep({ form, hasExistingTab, isTableLocked, existingTab, isTabOccupied }: OrderDetailsStepProps) {
+export function OrderDetailsStep({
+  form,
+  hasExistingTab,
+  isTableLocked,
+  existingTab,
+  isTabOccupied,
+}: OrderDetailsStepProps) {
   const orderType = form.watch('orderType');
   const tableNumber = form.watch('tableNumber');
-  
+
   // Backwards compatibility or default
   const locked = isTableLocked ?? hasExistingTab ?? false;
   const tabFound = !!existingTab;
 
+  // REQ-061 — pickup slots fetched on mount. Empty array → fall back to
+  // the legacy datetime-local input so customers can still pick a time.
+  const [pickupSlots, setPickupSlots] = useState<PickupSlot[]>([]);
+  const [slotsLoaded, setSlotsLoaded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/settings/pickup-slots')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body) => {
+        if (cancelled) return;
+        if (body?.success && Array.isArray(body.data?.slots)) {
+          setPickupSlots(body.data.slots);
+        }
+        setSlotsLoaded(true);
+      })
+      .catch(() => {
+        if (!cancelled) setSlotsLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div className="space-y-6">
+      {/* REQ-061 — Business-hours warning + "Schedule for opening" CTA */}
+      <BusinessHoursBanner
+        onScheduleForOpen={(iso) => form.setValue('pickupTime', iso)}
+      />
+
       {/* Order Type Selection */}
       <FormField
         control={form.control}
@@ -57,7 +115,11 @@ export function OrderDetailsStep({ form, hasExistingTab, isTableLocked, existing
                       : 'border-muted hover:border-primary/50'
                   }`}
                 >
-                  <RadioGroupItem value="dine-in" id="dine-in" className="sr-only" />
+                  <RadioGroupItem
+                    value="dine-in"
+                    id="dine-in"
+                    className="sr-only"
+                  />
                   <UtensilsCrossed className="h-6 w-6" />
                   <span className="font-medium">Dine In</span>
                   <span className="text-xs text-muted-foreground text-center">
@@ -75,11 +137,18 @@ export function OrderDetailsStep({ form, hasExistingTab, isTableLocked, existing
                         : 'border-muted hover:border-primary/50'
                   }`}
                 >
-                  <RadioGroupItem value="pickup" id="pickup" className="sr-only" disabled={tabFound || locked} />
+                  <RadioGroupItem
+                    value="pickup"
+                    id="pickup"
+                    className="sr-only"
+                    disabled={tabFound || locked}
+                  />
                   <Package className="h-6 w-6" />
                   <span className="font-medium">Pickup</span>
                   <span className="text-xs text-muted-foreground text-center">
-                    {(tabFound || locked) ? 'Close tab first' : 'Collect your order'}
+                    {tabFound || locked
+                      ? 'Close tab first'
+                      : 'Collect your order'}
                   </span>
                 </Label>
 
@@ -93,11 +162,18 @@ export function OrderDetailsStep({ form, hasExistingTab, isTableLocked, existing
                         : 'border-muted hover:border-primary/50'
                   }`}
                 >
-                  <RadioGroupItem value="delivery" id="delivery" className="sr-only" disabled={tabFound || locked} />
+                  <RadioGroupItem
+                    value="delivery"
+                    id="delivery"
+                    className="sr-only"
+                    disabled={tabFound || locked}
+                  />
                   <Truck className="h-6 w-6" />
                   <span className="font-medium">Delivery</span>
                   <span className="text-xs text-muted-foreground text-center">
-                    {(tabFound || locked) ? 'Close tab first' : 'Delivered to you'}
+                    {tabFound || locked
+                      ? 'Close tab first'
+                      : 'Delivered to you'}
                   </span>
                 </Label>
 
@@ -111,11 +187,18 @@ export function OrderDetailsStep({ form, hasExistingTab, isTableLocked, existing
                         : 'border-muted hover:border-primary/50'
                   }`}
                 >
-                  <RadioGroupItem value="pay-now" id="pay-now" className="sr-only" disabled={tabFound || locked} />
+                  <RadioGroupItem
+                    value="pay-now"
+                    id="pay-now"
+                    className="sr-only"
+                    disabled={tabFound || locked}
+                  />
                   <Zap className="h-6 w-6" />
                   <span className="font-medium">Pay Now</span>
                   <span className="text-xs text-muted-foreground text-center">
-                    {(tabFound || locked) ? 'Close tab first' : 'Quick order & pay'}
+                    {tabFound || locked
+                      ? 'Close tab first'
+                      : 'Quick order & pay'}
                   </span>
                 </Label>
               </RadioGroup>
@@ -134,34 +217,39 @@ export function OrderDetailsStep({ form, hasExistingTab, isTableLocked, existing
             <FormItem>
               <FormLabel>Table Number</FormLabel>
               <FormControl>
-                <Input 
-                  placeholder="e.g., T12" 
-                  {...field} 
+                <Input
+                  placeholder="e.g., T12"
+                  {...field}
                   disabled={locked}
                   className={`${locked ? 'bg-muted cursor-not-allowed' : ''} ${isTabOccupied ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                 />
               </FormControl>
               <FormDescription>
-                {locked 
+                {locked
                   ? 'Table number is set from your existing tab and cannot be changed'
-                  : 'Enter your table number or scan the QR code'
-                }
+                  : 'Enter your table number or scan the QR code'}
               </FormDescription>
-              
+
               {/* Message about existing tab if not locked but found */}
               {!locked && existingTab && (
-                 <div className="text-sm font-medium text-amber-600 dark:text-amber-400 flex items-center mt-2 p-2 bg-amber-50 dark:bg-amber-950/30 rounded border border-amber-200 dark:border-amber-800">
-                   <span>Note: An open tab exists for this table. This order will be added to it.</span>
-                 </div>
+                <div className="text-sm font-medium text-amber-600 dark:text-amber-400 flex items-center mt-2 p-2 bg-amber-50 dark:bg-amber-950/30 rounded border border-amber-200 dark:border-amber-800">
+                  <span>
+                    Note: An open tab exists for this table. This order will be
+                    added to it.
+                  </span>
+                </div>
               )}
 
               {/* Message about occupied tab */}
               {isTabOccupied && (
-                 <div className="text-sm font-medium text-destructive flex items-center mt-2 p-2 bg-destructive/10 rounded border border-destructive/20">
-                   <span>Table {tableNumber} is currently occupied. Please select another table.</span>
-                 </div>
+                <div className="text-sm font-medium text-destructive flex items-center mt-2 p-2 bg-destructive/10 rounded border border-destructive/20">
+                  <span>
+                    Table {tableNumber} is currently occupied. Please select
+                    another table.
+                  </span>
+                </div>
               )}
-              
+
               <FormMessage />
             </FormItem>
           )}
@@ -175,15 +263,46 @@ export function OrderDetailsStep({ form, hasExistingTab, isTableLocked, existing
           name="pickupTime"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Preferred Pickup Time <span className="text-red-500">*</span></FormLabel>
+              <FormLabel>
+                Preferred Pickup Time <span className="text-red-500">*</span>
+              </FormLabel>
               <FormControl>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input type="datetime-local" className="pl-10" {...field} required />
-                </div>
+                {/* REQ-061 — Slot picker fed by /api/settings/pickup-slots.
+                    Falls back to the legacy datetime-local input when no
+                    slots are available (closed today + tomorrow, or fetch
+                    failed) so customers can still type a time manually. */}
+                {pickupSlots.length > 0 ? (
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <SelectTrigger>
+                      <Clock className="h-4 w-4 text-muted-foreground mr-2" />
+                      <SelectValue placeholder="Select a pickup time" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {pickupSlots.map((slot) => (
+                        <SelectItem key={slot.value} value={slot.value}>
+                          {slot.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="relative">
+                    <Clock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="datetime-local"
+                      className="pl-10"
+                      {...field}
+                      required
+                    />
+                  </div>
+                )}
               </FormControl>
               <FormDescription>
-                When would you like to pick up your order?
+                {pickupSlots.length > 0
+                  ? 'Pick a slot within our open hours. We need preparation time before pickup.'
+                  : slotsLoaded
+                    ? 'When would you like to pick up your order?'
+                    : 'Loading available times…'}
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -199,7 +318,9 @@ export function OrderDetailsStep({ form, hasExistingTab, isTableLocked, existing
             name="deliveryStreet"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Street Address <span className="text-red-500">*</span></FormLabel>
+                <FormLabel>
+                  Street Address <span className="text-red-500">*</span>
+                </FormLabel>
                 <FormControl>
                   <div className="relative">
                     <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -211,9 +332,7 @@ export function OrderDetailsStep({ form, hasExistingTab, isTableLocked, existing
                     />
                   </div>
                 </FormControl>
-                <FormDescription>
-                  House number and street name
-                </FormDescription>
+                <FormDescription>House number and street name</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -245,7 +364,9 @@ export function OrderDetailsStep({ form, hasExistingTab, isTableLocked, existing
               name="deliveryCity"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>City <span className="text-red-500">*</span></FormLabel>
+                  <FormLabel>
+                    City <span className="text-red-500">*</span>
+                  </FormLabel>
                   <FormControl>
                     <Input placeholder="e.g., Lagos" {...field} required />
                   </FormControl>
@@ -259,7 +380,9 @@ export function OrderDetailsStep({ form, hasExistingTab, isTableLocked, existing
               name="deliveryState"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>State <span className="text-red-500">*</span></FormLabel>
+                  <FormLabel>
+                    State <span className="text-red-500">*</span>
+                  </FormLabel>
                   <FormControl>
                     <Input placeholder="e.g., Lagos" {...field} required />
                   </FormControl>
@@ -289,7 +412,9 @@ export function OrderDetailsStep({ form, hasExistingTab, isTableLocked, existing
               name="deliveryCountry"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Country <span className="text-red-500">*</span></FormLabel>
+                  <FormLabel>
+                    Country <span className="text-red-500">*</span>
+                  </FormLabel>
                   <FormControl>
                     <Input placeholder="e.g., Nigeria" {...field} required />
                   </FormControl>
@@ -308,9 +433,7 @@ export function OrderDetailsStep({ form, hasExistingTab, isTableLocked, existing
                 <FormControl>
                   <Input placeholder="e.g., Near City Mall" {...field} />
                 </FormControl>
-                <FormDescription>
-                  Help us find you easier
-                </FormDescription>
+                <FormDescription>Help us find you easier</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -350,7 +473,8 @@ export function OrderDetailsStep({ form, hasExistingTab, isTableLocked, existing
                     Save this address for future orders
                   </FormLabel>
                   <FormDescription>
-                    We'll pre-fill this address next time you order delivery
+                    We&apos;ll pre-fill this address next time you order
+                    delivery
                   </FormDescription>
                 </div>
               </FormItem>

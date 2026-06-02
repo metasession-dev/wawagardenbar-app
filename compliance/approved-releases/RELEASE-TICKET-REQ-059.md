@@ -1,13 +1,14 @@
 # Release Ticket: REQ-059 — InstagramPostCredit ledger + sliding-window award trigger (IG-4)
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-06-02
 **Requirement ID:** REQ-059
 **Risk Level:** MEDIUM
 **GitHub Issue:** [#117 IG-4](https://github.com/metasession-dev/wawagardenbar-app/issues/117)
 **Integration PR:** [#245](https://github.com/metasession-dev/wawagardenbar-app/pull/245) — merged to develop 2026-06-02 (commit `96f4f05`).
-**Release PR:** pending — to be opened `develop → main` after this evidence pack lands.
+**Release PR:** #247
 **DevAudit Release:** [`devaudit.metasession.co/projects/wgb/`](https://devaudit.metasession.co/projects/wgb/) — release version `REQ-059`, status `draft` → `uat_review` on this evidence push.
+**Sign-off (dual-actor):** UAT approved + Production approved on the DevAudit portal (`released`); post-deploy production smoke evidence captured. Closed out 2026-06-02.
 
 ---
 

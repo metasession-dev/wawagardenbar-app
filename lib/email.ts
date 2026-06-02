@@ -229,7 +229,7 @@ export async function sendWelcomeEmail(
   name?: string
 ): Promise<void> {
   const displayName = name || 'there';
-  
+
   const html = `
     <!DOCTYPE html>
     <html>
@@ -389,6 +389,15 @@ export async function sendOrderConfirmationEmail(
     orderNumber: string;
     orderType: string;
     items: { name: string; quantity: number; price: number }[];
+    /** REQ-062 — itemized breakdown fields. All optional for backwards-
+     * compatibility with existing callers; rendered when present. */
+    subtotal?: number;
+    tax?: number;
+    serviceFee?: number;
+    deliveryFee?: number;
+    tip?: number;
+    pointsEarned?: number;
+    paymentMethod?: string;
     total: number;
     estimatedWaitTime: number;
   }
@@ -399,6 +408,56 @@ export async function sendOrderConfirmationEmail(
         `<li>${item.quantity}x ${item.name} - ₦${item.price.toLocaleString()}</li>`
     )
     .join('');
+
+  // REQ-062 — itemized breakdown. Each row renders only when its value
+  // is meaningful (> 0 or a defined string), so backwards-compat callers
+  // that don't pass the new fields just see items + total like today.
+  const fmt = (n: number) => `₦${n.toLocaleString()}`;
+  const breakdownRows: string[] = [];
+  if (typeof orderData.subtotal === 'number') {
+    breakdownRows.push(
+      `<tr><td>Subtotal</td><td style="text-align:right">${fmt(orderData.subtotal)}</td></tr>`
+    );
+  }
+  if (typeof orderData.serviceFee === 'number' && orderData.serviceFee > 0) {
+    breakdownRows.push(
+      `<tr><td>Service Fee</td><td style="text-align:right">${fmt(orderData.serviceFee)}</td></tr>`
+    );
+  }
+  if (typeof orderData.deliveryFee === 'number' && orderData.deliveryFee > 0) {
+    breakdownRows.push(
+      `<tr><td>Delivery Fee</td><td style="text-align:right">${fmt(orderData.deliveryFee)}</td></tr>`
+    );
+  }
+  if (typeof orderData.tax === 'number' && orderData.tax > 0) {
+    breakdownRows.push(
+      `<tr><td>Tax</td><td style="text-align:right">${fmt(orderData.tax)}</td></tr>`
+    );
+  }
+  if (typeof orderData.tip === 'number' && orderData.tip > 0) {
+    breakdownRows.push(
+      `<tr><td>Tip</td><td style="text-align:right">${fmt(orderData.tip)}</td></tr>`
+    );
+  }
+  const breakdownTable =
+    breakdownRows.length > 0
+      ? `<table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px"><tbody>${breakdownRows.join('')}</tbody></table>`
+      : '';
+
+  const extraInfoRows: string[] = [];
+  if (orderData.paymentMethod) {
+    extraInfoRows.push(
+      `<p><strong>Payment Method:</strong> ${orderData.paymentMethod}</p>`
+    );
+  }
+  if (
+    typeof orderData.pointsEarned === 'number' &&
+    orderData.pointsEarned > 0
+  ) {
+    extraInfoRows.push(
+      `<p><strong>Points Earned:</strong> ${orderData.pointsEarned}</p>`
+    );
+  }
 
   const html = `
     <!DOCTYPE html>
@@ -427,30 +486,33 @@ export async function sendOrderConfirmationEmail(
             <h1>Order Confirmed! 🎉</h1>
             <p>Thank you for your order</p>
           </div>
-          
+
           <div class="order-number">
             <p style="margin: 0; font-size: 14px; color: #6b7280;">Order Number</p>
             <h2>#${orderData.orderNumber}</h2>
           </div>
-          
+
           <div class="info">
             <p><strong>Order Type:</strong> ${orderData.orderType}</p>
             <p><strong>Estimated Wait Time:</strong> ${orderData.estimatedWaitTime} minutes</p>
+            ${extraInfoRows.join('\n            ')}
           </div>
-          
+
           <div class="items">
             <h3>Order Items:</h3>
             <ul>${itemsList}</ul>
           </div>
-          
+
+          ${breakdownTable}
+
           <div class="total">
             Total: ₦${orderData.total.toLocaleString()}
           </div>
-          
+
           <p style="text-align: center;">
             You can track your order status in real-time from your account.
           </p>
-          
+
           <div class="footer">
             <p>© ${new Date().getFullYear()} Wawa Garden Bar</p>
             <p>Need help? Contact us at ${process.env.EMAIL_FROM}</p>

@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useCartStore } from '@/stores/cart-store';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
@@ -10,40 +11,109 @@ interface CartSummaryProps {
   showFees?: boolean;
 }
 
-export function CartSummary({ orderType = 'dine-in', showFees = false }: CartSummaryProps) {
+/**
+ * REQ-061 — Fee config fetched from /api/settings on mount. The endpoint
+ * already exists and is unauthenticated; it exposes deliveryFeeBase,
+ * deliveryFeeReduced, freeDeliveryThreshold, serviceFeePercentage,
+ * taxPercentage, taxEnabled, and minimumOrderAmount. Falls back to the
+ * hardcoded prior values on fetch failure so an outage doesn't break
+ * the cart.
+ */
+interface FeeConfig {
+  deliveryFeeBase: number;
+  deliveryFeeReduced: number;
+  freeDeliveryThreshold: number;
+  serviceFeePercentage: number;
+  taxPercentage: number;
+  taxEnabled: boolean;
+  minimumOrderAmount: number;
+}
+
+const FALLBACK_FEES: FeeConfig = {
+  deliveryFeeBase: 1000,
+  deliveryFeeReduced: 500,
+  freeDeliveryThreshold: 2000,
+  serviceFeePercentage: 0.02,
+  taxPercentage: 0.075,
+  taxEnabled: false,
+  minimumOrderAmount: 1000,
+};
+
+export function CartSummary({
+  orderType = 'dine-in',
+  showFees = false,
+}: CartSummaryProps) {
   const { getTotalPrice, getTotalItems } = useCartStore();
+  const [fees, setFees] = useState<FeeConfig>(FALLBACK_FEES);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/settings')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body) => {
+        if (cancelled || !body?.success || !body.data) return;
+        setFees({
+          deliveryFeeBase:
+            body.data.deliveryFeeBase ?? FALLBACK_FEES.deliveryFeeBase,
+          deliveryFeeReduced:
+            body.data.deliveryFeeReduced ?? FALLBACK_FEES.deliveryFeeReduced,
+          freeDeliveryThreshold:
+            body.data.freeDeliveryThreshold ??
+            FALLBACK_FEES.freeDeliveryThreshold,
+          serviceFeePercentage:
+            body.data.serviceFeePercentage ??
+            FALLBACK_FEES.serviceFeePercentage,
+          taxPercentage: body.data.taxPercentage ?? FALLBACK_FEES.taxPercentage,
+          taxEnabled: body.data.taxEnabled ?? FALLBACK_FEES.taxEnabled,
+          minimumOrderAmount:
+            body.data.minimumOrderAmount ?? FALLBACK_FEES.minimumOrderAmount,
+        });
+      })
+      .catch(() => {
+        // Fetch failure: keep fallback values; no UI noise.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const subtotal = getTotalPrice();
   const totalItems = getTotalItems();
 
-  // Calculate fees
-  // Note: This component uses hardcoded fees for immediate display
-  // For accurate fees, use the fee calculator or settings API
-  // TODO: Replace with real-time fee calculation from settings
+  // REQ-061 — derived from fetched settings rather than hardcoded.
   let deliveryFee = 0;
   let serviceFee = 0;
   let tax = 0;
 
-  if (orderType) {
-    if (orderType === 'delivery') {
-      deliveryFee = subtotal >= 2000 ? 500 : 1000;
-    }
-    serviceFee = Math.round(subtotal * 0.02);
-    // Tax calculation would go here if enabled
+  if (orderType === 'delivery') {
+    deliveryFee =
+      subtotal >= fees.freeDeliveryThreshold
+        ? fees.deliveryFeeReduced
+        : fees.deliveryFeeBase;
+  }
+  serviceFee = Math.round(subtotal * fees.serviceFeePercentage);
+  if (fees.taxEnabled) {
+    tax = Math.round(subtotal * fees.taxPercentage);
   }
 
   const total = subtotal + deliveryFee + serviceFee + tax;
 
-  // Minimum order requirements
-  const minimumOrders = {
+  // REQ-061 — minimum order derived from settings + delivery free-threshold
+  // (delivery orders bump the minimum to the free-delivery threshold to
+  // preserve the previous "pickup ₦1000 / delivery ₦2000" UX).
+  const minimumOrders: Record<
+    NonNullable<CartSummaryProps['orderType']>,
+    number
+  > = {
     'dine-in': 0,
-    pickup: 1000,
-    delivery: 2000,
+    pickup: fees.minimumOrderAmount,
+    delivery: Math.max(fees.minimumOrderAmount, fees.freeDeliveryThreshold),
   };
 
   const minimum = minimumOrders[orderType];
   const meetsMinimum = subtotal >= minimum;
   const remaining = minimum - subtotal;
+  const serviceFeeLabel = `Service Fee (${(fees.serviceFeePercentage * 100).toFixed(0)}%)`;
 
   function formatPrice(price: number): string {
     return new Intl.NumberFormat('en-NG', {
@@ -79,9 +149,19 @@ export function CartSummary({ orderType = 'dine-in', showFees = false }: CartSum
 
           {/* Service Fee */}
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Service Fee (2%)</span>
+            <span className="text-muted-foreground">{serviceFeeLabel}</span>
             <span>{formatPrice(serviceFee)}</span>
           </div>
+
+          {/* Tax */}
+          {fees.taxEnabled && tax > 0 && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">
+                Tax ({(fees.taxPercentage * 100).toFixed(1)}%)
+              </span>
+              <span>{formatPrice(tax)}</span>
+            </div>
+          )}
 
           <Separator />
 
@@ -112,11 +192,13 @@ export function CartSummary({ orderType = 'dine-in', showFees = false }: CartSum
       )}
 
       {/* Free Delivery Badge */}
-      {orderType === 'delivery' && subtotal >= 2000 && showFees && (
-        <Badge variant="secondary" className="w-full justify-center">
-          🎉 Free Delivery Unlocked!
-        </Badge>
-      )}
+      {orderType === 'delivery' &&
+        subtotal >= fees.freeDeliveryThreshold &&
+        showFees && (
+          <Badge variant="secondary" className="w-full justify-center">
+            🎉 Free Delivery Unlocked!
+          </Badge>
+        )}
     </div>
   );
 }

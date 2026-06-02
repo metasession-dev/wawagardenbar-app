@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
 import { revalidatePath } from 'next/cache';
 import { OrderService } from '@/services';
+import { SettingsService } from '@/services/settings-service';
 import { OrderStatus, OrderType, IOrder } from '@/interfaces';
 import { sessionOptions, SessionData } from '@/lib/session';
 import {
@@ -27,6 +28,12 @@ export interface CreateOrderActionInput {
   pickupDetails?: IOrder['pickupDetails'];
   dineInDetails?: IOrder['dineInDetails'];
   specialInstructions?: string;
+  // REQ-061 — optional customer coordinates for delivery distance check.
+  // When present (e.g. from a future map-picker), the server-side guard
+  // verifies the address is within `deliveryRadius` km of the bar. When
+  // absent, the check fails open (existing behaviour preserved).
+  customerLat?: number;
+  customerLng?: number;
 }
 
 export interface ActionResult<T = unknown> {
@@ -45,7 +52,10 @@ export async function createOrderAction(
   try {
     // Get user session if available
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
     const userId = session.userId;
 
     // Validate required fields
@@ -57,7 +67,10 @@ export async function createOrderAction(
     }
 
     // Validate customer info (either user or guest)
-    if (!userId && (!input.guestEmail || !input.guestName || !input.guestPhone)) {
+    if (
+      !userId &&
+      (!input.guestEmail || !input.guestName || !input.guestPhone)
+    ) {
       return {
         success: false,
         error: 'Customer information is required',
@@ -86,6 +99,41 @@ export async function createOrderAction(
       };
     }
 
+    // REQ-061 — Server-side business-hours guard (P2 #12). Pickup and
+    // delivery orders intended for the immediate term must be inside
+    // business hours; dine-in orders bypass (customer is already at
+    // the bar so the order is implicitly inside hours).
+    if (input.orderType === 'pickup' || input.orderType === 'delivery') {
+      const isOpen = await SettingsService.isWithinBusinessHours();
+      if (!isOpen) {
+        const next = await SettingsService.getNextOpenSlot();
+        return {
+          success: false,
+          error: 'OUTSIDE_BUSINESS_HOURS',
+          message: next.message,
+        };
+      }
+    }
+
+    // REQ-061 — Server-side delivery-distance guard (P2 #13). Fails open
+    // when either side's coordinates are missing (bar geocoding failed,
+    // or no customer coords supplied) — same posture as the customer-
+    // side check. Real enforcement kicks in once customer-address
+    // geocoding lands in a future REQ.
+    if (input.orderType === 'delivery') {
+      const distance = await SettingsService.checkDeliveryDistance(
+        input.customerLat,
+        input.customerLng
+      );
+      if (!distance.withinRadius) {
+        return {
+          success: false,
+          error: 'OUTSIDE_DELIVERY_RADIUS',
+          message: `This address is ${distance.distanceKm} km away — we only deliver within our configured radius.`,
+        };
+      }
+    }
+
     // Create order
     const order = await OrderService.createOrder({
       userId,
@@ -93,7 +141,7 @@ export async function createOrderAction(
       guestName: input.guestName,
       guestPhone: input.guestPhone,
       orderType: input.orderType,
-      items: input.items.map(item => ({
+      items: input.items.map((item) => ({
         ...item,
         portionSize: item.portionSize || 'full', // Ensure portionSize is set
       })),
@@ -167,7 +215,10 @@ export async function updateOrderStatusAction(
   try {
     // TODO: Add admin/kitchen authentication check
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
     if (!session.userId) {
       return {
         success: false,
@@ -185,12 +236,7 @@ export async function updateOrderStatusAction(
     }
 
     // Emit status update via WebSocket
-    emitOrderStatusUpdate(
-      orderId,
-      status,
-      order.estimatedWaitTime,
-      note
-    );
+    emitOrderStatusUpdate(orderId, status, order.estimatedWaitTime, note);
 
     // Emit update to kitchen
     emitOrderChange({
@@ -216,7 +262,10 @@ export async function updateOrderStatusAction(
     console.error('Error updating order status:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update order status',
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to update order status',
     };
   }
 }
@@ -230,8 +279,11 @@ export async function cancelOrderAction(
 ): Promise<ActionResult<IOrder>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
-    
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
+
     // Get order to verify ownership
     const existingOrder = await OrderService.getOrderById(orderId);
     if (!existingOrder) {
@@ -307,8 +359,11 @@ export async function addOrderReviewAction(
 ): Promise<ActionResult<IOrder>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
-    
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
+
     // Get order to verify ownership
     const existingOrder = await OrderService.getOrderById(orderId);
     if (!existingOrder) {
@@ -377,8 +432,11 @@ export async function getUserOrdersAction(options?: {
 }): Promise<ActionResult<{ orders: IOrder[]; total: number }>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
-    
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
+
     if (!session.userId) {
       return {
         success: false,
@@ -386,12 +444,17 @@ export async function getUserOrdersAction(options?: {
       };
     }
 
-    const result = await OrderService.getOrdersByUserId(session.userId!, options);
+    const result = await OrderService.getOrdersByUserId(
+      session.userId!,
+      options
+    );
 
     // Serialize Mongoose documents
     const serializedResult = {
       ...result,
-      orders: result.orders.map((order: any) => JSON.parse(JSON.stringify(order))),
+      orders: result.orders.map((order: any) =>
+        JSON.parse(JSON.stringify(order))
+      ),
     };
 
     return {
@@ -425,7 +488,10 @@ export async function getOrderAction(
 
     // Verify ownership if user is logged in
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
     if (session.userId && order.userId?.toString() !== session.userId) {
       return {
         success: false,
@@ -501,7 +567,10 @@ export async function getActiveOrdersAction(
   try {
     // TODO: Add admin/kitchen authentication check
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
     if (!session.userId) {
       return {
         success: false,
@@ -512,7 +581,9 @@ export async function getActiveOrdersAction(
     const orders = await OrderService.getActiveOrders(orderType);
 
     // Serialize Mongoose documents
-    const serializedOrders = orders.map((order: any) => JSON.parse(JSON.stringify(order)));
+    const serializedOrders = orders.map((order: any) =>
+      JSON.parse(JSON.stringify(order))
+    );
 
     return {
       success: true,
@@ -522,7 +593,10 @@ export async function getActiveOrdersAction(
     console.error('Error fetching active orders:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch active orders',
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to fetch active orders',
     };
   }
 }

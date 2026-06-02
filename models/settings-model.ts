@@ -10,22 +10,22 @@ export interface ISettings extends Document {
   deliveryFeeReduced: number;
   freeDeliveryThreshold: number;
   minimumOrderAmount: number;
-  
+
   // Tax Configuration
   taxPercentage: number;
   taxEnabled: boolean;
-  
+
   // Order Configuration
   estimatedPreparationTime: number; // minutes
   maxOrdersPerHour: number;
   allowGuestCheckout: boolean;
-  
+
   // Delivery Configuration
   deliveryRadius: number; // kilometers
   deliveryEnabled: boolean;
   pickupEnabled: boolean;
   dineInEnabled: boolean;
-  
+
   // Business Hours
   businessHours: {
     monday: { open: string; close: string; closed: boolean };
@@ -36,12 +36,21 @@ export interface ISettings extends Document {
     saturday: { open: string; close: string; closed: boolean };
     sunday: { open: string; close: string; closed: boolean };
   };
-  
+
   // Contact Information
   contactEmail: string;
   contactPhone: string;
   address: string;
-  
+
+  // REQ-061 — Lazy-cached geocoded coordinates of `address`. Backend-
+  // populated by `SettingsService.getBarCoordinates()` on first delivery
+  // distance check; persists across reads. Not surfaced in the admin form.
+  geocodedCoordinates?: {
+    lat: number;
+    lng: number;
+    geocodedAt: Date;
+  };
+
   // Metadata
   updatedBy?: mongoose.Types.ObjectId;
   updatedByEmail?: string;
@@ -87,7 +96,7 @@ const SettingsSchema = new Schema<ISettings>(
       default: 1000, // ₦1,000
       min: 0,
     },
-    
+
     // Tax Configuration
     taxPercentage: {
       type: Number,
@@ -100,7 +109,7 @@ const SettingsSchema = new Schema<ISettings>(
       type: Boolean,
       default: false,
     },
-    
+
     // Order Configuration
     estimatedPreparationTime: {
       type: Number,
@@ -119,7 +128,7 @@ const SettingsSchema = new Schema<ISettings>(
       type: Boolean,
       default: true,
     },
-    
+
     // Delivery Configuration
     deliveryRadius: {
       type: Number,
@@ -140,7 +149,7 @@ const SettingsSchema = new Schema<ISettings>(
       type: Boolean,
       default: true,
     },
-    
+
     // Business Hours
     businessHours: {
       type: {
@@ -182,7 +191,7 @@ const SettingsSchema = new Schema<ISettings>(
       },
       default: {},
     },
-    
+
     // Contact Information
     contactEmail: {
       type: String,
@@ -199,7 +208,17 @@ const SettingsSchema = new Schema<ISettings>(
       required: true,
       default: 'Wawa Garden Bar, Lagos, Nigeria',
     },
-    
+
+    // REQ-061 — Lazy-cached geocoded coordinates of `address`.
+    geocodedCoordinates: {
+      type: {
+        lat: { type: Number, required: true },
+        lng: { type: Number, required: true },
+        geocodedAt: { type: Date, required: true },
+      },
+      default: undefined,
+    },
+
     // Metadata
     updatedBy: {
       type: Schema.Types.ObjectId,
@@ -218,6 +237,7 @@ const SettingsSchema = new Schema<ISettings>(
 SettingsSchema.index({}, { unique: true });
 
 const SettingsModel =
-  mongoose.models.Settings || mongoose.model<ISettings>('Settings', SettingsSchema);
+  mongoose.models.Settings ||
+  mongoose.model<ISettings>('Settings', SettingsSchema);
 
 export default SettingsModel;

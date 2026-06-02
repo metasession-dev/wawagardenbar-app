@@ -5,12 +5,32 @@ import Link from 'next/link';
 import { MainLayout } from '@/components/shared/layout';
 import { Container } from '@/components/shared/layout';
 import { RewardsService, PointsService } from '@/services';
+import { InstagramService } from '@/services/instagram-service';
+import { InstagramCampaignCard } from '@/components/features/rewards/instagram-campaign-card';
 import { sessionOptions, SessionData } from '@/lib/session';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Gift, TrendingUp, Award, Clock, Percent, DollarSign, ShoppingBag, Star, ArrowUp, ArrowDown, Minus } from 'lucide-react';
+import {
+  Gift,
+  TrendingUp,
+  Award,
+  Clock,
+  Percent,
+  DollarSign,
+  ShoppingBag,
+  Star,
+  ArrowUp,
+  ArrowDown,
+  Minus,
+} from 'lucide-react';
 import { IReward, IRewardRule } from '@/interfaces';
 import { IPointsTransaction } from '@/models/points-transaction-model';
 
@@ -20,19 +40,34 @@ import { IPointsTransaction } from '@/models/points-transaction-model';
  */
 export default async function RewardsPage() {
   const cookieStore = await cookies();
-  const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+  const session = await getIronSession<SessionData>(
+    cookieStore,
+    sessionOptions
+  );
 
   if (!session.userId) {
     redirect('/login?redirect=/profile/rewards');
   }
 
-  const [activeRewards, rewardHistory, stats, availableRules, pointsBalance, pointsTransactions] = await Promise.all([
+  const [
+    activeRewards,
+    rewardHistory,
+    stats,
+    availableRules,
+    pointsBalance,
+    pointsTransactions,
+    igCampaigns,
+  ] = await Promise.all([
     RewardsService.getUserActiveRewards(session.userId),
     RewardsService.getUserRewardHistory(session.userId, { limit: 10 }),
     RewardsService.getUserRewardStats(session.userId),
     RewardsService.getAvailableRulesForUser(session.userId),
     PointsService.getBalance(session.userId),
     PointsService.getTransactionHistory(session.userId, 10, 0),
+    // REQ-060 — active IG-campaign progress for `<InstagramCampaignCard>`.
+    // Defensive: aggregator returns [] on DB failure so this page never
+    // crashes on the IG read path.
+    InstagramService.getActiveCampaignsForUser(session.userId),
   ]);
 
   return (
@@ -40,177 +75,196 @@ export default async function RewardsPage() {
       <Container size="xl" className="py-8">
         {/* Header */}
         <div className="mb-6">
-        <h1 className="text-3xl font-bold">My Rewards</h1>
-        <p className="text-muted-foreground">
-          Manage your rewards and track your savings
-        </p>
-      </div>
+          <h1 className="text-3xl font-bold">My Rewards</h1>
+          <p className="text-muted-foreground">
+            Manage your rewards and track your savings
+          </p>
+        </div>
 
-      {/* Statistics Cards */}
-      <div className="mb-6 grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium">
-              <Gift className="h-4 w-4 text-primary" />
-              Active Rewards
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{stats.activeRewards}</p>
-          </CardContent>
-        </Card>
+        {/* REQ-060 — Instagram campaign progress (renders nothing when no active campaigns) */}
+        <InstagramCampaignCard campaigns={igCampaigns} />
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium">
-              <TrendingUp className="h-4 w-4 text-green-600" />
-              Total Earned
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{stats.totalEarned}</p>
-          </CardContent>
-        </Card>
+        {/* Statistics Cards */}
+        <div className="mb-6 grid gap-4 md:grid-cols-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                <Gift className="h-4 w-4 text-primary" />
+                Active Rewards
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">{stats.activeRewards}</p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium">
-              <Award className="h-4 w-4 text-yellow-600" />
-              Total Savings
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">
-              ₦{stats.totalSavings.toLocaleString()}
-            </p>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                <TrendingUp className="h-4 w-4 text-green-600" />
+                Total Earned
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">{stats.totalEarned}</p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium">
-              <Award className="h-4 w-4 text-purple-600" />
-              Loyalty Points
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{pointsBalance.balance.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground">
-              = ₦{pointsBalance.nairaValue.toLocaleString()}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Types of Rewards Available */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Types of Rewards Available</CardTitle>
-          <CardDescription>
-            Earn rewards automatically when you place orders that meet spending thresholds
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {availableRules.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <Gift className="mb-3 h-12 w-12 text-muted-foreground" />
-              <p className="text-lg font-medium text-muted-foreground">
-                No rewards campaigns currently running
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                <Award className="h-4 w-4 text-yellow-600" />
+                Total Savings
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">
+                ₦{stats.totalSavings.toLocaleString()}
               </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Check back soon for new reward opportunities!
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                <Award className="h-4 w-4 text-purple-600" />
+                Loyalty Points
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">
+                {pointsBalance.balance.toLocaleString()}
               </p>
-            </div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              {availableRules.map((rule) => (
-                <RewardRuleCard key={rule._id.toString()} rule={rule} />
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              <p className="text-xs text-muted-foreground">
+                = ₦{pointsBalance.nairaValue.toLocaleString()}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="active" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="active">
-            Active Rewards ({activeRewards.length})
-          </TabsTrigger>
-          <TabsTrigger value="points">
-            Points History ({pointsTransactions.total})
-          </TabsTrigger>
-          <TabsTrigger value="history">
-            History ({rewardHistory.total})
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Active Rewards Tab */}
-        <TabsContent value="active" className="space-y-4">
-          {activeRewards.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Gift className="mb-4 h-12 w-12 text-muted-foreground" />
-                <h3 className="mb-2 text-lg font-semibold">No active rewards</h3>
-                <p className="mb-4 text-center text-muted-foreground">
-                  Keep ordering to earn rewards!
+        {/* Types of Rewards Available */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Types of Rewards Available</CardTitle>
+            <CardDescription>
+              Earn rewards automatically when you place orders that meet
+              spending thresholds
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {availableRules.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Gift className="mb-3 h-12 w-12 text-muted-foreground" />
+                <p className="text-lg font-medium text-muted-foreground">
+                  No rewards campaigns currently running
                 </p>
-                <Link href="/menu">
-                  <Button>Browse Menu</Button>
-                </Link>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              {activeRewards.map((reward) => (
-                <RewardCard key={reward._id.toString()} reward={reward} />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        {/* Points History Tab */}
-        <TabsContent value="points" className="space-y-4">
-          {pointsTransactions.transactions.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Award className="mb-4 h-12 w-12 text-muted-foreground" />
-                <h3 className="mb-2 text-lg font-semibold">No points transactions</h3>
-                <p className="text-center text-muted-foreground">
-                  Your points transaction history will appear here
+                <p className="text-sm text-muted-foreground mt-1">
+                  Check back soon for new reward opportunities!
                 </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {pointsTransactions.transactions.map((transaction) => (
-                <PointsTransactionCard key={transaction._id.toString()} transaction={transaction} conversionRate={pointsBalance.conversionRate} />
-              ))}
-            </div>
-          )}
-        </TabsContent>
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {availableRules.map((rule) => (
+                  <RewardRuleCard key={rule._id.toString()} rule={rule} />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-        {/* History Tab */}
-        <TabsContent value="history" className="space-y-4">
-          {rewardHistory.rewards.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Clock className="mb-4 h-12 w-12 text-muted-foreground" />
-                <h3 className="mb-2 text-lg font-semibold">No reward history</h3>
-                <p className="text-center text-muted-foreground">
-                  Your reward history will appear here
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {rewardHistory.rewards.map((reward) => (
-                <RewardHistoryCard key={reward._id.toString()} reward={reward} />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+        {/* Tabs */}
+        <Tabs defaultValue="active" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="active">
+              Active Rewards ({activeRewards.length})
+            </TabsTrigger>
+            <TabsTrigger value="points">
+              Points History ({pointsTransactions.total})
+            </TabsTrigger>
+            <TabsTrigger value="history">
+              History ({rewardHistory.total})
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Active Rewards Tab */}
+          <TabsContent value="active" className="space-y-4">
+            {activeRewards.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <Gift className="mb-4 h-12 w-12 text-muted-foreground" />
+                  <h3 className="mb-2 text-lg font-semibold">
+                    No active rewards
+                  </h3>
+                  <p className="mb-4 text-center text-muted-foreground">
+                    Keep ordering to earn rewards!
+                  </p>
+                  <Link href="/menu">
+                    <Button>Browse Menu</Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {activeRewards.map((reward) => (
+                  <RewardCard key={reward._id.toString()} reward={reward} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Points History Tab */}
+          <TabsContent value="points" className="space-y-4">
+            {pointsTransactions.transactions.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <Award className="mb-4 h-12 w-12 text-muted-foreground" />
+                  <h3 className="mb-2 text-lg font-semibold">
+                    No points transactions
+                  </h3>
+                  <p className="text-center text-muted-foreground">
+                    Your points transaction history will appear here
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {pointsTransactions.transactions.map((transaction) => (
+                  <PointsTransactionCard
+                    key={transaction._id.toString()}
+                    transaction={transaction}
+                    conversionRate={pointsBalance.conversionRate}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* History Tab */}
+          <TabsContent value="history" className="space-y-4">
+            {rewardHistory.rewards.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <Clock className="mb-4 h-12 w-12 text-muted-foreground" />
+                  <h3 className="mb-2 text-lg font-semibold">
+                    No reward history
+                  </h3>
+                  <p className="text-center text-muted-foreground">
+                    Your reward history will appear here
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {rewardHistory.rewards.map((reward) => (
+                  <RewardHistoryCard
+                    key={reward._id.toString()}
+                    reward={reward}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </Container>
     </MainLayout>
   );
@@ -250,7 +304,8 @@ function RewardCard({ reward }: { reward: IReward }) {
     return `Valid until ${expiryDate.toLocaleDateString()}`;
   }
 
-  const expiryWarning = new Date(reward.expiresAt).getTime() - Date.now() < 3 * 24 * 60 * 60 * 1000;
+  const expiryWarning =
+    new Date(reward.expiresAt).getTime() - Date.now() < 3 * 24 * 60 * 60 * 1000;
 
   return (
     <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
@@ -262,7 +317,8 @@ function RewardCard({ reward }: { reward: IReward }) {
               {getRewardTitle(reward.rewardType, reward.rewardValue)}
             </CardTitle>
             <CardDescription className="mt-1">
-              Reward Code: <code className="font-mono font-semibold">{reward.code}</code>
+              Reward Code:{' '}
+              <code className="font-mono font-semibold">{reward.code}</code>
             </CardDescription>
           </div>
           <Badge variant={expiryWarning ? 'destructive' : 'secondary'}>
@@ -331,7 +387,8 @@ function RewardHistoryCard({ reward }: { reward: IReward }) {
               {getRewardTitle(reward.rewardType, reward.rewardValue)}
             </p>
             <p className="text-sm text-muted-foreground">
-              Code: {reward.code} • Earned {new Date(reward.createdAt).toLocaleDateString()}
+              Code: {reward.code} • Earned{' '}
+              {new Date(reward.createdAt).toLocaleDateString()}
             </p>
           </div>
         </div>
@@ -351,7 +408,13 @@ function RewardHistoryCard({ reward }: { reward: IReward }) {
 /**
  * Points transaction card component
  */
-function PointsTransactionCard({ transaction, conversionRate }: { transaction: IPointsTransaction; conversionRate: number }) {
+function PointsTransactionCard({
+  transaction,
+  conversionRate,
+}: {
+  transaction: IPointsTransaction;
+  conversionRate: number;
+}) {
   function getTransactionIcon(type: string) {
     switch (type) {
       case 'earned':
@@ -399,8 +462,11 @@ function PointsTransactionCard({ transaction, conversionRate }: { transaction: I
           </div>
         </div>
         <div className="text-right">
-          <p className={`text-lg font-bold ${getTransactionColor(transaction.type)}`}>
-            {transaction.amount > 0 ? '+' : ''}{transaction.amount.toLocaleString()} pts
+          <p
+            className={`text-lg font-bold ${getTransactionColor(transaction.type)}`}
+          >
+            {transaction.amount > 0 ? '+' : ''}
+            {transaction.amount.toLocaleString()} pts
           </p>
           <p className="text-xs text-muted-foreground">
             ≈ ₦{nairaValue.toLocaleString()}
@@ -435,8 +501,10 @@ function RewardRuleCard({ rule }: { rule: IRewardRule }) {
 
   function getRewardDescription(rule: IRewardRule): string {
     const threshold = `₦${rule.spendThreshold.toLocaleString()}`;
-    const probability = rule.probability ? `${rule.probability}% chance` : 'Random chance';
-    
+    const probability = rule.probability
+      ? `${rule.probability}% chance`
+      : 'Random chance';
+
     switch (rule.rewardType) {
       case 'discount-percentage':
         return `Spend ${threshold} or more to get a ${probability} of earning ${rule.rewardValue}% off your next order`;

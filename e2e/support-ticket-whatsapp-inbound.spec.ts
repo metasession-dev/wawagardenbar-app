@@ -139,6 +139,18 @@ csrTest.describe('REQ-064 WhatsApp inbound → support ticket bridge', () => {
   csrTest(
     'AC3 — inbound support_text creates a SupportTicket and surfaces in the staff queue',
     async ({ page, request }) => {
+      // The webhook validates `x-hub-signature-256` server-side using
+      // `WHATSAPP_APP_SECRET` — when set (the prod-shape configuration that
+      // UAT mirrors), the test can't fake a valid signature without knowing
+      // the server's secret. The local convenience of "skip-when-unset"
+      // means this E2E only runs against a target whose secret is unset
+      // (local dev). The bridge logic itself is covered by the unit test
+      // in `__tests__/services/whatsapp-inbound.support-ticket.test.ts`.
+      csrTest.skip(
+        !!process.env.BASE_URL,
+        'WhatsApp webhook signature requires server-secret knowledge; only runs against local dev where the secret is unset.'
+      );
+
       guard(csrTest.skip, await isAuthenticated(page));
 
       phone = uniqueDigits();

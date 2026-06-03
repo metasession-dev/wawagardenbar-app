@@ -89,6 +89,8 @@ interface UserPrefsLite {
       push?: boolean;
       whatsappTransactional?: boolean;
       whatsappMarketing?: boolean;
+      // REQ-063 — explicit-consent split for marketing emails.
+      emailMarketing?: boolean;
     };
   };
 }
@@ -105,11 +107,19 @@ function shouldSendWhatsApp(
   return cp.whatsappTransactional !== false; // default true
 }
 
-function shouldSendEmail(user: UserPrefsLite | null): boolean {
+function shouldSendEmail(
+  user: UserPrefsLite | null,
+  category: NotificationCategory
+): boolean {
   if (!user) return true; // Guest with explicit email closure → caller decided
   const cp = user.preferences?.communicationPreferences;
   if (!cp) return true;
-  return cp.email !== false; // default true
+  // REQ-063 — marketing email gated on `emailMarketing` (default false);
+  // transactional + authentication fall through to the existing `email`
+  // gate (default true) so order confirmations / receipts aren't silently
+  // blocked when the user has only opted out of offers.
+  if (category === 'marketing') return cp.emailMarketing === true;
+  return cp.email !== false;
 }
 
 function shouldSendSMS(user: UserPrefsLite | null): boolean {
@@ -216,7 +226,7 @@ export class NotificationService {
     }
 
     // ── 2. Email ──
-    if (opts.email && shouldSendEmail(user)) {
+    if (opts.email && shouldSendEmail(user, category)) {
       const t0 = Date.now();
       try {
         await opts.email();

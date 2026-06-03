@@ -59,7 +59,14 @@ const preferencesSchema = new Schema<IPreferences>(
       // time; they're persisted on the next save.
       whatsappTransactional: { type: Boolean, default: true },
       whatsappMarketing: { type: Boolean, default: false },
+      // REQ-063 — separate gate for MARKETING email (offers, expiry nudges).
+      // `email` above remains the gate for TRANSACTIONAL email so a user
+      // opting out of offers doesn't lose their order confirmations.
+      emailMarketing: { type: Boolean, default: false },
     },
+    // REQ-063 — server-stamped audit timestamp; optional so existing docs
+    // remain valid and only the next save populates it.
+    communicationPreferencesUpdatedAt: { type: Date },
     language: { type: String, default: 'en' },
   },
   { _id: false }

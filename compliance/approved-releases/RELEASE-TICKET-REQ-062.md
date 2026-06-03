@@ -1,13 +1,14 @@
 # Release Ticket: REQ-062 — Customer trust polish (P0 #5 + P1 #6 + P1 #9 + P1 #11)
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-06-02
 **Requirement ID:** REQ-062
 **Risk Level:** LOW-MEDIUM
 **GitHub Issue:** [#117 P0 #5 + P1 #6 + P1 #9 + P1 #11](https://github.com/metasession-dev/wawagardenbar-app/issues/117)
 **Integration PR:** [#260](https://github.com/metasession-dev/wawagardenbar-app/pull/260) — merged to develop 2026-06-02 (commit `f01427b`).
-**Release PR:** pending — to be opened `develop → main` after this evidence pack lands.
+**Release PR:** #262
 **DevAudit Release:** [`devaudit.metasession.co/projects/wgb/`](https://devaudit.metasession.co/projects/wgb/) — release version `REQ-062`, status `draft` → `uat_review` on this evidence push.
+**Sign-off (dual-actor):** UAT approved + Production approved on the DevAudit portal (`released`); post-deploy production smoke evidence captured. Closed out 2026-06-03.
 
 ---
 

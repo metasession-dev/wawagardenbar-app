@@ -23,6 +23,8 @@ const preferencesSchema = z.object({
     // REQ-053 — WhatsApp opt-in surface.
     whatsappTransactional: z.boolean(),
     whatsappMarketing: z.boolean(),
+    // REQ-063 — separate gate for marketing email.
+    emailMarketing: z.boolean(),
   }),
   language: z.string(),
 });
@@ -70,6 +72,8 @@ export function PreferencesTab({ preferences }: PreferencesTabProps) {
         // assumed, marketing requires explicit opt-in).
         whatsappTransactional: true,
         whatsappMarketing: false,
+        // REQ-063 — email marketing requires explicit opt-in.
+        emailMarketing: false,
       },
       language: preferences?.language || 'en',
     },
@@ -328,6 +332,29 @@ export function PreferencesTab({ preferences }: PreferencesTabProps) {
                   checked,
                   { shouldDirty: true }
                 )
+              }
+            />
+          </div>
+
+          {/* REQ-063 — email marketing opt-in (separate gate from
+              transactional email above). */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="email-marketing">
+                Email — offers &amp; promotions
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Receive promotional offers and reward updates by email. Order
+                confirmations are controlled separately by Email Notifications.
+              </p>
+            </div>
+            <Switch
+              id="email-marketing"
+              checked={communicationPreferences.emailMarketing}
+              onCheckedChange={(checked) =>
+                setValue('communicationPreferences.emailMarketing', checked, {
+                  shouldDirty: true,
+                })
               }
             />
           </div>

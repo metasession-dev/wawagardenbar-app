@@ -232,7 +232,6 @@ jobs:
           E2E_CSR_USERNAME: e2e-csr
           E2E_CSR_PASSWORD: E2eTest@2026!
         run: npx playwright test --project=smoke --reporter=json,html
-
       # ── Gate 5: Build ──
 
       - name: Build Check

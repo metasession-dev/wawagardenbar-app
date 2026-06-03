@@ -58,7 +58,11 @@ All three flip status + attempt deduction with their own catch-and-swallow. The 
 
 6. **AC6 — `/dashboard/incidents` admin view.** Server-rendered list of `IncidentEvent` rows, newest-first, with a `kind` filter chip bar (`inventory_deduction_failed`, `stale_paid_order`, `all`). RBAC `csr` / `admin` / `super-admin`. Read-only — no actions in this REQ. Mirrors `/dashboard/support` (REQ-064) in structure.
 
-7. **AC7 — E2E invariant spec for kitchen-completion.** First invariant-class spec from #280. Admin path: seed inventory + create order + advance through `confirmed → preparing → ready → completed` via the kitchen-display actions; read inventory before + after; assert decrement. Same DB-seed shape as `e2e/support-ticket-staff-flow.spec.ts`. Live against UAT.
+7. **AC7 — E2E invariant specs for BOTH completion-UI surfaces.** First invariant-class specs from #280. Both UIs route through the same `updateOrderStatusAction` → `OrderService.completeOrder` chokepoint at the action layer, but the UI shapes differ (kitchen-display steps through `preparing → ready → completed` via discrete buttons; orders-page has direct "Complete" buttons that can jump from `ready` to `completed`) and a UI-level regression on either surface wouldn't be caught by a single-path spec.
+   - **AC7a — kitchen-display path** (`e2e/admin-order-inventory-delta.kitchen-display.spec.ts`): seed inventory + create order; advance through the kitchen-display order-card buttons; read inventory before + after; assert decrement at the `completed` transition (not earlier).
+   - **AC7b — orders-page path** (`e2e/admin-order-inventory-delta.orders-page.spec.ts`): same seed + order; advance through the `/dashboard/orders` admin order-card; same delta assertion.
+   - Both specs assert NEGATIVE invariants on intermediate transitions (inventory unchanged at `preparing` and `ready`) — proves the chokepoint is the ONLY mutation site.
+   - Same DB-seed shape as `e2e/support-ticket-staff-flow.spec.ts`. Live against UAT.
 
 ## Technical approach
 

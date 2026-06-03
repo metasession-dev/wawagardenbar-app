@@ -1221,6 +1221,82 @@ class InventoryService {
 
     await inventory.save();
   }
+
+  /**
+   * @requirement REQ-066 — Reconciliation cron backstop
+   *
+   * Scans for orders that the kitchen-completion chokepoint marked
+   * `completed` but whose `deductStockForOrder` threw at the time. Each
+   * such order gets a retry attempt. Successful retries flip the
+   * `inventoryDeducted` flag. Failed retries write a fresh
+   * `IncidentEvent` so the operator sees it didn't resolve.
+   *
+   * Pure retry — never mutates `Order.status`. The operator stipulated
+   * that no cron may set status to 'completed'; that contract is
+   * preserved here.
+   */
+  static async reconcileMissedDeductions(
+    limit: number = 100
+  ): Promise<{ attempted: number; succeeded: number; failed: number }> {
+    const OrderModel = (await import('@/models/order-model')).default;
+    const { IncidentEventService } = await import('./incident-event-service');
+
+    const orders = await OrderModel.find({
+      status: 'completed',
+      inventoryDeducted: false,
+    })
+      .sort({ updatedAt: 1 })
+      .limit(limit)
+      .lean<
+        Array<{
+          _id: { toString: () => string };
+          status: string;
+          inventoryDeducted: boolean;
+        }>
+      >();
+
+    let succeeded = 0;
+    let failed = 0;
+
+    for (const order of orders) {
+      const orderId = order._id.toString();
+      try {
+        await InventoryService.deductStockForOrder(orderId);
+        // Persist the flag flip; we don't use Mongoose doc here so go via
+        // a direct $set (the find above used .lean()).
+        await OrderModel.updateOne(
+          { _id: order._id, inventoryDeducted: false },
+          {
+            $set: {
+              inventoryDeducted: true,
+              inventoryDeductedAt: new Date(),
+            },
+          }
+        );
+        succeeded += 1;
+      } catch (error) {
+        try {
+          await IncidentEventService.recordIncident({
+            kind: 'inventory_deduction_failed',
+            entityId: orderId,
+            summary: 'reconciliation retry of deductStockForOrder threw',
+            errorDetails: {
+              message: error instanceof Error ? error.message : String(error),
+              actorRole: 'system_reconciliation',
+            },
+          });
+        } catch (logErr) {
+          console.error(
+            '[InventoryService.reconcileMissedDeductions] IncidentEvent write failed:',
+            logErr
+          );
+        }
+        failed += 1;
+      }
+    }
+
+    return { attempted: orders.length, succeeded, failed };
+  }
 }
 
 export default InventoryService;

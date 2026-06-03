@@ -1,6 +1,7 @@
 /**
  * @requirement REQ-048 — In-process reward-expiry scheduler (#117 P0 #3)
  * @requirement REQ-058 — In-process Instagram-rewards scheduler (#117 IG-5)
+ * @requirement REQ-066 — In-process inventory-deduction reconciliation + stale-paid-order visibility scan (#277)
  *
  * In-process scheduled jobs for the persistent Railway server. The app runs as
  * a long-lived custom Node server (`server.ts`), not serverless, so a simple
@@ -15,8 +16,20 @@
  */
 import { RewardsService } from '@/services/rewards-service';
 import { InstagramService } from '@/services/instagram-service';
+import InventoryService from '@/services/inventory-service';
+import { OrderService } from '@/services/order-service';
+
+/**
+ * REQ-066 — Hours a paid order may sit outside completed/cancelled before
+ * the visibility scan flags it as a stale-paid-order IncidentEvent. Hard-
+ * coded for v1 — a future REQ can promote this to a SystemSettings field
+ * if operations needs to tune it without a redeploy.
+ */
+const STALE_PAID_ORDER_THRESHOLD_HOURS = 2;
 
 const HOUR_MS = 60 * 60 * 1000;
+const MINUTE_MS = 60 * 1000;
+const FIFTEEN_MIN_MS = 15 * MINUTE_MS;
 const INITIAL_DELAY_MS = 60 * 1000;
 
 let started = false;
@@ -59,6 +72,45 @@ export async function runInstagramRewardsJob(): Promise<void> {
 }
 
 /**
+ * REQ-066 — Reconciliation + stale-paid-order visibility scan.
+ *
+ * Two passes per tick, BOTH read-only with respect to Order.status (the
+ * operator's rule: only kitchen-display staff may complete an order).
+ *
+ *   1. `reconcileMissedDeductions` — retry deduction for orders the
+ *      kitchen-completion chokepoint marked completed but for which the
+ *      deduction threw. Writes IncidentEvent on persistent failure.
+ *   2. `scanStalePaidOrders` — find paid orders sitting outside
+ *      completed/cancelled longer than the configured threshold; log
+ *      `stale_paid_order` IncidentEvents (deduped per 24h window).
+ */
+export async function runInventoryReconciliationJob(): Promise<void> {
+  try {
+    const recon = await InventoryService.reconcileMissedDeductions();
+    if (recon.attempted > 0) {
+      console.warn(
+        `[scheduled-jobs] inventory-reconcile: attempted=${recon.attempted} succeeded=${recon.succeeded} failed=${recon.failed}`
+      );
+    }
+  } catch (error) {
+    console.error('[scheduled-jobs] inventory-reconcile job failed:', error);
+  }
+
+  try {
+    const scan = await OrderService.scanStalePaidOrders({
+      thresholdHours: STALE_PAID_ORDER_THRESHOLD_HOURS,
+    });
+    if (scan.flagged > 0) {
+      console.warn(
+        `[scheduled-jobs] stale-paid-order scan: scanned=${scan.scanned} flagged=${scan.flagged} skippedAsDup=${scan.skippedAsDup} threshold=${STALE_PAID_ORDER_THRESHOLD_HOURS}h`
+      );
+    }
+  } catch (error) {
+    console.error('[scheduled-jobs] stale-paid-order scan failed:', error);
+  }
+}
+
+/**
  * Start all in-process scheduled jobs. Idempotent: guarded so repeated calls
  * (or dev hot-reloads) don't stack intervals.
  */
@@ -79,7 +131,11 @@ export function startScheduledJobs(): void {
   setTimeout(() => void runInstagramRewardsJob(), INITIAL_DELAY_MS);
   setInterval(() => void runInstagramRewardsJob(), HOUR_MS);
 
+  // REQ-066 — Inventory reconciliation + stale-paid-order scan, every 15 min.
+  setTimeout(() => void runInventoryReconciliationJob(), INITIAL_DELAY_MS);
+  setInterval(() => void runInventoryReconciliationJob(), FIFTEEN_MIN_MS);
+
   console.warn(
-    '[scheduled-jobs] started (reward-expiry: hourly, instagram-rewards: hourly)'
+    '[scheduled-jobs] started (reward-expiry: hourly, instagram-rewards: hourly, inventory-reconcile: 15min)'
   );
 }

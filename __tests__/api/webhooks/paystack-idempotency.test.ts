@@ -106,7 +106,10 @@ describe('REQ-049: Paystack webhook idempotency', () => {
     expect(mockProcessedCreate.mock.calls[0][0].eventId).toBe(
       String(EVENT.data.id)
     );
-    expect(mockDeductStock).toHaveBeenCalledOnce();
+    // REQ-066 — inventory deduction is OWNED by `OrderService.completeOrder`
+    // (kitchen-display completion). Webhook only confirms payment + awards
+    // rewards; it no longer deducts. See compliance/plans/REQ-066/.
+    expect(mockDeductStock).not.toHaveBeenCalled();
     expect(mockCalculateReward).toHaveBeenCalledOnce();
   });
 
@@ -136,7 +139,9 @@ describe('REQ-049: Paystack webhook idempotency', () => {
       expect(r.status).toBe(200);
     }
 
-    expect(mockDeductStock).toHaveBeenCalledOnce();
+    // REQ-066 — deduction is owned by kitchen-completion; reward stays
+    // here (one award across 10 replays = the REQ-049 idempotency).
+    expect(mockDeductStock).not.toHaveBeenCalled();
     expect(mockCalculateReward).toHaveBeenCalledOnce();
   });
 

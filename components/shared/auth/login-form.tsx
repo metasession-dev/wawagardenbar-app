@@ -75,13 +75,15 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
   } | null>(null);
   const [countdown, setCountdown] = useState(0);
   // REQ-053 — Tracked from the send-pin response so the PIN-entry step
-  // can decide whether to render the WhatsApp opt-in checkbox. Only new
-  // users see the consent surface; returning users skip it.
+  // can decide whether to render the consent surface. Only new users
+  // see it; returning users skip it.
   const [isNewUser, setIsNewUser] = useState(false);
-  // REQ-053 — The single PIN-verification checkbox is wired to both
-  // WhatsApp consent fields per AC3. Default checked: opt-in for order
-  // updates + offers; unchecking opts out of both.
-  const [whatsappOptIn, setWhatsappOptIn] = useState(true);
+  // REQ-063 — three independent consent checkboxes at PIN entry. WhatsApp
+  // transactional defaults to on (order updates), WhatsApp marketing and
+  // email marketing default off (explicit opt-in required).
+  const [waTransactional, setWaTransactional] = useState(true);
+  const [waMarketing, setWaMarketing] = useState(false);
+  const [emailMarketingOptIn, setEmailMarketingOptIn] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   const { refreshSession } = useAuth();
@@ -217,14 +219,15 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
     setIsLoading(true);
     try {
       let result;
-      // REQ-053 — Send the WhatsApp opt-in payload only for new users;
-      // the backend further gates persistence on `!phoneVerified &&
-      // !emailVerified`, so a stale payload from a returning user is a
+      // REQ-053/REQ-063 — Send the three-checkbox opt-in payload only for
+      // new users; the backend further gates persistence on `!phoneVerified
+      // && !emailVerified`, so a stale payload from a returning user is a
       // no-op even if it slips through.
       const optInPayload = isNewUser
         ? {
-            whatsappTransactional: whatsappOptIn,
-            whatsappMarketing: whatsappOptIn,
+            whatsappTransactional: waTransactional,
+            whatsappMarketing: waMarketing,
+            emailMarketing: emailMarketingOptIn,
           }
         : undefined;
 
@@ -578,24 +581,65 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
         </p>
       </div>
 
-      {/* REQ-053 — WhatsApp opt-in checkbox; only rendered for new users
-          (send-pin reported isNewUser === true). Default checked: consent
-          for both transactional + marketing. Unchecking opts out of both
-          per AC3. Returning users skip this surface entirely. */}
+      {/* REQ-063 — Three-checkbox consent surface; only rendered for new
+          users (send-pin reported isNewUser === true). Splits the previous
+          single `whatsappOptIn` into transactional vs marketing per #117
+          P4 #21's explicit-consent posture. Returning users skip this
+          surface entirely. */}
       {isNewUser && (
-        <div className="flex items-start gap-2 rounded-md border bg-muted/40 p-3">
-          <Checkbox
-            id="whatsapp-opt-in"
-            checked={whatsappOptIn}
-            onCheckedChange={(checked) => setWhatsappOptIn(checked === true)}
-            disabled={isLoading}
-          />
-          <Label
-            htmlFor="whatsapp-opt-in"
-            className="text-sm leading-tight cursor-pointer"
-          >
-            Get order updates and offers via WhatsApp — recommended
-          </Label>
+        <div className="space-y-2 rounded-md border bg-muted/40 p-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Communication preferences
+          </p>
+
+          <div className="flex items-start gap-2">
+            <Checkbox
+              id="wa-transactional"
+              checked={waTransactional}
+              onCheckedChange={(checked) =>
+                setWaTransactional(checked === true)
+              }
+              disabled={isLoading}
+            />
+            <Label
+              htmlFor="wa-transactional"
+              className="text-sm leading-tight cursor-pointer"
+            >
+              Order updates via WhatsApp (recommended)
+            </Label>
+          </div>
+
+          <div className="flex items-start gap-2">
+            <Checkbox
+              id="wa-marketing"
+              checked={waMarketing}
+              onCheckedChange={(checked) => setWaMarketing(checked === true)}
+              disabled={isLoading}
+            />
+            <Label
+              htmlFor="wa-marketing"
+              className="text-sm leading-tight cursor-pointer"
+            >
+              Offers and promotions via WhatsApp
+            </Label>
+          </div>
+
+          <div className="flex items-start gap-2">
+            <Checkbox
+              id="email-marketing"
+              checked={emailMarketingOptIn}
+              onCheckedChange={(checked) =>
+                setEmailMarketingOptIn(checked === true)
+              }
+              disabled={isLoading}
+            />
+            <Label
+              htmlFor="email-marketing"
+              className="text-sm leading-tight cursor-pointer"
+            >
+              Offers and promotions by email
+            </Label>
+          </div>
         </div>
       )}
 

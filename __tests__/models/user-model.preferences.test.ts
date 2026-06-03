@@ -81,6 +81,49 @@ describe('REQ-053: communicationPreferences.whatsapp* defaults', () => {
     );
   });
 
+  // REQ-063 ── explicit-consent split for marketing emails
+  it('REQ-063 AC2 — emailMarketing defaults to false', async () => {
+    const UserModel = await loadUserModel();
+    const doc = new UserModel({
+      phone: '+2347000000005',
+      role: 'customer',
+    });
+    expect(doc.preferences?.communicationPreferences?.emailMarketing).toBe(
+      false
+    );
+  });
+
+  it('REQ-063 AC2 — emailMarketing explicit override is honoured', async () => {
+    const UserModel = await loadUserModel();
+    const doc = new UserModel({
+      phone: '+2347000000006',
+      role: 'customer',
+      preferences: {
+        communicationPreferences: {
+          emailMarketing: true,
+        },
+      },
+    });
+    expect(doc.preferences?.communicationPreferences?.emailMarketing).toBe(
+      true
+    );
+  });
+
+  it('REQ-063 AC3 — communicationPreferencesUpdatedAt accepts a Date', async () => {
+    const UserModel = await loadUserModel();
+    const stamp = new Date('2026-06-03T12:00:00Z');
+    const doc = new UserModel({
+      phone: '+2347000000007',
+      role: 'customer',
+      preferences: {
+        communicationPreferencesUpdatedAt: stamp,
+      },
+    });
+    expect(
+      doc.preferences?.communicationPreferencesUpdatedAt?.toISOString()
+    ).toBe(stamp.toISOString());
+  });
+
   // Clean up any mongoose registration side effects between test runs.
   afterAll(async () => {
     await mongoose.disconnect().catch(() => undefined);

@@ -33,7 +33,19 @@ export interface IPreferences {
     // profile-set preferences.
     whatsappTransactional: boolean;
     whatsappMarketing: boolean;
+    // REQ-063 — explicit-consent split for marketing emails. The pre-existing
+    // `email` boolean above remains the gate for TRANSACTIONAL email (order
+    // confirmations, receipts). `emailMarketing` is the separate gate for
+    // MARKETING email (offers, expiry nudges). Default false; explicit opt-in
+    // required, mirroring `whatsappMarketing`.
+    emailMarketing: boolean;
   };
+  // REQ-063 — server-stamped audit timestamp for explicit-consent capture.
+  // Updated whenever any communicationPreferences field changes (PIN first-
+  // verify, profile-tab save). Single timestamp rather than a per-field event
+  // log — proves "consent was actively captured at <time>" which is what
+  // GDPR explicit-consent posture asks for.
+  communicationPreferencesUpdatedAt?: Date;
   language: string;
 }
 

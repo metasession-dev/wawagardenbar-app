@@ -86,6 +86,9 @@ const preferencesSchema = z.object({
       // to required.
       whatsappTransactional: z.boolean().optional(),
       whatsappMarketing: z.boolean().optional(),
+      // REQ-063 — separate gate for marketing email; optional during rollout
+      // mirroring the WhatsApp fields above.
+      emailMarketing: z.boolean().optional(),
     })
     .optional(),
   language: z.string().optional(),
@@ -263,7 +266,13 @@ export async function updatePreferencesAction(
                 true,
               whatsappMarketing:
                 validated.communicationPreferences.whatsappMarketing ?? false,
+              // REQ-063 — default false when absent (older client builds).
+              emailMarketing:
+                validated.communicationPreferences.emailMarketing ?? false,
             },
+            // REQ-063 — server-stamped audit timestamp on every prefs save
+            // (the client never supplies this; prevents backdating).
+            communicationPreferencesUpdatedAt: new Date(),
           }
         : (validated as Partial<IPreferences>);
 

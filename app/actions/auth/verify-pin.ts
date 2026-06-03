@@ -18,14 +18,18 @@ interface VerifyPinResult {
 }
 
 /**
- * REQ-053 — WhatsApp opt-in payload. Sent by the PIN-entry form when the
- * user is new (the checkbox is only rendered then). Persisted on first
- * verification only — subsequent verifies don't overwrite the user's
- * profile-set preferences.
+ * REQ-053 / REQ-063 — opt-in payload from the PIN-entry form when the user
+ * is new (the checkboxes are only rendered then). Persisted on first
+ * verification only. REQ-063 split the original collapsed `whatsappOptIn`
+ * into three independent fields so transactional vs marketing consent is
+ * actually captured separately as #117 P4 #21 requires.
  */
 export interface PinOptInPayload {
   whatsappTransactional: boolean;
   whatsappMarketing: boolean;
+  // REQ-063 — separate gate for MARKETING email (offers, expiry nudges).
+  // Default false at the form level (explicit opt-in required).
+  emailMarketing: boolean;
 }
 
 export async function verifyPinAction(
@@ -101,6 +105,14 @@ export async function verifyPinAction(
         'preferences.communicationPreferences.whatsappMarketing',
         optIn.whatsappMarketing
       );
+      // REQ-063 — email-marketing consent captured independently.
+      user.set(
+        'preferences.communicationPreferences.emailMarketing',
+        optIn.emailMarketing
+      );
+      // REQ-063 — server-stamped audit timestamp for explicit-consent
+      // capture (GDPR posture). Single timestamp covers all 5 channels.
+      user.set('preferences.communicationPreferencesUpdatedAt', new Date());
     }
 
     const sessionToken = generateSessionToken();

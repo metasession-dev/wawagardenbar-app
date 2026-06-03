@@ -139,6 +139,7 @@ describe('REQ-053 AC4: verifyPinAction persists optIn on FIRST verify only', () 
     const result = await verifyPinAction('+2347000000010', '1234', {
       whatsappTransactional: true,
       whatsappMarketing: true,
+      emailMarketing: false,
     });
 
     expect(result.success).toBe(true);
@@ -157,6 +158,7 @@ describe('REQ-053 AC4: verifyPinAction persists optIn on FIRST verify only', () 
     await verifyPinAction('+2347000000010', '1234', {
       whatsappTransactional: true,
       whatsappMarketing: false,
+      emailMarketing: false,
     });
 
     expect(cp(user).whatsappMarketing).toBe(false);
@@ -186,6 +188,7 @@ describe('REQ-053 AC4: verifyPinAction persists optIn on FIRST verify only', () 
     await verifyPinAction('+2347000000010', '1234', {
       whatsappTransactional: true,
       whatsappMarketing: true,
+      emailMarketing: true,
     });
 
     // Marketing stays OFF — the profile choice wins.

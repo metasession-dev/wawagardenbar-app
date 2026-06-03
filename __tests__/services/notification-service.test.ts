@@ -173,8 +173,24 @@ describe('REQ-054 NotificationService.send', () => {
     expect(smsFn).not.toHaveBeenCalled();
   });
 
-  it('AC3 — marketing template + whatsappMarketing false + email true: email fires (single-boolean email)', async () => {
-    mockFindById.mockResolvedValue(buildUser()); // whatsappMarketing defaults false
+  it('AC3 — marketing template + whatsappMarketing false + emailMarketing true: email fires', async () => {
+    // REQ-063 — marketing-category email now gated on emailMarketing.
+    // Flip the user's emailMarketing to true so we still test the WA-skip
+    // → email-fallback path for marketing templates.
+    mockFindById.mockResolvedValue(
+      buildUser({
+        preferences: {
+          communicationPreferences: {
+            email: true,
+            sms: true,
+            push: false,
+            whatsappTransactional: true,
+            whatsappMarketing: false,
+            emailMarketing: true,
+          },
+        },
+      })
+    );
     const emailFn = vi.fn().mockResolvedValue(undefined);
 
     const { NotificationService } = await import(
@@ -270,9 +286,24 @@ describe('REQ-054 NotificationService.send', () => {
 
   it('AC2 — explicit category override wins over the map lookup', async () => {
     // Pass `order_confirmation` (transactional in the map) but override
-    // to `marketing` — orchestrator should check `whatsappMarketing`,
-    // which is false by default, so WA is skipped.
-    mockFindById.mockResolvedValue(buildUser());
+    // to `marketing` — orchestrator should check `whatsappMarketing`
+    // (false by default), so WA is skipped. REQ-063 also routes email
+    // through the emailMarketing gate; flip it true so the override fires
+    // through to email.
+    mockFindById.mockResolvedValue(
+      buildUser({
+        preferences: {
+          communicationPreferences: {
+            email: true,
+            sms: true,
+            push: false,
+            whatsappTransactional: true,
+            whatsappMarketing: false,
+            emailMarketing: true,
+          },
+        },
+      })
+    );
     const emailFn = vi.fn().mockResolvedValue(undefined);
 
     const { NotificationService } = await import(

@@ -24,6 +24,8 @@ interface VerifyWhatsAppPinResult {
 export interface WhatsAppPinOptInPayload {
   whatsappTransactional: boolean;
   whatsappMarketing: boolean;
+  // REQ-063 — separate gate for marketing email; default false at the form.
+  emailMarketing: boolean;
 }
 
 export async function verifyWhatsAppPinAction(
@@ -98,6 +100,12 @@ export async function verifyWhatsAppPinAction(
         'preferences.communicationPreferences.whatsappMarketing',
         optIn.whatsappMarketing
       );
+      // REQ-063 — email-marketing consent + audit timestamp.
+      user.set(
+        'preferences.communicationPreferences.emailMarketing',
+        optIn.emailMarketing
+      );
+      user.set('preferences.communicationPreferencesUpdatedAt', new Date());
     }
 
     // PIN is valid - update user

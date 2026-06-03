@@ -437,34 +437,55 @@ export async function submitSupportTicketAction(input: {
       sessionOptions
     );
 
-    // Generate ticket number
-    const ticketNumber = `TKT-${Date.now()}`;
+    // REQ-064 — persist the ticket first; email confirmation is best-effort.
+    const { SupportTicketService } = await import(
+      '@/services/support-ticket-service'
+    );
 
-    // Get user email
-    let email = '';
-    if (session.userId) {
-      // Get from user model
-      email = session.email || '';
+    const customerEmail = session.email || null;
+    const customerPhone = session.phone || null;
+
+    if (!customerEmail && !customerPhone) {
+      return {
+        success: false,
+        error: 'A contact method (email or phone) is required',
+      };
     }
 
-    if (!email) {
-      return { success: false, error: 'Email address required' };
-    }
-
-    // In a real app, save ticket to database
-    // For now, send email confirmation
-    await sendSupportTicketEmail(email, {
-      ticketNumber,
+    const ticket = await SupportTicketService.createTicket({
+      userId: session.userId || null,
+      customerEmail,
+      customerPhone,
+      source: 'web',
       category: input.category,
       subject: input.subject,
       message: input.message,
+      orderId: input.orderId || null,
     });
+
+    // Best-effort email confirmation; ticket persistence is the source of
+    // truth so a mail-server outage doesn't break the customer's submit.
+    if (customerEmail) {
+      try {
+        await sendSupportTicketEmail(customerEmail, {
+          ticketNumber: ticket.ticketNumber,
+          category: input.category,
+          subject: input.subject,
+          message: input.message,
+        });
+      } catch (error) {
+        console.error(
+          '[submitSupportTicketAction] email confirmation failed:',
+          error instanceof Error ? error.message : String(error)
+        );
+      }
+    }
 
     return {
       success: true,
       message:
         'Support ticket submitted successfully. We will respond within 24 hours.',
-      data: { ticketNumber },
+      data: { ticketNumber: ticket.ticketNumber },
     };
   } catch (error) {
     console.error('Error submitting support ticket:', error);

@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-065",
+  "ac": 5,
+  "slug": "banner-dismissed-after-reload",
+  "specFile": "e2e/smoke/cookie-consent-banner.spec.ts",
+  "capturedAt": "2026-06-03T20:30:04.900Z"
+}

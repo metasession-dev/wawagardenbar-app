@@ -1,13 +1,14 @@
 # Release Ticket: REQ-065 — Self-service data export + cookie consent banner (#117 P4 #19 + P4 #20)
 
-**Status:** DRAFT
+**Status:** RELEASED
 **Date:** 2026-06-03
 **Requirement ID:** REQ-065
 **Risk Level:** MEDIUM
 **GitHub Issue:** [#117 P4 #19 + P4 #20](https://github.com/metasession-dev/wawagardenbar-app/issues/117)
 **Integration PR:** [#274](https://github.com/metasession-dev/wawagardenbar-app/pull/274) — merged to develop 2026-06-03.
-**Release PR:** (to be opened after this evidence pack lands)
+**Release PR:** #276
 **DevAudit Release:** [`devaudit.metasession.co/projects/wgb/`](https://devaudit.metasession.co/projects/wgb/) — release version `REQ-065`, status `draft` → `uat_review` on this evidence push.
+**Sign-off (dual-actor):** UAT approved + Production approved on the DevAudit portal (`released`); post-deploy production smoke evidence captured. Closed out 2026-06-03.
 **Sign-off (dual-actor):** Pending UAT approval + Production approval on the DevAudit portal.
 
 ---

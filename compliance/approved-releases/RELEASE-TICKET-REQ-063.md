@@ -1,13 +1,14 @@
 # Release Ticket: REQ-063 — Explicit-consent split (P4 #21 + WA-4 tail)
 
-**Status:** DRAFT
+**Status:** RELEASED
 **Date:** 2026-06-03
 **Requirement ID:** REQ-063
 **Risk Level:** MEDIUM
 **GitHub Issue:** [#117 P4 #21](https://github.com/metasession-dev/wawagardenbar-app/issues/117)
 **Integration PR:** [#266](https://github.com/metasession-dev/wawagardenbar-app/pull/266) — merged to develop 2026-06-03.
-**Release PR:** (to be opened after this evidence pack lands)
+**Release PR:** #268
 **DevAudit Release:** [`devaudit.metasession.co/projects/wgb/`](https://devaudit.metasession.co/projects/wgb/) — release version `REQ-063`, status `draft` → `uat_review` on this evidence push.
+**Sign-off (dual-actor):** UAT approved + Production approved on the DevAudit portal (`released`); post-deploy production smoke evidence captured. Closed out 2026-06-03.
 **Sign-off (dual-actor):** Pending UAT approval + Production approval on the DevAudit portal.
 
 ---

@@ -1,13 +1,14 @@
 # Release Ticket: REQ-064 — Support ticket model + WA-fed staff queue (#117 P3 #17)
 
-**Status:** DRAFT
+**Status:** RELEASED
 **Date:** 2026-06-03
 **Requirement ID:** REQ-064
 **Risk Level:** MEDIUM
 **GitHub Issue:** [#117 P3 #17](https://github.com/metasession-dev/wawagardenbar-app/issues/117)
 **Integration PR:** [#270](https://github.com/metasession-dev/wawagardenbar-app/pull/270) — merged to develop 2026-06-03.
-**Release PR:** (to be opened after this evidence pack lands)
+**Release PR:** #272
 **DevAudit Release:** [`devaudit.metasession.co/projects/wgb/`](https://devaudit.metasession.co/projects/wgb/) — release version `REQ-064`, status `draft` → `uat_review` on this evidence push.
+**Sign-off (dual-actor):** UAT approved + Production approved on the DevAudit portal (`released`); post-deploy production smoke evidence captured. Closed out 2026-06-03.
 **Sign-off (dual-actor):** Pending UAT approval + Production approval on the DevAudit portal.
 
 ---

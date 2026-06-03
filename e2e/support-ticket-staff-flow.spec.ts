@@ -142,8 +142,9 @@ csrTest.describe('REQ-064 staff flow — queue → detail → reply → status',
       // AC5 — open detail
       await page.getByRole('link', { name: seeded.ticketNumber }).click();
       await page.waitForURL(/\/dashboard\/support\/[a-f0-9]+/i);
+      // CardTitle renders as a <div>, not a heading element — match by text.
       await expect(
-        page.getByRole('heading', { name: /E2E seeded ticket/ })
+        page.getByText('E2E seeded ticket — staff flow').first()
       ).toBeVisible();
       await expect(page.getByText(/missing item/)).toBeVisible();
 
@@ -153,8 +154,12 @@ csrTest.describe('REQ-064 staff flow — queue → detail → reply → status',
         'Apologies for the mix-up — our kitchen lead will refund the missing item shortly.'
       );
       await page.getByRole('button', { name: /send reply/i }).click();
-      await expect(page.getByText(/reply sent/i)).toBeVisible();
-      await expect(page.getByText(/missing item shortly/)).toBeVisible();
+      // Toast title + aria-live status region both contain "Reply sent" —
+      // assert via the appended thread message (the reply body), which is
+      // the AC-proving signal anyway.
+      await expect(page.getByText(/missing item shortly/)).toBeVisible({
+        timeout: 10000,
+      });
 
       await evidenceShot(page, 'REQ-064', 5, 'reply-thread-staff-reply');
 

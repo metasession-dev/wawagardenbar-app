@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Providers } from '@/components/shared/providers';
+import { CookieConsentBanner } from '@/components/shared/cookie-consent-banner';
 
 export const metadata: Metadata = {
   title: 'Wawa Garden Bar - Order Food & Drinks',
@@ -17,7 +18,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="font-sans antialiased">
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <CookieConsentBanner />
+        </Providers>
       </body>
     </html>
   );

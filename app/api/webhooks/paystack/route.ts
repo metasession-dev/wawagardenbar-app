@@ -4,7 +4,7 @@ import { recordWebhookEvent } from '@/lib/webhook-idempotency';
 import Order from '@/models/order-model';
 import TabModel from '@/models/tab-model';
 import { PaystackService } from '@/services/paystack-service';
-import { InventoryService, RewardsService, TabService } from '@/services';
+import { RewardsService, TabService } from '@/services';
 import { deriveBusinessDate } from '@/lib/business-date';
 import { SystemSettingsService } from '@/services/system-settings-service';
 
@@ -119,21 +119,11 @@ export async function POST(request: NextRequest) {
 
         console.log('Order confirmed via Paystack:', order._id);
 
-        // Deduct inventory
-        if (!order.inventoryDeducted) {
-          try {
-            await InventoryService.deductStockForOrder(order._id.toString());
-            order.inventoryDeducted = true;
-            order.inventoryDeductedAt = new Date();
-            console.log('Inventory deducted for order:', order._id);
-          } catch (error) {
-            console.error(
-              'Error deducting inventory for order:',
-              order._id,
-              error
-            );
-          }
-        }
+        // REQ-066 — inventory deduction is OWNED by `OrderService.completeOrder`
+        // (kitchen-display completion). Webhook only confirms payment;
+        // the order still moves through pending → confirmed → preparing →
+        // ready → completed via the kitchen-display, and inventory drops
+        // on the final transition.
 
         // Issue reward
         if (order.userId) {

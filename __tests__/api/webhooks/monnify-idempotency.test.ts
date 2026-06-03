@@ -120,7 +120,10 @@ describe('REQ-049: Monnify webhook idempotency', () => {
     expect(mockProcessedCreate.mock.calls[0][0].eventId).toBe(
       EVENT.eventData.transactionReference
     );
-    expect(mockDeductStock).toHaveBeenCalledOnce();
+    // REQ-066 — inventory deduction is OWNED by `OrderService.completeOrder`
+    // (kitchen-display completion). Webhook only confirms payment + awards
+    // rewards; it no longer deducts.
+    expect(mockDeductStock).not.toHaveBeenCalled();
     expect(mockCalculateReward).toHaveBeenCalledOnce();
   });
 

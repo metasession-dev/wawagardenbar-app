@@ -10,7 +10,8 @@ import TabModel from '@/models/tab-model';
 import { AuditLogService } from '@/services/audit-log-service';
 import { TabService, OrderService } from '@/services';
 import InventoryService from '@/services/inventory-service';
-import { completeOrderAndDeductStockAction } from '@/app/actions/order/complete-order-action';
+// REQ-066 — completion now routes through `OrderService.completeOrder`
+// (loaded lazily inside the action) rather than `completeOrderAndDeductStockAction`.
 import { deriveBusinessDate } from '@/lib/business-date';
 import { SystemSettingsService } from '@/services/system-settings-service';
 import {
@@ -329,13 +330,31 @@ export async function updateOrderStatusAction(
       note: note || `Updated by ${session.role}`,
     });
 
-    // If completing order, deduct inventory
+    // REQ-066 — On completion, route through the canonical chokepoint
+    // `OrderService.completeOrder`, which owns the inventory deduction
+    // and writes an `IncidentEvent` row if the deduction throws (without
+    // blocking the status flip). We've already set `order.status` to
+    // 'completed' above; `completeOrder` is idempotent against that
+    // (sees status='completed' + inventoryDeducted=false → runs only
+    // the deduction branch).
     if (newStatus === 'completed' && !order.inventoryDeducted) {
-      try {
-        await completeOrderAndDeductStockAction(orderId);
-      } catch (error) {
-        console.error('Error deducting inventory:', error);
-        // Continue with status update even if inventory fails
+      // Save the in-memory status/history changes first so completeOrder
+      // sees a consistent persisted state.
+      await order.save();
+      const { OrderService } = await import('@/services/order-service');
+      await OrderService.completeOrder({
+        orderId,
+        actorUserId: session.userId,
+        actorRole: session.role,
+        note,
+      });
+      // Re-load the order so the auto-cash-payment block below sees the
+      // updated `inventoryDeducted` flag.
+      const refreshed = await OrderModel.findById(orderId);
+      if (refreshed) {
+        order.inventoryDeducted = refreshed.inventoryDeducted;
+        order.inventoryDeductedAt = refreshed.inventoryDeductedAt;
+        order.inventoryDeductedBy = refreshed.inventoryDeductedBy;
       }
     }
 

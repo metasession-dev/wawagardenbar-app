@@ -5,7 +5,7 @@ import Order from '@/models/order-model';
 import TabModel from '@/models/tab-model';
 import { MonnifyService } from '@/services/monnify-service';
 import { PaymentService } from '@/services/payment-service';
-import { InventoryService, RewardsService, TabService } from '@/services';
+import { RewardsService, TabService } from '@/services';
 import { MonnifyWebhookPayload } from '@/interfaces/payment';
 import { deriveBusinessDate } from '@/lib/business-date';
 import { SystemSettingsService } from '@/services/system-settings-service';
@@ -127,22 +127,8 @@ export async function POST(request: NextRequest) {
 
         console.log('Order confirmed:', order._id);
 
-        // Deduct inventory immediately after payment confirmation
-        if (!order.inventoryDeducted) {
-          try {
-            await InventoryService.deductStockForOrder(order._id.toString());
-            order.inventoryDeducted = true;
-            order.inventoryDeductedAt = new Date();
-            console.log('Inventory deducted for order:', order._id);
-          } catch (error) {
-            console.error(
-              'Error deducting inventory for order:',
-              order._id,
-              error
-            );
-            // Continue processing - don't fail webhook due to inventory issues
-          }
-        }
+        // REQ-066 — inventory deduction is OWNED by `OrderService.completeOrder`
+        // (kitchen-display completion). Webhook only confirms payment.
 
         // Calculate and issue reward if user is logged in
         if (order.userId) {

@@ -350,27 +350,9 @@ export class TabService {
       }
     );
 
-    // Deduct inventory for all orders in the tab
-    const InventoryService = (await import('./inventory-service')).default;
-    for (const orderId of tab.orders) {
-      try {
-        const order = await OrderModel.findById(orderId);
-        if (order && !order.inventoryDeducted) {
-          await InventoryService.deductStockForOrder(orderId.toString());
-          order.inventoryDeducted = true;
-          order.inventoryDeductedAt = new Date();
-          await order.save();
-          console.log('Inventory deducted for tab order:', orderId);
-        }
-      } catch (error) {
-        console.error(
-          'Error deducting inventory for tab order:',
-          orderId,
-          error
-        );
-        // Continue processing other orders even if one fails
-      }
-    }
+    // REQ-066 — tab orders flow through the kitchen-display individually
+    // and inventory deduction is OWNED by `OrderService.completeOrder`
+    // at the kitchen-completion step. No tab-side deduction.
 
     return JSON.parse(JSON.stringify(tab.toObject()));
   }
@@ -836,23 +818,9 @@ export class TabService {
       }
     );
 
-    // Deduct inventory for all orders in the tab
-    const InventoryService = (await import('./inventory-service')).default;
-    for (const orderId of tab.orders) {
-      try {
-        const order = await OrderModel.findById(orderId);
-        if (order && !order.inventoryDeducted) {
-          await InventoryService.deductStockForOrder(orderId.toString());
-          order.inventoryDeducted = true;
-          order.inventoryDeductedAt = new Date();
-          await order.save();
-          console.log('Inventory deducted for order:', orderId);
-        }
-      } catch (error) {
-        console.error('Error deducting inventory for order:', orderId, error);
-        // Continue processing other orders even if one fails
-      }
-    }
+    // REQ-066 — tab orders flow through the kitchen-display individually
+    // and inventory deduction is OWNED by `OrderService.completeOrder`
+    // at the kitchen-completion step. No tab-side deduction.
 
     // Create audit log for manual payment
     const AuditLogService = (await import('./audit-log-service'))

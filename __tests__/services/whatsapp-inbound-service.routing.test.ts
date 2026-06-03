@@ -48,6 +48,16 @@ vi.mock('@/lib/whatsapp', () => ({
   },
 }));
 
+// REQ-064 — the inbound router now lazy-imports SupportTicketService to
+// auto-create tickets on the support branch. Mock it so AC4 (and any other
+// support-branch test) doesn't await a real Mongo write.
+const mockTicketFromInbound = vi.fn();
+vi.mock('@/services/support-ticket-service', () => ({
+  SupportTicketService: {
+    createFromWhatsAppInbound: (...a: unknown[]) => mockTicketFromInbound(...a),
+  },
+}));
+
 const PHONE = '+2348012345678';
 
 const ACTIVE_USER = {
@@ -151,8 +161,12 @@ describe('REQ-056 WhatsAppInboundService.handle — routing matrix', () => {
     });
   });
 
-  it('AC4 — active + support_text → no template send, queued for staff', async () => {
+  it('AC4 — active + support_text → REQ-064: auto-creates SupportTicket and tags ticketed', async () => {
     mockFindOne.mockResolvedValue(ACTIVE_USER);
+    mockTicketFromInbound.mockResolvedValue({
+      _id: 't-1',
+      ticketNumber: 'TKT-1',
+    });
     const { WhatsAppInboundService } = await import(
       '@/services/whatsapp-inbound-service'
     );
@@ -161,7 +175,8 @@ describe('REQ-056 WhatsAppInboundService.handle — routing matrix', () => {
       {}
     );
     expect(mockNotificationSend).not.toHaveBeenCalled();
-    expect(result).toBe('queued_for_staff');
+    expect(mockTicketFromInbound).toHaveBeenCalledTimes(1);
+    expect(result).toBe('ticketed');
   });
 
   it('AC4 — dormant + chat_with_staff → sends welcome_back', async () => {
@@ -242,6 +257,7 @@ describe('REQ-056 WhatsAppInboundService.handle — routing matrix', () => {
 
   it('AC7 — IncomingMessage.create rejecting does not throw out of handle()', async () => {
     mockFindOne.mockResolvedValue(ACTIVE_USER);
+    mockTicketFromInbound.mockResolvedValue({ _id: 't-2' });
     mockIncomingMessageCreate.mockRejectedValue(new Error('Mongo down'));
     const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const { WhatsAppInboundService } = await import(

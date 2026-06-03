@@ -229,7 +229,27 @@ export class WhatsAppInboundService {
             actionTaken = 'send_failed';
           }
         } else {
-          actionTaken = 'queued_for_staff';
+          // REQ-064 — `support_text` intent (or any non-welcome path)
+          // auto-creates a SupportTicket from the inbound message. Best-
+          // effort: a ticket-create failure is logged but doesn't block
+          // the IncomingMessage audit row.
+          try {
+            const { SupportTicketService } = await import(
+              '@/services/support-ticket-service'
+            );
+            await SupportTicketService.createFromWhatsAppInbound({
+              from,
+              body: body ?? '',
+              userId,
+            });
+            actionTaken = 'ticketed';
+          } catch (error) {
+            console.error(
+              '[WhatsAppInbound] support-ticket auto-create failed:',
+              error instanceof Error ? error.message : String(error)
+            );
+            actionTaken = 'queued_for_staff';
+          }
         }
       }
     } catch (error) {

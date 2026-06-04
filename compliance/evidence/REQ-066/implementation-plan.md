@@ -163,4 +163,36 @@ These three checks are non-negotiable preconditions for the rest of the plan —
 
 ## Plan deviation
 
-_(to be filled if implementation requires divergence)_
+### Post-deploy operator-reported defect — added AC8 (location routing)
+
+Operator tested a fresh Desperados order on UAT after AC7a/AC7b shipped and observed inventory still showing 1 after completion. Investigation:
+
+- The chokepoint fired correctly (`inventoryDeducted: true`, stockmovement written with `qty: -1`)
+- BUT the Desperados inventory's `locations[0]` (the `store` bucket) was at 0 stock
+- `applyOrderStockDelta` always targeted `locations[0]`, so `Math.max(0, 0 + -1) = 0` silently clamped the deduction
+- The post-save hook then recomputed the aggregate `currentStock` as the sum of locations (0 + 1 = 1) — unchanged
+
+This is the _original_ #277 bug. The 3-round root-cause refinement narrowed in on the chokepoint layer but never asked the operator's literal observation: "stockmovements are written but inventory doesn't change". The chokepoint refactor (AC1-AC6) is structurally correct but did not address the customer-facing symptom.
+
+The fix is at the `applyOrderStockDelta` routing layer + a data backfill:
+
+8. **AC8 — Sales deductions route to `defaultSalesLocation`.** Mutate `applyOrderStockDelta` so trackByLocation deductions land on the row's `defaultSalesLocation` (the front-of-house bucket — chiller* for drinks, freezer* for frozen items). If unset (legacy data), walk locations[] and take from the first non-empty bucket (safe fallback). If the sale-point can't satisfy the deduction, throw — the chokepoint catches and writes an `inventory_deduction_failed` IncidentEvent (matches the operator's stipulation that the system never auto-spills from store to sale-point; managers must move stock manually). Refills always land on `locations[0]` (the storeroom — unchanged from prior behavior).
+
+   The `defaultSalesLocation` field already existed on the `Inventory` schema (line 61) and interface (line 63) but was never wired into deduction routing. A legacy migration (`scripts/migrate-location-tracking.ts`) had bulk-set it to `'store'` for all rows — the wrong target. A one-shot idempotent backfill (`scripts/backfill-sale-point-location.ts`) rewrites the field to chiller*/freezer* when those locations exist on the row.
+
+   New tests:
+   - `__tests__/services/inventory-service.sale-point-routing.test.ts` — 8 cases covering all 7 routing branches.
+   - `__tests__/lib/sale-point-location-backfill.test.ts` — 15 cases on the pure helper (mapping rule + idempotency predicate + mongo filter).
+   - `__tests__/services/inventory-service.track-by-location.test.ts` — 1 case updated (the test that codified the BROKEN clamp-at-zero behavior now asserts the new fall-through routing).
+   - `e2e/admin-order-inventory-delta.sale-point.spec.ts` (AC8) — live E2E that force-mutates a seeded inventory into the Desperados-shape (locations[0]=0, locations[1]>=1, defaultSalesLocation=locations[1]) and confirms the deduction lands on locations[1].
+
+   Backfill ran against UAT 2026-06-04: 37 of 39 trackByLocation rows touched (34 REWRITE from 'store', 3 SET fresh; 2 LEFT — items with only a store location, handled by the runtime fallback).
+
+### Upstream skill gaps filed (out-of-scope for this REQ)
+
+While composing the evidence pack, operator asked about screenshot density per spec role (feature-mode rich, regression-mode sparse). Two upstream issues filed against `metasession-dev/DevAudit-Installer`:
+
+- [#113](https://github.com/metasession-dev/DevAudit-Installer/issues/113) — `evidenceShot`: add `tier` parameter to gate screenshot density on `EvidenceShotOrigin`
+- [#114](https://github.com/metasession-dev/DevAudit-Installer/issues/114) — `e2e-test-engineer`: screenshot density policy guidance
+
+These are out-of-scope for REQ-066. The REQ-066 evidence pack keeps the existing 3 curated screenshots (one per AC7a/7b/8).

@@ -22,7 +22,8 @@ Operator reported: "items being sold are not deducted from inventory count. The 
 - **AC4** — Retry-only reconciliation cron (15 min). NEVER mutates `Order.status` — per operator's stipulation that only kitchen-display staff may complete an order.
 - **AC5** — Stale-paid-orders visibility scan (same cron tick, 2h threshold). NEVER mutates state. Pure visibility — managers see workflow gaps via `/dashboard/incidents`.
 - **AC6** — `/dashboard/incidents` admin view (RBAC csr/admin/super-admin).
-- **AC7a/AC7b** — E2E invariant specs authored for BOTH UI surfaces (kitchen-display + orders-page) and **both pass live against UAT** (5/5 focused-run: 3 auth-setup + AC7a + AC7b, 1.1 min wall-clock). The specs exercise the full chokepoint (seed → confirmed → preparing → ready → completed → inventory delta = −1) on both order surfaces. Cleanup is location-aware (`trackByLocation` rows are restored by `$inc`-ing `locations[0].currentStock`); the discovery + fix is documented in `test-execution-summary.md`.
+- **AC7a/AC7b** — E2E invariant specs authored for BOTH UI surfaces (kitchen-display + orders-page) and **both pass live against UAT**. The specs exercise the full chokepoint (seed → confirmed → preparing → ready → completed → inventory delta = −1) on both order surfaces. Cleanup is location-aware (`trackByLocation` rows are restored by `$inc`-ing `locations[0].currentStock`).
+- **AC8 — Sales deductions route to `defaultSalesLocation` (added after post-deploy operator-reported defect).** `applyOrderStockDelta` rewritten to route trackByLocation deductions to the row's sale-point bucket (chiller* for drinks, freezer* for frozen); throws on insufficient sale-point stock so the chokepoint catches and writes an `inventory_deduction_failed` IncidentEvent (operator's stipulation: system never auto-spills from store to sale-point). Fallback to "first non-empty" for legacy rows. Refills always land on `locations[0]`. Companion: `scripts/backfill-sale-point-location.ts` rewrites the legacy bulk-set `defaultSalesLocation='store'` value to the row's chiller*/freezer* code. Live AC8 E2E spec proves the routing against UAT (force-mutates the Desperados-shape and confirms the deduction lands on the sale-point, not the empty storeroom). **6/6 focused E2E (3 auth-setup + AC7a + AC7b + AC8), 1.5 min wall-clock.** Backfill ran against UAT 2026-06-04: 37/39 rows touched (34 REWRITE from `'store'`, 3 SET fresh; 2 LEFT — items with only a store location, handled by the runtime fallback).
 
 ## AI Involvement
 
@@ -46,12 +47,18 @@ Operator reported: "items being sold are not deducted from inventory count. The 
 - `__tests__/regression/inventory-deduction-removed.test.ts` — 4 regression-guard cases.
 - `e2e/admin-order-inventory-delta.kitchen-display.spec.ts` — AC7a (live-passing against UAT; `describe.configure({ mode: 'serial' })`).
 - `e2e/admin-order-inventory-delta.orders-page.spec.ts` — AC7b (live-passing against UAT; same serial config; routes through `/dashboard/orders` admin order-card, `Complete` button).
+- `e2e/admin-order-inventory-delta.sale-point.spec.ts` — **AC8** (live-passing against UAT; force-mutates the seeded inventory into the Desperados-shape).
+- `lib/sale-point-location-backfill.ts` — pure helper for `deriveSalePointLocation` + `isSalePointBackfillCandidate` + `SALE_POINT_LOCATION_BACKFILL_FILTER`.
+- `scripts/backfill-sale-point-location.ts` — one-shot idempotent backfill, ran against UAT 2026-06-04.
+- `__tests__/services/inventory-service.sale-point-routing.test.ts` — 8 AC8 routing cases.
+- `__tests__/lib/sale-point-location-backfill.test.ts` — 15 helper cases.
 - `compliance/plans/REQ-066/implementation-plan.md` — plan with ACs, risk, security.
 
 **Files Modified:**
 
 - `services/order-service.ts` — added `completeOrder` chokepoint + `scanStalePaidOrders`; removed 2 inline deduction blocks.
-- `services/inventory-service.ts` — added `reconcileMissedDeductions`.
+- `services/inventory-service.ts` — added `reconcileMissedDeductions`; **AC8: rewrote `applyOrderStockDelta` for sale-point routing**.
+- `__tests__/services/inventory-service.track-by-location.test.ts` — **1 case updated** (the test that codified the broken clamp-at-zero behavior now asserts the new fall-through routing — bug shape pinned in the regression pack).
 - `services/tab-service.ts` — removed 2 inline deduction blocks.
 - `app/api/webhooks/paystack/route.ts` — removed inline deduction.
 - `app/api/webhooks/monnify/route.ts` — removed inline deduction.
@@ -71,12 +78,12 @@ Operator reported: "items being sold are not deducted from inventory count. The 
 
 See `compliance/evidence/REQ-066/test-plan.md` and `test-execution-summary.md`.
 
-- Vitest: 1095 pass / 4 skip / 0 fail (+22 from REQ-065 baseline of 1073).
+- Vitest: 1118 pass / 4 skip / 0 fail (+45 from REQ-065 baseline of 1073; +23 from AC1-AC7 baseline of 1095 covers the AC8 routing + backfill-helper additions).
 - TypeScript: 0 errors.
 - ESLint: 0 errors / 950 pre-existing warnings.
 - Production build: green.
-- E2E full regression against UAT: **326 passed / 19 skipped / 27 did-not-run / 0 failed** (7.8 min; +36 passed vs REQ-065 baseline).
-- E2E focused REQ-066 (AC7a + AC7b): 5 passed (3 auth-setup + 2 invariant specs), 1.1 min wall-clock, 0 failed. Live against UAT.
+- E2E full regression against UAT (post-AC8): **326 passed / 18 skipped / 27 did-not-run / 0 failed** (16.2 min). Zero new failures relative to the prior AC1-AC7 baseline; wall-clock roughly doubled because the third inventory-delta spec (AC8) contends on the same UAT inventory rows as AC7a/AC7b.
+- E2E focused REQ-066 (AC7a + AC7b + AC8): 6 passed (3 auth-setup + 3 invariant specs), 1.5 min wall-clock, 0 failed. Live against UAT.
 
 ## Security & Compliance
 
@@ -86,20 +93,74 @@ See `security-summary.md` for the STRIDE pass. Headline:
 - **No new auth surface.** Reconciliation cron runs server-side; all UI surfaces inherit existing dashboard RBAC.
 - **No new data egress.** IncidentEvent rows hold operational metadata only.
 
+## Production deployment steps
+
+The code fix in AC8 is **inert against existing misconfigured production rows** until the `defaultSalesLocation` backfill runs against production. UAT proved this end-to-end: 36 of 39 production-shaped rows have the legacy bulk-set value `defaultSalesLocation: 'store'` (set by `scripts/migrate-location-tracking.ts` long ago); the AC8 `applyOrderStockDelta` will route deductions to that empty `store` bucket and throw → `inventory_deduction_failed` IncidentEvent on every sale of those items, exactly matching the customer-impact symptom of #277. The fix is only complete after the backfill rewrites those rows to point at chiller / freezer.
+
+The backfill is therefore a **required release-day action**, not a side quest. Run it AFTER merge to main + Railway production deploy completes:
+
+1. **Dry-run first.**
+
+   ```bash
+   MONGODB_URI="$MONGODB_PROD_EXTERNAL_URI" \
+     npx tsx scripts/backfill-sale-point-location.ts --dry-run
+   ```
+
+   Review the candidate list — expect every drinks/chilled item to show `REWRITE → 'chiller1'`, freezer items `REWRITE → 'freezer'`, and any storeroom-only items in `LEFT (no chiller/freezer present)`. Halt if the output is unexpected (e.g. zero candidates would indicate the URI didn't connect or the data already has chiller values, which is not the prod baseline we verified on the UAT-restore).
+
+2. **Run live.**
+
+   ```bash
+   MONGODB_URI="$MONGODB_PROD_EXTERNAL_URI" \
+     npx tsx scripts/backfill-sale-point-location.ts
+   ```
+
+   Summary line should match the dry-run candidate counts.
+
+3. **Spot-check.** Confirm a known item — e.g. Desperados — now reports the correct sale-point:
+
+   ```bash
+   MONGODB_URI="$MONGODB_PROD_EXTERNAL_URI" node -e \
+     'const{MongoClient}=require("mongodb");(async()=>{const c=new MongoClient(process.env.MONGODB_URI);await c.connect();const inv=await c.db("wawagardenbar").collection("inventories").findOne({"items.name":"Desperados"});console.log(inv?.defaultSalesLocation);await c.close();})();'
+   ```
+
+   Expected: `chiller1`.
+
+4. **Confirm a real completion succeeds.** Optional but recommended: complete a paid order via the production kitchen-display and verify the aggregate drops by 1. If `/dashboard/incidents` shows a new `inventory_deduction_failed` event, the backfill missed that row — re-run + spot-check that specific item.
+
+Per `feedback_no_prod_db_touches`, prod reads/writes are off-limits unless explicitly authorised this turn. Release time **is** the authorisation; the operator runs the commands themselves (or explicitly tells me to). The script writes only `defaultSalesLocation` — no other fields, no schema changes.
+
+### UAT pre-flight (already validated)
+
+The same sequence ran successfully against UAT on 2026-06-04:
+
+```
+[REQ-066] scanning 39 trackByLocation rows…
+  set fresh (chiller*):           3
+  rewrite from 'store':           34
+  left (no clear sale point):     2
+```
+
+Idempotency verified: a second dry-run reported 0 writes / 37 skipped-already-correct / 2 left. Spot-check confirmed Desperados.defaultSalesLocation flipped from `'store'` to `'chiller1'`. UAT was subsequently restored from a prod snapshot for operator manual testing, which wiped the backfill — that restore exercise is the strongest evidence we have that the same backfill will work correctly against the matching prod shape.
+
 ## Rollback Plan
 
-Revert PR #281. The schema additions are purely additive (the IncidentEvent collection stays in place but unreferenced). The cron registration is removed cleanly. The deduction goes back to the pre-REQ-066 mess of 6 inline call sites + duplicate completion functions — the prior bug returns. Therefore: rollback only as a true emergency; a forward-fix is preferred.
+Revert PR #281 (and PR #285 if merged). The schema additions are purely additive (the IncidentEvent collection stays in place but unreferenced). The cron registration is removed cleanly. The deduction goes back to the pre-REQ-066 mess of 6 inline call sites + duplicate completion functions — the prior bug returns.
+
+Note on the AC8 backfill: rolling back the code does NOT require unwinding the `defaultSalesLocation` rewrites. The pre-AC8 `applyOrderStockDelta` ignored the field entirely (always targeted `locations[0]`), so the rewritten values are harmless under the reverted code. If a future rollback needed to restore the legacy `'store'` value for every row anyway, a small reverse-mapping script would handle it.
+
+Therefore: rollback only as a true emergency; a forward-fix is preferred.
 
 ## Quality Gates
 
-| Gate                            | Expected   | Actual (2026-06-04)                                       |
-| ------------------------------- | ---------- | --------------------------------------------------------- |
-| `npx tsc --noEmit`              | exit 0     | exit 0                                                    |
-| `npx vitest run` (full)         | 0 failures | 1095 pass / 4 skip / 0 fail                               |
-| `npx eslint . --max-warnings=0` | 0 errors   | 0 errors / 950 pre-existing console warnings              |
-| `npm run build`                 | exit 0     | exit 0                                                    |
-| E2E focused REQ-066 (UAT)       | 0 failures | 5 passed (3 auth-setup + AC7a + AC7b), 1.1 min wall-clock |
-| E2E full regression pack (UAT)  | green      | 326 pass / 19 skip / 27 did-not-run / 0 fail (7.8 min)    |
+| Gate                            | Expected   | Actual (2026-06-04)                                             |
+| ------------------------------- | ---------- | --------------------------------------------------------------- |
+| `npx tsc --noEmit`              | exit 0     | exit 0                                                          |
+| `npx vitest run` (full)         | 0 failures | 1118 pass / 4 skip / 0 fail                                     |
+| `npx eslint . --max-warnings=0` | 0 errors   | 0 errors / 950 pre-existing console warnings                    |
+| `npm run build`                 | exit 0     | exit 0                                                          |
+| E2E focused REQ-066 (UAT)       | 0 failures | 6 passed (3 auth-setup + AC7a + AC7b + AC8), 1.5 min wall-clock |
+| E2E full regression pack (UAT)  | green      | 326 pass / 18 skip / 27 did-not-run / 0 fail (16.2 min)         |
 
 ## Stage Approvals
 

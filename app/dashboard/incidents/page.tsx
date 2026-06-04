@@ -11,6 +11,9 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { IncidentEventService } from '@/services/incident-event-service';
 import type { IncidentEventKind } from '@/models/incident-event-model';
+import OrderModel from '@/models/order-model';
+import { Types } from 'mongoose';
+import { IncidentRetryButton } from '@/components/features/admin/incident-retry-button';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,9 +41,9 @@ function timeSince(when: Date): string {
 
 /**
  * @requirement REQ-066 AC6 — Incidents queue
- *
- * Read-only list of IncidentEvent rows. Surfaces the silent failure
- * surfaces that REQ-066 moved off `console.error`. No actions in v1.
+ * @requirement REQ-066 AC10 — per-row "Retry now" action for stuck
+ *   `inventory_deduction_failed` events; row flips to ✓ Deducted once
+ *   the underlying order's `inventoryDeducted` flag has been set.
  */
 export default async function IncidentsPage({
   searchParams,
@@ -54,6 +57,33 @@ export default async function IncidentsPage({
     kind: kindFilter,
     limit: 200,
   });
+
+  // REQ-066 AC10 — join per-row Order.inventoryDeducted state so the
+  // action column can render "Retry now" vs "✓ Deducted" without
+  // requiring a roundtrip per row. Only matters for the
+  // `inventory_deduction_failed` kind; other kinds skip the lookup.
+  const dedupOrderIds = Array.from(
+    new Set(
+      rows
+        .filter(
+          (r) =>
+            r.kind === 'inventory_deduction_failed' &&
+            Types.ObjectId.isValid(r.entityId)
+        )
+        .map((r) => r.entityId)
+    )
+  );
+  const orders = dedupOrderIds.length
+    ? await OrderModel.find(
+        { _id: { $in: dedupOrderIds.map((id) => new Types.ObjectId(id)) } },
+        { _id: 1, inventoryDeducted: 1 }
+      ).lean<
+        Array<{ _id: { toString: () => string }; inventoryDeducted: boolean }>
+      >()
+    : [];
+  const inventoryDeductedByOrderId = new Map<string, boolean>(
+    orders.map((o) => [o._id.toString(), !!o.inventoryDeducted])
+  );
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-6">
@@ -103,27 +133,50 @@ export default async function IncidentsPage({
                   <TableHead>Entity</TableHead>
                   <TableHead>Summary</TableHead>
                   <TableHead>Age</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((r) => (
-                  <TableRow key={String(r._id)}>
-                    <TableCell>
-                      <Badge variant={KIND_VARIANTS[r.kind]}>
-                        {KIND_LABELS[r.kind]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {r.entityId}
-                    </TableCell>
-                    <TableCell className="max-w-2xl text-sm">
-                      {r.summary}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {timeSince(r.createdAt)}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {rows.map((r) => {
+                  const isDeductionFail =
+                    r.kind === 'inventory_deduction_failed';
+                  const alreadyDeducted = isDeductionFail
+                    ? inventoryDeductedByOrderId.get(r.entityId) === true
+                    : false;
+                  return (
+                    <TableRow key={String(r._id)}>
+                      <TableCell>
+                        <Badge variant={KIND_VARIANTS[r.kind]}>
+                          {KIND_LABELS[r.kind]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {r.entityId}
+                      </TableCell>
+                      <TableCell className="max-w-2xl text-sm">
+                        {r.summary}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {timeSince(r.createdAt)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {isDeductionFail && alreadyDeducted && (
+                          <span className="text-xs text-muted-foreground">
+                            ✓ Deducted
+                          </span>
+                        )}
+                        {isDeductionFail && !alreadyDeducted && (
+                          <IncidentRetryButton orderId={r.entityId} />
+                        )}
+                        {!isDeductionFail && (
+                          <span className="text-xs text-muted-foreground">
+                            —
+                          </span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}

@@ -23,9 +23,11 @@ vi.mock('@/models/order-model', () => ({
 }));
 
 const mockRecordIncident = vi.fn();
+const mockDedupRecent = vi.fn();
 vi.mock('@/services/incident-event-service', () => ({
   IncidentEventService: {
     recordIncident: (...a: unknown[]) => mockRecordIncident(...a),
+    dedupRecent: (...a: unknown[]) => mockDedupRecent(...a),
   },
 }));
 
@@ -50,6 +52,9 @@ beforeEach(() => {
   mockFind.mockReset();
   mockUpdateOne.mockReset().mockResolvedValue({ acknowledged: true });
   mockRecordIncident.mockReset().mockResolvedValue({});
+  // Default: no recent duplicate — preserves existing AC4 test behavior
+  // where the failure path writes a fresh IncidentEvent.
+  mockDedupRecent.mockReset().mockResolvedValue(false);
 });
 
 describe('REQ-066 InventoryService.reconcileMissedDeductions', () => {
@@ -107,6 +112,46 @@ describe('REQ-066 InventoryService.reconcileMissedDeductions', () => {
       entityId: '507f1f77bcf86cd799439011',
     });
     expect(mockUpdateOne).not.toHaveBeenCalled();
+    deductSpy.mockRestore();
+  });
+
+  it('AC10 — dedup: when dedupRecent returns true, no new IncidentEvent is written', async () => {
+    const order = mockOrder('507f1f77bcf86cd799439011');
+    mockFind.mockReturnValue(chainable([order]));
+    mockDedupRecent.mockResolvedValueOnce(true); // simulate recent dup
+    const InventoryService = (await import('@/services/inventory-service'))
+      .default;
+    const deductSpy = vi
+      .spyOn(InventoryService, 'deductStockForOrder')
+      .mockRejectedValue(new Error('still throwing'));
+
+    const result = await InventoryService.reconcileMissedDeductions();
+
+    expect(result.failed).toBe(1);
+    expect(mockDedupRecent).toHaveBeenCalledTimes(1);
+    expect(mockDedupRecent).toHaveBeenCalledWith({
+      kind: 'inventory_deduction_failed',
+      entityId: '507f1f77bcf86cd799439011',
+      withinHours: 1,
+    });
+    expect(mockRecordIncident).not.toHaveBeenCalled();
+    deductSpy.mockRestore();
+  });
+
+  it('AC10 — dedup: when dedupRecent returns false, a fresh IncidentEvent is written', async () => {
+    const order = mockOrder('507f1f77bcf86cd799439011');
+    mockFind.mockReturnValue(chainable([order]));
+    mockDedupRecent.mockResolvedValueOnce(false); // no recent dup
+    const InventoryService = (await import('@/services/inventory-service'))
+      .default;
+    const deductSpy = vi
+      .spyOn(InventoryService, 'deductStockForOrder')
+      .mockRejectedValue(new Error('still throwing'));
+
+    await InventoryService.reconcileMissedDeductions();
+
+    expect(mockDedupRecent).toHaveBeenCalledTimes(1);
+    expect(mockRecordIncident).toHaveBeenCalledTimes(1);
     deductSpy.mockRestore();
   });
 });

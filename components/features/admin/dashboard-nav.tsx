@@ -21,6 +21,7 @@ import {
   Clock,
   ChefHat,
   Boxes,
+  AlertTriangle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -129,6 +130,15 @@ const navItems: NavItem[] = [
     href: '/dashboard/audit-logs',
     icon: FileText,
     roles: ['super-admin'],
+  },
+  {
+    // REQ-066 AC10 — surfaces inventory_deduction_failed +
+    // stale_paid_order events; gates the Retry Now action.
+    title: 'Incidents',
+    href: '/dashboard/incidents',
+    icon: AlertTriangle,
+    roles: ['csr', 'admin', 'super-admin'],
+    permission: 'incidentsAccess',
   },
   {
     title: 'Settings',

@@ -419,5 +419,149 @@ superAdminTest.describe(
         }
       }
     );
+
+    superAdminTest(
+      'AC10 — operator-initiated Retry now on /dashboard/incidents resolves the stuck deduction after stock transfer',
+      async ({ page }: { page: Page }) => {
+        // REQ-066 AC10 — depends on the new Retry-now button on
+        // /dashboard/incidents + the retryInventoryDeductionAction
+        // server action. Both ship in the same PR as this spec, so the
+        // case is fixme'd until UAT redeploys with the new code, then
+        // un-fixme'd in a follow-up commit. Backend behavior is unit-
+        // tested at `__tests__/actions/admin/incidents-actions.test.ts`
+        // + `__tests__/services/inventory-service.reconcile.test.ts` so
+        // there is no coverage gap during the deploy window.
+        superAdminTest.fixme(
+          true,
+          'AC10 UI surface ships in this PR; un-fixme after UAT redeploys.'
+        );
+        guard(superAdminTest.skip, await isAuthenticated(page));
+
+        // Re-seed the over-sell shape just like the AC9 case above.
+        handle = await seedOverSellOrder();
+
+        // Drive the lifecycle to completed through the UI so the
+        // IncidentEvent is generated naturally by the chokepoint (not by
+        // a forced direct call).
+        await page.addInitScript(() => {
+          window.localStorage.setItem(
+            'cookieConsent',
+            JSON.stringify({
+              acceptedAt: '2026-06-04T00:00:00Z',
+              version: 'v1',
+            })
+          );
+        });
+        await page.goto('/dashboard/kitchen-display');
+        await page.waitForLoadState('networkidle');
+        const cookieBanner = page.getByTestId('cookie-consent-banner');
+        if (await cookieBanner.isVisible().catch(() => false)) {
+          await page.getByRole('button', { name: /got it/i }).click();
+          await expect(cookieBanner).toHaveCount(0);
+        }
+
+        async function uiClickAndAwaitStatus(
+          buttonText: string,
+          expectedNext: string
+        ) {
+          const h = page.getByRole('heading', {
+            name: handle!.orderNumber,
+            level: 2,
+          });
+          await expect(h).toBeVisible({ timeout: 15000 });
+          const card = h.locator(
+            'xpath=ancestor::div[contains(@class, "border-2")][1]'
+          );
+          const btn = card.getByRole('button', {
+            name: new RegExp(buttonText, 'i'),
+          });
+          await expect(btn).toBeVisible({ timeout: 15000 });
+          await expect(btn).toBeEnabled();
+          await btn.click();
+          await expect
+            .poll(
+              async () => (await readOrder(handle!.orderId))?.status ?? null,
+              { timeout: 20000 }
+            )
+            .toBe(expectedNext);
+        }
+
+        await uiClickAndAwaitStatus('Start Preparing', 'preparing');
+        await page.reload();
+        await page.waitForLoadState('networkidle');
+        await uiClickAndAwaitStatus('Mark Ready', 'ready');
+        await page.reload();
+        await page.waitForLoadState('networkidle');
+        await uiClickAndAwaitStatus('Complete Order', 'completed');
+
+        // Confirm we're in the post-over-sell state: IncidentEvent
+        // recorded, flag still false, stock untouched.
+        await expect
+          .poll(
+            () => readLatestIncident(handle!.orderId).then((i) => i?.kind),
+            { timeout: 10000 }
+          )
+          .toBe('inventory_deduction_failed');
+        const stuck = await readOrder(handle.orderId);
+        expect(stuck?.inventoryDeducted).toBe(false);
+
+        // Operator transfers stock store → chiller via direct Mongo
+        // (the equivalent of clicking "Transfer Stock" in the inventory
+        // UI). We bump the sale-point so the next retry has enough.
+        const transferDelta = OVERSELL_LIMIT + 5; // > requested
+        const { uri, dbName } = mongoConn();
+        const client = new MongoClient(uri);
+        try {
+          await client.connect();
+          await client
+            .db(dbName)
+            .collection('inventories')
+            .updateOne(
+              { _id: new ObjectId(handle.inventoryId) },
+              {
+                $set: {
+                  'locations.$[sale].currentStock': transferDelta,
+                },
+              },
+              { arrayFilters: [{ 'sale.location': handle.salePointCode }] }
+            );
+        } finally {
+          await client.close();
+        }
+
+        // Operator navigates to /dashboard/incidents + clicks Retry now.
+        await page.goto('/dashboard/incidents?kind=inventory_deduction_failed');
+        await page.waitForLoadState('networkidle');
+        const retryButton = page
+          .getByRole('button', {
+            name: new RegExp(
+              `retry inventory deduction for order ${handle.orderId}`,
+              'i'
+            ),
+          })
+          .first();
+        await expect(retryButton).toBeVisible({ timeout: 15000 });
+        await retryButton.click();
+
+        // Poll for the order's flag to flip.
+        await expect
+          .poll(
+            async () => (await readOrder(handle!.orderId))?.inventoryDeducted,
+            { timeout: 15000 }
+          )
+          .toBe(true);
+
+        // Inventory must reflect the deduction now: sale-point was
+        // transferDelta, requested OVERSELL_LIMIT + 1, so post-deduction
+        // sale-point = transferDelta - (OVERSELL_LIMIT + 1).
+        const final = await readLocations(handle.inventoryId);
+        const finalSale = final.find(
+          (l) => l.location === handle!.salePointCode
+        );
+        expect(finalSale?.currentStock).toBe(
+          transferDelta - (OVERSELL_LIMIT + 1)
+        );
+      }
+    );
   }
 );

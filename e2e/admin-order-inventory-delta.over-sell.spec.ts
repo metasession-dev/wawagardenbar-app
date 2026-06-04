@@ -423,18 +423,10 @@ superAdminTest.describe(
     superAdminTest(
       'AC10 — operator-initiated Retry now on /dashboard/incidents resolves the stuck deduction after stock transfer',
       async ({ page }: { page: Page }) => {
-        // REQ-066 AC10 — depends on the new Retry-now button on
-        // /dashboard/incidents + the retryInventoryDeductionAction
-        // server action. Both ship in the same PR as this spec, so the
-        // case is fixme'd until UAT redeploys with the new code, then
-        // un-fixme'd in a follow-up commit. Backend behavior is unit-
-        // tested at `__tests__/actions/admin/incidents-actions.test.ts`
-        // + `__tests__/services/inventory-service.reconcile.test.ts` so
-        // there is no coverage gap during the deploy window.
-        superAdminTest.fixme(
-          true,
-          'AC10 UI surface ships in this PR; un-fixme after UAT redeploys.'
-        );
+        // REQ-066 AC10 — Retry-now button + retryInventoryDeductionAction
+        // shipped via PR #288 to develop and PR #283 → main `b1a9c0b`
+        // 2026-06-04. Un-fixme'd in this close-out commit now that
+        // both UAT and production deploys have the supporting code.
         guard(superAdminTest.skip, await isAuthenticated(page));
 
         // Re-seed the over-sell shape just like the AC9 case above.

@@ -95,10 +95,21 @@ export function KitchenOrderCard({ order }: KitchenOrderCardProps) {
       const result = await updateOrderStatusAction(order._id, newStatus);
 
       if (result.success) {
-        toast({
-          title: 'Success',
-          description: result.message,
-        });
+        if (result.warning) {
+          // REQ-066 AC9 — completion succeeded but inventory deduction threw;
+          // chokepoint already wrote an inventory_deduction_failed IncidentEvent.
+          toast({
+            title: 'Completed — inventory not deducted',
+            description: `${result.warning} See /dashboard/incidents.`,
+            variant: 'destructive',
+            duration: 12000,
+          });
+        } else {
+          toast({
+            title: 'Success',
+            description: result.message,
+          });
+        }
         router.refresh();
       } else {
         toast({

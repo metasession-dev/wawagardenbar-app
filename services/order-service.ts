@@ -812,6 +812,13 @@ export class OrderService {
     success: boolean;
     error?: string;
     alreadyCompleted?: boolean;
+    /**
+     * REQ-066 AC9 — set when the kitchen-completion succeeded (status flipped,
+     * IncidentEvent written) but the inventory deduction threw. Callers use
+     * this to surface a UI warning instead of a "Success" toast.
+     */
+    deductionFailed?: boolean;
+    deductionError?: string;
   }> {
     await connectDB();
 
@@ -843,6 +850,7 @@ export class OrderService {
     }
 
     let incidentWritten = false;
+    let deductionError: string | undefined;
     if (!order.inventoryDeducted) {
       try {
         const InventoryService = (await import('./inventory-service')).default;
@@ -854,6 +862,7 @@ export class OrderService {
       } catch (error) {
         // Workflow must not stall — log incident, leave the deducted
         // flag false. Reconciliation cron retries.
+        deductionError = error instanceof Error ? error.message : String(error);
         try {
           const { IncidentEventService } = await import(
             './incident-event-service'
@@ -863,7 +872,7 @@ export class OrderService {
             entityId: opts.orderId,
             summary: 'deductStockForOrder threw during kitchen completion',
             errorDetails: {
-              message: error instanceof Error ? error.message : String(error),
+              message: deductionError,
               actorUserId: opts.actorUserId,
               actorRole: opts.actorRole,
             },
@@ -903,6 +912,9 @@ export class OrderService {
       );
     }
 
+    if (deductionError !== undefined) {
+      return { success: true, deductionFailed: true, deductionError };
+    }
     return { success: true };
   }
 

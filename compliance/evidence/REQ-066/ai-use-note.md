@@ -30,6 +30,15 @@ Fix: a `computeStockFromInventory()` helper returns the sum of `locations[*].cur
 
 The invariant is now pinned at all three layers: unit (`OrderService.completeOrder` happy-path + idempotency + throw branches), regression-guard (the 6 removed sites' source-code call counts), and live E2E (the UI lifecycle delta).
 
+## AC9 — what the operator's post-AC8 UAT testing caught
+
+After AC8 + the location-aware-cleanup fix shipped, the operator restored UAT from a production snapshot and manually tested both happy path (1× Desperados) + over-sell (15× Desperados against chiller1=9). Happy path proved the chokepoint + sale-point routing worked end-to-end. Over-sell exposed two distinct gaps:
+
+- **Gap A (in scope as AC9):** the kitchen-display "Complete Order" toast showed "Success" even when the chokepoint had logged an `inventory_deduction_failed` IncidentEvent. The operator only learned of the failure by checking `/dashboard/incidents`. Silent-failure UX.
+- **Gap B (deferred to REQ-067):** Express order + Quick Actions allow over-sells to be created in the first place — no pre-sale availability check on those surfaces. The existing check is also aggregate-based, not sale-point-aware.
+
+Operator chose to bundle Gap A into REQ-066 (closes the most surprising UX) and defer Gap B as a follow-up. AC9 added: chokepoint return shape extended (`deductionFailed` + `deductionError`), action `ActionResult.warning` propagates the message, three UI surfaces (kitchen-order-card, admin order-card, admin order-actions-sidebar) show a destructive-variant toast titled "Completed — inventory not deducted" pointing the operator at `/dashboard/incidents`. AC9 E2E spec pins the backend behavior (status flips + IncidentEvent + no over-deduction + no stockmovement); the UI toast itself is validated via operator's manual UAT post-merge. Filed [wawagardenbar-app #286 (REQ-067)](https://github.com/metasession-dev/wawagardenbar-app/issues/286) for the Gap B work.
+
 ## Human review boundary
 
 - **Operator drove three rounds of root-cause refinement** — the agent didn't ship the first plan; it iterated until the framing matched the operator's mental model.

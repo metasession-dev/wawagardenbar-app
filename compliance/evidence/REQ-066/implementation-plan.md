@@ -196,3 +196,21 @@ While composing the evidence pack, operator asked about screenshot density per s
 - [#114](https://github.com/metasession-dev/DevAudit-Installer/issues/114) — `e2e-test-engineer`: screenshot density policy guidance
 
 These are out-of-scope for REQ-066. The REQ-066 evidence pack keeps the existing 3 curated screenshots (one per AC7a/7b/8).
+
+### Post-deploy operator-reported UX gap — added AC9 (deduction-failure warning surfacing)
+
+After AC8 landed and the operator manually tested on UAT (post prod-restore), they hit two related UX gaps on the over-sell scenario:
+
+1. The kitchen-display "Complete Order" toast showed "Success" even when the chokepoint had logged an `inventory_deduction_failed` IncidentEvent — silent failure UX, operator only finds out via `/dashboard/incidents`.
+2. The Express order / Quick Actions order-creation paths allowed the over-sell to be created in the first place — there's no pre-sale availability check on those surfaces (separate issue, deferred to **REQ-067**).
+
+Item 1 is in scope as AC9; item 2 is filed as REQ-067 follow-up.
+
+9. **AC9 — Completion surface flags deduction failure to the operator.** `OrderService.completeOrder` extends its return shape with `deductionFailed?: boolean` + `deductionError?: string` set when the chokepoint catches a throw. `updateOrderStatusAction` reads these and adds an optional `warning` to its `ActionResult`. The three UI surfaces that call `updateOrderStatusAction` (kitchen-order-card, admin order-card, admin order-actions-sidebar) show a destructive-variant toast titled "Completed — inventory not deducted" with the chokepoint's error message + a pointer to `/dashboard/incidents` when `result.warning` is set. The original "Success" toast still fires on the happy path.
+
+   New / updated tests:
+   - `__tests__/services/order-service.completeOrder.test.ts` — 2 new cases (AC9 return shape on throw + on happy path).
+   - `e2e/admin-order-inventory-delta.over-sell.spec.ts` (AC9) — force-mutates an item so chiller1 has 2 units, seeds an order for 3 units, advances via kitchen-display. Asserts: status → completed, `inventoryDeducted: false`, IncidentEvent written with `defaultSalesLocation='chiller1'` mentioned in the error message, locations unchanged (no over-deduction, no clamp-at-zero), zero stockmovement rows for the order.
+
+   What's still out of scope for REQ-066:
+   - Pre-sale availability check on Express + Quick Actions + customer-ordering paths — surfaced and tracked as **REQ-067** (sale-point-aware availability across multiple order-create surfaces). The chokepoint's throw + IncidentEvent ensures over-sells never cause data corruption; managers see them on `/dashboard/incidents`. The pre-sale gate is a UX improvement, not a correctness fix.

@@ -56,6 +56,25 @@ Two follow-up prompts:
 - "i was expecting a larger set of screenshots but there were only 4 or so, dont we have an extensive set of regression tests and feature tests screenshots" — surfaced a project-wide policy gap: screenshot density should scale with spec role (feature-mode dense, regression-mode sparse). Filed [DevAudit-Installer #113](https://github.com/metasession-dev/DevAudit-Installer/issues/113) + [#114](https://github.com/metasession-dev/DevAudit-Installer/issues/114).
 - "approve, start tdd red baseline" — TDD red baseline written (5 failing routing tests + 11 failing backfill-helper tests across 3 files), then green phase implemented.
 
+## Post-AC8 operator UAT testing → added AC9 + filed REQ-067
+
+After AC8 + the location-aware-cleanup fix shipped (PR #285) and the operator restored UAT from a production snapshot to test manually, they ran two scenarios and reported:
+
+> "i created an order for 1 drink and paid and it got deducted when the kitchen display was updated to completed. when i sold more than is available in the chiller and completed the kitchen display nothing happened. the express order prosecc/view did not highlight the fact that there are not enough drinks in the fridge. the same happened with quick actions"
+
+The happy path proved AC8 worked end-to-end (Desperados aggregate dropped by 1, chiller1 location decremented). The over-sell scenario exposed two distinct UX gaps:
+
+- **Gap A — Completion-time toast didn't surface the IncidentEvent.** The kitchen-display "Complete Order" toast showed "Success" even when the chokepoint had caught a throw and logged an `inventory_deduction_failed` IncidentEvent. The operator only finds out by checking `/dashboard/incidents`.
+- **Gap B — Pre-sale availability check missing on Express + Quick Actions paths.** The existing check is also aggregate-based, not sale-point-aware.
+
+Asked the operator how to scope; they chose to roll Gap A into REQ-066 (added as AC9) and defer Gap B to follow-up REQ-067 (smaller surface this release, clean follow-up).
+
+> "update e2e to include testing this scenario"
+
+AC9 E2E spec authored in the same cycle: `e2e/admin-order-inventory-delta.over-sell.spec.ts` — force-mutates chiller1 to 2 units, seeds an order for 3 units, advances via kitchen-display. Asserts the backend correctly catches the over-sell (status=completed + inventoryDeducted=false + IncidentEvent + locations unchanged + zero stockmovement rows). The UI toast itself is validated via manual UAT post-merge.
+
+REQ-067 filed at [wawagardenbar-app #286](https://github.com/metasession-dev/wawagardenbar-app/issues/286).
+
 ## AI-generated artefacts in this cycle
 
 - `compliance/plans/REQ-066/implementation-plan.md` (rewritten 3x as the operator refined the frame; AC7 split into AC7a/AC7b)
@@ -65,9 +84,11 @@ Two follow-up prompts:
 - `/dashboard/incidents` layout + page
 - Removal of 6 premature deduction sites + 1 dead duplicate completion file
 - 23 new vitest cases + 3 updated
-- 3 new Playwright specs — all pass live against UAT (1.5 min wall-clock with the AC8 addition)
-- AC8 (post-deploy operator-reported defect): `applyOrderStockDelta` rewrite + `lib/sale-point-location-backfill.ts` pure helper + `scripts/backfill-sale-point-location.ts` one-shot idempotent backfill (ran against UAT 2026-06-04, 37/39 rows touched)
+- 4 new Playwright specs — all pass live against UAT (2.0 min wall-clock with the AC9 addition)
+- AC8 (post-deploy operator-reported defect): `applyOrderStockDelta` rewrite + `lib/sale-point-location-backfill.ts` pure helper + `scripts/backfill-sale-point-location.ts` one-shot idempotent backfill (ran against UAT 2026-06-04, 37→38/39→40 rows touched across two runs spanning a prod-restore)
+- AC9 (post-AC8 operator UAT testing): chokepoint return shape `deductionFailed` + `deductionError`, action `ActionResult.warning`, destructive-variant toast across kitchen-order-card + admin order-card + admin order-actions-sidebar
 - Two upstream issues filed against `metasession-dev/DevAudit-Installer` ([#113](https://github.com/metasession-dev/DevAudit-Installer/issues/113) + [#114](https://github.com/metasession-dev/DevAudit-Installer/issues/114)) for the screenshot-density policy gap
+- Follow-up REQ-067 filed at [wawagardenbar-app #286](https://github.com/metasession-dev/wawagardenbar-app/issues/286) covering pre-sale availability check on Express + Quick Actions + sale-point-aware availability rewrite
 - GitHub Issue #280 (regression-pack invariant coverage gap pattern catalog)
 - Comment thread on #277 documenting the three rounds of root-cause refinement
 

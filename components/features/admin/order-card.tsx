@@ -132,10 +132,22 @@ export function OrderCard({
       const result = await updateOrderStatusAction(order._id, newStatus);
 
       if (result.success) {
-        toast({
-          title: 'Success',
-          description: result.message,
-        });
+        if (result.warning) {
+          // REQ-066 AC9 — completion succeeded but the chokepoint logged
+          // an inventory_deduction_failed IncidentEvent. Operator must
+          // resolve the sale-point stock before the next sale of this item.
+          toast({
+            title: 'Completed — inventory not deducted',
+            description: `${result.warning} See /dashboard/incidents.`,
+            variant: 'destructive',
+            duration: 12000,
+          });
+        } else {
+          toast({
+            title: 'Success',
+            description: result.message,
+          });
+        }
         router.refresh();
       } else {
         toast({

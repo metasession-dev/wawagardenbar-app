@@ -136,6 +136,51 @@ describe('REQ-066 OrderService.completeOrder', () => {
     expect(incArg.summary).toMatch(/deductStockForOrder/i);
   });
 
+  it('AC9 — deduction throw: return value carries deductionFailed=true + the error message for UI surfacing', async () => {
+    // The kitchen-display / orders-page click handler reads this to show
+    // a yellow warning toast instead of a green "Success" toast — closes
+    // the silent-failure UX gap operator surfaced on UAT 2026-06-04.
+    const order = mockOrder();
+    mockFindById.mockResolvedValue(order);
+    mockDeductStock.mockRejectedValue(
+      new Error(
+        "Insufficient stock at defaultSalesLocation='chiller1': have 9, need 15. Move stock to the sale point before completing the order."
+      )
+    );
+
+    const { OrderService } = await import('@/services/order-service');
+    const result = await OrderService.completeOrder({
+      orderId: '507f1f77bcf86cd799439011',
+      actorUserId: 'staff-1',
+      actorRole: 'csr',
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.deductionFailed).toBe(true);
+    expect(result.deductionError).toMatch(/insufficient stock/i);
+    expect(result.deductionError).toMatch(/chiller1/);
+    // The order itself still flips — only the deduction half failed.
+    expect(order.status).toBe('completed');
+    expect(order.inventoryDeducted).toBe(false);
+  });
+
+  it('AC9 — happy path: deductionFailed is undefined when the deduction succeeds', async () => {
+    const order = mockOrder();
+    mockFindById.mockResolvedValue(order);
+    mockDeductStock.mockResolvedValue(undefined);
+
+    const { OrderService } = await import('@/services/order-service');
+    const result = await OrderService.completeOrder({
+      orderId: '507f1f77bcf86cd799439011',
+      actorUserId: 'staff-1',
+      actorRole: 'csr',
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.deductionFailed).toBeUndefined();
+    expect(result.deductionError).toBeUndefined();
+  });
+
   it('AC1 — order not found returns failure', async () => {
     mockFindById.mockResolvedValue(null);
     const { OrderService } = await import('@/services/order-service');

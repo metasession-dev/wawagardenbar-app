@@ -25,6 +25,13 @@ export interface ActionResult<T = unknown> {
   message?: string;
   data?: T;
   error?: string;
+  /**
+   * REQ-066 AC9 — set when the action succeeded but a side-effect needs
+   * to be flagged to the operator (e.g. completion succeeded but the
+   * inventory deduction threw and was recorded as an IncidentEvent).
+   * UI surfaces this as a warning toast instead of "Success".
+   */
+  warning?: string;
 }
 
 export interface OrderFilters {
@@ -337,17 +344,24 @@ export async function updateOrderStatusAction(
     // 'completed' above; `completeOrder` is idempotent against that
     // (sees status='completed' + inventoryDeducted=false → runs only
     // the deduction branch).
+    // REQ-066 AC9 — captures the deduction-failure message from the
+    // chokepoint so the UI can show a warning toast instead of the silent
+    // "Success" the operator saw on UAT.
+    let deductionWarning: string | undefined;
     if (newStatus === 'completed' && !order.inventoryDeducted) {
       // Save the in-memory status/history changes first so completeOrder
       // sees a consistent persisted state.
       await order.save();
       const { OrderService } = await import('@/services/order-service');
-      await OrderService.completeOrder({
+      const completeResult = await OrderService.completeOrder({
         orderId,
         actorUserId: session.userId,
         actorRole: session.role,
         note,
       });
+      if (completeResult.deductionFailed && completeResult.deductionError) {
+        deductionWarning = completeResult.deductionError;
+      }
       // Re-load the order so the auto-cash-payment block below sees the
       // updated `inventoryDeducted` flag.
       const refreshed = await OrderModel.findById(orderId);
@@ -410,6 +424,7 @@ export async function updateOrderStatusAction(
     return {
       success: true,
       message: `Order status updated to ${newStatus}`,
+      ...(deductionWarning ? { warning: deductionWarning } : {}),
       data: {
         orderId: order._id.toString(),
         status: order.status,

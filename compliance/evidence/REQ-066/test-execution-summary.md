@@ -33,50 +33,32 @@ RUN  v4.1.8 /home/william/Documents/SoftwareProjects/Metasession/wawagardenbar a
 
 ### Focused REQ-066 run against UAT
 
-Two specs authored. Both `test.fixme`'d after triage of an unresolved Playwright × Next.js server-action interaction issue.
+Both AC7 specs pass live against UAT:
 
 ```
-[regression] auth-setup × 3                                                                ✓
-[regression] e2e/admin-order-inventory-delta.kitchen-display.spec.ts:AC7a                  ↷ test.fixme
-[regression] e2e/admin-order-inventory-delta.orders-page.spec.ts:AC7b                      ↷ test.fixme
+[auth-setup] auth.setup.ts × 3                                                                  ✓
+[regression] e2e/admin-order-inventory-delta.kitchen-display.spec.ts:AC7a                       ✓ (25.1s)
+[regression] e2e/admin-order-inventory-delta.orders-page.spec.ts:AC7b                           ✓ (27.5s)
 
- 3 passed | 2 skipped
+ 5 passed (1.1m)
 ```
 
-### Honest scope note (AC7a / AC7b deferral)
+### What the specs prove
 
-The specs are authored end-to-end:
+For both UI surfaces (kitchen-display and `/dashboard/orders`):
 
-- **Seed:** picks a UAT menu item with `trackInventory: true` and its linked Inventory row, snapshots `currentStock`, inserts a one-item order with `status: 'confirmed'`, `paymentStatus: 'paid'`, `inventoryDeducted: false`.
-- **UI advance:** routes through the kitchen-display (AC7a) or `/dashboard/orders` admin card (AC7b) button clicks.
-- **Mongo polling:** asserts `Order.status` flips on each transition + reads `Inventory.currentStock` between steps.
-- **Cleanup:** `afterEach` deletes the order + stock-movement rows, restores `currentStock` to the captured baseline.
+- **Seed:** picks the first UAT menu item with `trackInventory: true` and its linked Inventory row, snapshots the true baseline stock (location-aware — see below), inserts a one-item order with `status: 'confirmed'`, `paymentStatus: 'paid'`, `inventoryDeducted: false`. Includes `estimatedWaitTime` (Mongoose-required; missing this field caused `order.save()` inside the server action to silently fail with a validation error during initial triage).
+- **UI advance:** routes through the kitchen-display order-card buttons (AC7a) or the `/dashboard/orders` admin order-card buttons (AC7b). Pre-seeds `cookieConsent` via `addInitScript` so the REQ-065 bottom-fixed banner does not intercept clicks on viewport-edge buttons.
+- **Mongo polling:** asserts `Order.status` flips on each transition + reads true `Inventory` stock between steps; NEGATIVE invariant at preparing and ready (stock unchanged), POSITIVE assertion at completed (stock decremented by exactly 1).
+- **Cleanup:** `afterEach` reads the order's `stockmovements` to compute the actual deducted amount, deletes the order + its stock-movement rows, then increments `locations[0].currentStock` (for `trackByLocation` rows) or the aggregate `currentStock` (for non-location rows) by the same amount — restoring the inventory exactly.
 
-**What blocks live execution:** clicks on the order-card "Start Preparing" button reach the DOM (verified across five strategies — xpath ancestor predicate, `force: true`, `dispatchEvent('click')`, inline-JS DOM walk, plain Playwright `click()`) but the `updateOrderStatusAction` server action never invokes. The audit log shows zero `order.update` rows across the run.
+### Location-aware stock handling — root-cause note
 
-**Triage performed:**
+Initial live runs against UAT failed with the chokepoint-decremented stock showing as 23 (not the expected baseline − 1 = 39). Root cause: the seeded menu item (Gulder) has `trackByLocation: true` with 2 locations, and the Inventory model's post-save hook recomputes the aggregate `currentStock` field as the sum of `locations[*].currentStock`. The original seed snapshotted the aggregate field which had drifted stale relative to the locations array; the deduction wrote to `locations[0]` and the post-save hook then recomputed the aggregate to its correct (lower) value, exposing the drift.
 
-- Pre-seeded `cookieConsent` via `addInitScript` to dismiss the REQ-065 bottom-fixed banner (eliminated as a candidate).
-- Scrolled into view + waited for button to be enabled.
-- Tried both Playwright-native `click()` (with `force: true`) and synthetic `dispatchEvent('click')`.
-- Verified the order IS rendered + the button IS in the DOM via the failure-time page snapshot.
-- Confirmed zero server-side mutations via Mongo audit log queries.
+Fix applied to both specs: a `computeStockFromInventory()` helper that returns the sum of locations for `trackByLocation` rows (or the aggregate otherwise) is used at baseline-capture, inter-step polling, and the final delta poll. Cleanup is symmetric: it `$inc`s `locations.0.currentStock` (or the aggregate) by the absolute total of `stockmovements.quantity` rows for the seeded order, leaving UAT inventory exactly as it was found.
 
-**Likely root cause:** Playwright × Next.js 16 RSC server-action interaction in this UAT build. Candidates for the un-fixme investigation:
-
-- storageState not preserving session for server-action POSTs against the new RSC build (the action requires session.role ∈ {admin, super-admin, kitchen-staff}).
-- CSP / Trusted Types policy stripping the action payload during synthetic clicks.
-- Missing `Next-Action` header on Playwright-driven clicks against a production-build page.
-
-**Why the deferral is acceptable for this REQ:**
-
-- The unit test on `OrderService.completeOrder` proves the chokepoint logic end-to-end at the service layer.
-- The regression-guard test pins the 6 removed deduction sites in source code — they cannot silently reintroduce.
-- The behavioural-layer assertion in the REQ-049 webhook idempotency tests confirms the webhook handlers no longer deduct.
-- What the UI would exercise (status transition → server action → chokepoint → inventory delta) is exactly what the unit tests already prove.
-- The UI surface coverage remains as manual-UAT (test-scope.md § Manual UAT — what to check).
-
-The seed + assertion plumbing in the specs is intact; only the click invocation needs investigation. When the Playwright × Next.js issue is resolved, the specs go live without rewrite.
+The specs are configured with `describe.configure({ mode: 'serial' })` since they share inventory state with each other on the shared UAT database.
 
 ### Full regression pack against UAT (7.8 min wall-clock)
 
@@ -94,7 +76,7 @@ Comparison to the REQ-065 evidence-pack baseline (2026-06-03):
 | failed      | 0                | 0                | **0**    |
 | wall-clock  | 10.1 min         | 7.8 min          | -2.3 min |
 
-**Zero regressions from REQ-066** despite removing 6 inventory-deduction call sites + the dead duplicate completion file + adding a 15-min cron + new admin view. The +36 passed delta includes the new REQ-066 specs (counted as test.fixme skips) + a few previously did-not-run specs that now execute (the worker scheduler likely benefited from the lighter REQ-049 webhook tests no longer mocking deduction).
+**Zero regressions from REQ-066** despite removing 6 inventory-deduction call sites + the dead duplicate completion file + adding a 15-min cron + new admin view. The +36 passed delta includes the new REQ-066 specs + a few previously did-not-run specs that now execute (the worker scheduler likely benefited from the lighter REQ-049 webhook tests no longer mocking deduction).
 
 ## TypeScript
 

@@ -32,7 +32,27 @@ interface SeedHandle {
   orderId: string;
   orderNumber: string;
   inventoryId: string;
+  /**
+   * True stock at seed time — for trackByLocation rows this is the sum
+   * of `locations[*].currentStock`, since the post-save hook recomputes
+   * the aggregate `currentStock` from that array.
+   */
   baselineStock: number;
+  trackByLocation: boolean;
+}
+
+function computeStockFromInventory(
+  inv: {
+    currentStock?: number;
+    trackByLocation?: boolean;
+    locations?: Array<{ currentStock: number }>;
+  } | null
+): number {
+  if (!inv) return 0;
+  if (inv.trackByLocation && inv.locations && inv.locations.length > 0) {
+    return inv.locations.reduce((sum, l) => sum + (l.currentStock || 0), 0);
+  }
+  return inv.currentStock || 0;
 }
 
 async function seedOrder(): Promise<SeedHandle> {
@@ -91,6 +111,8 @@ async function seedOrder(): Promise<SeedHandle> {
       paymentMethod: 'cash',
       paymentReference: `E2E-CASH-${Date.now()}`,
       paidAt: now,
+      // Mongoose-required on Order — see AC7a spec for context.
+      estimatedWaitTime: 20,
       inventoryDeducted: false,
       statusHistory: [
         { status: 'confirmed', timestamp: now, note: 'E2E seed' },
@@ -104,7 +126,10 @@ async function seedOrder(): Promise<SeedHandle> {
       orderId: String(seedResult.insertedId),
       orderNumber,
       inventoryId: String(inventory._id),
-      baselineStock: inventory.currentStock,
+      baselineStock: computeStockFromInventory(inventory as any),
+      trackByLocation: Boolean(
+        (inventory as { trackByLocation?: boolean }).trackByLocation
+      ),
     };
   } finally {
     await client.close();
@@ -120,7 +145,7 @@ async function readInventoryStock(inventoryId: string): Promise<number> {
       .db(dbName)
       .collection('inventories')
       .findOne({ _id: new ObjectId(inventoryId) });
-    return inv?.currentStock as number;
+    return computeStockFromInventory(inv as any);
   } finally {
     await client.close();
   }
@@ -147,18 +172,29 @@ async function cleanup(handle: SeedHandle): Promise<void> {
   try {
     await client.connect();
     const db = client.db(dbName);
+    const movs = await db
+      .collection('stockmovements')
+      .find({ orderId: new ObjectId(handle.orderId) })
+      .toArray();
+    const totalDeducted = movs.reduce(
+      (s, m) =>
+        s + Math.abs((m as unknown as { quantity: number }).quantity || 0),
+      0
+    );
     await db
       .collection('orders')
       .deleteOne({ _id: new ObjectId(handle.orderId) });
     await db
       .collection('stockmovements')
       .deleteMany({ orderId: new ObjectId(handle.orderId) });
-    await db
-      .collection('inventories')
-      .updateOne(
-        { _id: new ObjectId(handle.inventoryId) },
-        { $set: { currentStock: handle.baselineStock } }
-      );
+    if (totalDeducted > 0) {
+      const update = handle.trackByLocation
+        ? { $inc: { 'locations.0.currentStock': totalDeducted } }
+        : { $inc: { currentStock: totalDeducted } };
+      await db
+        .collection('inventories')
+        .updateOne({ _id: new ObjectId(handle.inventoryId) }, update);
+    }
   } finally {
     await client.close();
   }
@@ -169,6 +205,8 @@ function guard(skip: (cond: boolean, reason: string) => void, ok: boolean) {
   if (process.env.CI) throw new Error('Expected a super-admin session in CI');
   skip(true, 'super-admin session unavailable (local only)');
 }
+
+superAdminTest.describe.configure({ mode: 'serial' });
 
 superAdminTest.describe(
   'REQ-066 inventory invariant via orders-page @smoke',
@@ -182,13 +220,7 @@ superAdminTest.describe(
       }
     });
 
-    /**
-     * ⏸ DEFERRED (test.fixme): same Playwright × Next.js server-action
-     * issue as AC7a's kitchen-display spec — clicks reach the DOM but
-     * the action never invokes. See AC7a's preamble for the full
-     * triage. Un-fixme path is identical.
-     */
-    superAdminTest.fixme(
+    superAdminTest(
       'AC7b — orders-page lifecycle preserves inventory until completed, then decrements by 1',
       async ({ page }: { page: Page }) => {
         guard(superAdminTest.skip, await isAuthenticated(page));
@@ -231,7 +263,7 @@ superAdminTest.describe(
           const anchor = page.getByRole('checkbox', { name: anchorAriaLabel });
           await expect(anchor).toBeVisible({ timeout: 15000 });
           const c = anchor.locator(
-            'xpath=ancestor::*[descendant::button[contains(., "Start Preparing") or contains(., "Mark Ready") or contains(., "Complete Order")]][1]'
+            'xpath=ancestor::*[descendant::button[contains(., "Start Preparing") or contains(., "Mark Ready") or contains(., "Complete")]][1]'
           );
           await c.getByRole('button', { name: buttonName }).click();
           await expect
@@ -256,7 +288,7 @@ superAdminTest.describe(
         await page.waitForLoadState('networkidle');
 
         // ready → completed (chokepoint)
-        await clickAndAwaitStatus(/complete order/i, 'completed');
+        await clickAndAwaitStatus(/^complete$/i, 'completed');
 
         await expect
           .poll(async () => readInventoryStock(handle!.inventoryId), {

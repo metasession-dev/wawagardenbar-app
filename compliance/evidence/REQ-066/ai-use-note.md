@@ -14,15 +14,21 @@ Claude Opus 4.7 via Claude Code (CLI). `e2e-test-engineer` skill invoked once fo
 - **6 premature deduction sites removed** + dead duplicate completion file deleted + REQ-049 webhook idempotency tests updated to assert the new ownership.
 - **Retry-only reconciliation cron + visibility-only stale-paid-orders scan.** Both passes obey the operator's rule: NEVER mutates Order.status.
 - **`/dashboard/incidents` admin view** + `IncidentEventModel` + `IncidentEventService` (recordIncident, list, dedupRecent).
-- **E2E specs authored end-to-end** for AC7a + AC7b. Seed + Mongo assertion + cleanup plumbing all in place; both `test.fixme`'d after live execution hit an unresolved Playwright × Next.js server-action interaction issue. Honest framing in `test-execution-summary.md`.
+- **E2E specs authored + live-passing** for AC7a + AC7b against UAT. First attempt deferred to `test.fixme` after live clicks appeared not to fire; operator pushed back and required live-passing specs before merge. Agent dug back in: surfaced three orthogonal issues — (1) the seed was missing the Mongoose-required `estimatedWaitTime` field so `order.save()` silently failed validation; (2) the orders-page button label is `Complete` not `Complete Order`; (3) the seeded item is `trackByLocation:true` and the aggregate `currentStock` was stale relative to the locations array. Fixed all three; both specs now pass live (5/5, 1.1 min). The full triage is in `test-execution-summary.md`.
 - **Full regression pack against UAT.** 326 passed / 0 failed / 7.8 min wall-clock — 0 regressions from REQ-066 despite removing 6 deduction sites + the duplicate completion file.
 - **Compliance pack.** Authored this evidence pack (release ticket + 7 markdown files) per `feedback_phase3_release_ticket_mandatory`.
 
-## Honest scope limitation
+## E2E live-passing — what the operator pushback caught
 
-The AC7a/AC7b E2E specs are authored but `test.fixme`'d. Live execution hit a Playwright × Next.js 16 server-action interaction issue: clicks on the kitchen-order-card / admin-order-card "Start Preparing" button reach the DOM (verified via xpath, force, dispatchEvent, inline JS DOM walk, plain Playwright click) but the server action never invokes (zero audit log rows across all strategies tried). The triage + likely root cause is documented in `test-execution-summary.md`.
+The agent's first instinct on persistent UAT spec failures was to `test.fixme` AC7a/AC7b and lean on the unit + regression-guard tests as load-bearing. Operator rejected the deferral ("i need this resolved before merging") and required live-passing specs. The root cause that surfaced under continued investigation:
 
-The underlying invariant is pinned by the unit test on `OrderService.completeOrder` + the regression-guard tests. The E2E specs would have been a UI-layer confidence check; that confidence remains as manual UAT (test-scope.md § Manual UAT). The fixme path is well-defined — when the Playwright × Next.js issue is resolved, the specs go live without rewrite.
+1. Mongoose-required `estimatedWaitTime` was missing from the seed. `OrderModel` enforces it at `save()` validation; the raw `collection.insertOne()` bypasses validation but the server-action `order.save()` call inside `updateOrderStatusAction` rejects it. The action returned `{success: false}`, a toast showed the error, and the test never inspected the toast.
+2. Orders-page admin card uses `Complete` not `Complete Order` for the button label — kitchen-display uses `Complete Order`. The locator regex had to differ between AC7a and AC7b.
+3. The seeded inventory item (Gulder) has `trackByLocation: true` with 2 locations. The Inventory model's post-save hook recomputes the aggregate `currentStock` from `locations[*].currentStock`. The seed had been snapshotting the aggregate (stale relative to the locations array), so the test compared against a stale baseline and saw the post-save-hook-recomputed lower number as a phantom 16-unit drop.
+
+Fix: a `computeStockFromInventory()` helper returns the sum of `locations[*].currentStock` for `trackByLocation` rows, used at baseline-capture, inter-step polling, and final delta poll. Cleanup is location-aware: it reads the order's `stockmovements` to compute the true deducted amount, then `$inc`s `locations[0].currentStock` (or aggregate for non-location rows) by that amount — restoring UAT inventory exactly.
+
+The invariant is now pinned at all three layers: unit (`OrderService.completeOrder` happy-path + idempotency + throw branches), regression-guard (the 6 removed sites' source-code call counts), and live E2E (the UI lifecycle delta).
 
 ## Human review boundary
 
@@ -42,7 +48,7 @@ The underlying invariant is pinned by the unit test on `OrderService.completeOrd
 ## What the AI did NOT do
 
 - Did not auto-complete stale orders or otherwise mutate `Order.status` from any automation. Operator's stipulation observed verbatim.
-- Did not push past the unresolved Playwright × Next.js issue with fake-positive specs. `test.fixme` is the honest framing.
+- Did not paper over the AC7 failures with fake-positive assertions. The agent's first attempt deferred to `test.fixme`; operator pushback drove a proper root-cause fix (Mongoose validation + button label + location-aware stock) so both specs now run live.
 - Did not modify any existing user data (no migration, no backfill).
 - Did not add a new package, env var, or DB migration outside the IncidentEvent collection (auto-created).
 - Did not touch the prod Mongo (UAT only per `feedback_no_prod_db_touches`).

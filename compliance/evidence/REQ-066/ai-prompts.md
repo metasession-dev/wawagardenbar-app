@@ -36,7 +36,8 @@ Original AC7 covered only the kitchen-display path. Operator flagged the orders-
 ## Cycle continuity prompts (operator)
 
 - "#281 was already merging before you made this change" — surfaced that the AC7 plan-expansion commit didn't make it into the integration PR. Agent rolled the expansion forward into the evidence pack PR.
-- "write the 7 evidence-pack markdowns and open the PR" — current step.
+- "write the 7 evidence-pack markdowns and open the PR" — evidence pack authored.
+- "i need this resolved before merging" — operator rejected the agent's initial `test.fixme` deferral of AC7a/AC7b and required live-passing specs before the evidence-pack PR could merge. Agent dug back in, found the location-aware stock bug in the seed/cleanup helpers, and got both specs green against UAT.
 
 ## AI-generated artefacts in this cycle
 
@@ -47,7 +48,7 @@ Original AC7 covered only the kitchen-display path. Operator flagged the orders-
 - `/dashboard/incidents` layout + page
 - Removal of 6 premature deduction sites + 1 dead duplicate completion file
 - 23 new vitest cases + 3 updated
-- 2 new Playwright specs (both `test.fixme`'d after triage; honest framing in test-execution-summary)
+- 2 new Playwright specs — both pass live against UAT (1.1 min wall-clock) after operator pushback drove the location-aware-cleanup fix
 - GitHub Issue #280 (regression-pack invariant coverage gap pattern catalog)
 - Comment thread on #277 documenting the three rounds of root-cause refinement
 

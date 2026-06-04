@@ -22,12 +22,12 @@ Operator reported: "items being sold are not deducted from inventory count. The 
 - **AC4** — Retry-only reconciliation cron (15 min). NEVER mutates `Order.status` — per operator's stipulation that only kitchen-display staff may complete an order.
 - **AC5** — Stale-paid-orders visibility scan (same cron tick, 2h threshold). NEVER mutates state. Pure visibility — managers see workflow gaps via `/dashboard/incidents`.
 - **AC6** — `/dashboard/incidents` admin view (RBAC csr/admin/super-admin).
-- **AC7a/AC7b** — E2E invariant specs authored for BOTH UI surfaces (kitchen-display + orders-page). Specs `test.fixme`'d due to an unresolved Playwright × Next.js server-action interaction issue surfaced during live UAT execution; underlying invariant is pinned by the unit test on `OrderService.completeOrder` + the regression-guard test on the 6 removed sites. Honest scope note in `test-execution-summary.md`.
+- **AC7a/AC7b** — E2E invariant specs authored for BOTH UI surfaces (kitchen-display + orders-page) and **both pass live against UAT** (5/5 focused-run: 3 auth-setup + AC7a + AC7b, 1.1 min wall-clock). The specs exercise the full chokepoint (seed → confirmed → preparing → ready → completed → inventory delta = −1) on both order surfaces. Cleanup is location-aware (`trackByLocation` rows are restored by `$inc`-ing `locations[0].currentStock`); the discovery + fix is documented in `test-execution-summary.md`.
 
 ## AI Involvement
 
 - **AI Tool Used:** Claude Opus 4.7 via Claude Code (CLI). `e2e-test-engineer` skill invoked for the live-execution E2E phase.
-- **AI-Generated Changes:** Implementation plan with 7 ACs (AC7 expanded to AC7a/AC7b after operator flagged the orders-page gap); new `OrderService.completeOrder` chokepoint with IncidentEvent on throw; removal of 6 premature deduction sites + deletion of the dead duplicate completion file; new `IncidentEventModel` + service with `recordIncident` / `list` / `dedupRecent`; retry-only reconciliation cron via `lib/scheduled-jobs.ts`; visibility-only stale-paid-orders scan; `/dashboard/incidents` admin view; 23 new vitest cases + 3 updated (REQ-049 webhook idempotency + scheduled-jobs interval count); 2 new Playwright specs (both `test.fixme`'d). Operator drove three rounds of root-cause refinement; the agent encoded each iteration honestly into the plan + RTM. See `compliance/evidence/REQ-066/ai-prompts.md` + `ai-use-note.md`.
+- **AI-Generated Changes:** Implementation plan with 7 ACs (AC7 expanded to AC7a/AC7b after operator flagged the orders-page gap); new `OrderService.completeOrder` chokepoint with IncidentEvent on throw; removal of 6 premature deduction sites + deletion of the dead duplicate completion file; new `IncidentEventModel` + service with `recordIncident` / `list` / `dedupRecent`; retry-only reconciliation cron via `lib/scheduled-jobs.ts`; visibility-only stale-paid-orders scan; `/dashboard/incidents` admin view; 23 new vitest cases + 3 updated (REQ-049 webhook idempotency + scheduled-jobs interval count); 2 new Playwright specs (both live-passing against UAT after a location-aware-cleanup fix). Operator drove three rounds of root-cause refinement and pushed back when the agent first deferred AC7a/AC7b with `test.fixme`, requiring live-passing specs before merge; the agent encoded each iteration honestly into the plan + RTM. See `compliance/evidence/REQ-066/ai-prompts.md` + `ai-use-note.md`.
 - **Operator action this cycle:** reported the inventory drift; pushed back on the catch-and-swallow framing (correctly); rejected auto-completion crons ("I don't want anything bypassing the kitchen display"); confirmed tab orders flow through kitchen-display individually; flagged the orders-page UI gap in the original AC7 design; approved the revised plan; merged the integration PR; will perform Stage 4 portal UAT approval + Stage 5 Production approval.
 - **Human Reviewer:** Stage 4 `dual_actor` approver — see `implementation-plan.md` § Four-eyes attestation.
 
@@ -44,8 +44,8 @@ Operator reported: "items being sold are not deducted from inventory count. The 
 - `__tests__/services/order-service.scanStalePaidOrders.test.ts` — 3 cases.
 - `__tests__/services/inventory-service.reconcile.test.ts` — 3 cases.
 - `__tests__/regression/inventory-deduction-removed.test.ts` — 4 regression-guard cases.
-- `e2e/admin-order-inventory-delta.kitchen-display.spec.ts` — AC7a (`test.fixme`).
-- `e2e/admin-order-inventory-delta.orders-page.spec.ts` — AC7b (`test.fixme`).
+- `e2e/admin-order-inventory-delta.kitchen-display.spec.ts` — AC7a (live-passing against UAT; `describe.configure({ mode: 'serial' })`).
+- `e2e/admin-order-inventory-delta.orders-page.spec.ts` — AC7b (live-passing against UAT; same serial config; routes through `/dashboard/orders` admin order-card, `Complete` button).
 - `compliance/plans/REQ-066/implementation-plan.md` — plan with ACs, risk, security.
 
 **Files Modified:**
@@ -76,7 +76,7 @@ See `compliance/evidence/REQ-066/test-plan.md` and `test-execution-summary.md`.
 - ESLint: 0 errors / 950 pre-existing warnings.
 - Production build: green.
 - E2E full regression against UAT: **326 passed / 19 skipped / 27 did-not-run / 0 failed** (7.8 min; +36 passed vs REQ-065 baseline).
-- E2E focused REQ-066 (AC7a + AC7b): authored, `test.fixme`'d. Honest framing in test-execution-summary.
+- E2E focused REQ-066 (AC7a + AC7b): 5 passed (3 auth-setup + 2 invariant specs), 1.1 min wall-clock, 0 failed. Live against UAT.
 
 ## Security & Compliance
 
@@ -98,7 +98,7 @@ Revert PR #281. The schema additions are purely additive (the IncidentEvent coll
 | `npx vitest run` (full)         | 0 failures | 1095 pass / 4 skip / 0 fail                               |
 | `npx eslint . --max-warnings=0` | 0 errors   | 0 errors / 950 pre-existing console warnings              |
 | `npm run build`                 | exit 0     | exit 0                                                    |
-| E2E focused REQ-066 (UAT)       | per scope  | 0 failures; 2 cases `test.fixme`'d (Playwright × Next.js) |
+| E2E focused REQ-066 (UAT)       | 0 failures | 5 passed (3 auth-setup + AC7a + AC7b), 1.1 min wall-clock |
 | E2E full regression pack (UAT)  | green      | 326 pass / 19 skip / 27 did-not-run / 0 fail (7.8 min)    |
 
 ## Stage Approvals
@@ -114,5 +114,5 @@ Revert PR #281. The schema additions are purely additive (the IncidentEvent coll
 - First REQ outside the post-REQ-062 trio. Triggered by the operator's defect report during REQ-065 close-out.
 - The plan was rewritten 3 times across the cycle — each rewrite tracked in the comment thread on #277 + reflected verbatim in the RTM row. Plan-of-record was the third revision.
 - Operator stipulated "nothing bypasses the kitchen-display" — reconciliation cron is retry-only; stale-paid-orders scan is visibility-only. Both deliberately stop short of auto-completion.
-- AC7a/AC7b `test.fixme` is the honest framing: the specs are authored end-to-end (seed + assertion + cleanup); only the click invocation hit the Playwright × Next.js issue. The underlying invariant is pinned by unit + regression-guard tests.
+- AC7a/AC7b now pass live against UAT. Two issues blocked the initial click invocation, both resolved: (1) the seed was missing the Mongoose-required `estimatedWaitTime` field, causing `order.save()` inside `updateOrderStatusAction` to silently fail validation; (2) the kitchen-display "Complete Order" / orders-page "Complete" button label difference; (3) the seeded inventory item (Gulder) was `trackByLocation:true` and the test was snapshotting the stale aggregate `currentStock` instead of the sum of `locations[*].currentStock`. The fix is a small `computeStockFromInventory()` helper used at baseline-capture + every poll, plus a location-aware cleanup that restores by `$inc`-ing `locations[0].currentStock` for `trackByLocation` rows. The underlying invariant is now pinned at all three layers: unit (`OrderService.completeOrder`), regression-guard (the 6 removed sites), and live E2E (UI lifecycle → inventory delta).
 - No new packages, no env vars. New collection auto-created on first write.

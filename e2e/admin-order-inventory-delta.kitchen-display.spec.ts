@@ -38,10 +38,36 @@ interface SeedHandle {
   orderId: string;
   orderNumber: string;
   inventoryId: string;
+  /**
+   * The TRUE baseline at seed time. For trackByLocation inventory rows,
+   * the aggregate `currentStock` field is recomputed from `locations[]`
+   * on every Mongoose `save()` (post-save hook), so it can drift stale
+   * after direct collection-level writes; the load-bearing value is the
+   * sum of `locations[*].currentStock`.
+   */
   baselineStock: number;
+  /**
+   * True when Gulder (and other location-tracked items) — controls
+   * whether the deduction lands in `locations[0]` or the aggregate.
+   */
+  trackByLocation: boolean;
   menuItemId: string;
   unitPrice: number;
   menuItemName: string;
+}
+
+function computeStockFromInventory(
+  inv: {
+    currentStock?: number;
+    trackByLocation?: boolean;
+    locations?: Array<{ currentStock: number }>;
+  } | null
+): number {
+  if (!inv) return 0;
+  if (inv.trackByLocation && inv.locations && inv.locations.length > 0) {
+    return inv.locations.reduce((sum, l) => sum + (l.currentStock || 0), 0);
+  }
+  return inv.currentStock || 0;
 }
 
 /**
@@ -113,6 +139,11 @@ async function seedOrder(
       paymentMethod: 'cash',
       paymentReference: `E2E-CASH-${Date.now()}`,
       paidAt: now,
+      // Mongoose-required on Order. Without it, `order.save()` in
+      // `updateOrderStatusAction` rejects with a ValidationError and the
+      // server action returns success: false (silently — the toast surfaces it
+      // but the test was not asserting against the toast).
+      estimatedWaitTime: 20,
       inventoryDeducted: false,
       statusHistory: [
         { status: orderStartStatus, timestamp: now, note: 'E2E seed' },
@@ -126,7 +157,10 @@ async function seedOrder(
       orderId: String(seedResult.insertedId),
       orderNumber,
       inventoryId: String(inventory._id),
-      baselineStock: inventory.currentStock,
+      baselineStock: computeStockFromInventory(inventory as any),
+      trackByLocation: Boolean(
+        (inventory as { trackByLocation?: boolean }).trackByLocation
+      ),
       menuItemId: String(menuItem._id),
       unitPrice: menuItem.price,
       menuItemName: menuItem.name,
@@ -145,7 +179,7 @@ async function readInventoryStock(inventoryId: string): Promise<number> {
       .db(dbName)
       .collection('inventories')
       .findOne({ _id: new ObjectId(inventoryId) });
-    return inv?.currentStock as number;
+    return computeStockFromInventory(inv as any);
   } finally {
     await client.close();
   }
@@ -172,20 +206,35 @@ async function cleanup(handle: SeedHandle): Promise<void> {
   try {
     await client.connect();
     const db = client.db(dbName);
+    // Sum the deductions we caused BEFORE deleting them, so we can
+    // restore exactly that amount (sign-flipped) back to the inventory.
+    const movs = await db
+      .collection('stockmovements')
+      .find({ orderId: new ObjectId(handle.orderId) })
+      .toArray();
+    const totalDeducted = movs.reduce(
+      (s, m) =>
+        s + Math.abs((m as unknown as { quantity: number }).quantity || 0),
+      0
+    );
     await db
       .collection('orders')
       .deleteOne({ _id: new ObjectId(handle.orderId) });
     await db
       .collection('stockmovements')
       .deleteMany({ orderId: new ObjectId(handle.orderId) });
-    // Restore the inventory back to the captured baseline so the spec
-    // leaves UAT in a clean state.
-    await db
-      .collection('inventories')
-      .updateOne(
-        { _id: new ObjectId(handle.inventoryId) },
-        { $set: { currentStock: handle.baselineStock } }
-      );
+    if (totalDeducted > 0) {
+      // Inventory rows with `trackByLocation:true` recompute the aggregate
+      // `currentStock` from `locations[]` on every Mongoose save (post-save
+      // hook). Writing to the aggregate alone gets clobbered next save, so
+      // for location-tracked rows we restore into `locations.0`.
+      const update = handle.trackByLocation
+        ? { $inc: { 'locations.0.currentStock': totalDeducted } }
+        : { $inc: { currentStock: totalDeducted } };
+      await db
+        .collection('inventories')
+        .updateOne({ _id: new ObjectId(handle.inventoryId) }, update);
+    }
   } finally {
     await client.close();
   }
@@ -201,6 +250,8 @@ function guard(skip: (cond: boolean, reason: string) => void, ok: boolean) {
   skip(true, 'super-admin session unavailable (local only)');
 }
 
+superAdminTest.describe.configure({ mode: 'serial' });
+
 superAdminTest.describe(
   'REQ-066 inventory invariant via kitchen-display @smoke',
   () => {
@@ -213,30 +264,7 @@ superAdminTest.describe(
       }
     });
 
-    /**
-     * ⏸ DEFERRED (test.fixme): live UAT execution hit an unresolved
-     * Playwright × Next.js server-action interaction issue — clicks on
-     * the kitchen-order-card's "Start Preparing" button reach the DOM
-     * (verified via xpath / force-click / dispatchEvent / inline-JS
-     * DOM-walk) but the `updateOrderStatusAction` server action never
-     * invokes (zero `order.update` rows in the audit log across all
-     * strategies tried).
-     *
-     * The unit test for `OrderService.completeOrder` (`__tests__/services/
-     * order-service.completeOrder.test.ts`) proves the chokepoint
-     * behaviour; the regression-guard test asserts the 6 premature
-     * deduction sites stay removed. Together they pin the invariant at
-     * the layer immediately below the UI — what the UI exercises is
-     * exactly what the unit tests prove.
-     *
-     * Un-fixme path: investigate Playwright server-action support
-     * against Next.js 16 RSC builds. Likely candidates: storageState
-     * not preserving session for server-action POSTs; CSP / Trusted
-     * Types stripping the action payload; missing `Next-Action` header
-     * on synthetic clicks. The seed + Mongo assertion plumbing is
-     * already in place; only the click invocation needs fixing.
-     */
-    superAdminTest.fixme(
+    superAdminTest(
       'AC7a — kitchen-display lifecycle preserves inventory until completed, then decrements by 1',
       async ({ page }: { page: Page }) => {
         guard(superAdminTest.skip, await isAuthenticated(page));

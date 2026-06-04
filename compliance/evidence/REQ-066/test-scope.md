@@ -12,11 +12,11 @@
   - `__tests__/regression/inventory-deduction-removed.test.ts` — source-code-level assertion that 4 historical files have exactly the allowed `deductStockForOrder(` call count (0 for webhooks + tab-service; 1 for `services/order-service.ts` where the canonical site lives).
   - `__tests__/api/webhooks/paystack-idempotency.test.ts` + `monnify-idempotency.test.ts` — REQ-049's existing idempotency tests updated to assert webhooks NO LONGER call `deductStockForOrder` (regression guard at the behavioural layer).
 
-## In scope (E2E — authored; live execution blocked)
+## In scope (E2E — live-passing against UAT)
 
-- `e2e/admin-order-inventory-delta.kitchen-display.spec.ts` (AC7a): seeds an order via direct Mongo write with an inventory-linked menu item; advances through `confirmed → preparing → ready → completed` via the kitchen-display order-card buttons; reads UAT inventory at each step; asserts NEGATIVE invariant on preparing + ready (unchanged), positive delta of −1 at completed. Cleanup in afterEach restores baseline.
-- `e2e/admin-order-inventory-delta.orders-page.spec.ts` (AC7b): same seed + lifecycle via the `/dashboard/orders` admin order-card; same delta assertions.
-- **Both `test.fixme`'d** — see `test-execution-summary.md` § Honest scope note for the Playwright × Next.js server-action interaction triage. The seed + Mongo-assertion plumbing is intact; only the click invocation needs further investigation.
+- `e2e/admin-order-inventory-delta.kitchen-display.spec.ts` (AC7a): seeds an order via direct Mongo write with an inventory-linked menu item; advances through `confirmed → preparing → ready → completed` via the kitchen-display order-card buttons; reads UAT inventory at each step; asserts NEGATIVE invariant on preparing + ready (unchanged), positive delta of −1 at completed. Cleanup in afterEach is location-aware — it computes the actual deducted amount from the order's stockmovements and restores `locations[0].currentStock` (for `trackByLocation` rows) or the aggregate.
+- `e2e/admin-order-inventory-delta.orders-page.spec.ts` (AC7b): same seed + lifecycle via the `/dashboard/orders` admin order-card (button label `Complete`, anchor on the per-order reconcile-checkbox aria-label); same delta assertions; same location-aware cleanup.
+- **Both pass live against UAT** — 5 passed (3 auth-setup + AC7a + AC7b), 1.1 min wall-clock, 0 failed. See `test-execution-summary.md` for the location-aware stock root-cause writeup. The specs are configured with `describe.configure({ mode: 'serial' })` since they share inventory state on the UAT database.
 
 ## Out of scope
 

@@ -1,14 +1,22 @@
 # Release Ticket: REQ-066 — Inventory deduction correctness + reconciliation (#277)
 
-**Status:** DRAFT
-**Date:** 2026-06-04
+**Status:** RELEASED
+**Released:** 2026-06-04 via release PR [#283](https://github.com/metasession-dev/wawagardenbar-app/pull/283) → main `b1a9c0b`
 **Requirement ID:** REQ-066
 **Risk Level:** HIGH
-**GitHub Issue:** [#277](https://github.com/metasession-dev/wawagardenbar-app/issues/277) (root cause refined 3x in comments) · pattern context: [#280](https://github.com/metasession-dev/wawagardenbar-app/issues/280)
-**Integration PR:** [#281](https://github.com/metasession-dev/wawagardenbar-app/pull/281) — merged to develop 2026-06-03.
-**Release PR:** (to be opened after this evidence pack lands)
-**DevAudit Release:** [`devaudit.metasession.co/projects/wgb/`](https://devaudit.metasession.co/projects/wgb/) — release version `REQ-066`, status `draft` → `uat_review` on this evidence push.
-**Sign-off (dual-actor):** Pending UAT approval + Production approval on the DevAudit portal.
+**GitHub Issue:** [#277](https://github.com/metasession-dev/wawagardenbar-app/issues/277) (root cause refined 4x across cycle) · pattern context: [#280](https://github.com/metasession-dev/wawagardenbar-app/issues/280)
+**Cycle PRs:**
+
+- [#281](https://github.com/metasession-dev/wawagardenbar-app/pull/281) — AC1-AC6 implementation (chokepoint + 6-site removal + IncidentEvent model + cron + /dashboard/incidents)
+- [#282](https://github.com/metasession-dev/wawagardenbar-app/pull/282) — Phase 3 evidence pack + AC7a/AC7b E2E specs
+- [#285](https://github.com/metasession-dev/wawagardenbar-app/pull/285) — AC8 sale-point routing + backfill (post-deploy operator-reported defect)
+- [#287](https://github.com/metasession-dev/wawagardenbar-app/pull/287) — AC9 completion-time warning toast (post-AC8 operator UAT testing)
+- [#288](https://github.com/metasession-dev/wawagardenbar-app/pull/288) — AC10 incidents remediation UX (operator workflow Q)
+- [#283](https://github.com/metasession-dev/wawagardenbar-app/pull/283) — release PR → main `b1a9c0b`
+
+**DevAudit Release:** Marked Released 2026-06-04 on portal.
+**Sign-off (dual-actor):** ✓ UAT approved · ✓ Production approved · ✓ Marked as Released.
+**Production backfill:** **DEFERRED per operator decision** — see _Production deployment steps_ section below for the live workflow + the backstop the deferral relies on.
 
 ---
 
@@ -101,24 +109,41 @@ See `security-summary.md` for the STRIDE pass. Headline:
 
 ## Production deployment steps
 
+> ⚠️ **DEFERRED post-release per operator decision (2026-06-04).** Code (AC1-AC10) shipped to production via PR #283 → main `b1a9c0b`. Backfill commands below were prepared but NOT executed against production. The AC9 destructive-toast + AC10 Retry-now button + `/dashboard/incidents` nav surface form the operational backstop until the backfill runs separately.
+
 The code fix in AC8 is **inert against existing misconfigured production rows** until the `defaultSalesLocation` backfill runs against production. UAT proved this end-to-end: 36 of 39 production-shaped rows have the legacy bulk-set value `defaultSalesLocation: 'store'` (set by `scripts/migrate-location-tracking.ts` long ago); the AC8 `applyOrderStockDelta` will route deductions to that empty `store` bucket and throw → `inventory_deduction_failed` IncidentEvent on every sale of those items, exactly matching the customer-impact symptom of #277. The fix is only complete after the backfill rewrites those rows to point at chiller / freezer.
 
-The backfill is therefore a **required release-day action**, not a side quest. Run it AFTER merge to main + Railway production deploy completes:
+### Operational state until the backfill runs
+
+For any sale of a `trackByLocation` item where `defaultSalesLocation` is `'store'` (the legacy default) and the actual sale point is a chiller/freezer:
+
+- AC8 `applyOrderStockDelta` will route the deduction to the empty `store` bucket and throw.
+- The chokepoint catches the throw, writes an `inventory_deduction_failed` IncidentEvent, and lets the order's status flip — workflow does not stall (AC1 contract).
+- **AC9** surfaces a destructive-variant toast on the completion UI: "Completed — inventory not deducted: Insufficient stock at defaultSalesLocation='store'…". Operator sees this immediately.
+- Operator follows AC10's remediation workflow: either (a) move physical stock from chiller → store via the inventory transfer UI to satisfy the deduction at the configured sale-point, OR (b) navigate to `/dashboard/incidents`, see the row, click **Retry now** after correcting the data.
+- AC10's cron dedup (1h window) prevents the dashboard from spamming.
+
+Backend integrity is preserved — no over-deduction, no silent absorption. The failure mode is visible + remediable. Operator preferred shipping this backstop over delaying the release.
+
+### The backfill commands (for reference / future execution)
+
+The backfill is **idempotent** + **deferrable**. Re-running against UAT after the prior runs reported 0 writes / 37 already-correct. Same will hold on prod after first run. Run AFTER deciding to execute:
+
+> ⚠️ **The script uses the URI as a positional argument, not the `MONGODB_URI` env var** — falls back to `MONGODB_WAWAGARDENBAR_APP_URI + MONGODB_DB_NAME` from `.env.local` (which points at a backup database) if no positional URI is supplied. Always pass the prod URI as the first argument.
 
 1. **Dry-run first.**
 
    ```bash
-   MONGODB_URI="$MONGODB_PROD_EXTERNAL_URI" \
-     npx tsx scripts/backfill-sale-point-location.ts --dry-run
+   PROD_URI=$(grep '^MONGODB_PROD_EXTERNAL_URI=' .env.local | cut -d= -f2-)
+   npx tsx scripts/backfill-sale-point-location.ts "$PROD_URI" --dry-run
    ```
 
-   Review the candidate list — expect every drinks/chilled item to show `REWRITE → 'chiller1'`, freezer items `REWRITE → 'freezer'`, and any storeroom-only items in `LEFT (no chiller/freezer present)`. Halt if the output is unexpected (e.g. zero candidates would indicate the URI didn't connect or the data already has chiller values, which is not the prod baseline we verified on the UAT-restore).
+   Confirm the first output line shows `Connecting to database: wawagardenbar` (NOT `wawagardenbar_backup_…`). Review the candidate list — expect every drinks/chilled item to show `REWRITE → 'chiller1'`, freezer items `REWRITE → 'freezer'`, and any storeroom-only items in `LEFT (no chiller/freezer present)`. Halt if the output is unexpected (e.g. zero candidates would indicate the wrong DB).
 
 2. **Run live.**
 
    ```bash
-   MONGODB_URI="$MONGODB_PROD_EXTERNAL_URI" \
-     npx tsx scripts/backfill-sale-point-location.ts
+   npx tsx scripts/backfill-sale-point-location.ts "$PROD_URI"
    ```
 
    Summary line should match the dry-run candidate counts.
@@ -126,8 +151,16 @@ The backfill is therefore a **required release-day action**, not a side quest. R
 3. **Spot-check.** Confirm a known item — e.g. Desperados — now reports the correct sale-point:
 
    ```bash
-   MONGODB_URI="$MONGODB_PROD_EXTERNAL_URI" node -e \
-     'const{MongoClient}=require("mongodb");(async()=>{const c=new MongoClient(process.env.MONGODB_URI);await c.connect();const inv=await c.db("wawagardenbar").collection("inventories").findOne({"items.name":"Desperados"});console.log(inv?.defaultSalesLocation);await c.close();})();'
+   node -e "
+   const {MongoClient} = require('mongodb');
+   (async () => {
+     const c = new MongoClient('$PROD_URI');
+     await c.connect();
+     const inv = await c.db('wawagardenbar').collection('inventories').findOne({'items.name': 'Desperados'});
+     console.log('Desperados defaultSalesLocation:', inv?.defaultSalesLocation);
+     await c.close();
+   })();
+   "
    ```
 
    Expected: `chiller1`.

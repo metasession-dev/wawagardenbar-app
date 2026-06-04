@@ -46,7 +46,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # full history so merged commits' REQ tags are readable
+          fetch-depth: 0   # full history so merged commits' REQ tags are readable
 
       - name: Resolve DevAudit base URL and post-deploy terminal status
         run: |

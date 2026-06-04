@@ -6,13 +6,13 @@ Used by both `e2e-test-engineer` (when filing defects) and `governance-doc-autho
 
 Every `incident_report` evidence row closes `ISO29119.3.5.4` (baseline). Additional clauses depend on the incident's scope.
 
-| Defect / incident characteristic                                                               | Frameworks/clauses attributed                                                                                                     |
-| ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **Any test failure / defect** (baseline — always)                                              | `ISO29119.3.5.4` Test incident report                                                                                             |
-| **Ops impact** (downtime, persistent errors, perf regression, data corruption)                 | + `SOC2.CC7.2` System monitoring and incident response                                                                            |
-| **Security vulnerability** (auth bypass, injection, data exposure beyond GDPR scope)           | + `SOC2.CC7.2` + relevant ISO 27001 controls                                                                                      |
-| **Personal data exposed / lost / mishandled**                                                  | + `GDPR.Art-33` (always — supervisory authority within 72h) + `GDPR.Art-34` (when data subjects need notification per Art. 34(1)) |
-| **AI/ML failure** (model hallucination, biased output, oversight bypass, transparency failure) | + relevant EU AI Act articles (`Art-9` risk, `Art-14` human oversight, `Art-15` accuracy/robustness)                              |
+| Defect / incident characteristic | Frameworks/clauses attributed |
+|---|---|
+| **Any test failure / defect** (baseline — always) | `ISO29119.3.5.4` Test incident report |
+| **Ops impact** (downtime, persistent errors, perf regression, data corruption) | + `SOC2.CC7.2` System monitoring and incident response |
+| **Security vulnerability** (auth bypass, injection, data exposure beyond GDPR scope) | + `SOC2.CC7.2` + relevant ISO 27001 controls |
+| **Personal data exposed / lost / mishandled** | + `GDPR.Art-33` (always — supervisory authority within 72h) + `GDPR.Art-34` (when data subjects need notification per Art. 34(1)) |
+| **AI/ML failure** (model hallucination, biased output, oversight bypass, transparency failure) | + relevant EU AI Act articles (`Art-9` risk, `Art-14` human oversight, `Art-15` accuracy/robustness) |
 
 ## Baseline rule
 
@@ -27,7 +27,6 @@ The remaining rows are conditional. Tick the matching characteristic; ensure the
 Signals: production downtime, sustained error-rate elevation, perf regression measured in p95 or SLO breaches, data corruption.
 
 If yes:
-
 - §1 Summary must name the affected systems + duration
 - §3 Affected scope must include user-count estimate
 - §6 Containment must name what was done to mitigate
@@ -37,7 +36,6 @@ If yes:
 Signals: auth bypass, injection (SQL / NoSQL / template / OS), broken access control, secrets in logs / git, dependency CVE exploit path.
 
 If yes:
-
 - §5 Root cause must name the vulnerability class (OWASP / CWE id where applicable)
 - §7 Follow-up actions must include the regression test that prevents recurrence
 - Security lead listed in §8 Sign-off
@@ -47,7 +45,6 @@ If yes:
 Signals: any unauthorised disclosure of personal data, data loss without backup, data sent to unintended recipients, retention exceeded, lawful-basis collapse.
 
 If yes:
-
 - §4 GDPR triage **must** be fully filled: data subject count, data categories, special-category-data Y/N
 - Art. 33: notification to supervisory authority within 72h of awareness → document timestamp + sent-to in §2 Timeline
 - Art. 34: notification to data subjects when likely to result in HIGH risk → document the decision (with rationale) in §4
@@ -58,7 +55,6 @@ If yes:
 Signals: model produced incorrect / biased / harmful output that reached a user; oversight gate bypassed; accuracy / robustness regression in production.
 
 If yes:
-
 - §5 Root cause must name the model + invocation path + what guardrail failed
 - §7 Follow-up actions must include the change to the AI oversight path (Art. 14)
 - Cross-link to `compliance/governance/ai-disclosure.md` from §1 Summary

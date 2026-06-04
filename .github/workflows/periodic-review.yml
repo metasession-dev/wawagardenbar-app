@@ -218,6 +218,13 @@ jobs:
             # consumer's portal base URL — fall back to the SDLC docs when
             # DEVAUDIT_BASE_URL isn't set in the workflow env.
             BASE="${DEVAUDIT_BASE_URL:-https://github.com/metasession-dev/DevAudit-Installer/blob/main/docs/governance-templates.md}"
+            # Assemble the PR body via printf to a temp file. We avoided
+            # a heredoc here because <<PRBODY preserves leading whitespace
+            # literally — and any body line at YAML column 1 breaks the
+            # surrounding `run: |` block scalar (prettier-yaml fails with
+            # "collection cannot be both a mapping and a sequence").
+            # printf '%s\n' …list of lines… keeps every line inside the
+            # block scalar's indentation discipline.
             PR_BODY_FILE=$(mktemp)
             printf '%s\n' \
               "Auto-generated quarterly periodic-review for **${REVIEW_ID}** by the \`Periodic Review\` workflow." \

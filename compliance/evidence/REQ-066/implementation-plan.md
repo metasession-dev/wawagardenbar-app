@@ -214,3 +214,27 @@ Item 1 is in scope as AC9; item 2 is filed as REQ-067 follow-up.
 
    What's still out of scope for REQ-066:
    - Pre-sale availability check on Express + Quick Actions + customer-ordering paths — surfaced and tracked as **REQ-067** (sale-point-aware availability across multiple order-create surfaces). The chokepoint's throw + IncidentEvent ensures over-sells never cause data corruption; managers see them on `/dashboard/incidents`. The pre-sale gate is a UX improvement, not a correctness fix.
+
+### Post-AC9 operator workflow Q — added AC10 (IncidentEvent remediation)
+
+Operator asked: when `/dashboard/incidents` shows an `inventory_deduction_failed` event, what's the remediation workflow? Two scenarios surfaced:
+
+- **Scenario A** (chiller empty, store has stock) — has an in-system remediation today (transfer stock + wait up to 15 min for the cron) but the IncidentEvent spams every 15 min until it resolves + the operator has to wait the full cron cycle.
+- **Scenario B** (no stock anywhere) — has no in-system remediation today (no manual override, no cancel-refund for completed orders). Filed as **REQ-068**.
+
+Operator selected: roll Gap 1 (cron dedup) + Gap 2 (Retry-now button) + nav-link with permission gating into REQ-066 as AC10; defer Gap 3-5 to REQ-068.
+
+10. **AC10 — IncidentEvent remediation UX.**
+    1. **Cron dedup.** `services/inventory-service.ts` `reconcileMissedDeductions` catch — call `IncidentEventService.dedupRecent({ kind: 'inventory_deduction_failed', entityId: orderId, withinHours: 1 })` before `recordIncident`. Matches the existing pattern in `OrderService.scanStalePaidOrders`. 2 new unit cases in `__tests__/services/inventory-service.reconcile.test.ts`.
+    2. **Retry-now action.** New `app/actions/admin/incidents-actions.ts` — `retryInventoryDeductionAction(orderId): ActionResult`. Requires the new `incidentsAccess` permission, calls `InventoryService.deductStockForOrder`, returns `{ success: true, message }` on success, `{ success: true, warning: <error> }` on throw (matches AC9 ActionResult shape so the destructive-toast UI pattern from AC9 fires identically). Audit-logs both success + failure paths with new `incidents.retry_deduction_succeeded` + `incidents.retry_deduction_failed` audit-action constants. 7 new unit cases in `__tests__/actions/admin/incidents-actions.test.ts`.
+    3. **`/dashboard/incidents` Action column.** New rightmost column. Server-side joins Order.inventoryDeducted state for `inventory_deduction_failed` rows (single `OrderModel.find({ _id: { $in: orderIds } })`). Renders: `[Retry now]` button (new client component `components/features/admin/incident-retry-button.tsx`) when `inventoryDeducted: false`; `✓ Deducted` text when `true`; `—` for `stale_paid_order` rows.
+    4. **Incidents in main nav.** New nav item at `components/features/admin/dashboard-nav.tsx` between "Audit Logs" and "Settings", `roles: ['csr', 'admin', 'super-admin']`, `permission: 'incidentsAccess'`. Same two-tier filter pattern (role + permission) as Recipes/Production.
+    5. **`incidentsAccess` permission.** New field on `IAdminPermissions` interface (default-true across all role presets). The `permissions-editor.tsx` toggle card uses AlertTriangle icon. The page's layout switched to `requirePermission('incidentsAccess')` (was `requireRole`) for fine-grained gating. `lib/permissions.ts` `routePermissions` map adds `/dashboard/incidents`.
+    6. **Soft-default for legacy users.** `app/actions/auth/admin-login.ts` reads `incidentsAccess: admin.permissions.incidentsAccess !== false` so users whose DB record predates AC10 keep access on first login without a data backfill. `permissions-editor.tsx` merges over `DEFAULT_ADMIN_PERMISSIONS` so missing keys show their default state in the toggle UI.
+    7. **E2E AC10.** New test case in `e2e/admin-order-inventory-delta.over-sell.spec.ts` — drives an over-sell via UI, transfers stock via Mongo, navigates to `/dashboard/incidents`, clicks Retry now, asserts the order's `inventoryDeducted` flips + the inventory drops by the expected delta. Pre-merge state: `test.fixme` (deploy-gated; AC10 UI surface ships in this PR). Un-fixme'd post-merge after Railway redeploys UAT.
+
+    What's deferred to **REQ-068** ([wawagardenbar-app #286 follow-up — separate issue to be filed]):
+    - Manual mark-as-deducted override for Scenario B (no-stock-anywhere data-drift remediation)
+    - Cancel/refund flow for `completed` orders
+    - Per-row Delete/Dismiss actions on `/dashboard/incidents` beyond Retry now
+    - Promote `FIFTEEN_MIN_MS` + `STALE_PAID_ORDER_THRESHOLD_HOURS` to `SystemSettings` with admin UI (the cron-cadence editor the operator asked about)

@@ -59,6 +59,11 @@ export async function adminLoginAction(
         expensesManagement: !!admin.permissions.expensesManagement,
         settingsAndConfiguration: !!admin.permissions.settingsAndConfiguration,
         kitchenManagement: !!admin.permissions.kitchenManagement,
+        // REQ-066 AC10 — new permission key. Default to true so existing
+        // users (whose DB record predates AC10) keep access on first
+        // login without needing a data backfill; only an explicit
+        // toggle-off in the permissions editor sets this to false.
+        incidentsAccess: admin.permissions.incidentsAccess !== false,
       };
       console.log(
         '[Login] Saving permissions to session:',

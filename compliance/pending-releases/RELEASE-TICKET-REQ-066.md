@@ -24,9 +24,12 @@ Operator reported: "items being sold are not deducted from inventory count. The 
 - **AC6** — `/dashboard/incidents` admin view (RBAC csr/admin/super-admin).
 - **AC7a/AC7b** — E2E invariant specs authored for BOTH UI surfaces (kitchen-display + orders-page) and **both pass live against UAT**. The specs exercise the full chokepoint (seed → confirmed → preparing → ready → completed → inventory delta = −1) on both order surfaces. Cleanup is location-aware (`trackByLocation` rows are restored by `$inc`-ing `locations[0].currentStock`).
 - **AC8 — Sales deductions route to `defaultSalesLocation`.** `applyOrderStockDelta` rewritten to route trackByLocation deductions to the row's sale-point bucket (chiller* for drinks, freezer* for frozen); throws on insufficient sale-point stock so the chokepoint catches and writes an `inventory_deduction_failed` IncidentEvent. Fallback to "first non-empty" for legacy rows. Refills always land on `locations[0]`. Companion: `scripts/backfill-sale-point-location.ts` rewrites the legacy bulk-set `defaultSalesLocation='store'` value to the row's chiller*/freezer* code.
-- **AC9 — Completion surface flags deduction failure (added after post-AC8 operator UAT testing).** Operator's manual over-sell test surfaced that the kitchen-display "Complete Order" toast showed "Success" even when the chokepoint had logged an `inventory_deduction_failed` IncidentEvent. `OrderService.completeOrder` extends its return shape with `deductionFailed?` + `deductionError?`; `updateOrderStatusAction` adds optional `warning` to its `ActionResult`; the three UI surfaces (kitchen-order-card, admin order-card, admin order-actions-sidebar) show a destructive-variant toast titled "Completed — inventory not deducted" with the chokepoint's error message + a pointer to `/dashboard/incidents`. AC9 E2E spec pins the backend behavior on UAT. **7/7 focused E2E (3 auth-setup + AC7a + AC7b + AC8 + AC9), 2.0 min wall-clock.** Backfill ran against UAT 2026-06-04: 37/39 rows touched initially; re-applied to 38/40 rows after the operator restored UAT from a prod snapshot.
+- **AC9 — Completion surface flags deduction failure (added after post-AC8 operator UAT testing).** Operator's manual over-sell test surfaced that the kitchen-display "Complete Order" toast showed "Success" even when the chokepoint had logged an `inventory_deduction_failed` IncidentEvent. `OrderService.completeOrder` extends its return shape with `deductionFailed?` + `deductionError?`; `updateOrderStatusAction` adds optional `warning` to its `ActionResult`; the three UI surfaces (kitchen-order-card, admin order-card, admin order-actions-sidebar) show a destructive-variant toast titled "Completed — inventory not deducted" with the chokepoint's error message + a pointer to `/dashboard/incidents`. AC9 E2E spec pins the backend behavior on UAT.
+- **AC10 — IncidentEvent remediation UX (added after operator workflow Q on /dashboard/incidents).** Three pieces: (1) `reconcileMissedDeductions` dedups its IncidentEvent writes with a 1-hour window so stuck orders don't spam the dashboard every 15 min; (2) new `retryInventoryDeductionAction` server action + per-row "Retry now" button on `/dashboard/incidents` flips ✓ Deducted on success (idempotent — chokepoint guards on `inventoryDeducted`) or shows the destructive toast pattern on still-failing; (3) "Incidents" added to the main nav between Audit Logs and Settings, gated by a new `incidentsAccess` field on `IAdminPermissions` (default-true across all role presets + soft-default on login for legacy users without the key). Audit-log entries `incidents.retry_deduction_succeeded` + `incidents.retry_deduction_failed` track every retry. **7 passed + 1 deploy-gated fixme (AC10 E2E un-fixme'd post-Railway-redeploy)**, 2.0 min wall-clock. Backfill ran against UAT 2026-06-04: 37/39 rows touched initially; re-applied to 38/40 rows after the operator restored UAT from a prod snapshot.
 
   Follow-up filed as **REQ-067** ([wawagardenbar-app #286](https://github.com/metasession-dev/wawagardenbar-app/issues/286)): pre-sale availability check missing on Express + Quick Actions paths; sale-point-aware availability rewrite across all order-create surfaces. The chokepoint + AC9 toast are the backstop until REQ-067 ships.
+
+  Additional follow-up filed as **REQ-068**: Scenario-B remediation (manual mark-as-deducted override for stock-served-but-untracked situations), cancel/refund flow for `completed` orders, per-row Delete/Dismiss actions on `/dashboard/incidents` beyond Retry now, and configurable cron cadence + stale-paid-order threshold via SystemSettings.
 
 ## AI Involvement
 
@@ -81,12 +84,12 @@ Operator reported: "items being sold are not deducted from inventory count. The 
 
 See `compliance/evidence/REQ-066/test-plan.md` and `test-execution-summary.md`.
 
-- Vitest: 1120 pass / 4 skip / 0 fail (+47 from REQ-065 baseline of 1073; +2 for AC9 return-shape cases on top of AC8's +23).
+- Vitest: 1129 pass / 4 skip / 0 fail (+56 from REQ-065 baseline of 1073; +9 for AC10 dedup + incidents-actions cases on top of AC8/AC9).
 - TypeScript: 0 errors.
 - ESLint: 0 errors / 950 pre-existing warnings.
 - Production build: green.
 - E2E full regression against UAT (post-AC9): **282 passed / 15 skipped / 28 did-not-run / 0 failed** (22.3 min). Zero failures. The pass-count delta vs the prior post-AC8 run (326 → 282) is a list-reporter truncation + mid-day prod-restore + user re-seed effect — affected tests shifted to the did-not-run bucket, not into failures.
-- E2E focused REQ-066 (AC7a + AC7b + AC8 + AC9): 7 passed (3 auth-setup + 4 invariant specs), 2.0 min wall-clock, 0 failed. Live against UAT.
+- E2E focused REQ-066 (AC7a + AC7b + AC8 + AC9 + AC10): 7 passed + 1 fixme (AC10 deploy-gated), 2.0 min wall-clock, 0 failed. Live against UAT.
 
 ## Security & Compliance
 
@@ -156,14 +159,14 @@ Therefore: rollback only as a true emergency; a forward-fix is preferred.
 
 ## Quality Gates
 
-| Gate                            | Expected   | Actual (2026-06-04)                                                   |
-| ------------------------------- | ---------- | --------------------------------------------------------------------- |
-| `npx tsc --noEmit`              | exit 0     | exit 0                                                                |
-| `npx vitest run` (full)         | 0 failures | 1120 pass / 4 skip / 0 fail                                           |
-| `npx eslint . --max-warnings=0` | 0 errors   | 0 errors / 950 pre-existing console warnings                          |
-| `npm run build`                 | exit 0     | exit 0                                                                |
-| E2E focused REQ-066 (UAT)       | 0 failures | 7 passed (3 auth-setup + AC7a + AC7b + AC8 + AC9), 2.0 min wall-clock |
-| E2E full regression pack (UAT)  | green      | 282 pass / 15 skip / 28 did-not-run / 0 fail (22.3 min)               |
+| Gate                            | Expected   | Actual (2026-06-04)                                        |
+| ------------------------------- | ---------- | ---------------------------------------------------------- |
+| `npx tsc --noEmit`              | exit 0     | exit 0                                                     |
+| `npx vitest run` (full)         | 0 failures | 1129 pass / 4 skip / 0 fail                                |
+| `npx eslint . --max-warnings=0` | 0 errors   | 0 errors / 950 pre-existing console warnings               |
+| `npm run build`                 | exit 0     | exit 0                                                     |
+| E2E focused REQ-066 (UAT)       | 0 failures | 7 passed + 1 fixme (AC10 deploy-gated), 2.0 min wall-clock |
+| E2E full regression pack (UAT)  | green      | 282 pass / 15 skip / 28 did-not-run / 0 fail (22.3 min)    |
 
 ## Stage Approvals
 

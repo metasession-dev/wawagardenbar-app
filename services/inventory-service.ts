@@ -1350,15 +1350,27 @@ class InventoryService {
         succeeded += 1;
       } catch (error) {
         try {
-          await IncidentEventService.recordIncident({
+          // REQ-066 AC10 — dedup so a single stuck order doesn't spam a
+          // fresh IncidentEvent every 15 min until it resolves. Matches
+          // the existing pattern in OrderService.scanStalePaidOrders.
+          // 1-hour window means at most one row per stuck order per
+          // hour (4 retries condensed into 1 event).
+          const isDup = await IncidentEventService.dedupRecent({
             kind: 'inventory_deduction_failed',
             entityId: orderId,
-            summary: 'reconciliation retry of deductStockForOrder threw',
-            errorDetails: {
-              message: error instanceof Error ? error.message : String(error),
-              actorRole: 'system_reconciliation',
-            },
+            withinHours: 1,
           });
+          if (!isDup) {
+            await IncidentEventService.recordIncident({
+              kind: 'inventory_deduction_failed',
+              entityId: orderId,
+              summary: 'reconciliation retry of deductStockForOrder threw',
+              errorDetails: {
+                message: error instanceof Error ? error.message : String(error),
+                actorRole: 'system_reconciliation',
+              },
+            });
+          }
         } catch (logErr) {
           console.error(
             '[InventoryService.reconcileMissedDeductions] IncidentEvent write failed:',

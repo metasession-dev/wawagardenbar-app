@@ -47,7 +47,11 @@ export type AuditAction =
   | 'inventory.location_tracking_enabled'
   | 'inventory.stock_added_to_location'
   | 'inventory.stock_deducted_from_location'
-  | 'settings.inventory_locations_updated';
+  | 'settings.inventory_locations_updated'
+  // REQ-066 AC10 — operator-initiated retry of a stuck deduction via
+  // the /dashboard/incidents page. Both success + failure paths log.
+  | 'incidents.retry_deduction_succeeded'
+  | 'incidents.retry_deduction_failed';
 
 export interface IAuditLog {
   _id: Types.ObjectId;

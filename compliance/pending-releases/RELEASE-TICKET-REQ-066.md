@@ -93,9 +93,63 @@ See `security-summary.md` for the STRIDE pass. Headline:
 - **No new auth surface.** Reconciliation cron runs server-side; all UI surfaces inherit existing dashboard RBAC.
 - **No new data egress.** IncidentEvent rows hold operational metadata only.
 
+## Production deployment steps
+
+The code fix in AC8 is **inert against existing misconfigured production rows** until the `defaultSalesLocation` backfill runs against production. UAT proved this end-to-end: 36 of 39 production-shaped rows have the legacy bulk-set value `defaultSalesLocation: 'store'` (set by `scripts/migrate-location-tracking.ts` long ago); the AC8 `applyOrderStockDelta` will route deductions to that empty `store` bucket and throw → `inventory_deduction_failed` IncidentEvent on every sale of those items, exactly matching the customer-impact symptom of #277. The fix is only complete after the backfill rewrites those rows to point at chiller / freezer.
+
+The backfill is therefore a **required release-day action**, not a side quest. Run it AFTER merge to main + Railway production deploy completes:
+
+1. **Dry-run first.**
+
+   ```bash
+   MONGODB_URI="$MONGODB_PROD_EXTERNAL_URI" \
+     npx tsx scripts/backfill-sale-point-location.ts --dry-run
+   ```
+
+   Review the candidate list — expect every drinks/chilled item to show `REWRITE → 'chiller1'`, freezer items `REWRITE → 'freezer'`, and any storeroom-only items in `LEFT (no chiller/freezer present)`. Halt if the output is unexpected (e.g. zero candidates would indicate the URI didn't connect or the data already has chiller values, which is not the prod baseline we verified on the UAT-restore).
+
+2. **Run live.**
+
+   ```bash
+   MONGODB_URI="$MONGODB_PROD_EXTERNAL_URI" \
+     npx tsx scripts/backfill-sale-point-location.ts
+   ```
+
+   Summary line should match the dry-run candidate counts.
+
+3. **Spot-check.** Confirm a known item — e.g. Desperados — now reports the correct sale-point:
+
+   ```bash
+   MONGODB_URI="$MONGODB_PROD_EXTERNAL_URI" node -e \
+     'const{MongoClient}=require("mongodb");(async()=>{const c=new MongoClient(process.env.MONGODB_URI);await c.connect();const inv=await c.db("wawagardenbar").collection("inventories").findOne({"items.name":"Desperados"});console.log(inv?.defaultSalesLocation);await c.close();})();'
+   ```
+
+   Expected: `chiller1`.
+
+4. **Confirm a real completion succeeds.** Optional but recommended: complete a paid order via the production kitchen-display and verify the aggregate drops by 1. If `/dashboard/incidents` shows a new `inventory_deduction_failed` event, the backfill missed that row — re-run + spot-check that specific item.
+
+Per `feedback_no_prod_db_touches`, prod reads/writes are off-limits unless explicitly authorised this turn. Release time **is** the authorisation; the operator runs the commands themselves (or explicitly tells me to). The script writes only `defaultSalesLocation` — no other fields, no schema changes.
+
+### UAT pre-flight (already validated)
+
+The same sequence ran successfully against UAT on 2026-06-04:
+
+```
+[REQ-066] scanning 39 trackByLocation rows…
+  set fresh (chiller*):           3
+  rewrite from 'store':           34
+  left (no clear sale point):     2
+```
+
+Idempotency verified: a second dry-run reported 0 writes / 37 skipped-already-correct / 2 left. Spot-check confirmed Desperados.defaultSalesLocation flipped from `'store'` to `'chiller1'`. UAT was subsequently restored from a prod snapshot for operator manual testing, which wiped the backfill — that restore exercise is the strongest evidence we have that the same backfill will work correctly against the matching prod shape.
+
 ## Rollback Plan
 
-Revert PR #281. The schema additions are purely additive (the IncidentEvent collection stays in place but unreferenced). The cron registration is removed cleanly. The deduction goes back to the pre-REQ-066 mess of 6 inline call sites + duplicate completion functions — the prior bug returns. Therefore: rollback only as a true emergency; a forward-fix is preferred.
+Revert PR #281 (and PR #285 if merged). The schema additions are purely additive (the IncidentEvent collection stays in place but unreferenced). The cron registration is removed cleanly. The deduction goes back to the pre-REQ-066 mess of 6 inline call sites + duplicate completion functions — the prior bug returns.
+
+Note on the AC8 backfill: rolling back the code does NOT require unwinding the `defaultSalesLocation` rewrites. The pre-AC8 `applyOrderStockDelta` ignored the field entirely (always targeted `locations[0]`), so the rewritten values are harmless under the reverted code. If a future rollback needed to restore the legacy `'store'` value for every row anyway, a small reverse-mapping script would handle it.
+
+Therefore: rollback only as a true emergency; a forward-fix is preferred.
 
 ## Quality Gates
 

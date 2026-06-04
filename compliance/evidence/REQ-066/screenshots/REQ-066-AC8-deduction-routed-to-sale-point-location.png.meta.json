@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-066",
+  "ac": 8,
+  "slug": "deduction-routed-to-sale-point-location",
+  "specFile": "e2e/admin-order-inventory-delta.sale-point.spec.ts",
+  "capturedAt": "2026-06-04T08:18:50.977Z"
+}

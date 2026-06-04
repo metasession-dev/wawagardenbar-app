@@ -22,7 +22,8 @@ Operator reported: "items being sold are not deducted from inventory count. The 
 - **AC4** — Retry-only reconciliation cron (15 min). NEVER mutates `Order.status` — per operator's stipulation that only kitchen-display staff may complete an order.
 - **AC5** — Stale-paid-orders visibility scan (same cron tick, 2h threshold). NEVER mutates state. Pure visibility — managers see workflow gaps via `/dashboard/incidents`.
 - **AC6** — `/dashboard/incidents` admin view (RBAC csr/admin/super-admin).
-- **AC7a/AC7b** — E2E invariant specs authored for BOTH UI surfaces (kitchen-display + orders-page) and **both pass live against UAT** (5/5 focused-run: 3 auth-setup + AC7a + AC7b, 1.1 min wall-clock). The specs exercise the full chokepoint (seed → confirmed → preparing → ready → completed → inventory delta = −1) on both order surfaces. Cleanup is location-aware (`trackByLocation` rows are restored by `$inc`-ing `locations[0].currentStock`); the discovery + fix is documented in `test-execution-summary.md`.
+- **AC7a/AC7b** — E2E invariant specs authored for BOTH UI surfaces (kitchen-display + orders-page) and **both pass live against UAT**. The specs exercise the full chokepoint (seed → confirmed → preparing → ready → completed → inventory delta = −1) on both order surfaces. Cleanup is location-aware (`trackByLocation` rows are restored by `$inc`-ing `locations[0].currentStock`).
+- **AC8 — Sales deductions route to `defaultSalesLocation` (added after post-deploy operator-reported defect).** `applyOrderStockDelta` rewritten to route trackByLocation deductions to the row's sale-point bucket (chiller* for drinks, freezer* for frozen); throws on insufficient sale-point stock so the chokepoint catches and writes an `inventory_deduction_failed` IncidentEvent (operator's stipulation: system never auto-spills from store to sale-point). Fallback to "first non-empty" for legacy rows. Refills always land on `locations[0]`. Companion: `scripts/backfill-sale-point-location.ts` rewrites the legacy bulk-set `defaultSalesLocation='store'` value to the row's chiller*/freezer* code. Live AC8 E2E spec proves the routing against UAT (force-mutates the Desperados-shape and confirms the deduction lands on the sale-point, not the empty storeroom). **6/6 focused E2E (3 auth-setup + AC7a + AC7b + AC8), 1.5 min wall-clock.** Backfill ran against UAT 2026-06-04: 37/39 rows touched (34 REWRITE from `'store'`, 3 SET fresh; 2 LEFT — items with only a store location, handled by the runtime fallback).
 
 ## AI Involvement
 
@@ -46,12 +47,18 @@ Operator reported: "items being sold are not deducted from inventory count. The 
 - `__tests__/regression/inventory-deduction-removed.test.ts` — 4 regression-guard cases.
 - `e2e/admin-order-inventory-delta.kitchen-display.spec.ts` — AC7a (live-passing against UAT; `describe.configure({ mode: 'serial' })`).
 - `e2e/admin-order-inventory-delta.orders-page.spec.ts` — AC7b (live-passing against UAT; same serial config; routes through `/dashboard/orders` admin order-card, `Complete` button).
+- `e2e/admin-order-inventory-delta.sale-point.spec.ts` — **AC8** (live-passing against UAT; force-mutates the seeded inventory into the Desperados-shape).
+- `lib/sale-point-location-backfill.ts` — pure helper for `deriveSalePointLocation` + `isSalePointBackfillCandidate` + `SALE_POINT_LOCATION_BACKFILL_FILTER`.
+- `scripts/backfill-sale-point-location.ts` — one-shot idempotent backfill, ran against UAT 2026-06-04.
+- `__tests__/services/inventory-service.sale-point-routing.test.ts` — 8 AC8 routing cases.
+- `__tests__/lib/sale-point-location-backfill.test.ts` — 15 helper cases.
 - `compliance/plans/REQ-066/implementation-plan.md` — plan with ACs, risk, security.
 
 **Files Modified:**
 
 - `services/order-service.ts` — added `completeOrder` chokepoint + `scanStalePaidOrders`; removed 2 inline deduction blocks.
-- `services/inventory-service.ts` — added `reconcileMissedDeductions`.
+- `services/inventory-service.ts` — added `reconcileMissedDeductions`; **AC8: rewrote `applyOrderStockDelta` for sale-point routing**.
+- `__tests__/services/inventory-service.track-by-location.test.ts` — **1 case updated** (the test that codified the broken clamp-at-zero behavior now asserts the new fall-through routing — bug shape pinned in the regression pack).
 - `services/tab-service.ts` — removed 2 inline deduction blocks.
 - `app/api/webhooks/paystack/route.ts` — removed inline deduction.
 - `app/api/webhooks/monnify/route.ts` — removed inline deduction.
@@ -71,12 +78,12 @@ Operator reported: "items being sold are not deducted from inventory count. The 
 
 See `compliance/evidence/REQ-066/test-plan.md` and `test-execution-summary.md`.
 
-- Vitest: 1095 pass / 4 skip / 0 fail (+22 from REQ-065 baseline of 1073).
+- Vitest: 1118 pass / 4 skip / 0 fail (+45 from REQ-065 baseline of 1073; +23 from AC1-AC7 baseline of 1095 covers the AC8 routing + backfill-helper additions).
 - TypeScript: 0 errors.
 - ESLint: 0 errors / 950 pre-existing warnings.
 - Production build: green.
-- E2E full regression against UAT: **326 passed / 19 skipped / 27 did-not-run / 0 failed** (7.8 min; +36 passed vs REQ-065 baseline).
-- E2E focused REQ-066 (AC7a + AC7b): 5 passed (3 auth-setup + 2 invariant specs), 1.1 min wall-clock, 0 failed. Live against UAT.
+- E2E full regression against UAT (post-AC8): **326 passed / 18 skipped / 27 did-not-run / 0 failed** (16.2 min). Zero new failures relative to the prior AC1-AC7 baseline; wall-clock roughly doubled because the third inventory-delta spec (AC8) contends on the same UAT inventory rows as AC7a/AC7b.
+- E2E focused REQ-066 (AC7a + AC7b + AC8): 6 passed (3 auth-setup + 3 invariant specs), 1.5 min wall-clock, 0 failed. Live against UAT.
 
 ## Security & Compliance
 
@@ -92,14 +99,14 @@ Revert PR #281. The schema additions are purely additive (the IncidentEvent coll
 
 ## Quality Gates
 
-| Gate                            | Expected   | Actual (2026-06-04)                                       |
-| ------------------------------- | ---------- | --------------------------------------------------------- |
-| `npx tsc --noEmit`              | exit 0     | exit 0                                                    |
-| `npx vitest run` (full)         | 0 failures | 1095 pass / 4 skip / 0 fail                               |
-| `npx eslint . --max-warnings=0` | 0 errors   | 0 errors / 950 pre-existing console warnings              |
-| `npm run build`                 | exit 0     | exit 0                                                    |
-| E2E focused REQ-066 (UAT)       | 0 failures | 5 passed (3 auth-setup + AC7a + AC7b), 1.1 min wall-clock |
-| E2E full regression pack (UAT)  | green      | 326 pass / 19 skip / 27 did-not-run / 0 fail (7.8 min)    |
+| Gate                            | Expected   | Actual (2026-06-04)                                             |
+| ------------------------------- | ---------- | --------------------------------------------------------------- |
+| `npx tsc --noEmit`              | exit 0     | exit 0                                                          |
+| `npx vitest run` (full)         | 0 failures | 1118 pass / 4 skip / 0 fail                                     |
+| `npx eslint . --max-warnings=0` | 0 errors   | 0 errors / 950 pre-existing console warnings                    |
+| `npm run build`                 | exit 0     | exit 0                                                          |
+| E2E focused REQ-066 (UAT)       | 0 failures | 6 passed (3 auth-setup + AC7a + AC7b + AC8), 1.5 min wall-clock |
+| E2E full regression pack (UAT)  | green      | 326 pass / 18 skip / 27 did-not-run / 0 fail (16.2 min)         |
 
 ## Stage Approvals
 

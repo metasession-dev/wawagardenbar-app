@@ -15,26 +15,100 @@ import type { InventoryKind } from '@/interfaces/inventory.interface';
  */
 class InventoryService {
   /**
-   * Apply a stock delta from an order operation (positive = restore on
-   * cancel, negative = deduction on sale). For trackByLocation items,
-   * mutate `locations[0]` so the model's pre-save hook (which recomputes
-   * `currentStock = sum(locations[].currentStock)` for location-tracked
-   * rows) reflects the change. Without this routing, direct assignments
-   * to `currentStock` on a location-tracked row are silently overwritten
-   * by the hook, leaving stock counts frozen at the last manual update.
+   * REQ-066 AC8 — Route an order-driven stock delta to the correct
+   * physical location.
+   *
+   * For trackByLocation items, the location matters: sales come from the
+   * front-of-house bucket (the bar `chiller`, typically) and refills land
+   * in the back (`store`). Pre-REQ-066 this function always mutated
+   * `locations[0]`, which silently absorbed any deduction when
+   * `locations[0]` was empty (because `Math.max(0, 0 + -1) = 0` clamps
+   * before the post-save hook recomputes the aggregate) — the root cause
+   * of #277.
+   *
+   * Routing rules (deduction, delta < 0):
+   *   1. If `inventory.defaultSalesLocation` is set AND that location
+   *      exists AND has stock >= |delta| → deduct from it.
+   *   2. If `defaultSalesLocation` is set but that location is short →
+   *      THROW. The chokepoint catches and writes an
+   *      `inventory_deduction_failed` IncidentEvent. The manager moves
+   *      stock from the back via the existing transfer UI; the system
+   *      never auto-spills to other locations (operator stipulation).
+   *   3. If `defaultSalesLocation` unset (legacy data, pre-backfill) →
+   *      walk `locations[]` in order and take from the first non-empty
+   *      bucket. Safe fallback so the #277 bug cannot recur on
+   *      un-migrated rows.
+   *   4. If even the fallback can't satisfy the deduction → THROW (same
+   *      IncidentEvent path).
+   *
+   * Refill / restoration (delta > 0):
+   *   - Always lands on `locations[0]` (the storeroom). New stock comes
+   *     in the back; operators rebalance via the inventory transfer UI.
    */
   private static applyOrderStockDelta(
     inventory: InstanceType<typeof InventoryModel>,
     delta: number
   ): void {
-    if (inventory.trackByLocation && inventory.locations.length > 0) {
-      const loc = inventory.locations[0];
-      loc.currentStock = Math.max(0, loc.currentStock + delta);
-      loc.lastUpdated = new Date();
-      loc.updatedBy = new mongoose.Types.ObjectId('000000000000000000000000');
-      loc.updatedByName = 'System';
-    } else {
+    if (!inventory.trackByLocation || inventory.locations.length === 0) {
       inventory.currentStock = Math.max(0, inventory.currentStock + delta);
+      return;
+    }
+
+    const SYSTEM_ACTOR = new mongoose.Types.ObjectId(
+      '000000000000000000000000'
+    );
+
+    if (delta >= 0) {
+      const loc = inventory.locations[0];
+      loc.currentStock = loc.currentStock + delta;
+      loc.lastUpdated = new Date();
+      loc.updatedBy = SYSTEM_ACTOR;
+      loc.updatedByName = 'System';
+      return;
+    }
+
+    // Deduction path — `delta` is negative.
+    let remaining = -delta;
+    const target =
+      inventory.defaultSalesLocation &&
+      inventory.locations.find(
+        (l) => l.location === inventory.defaultSalesLocation
+      );
+
+    if (target) {
+      if (target.currentStock < remaining) {
+        throw new Error(
+          `Insufficient stock at defaultSalesLocation='${inventory.defaultSalesLocation}': ` +
+            `have ${target.currentStock}, need ${remaining}. ` +
+            'Move stock to the sale point before completing the order.'
+        );
+      }
+      target.currentStock -= remaining;
+      target.lastUpdated = new Date();
+      target.updatedBy = SYSTEM_ACTOR;
+      target.updatedByName = 'System';
+      return;
+    }
+
+    // Fallback: walk locations, take from each non-empty bucket. Used when
+    // `defaultSalesLocation` is unset (legacy data) OR when it references
+    // a location code that no longer exists on the row (data anomaly).
+    for (const loc of inventory.locations) {
+      if (remaining <= 0) break;
+      if (loc.currentStock <= 0) continue;
+      const take = Math.min(loc.currentStock, remaining);
+      loc.currentStock -= take;
+      loc.lastUpdated = new Date();
+      loc.updatedBy = SYSTEM_ACTOR;
+      loc.updatedByName = 'System';
+      remaining -= take;
+    }
+
+    if (remaining > 0) {
+      throw new Error(
+        `Insufficient stock across all locations: short ${remaining} unit(s). ` +
+          'Restock before completing this order.'
+      );
     }
   }
 

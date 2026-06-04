@@ -187,7 +187,11 @@ describe('deductStockForOrder — trackByLocation routing', () => {
     expect(inv.currentStock).toBe(9);
   });
 
-  it('trackByLocation=true: deduction clamps locations[0] at zero', async () => {
+  it('trackByLocation=true + locations[0] empty: deduction falls through to first non-empty location', async () => {
+    // REQ-066 AC8: this is the Desperados-shape regression from #277. The
+    // previous behavior clamped at zero on locations[0] and silently
+    // absorbed the deduction. Now the deduction walks the array and lands
+    // on the first non-empty bucket.
     const inv = buildInventory({
       trackByLocation: true,
       currentStock: 1,
@@ -201,8 +205,9 @@ describe('deductStockForOrder — trackByLocation routing', () => {
     await InventoryService.deductStockForOrder(ORDER_ID);
 
     const locs = inv.locations as LocationDoc[];
-    expect(locs[0].currentStock).toBe(0);
-    expect(locs[1].currentStock).toBe(1);
+    expect(locs[0].currentStock).toBe(0); // store stays empty
+    expect(locs[1].currentStock).toBe(0); // chiller1 took the hit
+    expect(inv.currentStock).toBe(0); // aggregate post-save sum reflects the deduction
   });
 });
 

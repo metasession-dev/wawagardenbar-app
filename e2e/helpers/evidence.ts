@@ -56,25 +56,18 @@ export async function evidenceShot(
   reqId: string,
   ac: number,
   slug: string,
-  opts: EvidenceShotOptions = {}
+  opts: EvidenceShotOptions = {},
 ): Promise<void> {
   validateEvidenceShotInputs(reqId, ac, slug);
   const fileName = composeScreenshotFilename(reqId, ac, slug);
-  const dir = path.join(
-    process.cwd(),
-    'compliance/evidence',
-    reqId,
-    'screenshots'
-  );
+  const dir = path.join(process.cwd(), 'compliance/evidence', reqId, 'screenshots');
   const pngPath = path.join(dir, fileName);
   const sidecarPath = `${pngPath}.meta.json`;
 
   await page.screenshot({ path: pngPath, fullPage: opts.fullPage ?? true });
 
   const specFile = resolveSpecFile();
-  const origin =
-    opts.origin ??
-    autoDetectEvidenceShotOrigin(specFile, process.env.E2E_NEW_SPECS);
+  const origin = opts.origin ?? autoDetectEvidenceShotOrigin(specFile, process.env.E2E_NEW_SPECS);
   const sidecar: EvidenceShotSidecar = {
     origin,
     reqId,
@@ -83,11 +76,7 @@ export async function evidenceShot(
     specFile,
     capturedAt: new Date().toISOString(),
   };
-  await fs.promises.writeFile(
-    sidecarPath,
-    `${JSON.stringify(sidecar, null, 2)}\n`,
-    'utf8'
-  );
+  await fs.promises.writeFile(sidecarPath, `${JSON.stringify(sidecar, null, 2)}\n`, 'utf8');
 }
 
 /**

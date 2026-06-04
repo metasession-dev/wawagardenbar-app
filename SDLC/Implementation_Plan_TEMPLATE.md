@@ -1,10 +1,10 @@
 ---
-title: 'Implementation plan — REQ-XXX'
-requirement_id: 'REQ-XXX'
-risk_class: 'REPLACE — HIGH | MEDIUM | LOW'
-change_type: 'REPLACE — feat | fix | refactor | perf | chore | docs | ci | build | test | compliance | revert'
-authored_by: 'REPLACE — operator / agent'
-authored_at: 'REPLACE — YYYY-MM-DD'
+title: "Implementation plan — REQ-XXX"
+requirement_id: "REQ-XXX"
+risk_class: "REPLACE — HIGH | MEDIUM | LOW"
+change_type: "REPLACE — feat | fix | refactor | perf | chore | docs | ci | build | test | compliance | revert"
+authored_by: "REPLACE — operator / agent"
+authored_at: "REPLACE — YYYY-MM-DD"
 ---
 
 > ⚠️ **STARTER TEMPLATE — REPLACE EVERY `REPLACE` MARKER BEFORE COMMITTING.**
@@ -21,18 +21,18 @@ authored_at: 'REPLACE — YYYY-MM-DD'
 
 **Closes clauses** (every implementation plan satisfies all four):
 
-| Clause                                                    | What this plan must contain                                                                                                                                       |
-| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **ISO 29119 §3.4** Test Plan                              | Acceptance criteria + the strategy for verifying each one. Reference the per-REQ `test-plan.md` if it lives separately.                                           |
-| **ISO 27001 A.8.25** Secure development life cycle        | Threat model + secure-design considerations (auth, data handling, dependencies, secrets).                                                                         |
+| Clause | What this plan must contain |
+|---|---|
+| **ISO 29119 §3.4** Test Plan | Acceptance criteria + the strategy for verifying each one. Reference the per-REQ `test-plan.md` if it lives separately. |
+| **ISO 27001 A.8.25** Secure development life cycle | Threat model + secure-design considerations (auth, data handling, dependencies, secrets). |
 | **GDPR Art. 25** Data protection by design and by default | Per-purpose data flows; minimisation; lawful basis; retention. **Required for any REQ that processes personal data; explicit "no personal data" callout if not.** |
-| **EU AI Act Art. 11** Technical documentation (Annex IV)  | When the REQ touches AI / model behaviour: model provenance, prompt sources, oversight path. **Explicit "no AI in scope" callout if not.**                        |
+| **EU AI Act Art. 11** Technical documentation (Annex IV) | When the REQ touches AI / model behaviour: model provenance, prompt sources, oversight path. **Explicit "no AI in scope" callout if not.** |
 
 Each section below maps to one (or more) of these clauses. Don't delete sections — mark with "N/A — <reason>" if the clause genuinely doesn't apply.
 
 ## 1. Goal + acceptance criteria
 
-> _Closes ISO 29119 §3.4 — test plan_
+> *Closes ISO 29119 §3.4 — test plan*
 
 - **Goal:** REPLACE — one sentence describing what this REQ delivers, no jargon.
 - **Acceptance criteria:**
@@ -47,12 +47,12 @@ Each section below maps to one (or more) of these clauses. Don't delete sections
 
 ## 3. Threat model + security considerations
 
-> _Closes ISO 27001 A.8.25 — secure development life cycle_
+> *Closes ISO 27001 A.8.25 — secure development life cycle*
 
-| Threat                                           | Likelihood | Impact  | Mitigation |
-| ------------------------------------------------ | ---------- | ------- | ---------- |
-| REPLACE — e.g. SQL injection via X param         | REPLACE    | REPLACE | REPLACE    |
-| REPLACE — e.g. unauthenticated access to Y route | REPLACE    | REPLACE | REPLACE    |
+| Threat | Likelihood | Impact | Mitigation |
+|---|---|---|---|
+| REPLACE — e.g. SQL injection via X param | REPLACE | REPLACE | REPLACE |
+| REPLACE — e.g. unauthenticated access to Y route | REPLACE | REPLACE | REPLACE |
 
 **Secrets / credentials:** REPLACE — does this REQ handle any? If yes, how stored, rotated, scoped?
 
@@ -60,7 +60,7 @@ Each section below maps to one (or more) of these clauses. Don't delete sections
 
 ## 4. Data protection (GDPR Art. 25)
 
-> _Closes GDPR Art. 25 — data protection by design_
+> *Closes GDPR Art. 25 — data protection by design*
 
 **Personal data processed by this REQ:** REPLACE — yes / no.
 
@@ -78,11 +78,11 @@ If **yes**, fill in:
   - Is a DPIA required? REPLACE — yes (file under `compliance/governance/dpia-<reqid>.md`) / no / N/A
 - **Cross-border transfers:** REPLACE — none / specify mechanism
 
-If **no**, write: _"N/A — this REQ does not process personal data. <Why — e.g. UI-only change, internal-routing refactor, dev-tooling.>"_
+If **no**, write: *"N/A — this REQ does not process personal data. <Why — e.g. UI-only change, internal-routing refactor, dev-tooling.>"*
 
 ## 5. AI / model considerations (EU AI Act Art. 11)
 
-> _Closes EUAIA Art. 11 — technical documentation_
+> *Closes EUAIA Art. 11 — technical documentation*
 
 **AI / ML in scope for this REQ:** REPLACE — yes / no.
 
@@ -96,7 +96,7 @@ If **yes**, fill in:
 - **Cross-references:**
   - Is `compliance/governance/ai-disclosure.md` updated? REPLACE — yes / no / N/A
 
-If **no**, write: _"N/A — this REQ does not introduce or change AI behaviour. <Why.>"_
+If **no**, write: *"N/A — this REQ does not introduce or change AI behaviour. <Why.>"*
 
 ## 6. Rollback plan
 

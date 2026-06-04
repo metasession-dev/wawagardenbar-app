@@ -22,6 +22,13 @@ export const routePermissions: Record<string, UserRole[]> = {
   '/dashboard/rewards': ['csr', 'admin', 'super-admin'],
   '/dashboard/analytics': ['super-admin'],
   '/dashboard/audit-logs': ['super-admin'],
+  /**
+   * REQ-066 AC10 — Incidents queue + Retry-now action surface. The
+   * layout adds a `requirePermission('incidentsAccess')` feature-gate
+   * on top of this role allowlist for fine-grained control via Settings →
+   * Admins → Permissions.
+   */
+  '/dashboard/incidents': ['csr', 'admin', 'super-admin'],
   '/dashboard/settings': ['admin', 'super-admin'],
   '/dashboard/kitchen': ['admin', 'super-admin'],
   '/dashboard/kitchen/recipes': ['admin', 'super-admin'],

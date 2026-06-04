@@ -84,6 +84,7 @@ async function seed() {
                 expensesManagement: true,
                 settingsAndConfiguration: true,
                 kitchenManagement: true,
+                incidentsAccess: true,
               },
             }
           : {}),
@@ -98,6 +99,7 @@ async function seed() {
                 expensesManagement: false,
                 settingsAndConfiguration: false,
                 kitchenManagement: false,
+                incidentsAccess: true,
               },
             }
           : {}),

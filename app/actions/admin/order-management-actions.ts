@@ -10,7 +10,8 @@ import TabModel from '@/models/tab-model';
 import { AuditLogService } from '@/services/audit-log-service';
 import { TabService, OrderService } from '@/services';
 import InventoryService from '@/services/inventory-service';
-import { completeOrderAndDeductStockAction } from '@/app/actions/order/complete-order-action';
+// REQ-066 — completion now routes through `OrderService.completeOrder`
+// (loaded lazily inside the action) rather than `completeOrderAndDeductStockAction`.
 import { deriveBusinessDate } from '@/lib/business-date';
 import { SystemSettingsService } from '@/services/system-settings-service';
 import {
@@ -24,6 +25,13 @@ export interface ActionResult<T = unknown> {
   message?: string;
   data?: T;
   error?: string;
+  /**
+   * REQ-066 AC9 — set when the action succeeded but a side-effect needs
+   * to be flagged to the operator (e.g. completion succeeded but the
+   * inventory deduction threw and was recorded as an IncidentEvent).
+   * UI surfaces this as a warning toast instead of "Success".
+   */
+  warning?: string;
 }
 
 export interface OrderFilters {
@@ -329,13 +337,38 @@ export async function updateOrderStatusAction(
       note: note || `Updated by ${session.role}`,
     });
 
-    // If completing order, deduct inventory
+    // REQ-066 — On completion, route through the canonical chokepoint
+    // `OrderService.completeOrder`, which owns the inventory deduction
+    // and writes an `IncidentEvent` row if the deduction throws (without
+    // blocking the status flip). We've already set `order.status` to
+    // 'completed' above; `completeOrder` is idempotent against that
+    // (sees status='completed' + inventoryDeducted=false → runs only
+    // the deduction branch).
+    // REQ-066 AC9 — captures the deduction-failure message from the
+    // chokepoint so the UI can show a warning toast instead of the silent
+    // "Success" the operator saw on UAT.
+    let deductionWarning: string | undefined;
     if (newStatus === 'completed' && !order.inventoryDeducted) {
-      try {
-        await completeOrderAndDeductStockAction(orderId);
-      } catch (error) {
-        console.error('Error deducting inventory:', error);
-        // Continue with status update even if inventory fails
+      // Save the in-memory status/history changes first so completeOrder
+      // sees a consistent persisted state.
+      await order.save();
+      const { OrderService } = await import('@/services/order-service');
+      const completeResult = await OrderService.completeOrder({
+        orderId,
+        actorUserId: session.userId,
+        actorRole: session.role,
+        note,
+      });
+      if (completeResult.deductionFailed && completeResult.deductionError) {
+        deductionWarning = completeResult.deductionError;
+      }
+      // Re-load the order so the auto-cash-payment block below sees the
+      // updated `inventoryDeducted` flag.
+      const refreshed = await OrderModel.findById(orderId);
+      if (refreshed) {
+        order.inventoryDeducted = refreshed.inventoryDeducted;
+        order.inventoryDeductedAt = refreshed.inventoryDeductedAt;
+        order.inventoryDeductedBy = refreshed.inventoryDeductedBy;
       }
     }
 
@@ -391,6 +424,7 @@ export async function updateOrderStatusAction(
     return {
       success: true,
       message: `Order status updated to ${newStatus}`,
+      ...(deductionWarning ? { warning: deductionWarning } : {}),
       data: {
         orderId: order._id.toString(),
         status: order.status,

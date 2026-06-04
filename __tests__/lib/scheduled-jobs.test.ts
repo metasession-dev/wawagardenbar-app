@@ -65,13 +65,14 @@ describe('REQ-048 + REQ-058: startScheduledJobs', () => {
     vi.useRealTimers();
   });
 
-  it('registers TWO hourly intervals (reward-expiry + instagram-rewards) and is idempotent', () => {
+  it('registers THREE intervals (reward-expiry + instagram-rewards + inventory-reconcile) and is idempotent', () => {
     vi.useFakeTimers();
     const intervalSpy = vi.spyOn(global, 'setInterval');
     startScheduledJobs();
     startScheduledJobs(); // second call must not stack intervals
-    // REQ-048 reward-expiry + REQ-058 instagram-rewards = 2 intervals.
+    // REQ-048 reward-expiry (hourly) + REQ-058 instagram-rewards (hourly)
+    // + REQ-066 inventory-reconcile + stale-paid scan (15-min) = 3 intervals.
     // Idempotency guard prevents stacking on the second call.
-    expect(intervalSpy).toHaveBeenCalledTimes(2);
+    expect(intervalSpy).toHaveBeenCalledTimes(3);
   });
 });

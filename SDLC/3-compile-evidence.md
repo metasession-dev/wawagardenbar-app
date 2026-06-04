@@ -23,23 +23,23 @@ description: Compile test, security, and AI evidence, update RTM, create release
 
 **Markdown stays in git. Binary and JSON evidence goes to DevAudit.**
 
-| Artifact                                                | Store in | Why                                                                                                                                                                                                                                                        |
-| ------------------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `compliance/RTM.md`                                     | Git      | Source of truth, version history, PR-reviewable                                                                                                                                                                                                            |
-| `compliance/evidence/REQ-XXX/test-scope.md`             | Git      | Planning artifact, reviewed in PRs                                                                                                                                                                                                                         |
-| `compliance/evidence/REQ-XXX/implementation-plan.md`    | Git      | Design decisions artifact (MEDIUM/HIGH risk), reviewed in PRs                                                                                                                                                                                              |
-| `compliance/evidence/REQ-XXX/test-plan.md`              | Git      | Test strategy — tests to add/update/remove, mapped to criteria                                                                                                                                                                                             |
-| `compliance/evidence/REQ-XXX/test-execution-summary.md` | Git      | Gate results, test changes, coverage against test plan. **ISO 29119-3 §3.5.6 Test Completion Report for THIS release** — uploaded as `evidence_type=test_report` since v0.1.32, satisfying the portal's Test Reports gate with fresh per-release evidence. |
-| `compliance/evidence/REQ-XXX/ai-use-note.md`            | Git      | Small markdown, needs PR review                                                                                                                                                                                                                            |
-| `compliance/evidence/REQ-XXX/ai-prompts.md`             | Git      | Small markdown, needs PR review                                                                                                                                                                                                                            |
-| `compliance/evidence/REQ-XXX/security-summary.md`       | Git      | Small markdown, needs PR review                                                                                                                                                                                                                            |
-| `compliance/pending-releases/RELEASE-TICKET-*.md`       | Git      | Reviewed and moved to approved-releases                                                                                                                                                                                                                    |
-| E2E results (JSON)                                      | DevAudit | Large, bloats git history                                                                                                                                                                                                                                  |
-| Screenshots (PNG/JPG)                                   | DevAudit | Binary, bloats git history                                                                                                                                                                                                                                 |
-| SAST results (JSON)                                     | DevAudit | Large JSON, bloats git history                                                                                                                                                                                                                             |
-| Dependency audit (JSON)                                 | DevAudit | Large JSON, bloats git history                                                                                                                                                                                                                             |
-| Unit test output (TXT)                                  | DevAudit | Verbose output, bloats git history                                                                                                                                                                                                                         |
-| Test reports (HTML)                                     | DevAudit | Binary, bloats git history                                                                                                                                                                                                                                 |
+| Artifact | Store in | Why |
+|----------|----------|-----|
+| `compliance/RTM.md` | Git | Source of truth, version history, PR-reviewable |
+| `compliance/evidence/REQ-XXX/test-scope.md` | Git | Planning artifact, reviewed in PRs |
+| `compliance/evidence/REQ-XXX/implementation-plan.md` | Git | Design decisions artifact (MEDIUM/HIGH risk), reviewed in PRs |
+| `compliance/evidence/REQ-XXX/test-plan.md` | Git | Test strategy — tests to add/update/remove, mapped to criteria |
+| `compliance/evidence/REQ-XXX/test-execution-summary.md` | Git | Gate results, test changes, coverage against test plan. **ISO 29119-3 §3.5.6 Test Completion Report for THIS release** — uploaded as `evidence_type=test_report` since v0.1.32, satisfying the portal's Test Reports gate with fresh per-release evidence. |
+| `compliance/evidence/REQ-XXX/ai-use-note.md` | Git | Small markdown, needs PR review |
+| `compliance/evidence/REQ-XXX/ai-prompts.md` | Git | Small markdown, needs PR review |
+| `compliance/evidence/REQ-XXX/security-summary.md` | Git | Small markdown, needs PR review |
+| `compliance/pending-releases/RELEASE-TICKET-*.md` | Git | Reviewed and moved to approved-releases |
+| E2E results (JSON) | DevAudit | Large, bloats git history |
+| Screenshots (PNG/JPG) | DevAudit | Binary, bloats git history |
+| SAST results (JSON) | DevAudit | Large JSON, bloats git history |
+| Dependency audit (JSON) | DevAudit | Large JSON, bloats git history |
+| Unit test output (TXT) | DevAudit | Verbose output, bloats git history |
+| Test reports (HTML) | DevAudit | Binary, bloats git history |
 
 ## Release Identity
 
@@ -47,12 +47,12 @@ CI uploads are scoped to a **release record** in DevAudit, keyed by `(project, v
 
 The templated workflows derive the release version from the **latest commit on the branch** via `scripts/derive-release-version.sh`:
 
-| Commit shape                                               | Release version              |
-| ---------------------------------------------------------- | ---------------------------- |
-| Subject `[REQ-037] feat(...)`                              | `REQ-037`                    |
-| Subject `feat(...)` + body `Ref: REQ-037`                  | `REQ-037`                    |
+| Commit shape | Release version |
+|---|---|
+| Subject `[REQ-037] feat(...)` | `REQ-037` |
+| Subject `feat(...)` + body `Ref: REQ-037` | `REQ-037` |
 | Subject contains multiple tags (e.g. `[REQ-037][REQ-038]`) | First match wins → `REQ-037` |
-| No REQ tag (housekeeping, dep bumps)                       | Bare date → `v2026.05.17`    |
+| No REQ tag (housekeeping, dep bumps) | Bare date → `v2026.05.17` |
 
 Both `ci.yml` and `compliance-evidence.yml` call the same helper, so a feature spanning many commits and a mix of code/docs pushes converges on **one** release record. Subject takes priority over body when both are present.
 
@@ -71,7 +71,6 @@ gh run list --branch develop --limit 1
 **Do NOT proceed** if CI is failing or was cancelled. Evidence must reflect a green pipeline. If CI failed, return to `2-implement-and-test.md` and fix the issue first.
 
 For MEDIUM/HIGH risk with AI involvement, also verify:
-
 ```bash
 # AI prompt log must exist and be non-empty
 test -s compliance/evidence/REQ-XXX/ai-prompts.md && echo "OK" || echo "MISSING — create ai-prompts.md before proceeding"
@@ -176,7 +175,6 @@ npm test -- --verbose 2>&1 | tee /tmp/unit-test-results.txt
 ```
 
 **Alternative (git-based):** If not using DevAudit, save evidence locally:
-
 ```bash
 cp [E2E_RESULTS_PATH] compliance/evidence/REQ-XXX/
 npm test -- --verbose 2>&1 | tee compliance/evidence/REQ-XXX/unit-test-results.txt
@@ -197,7 +195,6 @@ npm audit --json > /tmp/dependency-audit.json 2>&1
 ```
 
 Create a security summary (keep in git — this is a compliance document, not binary evidence):
-
 ```bash
 cat > compliance/evidence/REQ-XXX/security-summary.md << EOF
 ## Security Evidence Summary — REQ-XXX
@@ -268,45 +265,37 @@ Create `compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md`:
 ---
 
 ## Summary
-
 [1-3 sentences]
 
 ## AI Involvement
-
 - **AI Tool Used:** [tool / none]
 - **AI-Generated Files:** [list, or "none"]
 - **Human Reviewer of AI Code:** [name]
 - **Components Regenerated:** [none / list]
 
 ## Implementation Details
-
 **Files Modified:**
-
 - `path/to/file1.ts` — [what changed]
 
 **Dependencies Added/Changed:**
-
 - [package@version — purpose — vulnerability status]
 - [or "No dependency changes"]
 
 ## Test Evidence
-
-| Test Type        | Count | Passed | Failed | Evidence Location                       |
-| ---------------- | ----- | ------ | ------ | --------------------------------------- |
-| E2E (Playwright) | [N]   | [N]    | 0      | DevAudit portal: [PROJECT_SLUG]/REQ-XXX |
-| Unit             | [N]   | [N]    | 0      | DevAudit portal: [PROJECT_SLUG]/REQ-XXX |
+| Test Type | Count | Passed | Failed | Evidence Location |
+|-----------|-------|--------|--------|-------------------|
+| E2E (Playwright) | [N] | [N] | 0 | DevAudit portal: [PROJECT_SLUG]/REQ-XXX |
+| Unit | [N] | [N] | 0 | DevAudit portal: [PROJECT_SLUG]/REQ-XXX |
 
 ## Security Evidence
-
-| Check            | Result          | Evidence Location                                      |
-| ---------------- | --------------- | ------------------------------------------------------ |
-| SAST             | 0 high/critical | DevAudit portal: [PROJECT_SLUG]/REQ-XXX                |
-| Dependency Audit | 0 high/critical | DevAudit portal: [PROJECT_SLUG]/REQ-XXX                |
-| Access Control   | [PASS/N/A]      | Git: `compliance/evidence/REQ-XXX/security-summary.md` |
-| Audit Log        | [PASS/N/A]      | Git: `compliance/evidence/REQ-XXX/security-summary.md` |
+| Check | Result | Evidence Location |
+|-------|--------|-------------------|
+| SAST | 0 high/critical | DevAudit portal: [PROJECT_SLUG]/REQ-XXX |
+| Dependency Audit | 0 high/critical | DevAudit portal: [PROJECT_SLUG]/REQ-XXX |
+| Access Control | [PASS/N/A] | Git: `compliance/evidence/REQ-XXX/security-summary.md` |
+| Audit Log | [PASS/N/A] | Git: `compliance/evidence/REQ-XXX/security-summary.md` |
 
 ## Acceptance Criteria
-
 - [x] [From test-scope.md]
 - [x] All E2E tests passing
 - [x] TypeScript clean
@@ -315,15 +304,14 @@ Create `compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md`:
 - [x] AI use documented (if applicable)
 
 ## Risk Assessment
-
 - [Any risks introduced]
 - [New dependencies and trust assessment]
 
 ## Post-Deploy Actions
 
-| Type | Script / Command | Target | Required | Notes                           |
-| ---- | ---------------- | ------ | -------- | ------------------------------- |
-| —    | None             | —      | —        | No post-deploy actions required |
+| Type | Script / Command | Target | Required | Notes |
+|------|-----------------|--------|----------|-------|
+| — | None | — | — | No post-deploy actions required |
 
 <!-- Replace the "None" row above with actual actions if this release requires them:
 | Data migration | `npx tsx scripts/backfill-x.ts "[CONN_STRING]"` | Prod DB | Yes | [description] |
@@ -335,7 +323,6 @@ Create `compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md`:
 ---
 
 ## Reviewer Checklist
-
 - [ ] Code matches requirement
 - [ ] Test evidence present and all-pass
 - [ ] Security evidence present and clean
@@ -350,16 +337,15 @@ Create `compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md`:
 ---
 
 ## Audit Trail
-
-| Date   | Action                   | Actor      | Notes                             |
-| ------ | ------------------------ | ---------- | --------------------------------- |
-| [date] | Requirement created      | [who]      | Risk: [level]                     |
-| [date] | Implementation completed | [who]      | [details]                         |
-| [date] | AI code reviewed         | [reviewer] | [files]                           |
-| [date] | Tests passed             | [who]      | E2E + SAST: clean                 |
-| [date] | UAT verification passed  | [who]      | Health + smoke + feature verified |
-| [date] | Post-deploy actions      | [who]      | [Completed / None required]       |
-| [date] | Submitted for review     | [who]      | PR #[number]                      |
+| Date | Action | Actor | Notes |
+|------|--------|-------|-------|
+| [date] | Requirement created | [who] | Risk: [level] |
+| [date] | Implementation completed | [who] | [details] |
+| [date] | AI code reviewed | [reviewer] | [files] |
+| [date] | Tests passed | [who] | E2E + SAST: clean |
+| [date] | UAT verification passed | [who] | Health + smoke + feature verified |
+| [date] | Post-deploy actions | [who] | [Completed / None required] |
+| [date] | Submitted for review | [who] | PR #[number] |
 ```
 
 ### Step 9: Commit Compliance Docs and Push
@@ -371,7 +357,6 @@ Commit compliance documents and push immediately. Heavy CI gates (E2E, TypeScrip
 If using DevAudit, commit only compliance documents (RTM, release ticket, test scope, AI notes, security summary). Binary evidence (JSON results, screenshots) is stored in DevAudit, not git.
 
 **Before committing, verify all required artifacts exist:**
-
 - [ ] `compliance/evidence/REQ-XXX/test-scope.md`
 - [ ] `compliance/evidence/REQ-XXX/test-plan.md`
 - [ ] `compliance/evidence/REQ-XXX/test-execution-summary.md`
@@ -395,7 +380,6 @@ git push origin develop
 ```
 
 If NOT using DevAudit (git-based evidence):
-
 ```bash
 git add compliance/RTM.md compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md compliance/evidence/REQ-XXX/
 git commit -m "compliance: [REQ-XXX] evidence compiled - awaiting review"
@@ -515,11 +499,11 @@ The script:
 
 Required environment variables for the scripted path:
 
-| Var                   | What it is                                                       | Where to set                                                                     |
-| --------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `DEVAUDIT_USER_TOKEN` | Personal Access Token (`mctok_…`) attributed to the running user | Issue at `/settings/tokens`; store as a repo secret for CI or `.env` for local   |
-| `DEVAUDIT_API_KEY`    | Project-scoped API key (existing)                                | Already set for evidence uploads                                                 |
-| `DEVAUDIT_BASE_URL`   | DevAudit URL                                                     | Resolved by CI templates; locally read from `sdlc-config.json devaudit.base_url` |
+| Var | What it is | Where to set |
+|---|---|---|
+| `DEVAUDIT_USER_TOKEN` | Personal Access Token (`mctok_…`) attributed to the running user | Issue at `/settings/tokens`; store as a repo secret for CI or `.env` for local |
+| `DEVAUDIT_API_KEY` | Project-scoped API key (existing) | Already set for evidence uploads |
+| `DEVAUDIT_BASE_URL` | DevAudit URL | Resolved by CI templates; locally read from `sdlc-config.json devaudit.base_url` |
 
 #### Step 11b — Approve
 
@@ -578,7 +562,7 @@ upload-evidence:
   uses: metasession-dev/devaudit/.github/workflows/upload-evidence.yml@main
   with:
     project-slug: your-project-slug
-    release-version: v2026.03.27 # or use date-based auto-generation
+    release-version: v2026.03.27       # or use date-based auto-generation
     environment: uat
   secrets:
     SUPABASE_URL: ${{ secrets.META_COMPLY_SUPABASE_URL }}
@@ -586,7 +570,6 @@ upload-evidence:
 ```
 
 This automatically:
-
 - Creates the release in DevAudit if it doesn't exist (status: `draft`)
 - Uploads compliance source documents (RTM, test plan, test cases, test summary report)
 - Syncs `known_requirements` from RTM.md for completeness tracking
@@ -597,12 +580,10 @@ This automatically:
 Copy these from `sdlc/files/ci/` into your project's `.github/workflows/`:
 
 **`check-release-approval.yml`** (renamed from `check-uat-approval.yml` in sdlc-v1.22.0) — Release Approval Gate on PRs to main:
-
 - Blocks merge until the release is approved in DevAudit (`uat_approved` / `release_approved` / downstream statuses)
 - Add as a required status check on the `main` branch protection rule
 
 **`post-deploy-prod.yml`** — Production evidence capture after merge to main:
-
 - Runs production smoke tests
 - Uploads production evidence to DevAudit (environment: production)
 - Marks the release as `released`

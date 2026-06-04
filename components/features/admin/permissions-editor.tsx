@@ -16,6 +16,7 @@ import {
   DollarSign,
   Settings,
   ChefHat,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface PermissionsEditorProps {
@@ -29,7 +30,15 @@ export function PermissionsEditor({
   onChange,
   disabled,
 }: PermissionsEditorProps) {
-  const currentPermissions = permissions || DEFAULT_ADMIN_PERMISSIONS;
+  // Merge the user's stored permissions over the role-default preset so
+  // any permission key added after the user's DB record was created
+  // (e.g. REQ-066 AC10's `incidentsAccess`) shows its default state in
+  // the editor instead of an unintended OFF. Explicit user values still
+  // win via the second spread.
+  const currentPermissions: IAdminPermissions = {
+    ...DEFAULT_ADMIN_PERMISSIONS,
+    ...(permissions || {}),
+  };
 
   function handleToggle(key: keyof IAdminPermissions) {
     const updated = {
@@ -88,6 +97,15 @@ export function PermissionsEditor({
       title: 'Kitchen Management',
       icon: ChefHat,
       description: 'Author recipes and record production batches',
+    },
+    {
+      // REQ-066 AC10 — gates /dashboard/incidents (inventory deduction
+      // failures, stale-paid-orders, "Retry now" action).
+      key: 'incidentsAccess' as const,
+      title: 'Incidents',
+      icon: AlertTriangle,
+      description:
+        'View and resolve inventory deduction failures and stale-paid-order events',
     },
   ];
 

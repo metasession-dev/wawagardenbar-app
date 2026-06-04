@@ -12,6 +12,15 @@ export interface IAdminPermissions {
    * Granted via Settings → Admins → Permissions toggle.
    */
   kitchenManagement: boolean;
+  /**
+   * REQ-066 AC10 — gates `/dashboard/incidents`. Lets the holder view
+   * inventory-deduction-failed + stale-paid-order events and click
+   * "Retry now" on stuck deductions. Defaults `true` for all roles
+   * (matches the existing `requireRole(['csr','admin','super-admin'])`
+   * gate on the page); super-admin always bypasses the permission
+   * gate in the nav filter.
+   */
+  incidentsAccess: boolean;
 }
 
 export const DEFAULT_ADMIN_PERMISSIONS: IAdminPermissions = {
@@ -23,6 +32,7 @@ export const DEFAULT_ADMIN_PERMISSIONS: IAdminPermissions = {
   expensesManagement: false,
   settingsAndConfiguration: false,
   kitchenManagement: false,
+  incidentsAccess: true,
 };
 
 export const CSR_DEFAULT_PERMISSIONS: IAdminPermissions = {
@@ -34,6 +44,7 @@ export const CSR_DEFAULT_PERMISSIONS: IAdminPermissions = {
   expensesManagement: false,
   settingsAndConfiguration: false,
   kitchenManagement: false,
+  incidentsAccess: true,
 };
 
 export const SUPER_ADMIN_PERMISSIONS: IAdminPermissions = {
@@ -45,4 +56,5 @@ export const SUPER_ADMIN_PERMISSIONS: IAdminPermissions = {
   expensesManagement: true,
   settingsAndConfiguration: true,
   kitchenManagement: true,
+  incidentsAccess: true,
 };

@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-066",
+  "ac": 7,
+  "slug": "inventory-decremented-on-kitchen-complete",
+  "specFile": "e2e/admin-order-inventory-delta.kitchen-display.spec.ts",
+  "capturedAt": "2026-06-04T08:17:17.879Z"
+}

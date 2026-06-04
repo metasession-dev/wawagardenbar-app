@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-066",
+  "ac": 7,
+  "slug": "inventory-decremented-on-orders-page-complete",
+  "specFile": "e2e/admin-order-inventory-delta.orders-page.spec.ts",
+  "capturedAt": "2026-06-04T08:17:45.005Z"
+}

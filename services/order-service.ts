@@ -202,20 +202,10 @@ export class OrderService {
       operationalCosts,
     });
 
-    // Deduct inventory immediately upon order creation
-    try {
-      const InventoryService = (await import('./inventory-service')).default;
-      await InventoryService.deductStockForOrder(order._id.toString());
-
-      // Mark inventory as deducted
-      order.inventoryDeducted = true;
-      order.inventoryDeductedAt = new Date();
-      await order.save();
-    } catch (error) {
-      console.error('Error deducting inventory on order creation:', error);
-      // Continue with order creation even if inventory deduction fails
-      // This prevents blocking order creation due to inventory issues
-    }
+    // REQ-066 — inventory deduction is OWNED by `OrderService.completeOrder`
+    // (called from the kitchen-display action). Order-create no longer
+    // deducts; the order moves through pending → confirmed → preparing →
+    // ready → completed and inventory drops on the final transition.
 
     return order.toObject();
   }
@@ -751,18 +741,10 @@ export class OrderService {
 
     await order.save();
 
-    // Deduct inventory if not already deducted
-    if (!order.inventoryDeducted) {
-      try {
-        const InventoryService = (await import('./inventory-service')).default;
-        await InventoryService.deductStockForOrder(params.orderId);
-        order.inventoryDeducted = true;
-        order.inventoryDeductedAt = new Date();
-        await order.save();
-      } catch (error) {
-        console.error('Error deducting inventory:', error);
-      }
-    }
+    // REQ-066 — inventory deduction is OWNED by `OrderService.completeOrder`
+    // (kitchen-display completion). Manual payment capture flips status
+    // to `confirmed`; the order still moves through the kitchen-display
+    // lifecycle to `completed` where the deduction fires.
 
     // Calculate and issue rewards if user is logged in
     if (order.userId) {
@@ -804,5 +786,219 @@ export class OrderService {
     }
 
     return order.toObject();
+  }
+
+  /**
+   * @requirement REQ-066 — Canonical completion chokepoint
+   *
+   * The ONLY place in the codebase that sets `Order.status = 'completed'`
+   * and triggers the inventory deduction. The kitchen-display action
+   * (and any other admin path that wants to complete an order) routes
+   * through here. The 6 historical inline `deductStockForOrder` call
+   * sites (OrderService.createOrder + captureManualPayment, both payment
+   * webhooks, both TabService sites) have been removed.
+   *
+   * On a deduction throw the function writes an `IncidentEvent` row
+   * tagged `inventory_deduction_failed` and returns success — the kitchen
+   * workflow MUST NOT stall on an inventory-side error. The 15-min
+   * reconciliation cron retries from there.
+   */
+  static async completeOrder(opts: {
+    orderId: string;
+    actorUserId: string;
+    actorRole: string;
+    note?: string;
+  }): Promise<{
+    success: boolean;
+    error?: string;
+    alreadyCompleted?: boolean;
+    /**
+     * REQ-066 AC9 — set when the kitchen-completion succeeded (status flipped,
+     * IncidentEvent written) but the inventory deduction threw. Callers use
+     * this to surface a UI warning instead of a "Success" toast.
+     */
+    deductionFailed?: boolean;
+    deductionError?: string;
+  }> {
+    await connectDB();
+
+    if (!Types.ObjectId.isValid(opts.orderId)) {
+      return { success: false, error: 'Invalid order ID' };
+    }
+
+    const order = await Order.findById(opts.orderId);
+    if (!order) {
+      return { success: false, error: 'Order not found' };
+    }
+
+    if (order.status === 'cancelled') {
+      return { success: false, error: 'Cannot complete a cancelled order' };
+    }
+
+    if (order.status === 'completed' && order.inventoryDeducted) {
+      return { success: true, alreadyCompleted: true };
+    }
+
+    const previousStatus = order.status;
+    if (order.status !== 'completed') {
+      order.status = 'completed';
+      order.statusHistory.push({
+        status: 'completed',
+        timestamp: new Date(),
+        note: opts.note ?? `Completed by ${opts.actorRole}`,
+      });
+    }
+
+    let incidentWritten = false;
+    let deductionError: string | undefined;
+    if (!order.inventoryDeducted) {
+      try {
+        const InventoryService = (await import('./inventory-service')).default;
+        await InventoryService.deductStockForOrder(opts.orderId);
+        order.inventoryDeducted = true;
+        order.inventoryDeductedAt = new Date();
+        order.inventoryDeductedBy =
+          opts.actorUserId as unknown as Types.ObjectId;
+      } catch (error) {
+        // Workflow must not stall — log incident, leave the deducted
+        // flag false. Reconciliation cron retries.
+        deductionError = error instanceof Error ? error.message : String(error);
+        try {
+          const { IncidentEventService } = await import(
+            './incident-event-service'
+          );
+          await IncidentEventService.recordIncident({
+            kind: 'inventory_deduction_failed',
+            entityId: opts.orderId,
+            summary: 'deductStockForOrder threw during kitchen completion',
+            errorDetails: {
+              message: deductionError,
+              actorUserId: opts.actorUserId,
+              actorRole: opts.actorRole,
+            },
+          });
+          incidentWritten = true;
+        } catch (logErr) {
+          console.error(
+            '[OrderService.completeOrder] IncidentEvent write also failed:',
+            logErr
+          );
+        }
+      }
+    }
+
+    await order.save();
+
+    try {
+      const { AuditLogService } = await import('./audit-log-service');
+      await AuditLogService.createLog({
+        userId: opts.actorUserId,
+        userEmail: '',
+        userRole: opts.actorRole,
+        action: 'order.update',
+        resource: 'order',
+        resourceId: opts.orderId,
+        details: {
+          previousStatus,
+          newStatus: 'completed',
+          inventoryDeducted: order.inventoryDeducted,
+          incidentWritten,
+        },
+      });
+    } catch (error) {
+      console.error(
+        '[OrderService.completeOrder] audit log write failed:',
+        error
+      );
+    }
+
+    if (deductionError !== undefined) {
+      return { success: true, deductionFailed: true, deductionError };
+    }
+    return { success: true };
+  }
+
+  /**
+   * @requirement REQ-066 AC5 — Stale-paid-order visibility scan
+   *
+   * Read-only scan called from the 15-min reconciliation cron. For every
+   * order matching (paymentStatus=paid AND status NOT IN [completed,
+   * cancelled] AND createdAt older than the threshold), writes an
+   * `IncidentEvent` tagged `stale_paid_order` so the `/dashboard/incidents`
+   * panel surfaces it. **Never mutates Order.status** — the operator's
+   * contract is that ONLY kitchen-display staff may complete an order.
+   *
+   * Dedup is delegated to `IncidentEventService.dedupRecent` (24h window
+   * keyed on kind + entityId) so the same stuck order doesn't generate
+   * 96 rows over 24h of cron cycles.
+   */
+  static async scanStalePaidOrders(opts: {
+    thresholdHours: number;
+    limit?: number;
+  }): Promise<{ scanned: number; flagged: number; skippedAsDup: number }> {
+    await connectDB();
+    const { IncidentEventService } = await import('./incident-event-service');
+
+    const olderThan = new Date(
+      Date.now() - opts.thresholdHours * 60 * 60 * 1000
+    );
+
+    const orders = await Order.find({
+      paymentStatus: 'paid',
+      status: { $nin: ['completed', 'cancelled'] },
+      createdAt: { $lt: olderThan },
+    })
+      .sort({ createdAt: 1 })
+      .limit(opts.limit ?? 100)
+      .lean<
+        Array<{
+          _id: { toString: () => string };
+          orderNumber: string;
+          status: string;
+          paymentStatus: string;
+          createdAt: Date;
+        }>
+      >();
+
+    let flagged = 0;
+    let skippedAsDup = 0;
+
+    for (const order of orders) {
+      const entityId = order._id.toString();
+      const already = await IncidentEventService.dedupRecent({
+        kind: 'stale_paid_order',
+        entityId,
+        withinHours: 24,
+      });
+      if (already) {
+        skippedAsDup += 1;
+        continue;
+      }
+      const ageHours = (
+        (Date.now() - new Date(order.createdAt).getTime()) /
+        (60 * 60 * 1000)
+      ).toFixed(1);
+      try {
+        await IncidentEventService.recordIncident({
+          kind: 'stale_paid_order',
+          entityId,
+          summary: `Paid order ${order.orderNumber} stuck at status='${order.status}' for ${ageHours}h`,
+          errorDetails: {
+            orderNumber: order.orderNumber,
+            status: order.status,
+            createdAt: order.createdAt,
+            ageHours: Number(ageHours),
+          },
+        });
+        flagged += 1;
+      } catch (error) {
+        console.error(
+          '[OrderService.scanStalePaidOrders] IncidentEvent write failed:',
+          error
+        );
+      }
+    }
+
+    return { scanned: orders.length, flagged, skippedAsDup };
   }
 }

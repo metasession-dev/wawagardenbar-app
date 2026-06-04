@@ -19,33 +19,21 @@ export interface EvidenceShotSidecar {
 const REQ_ID_RE = /^REQ-[A-Z0-9-]+$/;
 const SLUG_RE = /^[a-z0-9-]+$/;
 
-export function validateEvidenceShotInputs(
-  reqId: string,
-  ac: number,
-  slug: string
-): void {
+export function validateEvidenceShotInputs(reqId: string, ac: number, slug: string): void {
   if (!REQ_ID_RE.test(reqId)) {
-    throw new Error(
-      `evidenceShot: invalid reqId "${reqId}" (must match ${REQ_ID_RE})`
-    );
+    throw new Error(`evidenceShot: invalid reqId "${reqId}" (must match ${REQ_ID_RE})`);
   }
   if (!Number.isInteger(ac) || ac <= 0) {
-    throw new Error(
-      `evidenceShot: invalid ac "${ac}" (must be a positive integer)`
-    );
+    throw new Error(`evidenceShot: invalid ac "${ac}" (must be a positive integer)`);
   }
   if (!SLUG_RE.test(slug)) {
     throw new Error(
-      `evidenceShot: invalid slug "${slug}" (must match ${SLUG_RE} — kebab-case, no AC prefix)`
+      `evidenceShot: invalid slug "${slug}" (must match ${SLUG_RE} — kebab-case, no AC prefix)`,
     );
   }
 }
 
-export function composeScreenshotFilename(
-  reqId: string,
-  ac: number,
-  slug: string
-): string {
+export function composeScreenshotFilename(reqId: string, ac: number, slug: string): string {
   return `${reqId}-AC${ac}-${slug}.png`;
 }
 
@@ -60,7 +48,7 @@ export function composeScreenshotFilename(
  */
 export function autoDetectEvidenceShotOrigin(
   specFile: string,
-  newSpecsEnv: string | undefined
+  newSpecsEnv: string | undefined,
 ): EvidenceShotOrigin {
   const list = (newSpecsEnv ?? '').trim();
   if (list.length === 0) return 'regression';
@@ -68,7 +56,7 @@ export function autoDetectEvidenceShotOrigin(
     list
       .split(/\r?\n/)
       .map((s) => s.trim())
-      .filter(Boolean)
+      .filter(Boolean),
   );
   return newSpecs.has(specFile) ? 'feature' : 'regression';
 }

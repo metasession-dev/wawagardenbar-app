@@ -79,6 +79,17 @@ The negative case is audit evidence too — auditors examine "no ADR — <ration
 
 **Dependencies introduced:** REPLACE — list new npm/pip packages; flag any with known CVEs or transitive concerns.
 
+### Risk register entries
+
+> _Populated by the [`risk-register-keeper` skill](../skills/risk-register-keeper/SKILL.md) for MEDIUM/HIGH risk REQs at Stage 1 plan APPROVAL. The persistent risk record lives in [`compliance/risk-register.md`](../../risk-register.md); this section references the RISK-NNN entries this REQ opened, mitigated, or accepted._
+
+When **risk class is MEDIUM or HIGH**, expect a list like:
+
+- **RISK-NNN — <title>** — Status: OPEN. Opened by `risk-register-keeper`. Operator edits canonical row + signs off residual rating before plan APPROVAL.
+- **RISK-NNN — <title>** — Status: MITIGATED. Controls landing in this PR close the residual.
+
+When **risk class is LOW** OR no register-worthy risk is identified, write: _"@risk-deferred: <one-line rationale>"_ — the negative case is audit evidence too. Don't leave this section empty.
+
 ## 5. Data protection (GDPR Art. 25)
 
 > _Closes GDPR Art. 25 — data protection by design_

@@ -165,9 +165,10 @@ Reached only on the **tracked** route from Phase 0 (the issue is already fetched
 
 6. **Invoke `requirements-aligner` to populate the SRS-ID column on the AC table.** The plan's "Acceptance criteria" table carries an SRS-ID column per AC; `requirements-aligner` fuzzy-matches each AC against `docs/SRS.md` and proposes new `REQ-AREA-NNN` stubs, flags stale items, or annotates `@srs-deferred`. Don't author the SRS-ID column inline — call via the standard Claude Code Skill mechanism (`Skill(name: "requirements-aligner", …)`). Block plan APPROVAL until every AC has a resolved SRS-ID per the skill's Phase 1 contract (configurable via `sdlc-config.json:requirements_aligner.block_on_stage_1`; ramp-up mode default-on for legacy projects).
 7. **Invoke `adr-author` to decide ADR-worthiness + draft the ADR if needed.** The plan's "Architecture decisions" section is no longer authored inline as bullets — `adr-author` applies its decision tree (new third-party dependency / new database/cache/queue / new external service / pattern change spanning >3 files / HIGH-CRITICAL risk class / file-path signals from `sdlc-config.json:adr_author.file_paths_signal_architecture`), allocates the next `ADR-NNN`, drafts a Context/Decision/Consequences/Alternatives/Status stub at `docs/ADR/ADR-NNN-<slug>.md`, and injects either _"Produced ADR-NNN: <title>"_ or _"No ADR needed — <rationale>"_ into the plan's section. Call via the standard Claude Code Skill mechanism (`Skill(name: "adr-author", …)`). Configurable via `sdlc-config.json:adr_author.block_on_stage_1`; advisory by default in v1.
-8. **Update `compliance/RTM.md`** with the new entry: REQ-XXX, title, risk class, linked issue, linked test cases (placeholder).
-9. **Post plan summary as an issue comment.** Format: TL;DR; Risk class + signals; Acceptance criteria (with SRS-IDs); Architectural decisions (ADR-NNN reference or no-ADR rationale); Technical approach (one paragraph); Dependencies; Test scope.
-10. **Checkpoint** — pause for human approval **iff** risk class is HIGH or CRITICAL. LOW and MEDIUM pass through to Phase 2 automatically. The checkpoint can be forced on for all classes via the `--require-plan-approval` flag (or `DEVAUDIT_REQUIRE_PLAN_APPROVAL=1` env var) for orgs that want it always-on.
+8. **Invoke `risk-register-keeper` for MEDIUM/HIGH risk classifications.** The plan's "Threat model" / Risks section is no longer authored as orphan bullets — when risk class is MEDIUM or HIGH (LOW skipped by default per `sdlc-config.json:risk_register_keeper.stage_1_min_risk_class`), `risk-register-keeper` reads the plan + diff, identifies discrete risks the change introduces, allocates `RISK-NNN` per project, drafts canonical rows in `compliance/risk-register.md`, and injects the RISK-NNN reference list into the plan's "Risk register entries" sub-section. The skill also enforces the `solo_with_gap` control-gap entry exists for projects in that approval mode. Call via the standard Claude Code Skill mechanism (`Skill(name: "risk-register-keeper", …)`). Configurable via `sdlc-config.json:risk_register_keeper.block_on_stage_1`; advisory by default in v1.
+9. **Update `compliance/RTM.md`** with the new entry: REQ-XXX, title, risk class, linked issue, linked test cases (placeholder).
+10. **Post plan summary as an issue comment.** Format: TL;DR; Risk class + signals; Acceptance criteria (with SRS-IDs); Architectural decisions (ADR-NNN reference or no-ADR rationale); Risk register entries (RISK-NNN list); Technical approach (one paragraph); Dependencies; Test scope.
+11. **Checkpoint** — pause for human approval **iff** risk class is HIGH or CRITICAL. LOW and MEDIUM pass through to Phase 2 automatically. The checkpoint can be forced on for all classes via the `--require-plan-approval` flag (or `DEVAUDIT_REQUIRE_PLAN_APPROVAL=1` env var) for orgs that want it always-on.
 
 ### Phase 2 — Implement and test (SDLC stage 2)
 
@@ -201,15 +202,17 @@ Reached only on the **tracked** route from Phase 0 (the issue is already fetched
 
 1. **Invoke `requirements-aligner` to drop the per-REQ SRS-alignment artefact.** The skill's Phase 2 produces `compliance/evidence/REQ-XXX/srs-alignment.md` — the per-REQ trace from each AC to its SRS item, with an operator sign-off block. The artefact uploads with `evidence_type=srs_alignment` (visible in Documents tab + audit-pack export; v1 orphan-by-design per META-COMPLY framework-registry-auditor). Call via the standard Skill mechanism; don't inline the alignment logic.
 2. **Invoke `adr-author` to drop the per-REQ architecture-decision artefact.** The skill's Phase 2 produces `compliance/evidence/REQ-XXX/architecture-decision.md` — either _"Produced ADR-NNN: <title>"_ with the file pointer, or _"No ADR needed — <rationale>"_. Operator sign-off block at the bottom. The artefact uploads with `evidence_type=architecture_decision`; clause attribution per the META-COMPLY framework-registry-auditor review. Call via the standard Skill mechanism.
-3. **Re-run the full test pack** with artefact capture:
+3. **Invoke `risk-register-keeper` to drop the per-REQ risk-assessment artefact.** The skill's Phase 3 produces `compliance/evidence/REQ-XXX/risk-assessment.md` — a summary table of RISK-NNN entries this REQ opened / mitigated / accepted, framework cross-references, and an operator sign-off block. The artefact uploads with `evidence_type=risk_assessment`; clause attribution per the META-COMPLY framework-registry-auditor review. Call via the standard Skill mechanism.
+4. **Re-run the full test pack** with artefact capture:
    - `npm run test:e2e -- --reporter=html` (produces `playwright-report/`)
    - `npx vitest run --coverage` (produces `coverage/`)
-4. **Organise artefacts** under `compliance/evidence/REQ-XXX/` with date-prefixed naming:
+5. **Organise artefacts** under `compliance/evidence/REQ-XXX/` with date-prefixed naming:
 
    ```
    compliance/evidence/REQ-XXX/
    ├── srs-alignment.md                  ← produced in step 1 by requirements-aligner
    ├── architecture-decision.md          ← produced in step 2 by adr-author
+   ├── risk-assessment.md                ← produced in step 3 by risk-register-keeper
    ├── YYYY-MM-DD_e2e-results.json
    ├── YYYY-MM-DD_playwright-report/
    ├── YYYY-MM-DD_traces/                ← per-test trace.zip + error-context.md
@@ -219,7 +222,7 @@ Reached only on the **tracked** route from Phase 0 (the issue is already fetched
 
    Copy Playwright's `test-results/` folder verbatim into `YYYY-MM-DD_traces/` so trace-by-test-name is available for audit without walking the HTML report's hash-name index. For HIGH/CRITICAL releases the traces are part of the audit trail — _"what state was the page in when test X failed and was overridden?"_ answers in one `ls` instead of an HTML-report walk.
 
-5. **Upload each artefact to the portal**:
+6. **Upload each artefact to the portal**:
    ```bash
    devaudit push <project-slug> REQ-XXX <evidence-type> <file> \
      --release "v$(date +%Y.%m.%d)" --create-release-if-missing \
@@ -227,9 +230,9 @@ Reached only on the **tracked** route from Phase 0 (the issue is already fetched
      --git-sha "$(git rev-parse HEAD)" \
      --branch "$(git rev-parse --abbrev-ref HEAD)"
    ```
-   Evidence types: `screenshot`, `e2e_result`, `test_report`, `audit_log`, `compliance_document`, `manual_upload`, `srs_alignment` (from step 1), `architecture_decision` (from step 2).
-6. **Verify uploads landed.** `gh api` or `curl` against `https://devaudit.metasession.co/projects/<slug>/requirements/REQ-XXX/evidence` should show every artefact.
-7. **Update `compliance/RTM.md`** with portal links for each evidence row.
+   Evidence types: `screenshot`, `e2e_result`, `test_report`, `audit_log`, `compliance_document`, `manual_upload`, `srs_alignment` (from step 1), `architecture_decision` (from step 2), `risk_assessment` (from step 3).
+7. **Verify uploads landed.** `gh api` or `curl` against `https://devaudit.metasession.co/projects/<slug>/requirements/REQ-XXX/evidence` should show every artefact.
+8. **Update `compliance/RTM.md`** with portal links for each evidence row.
 
 ### Phase 4 — Submit for UAT review (SDLC stage 4)
 

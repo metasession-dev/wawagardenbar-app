@@ -113,7 +113,9 @@ Create `compliance/evidence/REQ-XXX/implementation-plan.md`:
 
 ## Risks / Considerations
 
-- [Anything that could go wrong or needs special attention]
+> Populated by the [`risk-register-keeper` skill](../skills/risk-register-keeper/SKILL.md) at Stage 1 for MEDIUM/HIGH risk REQs (LOW skipped by default per `sdlc-config.json:risk_register_keeper.stage_1_min_risk_class`). The skill identifies discrete risks the change introduces, allocates `RISK-NNN` per project, drafts canonical rows in `compliance/risk-register.md`, and injects the RISK-NNN reference list here (replacing the inline bullets). Don't author this section inline as bullets — the persistent risk record lives in `compliance/risk-register.md`, not buried in the plan.
+
+- RISK-NNN — <title> (`compliance/risk-register.md`) — Operator edits canonical row + signs off residual rating before APPROVAL — OR — @risk-deferred — <rationale>
 
 ## Post-Deploy Actions
 

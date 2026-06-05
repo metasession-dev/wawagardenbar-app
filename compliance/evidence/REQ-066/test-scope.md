@@ -38,6 +38,10 @@
 - **No migration script for existing `inventoryDeducted: false` orders** — the reconciliation cron picks them up on the next tick after deployment.
 - **No upstream `evidenceShot` tier param work** — filed as separate issues against `metasession-dev/DevAudit-Installer` ([#113](https://github.com/metasession-dev/DevAudit-Installer/issues/113) helper change + [#114](https://github.com/metasession-dev/DevAudit-Installer/issues/114) skill density guidance).
 
+## Post-release SRS alignment (2026-06-05)
+
+REQ-066 shipped without corresponding `docs/SRS.md` updates. Filed as [#305](https://github.com/metasession-dev/wawagardenbar-app/issues/305) and implemented under branch `docs/srs-align-req-066`: 7 new SRS items added (REQ-ORDMGT-007, REQ-INV-009/010/011/012/013, REQ-SETTINGS-005) + REQ-CHECKOUT-007 clarified to specify that inventory deduction is **not** at order creation. Process-improvement skill `srs-aligner` proposed against DevAudit-Installer [#119](https://github.com/metasession-dev/DevAudit-Installer/issues/119) so future feature/bug-fix REQs cannot ship without their SRS items.
+
 ## Manual UAT — what to check
 
 1. **Kitchen-display happy path** — Open `/dashboard/kitchen-display` as super-admin; advance a real paid order through `confirmed → preparing → ready → completed`. Check the order's inventory item in `/dashboard/inventory` after each step. Inventory should be UNCHANGED at preparing + ready, DECREMENTED at completed.

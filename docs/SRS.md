@@ -118,6 +118,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-ORDMGT-004   | Price override with reason → audit                            | Should   | regression | `payment-actions.ts:129`                                                  |
 | REQ-ORDMGT-005   | Cancel order: reason required, paid blocked                   | Should   | regression | `order-management-actions.ts`                                             |
 | REQ-ORDMGT-006   | Manual payment recording                                      | Should   | regression | `order-payment-actions.ts:16`                                             |
+| REQ-ORDMGT-007   | Order completion → inventory deduction chokepoint             | Must     | regression | `services/order-service.ts:806`; REQ-066                                  |
 | REQ-TABMGT-001   | Tab list with status filter + stats                           | Should   | regression | `app/dashboard/orders/tabs/page.tsx`                                      |
 | REQ-TABMGT-002   | Tab detail with partial payments                              | Should   | regression | `tabs/[tabId]/page.tsx:82`; REQ-012/035/036                               |
 | REQ-TABMGT-003   | Admin pay tab with method + independent tip                   | Should   | regression | `admin-pay-tab-dialog`; REQ-036                                           |
@@ -142,6 +143,11 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-INV-006      | Inter-location stock transfer                                 | Could    | extended   | `inventory/transfer/page.tsx`                                             |
 | REQ-INV-007      | Cost-snapshot integrity                                       | Could    | extended   | REQ-022                                                                   |
 | REQ-INV-008      | Units of measurement registry                                 | Could    | extended   | REQ-033                                                                   |
+| REQ-INV-009      | Sale-point routing for deductions (`defaultSalesLocation`)    | Must     | regression | `services/inventory-service.ts:48`; REQ-066                               |
+| REQ-INV-010      | IncidentEvent model + recording                               | Must     | regression | `models/incident-event-model.ts`; REQ-066                                 |
+| REQ-INV-011      | Reconciliation cron + stale-paid scan                         | Must     | regression | `lib/scheduled-jobs.ts`; `services/order-service.ts`; REQ-066             |
+| REQ-INV-012      | `/dashboard/incidents` page + deduction-failure toast         | Should   | regression | `app/dashboard/incidents/page.tsx`; REQ-066                               |
+| REQ-INV-013      | Retry-now remediation + audit log                             | Should   | regression | `app/actions/admin/incidents-actions.ts`; REQ-066                         |
 | REQ-FIN-001      | Create + list expenses by date/filters                        | Should   | regression | `app/actions/finance/expense-actions.ts:17,52`                            |
 | REQ-FIN-002      | Bank statement (XLSX) import + dedupe                         | Should   | regression | `app/actions/expenses/csv-import-actions.ts:31`                           |
 | REQ-FIN-003      | Pending expense group submit/edit/approve                     | Should   | regression | `pending-expense-actions.ts:49`; REQ-026/032                              |
@@ -160,6 +166,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-SETTINGS-002 | Admin CRUD + permissions (super-admin)                        | Should   | regression | `admin-management-actions.ts:11`                                          |
 | REQ-SETTINGS-003 | API key create/revoke with scopes                             | Should   | regression | `settings/api-keys/page.tsx`, `services/api-key-service.ts:54`            |
 | REQ-SETTINGS-004 | Process data-deletion requests                                | Could    | extended   | `settings/data-requests/`; REQ-027                                        |
+| REQ-SETTINGS-005 | `incidentsAccess` admin permission                            | Should   | regression | `interfaces/admin-permissions.interface.ts`; REQ-066                      |
 | REQ-AUDIT-001    | Admin actions appear in audit log                             | Should   | regression | `app/dashboard/audit-logs/page.tsx`, `AuditLogService`                    |
 | REQ-API-001      | Public API requires valid key (401)                           | Must     | smoke      | `lib/api-key-validator.ts:39`; REQ-007                                    |
 | REQ-API-002      | Insufficient scope → 403                                      | Must     | smoke      | `api-key-validator.ts`                                                    |
@@ -301,9 +308,10 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 #### REQ-CHECKOUT-007 — Create order (happy path) · **Must** · smoke
 
 **Source:** `app/actions/payment/payment-actions.ts:65` (`createOrder`)
-**Behaviour:** On submit, an Order is created with a unique `orderNumber`, computed totals, `paymentStatus:'pending'`, estimated wait time; the cart is cleared and the kitchen is notified.
+**Behaviour:** On submit, an Order is created with a unique `orderNumber`, computed totals, `paymentStatus:'pending'`, estimated wait time; the cart is cleared and the kitchen is notified. **Inventory is NOT deducted at order creation** — deduction happens on transition to `status === 'completed'` via `OrderService.completeOrder` (see **REQ-ORDMGT-007**). Pre-REQ-066 the create/payment path called `deductStockForOrder` inline; those six call sites were removed by AC2.
 
 - **Given** a valid checkout, **When** the visitor submits, **Then** an order is created and they reach the order/payment confirmation; the cart empties.
+- **Given** the order is created with stock-tracked items, **When** the create-action returns, **Then** no inventory mutation has occurred (deduction is deferred to completion per REQ-ORDMGT-007).
 
 #### REQ-CHECKOUT-008 — Idempotency · **Must** · regression
 
@@ -516,6 +524,14 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 
 - **Given** an unpaid order, **When** the admin records a manual cash/transfer/card payment, **Then** `paymentStatus` becomes paid and a socket update fires.
 
+#### REQ-ORDMGT-007 — Order completion → inventory deduction chokepoint · **Must** · regression
+
+**Source:** `services/order-service.ts:806` (`completeOrder`), `app/actions/admin/order-management-actions.ts` (`updateOrderStatusAction`); cross-ref REQ-066, REQ-INV-009/010
+**Behaviour:** Order completion via kitchen-display Complete-Order action OR admin order-card "Complete" button routes through `OrderService.completeOrder` — the chokepoint is the **only** place inventory deduction occurs on the customer-order path. The chokepoint flips `Order.inventoryDeducted` on success and writes `inventoryDeductedAt` + `inventoryDeductedBy`. On a deduction throw, the order still flips to `completed` (kitchen workflow can't stall), the action returns `deductionFailed: true` + `deductionError: <message>`, and an IncidentEvent is recorded.
+
+- **Given** a confirmed/in-progress order with stock-tracked items, **When** kitchen-display or an admin marks it `completed`, **Then** `completeOrder` calls `deductStockForOrder`, flips `inventoryDeducted: true` on success, and the items' inventory rows decrement (per REQ-INV-009).
+- **Given** insufficient stock at the routed sale point, **When** `completeOrder` runs, **Then** `Order.status` still flips to `completed`, `Order.inventoryDeducted` stays `false`, the action result returns `deductionFailed: true`, and an `inventory_deduction_failed` IncidentEvent is recorded (REQ-INV-010).
+
 ---
 
 ## Feature Area 11 — Tab Management (TABMGT)
@@ -690,6 +706,47 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 
 - **Given** the UoM registry, **When** a super-admin adds a unit, **Then** it appears in inventory/recipe dropdowns and enforces dimension matching.
 
+#### REQ-INV-009 — Sale-point routing for deductions · **Must** · regression
+
+**Source:** `services/inventory-service.ts:48` (`applyOrderStockDelta`), `lib/sale-point-location-backfill.ts` (`deriveSalePointLocation`); cross-ref REQ-066 AC8
+**Behaviour:** Inventory deductions on the customer-order path route to the `locations[]` entry whose name matches `Inventory.defaultSalesLocation` (front-of-house, typically `chiller1`/`freezer1`). When `defaultSalesLocation` is unset, a "first non-empty" fallback walks `locations[]`. When it points at a bucket below the deduction quantity, `applyOrderStockDelta` **throws** — the system never auto-spills to other locations (operator stipulation). Refills (positive deltas) always land on `locations[0]` (storeroom).
+
+- **Given** an inventory row with `defaultSalesLocation: 'chiller1'` and chiller1.currentStock ≥ deduction, **When** order completion runs, **Then** chiller1 decrements and other location buckets are untouched.
+- **Given** an inventory row whose `defaultSalesLocation` bucket has insufficient stock — even when other locations have plenty, **When** order completion runs, **Then** `applyOrderStockDelta` throws `Insufficient stock at defaultSalesLocation='<loc>': have <n>, need <m>`; the chokepoint catches (REQ-ORDMGT-007).
+- **Given** a refill (cancel restore or production yield), **When** the delta is positive, **Then** it lands on `locations[0]` regardless of `defaultSalesLocation`.
+
+#### REQ-INV-010 — IncidentEvent model + recording · **Must** · regression
+
+**Source:** `models/incident-event-model.ts`, `services/incident-event-service.ts` (`recordIncident`, `dedupRecent`); cross-ref REQ-066 AC3
+**Behaviour:** `IncidentEvent` documents capture operational failures via two kinds: `inventory_deduction_failed` (entityId=orderId, recorded when the chokepoint catches a deduction throw) and `stale_paid_order` (entityId=orderId, recorded by the visibility scan). Each event carries `summary`, `errorDetails.message`, and timestamps. Dedup windows: 1h for `inventory_deduction_failed`, 24h for `stale_paid_order`.
+
+- **Given** an order completion where `applyOrderStockDelta` throws, **When** the chokepoint catches, **Then** an IncidentEvent kind=`inventory_deduction_failed` is written with `entityId` = orderId and `errorDetails.message` = the throw text.
+- **Given** an already-recorded `inventory_deduction_failed` event for the same orderId within the last hour, **When** the reconciliation cron retries and throws again, **Then** `IncidentEventService.dedupRecent` suppresses a duplicate write.
+
+#### REQ-INV-011 — Reconciliation cron + stale-paid scan · **Must** · regression
+
+**Source:** `lib/scheduled-jobs.ts`, `services/inventory-service.ts:reconcileMissedDeductions`, `services/order-service.ts:scanStalePaidOrders`; cross-ref REQ-066 AC4 + AC5
+**Behaviour:** A 15-minute scheduled job (1) re-runs `deductStockForOrder` for every Order with `inventoryDeducted: false` — `Order.status` is **never mutated** by the cron (operator stipulation); (2) scans for orders with `paymentStatus === 'paid'` AND `status !== 'completed'/'cancelled'` AND age ≥ 2h, recording `stale_paid_order` IncidentEvents within the 24h dedup window. Stops firing for a given order once `inventoryDeducted` flips true or the order is cancelled.
+
+- **Given** an order with `inventoryDeducted: false` AND deductible stock now exists at the routed location, **When** the cron tick runs, **Then** the retry succeeds, the flag flips to `true`, and no further IncidentEvents fire for that order.
+- **Given** a paid order older than 2h whose status is `confirmed` (never completed), **When** the cron tick runs, **Then** a `stale_paid_order` IncidentEvent is recorded once, suppressed for the next 24h.
+
+#### REQ-INV-012 — `/dashboard/incidents` page + deduction-failure toast · **Should** · regression
+
+**Source:** `app/dashboard/incidents/page.tsx`; `components/features/kitchen/kitchen-order-card.tsx`, `components/features/admin/orders/admin-order-card.tsx`, `components/features/admin/orders/order-actions-sidebar.tsx`; cross-ref REQ-066 AC6 + AC9, REQ-SETTINGS-005
+**Behaviour:** `/dashboard/incidents` lists IncidentEvents newest-first with kind-filter chips; gated by RBAC csr/admin/super-admin AND the `incidentsAccess` permission. When the order-completion action returns a `warning` (from `deductionFailed: true`), the calling UI surface — kitchen-display, admin order-card, or order-actions-sidebar — shows a destructive-variant toast titled "Completed — inventory not deducted" containing the chokepoint's error message and a pointer to `/dashboard/incidents`.
+
+- **Given** an admin/csr/super-admin with `incidentsAccess: true`, **When** they open `/dashboard/incidents`, **Then** IncidentEvents render newest-first with kind-filter chips and Retry-now buttons on the `inventory_deduction_failed` rows (REQ-INV-013).
+- **Given** a deduction failure during completion, **When** the action result returns `warning`, **Then** the UI surface that initiated the completion shows the destructive "Completed — inventory not deducted" toast with the message and the `/dashboard/incidents` pointer.
+
+#### REQ-INV-013 — Retry-now remediation + audit log · **Should** · regression
+
+**Source:** `app/actions/admin/incidents-actions.ts:retryInventoryDeductionAction`, `components/features/admin/incident-retry-button.tsx`; cross-ref REQ-066 AC10
+**Behaviour:** The per-row "Retry now" button on `/dashboard/incidents` calls `retryInventoryDeductionAction(orderId)`. The action is **idempotent** — when `Order.inventoryDeducted === true` it returns a no-op success; otherwise it invokes `deductStockForOrder`. On success the order's `inventoryDeducted` flips, the row's badge renders ✓ Deducted on next load, and an `incidents.retry_deduction_succeeded` audit-log entry is written. On still-failing it shows a destructive toast and writes `incidents.retry_deduction_failed`.
+
+- **Given** an `inventory_deduction_failed` row whose underlying order has `inventoryDeducted: false` and stock now exists at the routed location, **When** an admin clicks Retry now, **Then** the deduction succeeds, the row's badge flips to ✓ Deducted, and an audit-log entry `incidents.retry_deduction_succeeded` is written.
+- **Given** an already-retried row whose `Order.inventoryDeducted` is already `true`, **When** Retry now is clicked again, **Then** the action exits idempotently with success and no further inventory or audit mutation.
+
 ---
 
 ## Feature Area 16 — Financial Management (FIN)
@@ -822,6 +879,15 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 **Source:** `app/dashboard/settings/data-requests/`; cross-ref REQ-027
 
 - **Given** a pending deletion request, **When** a super-admin approves it, **Then** the customer's `accountStatus` becomes `deleted` and it is audit-logged.
+
+#### REQ-SETTINGS-005 — `incidentsAccess` admin permission · **Should** · regression
+
+**Source:** `interfaces/admin-permissions.interface.ts` (`IAdminPermissions.incidentsAccess`), `components/features/admin/dashboard-nav.tsx`, `components/features/admin/permissions-editor.tsx`; cross-ref REQ-066 AC10, REQ-INV-012
+**Behaviour:** `IAdminPermissions` includes `incidentsAccess: boolean`. The three role presets (`DEFAULT_ADMIN_PERMISSIONS`, `CSR_DEFAULT_PERMISSIONS`, `SUPER_ADMIN_PERMISSIONS`) default it to `true`. The three read sites (admin-login + permissions-editor + dashboard-nav) **soft-default** to `true` when the key is missing on a User document — legacy users without the field still see the nav link, no data backfill required. The field gates the "Incidents" main-nav item.
+
+- **Given** a newly-created admin with the default preset, **When** they log in, **Then** the dashboard nav includes the "Incidents" link and `/dashboard/incidents` is reachable.
+- **Given** a User document predating REQ-066 (the `incidentsAccess` key is missing), **When** the user logs in, **Then** the soft-default of `true` applies and the nav link still appears (no schema migration was run).
+- **Given** a super-admin who toggles `incidentsAccess: false` for a specific admin via the permissions editor, **When** that admin reloads, **Then** the "Incidents" nav link is hidden and direct access to `/dashboard/incidents` is denied.
 
 ---
 

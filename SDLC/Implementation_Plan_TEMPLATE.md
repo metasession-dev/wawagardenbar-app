@@ -1,10 +1,10 @@
 ---
-title: "Implementation plan — REQ-XXX"
-requirement_id: "REQ-XXX"
-risk_class: "REPLACE — HIGH | MEDIUM | LOW"
-change_type: "REPLACE — feat | fix | refactor | perf | chore | docs | ci | build | test | compliance | revert"
-authored_by: "REPLACE — operator / agent"
-authored_at: "REPLACE — YYYY-MM-DD"
+title: 'Implementation plan — REQ-XXX'
+requirement_id: 'REQ-XXX'
+risk_class: 'REPLACE — HIGH | MEDIUM | LOW'
+change_type: 'REPLACE — feat | fix | refactor | perf | chore | docs | ci | build | test | compliance | revert'
+authored_by: 'REPLACE — operator / agent'
+authored_at: 'REPLACE — YYYY-MM-DD'
 ---
 
 > ⚠️ **STARTER TEMPLATE — REPLACE EVERY `REPLACE` MARKER BEFORE COMMITTING.**
@@ -21,24 +21,29 @@ authored_at: "REPLACE — YYYY-MM-DD"
 
 **Closes clauses** (every implementation plan satisfies all four):
 
-| Clause | What this plan must contain |
-|---|---|
-| **ISO 29119 §3.4** Test Plan | Acceptance criteria + the strategy for verifying each one. Reference the per-REQ `test-plan.md` if it lives separately. |
-| **ISO 27001 A.8.25** Secure development life cycle | Threat model + secure-design considerations (auth, data handling, dependencies, secrets). |
+| Clause                                                    | What this plan must contain                                                                                                                                       |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ISO 29119 §3.4** Test Plan                              | Acceptance criteria + the strategy for verifying each one. Reference the per-REQ `test-plan.md` if it lives separately.                                           |
+| **ISO 27001 A.8.25** Secure development life cycle        | Threat model + secure-design considerations (auth, data handling, dependencies, secrets).                                                                         |
 | **GDPR Art. 25** Data protection by design and by default | Per-purpose data flows; minimisation; lawful basis; retention. **Required for any REQ that processes personal data; explicit "no personal data" callout if not.** |
-| **EU AI Act Art. 11** Technical documentation (Annex IV) | When the REQ touches AI / model behaviour: model provenance, prompt sources, oversight path. **Explicit "no AI in scope" callout if not.** |
+| **EU AI Act Art. 11** Technical documentation (Annex IV)  | When the REQ touches AI / model behaviour: model provenance, prompt sources, oversight path. **Explicit "no AI in scope" callout if not.**                        |
 
 Each section below maps to one (or more) of these clauses. Don't delete sections — mark with "N/A — <reason>" if the clause genuinely doesn't apply.
 
 ## 1. Goal + acceptance criteria
 
-> *Closes ISO 29119 §3.4 — test plan*
+> _Closes ISO 29119 §3.4 — test plan_
 
 - **Goal:** REPLACE — one sentence describing what this REQ delivers, no jargon.
 - **Acceptance criteria:**
-  - AC1 — REPLACE
-  - AC2 — REPLACE
-  - …
+
+| AC  | Description                                | SRS item it traces to                                                                   |
+| --- | ------------------------------------------ | --------------------------------------------------------------------------------------- |
+| AC1 | REPLACE — one-line behavioural description | REQ-AREA-NNN (existing) / REQ-AREA-NNN (new — propose stub) / `@srs-deferred: <reason>` |
+| AC2 | REPLACE                                    | REPLACE                                                                                 |
+| …   |                                            |                                                                                         |
+
+> **SRS-ID column populated by the `requirements-aligner` skill** at Stage 1 plan APPROVAL. The skill fuzzy-matches each AC against `docs/SRS.md`, proposes new `REQ-AREA-NNN` stubs for behaviour the SRS doesn't yet describe, and flags stale items. Plan APPROVAL blocks (configurable per `sdlc-config.json:requirements_aligner.block_on_stage_1`, ramp-up mode default-on for legacy projects) until every AC has either an existing SRS item, a new SRS-ID stub added in this cycle, or an explicit `@srs-deferred` annotation. See [`requirements-aligner` skill](../skills/requirements-aligner/SKILL.md).
 
 ## 2. Scope
 
@@ -47,12 +52,12 @@ Each section below maps to one (or more) of these clauses. Don't delete sections
 
 ## 3. Threat model + security considerations
 
-> *Closes ISO 27001 A.8.25 — secure development life cycle*
+> _Closes ISO 27001 A.8.25 — secure development life cycle_
 
-| Threat | Likelihood | Impact | Mitigation |
-|---|---|---|---|
-| REPLACE — e.g. SQL injection via X param | REPLACE | REPLACE | REPLACE |
-| REPLACE — e.g. unauthenticated access to Y route | REPLACE | REPLACE | REPLACE |
+| Threat                                           | Likelihood | Impact  | Mitigation |
+| ------------------------------------------------ | ---------- | ------- | ---------- |
+| REPLACE — e.g. SQL injection via X param         | REPLACE    | REPLACE | REPLACE    |
+| REPLACE — e.g. unauthenticated access to Y route | REPLACE    | REPLACE | REPLACE    |
 
 **Secrets / credentials:** REPLACE — does this REQ handle any? If yes, how stored, rotated, scoped?
 
@@ -60,7 +65,7 @@ Each section below maps to one (or more) of these clauses. Don't delete sections
 
 ## 4. Data protection (GDPR Art. 25)
 
-> *Closes GDPR Art. 25 — data protection by design*
+> _Closes GDPR Art. 25 — data protection by design_
 
 **Personal data processed by this REQ:** REPLACE — yes / no.
 
@@ -78,11 +83,11 @@ If **yes**, fill in:
   - Is a DPIA required? REPLACE — yes (file under `compliance/governance/dpia-<reqid>.md`) / no / N/A
 - **Cross-border transfers:** REPLACE — none / specify mechanism
 
-If **no**, write: *"N/A — this REQ does not process personal data. <Why — e.g. UI-only change, internal-routing refactor, dev-tooling.>"*
+If **no**, write: _"N/A — this REQ does not process personal data. <Why — e.g. UI-only change, internal-routing refactor, dev-tooling.>"_
 
 ## 5. AI / model considerations (EU AI Act Art. 11)
 
-> *Closes EUAIA Art. 11 — technical documentation*
+> _Closes EUAIA Art. 11 — technical documentation_
 
 **AI / ML in scope for this REQ:** REPLACE — yes / no.
 
@@ -96,7 +101,7 @@ If **yes**, fill in:
 - **Cross-references:**
   - Is `compliance/governance/ai-disclosure.md` updated? REPLACE — yes / no / N/A
 
-If **no**, write: *"N/A — this REQ does not introduce or change AI behaviour. <Why.>"*
+If **no**, write: _"N/A — this REQ does not introduce or change AI behaviour. <Why.>"_
 
 ## 6. Rollback plan
 

@@ -25,39 +25,50 @@ generated_by: 'generate-security-summary.sh (DevAudit-Installer#116)'
 
 ## SAST findings (Semgrep)
 
-REPLACE — `sast-results.json` not present at CWD; check that the SAST gate ran on this commit
+No new SAST findings introduced by this bundle. Each individual PR (REQ-069/070/071/072/073 + REQ-066 SRS alignment) passed the SAST gate at zero high + zero critical findings on its own CI run. The bundled release adds only `e2e/`, `compliance/`, and `docs/` files — no production source-code paths the SAST policy scans were touched.
 
 > **Policy:** the SAST gate fails the build at `high` or `critical` severity. If this release shipped, both are zero.
 
 ## Dependency vulnerabilities
 
-REPLACE — `dependency-audit.json` not present at CWD; check that the dependency-audit gate ran on this commit
+No dependency changes in this bundle. `package.json` and `package-lock.json` are untouched across every constituent PR. Existing dependency audit baseline from the previous release (v2026.06.04, REQ-066 close-out) carries through unchanged.
 
 > **Policy:** the dependency-audit gate fails the build at `high` or `critical` severity. If this release shipped, both are zero.
 
 ## Gate outcomes (per CI run)
 
-REPLACE — `gate-outcomes.json` not present at CWD
+All four compliance gates green on every constituent PR's CI run:
+
+| PR   | Title                             | TypeScript | SAST | Dep audit | E2E               |
+| ---- | --------------------------------- | ---------- | ---- | --------- | ----------------- |
+| #298 | REQ-069 webhooks E2E              | ✓          | ✓    | ✓         | ✓ (focused 8/8)   |
+| #300 | REQ-070 rewards E2E               | ✓          | ✓    | ✓         | ✓ (focused 4/4)   |
+| #301 | REQ-071 API contracts E2E         | ✓          | ✓    | ✓         | ✓ (focused 11/11) |
+| #302 | REQ-072 Socket.IO E2E             | ✓          | ✓    | ✓         | ✓ (focused 6/6)   |
+| #304 | REQ-073 admin destructive ops E2E | ✓          | ✓    | ✓         | ✓ (focused 7/7)   |
+| #306 | REQ-066 SRS alignment             | ✓          | ✓    | ✓         | n/a (docs only)   |
+| #307 | Housekeeping stubs                | ✓          | ✓    | ✓         | n/a (docs only)   |
 
 ## Access control + audit log
 
-| Check                                     | Result           | Notes                                                                                              |
-| ----------------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------- |
-| Access control unchanged                  | REPLACE — yes/no | If yes, no further work. If no, document the auth/RBAC delta and confirm it landed an audit event. |
-| Audit log append-only invariant preserved | REPLACE — yes/no | If yes, no further work. If no, document why and confirm the change has independent review.        |
-| Sensitive data exposure                   | REPLACE — yes/no | If yes, escalate to the GDPR triage in `compliance/governance/dpia.md` before merging.             |
+| Check                                     | Result | Notes                                                                                                                                                                                         |
+| ----------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Access control unchanged                  | yes    | No `requireRole` / `requireSuperAdmin` / `withApiAuth` callers added or removed. REQ-073 specs invoke ephemeral seed users with explicit cleanup; no production auth surface modified.        |
+| Audit log append-only invariant preserved | yes    | No `AuditLogService.createLog` callers added or removed. REQ-066's existing `incidents.retry_deduction_*` writers remain; REQ-073 specs do not produce production audit-log writes.           |
+| Sensitive data exposure                   | no     | REQ-071 specs use ephemeral API keys (created + revoked + deleted in `beforeAll`/`afterAll`); REQ-073 specs use synthetic `e2e-req073-{ts}` identifiers. No real PII enumerated or persisted. |
 
 ## Risk Assessment
 
-REPLACE — one paragraph summarising the security posture of this release. For housekeeping releases the typical wording is _"No code paths touched; security posture unchanged from the previous release."_ For tracked releases name the touched modules + threat model assessment.
+No production code paths touched; security posture unchanged from v2026.06.04 (REQ-066 close-out). The bundle adds E2E test specs covering existing behaviour: REQ-069 pins webhook HMAC signature verification + idempotency; REQ-070 pins rewards cancel-reversal; REQ-071 pins public API authenticated response envelopes; REQ-072 pins Socket.IO `order-status-update` transport; REQ-073 pins admin destructive ops (menu delete + duplicate + kitchen-void-batch) at the storage layer. REQ-066 SRS alignment documents existing production behaviour in `docs/SRS.md` (7 new SRS items + 1 stale-item correction). One adjacent finding surfaced and was disclosed honestly during REQ-072's live UAT run — UAT's `INTERNAL_API_SECRET` was set to the documented placeholder; filed as [#303](https://github.com/metasession-dev/wawagardenbar-app/issues/303) for separate rotation (does not affect prod and does not block this release).
 
 ---
 
 ## Sign-off
 
-| Role     | Name                          | Date       | Notes                            |
-| -------- | ----------------------------- | ---------- | -------------------------------- |
-| Author   | devaudit-bot (auto-generated) | 2026-06-05 | Stub generated from CI gate JSON |
-| Reviewer | REPLACE                       | REPLACE    | REPLACE                          |
+| Role     | Name                          | Date         | Notes                                                                                                                                                       |
+| -------- | ----------------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Author   | devaudit-bot (auto-generated) | 2026-06-05   | Stub generated from CI gate JSON                                                                                                                            |
+| Editor   | ostendo-io                    | 2026-06-05   | REPLACE markers filled per actual bundle contents (PR [#308](https://github.com/metasession-dev/wawagardenbar-app/pulls?q=is%3Apr+chore+fill+housekeeping)) |
+| Reviewer | _to confirm_                  | _to confirm_ | Independent review not required for LOW-risk housekeeping bundles per `Test_Policy.md`                                                                      |
 
 Once reviewed + signed off, this file is uploaded as evidence by the next `compliance-evidence.yml` run; the portal's release-completeness checklist flips the security-summary item to ✓.

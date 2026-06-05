@@ -23,17 +23,14 @@ on:
         required: false
         type: string
         default: ''
-  # Auto-triggers DISABLED during #117 (WhatsApp + customer-facing
-  # backlog). Operator policy: "delivery" = when #117 as a whole closes,
-  # not when each intermediate REQ-XXX inside #117 ships. Until then:
-  #   - workflow_dispatch with `specs` for targeted iteration (above)
-  #   - workflow_dispatch with empty `specs` for the one-time full pack
-  #     at #117 close (manual op)
-  # Re-enable both blocks below by uncommenting once #117 closes.
-  # pull_request:
-  #   branches: [main]
-  # schedule:
-  #   - cron: '0 2 * * *' # nightly 02:00 UTC
+  # Auto-triggers re-enabled 2026-06-06 — #117 (WhatsApp + customer-facing
+  # backlog) CLOSED with the v2026.06.05 bundle shipping REQ-066/069/070/
+  # 071/072/073. workflow_dispatch with `specs` remains available for
+  # targeted iteration loops during in-flight REQ work.
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 2 * * *' # nightly 02:00 UTC
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

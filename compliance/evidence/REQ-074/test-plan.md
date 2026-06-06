@@ -7,14 +7,14 @@
 
 ## Acceptance criteria → tests
 
-| AC  | Statement                                                                                                                                                                                                   | Test                                                                                                 |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| AC1 | `sendPinAction` with `ENABLE_E2E_PIN_INTERCEPT=true` returns `success: true` without invoking `SMSService.sendVerificationPinSMS`; PIN is still persisted to `User.verificationPin`.                        | `__tests__/actions/auth/pin-intercept.test.ts` — "sendPinAction (SMS) > with bypass active"          |
-| AC2 | Same shape for `sendWhatsAppPinAction` (no `WhatsAppService` call) + `sendEmailPinAction` (no `sendVerificationPinEmail` call).                                                                             | same file — "sendWhatsAppPinAction > with bypass active" + "sendEmailPinAction > with bypass active" |
-| AC3 | With flag unset, existing behaviour preserved: provider dispatch fires.                                                                                                                                     | same file — 3 "with bypass inactive" cases                                                           |
-| AC4 | `e2e/customer/auth-pin-happy-path.spec.ts` walks `/login → SMS → phone → Continue → PIN-entry → verify → session`. Reads PIN from `User.verificationPin` via `e2e/helpers/customer-auth.ts`'s `waitForPin`. | `e2e/customer/auth-pin-happy-path.spec.ts` — single case, runs only when server has the flag         |
-| AC5 | `e2e/customer/home-page.spec.ts` pins `/` hero + View Menu CTA, and `/menu` navbar (Sign In for guests) + items.                                                                                            | 2 cases in `home-page.spec.ts`                                                                       |
-| AC6 | `e2e/customer/auth-guest-flow.spec.ts` pins guest navigation `/` ↔ `/menu` doesn't mint an authenticated session.                                                                                          | 1 case in `auth-guest-flow.spec.ts`                                                                  |
+| AC  | Statement                                                                                                                                                                                                                         | Test                                                                                                 |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| AC1 | `sendPinAction` with `ENABLE_E2E_PIN_INTERCEPT=true` returns `success: true` without invoking `SMSService.sendVerificationPinSMS`; PIN is still persisted to `User.verificationPin`.                                              | `__tests__/actions/auth/pin-intercept.test.ts` — "sendPinAction (SMS) > with bypass active"          |
+| AC2 | Same shape for `sendWhatsAppPinAction` (no `WhatsAppService` call) + `sendEmailPinAction` (no `sendVerificationPinEmail` call).                                                                                                   | same file — "sendWhatsAppPinAction > with bypass active" + "sendEmailPinAction > with bypass active" |
+| AC3 | With flag unset, existing behaviour preserved: provider dispatch fires.                                                                                                                                                           | same file — 3 "with bypass inactive" cases                                                           |
+| AC4 | `e2e/customer/auth-pin-happy-path.spec.ts` walks `/login → SMS → phone → Continue → PIN-entry → verify → session`. Reads PIN from `User.verificationPin` via the `waitForPin` helper (defined in `e2e/helpers/customer-auth.ts`). | `e2e/customer/auth-pin-happy-path.spec.ts` — single case, runs only when server has the flag         |
+| AC5 | `e2e/customer/home-page.spec.ts` pins `/` hero + View Menu CTA, and `/menu` navbar (Sign In for guests) + items.                                                                                                                  | 2 cases in `home-page.spec.ts`                                                                       |
+| AC6 | `e2e/customer/auth-guest-flow.spec.ts` pins guest navigation `/` ↔ `/menu` doesn't mint an authenticated session.                                                                                                                | 1 case in `auth-guest-flow.spec.ts`                                                                  |
 
 ## Surfaces / contracts under test
 
@@ -47,6 +47,6 @@
 ## Out of scope
 
 - Real SMS / WhatsApp / Email dispatch — covered by integration tests on `lib/sms.ts` / `lib/whatsapp.ts` / `lib/email.ts`
-- PIN expiry + rate-limit + wrong-PIN error states — deferred to V2 spec `auth-pin-errors.spec.ts`
+- PIN expiry + rate-limit + wrong-PIN error states — deferred to a V2 spec (file name TBD; will live under `e2e/customer/` when authored)
 - Profile + rewards page coverage — deferred to V2 within #292
 - Cart preservation across pages — deferred to V2; V1 guest-flow pins navigation + no-auth-minted only

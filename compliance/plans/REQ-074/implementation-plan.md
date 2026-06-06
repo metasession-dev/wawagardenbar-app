@@ -50,7 +50,7 @@ The PIN is already in MongoDB — E2E specs read it via `User.verificationPin` a
 
 - `e2e/customer/profile-page.spec.ts` (REQ-PROFILE-001) — needs authenticated-user fixture + addresses seed
 - `e2e/customer/rewards-page.spec.ts` (REQ-REWARDC-001/002) — needs seeded points + rewards
-- `e2e/customer/auth-pin-errors.spec.ts` (REQ-AUTHC-002) — rate-limit + expiry error states
+- `the V2 auth-pin-errors spec (file name TBD)` (REQ-AUTHC-002) — rate-limit + expiry error states
 
 ## Security
 

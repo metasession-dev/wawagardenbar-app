@@ -75,7 +75,7 @@ Revert the integration PR. The 3-line bypass blocks are pure additions inside an
 
 | Item                                         | Why                                                                       |
 | -------------------------------------------- | ------------------------------------------------------------------------- |
-| `auth-pin-errors.spec.ts` (REQ-AUTHC-002)    | Rate-limit + expiry + wrong-PIN error states need Mongo-seed manipulation |
+| the V2 auth-pin-errors spec (REQ-AUTHC-002)  | Rate-limit + expiry + wrong-PIN error states need Mongo-seed manipulation |
 | `profile-page.spec.ts` (REQ-PROFILE-001)     | Needs authenticated-user fixture + addresses seed                         |
 | `rewards-page.spec.ts` (REQ-REWARDC-001/002) | Needs seeded points + active rewards                                      |
 | Cart preservation in guest flow              | Needs cart-store fixture + concrete add-to-cart selector                  |

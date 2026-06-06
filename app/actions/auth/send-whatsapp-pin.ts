@@ -55,6 +55,18 @@ export async function sendWhatsAppPinAction(
     user.pinExpiresAt = pinExpiresAt;
     await user.save();
 
+    // REQ-074 — E2E intercept. See app/actions/auth/send-pin.ts for the
+    // shared rationale; same env flag short-circuits all three send
+    // pathways (SMS, WhatsApp, Email) so any auth-touching spec works
+    // regardless of which channel the test picks.
+    if (process.env.ENABLE_E2E_PIN_INTERCEPT === 'true') {
+      return {
+        success: true,
+        message: 'PIN persisted (E2E intercept mode)',
+        isNewUser,
+      };
+    }
+
     // Send PIN via WhatsApp
     const whatsappResult = await WhatsAppService.sendVerificationPinWhatsApp(
       sanitizedPhone,

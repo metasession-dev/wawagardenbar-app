@@ -54,6 +54,18 @@ export async function sendPinAction(phone: string): Promise<SendPinResult> {
     user.pinExpiresAt = pinExpiresAt;
     await user.save();
 
+    // REQ-074 — E2E intercept. When the env flag is on, skip the real
+    // SMS dispatch and return success after the PIN is persisted. Specs
+    // read the PIN from User.verificationPin in Mongo and submit it via
+    // verify-pin. Default-off; only the operator sets this on UAT.
+    if (process.env.ENABLE_E2E_PIN_INTERCEPT === 'true') {
+      return {
+        success: true,
+        message: 'PIN persisted (E2E intercept mode)',
+        isNewUser,
+      };
+    }
+
     // Send PIN via SMS
     const smsResult = await SMSService.sendVerificationPinSMS(
       sanitizedPhone,

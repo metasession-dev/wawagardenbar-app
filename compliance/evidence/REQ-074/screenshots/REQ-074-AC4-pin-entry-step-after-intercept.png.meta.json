@@ -1,0 +1,8 @@
+{
+  "origin": "feature",
+  "reqId": "REQ-074",
+  "ac": 4,
+  "slug": "pin-entry-step-after-intercept",
+  "specFile": "e2e/customer/auth-pin-happy-path.spec.ts",
+  "capturedAt": "2026-06-06T07:20:13.472Z"
+}

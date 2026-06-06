@@ -111,8 +111,9 @@ test.describe('REQ-074 — Customer PIN-flow happy path (REQ-AUTHC-001)', () => 
     expect(expiresAt.getTime()).toBeGreaterThan(Date.now());
 
     await page.locator('#pin').fill(pin);
-    // Form's PIN-step submit is also labelled "Continue".
-    await page.getByRole('button', { name: /^continue$/i }).click();
+    // PIN-step submit is labelled "Verify & Login" (the phone-step Continue
+    // shipped the PIN; this verifies it and creates the session).
+    await page.getByRole('button', { name: /verify.*login/i }).click();
 
     // ── Step 5: session created → redirected away from /login ─────────────
     // The exact post-login destination depends on the post-auth redirect

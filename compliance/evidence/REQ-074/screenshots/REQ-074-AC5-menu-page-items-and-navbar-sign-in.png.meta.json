@@ -1,0 +1,8 @@
+{
+  "origin": "feature",
+  "reqId": "REQ-074",
+  "ac": 5,
+  "slug": "menu-page-items-and-navbar-sign-in",
+  "specFile": "e2e/customer/home-page.spec.ts",
+  "capturedAt": "2026-06-06T06:49:24.804Z"
+}

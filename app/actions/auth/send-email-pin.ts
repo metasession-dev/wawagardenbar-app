@@ -116,6 +116,17 @@ export async function sendEmailPinAction(
       pinSet: !!targetUser.verificationPin,
     });
 
+    // REQ-074 — E2E intercept. See app/actions/auth/send-pin.ts for the
+    // shared rationale; same env flag short-circuits all three send
+    // pathways so any auth-touching spec works regardless of channel.
+    if (process.env.ENABLE_E2E_PIN_INTERCEPT === 'true') {
+      return {
+        success: true,
+        message: 'PIN persisted (E2E intercept mode)',
+        isNewUser,
+      };
+    }
+
     // Send PIN via Email
     try {
       await sendVerificationPinEmail(targetUser.email, pin);

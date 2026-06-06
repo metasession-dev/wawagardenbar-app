@@ -21,6 +21,7 @@
  *     specs (REQ-CHECKOUT-* sub-issues)
  */
 import { test, expect } from '@playwright/test';
+import { evidenceShot } from '../helpers/evidence';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
@@ -45,6 +46,7 @@ test.describe('REQ-074 — Guest navigation flow (REQ-AUTHC-003)', () => {
     const signInOnMenu = page.getByRole('link', { name: /sign in/i }).first();
     await expect(signInOnMenu).toBeVisible({ timeout: 10_000 });
     await expect(signInOnMenu).toHaveAttribute('href', '/login');
+    await evidenceShot(page, 'REQ-074', 6, 'guest-on-menu-sees-sign-in-link');
 
     // ── Back to / via direct nav ──────────────────────────────────────────
     await page.goto(`${BASE_URL}/`);

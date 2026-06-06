@@ -21,6 +21,7 @@
  *   ✗ Rate-limit + expiry error states — V2 (auth-pin-errors.spec.ts)
  */
 import { test, expect } from '@playwright/test';
+import { evidenceShot } from '../helpers/evidence';
 import {
   mongoConn,
   syntheticPhone,
@@ -102,6 +103,7 @@ test.describe('REQ-074 — Customer PIN-flow happy path (REQ-AUTHC-001)', () => 
     }
 
     await expect(pinField).toBeVisible();
+    await evidenceShot(page, 'REQ-074', 4, 'pin-entry-step-after-intercept');
 
     // ── Step 4: read PIN from Mongo + verify ──────────────────────────────
     const { pin, expiresAt } = await waitForPin(conn, phone);
@@ -116,6 +118,12 @@ test.describe('REQ-074 — Customer PIN-flow happy path (REQ-AUTHC-001)', () => 
     // The exact post-login destination depends on the post-auth redirect
     // logic; either way the page should leave /login.
     await expect(page).not.toHaveURL(/\/login/, { timeout: 10_000 });
+    await evidenceShot(
+      page,
+      'REQ-074',
+      4,
+      'session-created-redirect-away-from-login'
+    );
 
     // ── Step 6: cookie sanity — session cookie should be set ─────────────
     const cookies = await page.context().cookies();

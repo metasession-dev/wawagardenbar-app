@@ -24,6 +24,7 @@
  *   ✗ Mobile-menu surface (different `Sheet` trigger; V2)
  */
 import { test, expect } from '@playwright/test';
+import { evidenceShot } from '../helpers/evidence';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
@@ -48,6 +49,7 @@ test.describe('REQ-074 — Home + menu render for guests (REQ-HOME-001/002)', ()
     await expect(
       page.getByRole('heading', { name: /wawa garden bar/i }).first()
     ).toBeVisible();
+    await evidenceShot(page, 'REQ-074', 5, 'marketing-home-hero-view-menu-cta');
   });
 
   test('/menu renders menu items + navbar shows Sign In for guests', async ({
@@ -72,5 +74,11 @@ test.describe('REQ-074 — Home + menu render for guests (REQ-HOME-001/002)', ()
       .getByText(/₦\s*\d|N\s*\d/i)
       .first();
     await expect(priceMarker).toBeVisible({ timeout: 10_000 });
+    await evidenceShot(
+      page,
+      'REQ-074',
+      5,
+      'menu-page-items-and-navbar-sign-in'
+    );
   });
 });

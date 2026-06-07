@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm, useFieldArray, type ArrayPath } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -90,6 +90,20 @@ export function MenuCategoriesForm({
     resolver: zodResolver(menuSettingsSchema),
     defaultValues: defaults,
   });
+
+  // After a Main Category rename / add / delete via the sibling
+  // MainCategoriesForm, `revalidatePath` re-renders the page with a new
+  // `initialSettings` + `mainCategories` prop. RHF's internal state
+  // doesn't auto-sync to changed `defaultValues`, so we explicitly reset
+  // — otherwise a "Save Categories" submit after a rename would clobber
+  // the relocated keys with the form's stale snapshot.
+  useEffect(() => {
+    form.reset(defaults);
+    if (enabled.length > 0 && !enabled.some((m) => m.slug === activeTab)) {
+      setActiveTab(enabled[0].slug);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaults, enabled]);
 
   async function onSubmit(data: MenuSettingsFormValues) {
     setIsSubmitting(true);

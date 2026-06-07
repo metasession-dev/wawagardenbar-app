@@ -27,7 +27,17 @@ export type MenuCategory =
   | 'small-chops'
   | 'pepper-soup';
 
-export type MenuMainCategory = 'drinks' | 'food';
+/**
+ * REQ-075 — Relaxed from the hardcoded `'drinks' | 'food'` union to a
+ * free-form string. Validation moves to the application layer via
+ * `MainCategoryService` (reads the configurable registry persisted under
+ * SystemSettings key `'main-categories'`). The default registry seed
+ * keeps the historical `'food'` and `'drinks'` slugs so existing
+ * MenuItem documents carry through unchanged.
+ *
+ * @see interfaces/main-category.interface.ts for the registry shape.
+ */
+export type MenuMainCategory = string;
 
 /**
  * REQ-034: discriminator on MenuItem mirrors the one on Inventory.

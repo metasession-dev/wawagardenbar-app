@@ -5,10 +5,17 @@ export interface IMenuCategoryConfig {
   isEnabled: boolean;
 }
 
-export interface IMenuSettings {
-  food: IMenuCategoryConfig[];
-  drinks: IMenuCategoryConfig[];
-}
+/**
+ * REQ-075 — Restructured from `{ food: [], drinks: [] }` to a dynamic
+ * `Record<string, IMenuCategoryConfig[]>` keyed by main-category slug.
+ * The default seed below preserves the historical `food` and `drinks`
+ * keys, so existing persisted settings carry through unchanged.
+ *
+ * Reads use `SystemSettingsService.getMenuCategories()`; mutation goes
+ * through `MainCategoryService` (for rename/delete that cascades across
+ * keys) or `updateMenuCategories` for routine sub-category edits.
+ */
+export type IMenuSettings = Record<string, IMenuCategoryConfig[]>;
 
 export const DEFAULT_MENU_SETTINGS: IMenuSettings = {
   food: [
@@ -26,7 +33,12 @@ export const DEFAULT_MENU_SETTINGS: IMenuSettings = {
   ],
   drinks: [
     { label: 'Beer (Local)', value: 'beer-local', order: 1, isEnabled: true },
-    { label: 'Beer (Imported)', value: 'beer-imported', order: 2, isEnabled: true },
+    {
+      label: 'Beer (Imported)',
+      value: 'beer-imported',
+      order: 2,
+      isEnabled: true,
+    },
     { label: 'Beer (Craft)', value: 'beer-craft', order: 3, isEnabled: true },
     { label: 'Wine', value: 'wine', order: 4, isEnabled: true },
     { label: 'Soft Drinks', value: 'soft-drinks', order: 5, isEnabled: true },
@@ -35,9 +47,19 @@ export const DEFAULT_MENU_SETTINGS: IMenuSettings = {
     { label: 'Energy Drink', value: 'energy-drink', order: 8, isEnabled: true },
     { label: 'Malt', value: 'malt', order: 9, isEnabled: true },
     { label: 'Yoghurt', value: 'yoghurt', order: 10, isEnabled: true },
-    { label: 'Healthy Soft Drink', value: 'healthy-soft-drink', order: 11, isEnabled: true },
+    {
+      label: 'Healthy Soft Drink',
+      value: 'healthy-soft-drink',
+      order: 11,
+      isEnabled: true,
+    },
     { label: 'Cider', value: 'cider', order: 12, isEnabled: true },
-    { label: 'Pre-mixed Spirit', value: 'pre-mixed-spirit', order: 13, isEnabled: true },
+    {
+      label: 'Pre-mixed Spirit',
+      value: 'pre-mixed-spirit',
+      order: 13,
+      isEnabled: true,
+    },
     { label: 'Bitters', value: 'bitters', order: 14, isEnabled: true },
     { label: 'Liqueur', value: 'liqueur', order: 15, isEnabled: true },
     { label: 'Whisky', value: 'whisky', order: 16, isEnabled: true },

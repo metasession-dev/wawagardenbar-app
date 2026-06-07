@@ -378,7 +378,8 @@ export async function updateMenuItemAction(
     // Update basic fields
     if (name) menuItem.name = name;
     if (description !== undefined) menuItem.description = description;
-    if (mainCategory) menuItem.mainCategory = mainCategory as 'food' | 'drinks';
+    // REQ-075 — `mainCategory` is now free-form; trust the form-bound slug.
+    if (mainCategory) menuItem.mainCategory = mainCategory;
     if (category) menuItem.category = category as any;
     // Price is updated exclusively via PriceHistoryService.updatePrice()
     if (!isNaN(preparationTime)) menuItem.preparationTime = preparationTime;

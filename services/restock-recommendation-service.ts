@@ -13,7 +13,8 @@ export interface RestockRecommendationItem {
   inventoryId: string;
   menuItemId: string;
   itemName: string;
-  mainCategory: 'food' | 'drinks';
+  // REQ-075 — Free-form main-category slug (was `'food' | 'drinks'`).
+  mainCategory: string;
   category: string;
   currentStock: number;
   minimumStock: number;
@@ -59,7 +60,8 @@ export interface RestockRecommendationReport {
 }
 
 export interface RestockRecommendationParams {
-  mainCategory?: 'food' | 'drinks';
+  // REQ-075 — Free-form main-category slug (was `'food' | 'drinks'`).
+  mainCategory?: string;
   categories?: string[];
   days: number;
   priceBracket?: { min?: number; max?: number };
@@ -272,8 +274,7 @@ export class RestockRecommendationService {
         inventoryId: invId,
         menuItemId,
         itemName: (menuItem as { name: string }).name,
-        mainCategory: (menuItem as { mainCategory: 'food' | 'drinks' })
-          .mainCategory,
+        mainCategory: (menuItem as { mainCategory: string }).mainCategory,
         category: (menuItem as { category: string }).category,
         currentStock: inventory.currentStock,
         minimumStock: inventory.minimumStock,

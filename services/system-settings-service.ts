@@ -405,6 +405,73 @@ export class SystemSettingsService {
   }
 
   /**
+   * Get the configured main categories.
+   *
+   * Falls back to `DEFAULT_MAIN_CATEGORIES` (food + drinks, matching the
+   * pre-REQ-075 hardcoded enum) when no setting exists yet.
+   *
+   * @requirement REQ-075
+   */
+  static async getMainCategories(): Promise<
+    import('@/interfaces/main-category.interface').IMainCategoryConfig[]
+  > {
+    await connectDB();
+
+    const { MAIN_CATEGORIES_SETTINGS_KEY, DEFAULT_MAIN_CATEGORIES } =
+      await import('@/interfaces/main-category.interface');
+
+    const setting = await SystemSettingsModel.findOne({
+      key: MAIN_CATEGORIES_SETTINGS_KEY,
+    });
+
+    const list =
+      (setting?.value as import('@/interfaces/main-category.interface').IMainCategoryConfig[]) ||
+      DEFAULT_MAIN_CATEGORIES;
+
+    return [...list].sort((a, b) => a.order - b.order);
+  }
+
+  /**
+   * Persist the full main-categories list. Used by
+   * `MainCategoryService` for create / update / disable / rename / delete
+   * / reorder — every mutation rewrites the full list.
+   *
+   * @requirement REQ-075
+   */
+  static async updateMainCategories(
+    list: import('@/interfaces/main-category.interface').IMainCategoryConfig[],
+    adminUserId: string
+  ): Promise<boolean> {
+    await connectDB();
+
+    const { MAIN_CATEGORIES_SETTINGS_KEY } = await import(
+      '@/interfaces/main-category.interface'
+    );
+
+    await SystemSettingsModel.findOneAndUpdate(
+      { key: MAIN_CATEGORIES_SETTINGS_KEY },
+      {
+        $set: {
+          value: list,
+          updatedBy: new Types.ObjectId(adminUserId),
+          updatedAt: new Date(),
+        },
+        $push: {
+          changeHistory: {
+            value: list,
+            changedBy: new Types.ObjectId(adminUserId),
+            changedAt: new Date(),
+            reason: 'Main categories updated',
+          },
+        },
+      },
+      { upsert: true, new: true }
+    );
+
+    return true;
+  }
+
+  /**
    * Update expense categories and their optional display groups.
    *
    * @requirement REQ-028

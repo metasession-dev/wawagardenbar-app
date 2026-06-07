@@ -123,12 +123,21 @@ export async function GET(request: NextRequest): Promise<Response> {
       let foodCOGS = 0;
       let drinksCOGS = 0;
 
+      // REQ-075 — The public sales-summary envelope still exposes only
+      // food/drinks aggregates for back-compat. Items in other main
+      // categories aggregate into the food bucket with a console.warn so
+      // the operator can spot un-bucketed slugs.
       for (const [, item] of itemAgg) {
         const costTotal = item.costPerUnit * item.quantity;
         if (item.mainCategory === 'drinks') {
           drinksRevenue += item.revenue;
           drinksCOGS += costTotal;
         } else {
+          if (item.mainCategory !== 'food') {
+            console.warn(
+              `[/api/public/sales/summary] REQ-075 — Aggregating mainCategory "${item.mainCategory}" into food bucket for back-compat.`
+            );
+          }
           foodRevenue += item.revenue;
           foodCOGS += costTotal;
         }

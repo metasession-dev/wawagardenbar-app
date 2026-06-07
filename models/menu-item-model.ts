@@ -3,7 +3,6 @@ import {
   IMenuItem,
   ICustomization,
   ICustomizationOption,
-  MenuMainCategory,
   MenuItemKind,
   INVENTORY_KINDS,
 } from '../interfaces';
@@ -38,9 +37,12 @@ const menuItemSchema = new Schema<IMenuItem>(
     },
     name: { type: String, required: true, trim: true },
     description: { type: String, required: true },
+    // REQ-075 — `enum:` constraint removed; mainCategory is now a
+    // free-form string validated at the application layer via the
+    // `MainCategoryService` registry. Existing `'food'` / `'drinks'`
+    // values continue to work via the default registry seed.
     mainCategory: {
       type: String,
-      enum: ['drinks', 'food'] as MenuMainCategory[],
       required: true,
     },
     category: {

@@ -344,10 +344,16 @@ export function RestockRecommendationsClient() {
   const [report, setReport] = useState<RestockRecommendationReport | null>(
     null
   );
-  const [availableCategories, setAvailableCategories] = useState<{
-    drinks: string[];
-    food: string[];
-  }>({ drinks: [], food: [] });
+  // REQ-075 — driven by the configurable main-category registry.
+  type MainCategoryEntry = {
+    slug: string;
+    label: string;
+    order: number;
+    subCategories: string[];
+  };
+  const [mainCategoryOptions, setMainCategoryOptions] = useState<
+    MainCategoryEntry[]
+  >([]);
 
   const [strategy, setStrategy] = useState<RestockStrategy>('popularity');
   const [mainCategory, setMainCategory] = useState<string>('all');
@@ -359,7 +365,7 @@ export function RestockRecommendationsClient() {
   useEffect(() => {
     getAvailableCategoriesAction().then((result) => {
       if (result.success && result.data) {
-        setAvailableCategories(result.data);
+        setMainCategoryOptions(result.data.mainCategories);
       }
     });
   }, []);
@@ -387,10 +393,7 @@ export function RestockRecommendationsClient() {
         selectedCategory !== 'all' ? [selectedCategory] : undefined;
 
       const result = await getRestockRecommendationsAction({
-        mainCategory:
-          mainCategory !== 'all'
-            ? (mainCategory as 'food' | 'drinks')
-            : undefined,
+        mainCategory: mainCategory !== 'all' ? mainCategory : undefined,
         categories,
         days,
         priceMin,
@@ -432,12 +435,13 @@ export function RestockRecommendationsClient() {
     setSelectedCategory('all');
   }, [mainCategory]);
 
+  // REQ-075 — Subcategories derived dynamically from selected main
+  // category; 'all' aggregates every registered main's sub-categories.
   const subcategories =
-    mainCategory === 'food'
-      ? availableCategories.food
-      : mainCategory === 'drinks'
-        ? availableCategories.drinks
-        : [...availableCategories.food, ...availableCategories.drinks].sort();
+    mainCategory === 'all'
+      ? [...new Set(mainCategoryOptions.flatMap((m) => m.subCategories))].sort()
+      : (mainCategoryOptions.find((m) => m.slug === mainCategory)
+          ?.subCategories ?? []);
 
   if (error) {
     return (
@@ -495,8 +499,11 @@ export function RestockRecommendationsClient() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="food">Food</SelectItem>
-                  <SelectItem value="drinks">Drinks</SelectItem>
+                  {mainCategoryOptions.map((m) => (
+                    <SelectItem key={m.slug} value={m.slug}>
+                      {m.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

@@ -1,24 +1,40 @@
 import { NextRequest } from 'next/server';
 import { CategoryService } from '@/services/category-service';
-import { withApiAuth, apiSuccess, apiError, serialize } from '@/lib/api-response';
+import {
+  withApiAuth,
+  apiSuccess,
+  apiError,
+  serialize,
+} from '@/lib/api-response';
 
 /**
  * GET /api/public/menu/categories
  *
  * List available menu categories grouped by main category.
- * Returns enabled categories from system settings, merged with any legacy
- * categories still in use in the database.
+ *
+ * REQ-075 (BREAKING) — Envelope shape changed from
+ * `{ drinks: [...], food: [...] }` (REQ-071, pre-this-release) to
+ * `{ mainCategories: [{ slug, label, order, subCategories }] }`. This
+ * supports admin-configurable main categories (rename / add / disable /
+ * delete) and surfaces the human-readable `label` alongside the slug so
+ * clients don't need a separate label lookup.
+ *
+ * Sub-category lists merge enabled rows from settings with any legacy
+ * categories still in use in the database (de-duplicated).
  *
  * @authentication API Key required — scope: `menu:read`
  * @ratelimit      30 requests / minute (moderate)
  *
  * @returns {Object}   response
- * @returns {boolean}  response.success        - `true`
- * @returns {Object}   response.data           - Categories grouped by main category
- * @returns {string[]} response.data.drinks    - Drink sub-category slugs (e.g. `["beer-local","wine","soft-drinks"]`)
- * @returns {string[]} response.data.food      - Food sub-category slugs (e.g. `["starters","rice-dishes","soups"]`)
+ * @returns {boolean}  response.success                      - `true`
+ * @returns {Object}   response.data
+ * @returns {Object[]} response.data.mainCategories          - Enabled main categories, sorted by `order` ascending.
+ * @returns {string}   response.data.mainCategories[].slug   - Stable identifier; matches `MenuItem.mainCategory`.
+ * @returns {string}   response.data.mainCategories[].label  - Human-readable display name.
+ * @returns {number}   response.data.mainCategories[].order  - Display order (lower first).
+ * @returns {string[]} response.data.mainCategories[].subCategories - Enabled sub-category slugs under this main.
  * @returns {Object}   response.meta
- * @returns {string}   response.meta.timestamp - ISO 8601 response timestamp
+ * @returns {string}   response.meta.timestamp               - ISO 8601 response timestamp
  *
  * @status 200 - Success
  * @status 401 - Missing or invalid API key
@@ -35,10 +51,22 @@ import { withApiAuth, apiSuccess, apiError, serialize } from '@/lib/api-response
  * {
  *   "success": true,
  *   "data": {
- *     "drinks": ["beer-local", "beer-imported", "wine", "soft-drinks", "juice"],
- *     "food": ["starters", "rice-dishes", "soups", "small-chops", "desserts"]
+ *     "mainCategories": [
+ *       {
+ *         "slug": "food",
+ *         "label": "Food",
+ *         "order": 0,
+ *         "subCategories": ["starters", "rice-dishes", "soups", "small-chops", "desserts"]
+ *       },
+ *       {
+ *         "slug": "drinks",
+ *         "label": "Drinks",
+ *         "order": 1,
+ *         "subCategories": ["beer-local", "beer-imported", "wine", "soft-drinks", "juice"]
+ *       }
+ *     ]
  *   },
- *   "meta": { "timestamp": "2025-06-01T12:00:00.000Z" }
+ *   "meta": { "timestamp": "2026-06-07T12:00:00.000Z" }
  * }
  */
 export async function GET(request: NextRequest): Promise<Response> {

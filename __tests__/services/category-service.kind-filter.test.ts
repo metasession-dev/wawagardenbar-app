@@ -45,6 +45,24 @@ vi.mock('@/services/system-settings-service', () => ({
       food: [],
       drinks: [],
     })),
+    // REQ-075 — getCategories now reads the configurable main-category
+    // registry; seed it with the default `food` + `drinks` pair so the
+    // pre-REQ-075 kind-filter assertions still find their `mainCategory`
+    // `distinct(..)` calls.
+    getMainCategories: vi.fn(async () => [
+      {
+        slug: 'food',
+        label: 'Food',
+        order: 0,
+        isEnabled: true,
+      },
+      {
+        slug: 'drinks',
+        label: 'Drinks',
+        order: 1,
+        isEnabled: true,
+      },
+    ]),
   },
 }));
 

@@ -76,10 +76,13 @@ export class CategoryService {
   }
 
   /**
-   * Get menu items by main category
+   * Get menu items by main category.
+   *
+   * REQ-075 — `mainCategory` is now any registered slug from the
+   * `MainCategoryService` registry.
    */
   static async getItemsByMainCategory(
-    mainCategory: 'drinks' | 'food'
+    mainCategory: string
   ): Promise<MenuItemWithStock[]> {
     await connectDB();
 
@@ -163,60 +166,68 @@ export class CategoryService {
   }
 
   /**
-   * Get available categories grouped by main category
+   * Get available categories grouped by main category.
+   *
+   * REQ-075 — Returns the new envelope shape keyed off the configurable
+   * main-category registry. This is a BREAKING API contract change from
+   * REQ-071's `{ food: [...], drinks: [...] }` shape; the REQ-071 spec
+   * file is amended in the same PR.
+   *
+   * @returns Envelope with main-category list. Each entry has the slug,
+   *          label, display order, and the enabled sub-category slugs
+   *          (settings + legacy DB rows merged + de-duplicated).
    */
   static async getCategories(): Promise<{
-    drinks: string[];
-    food: string[];
+    mainCategories: Array<{
+      slug: string;
+      label: string;
+      order: number;
+      subCategories: string[];
+    }>;
   }> {
     await connectDB();
 
-    // Get categories from settings
-    const menuSettings = await SystemSettingsService.getMenuCategories();
-
-    // Get enabled categories only, sorted by order
-    const foodCategories = menuSettings.food
-      .filter((c) => c.isEnabled)
-      .sort((a, b) => a.order - b.order)
-      .map((c) => c.value);
-
-    const drinkCategories = menuSettings.drinks
-      .filter((c) => c.isEnabled)
-      .sort((a, b) => a.order - b.order)
-      .map((c) => c.value);
-
-    // Also get distinct categories from DB to ensure we don't miss any that are in use
-    // but might not be in settings (legacy support)
-    const [dbDrinkCategories, dbFoodCategories] = await Promise.all([
-      MenuItem.distinct('category', {
-        mainCategory: 'drinks',
-        isAvailable: true,
-        kind: 'menu-item',
-      }),
-      MenuItem.distinct('category', {
-        mainCategory: 'food',
-        isAvailable: true,
-        kind: 'menu-item',
-      }),
+    const [mainCats, menuSettings] = await Promise.all([
+      SystemSettingsService.getMainCategories(),
+      SystemSettingsService.getMenuCategories(),
     ]);
 
-    // Merge DB categories if they don't exist in settings
-    for (const cat of dbFoodCategories) {
-      if (!foodCategories.includes(cat)) {
-        foodCategories.push(cat);
-      }
-    }
+    const enabledMains = mainCats
+      .filter((m) => m.isEnabled)
+      .sort((a, b) => a.order - b.order);
 
-    for (const cat of dbDrinkCategories) {
-      if (!drinkCategories.includes(cat)) {
-        drinkCategories.push(cat);
-      }
-    }
+    const result = await Promise.all(
+      enabledMains.map(async (main) => {
+        const fromSettings = (menuSettings[main.slug] || [])
+          .filter((c) => c.isEnabled)
+          .sort((a, b) => a.order - b.order)
+          .map((c) => c.value);
 
-    return {
-      drinks: drinkCategories,
-      food: foodCategories,
-    };
+        // Legacy support — pick up sub-categories present on MenuItem
+        // documents but missing from settings.
+        const fromDb = await MenuItem.distinct('category', {
+          mainCategory: main.slug,
+          isAvailable: true,
+          kind: 'menu-item',
+        });
+
+        const subCategories = [...fromSettings];
+        for (const cat of fromDb) {
+          if (!subCategories.includes(cat)) {
+            subCategories.push(cat);
+          }
+        }
+
+        return {
+          slug: main.slug,
+          label: main.label,
+          order: main.order,
+          subCategories,
+        };
+      })
+    );
+
+    return { mainCategories: result };
   }
 
   /**

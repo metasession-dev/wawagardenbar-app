@@ -24,7 +24,9 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { getSnapshotHistoryAction } from '@/app/actions/inventory/snapshot-actions';
+import { getMainCategoriesAction } from '@/app/dashboard/settings/actions';
 import type { IInventorySnapshot } from '@/interfaces/inventory-snapshot.interface';
+import type { IMainCategoryConfig } from '@/interfaces/main-category.interface';
 import { computeMissingCost } from '@/lib/snapshot-missing-cost';
 
 // REQ-039: format the missing-cost figure for table display.
@@ -50,11 +52,23 @@ export function SnapshotsListClient() {
   const [statusFilter, setStatusFilter] = useState<
     'all' | 'pending' | 'approved' | 'rejected'
   >('all');
-  const [categoryFilter, setCategoryFilter] = useState<
-    'all' | 'food' | 'drinks'
-  >('all');
+  // REQ-075 — Free-form filter string; 'all' clears mainCategory filter.
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [mainCategoryOptions, setMainCategoryOptions] = useState<
+    IMainCategoryConfig[]
+  >([]);
+
+  useEffect(() => {
+    getMainCategoriesAction().then((res) => {
+      if (res.success && res.data) {
+        setMainCategoryOptions(
+          res.data.filter((m) => m.isEnabled).sort((a, b) => a.order - b.order)
+        );
+      }
+    });
+  }, []);
 
   useEffect(() => {
     loadSnapshots();
@@ -173,8 +187,11 @@ export function SnapshotsListClient() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="food">Food Only</SelectItem>
-                  <SelectItem value="drinks">Drinks Only</SelectItem>
+                  {mainCategoryOptions.map((m) => (
+                    <SelectItem key={m.slug} value={m.slug}>
+                      {m.label} Only
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -230,17 +247,12 @@ export function SnapshotsListClient() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={
-                              snapshot.mainCategory === 'food'
-                                ? 'bg-orange-50 text-orange-700 border-orange-200'
-                                : 'bg-blue-50 text-blue-700 border-blue-200'
-                            }
-                          >
-                            {snapshot.mainCategory === 'food'
-                              ? 'Food'
-                              : 'Drinks'}
+                          {/* REQ-075 — Label derived from the registry; per-category
+                              palette can land in a follow-up alongside icon support. */}
+                          <Badge variant="outline">
+                            {mainCategoryOptions.find(
+                              (m) => m.slug === snapshot.mainCategory
+                            )?.label ?? snapshot.mainCategory}
                           </Badge>
                         </TableCell>
                         <TableCell>{snapshot.submittedByName}</TableCell>

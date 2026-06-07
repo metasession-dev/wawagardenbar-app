@@ -17,7 +17,8 @@ import type {
 export class InventorySnapshotService {
   static async generateSnapshotData(
     date: Date,
-    mainCategory?: 'food' | 'drinks'
+    // REQ-075 — Free-form main-category slug (was `'food' | 'drinks'`).
+    mainCategory?: string
   ): Promise<IInventorySnapshotItem[]> {
     const query: any = { trackInventory: true };
     if (mainCategory) {
@@ -213,7 +214,8 @@ export class InventorySnapshotService {
     data: ISubmitSnapshotData,
     userId: string,
     userName: string,
-    mainCategory: 'food' | 'drinks'
+    // REQ-075 — Free-form main-category slug (was `'food' | 'drinks'`).
+    mainCategory: string
   ): Promise<IInventorySnapshot> {
     const snapshotDate = new Date(data.snapshotDate);
     snapshotDate.setHours(0, 0, 0, 0);
@@ -537,7 +539,8 @@ export class InventorySnapshotService {
   static async checkExistingSnapshot(
     date: Date,
     userId: string,
-    mainCategory: 'food' | 'drinks'
+    // REQ-075 — Free-form main-category slug (was `'food' | 'drinks'`).
+    mainCategory: string
   ): Promise<IInventorySnapshot | null> {
     const snapshotDate = new Date(date);
     snapshotDate.setHours(0, 0, 0, 0);

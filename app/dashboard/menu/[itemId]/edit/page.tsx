@@ -104,14 +104,20 @@ export default async function EditMenuItemPage({
   params,
 }: EditMenuItemPageProps) {
   const { itemId } = await params;
-  const [menuItem, menuSettings] = await Promise.all([
+  const [menuItem, menuSettings, mainCategoriesAll] = await Promise.all([
     getMenuItem(itemId),
     SystemSettingsService.getMenuCategories(),
+    // REQ-075 — supply the configurable main-category registry.
+    SystemSettingsService.getMainCategories(),
   ]);
 
   if (!menuItem) {
     notFound();
   }
+
+  const mainCategories = mainCategoriesAll
+    .filter((m) => m.isEnabled)
+    .sort((a, b) => a.order - b.order);
 
   return (
     <div className="space-y-6">
@@ -151,6 +157,7 @@ export default async function EditMenuItemPage({
         <MenuItemEditForm
           menuItem={menuItem}
           availableCategories={menuSettings}
+          mainCategories={mainCategories}
         />
       </Suspense>
 

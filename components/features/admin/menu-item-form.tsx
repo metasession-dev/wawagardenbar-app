@@ -21,6 +21,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { createMenuItemAction } from '@/app/actions/admin/menu-actions';
 import { IMenuSettings } from '@/interfaces/menu-settings.interface';
+import { IMainCategoryConfig } from '@/interfaces/main-category.interface';
 import { getUnitsOfMeasurementAction } from '@/app/actions/units-actions';
 import {
   DEFAULT_UNITS_OF_MEASUREMENT,
@@ -31,7 +32,9 @@ import { getActiveUnits } from '@/lib/units';
 const menuItemSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   description: z.string().optional(),
-  mainCategory: z.enum(['food', 'drinks']),
+  // REQ-075 — Free-form main-category slug; the form constrains the
+  // selection to enabled registry entries at runtime via `mainCategories`.
+  mainCategory: z.string().min(1, 'Main category is required'),
   category: z.string().min(1, 'Category is required'),
   price: z.number().min(0, 'Price must be 0 or greater'),
   preparationTime: z
@@ -59,12 +62,18 @@ type MenuItemFormData = z.infer<typeof menuItemSchema>;
 
 interface MenuItemFormProps {
   availableCategories?: IMenuSettings;
+  // REQ-075 — Configurable main-category registry (enabled-only list).
+  // Drives the main-category Select + the portions-section gate.
+  mainCategories: IMainCategoryConfig[];
 }
 
 /**
  * Menu item form component
  */
-export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
+export function MenuItemForm({
+  availableCategories,
+  mainCategories,
+}: MenuItemFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [unitsRegistry, setUnitsRegistry] = useState<UnitOfMeasurement[]>([
     ...DEFAULT_UNITS_OF_MEASUREMENT,
@@ -96,7 +105,9 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
     defaultValues: {
       name: '',
       description: '',
-      mainCategory: 'food',
+      // REQ-075 — Default to the first enabled main category in the
+      // registry; falls back to 'food' for the legacy seed.
+      mainCategory: mainCategories[0]?.slug ?? 'food',
       category: '',
       price: 0,
       preparationTime: 15,
@@ -204,27 +215,15 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
     }
   }
 
-  const foodCategories = availableCategories?.food
+  // REQ-075 — Sub-category options are now looked up against the
+  // selected main-category slug in `availableCategories`. No food/drinks
+  // special-cases.
+  const categories = (availableCategories?.[mainCategory] ?? [])
     .filter((c) => c.isEnabled)
-    .sort((a, b) => a.order - b.order) || [
-    { value: 'main-courses', label: 'Main Courses' },
-    { value: 'starters', label: 'Starters' },
-    { value: 'desserts', label: 'Desserts' },
-    { value: 'sides', label: 'Sides' },
-  ];
+    .sort((a, b) => a.order - b.order);
 
-  const drinkCategories = availableCategories?.drinks
-    .filter((c) => c.isEnabled)
-    .sort((a, b) => a.order - b.order) || [
-    { value: 'beer-local', label: 'Beer (Local)' },
-    { value: 'beer-imported', label: 'Beer (Imported)' },
-    { value: 'beer-craft', label: 'Beer (Craft)' },
-    { value: 'wine', label: 'Wine' },
-    { value: 'soft-drinks', label: 'Soft Drinks' },
-    { value: 'cocktails', label: 'Cocktails' },
-  ];
-
-  const categories = mainCategory === 'food' ? foodCategories : drinkCategories;
+  const selectedMain = mainCategories.find((m) => m.slug === mainCategory);
+  const portionsEnabledForMain = selectedMain?.portionsEnabled === true;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -265,17 +264,18 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
           <Label htmlFor="mainCategory">Main Category *</Label>
           <Select
             value={mainCategory}
-            onValueChange={(value) =>
-              setValue('mainCategory', value as 'food' | 'drinks')
-            }
+            onValueChange={(value) => setValue('mainCategory', value)}
             disabled={isLoading}
           >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="food">Food</SelectItem>
-              <SelectItem value="drinks">Drinks</SelectItem>
+              {mainCategories.map((m) => (
+                <SelectItem key={m.slug} value={m.slug}>
+                  {m.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           {errors.mainCategory && (
@@ -395,8 +395,9 @@ export function MenuItemForm({ availableCategories }: MenuItemFormProps) {
         </div>
       </div>
 
-      {/* Half Portion Section - Only for Food Items */}
-      {mainCategory === 'food' && (
+      {/* REQ-075 — Portions section gated by the registry's
+          `portionsEnabled` flag on the selected main category. */}
+      {portionsEnabledForMain && (
         <div className="space-y-4 rounded-lg border p-4">
           <div>
             <h3 className="text-lg font-semibold mb-4">Portion Options</h3>

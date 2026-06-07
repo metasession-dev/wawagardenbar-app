@@ -102,7 +102,12 @@ test.describe('REQ-071 SRS REQ-API-006 — public API authenticated contract', (
     }
   });
 
-  test('GET /api/public/menu/categories: envelope { success, data: { drinks: string[], food: string[] } }', async () => {
+  // REQ-075 (BREAKING) — Envelope changed from
+  // `{ drinks: string[], food: string[] }` to
+  // `{ mainCategories: [{ slug, label, order, subCategories[] }] }` to
+  // support the configurable main-category registry. REQ-071's SRS spec
+  // is amended in the same release.
+  test('GET /api/public/menu/categories: envelope { success, data: { mainCategories: [{ slug, label, order, subCategories[] }] } } [REQ-075]', async () => {
     const res = await fetch(`${baseUrl()}/api/public/menu/categories`, {
       headers: { 'x-api-key': apiKey },
     });
@@ -110,8 +115,18 @@ test.describe('REQ-071 SRS REQ-API-006 — public API authenticated contract', (
     const json = await res.json();
     expect(json.success).toBe(true);
     expect(json.data).toBeTruthy();
-    expect(Array.isArray(json.data.drinks)).toBe(true);
-    expect(Array.isArray(json.data.food)).toBe(true);
+    expect(Array.isArray(json.data.mainCategories)).toBe(true);
+    // Default seed ships food + drinks; expect at least one entry.
+    expect(json.data.mainCategories.length).toBeGreaterThan(0);
+    for (const main of json.data.mainCategories) {
+      expect(typeof main.slug).toBe('string');
+      expect(typeof main.label).toBe('string');
+      expect(typeof main.order).toBe('number');
+      expect(Array.isArray(main.subCategories)).toBe(true);
+      for (const sub of main.subCategories) {
+        expect(typeof sub).toBe('string');
+      }
+    }
   });
 
   test('GET /api/public/inventory: envelope { success, data: array<Inventory> } + status enum', async () => {

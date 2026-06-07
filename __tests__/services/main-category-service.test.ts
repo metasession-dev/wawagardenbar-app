@@ -33,9 +33,14 @@ const mockUpdateMany = vi.fn();
 
 const mockFindOne = vi.fn();
 const mockFindOneAndUpdate = vi.fn();
+// `MainCategoryService` reads SystemSettings via `findOne().lean()` (fix
+// for the rename-loses-link bug). The mock returns a chainable whose
+// `.lean()` resolves to whatever the test set on `mockFindOne`.
 vi.mock('@/models/system-settings-model', () => ({
   default: {
-    findOne: (...args: unknown[]) => mockFindOne(...args),
+    findOne: (...args: unknown[]) => ({
+      lean: () => mockFindOne(...args),
+    }),
     findOneAndUpdate: (...args: unknown[]) => mockFindOneAndUpdate(...args),
   },
 }));
@@ -199,6 +204,44 @@ describe('REQ-075 — MainCategoryService', () => {
       expect(
         finalListUpdate.find((c: { slug: string }) => c.slug === 'food')
       ).toBeUndefined();
+    });
+
+    // Regression: the rename relocates 'food' → 'meals' inside the
+    // 'menu-categories' SystemSettings doc. Old impl mutated the
+    // Mongoose-Mixed wrapper in place + assumed `$set: { value: ... }`
+    // would persist the deletion; that left sub-categories under the
+    // old slug while the registry had been renamed, breaking the
+    // MenuCategoriesForm tab for the new slug.
+    it('writes a $set with the new slug key and without the old slug key', async () => {
+      mockFindOne.mockResolvedValueOnce({
+        key: 'menu-categories',
+        value: {
+          food: [
+            { value: 'starters', label: 'Starters', order: 1, isEnabled: true },
+            {
+              value: 'main-courses',
+              label: 'Main Courses',
+              order: 2,
+              isEnabled: true,
+            },
+          ],
+          drinks: [{ value: 'wine', label: 'Wine', order: 1, isEnabled: true }],
+        },
+      });
+
+      await MainCategoryService.rename('food', 'meals', ADMIN);
+
+      const menuCatsWriteCall = mockFindOneAndUpdate.mock.calls.find(
+        (c) => c[0]?.key === 'menu-categories'
+      );
+      expect(menuCatsWriteCall).toBeDefined();
+      const nextValue = menuCatsWriteCall![1].$set.value;
+      expect(nextValue.food).toBeUndefined();
+      expect(Array.isArray(nextValue.meals)).toBe(true);
+      expect(nextValue.meals).toHaveLength(2);
+      expect(nextValue.meals[0].value).toBe('starters');
+      // Drinks unchanged.
+      expect(nextValue.drinks).toHaveLength(1);
     });
 
     it('rejects identical old/new slug', async () => {

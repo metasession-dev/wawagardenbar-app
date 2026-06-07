@@ -93,14 +93,13 @@ export class MainCategoryService {
       mainCategory: slug,
     });
 
+    // `.lean()` returns a POJO; without it Mongoose's Mixed wrapper can
+    // make nested arrays fail `Array.isArray()`, masking real refs.
     const menuCatsSetting = await SystemSettingsModel.findOne({
       key: 'menu-categories',
-    });
-    const menuCats =
-      (menuCatsSetting?.value as Record<string, unknown[]>) || {};
-    const subCategories = Array.isArray(menuCats[slug])
-      ? menuCats[slug].length
-      : 0;
+    }).lean<{ value?: Record<string, unknown[]> }>();
+    const sub = menuCatsSetting?.value?.[slug];
+    const subCategories = Array.isArray(sub) ? sub.length : 0;
 
     return { menuItems, subCategories };
   }
@@ -275,27 +274,44 @@ export class MainCategoryService {
     );
 
     // Step 2: relocate sub-categories in 'menu-categories' SystemSettings.
+    //
+    // NOTE: read via `.lean()` so `value` comes back as a plain JS object
+    // (POJO) — without it, Mongoose hydrates `value` as a Mixed wrapper
+    // whose nested arrays don't pass `Array.isArray()` and whose in-place
+    // mutations don't always re-serialize cleanly for `$set`. The old
+    // implementation could silently no-op step 2, leaving sub-categories
+    // pinned to `oldSlug` after the registry had been renamed to
+    // `newSlug` — making the MenuCategoriesForm tab for the new slug
+    // appear empty (the "menu categories lost the link" symptom).
     let subCategoriesMoved = 0;
-    const menuCatsSetting = await SystemSettingsModel.findOne({
+    const menuCatsSettingLean = await SystemSettingsModel.findOne({
       key: 'menu-categories',
-    });
-    if (menuCatsSetting && menuCatsSetting.value) {
-      const menuCats = menuCatsSetting.value as Record<string, unknown[]>;
-      if (Array.isArray(menuCats[oldSlug])) {
-        subCategoriesMoved = menuCats[oldSlug].length;
-        menuCats[newSlug] = menuCats[oldSlug];
-        delete menuCats[oldSlug];
+    }).lean<{ value?: Record<string, unknown[]> }>();
+
+    if (menuCatsSettingLean?.value) {
+      const sourceList = menuCatsSettingLean.value[oldSlug];
+      if (Array.isArray(sourceList) && sourceList.length > 0) {
+        subCategoriesMoved = sourceList.length;
+        // Build the post-rename value as a fresh POJO clone — don't
+        // mutate the read result + assume Mongoose will serialize it
+        // back correctly.
+        const nextValue: Record<string, unknown[]> = {
+          ...menuCatsSettingLean.value,
+          [newSlug]: sourceList,
+        };
+        delete nextValue[oldSlug];
+
         await SystemSettingsModel.findOneAndUpdate(
           { key: 'menu-categories' },
           {
             $set: {
-              value: menuCats,
+              value: nextValue,
               updatedBy: new Types.ObjectId(adminUserId),
               updatedAt: new Date(),
             },
             $push: {
               changeHistory: {
-                value: menuCats,
+                value: nextValue,
                 changedBy: new Types.ObjectId(adminUserId),
                 changedAt: new Date(),
                 reason: `Main category rename ${oldSlug} → ${newSlug}`,

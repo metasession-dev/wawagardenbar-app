@@ -102,11 +102,14 @@ test.describe('REQ-075 — main-category registry (REQ-MENUMGT-005)', () => {
 
   test('AC1 — create persists slug + label + order under main-categories key', async () => {
     const label = `e2e-req075 Snacks ${Date.now()}`;
-    const before = await readRegistry();
+    // Read the service-layer view (which respects the default seed when
+    // the SystemSettings doc hasn't been persisted yet) rather than the
+    // raw Mongo doc — pre-REQ-075 envs may have a doc with empty value.
+    const beforeList = await MainCategoryService.list();
     const expectedOrder =
-      before.length === 0
+      beforeList.length === 0
         ? 0
-        : Math.max(...before.map((c) => c.order ?? 0)) + 1;
+        : Math.max(...beforeList.map((c) => c.order ?? 0)) + 1;
 
     const created = await MainCategoryService.create({ label }, ADMIN_USER_ID);
     seededSlugs.push(created.slug);

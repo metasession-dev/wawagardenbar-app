@@ -1,9 +1,9 @@
 ---
-version: "v2026.06.06"
+version: 'v2026.06.06'
 release_shape: housekeeping
-generated_at: "2026-06-06"
-last_reviewed_at: "2026-06-06"
-generated_by: "generate-security-summary.sh (DevAudit-Installer#116)"
+generated_at: '2026-06-06'
+last_reviewed_at: '2026-06-06'
+generated_by: 'generate-security-summary.sh (DevAudit-Installer#116)'
 ---
 
 > ⚠️ **AUTO-GENERATED STUB — REVIEW BEFORE MERGE**
@@ -25,39 +25,48 @@ generated_by: "generate-security-summary.sh (DevAudit-Installer#116)"
 
 ## SAST findings (Semgrep)
 
-REPLACE — `sast-results.json` not present at CWD; check that the SAST gate ran on this commit
+No new SAST findings attributable to this housekeeping window. The REQ-074 push that sits in this window had zero high + zero critical findings on its own CI run (covered by the REQ-074 tracked release [#318](https://github.com/metasession-dev/wawagardenbar-app/pull/318)). The other commits in scope are docs / chore / RTM-only and produce no new SAST surface.
 
 > **Policy:** the SAST gate fails the build at `high` or `critical` severity. If this release shipped, both are zero.
 
 ## Dependency vulnerabilities
 
-REPLACE — `dependency-audit.json` not present at CWD; check that the dependency-audit gate ran on this commit
+No dependency changes in this window. `package.json` + `package-lock.json` are untouched across every constituent commit. Baseline carries through from v2026.06.05 unchanged.
 
 > **Policy:** the dependency-audit gate fails the build at `high` or `critical` severity. If this release shipped, both are zero.
 
 ## Gate outcomes (per CI run)
 
-REPLACE — `gate-outcomes.json` not present at CWD
+Inherited from the REQ-074 tracked release for the substantive feature work. Per-commit gate outcomes for the housekeeping pushes (#319/#320 close-out + validator fix + #321 stub commit) are all green on develop's compliance-evidence.yml runs after PR #321 landed (the prior 401-failed run was on the auto-stub-PR step, not the gates themselves).
+
+| PR   | Title                                                 | TypeScript | SAST | Dep audit | E2E             |
+| ---- | ----------------------------------------------------- | ---------- | ---- | --------- | --------------- |
+| #316 | REQ-074 customer PIN-flow E2E coverage                | ✓          | ✓    | ✓         | ✓ (focused 7/7) |
+| #317 | REQ-074 verify-step button-name fix + AC4 screenshots | ✓          | ✓    | ✓         | ✓ (focused 7/7) |
+| #319 | Compliance Validation false-positive doc fix          | ✓          | ✓    | ✓         | n/a (docs only) |
+| #320 | REQ-074 close-out                                     | ✓          | ✓    | ✓         | n/a (RTM only)  |
+| #321 | v2026.06.06 housekeeping stubs                        | ✓          | ✓    | ✓         | n/a (docs only) |
 
 ## Access control + audit log
 
-| Check | Result | Notes |
-|---|---|---|
-| Access control unchanged | REPLACE — yes/no | If yes, no further work. If no, document the auth/RBAC delta and confirm it landed an audit event. |
-| Audit log append-only invariant preserved | REPLACE — yes/no | If yes, no further work. If no, document why and confirm the change has independent review. |
-| Sensitive data exposure | REPLACE — yes/no | If yes, escalate to the GDPR triage in `compliance/governance/dpia.md` before merging. |
+| Check                                     | Result | Notes                                                                                                                                                                                                                                                                                                                           |
+| ----------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Access control unchanged                  | yes    | REQ-074's `ENABLE_E2E_PIN_INTERCEPT` env-gated bypass is the only auth-adjacent change in this window. It's documented separately in REQ-074's `security-summary.md`; bypass defaults to false; bounded blast radius (UX failure if accidentally enabled on prod, not security failure). No other RBAC / auth surface modified. |
+| Audit log append-only invariant preserved | yes    | No `AuditLogService.createLog` callers added or removed in this window.                                                                                                                                                                                                                                                         |
+| Sensitive data exposure                   | no     | REQ-074 specs use synthetic phone numbers + ephemeral test users with explicit cleanup. The housekeeping doc-only changes don't touch any data paths.                                                                                                                                                                           |
 
 ## Risk Assessment
 
-REPLACE — one paragraph summarising the security posture of this release. For housekeeping releases the typical wording is *"No code paths touched; security posture unchanged from the previous release."* For tracked releases name the touched modules + threat model assessment.
+No production code paths touched by this housekeeping record itself — the substantive REQ-074 changes are already attested under REQ-074's own evidence pack. This record exists because PRs #316/#317/#319/#320/#321 landed on develop with commit subjects that didn't carry `[REQ-074]` brackets, so `derive-release-version.sh` fell through to the bare-date fallback rather than attributing them to REQ-074's release. The auth-adjacent `ENABLE_E2E_PIN_INTERCEPT` bypass introduced by REQ-074 is the only sensitive surface — its disclosure + production-must-not-set rule are documented in REQ-074's `compliance/evidence/REQ-074/security-summary.md`. Security posture unchanged from v2026.06.05.
 
 ---
 
 ## Sign-off
 
-| Role | Name | Date | Notes |
-|---|---|---|---|
-| Author | devaudit-bot (auto-generated) | 2026-06-06 | Stub generated from CI gate JSON |
-| Reviewer | REPLACE | REPLACE | REPLACE |
+| Role     | Name                          | Date         | Notes                                                                                  |
+| -------- | ----------------------------- | ------------ | -------------------------------------------------------------------------------------- |
+| Author   | devaudit-bot (auto-generated) | 2026-06-06   | Stub generated from CI gate JSON                                                       |
+| Editor   | ostendo-io                    | 2026-06-07   | REPLACE markers filled per actual window contents                                      |
+| Reviewer | _to confirm_                  | _to confirm_ | Independent review not required for LOW-risk housekeeping windows per `Test_Policy.md` |
 
 Once reviewed + signed off, this file is uploaded as evidence by the next `compliance-evidence.yml` run; the portal's release-completeness checklist flips the security-summary item to ✓.

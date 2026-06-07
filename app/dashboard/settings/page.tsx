@@ -11,6 +11,7 @@ import { SettingsForm } from '@/components/features/admin/settings-form';
 import { PaymentSettingsForm } from '@/components/features/admin/payment-settings-form';
 import { ExpenseCategoriesForm } from '@/components/features/admin/expense-categories-form';
 import { MenuCategoriesForm } from '@/components/features/admin/menu-categories-form';
+import { MainCategoriesForm } from '@/components/features/admin/main-categories-form';
 import { UnitsOfMeasurementForm } from '@/components/features/admin/units-of-measurement-form';
 import { StaffPotConfigForm } from '@/components/features/admin/staff-pot/staff-pot-config-form';
 import { BusinessDayCutoffForm } from '@/components/features/admin/business-day-cutoff-form';
@@ -35,6 +36,7 @@ export default async function SettingsPage() {
     paymentSettings,
     expenseCategories,
     menuSettings,
+    mainCategoriesList,
     inventoryLocationsSettings,
     staffPotConfig,
     businessDayCutoff,
@@ -45,6 +47,9 @@ export default async function SettingsPage() {
     SystemSettingsService.getPaymentSettings(),
     SystemSettingsService.getExpenseCategories(),
     SystemSettingsService.getMenuCategories(),
+    // REQ-075 — Configurable main-category registry feeds both the new
+    // MainCategoriesForm and the dynamic-tab MenuCategoriesForm below.
+    SystemSettingsService.getMainCategories(),
     SystemSettingsService.getInventoryLocations(),
     SystemSettingsService.getStaffPotConfig(),
     SystemSettingsService.getBusinessDayCutoff(),
@@ -150,8 +155,14 @@ export default async function SettingsPage() {
       {/* Units of Measurement (REQ-033) */}
       <UnitsOfMeasurementForm initialUnits={unitsOfMeasurement} />
 
+      {/* Main Categories (REQ-075) */}
+      <MainCategoriesForm initialCategories={mainCategoriesList} />
+
       {/* Menu Categories */}
-      <MenuCategoriesForm initialSettings={menuSettings} />
+      <MenuCategoriesForm
+        initialSettings={menuSettings}
+        mainCategories={mainCategoriesList}
+      />
 
       {/* Business Day Cutoff */}
       <Card>

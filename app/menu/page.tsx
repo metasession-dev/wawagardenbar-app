@@ -28,22 +28,20 @@ export default async function MenuPage({ searchParams }: MenuPageProps) {
   // Await searchParams (Next.js 15+ requirement)
   const params = await searchParams;
 
-  // Parallel data fetching
+  // REQ-075 — Categories envelope is now keyed by configurable
+  // main-category slug; iterate over every entry instead of the
+  // hardcoded `food` / `drinks` pair.
   const [categoriesPromise, menuSettings] = await Promise.all([
     CategoryService.getCategories(),
     SystemSettingsService.getMenuCategories(),
   ]);
 
-  // Generate label map from settings
   const categoryLabels: Record<string, string> = {};
-  
-  menuSettings.food.forEach(cat => {
-    categoryLabels[cat.value] = cat.label;
-  });
-  
-  menuSettings.drinks.forEach(cat => {
-    categoryLabels[cat.value] = cat.label;
-  });
+  for (const subList of Object.values(menuSettings)) {
+    for (const cat of subList) {
+      categoryLabels[cat.value] = cat.label;
+    }
+  }
 
   return (
     <MainLayout>

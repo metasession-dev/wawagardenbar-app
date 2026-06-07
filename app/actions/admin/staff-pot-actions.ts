@@ -182,6 +182,10 @@ export async function getStaffPotChecklistAction(
       .select('mainCategory status snapshotDate')
       .lean();
 
+    // REQ-075 — Staff-pot eligibility gate continues to require both
+    // food + drink snapshots to be approved at month-end. Other main
+    // categories aren't part of the eligibility contract today; extending
+    // the gate would require an explicit operator decision per category.
     const foodSnapshots = snapshots.filter((s) => s.mainCategory === 'food');
     const drinkSnapshots = snapshots.filter((s) => s.mainCategory === 'drinks');
 

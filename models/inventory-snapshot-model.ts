@@ -10,7 +10,9 @@ const inventorySnapshotItemSchema = new Schema(
     },
     menuItemName: { type: String, required: true },
     inventoryId: { type: Schema.Types.ObjectId, ref: 'Inventory' },
-    mainCategory: { type: String, enum: ['food', 'drinks'], required: true },
+    // REQ-075 — `enum` removed; mainCategory is now free-form. Validation
+    // moves to the application layer via `MainCategoryService`.
+    mainCategory: { type: String, required: true },
     category: { type: String, required: true },
     systemInventoryCount: { type: Number, required: true, default: 0 },
     todaySalesCount: { type: Number, required: true, default: 0 },
@@ -38,7 +40,8 @@ const inventorySnapshotItemSchema = new Schema(
 const inventorySnapshotSchema = new Schema<IInventorySnapshot>(
   {
     snapshotDate: { type: Date, required: true },
-    mainCategory: { type: String, enum: ['food', 'drinks'], required: true },
+    // REQ-075 — `enum` removed; see item-level note above.
+    mainCategory: { type: String, required: true },
     submittedAt: { type: Date, required: true, default: Date.now },
     submittedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     submittedByName: { type: String, required: true },

@@ -3,7 +3,14 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { MenuItemWithStock } from '@/services/category-service';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, AlertCircle } from 'lucide-react';
@@ -49,7 +56,12 @@ export function MenuItem({ item }: MenuItemProps) {
             />
           ) : (
             <div className="flex h-full items-center justify-center bg-muted">
-              <span className="text-6xl">{item.mainCategory === 'drinks' ? '🥤' : '🍽️'}</span>
+              {/* REQ-075 — Per-main-category icon will land alongside
+                  the registry `icon` plumbing; for now keep the two
+                  legacy emojis with food as default. */}
+              <span className="text-6xl">
+                {item.mainCategory === 'drinks' ? '🥤' : '🍽️'}
+              </span>
             </div>
           )}
 
@@ -73,16 +85,27 @@ export function MenuItem({ item }: MenuItemProps) {
           <div className="flex items-start justify-between gap-2">
             <CardTitle className="line-clamp-1 text-lg">{item.name}</CardTitle>
             <Badge variant="outline" className="shrink-0">
-              {item.mainCategory === 'food' && (item.portionOptions?.halfPortionEnabled || item.portionOptions?.quarterPortionEnabled)
+              {/* REQ-075 — Drop the `mainCategory === 'food'` gate; the
+                  item's own `portionOptions` flags are authoritative.
+                  The admin form already gates portion-enablement on the
+                  registry's `portionsEnabled`, so a non-food main with
+                  portions enabled (e.g. a future "snacks") now reads
+                  through here without code change. */}
+              {item.portionOptions?.halfPortionEnabled ||
+              item.portionOptions?.quarterPortionEnabled
                 ? `from ${formatPrice(
-                    item.portionOptions?.quarterPortionEnabled 
-                      ? Math.round(item.price * 0.25) + (item.portionOptions?.quarterPortionSurcharge || 0)
-                      : Math.round(item.price * 0.5) + (item.portionOptions?.halfPortionSurcharge || 0)
+                    item.portionOptions?.quarterPortionEnabled
+                      ? Math.round(item.price * 0.25) +
+                          (item.portionOptions?.quarterPortionSurcharge || 0)
+                      : Math.round(item.price * 0.5) +
+                          (item.portionOptions?.halfPortionSurcharge || 0)
                   )}`
                 : formatPrice(item.price)}
             </Badge>
           </div>
-          <CardDescription className="line-clamp-2">{item.description}</CardDescription>
+          <CardDescription className="line-clamp-2">
+            {item.description}
+          </CardDescription>
         </CardHeader>
 
         <CardContent className="pb-3">

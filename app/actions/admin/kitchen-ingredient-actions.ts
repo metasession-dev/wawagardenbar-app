@@ -83,6 +83,8 @@ export async function createKitchenIngredientAction(
       name: input.name.trim(),
       description:
         'Kitchen ingredient — used in recipes; not visible on the customer menu.',
+      // REQ-075 — kitchen-ingredient documents are not customer-visible,
+      // so the historical `'food'` default is preserved as an inert tag.
       mainCategory: 'food',
       category: input.category.trim(),
       price: 0,

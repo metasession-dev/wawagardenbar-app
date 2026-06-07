@@ -1,13 +1,15 @@
 import { CategoryService } from '@/services/category-service';
-import { CategoryNavigation } from './category-navigation';
+import {
+  CategoryNavigation,
+  type CategoryNavigationCategories,
+} from './category-navigation';
 import { MenuGrid } from './menu-grid';
 import { PageHeader } from '@/components/shared/ui';
 
 interface MenuContentProps {
-  initialCategories: {
-    drinks: string[];
-    food: string[];
-  };
+  // REQ-075 — Categories envelope now keyed by the configurable
+  // main-category registry. See `CategoryNavigationCategories`.
+  initialCategories: CategoryNavigationCategories;
   selectedCategory?: string;
   searchQuery?: string;
   categoryLabels?: Record<string, string>;

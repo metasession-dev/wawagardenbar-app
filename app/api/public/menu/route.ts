@@ -1,7 +1,14 @@
 import { NextRequest } from 'next/server';
 import { CategoryService } from '@/services/category-service';
 import MenuItemModel from '@/models/menu-item-model';
-import { withApiAuth, apiSuccess, apiError, parsePagination, serialize, parseJsonBody } from '@/lib/api-response';
+import {
+  withApiAuth,
+  apiSuccess,
+  apiError,
+  parsePagination,
+  serialize,
+  parseJsonBody,
+} from '@/lib/api-response';
 import { AuditLogService } from '@/services/audit-log-service';
 
 /**
@@ -77,7 +84,8 @@ import { AuditLogService } from '@/services/audit-log-service';
 export async function GET(request: NextRequest): Promise<Response> {
   return withApiAuth(request, ['menu:read'], async () => {
     const { searchParams } = request.nextUrl;
-    const mainCategory = searchParams.get('mainCategory') as 'drinks' | 'food' | null;
+    // REQ-075 — Free-form main-category slug (was `'drinks' | 'food'`).
+    const mainCategory = searchParams.get('mainCategory');
     const category = searchParams.get('category');
     const query = searchParams.get('q');
     const { page, limit, skip } = parsePagination(searchParams);
@@ -111,7 +119,15 @@ export async function POST(request: NextRequest): Promise<Response> {
       const body = await parseJsonBody<Record<string, unknown>>(request);
       if (!body) return apiError('Invalid JSON body', 400);
 
-      const { name, description, mainCategory, category, price, costPerUnit, preparationTime } = body as Record<string, any>;
+      const {
+        name,
+        description,
+        mainCategory,
+        category,
+        price,
+        costPerUnit,
+        preparationTime,
+      } = body as Record<string, any>;
 
       if (!name || typeof name !== 'string') {
         return apiError('name is required', 400);
@@ -125,13 +141,28 @@ export async function POST(request: NextRequest): Promise<Response> {
       if (!category || typeof category !== 'string') {
         return apiError('category is required', 400);
       }
-      if (price === undefined || price === null || typeof price !== 'number' || price < 0) {
+      if (
+        price === undefined ||
+        price === null ||
+        typeof price !== 'number' ||
+        price < 0
+      ) {
         return apiError('price must be a number >= 0', 400);
       }
-      if (costPerUnit === undefined || costPerUnit === null || typeof costPerUnit !== 'number' || costPerUnit < 0) {
+      if (
+        costPerUnit === undefined ||
+        costPerUnit === null ||
+        typeof costPerUnit !== 'number' ||
+        costPerUnit < 0
+      ) {
         return apiError('costPerUnit must be a number >= 0', 400);
       }
-      if (preparationTime === undefined || preparationTime === null || typeof preparationTime !== 'number' || preparationTime < 0) {
+      if (
+        preparationTime === undefined ||
+        preparationTime === null ||
+        typeof preparationTime !== 'number' ||
+        preparationTime < 0
+      ) {
         return apiError('preparationTime must be a number >= 0', 400);
       }
 
@@ -152,11 +183,16 @@ export async function POST(request: NextRequest): Promise<Response> {
         nutritionalInfo: body.nutritionalInfo || undefined,
         slug: body.slug || undefined,
         metaDescription: body.metaDescription || undefined,
-        trackInventory: body.trackInventory !== undefined ? body.trackInventory : false,
+        trackInventory:
+          body.trackInventory !== undefined ? body.trackInventory : false,
         pointsValue: body.pointsValue || undefined,
-        pointsRedeemable: body.pointsRedeemable !== undefined ? body.pointsRedeemable : false,
+        pointsRedeemable:
+          body.pointsRedeemable !== undefined ? body.pointsRedeemable : false,
         portionOptions: body.portionOptions || undefined,
-        allowManualPriceOverride: body.allowManualPriceOverride !== undefined ? body.allowManualPriceOverride : false,
+        allowManualPriceOverride:
+          body.allowManualPriceOverride !== undefined
+            ? body.allowManualPriceOverride
+            : false,
       });
 
       await AuditLogService.createLog({

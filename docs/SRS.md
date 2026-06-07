@@ -75,117 +75,118 @@
 
 MoSCoW also signals **test execution order**: **Must** → smoke; **Should** → regression; **Could** → extended/edge; **Won't** → excluded this cycle.
 
-| ID               | Title                                                         | Priority | Suite      | Source                                                                    |
-| ---------------- | ------------------------------------------------------------- | -------- | ---------- | ------------------------------------------------------------------------- |
-| REQ-HOME-001     | Home renders branding + order-type CTAs                       | Should   | regression | `app/page.tsx`                                                            |
-| REQ-HOME-002     | "View Menu" navigates to `/menu`                              | Must     | smoke      | `app/page.tsx:14`                                                         |
-| REQ-MENU-001     | Menu lists items by category                                  | Must     | smoke      | `app/menu/page.tsx`, `components/features/menu/menu-content.tsx`          |
-| REQ-MENU-002     | Menu search & category filter via URL params                  | Must     | smoke      | `app/menu/page.tsx:20`, `category-navigation.tsx`                         |
-| REQ-MENU-003     | Item detail modal: portion, qty, customizations, instructions | Must     | regression | `components/features/menu/menu-item-detail-modal.tsx`                     |
-| REQ-MENU-004     | Out-of-stock blocks add-to-cart; qty capped by stock          | Should   | regression | `menu-item-detail-modal.tsx:82,98`; REQ-030                               |
-| REQ-MENU-005     | Add to cart merges identical lines; cart count updates        | Must     | smoke      | `stores/cart-store.ts:66`, `lib/cart-store-helpers.ts:43`                 |
-| REQ-MENU-006     | Cart line total = (base + Σ surcharge×portionMult)×qty        | Must     | regression | `lib/cart-store-helpers.ts:97`; REQ-031                                   |
-| REQ-MENU-007     | Cart persists across reload (localStorage)                    | Should   | regression | `stores/cart-store.ts:199`                                                |
-| REQ-CHECKOUT-001 | Multi-step checkout renders & validates per step              | Must     | smoke      | `components/features/checkout/checkout-form.tsx`                          |
-| REQ-CHECKOUT-002 | Order-type-specific required fields enforced                  | Must     | regression | `checkout/order-details-step.tsx:79`                                      |
-| REQ-CHECKOUT-003 | Fees computed (service %, delivery tiers, VAT)                | Must     | regression | `services/settings-service.ts:82`                                         |
-| REQ-CHECKOUT-004 | Minimum-order threshold blocks checkout                       | Should   | regression | `services/settings-service.ts:145`                                        |
-| REQ-CHECKOUT-005 | Dine-in tab options (pay-now / new / existing)                | Should   | regression | `checkout/tab-options-step.tsx`                                           |
-| REQ-CHECKOUT-006 | Independent tip amount + tip payment method                   | Should   | regression | `checkout/tip-input-step.tsx`; REQ-035/036                                |
-| REQ-CHECKOUT-007 | Submit creates order (happy path) + clears cart               | Must     | smoke      | `app/actions/payment/payment-actions.ts:65`                               |
-| REQ-CHECKOUT-008 | Idempotency key prevents duplicate orders                     | Must     | regression | `payment-actions.ts:82`                                                   |
-| REQ-CHECKOUT-009 | Apply reward code / redeem points at checkout                 | Could    | extended   | `checkout/order-summary.tsx`                                              |
-| REQ-ORDER-001    | Order tracking page shows live status                         | Should   | regression | `app/(customer)/orders/[orderId]/page.tsx`, `real-time-order-tracker.tsx` |
-| REQ-ORDER-002    | Orders & Tabs page lists orders + tabs (auth)                 | Must     | smoke      | `app/(customer)/orders/page.tsx`                                          |
-| REQ-ORDER-003    | Guest sees own open tabs by guestId/email                     | Should   | regression | `app/(customer)/orders/page.tsx:55`                                       |
-| REQ-ORDER-004    | Pay & close tab from customer side                            | Should   | regression | `app/(customer)/orders/tabs/[tabId]/checkout/`                            |
-| REQ-PROFILE-001  | View/edit personal info                                       | Should   | regression | `app/(customer)/profile/page.tsx`, `personal-info-tab.tsx`                |
-| REQ-PROFILE-002  | Address CRUD + default address                                | Could    | extended   | `addresses-tab.tsx`                                                       |
-| REQ-REWARDC-001  | Rewards page shows active rewards, codes, expiry              | Should   | regression | `app/(customer)/profile/rewards/page.tsx`                                 |
-| REQ-REWARDC-002  | Points balance + ₦ equivalent + history                       | Could    | extended   | `profile/rewards/page.tsx:89`                                             |
-| REQ-AUTHC-001    | Passwordless PIN login (email/SMS/WhatsApp)                   | Must     | smoke      | `components/shared/auth/login-form.tsx`, `app/actions/auth/verify-pin.ts` |
-| REQ-AUTHC-002    | PIN expiry / invalid-PIN error handling                       | Should   | regression | `app/actions/auth/verify-pin.ts:62,69`                                    |
-| REQ-AUTHC-003    | Guest checkout (no PIN)                                       | Should   | regression | `app/actions/auth/guest-checkout.ts`                                      |
-| REQ-AUTHA-001    | Admin login (username + bcrypt)                               | Must     | smoke      | `app/actions/auth/admin-login.ts`, `services/admin-service.ts:478`        |
-| REQ-AUTHA-002    | Failed-login lockout (5 attempts / 15 min)                    | Should   | regression | `services/admin-service.ts:13,499`                                        |
-| REQ-AUTHA-003    | Force password change flag                                    | Could    | extended   | `admin-login.ts:78`                                                       |
-| REQ-AUTHA-004    | RBAC route gating (role + permission)                         | Must     | smoke      | `proxy.ts`, `lib/auth-middleware.ts:90`, `lib/permissions.ts:13`          |
-| REQ-DASH-001     | Super-admin dashboard overview stats                          | Should   | regression | `app/dashboard/page.tsx:53`; REQ-007                                      |
-| REQ-DASH-002     | Admin redirected from `/dashboard` to `/orders`               | Must     | smoke      | `app/dashboard/page.tsx:303`                                              |
-| REQ-ORDMGT-001   | Order queue with filters + real-time                          | Must     | smoke      | `app/dashboard/orders/page.tsx`, `order-management-actions.ts:42`         |
-| REQ-ORDMGT-002   | Order detail: timeline, payment, actions                      | Should   | regression | `app/dashboard/orders/[orderId]/page.tsx`                                 |
-| REQ-ORDMGT-003   | Edit order items (unpaid only)                                | Should   | regression | `app/actions/admin/order-edit-actions.ts:33`                              |
-| REQ-ORDMGT-004   | Price override with reason → audit                            | Should   | regression | `payment-actions.ts:129`                                                  |
-| REQ-ORDMGT-005   | Cancel order: reason required, paid blocked                   | Should   | regression | `order-management-actions.ts`                                             |
-| REQ-ORDMGT-006   | Manual payment recording                                      | Should   | regression | `order-payment-actions.ts:16`                                             |
-| REQ-ORDMGT-007   | Order completion → inventory deduction chokepoint             | Must     | regression | `services/order-service.ts:806`; REQ-066                                  |
-| REQ-TABMGT-001   | Tab list with status filter + stats                           | Should   | regression | `app/dashboard/orders/tabs/page.tsx`                                      |
-| REQ-TABMGT-002   | Tab detail with partial payments                              | Should   | regression | `tabs/[tabId]/page.tsx:82`; REQ-012/035/036                               |
-| REQ-TABMGT-003   | Admin pay tab with method + independent tip                   | Should   | regression | `admin-pay-tab-dialog`; REQ-036                                           |
-| REQ-TABMGT-004   | Delete tab (guard closed/paid)                                | Could    | extended   | `delete-tab-dialog`                                                       |
-| REQ-KITCHEN-001  | Kitchen display shows active orders real-time                 | Should   | regression | `app/dashboard/kitchen-display/page.tsx`                                  |
-| REQ-KITCHEN-002  | `kitchenManagement` gates kitchen routes                      | Must     | regression | `app/dashboard/kitchen/layout.tsx`; REQ-034                               |
-| REQ-KITCHEN-003  | Recipe CRUD + validation                                      | Should   | regression | `services/recipe-service.ts:41`; REQ-034                                  |
-| REQ-KITCHEN-004  | Make-a-batch deducts ingredients, yields stock                | Should   | regression | `app/dashboard/kitchen/production/page.tsx`; REQ-034                      |
-| REQ-KITCHEN-005  | Void batch (super-admin only)                                 | Could    | extended   | `production-history`; REQ-034                                             |
-| REQ-KITCHEN-006  | Kitchen ingredient CRUD                                       | Could    | extended   | REQ-037                                                                   |
-| REQ-MENUMGT-001  | Menu item list + stats (super-admin)                          | Should   | regression | `app/dashboard/menu/page.tsx`                                             |
-| REQ-MENUMGT-002  | Create menu item (+ optional inventory)                       | Should   | regression | `app/actions/admin/menu-actions.ts:60`                                    |
-| REQ-MENUMGT-003  | Edit item incl. customization inventory links                 | Should   | regression | `menu/[itemId]/edit/page.tsx`; REQ-030                                    |
-| REQ-MENUMGT-004  | Delete/duplicate item                                         | Could    | extended   | `menu-items-client`                                                       |
-| REQ-CUST-001     | Customer list (csr/super-admin)                               | Should   | regression | `app/dashboard/customers/page.tsx`                                        |
-| REQ-CUST-002     | Delete + recreate customer by email                           | Could    | extended   | REQ-027                                                                   |
-| REQ-INV-001      | Inventory list with live status                               | Should   | regression | `app/dashboard/inventory/page.tsx:77`                                     |
-| REQ-INV-002      | Inventory detail: movements + locations                       | Should   | regression | `inventory/[id]/page.tsx`                                                 |
-| REQ-INV-003      | Snapshot submit → pending                                     | Should   | regression | `app/actions/inventory/snapshot-actions.ts:52`; REQ-018                   |
-| REQ-INV-004      | Snapshot approve/reject (super-admin)                         | Should   | regression | `snapshot-actions.ts:154,190`; REQ-018                                    |
-| REQ-INV-005      | Restock recommendations                                       | Could    | extended   | `restock-recommendation-actions.ts:27`; REQ-019/020                       |
-| REQ-INV-006      | Inter-location stock transfer                                 | Could    | extended   | `inventory/transfer/page.tsx`                                             |
-| REQ-INV-007      | Cost-snapshot integrity                                       | Could    | extended   | REQ-022                                                                   |
-| REQ-INV-008      | Units of measurement registry                                 | Could    | extended   | REQ-033                                                                   |
-| REQ-INV-009      | Sale-point routing for deductions (`defaultSalesLocation`)    | Must     | regression | `services/inventory-service.ts:48`; REQ-066                               |
-| REQ-INV-010      | IncidentEvent model + recording                               | Must     | regression | `models/incident-event-model.ts`; REQ-066                                 |
-| REQ-INV-011      | Reconciliation cron + stale-paid scan                         | Must     | regression | `lib/scheduled-jobs.ts`; `services/order-service.ts`; REQ-066             |
-| REQ-INV-012      | `/dashboard/incidents` page + deduction-failure toast         | Should   | regression | `app/dashboard/incidents/page.tsx`; REQ-066                               |
-| REQ-INV-013      | Retry-now remediation + audit log                             | Should   | regression | `app/actions/admin/incidents-actions.ts`; REQ-066                         |
-| REQ-FIN-001      | Create + list expenses by date/filters                        | Should   | regression | `app/actions/finance/expense-actions.ts:17,52`                            |
-| REQ-FIN-002      | Bank statement (XLSX) import + dedupe                         | Should   | regression | `app/actions/expenses/csv-import-actions.ts:31`                           |
-| REQ-FIN-003      | Pending expense group submit/edit/approve                     | Should   | regression | `pending-expense-actions.ts:49`; REQ-026/032                              |
-| REQ-FIN-004      | Grouped expense category dropdown                             | Could    | extended   | `expense-categories-actions.ts`; REQ-028                                  |
-| REQ-FIN-005      | Staff pot balance from approved expenses                      | Could    | extended   | REQ-015                                                                   |
-| REQ-REPORT-001   | Daily report: payment accuracy + reconciliation               | Should   | regression | `app/actions/reports/report-actions.ts:11`; REQ-013/014                   |
-| REQ-REPORT-002   | Business-day cutoff grouping                                  | Should   | regression | REQ-025                                                                   |
-| REQ-REPORT-003   | Profitability report by item/category                         | Could    | extended   | `profitability-analytics-actions.ts:15`                                   |
-| REQ-REPORT-004   | PDF/Excel export                                              | Could    | extended   | `report-actions.ts`                                                       |
-| REQ-REPORT-005   | Dashboard ↔ daily report revenue consistency                 | Should   | regression | `dashboard-revenue.spec.ts`                                               |
-| REQ-REWMGT-001   | Reward rule CRUD (+ probability, campaign)                    | Should   | regression | `app/actions/admin/reward-rules-actions.ts:95`                            |
-| REQ-REWMGT-002   | Social (Instagram) rule config                                | Could    | extended   | `reward-rules-actions.ts:42`; REQ-046                                     |
-| REQ-REWMGT-003   | Issued rewards: filter, manual issue/expire, export           | Could    | extended   | `issued-rewards-actions.ts`                                               |
-| REQ-REWMGT-004   | Apply reward template (one-click)                             | Could    | extended   | `rewards/templates/page.tsx:111`                                          |
-| REQ-SETTINGS-001 | Fees/delivery/hours config persists                           | Should   | regression | `app/dashboard/settings/page.tsx`                                         |
-| REQ-SETTINGS-002 | Admin CRUD + permissions (super-admin)                        | Should   | regression | `admin-management-actions.ts:11`                                          |
-| REQ-SETTINGS-003 | API key create/revoke with scopes                             | Should   | regression | `settings/api-keys/page.tsx`, `services/api-key-service.ts:54`            |
-| REQ-SETTINGS-004 | Process data-deletion requests                                | Could    | extended   | `settings/data-requests/`; REQ-027                                        |
-| REQ-SETTINGS-005 | `incidentsAccess` admin permission                            | Should   | regression | `interfaces/admin-permissions.interface.ts`; REQ-066                      |
-| REQ-AUDIT-001    | Admin actions appear in audit log                             | Should   | regression | `app/dashboard/audit-logs/page.tsx`, `AuditLogService`                    |
-| REQ-API-001      | Public API requires valid key (401)                           | Must     | smoke      | `lib/api-key-validator.ts:39`; REQ-007                                    |
-| REQ-API-002      | Insufficient scope → 403                                      | Must     | smoke      | `api-key-validator.ts`                                                    |
-| REQ-API-003      | Response envelope `{success,data,meta}`                       | Must     | regression | `lib/api-response.ts:9`                                                   |
-| REQ-API-004      | Health endpoint is unauthenticated                            | Should   | smoke      | `app/api/public/health/route.ts`                                          |
-| REQ-API-005      | Rate limit returns 429 + Retry-After                          | Should   | regression | `lib/rate-limiter.ts:82`                                                  |
-| REQ-API-006      | Per-group contracts (menu/orders/inventory/…)                 | Should   | regression | `app/api/public/**`                                                       |
-| REQ-RT-001       | Order status broadcast to subscribers                         | Could    | extended   | `lib/socket-server.ts:108`, `hooks/use-order-socket.ts`                   |
-| REQ-RT-002       | New order broadcast to kitchen room                           | Could    | extended   | `lib/socket-server.ts:134`                                                |
-| REQ-PAY-001      | Payment init returns checkout URL + ref                       | Should   | regression | `app/api/public/payments/route.ts`                                        |
-| REQ-PAY-002      | Monnify webhook updates order on valid hash                   | Should   | regression | `app/api/webhooks/monnify/route.ts:24`                                    |
-| REQ-PAY-003      | Webhook rejects invalid signature                             | Must     | regression | `webhooks/{monnify,whatsapp,paystack}/route.ts`                           |
-| REQ-PAY-004      | Partial payments on a tab                                     | Should   | regression | `tabs/[tabId]/page.tsx`; REQ-012                                          |
-| REQ-SEC-001      | Security headers present                                      | Must     | smoke      | `next.config.ts:5`                                                        |
-| REQ-SEC-002      | Session cookie httpOnly/secure/sameSite                       | Should   | regression | `lib/session.ts:18`                                                       |
-| REQ-SEC-003      | CORS: no wildcard origin with credentials                     | Should   | regression | `lib/cors.ts`; REQ-047                                                    |
-| REQ-SEC-004      | Auth endpoints strict rate limit (5/min)                      | Should   | regression | `lib/rate-limiter.ts:19`                                                  |
-| REQ-PRIVACY-001  | `/privacy` + `/data-deletion` public                          | Should   | smoke      | `app/(public)/privacy`, `app/(public)/data-deletion`                      |
-| REQ-PRIVACY-002  | Data-deletion request → soft delete                           | Could    | extended   | `accountStatus: 'deleted'`                                                |
+| ID               | Title                                                                   | Priority | Suite      | Source                                                                          |
+| ---------------- | ----------------------------------------------------------------------- | -------- | ---------- | ------------------------------------------------------------------------------- |
+| REQ-HOME-001     | Home renders branding + order-type CTAs                                 | Should   | regression | `app/page.tsx`                                                                  |
+| REQ-HOME-002     | "View Menu" navigates to `/menu`                                        | Must     | smoke      | `app/page.tsx:14`                                                               |
+| REQ-MENU-001     | Menu lists items by category                                            | Must     | smoke      | `app/menu/page.tsx`, `components/features/menu/menu-content.tsx`                |
+| REQ-MENU-002     | Menu search & category filter via URL params                            | Must     | smoke      | `app/menu/page.tsx:20`, `category-navigation.tsx`                               |
+| REQ-MENU-003     | Item detail modal: portion, qty, customizations, instructions           | Must     | regression | `components/features/menu/menu-item-detail-modal.tsx`                           |
+| REQ-MENU-004     | Out-of-stock blocks add-to-cart; qty capped by stock                    | Should   | regression | `menu-item-detail-modal.tsx:82,98`; REQ-030                                     |
+| REQ-MENU-005     | Add to cart merges identical lines; cart count updates                  | Must     | smoke      | `stores/cart-store.ts:66`, `lib/cart-store-helpers.ts:43`                       |
+| REQ-MENU-006     | Cart line total = (base + Σ surcharge×portionMult)×qty                  | Must     | regression | `lib/cart-store-helpers.ts:97`; REQ-031                                         |
+| REQ-MENU-007     | Cart persists across reload (localStorage)                              | Should   | regression | `stores/cart-store.ts:199`                                                      |
+| REQ-CHECKOUT-001 | Multi-step checkout renders & validates per step                        | Must     | smoke      | `components/features/checkout/checkout-form.tsx`                                |
+| REQ-CHECKOUT-002 | Order-type-specific required fields enforced                            | Must     | regression | `checkout/order-details-step.tsx:79`                                            |
+| REQ-CHECKOUT-003 | Fees computed (service %, delivery tiers, VAT)                          | Must     | regression | `services/settings-service.ts:82`                                               |
+| REQ-CHECKOUT-004 | Minimum-order threshold blocks checkout                                 | Should   | regression | `services/settings-service.ts:145`                                              |
+| REQ-CHECKOUT-005 | Dine-in tab options (pay-now / new / existing)                          | Should   | regression | `checkout/tab-options-step.tsx`                                                 |
+| REQ-CHECKOUT-006 | Independent tip amount + tip payment method                             | Should   | regression | `checkout/tip-input-step.tsx`; REQ-035/036                                      |
+| REQ-CHECKOUT-007 | Submit creates order (happy path) + clears cart                         | Must     | smoke      | `app/actions/payment/payment-actions.ts:65`                                     |
+| REQ-CHECKOUT-008 | Idempotency key prevents duplicate orders                               | Must     | regression | `payment-actions.ts:82`                                                         |
+| REQ-CHECKOUT-009 | Apply reward code / redeem points at checkout                           | Could    | extended   | `checkout/order-summary.tsx`                                                    |
+| REQ-ORDER-001    | Order tracking page shows live status                                   | Should   | regression | `app/(customer)/orders/[orderId]/page.tsx`, `real-time-order-tracker.tsx`       |
+| REQ-ORDER-002    | Orders & Tabs page lists orders + tabs (auth)                           | Must     | smoke      | `app/(customer)/orders/page.tsx`                                                |
+| REQ-ORDER-003    | Guest sees own open tabs by guestId/email                               | Should   | regression | `app/(customer)/orders/page.tsx:55`                                             |
+| REQ-ORDER-004    | Pay & close tab from customer side                                      | Should   | regression | `app/(customer)/orders/tabs/[tabId]/checkout/`                                  |
+| REQ-PROFILE-001  | View/edit personal info                                                 | Should   | regression | `app/(customer)/profile/page.tsx`, `personal-info-tab.tsx`                      |
+| REQ-PROFILE-002  | Address CRUD + default address                                          | Could    | extended   | `addresses-tab.tsx`                                                             |
+| REQ-REWARDC-001  | Rewards page shows active rewards, codes, expiry                        | Should   | regression | `app/(customer)/profile/rewards/page.tsx`                                       |
+| REQ-REWARDC-002  | Points balance + ₦ equivalent + history                                 | Could    | extended   | `profile/rewards/page.tsx:89`                                                   |
+| REQ-AUTHC-001    | Passwordless PIN login (email/SMS/WhatsApp)                             | Must     | smoke      | `components/shared/auth/login-form.tsx`, `app/actions/auth/verify-pin.ts`       |
+| REQ-AUTHC-002    | PIN expiry / invalid-PIN error handling                                 | Should   | regression | `app/actions/auth/verify-pin.ts:62,69`                                          |
+| REQ-AUTHC-003    | Guest checkout (no PIN)                                                 | Should   | regression | `app/actions/auth/guest-checkout.ts`                                            |
+| REQ-AUTHA-001    | Admin login (username + bcrypt)                                         | Must     | smoke      | `app/actions/auth/admin-login.ts`, `services/admin-service.ts:478`              |
+| REQ-AUTHA-002    | Failed-login lockout (5 attempts / 15 min)                              | Should   | regression | `services/admin-service.ts:13,499`                                              |
+| REQ-AUTHA-003    | Force password change flag                                              | Could    | extended   | `admin-login.ts:78`                                                             |
+| REQ-AUTHA-004    | RBAC route gating (role + permission)                                   | Must     | smoke      | `proxy.ts`, `lib/auth-middleware.ts:90`, `lib/permissions.ts:13`                |
+| REQ-DASH-001     | Super-admin dashboard overview stats                                    | Should   | regression | `app/dashboard/page.tsx:53`; REQ-007                                            |
+| REQ-DASH-002     | Admin redirected from `/dashboard` to `/orders`                         | Must     | smoke      | `app/dashboard/page.tsx:303`                                                    |
+| REQ-ORDMGT-001   | Order queue with filters + real-time                                    | Must     | smoke      | `app/dashboard/orders/page.tsx`, `order-management-actions.ts:42`               |
+| REQ-ORDMGT-002   | Order detail: timeline, payment, actions                                | Should   | regression | `app/dashboard/orders/[orderId]/page.tsx`                                       |
+| REQ-ORDMGT-003   | Edit order items (unpaid only)                                          | Should   | regression | `app/actions/admin/order-edit-actions.ts:33`                                    |
+| REQ-ORDMGT-004   | Price override with reason → audit                                      | Should   | regression | `payment-actions.ts:129`                                                        |
+| REQ-ORDMGT-005   | Cancel order: reason required, paid blocked                             | Should   | regression | `order-management-actions.ts`                                                   |
+| REQ-ORDMGT-006   | Manual payment recording                                                | Should   | regression | `order-payment-actions.ts:16`                                                   |
+| REQ-ORDMGT-007   | Order completion → inventory deduction chokepoint                       | Must     | regression | `services/order-service.ts:806`; REQ-066                                        |
+| REQ-TABMGT-001   | Tab list with status filter + stats                                     | Should   | regression | `app/dashboard/orders/tabs/page.tsx`                                            |
+| REQ-TABMGT-002   | Tab detail with partial payments                                        | Should   | regression | `tabs/[tabId]/page.tsx:82`; REQ-012/035/036                                     |
+| REQ-TABMGT-003   | Admin pay tab with method + independent tip                             | Should   | regression | `admin-pay-tab-dialog`; REQ-036                                                 |
+| REQ-TABMGT-004   | Delete tab (guard closed/paid)                                          | Could    | extended   | `delete-tab-dialog`                                                             |
+| REQ-KITCHEN-001  | Kitchen display shows active orders real-time                           | Should   | regression | `app/dashboard/kitchen-display/page.tsx`                                        |
+| REQ-KITCHEN-002  | `kitchenManagement` gates kitchen routes                                | Must     | regression | `app/dashboard/kitchen/layout.tsx`; REQ-034                                     |
+| REQ-KITCHEN-003  | Recipe CRUD + validation                                                | Should   | regression | `services/recipe-service.ts:41`; REQ-034                                        |
+| REQ-KITCHEN-004  | Make-a-batch deducts ingredients, yields stock                          | Should   | regression | `app/dashboard/kitchen/production/page.tsx`; REQ-034                            |
+| REQ-KITCHEN-005  | Void batch (super-admin only)                                           | Could    | extended   | `production-history`; REQ-034                                                   |
+| REQ-KITCHEN-006  | Kitchen ingredient CRUD                                                 | Could    | extended   | REQ-037                                                                         |
+| REQ-MENUMGT-001  | Menu item list + stats (super-admin)                                    | Should   | regression | `app/dashboard/menu/page.tsx`                                                   |
+| REQ-MENUMGT-002  | Create menu item (+ optional inventory)                                 | Should   | regression | `app/actions/admin/menu-actions.ts:60`                                          |
+| REQ-MENUMGT-003  | Edit item incl. customization inventory links                           | Should   | regression | `menu/[itemId]/edit/page.tsx`; REQ-030                                          |
+| REQ-MENUMGT-004  | Delete/duplicate item                                                   | Could    | extended   | `menu-items-client`                                                             |
+| REQ-MENUMGT-005  | Configurable main categories (rename / add / delete, reference-blocked) | Should   | regression | `app/dashboard/settings/page.tsx`; `services/main-category-service.ts`; REQ-075 |
+| REQ-CUST-001     | Customer list (csr/super-admin)                                         | Should   | regression | `app/dashboard/customers/page.tsx`                                              |
+| REQ-CUST-002     | Delete + recreate customer by email                                     | Could    | extended   | REQ-027                                                                         |
+| REQ-INV-001      | Inventory list with live status                                         | Should   | regression | `app/dashboard/inventory/page.tsx:77`                                           |
+| REQ-INV-002      | Inventory detail: movements + locations                                 | Should   | regression | `inventory/[id]/page.tsx`                                                       |
+| REQ-INV-003      | Snapshot submit → pending                                               | Should   | regression | `app/actions/inventory/snapshot-actions.ts:52`; REQ-018                         |
+| REQ-INV-004      | Snapshot approve/reject (super-admin)                                   | Should   | regression | `snapshot-actions.ts:154,190`; REQ-018                                          |
+| REQ-INV-005      | Restock recommendations                                                 | Could    | extended   | `restock-recommendation-actions.ts:27`; REQ-019/020                             |
+| REQ-INV-006      | Inter-location stock transfer                                           | Could    | extended   | `inventory/transfer/page.tsx`                                                   |
+| REQ-INV-007      | Cost-snapshot integrity                                                 | Could    | extended   | REQ-022                                                                         |
+| REQ-INV-008      | Units of measurement registry                                           | Could    | extended   | REQ-033                                                                         |
+| REQ-INV-009      | Sale-point routing for deductions (`defaultSalesLocation`)              | Must     | regression | `services/inventory-service.ts:48`; REQ-066                                     |
+| REQ-INV-010      | IncidentEvent model + recording                                         | Must     | regression | `models/incident-event-model.ts`; REQ-066                                       |
+| REQ-INV-011      | Reconciliation cron + stale-paid scan                                   | Must     | regression | `lib/scheduled-jobs.ts`; `services/order-service.ts`; REQ-066                   |
+| REQ-INV-012      | `/dashboard/incidents` page + deduction-failure toast                   | Should   | regression | `app/dashboard/incidents/page.tsx`; REQ-066                                     |
+| REQ-INV-013      | Retry-now remediation + audit log                                       | Should   | regression | `app/actions/admin/incidents-actions.ts`; REQ-066                               |
+| REQ-FIN-001      | Create + list expenses by date/filters                                  | Should   | regression | `app/actions/finance/expense-actions.ts:17,52`                                  |
+| REQ-FIN-002      | Bank statement (XLSX) import + dedupe                                   | Should   | regression | `app/actions/expenses/csv-import-actions.ts:31`                                 |
+| REQ-FIN-003      | Pending expense group submit/edit/approve                               | Should   | regression | `pending-expense-actions.ts:49`; REQ-026/032                                    |
+| REQ-FIN-004      | Grouped expense category dropdown                                       | Could    | extended   | `expense-categories-actions.ts`; REQ-028                                        |
+| REQ-FIN-005      | Staff pot balance from approved expenses                                | Could    | extended   | REQ-015                                                                         |
+| REQ-REPORT-001   | Daily report: payment accuracy + reconciliation                         | Should   | regression | `app/actions/reports/report-actions.ts:11`; REQ-013/014                         |
+| REQ-REPORT-002   | Business-day cutoff grouping                                            | Should   | regression | REQ-025                                                                         |
+| REQ-REPORT-003   | Profitability report by item/category                                   | Could    | extended   | `profitability-analytics-actions.ts:15`                                         |
+| REQ-REPORT-004   | PDF/Excel export                                                        | Could    | extended   | `report-actions.ts`                                                             |
+| REQ-REPORT-005   | Dashboard ↔ daily report revenue consistency                           | Should   | regression | `dashboard-revenue.spec.ts`                                                     |
+| REQ-REWMGT-001   | Reward rule CRUD (+ probability, campaign)                              | Should   | regression | `app/actions/admin/reward-rules-actions.ts:95`                                  |
+| REQ-REWMGT-002   | Social (Instagram) rule config                                          | Could    | extended   | `reward-rules-actions.ts:42`; REQ-046                                           |
+| REQ-REWMGT-003   | Issued rewards: filter, manual issue/expire, export                     | Could    | extended   | `issued-rewards-actions.ts`                                                     |
+| REQ-REWMGT-004   | Apply reward template (one-click)                                       | Could    | extended   | `rewards/templates/page.tsx:111`                                                |
+| REQ-SETTINGS-001 | Fees/delivery/hours config persists                                     | Should   | regression | `app/dashboard/settings/page.tsx`                                               |
+| REQ-SETTINGS-002 | Admin CRUD + permissions (super-admin)                                  | Should   | regression | `admin-management-actions.ts:11`                                                |
+| REQ-SETTINGS-003 | API key create/revoke with scopes                                       | Should   | regression | `settings/api-keys/page.tsx`, `services/api-key-service.ts:54`                  |
+| REQ-SETTINGS-004 | Process data-deletion requests                                          | Could    | extended   | `settings/data-requests/`; REQ-027                                              |
+| REQ-SETTINGS-005 | `incidentsAccess` admin permission                                      | Should   | regression | `interfaces/admin-permissions.interface.ts`; REQ-066                            |
+| REQ-AUDIT-001    | Admin actions appear in audit log                                       | Should   | regression | `app/dashboard/audit-logs/page.tsx`, `AuditLogService`                          |
+| REQ-API-001      | Public API requires valid key (401)                                     | Must     | smoke      | `lib/api-key-validator.ts:39`; REQ-007                                          |
+| REQ-API-002      | Insufficient scope → 403                                                | Must     | smoke      | `api-key-validator.ts`                                                          |
+| REQ-API-003      | Response envelope `{success,data,meta}`                                 | Must     | regression | `lib/api-response.ts:9`                                                         |
+| REQ-API-004      | Health endpoint is unauthenticated                                      | Should   | smoke      | `app/api/public/health/route.ts`                                                |
+| REQ-API-005      | Rate limit returns 429 + Retry-After                                    | Should   | regression | `lib/rate-limiter.ts:82`                                                        |
+| REQ-API-006      | Per-group contracts (menu/orders/inventory/…)                           | Should   | regression | `app/api/public/**`                                                             |
+| REQ-RT-001       | Order status broadcast to subscribers                                   | Could    | extended   | `lib/socket-server.ts:108`, `hooks/use-order-socket.ts`                         |
+| REQ-RT-002       | New order broadcast to kitchen room                                     | Could    | extended   | `lib/socket-server.ts:134`                                                      |
+| REQ-PAY-001      | Payment init returns checkout URL + ref                                 | Should   | regression | `app/api/public/payments/route.ts`                                              |
+| REQ-PAY-002      | Monnify webhook updates order on valid hash                             | Should   | regression | `app/api/webhooks/monnify/route.ts:24`                                          |
+| REQ-PAY-003      | Webhook rejects invalid signature                                       | Must     | regression | `webhooks/{monnify,whatsapp,paystack}/route.ts`                                 |
+| REQ-PAY-004      | Partial payments on a tab                                               | Should   | regression | `tabs/[tabId]/page.tsx`; REQ-012                                                |
+| REQ-SEC-001      | Security headers present                                                | Must     | smoke      | `next.config.ts:5`                                                              |
+| REQ-SEC-002      | Session cookie httpOnly/secure/sameSite                                 | Should   | regression | `lib/session.ts:18`                                                             |
+| REQ-SEC-003      | CORS: no wildcard origin with credentials                               | Should   | regression | `lib/cors.ts`; REQ-047                                                          |
+| REQ-SEC-004      | Auth endpoints strict rate limit (5/min)                                | Should   | regression | `lib/rate-limiter.ts:19`                                                        |
+| REQ-PRIVACY-001  | `/privacy` + `/data-deletion` public                                    | Should   | smoke      | `app/(public)/privacy`, `app/(public)/data-deletion`                            |
+| REQ-PRIVACY-002  | Data-deletion request → soft delete                                     | Could    | extended   | `accountStatus: 'deleted'`                                                      |
 
 ---
 
@@ -634,6 +635,19 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 
 - **Given** an item, **When** the super-admin deletes it, **Then** a confirmation is required and the item leaves the active list.
 
+#### REQ-MENUMGT-005 — Configurable main categories · **Should** · regression
+
+**Source:** `app/dashboard/settings/page.tsx`; `services/main-category-service.ts`; REQ-075.
+
+Pre-REQ-075, `MenuItem.mainCategory` was a hardcoded `'food' | 'drinks'` union. This requirement makes the registry of main categories admin-configurable from `/dashboard/settings`, with reference-counted delete and a server-side rename that cascades across MenuItem rows and the per-main sub-category settings.
+
+- **Given** the super-admin opens `/dashboard/settings`, **When** the Main Categories card renders, **Then** every registry entry shows its label, slug, enabled toggle, and reorder + rename + delete controls.
+- **Given** a new label, **When** the admin clicks Add, **Then** a new main category is created with a kebab-case slug derived from the label, `order = max + 1`, `isEnabled: true`, and reserved + duplicate + format guards reject invalid input.
+- **Given** an existing slug, **When** the admin renames it through the per-row Rename action, **Then** every `MenuItem.mainCategory` referencing the old slug is rewritten and the sub-category list under `'menu-categories'` is relocated atomically (sequentially; partial failure leaves a discoverable mismatch the admin can re-run rename against).
+- **Given** an existing slug that no `MenuItem` references and no sub-category lives under, **When** the admin confirms Delete, **Then** the entry is removed from the registry.
+- **Given** ≥1 `MenuItem` references the slug OR ≥1 sub-category lives under it, **When** the admin attempts Delete, **Then** the action errors with the reference counts and the entry is retained.
+- **Given** the public envelope contract at `GET /api/public/menu/categories`, **When** any consumer reads it post-REQ-075, **Then** the response shape is `{ mainCategories: [{ slug, label, order, subCategories[] }] }` (BREAKING — supersedes the pre-REQ-075 `{ food: [], drinks: [] }` envelope captured under REQ-API-006).
+
 ---
 
 ## Feature Area 14 — Customers (CUST)
@@ -944,6 +958,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 **Behaviour:** Each group enforces its scope and validates inputs (400 on missing/invalid fields, 404 on unknown id). E.g. `GET /api/public/menu` paginates (default 25, max 100) with `mainCategory`/`category`/`q`; `POST /api/public/orders` validates the order body.
 
 - **Given** `menu:read`, **When** calling `GET /api/public/menu?limit=10`, **Then** 200 with ≤10 items and pagination meta.
+- **Given** `menu:read` (REQ-075, BREAKING), **When** calling `GET /api/public/menu/categories`, **Then** 200 with envelope `{ success, data: { mainCategories: [{ slug, label, order, subCategories[] }] }, meta: { timestamp } }`. This supersedes the pre-REQ-075 envelope `{ success, data: { drinks: string[], food: string[] }, meta }` exposed under REQ-071 and is intentionally not back-compatible; clients pinned to the old shape must migrate when REQ-075 ships.
 
 ---
 

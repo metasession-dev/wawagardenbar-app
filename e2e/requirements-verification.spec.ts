@@ -74,14 +74,18 @@ test.describe('Section 1/5.1: Home Page', () => {
     await expect(menuLink).toHaveText(/View Menu/i);
   });
 
-  test('displays order type feature cards (Dine In, Pickup, Delivery)', async ({ page }) => {
+  test('displays order type feature cards (Dine In, Pickup, Delivery)', async ({
+    page,
+  }) => {
     await page.goto('/');
     await expect(page.getByText('Dine In', { exact: true })).toBeVisible();
     await expect(page.getByText('Pickup', { exact: true })).toBeVisible();
     await expect(page.getByText('Delivery', { exact: true })).toBeVisible();
   });
 
-  test('displays "How It Works" section with descriptions', async ({ page }) => {
+  test('displays "How It Works" section with descriptions', async ({
+    page,
+  }) => {
     await page.goto('/');
     await expect(page.locator('h2', { hasText: 'How It Works' })).toBeVisible();
     const body = await page.textContent('body');
@@ -90,14 +94,18 @@ test.describe('Section 1/5.1: Home Page', () => {
     expect(body).toContain('delivered to your door');
   });
 
-  test('is responsive — renders correctly on mobile viewport', async ({ page }) => {
+  test('is responsive — renders correctly on mobile viewport', async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/');
     await expect(page.locator('img[alt*="Wawa Garden Bar"]')).toBeVisible();
     await expect(page.locator('a[href="/menu"]')).toBeVisible();
   });
 
-  test('is responsive — renders correctly on tablet viewport', async ({ page }) => {
+  test('is responsive — renders correctly on tablet viewport', async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 768, height: 1024 });
     await page.goto('/');
     await expect(page.locator('img[alt*="Wawa Garden Bar"]')).toBeVisible();
@@ -117,7 +125,9 @@ test.describe('Section 4: Customer Authentication', () => {
     expect(body).toContain('phone number');
   });
 
-  test('login page shows PIN delivery method options (WhatsApp, SMS, Email)', async ({ page }) => {
+  test('login page shows PIN delivery method options (WhatsApp, SMS, Email)', async ({
+    page,
+  }) => {
     await page.goto('/login');
     await page.waitForLoadState('networkidle');
     const body = await page.textContent('body');
@@ -141,13 +151,17 @@ test.describe('Section 4: Customer Authentication', () => {
     await expect(page.locator('a[href="/terms"]')).toBeVisible();
   });
 
-  test('unauthenticated user is redirected from /orders to /login', async ({ page }) => {
+  test('unauthenticated user is redirected from /orders to /login', async ({
+    page,
+  }) => {
     await page.goto('/orders');
     await page.waitForURL(/\/login/, { timeout: 10000 });
     expect(page.url()).toContain('/login');
   });
 
-  test('unauthenticated user is redirected from /profile to /login', async ({ page }) => {
+  test('unauthenticated user is redirected from /profile to /login', async ({
+    page,
+  }) => {
     await page.goto('/profile');
     await page.waitForURL(/\/login/, { timeout: 10000 });
     expect(page.url()).toContain('/login');
@@ -165,7 +179,9 @@ test.describe('Section 4: Admin Authentication', () => {
     await expect(page.locator('text=Enter your credentials')).toBeVisible();
   });
 
-  test('admin login form has username and password fields', async ({ page }) => {
+  test('admin login form has username and password fields', async ({
+    page,
+  }) => {
     await page.goto('/admin/login');
     await expect(page.locator('#username')).toBeVisible();
     await expect(page.locator('#password')).toBeVisible();
@@ -182,9 +198,13 @@ test.describe('Section 4: Admin Authentication', () => {
     expect(page.url()).toContain('/admin/login');
   });
 
-  test('unauthenticated user is redirected from /dashboard to login', async ({ page }) => {
+  test('unauthenticated user is redirected from /dashboard to login', async ({
+    page,
+  }) => {
     await page.goto('/dashboard');
-    await page.waitForURL(/\/(login|admin-login|admin\/login)/, { timeout: 10000 });
+    await page.waitForURL(/\/(login|admin-login|admin\/login)/, {
+      timeout: 10000,
+    });
     expect(page.url()).toMatch(/\/(login|admin)/);
   });
 });
@@ -201,15 +221,20 @@ test.describe('Section 5.2/6: Menu System', () => {
 
   test('menu page displays item cards', async ({ page }) => {
     await page.goto('/menu');
-    await page.waitForSelector('[class*="card"], [class*="menu"], [class*="item"]', {
-      timeout: 15000,
-    });
+    await page.waitForSelector(
+      '[class*="card"], [class*="menu"], [class*="item"]',
+      {
+        timeout: 15000,
+      }
+    );
     const items = page.locator('[class*="card"]');
     const count = await items.count();
     expect(count).toBeGreaterThan(0);
   });
 
-  test('menu page has category navigation with food and drink categories', async ({ page }) => {
+  test('menu page has category navigation with food and drink categories', async ({
+    page,
+  }) => {
     await page.goto('/menu');
     await page.waitForLoadState('networkidle');
     const bodyText = await page.textContent('body');
@@ -228,13 +253,17 @@ test.describe('Section 5.2/6: Menu System', () => {
     await expect(page).toHaveTitle(/Menu.*Wawa/i);
   });
 
-  test('menu page supports category filter via URL parameter', async ({ page }) => {
+  test('menu page supports category filter via URL parameter', async ({
+    page,
+  }) => {
     await page.goto('/menu?category=beer');
     await page.waitForLoadState('networkidle');
     await expect(page).toHaveTitle(/Menu.*Wawa/i);
   });
 
-  test('menu page supports table number via URL parameter', async ({ page }) => {
+  test('menu page supports table number via URL parameter', async ({
+    page,
+  }) => {
     await page.goto('/menu?tableNumber=5');
     await page.waitForLoadState('networkidle');
     await expect(page).toHaveTitle(/Menu.*Wawa/i);
@@ -245,12 +274,16 @@ test.describe('Section 5.2/6: Menu System', () => {
 // Section 5.3: Cart (Zustand Store)
 // ===========================================================================
 test.describe('Section 5.3: Cart', () => {
-  test('cart persists items in localStorage under wawa-cart-storage', async ({ page }) => {
+  test('cart persists items in localStorage under wawa-cart-storage', async ({
+    page,
+  }) => {
     await seedCart(page);
     await page.goto('/menu');
     await page.waitForLoadState('networkidle');
 
-    const stored = await page.evaluate(() => localStorage.getItem('wawa-cart-storage'));
+    const stored = await page.evaluate(() =>
+      localStorage.getItem('wawa-cart-storage')
+    );
     expect(stored).toBeTruthy();
     const parsed = JSON.parse(stored!);
     expect(parsed.state.items).toHaveLength(2);
@@ -264,7 +297,9 @@ test.describe('Section 5.3: Cart', () => {
     await seedCart(page);
     await page.goto('/menu');
 
-    const stored = await page.evaluate(() => localStorage.getItem('wawa-cart-storage'));
+    const stored = await page.evaluate(() =>
+      localStorage.getItem('wawa-cart-storage')
+    );
     const parsed = JSON.parse(stored!);
     const item1 = parsed.state.items[0];
     const item2 = parsed.state.items[1];
@@ -311,7 +346,9 @@ test.describe('Section 5.5: Orders & Tabs Page', () => {
     expect(page.url()).toContain('/login');
   });
 
-  test('orders/history page redirects unauthenticated users', async ({ page }) => {
+  test('orders/history page redirects unauthenticated users', async ({
+    page,
+  }) => {
     await page.goto('/orders/history');
     await page.waitForURL(/\/login/, { timeout: 10000 });
     expect(page.url()).toContain('/login');
@@ -328,7 +365,9 @@ test.describe('Section 5.6: Customer Profile', () => {
     expect(page.url()).toContain('/login');
   });
 
-  test('profile/rewards page redirects unauthenticated users', async ({ page }) => {
+  test('profile/rewards page redirects unauthenticated users', async ({
+    page,
+  }) => {
     await page.goto('/profile/rewards');
     await page.waitForURL(/\/login/, { timeout: 10000 });
     expect(page.url()).toContain('/login');
@@ -346,7 +385,9 @@ test.describe('Section 5.7/10: Rewards', () => {
     expect(body?.toLowerCase()).toMatch(/reward|loyalty|point/i);
   });
 
-  test('rewards page shows sign-in prompt for unauthenticated users', async ({ page }) => {
+  test('rewards page shows sign-in prompt for unauthenticated users', async ({
+    page,
+  }) => {
     await page.goto('/rewards');
     await page.waitForLoadState('networkidle');
     const body = await page.textContent('body');
@@ -362,7 +403,9 @@ test.describe('Section 5.7/10: Rewards', () => {
     expect(body).toContain('Loyalty Points');
   });
 
-  test('rewards page explains points conversion (100 points = NGN 1)', async ({ page }) => {
+  test('rewards page explains points conversion (100 points = NGN 1)', async ({
+    page,
+  }) => {
     await page.goto('/rewards');
     await page.waitForLoadState('networkidle');
     const body = await page.textContent('body');
@@ -413,7 +456,9 @@ test.describe('Section 9: Checkout & Payment', () => {
     expect(body).toMatch(/Jollof Rice|Chapman|3,500|1,500|8,500/);
   });
 
-  test('checkout form has customer info fields (name, email, phone)', async ({ page }) => {
+  test('checkout form has customer info fields (name, email, phone)', async ({
+    page,
+  }) => {
     await seedCart(page);
     await page.goto('/checkout');
     await page.waitForLoadState('networkidle');
@@ -476,7 +521,9 @@ test.describe('Section 11/12: Dashboard RBAC', () => {
   for (const route of protectedRoutes) {
     test(`${route} redirects unauthenticated users`, async ({ page }) => {
       await page.goto(route);
-      await page.waitForURL(/\/(login|admin-login|admin\/login)/, { timeout: 10000 });
+      await page.waitForURL(/\/(login|admin-login|admin\/login)/, {
+        timeout: 10000,
+      });
       expect(page.url()).toMatch(/\/(login|admin)/);
     });
   }
@@ -486,14 +533,30 @@ test.describe('Section 11/12: Dashboard RBAC', () => {
 // Section 13: Menu Management (Admin)
 // ===========================================================================
 test.describe('Section 13: Menu Management', () => {
-  test('menu management page redirects unauthenticated users', async ({ page }) => {
+  test('menu management page redirects unauthenticated users', async ({
+    page,
+  }) => {
     await page.goto('/dashboard/menu');
     await page.waitForURL(/\/(login|admin)/, { timeout: 10000 });
     expect(page.url()).toMatch(/\/(login|admin)/);
   });
 
-  test('new menu item page redirects unauthenticated users', async ({ page }) => {
+  test('new menu item page redirects unauthenticated users', async ({
+    page,
+  }) => {
     await page.goto('/dashboard/menu/new');
+    await page.waitForURL(/\/(login|admin)/, { timeout: 10000 });
+    expect(page.url()).toMatch(/\/(login|admin)/);
+  });
+
+  // REQ-075 — settings entry-point check for SRS REQ-MENUMGT-005. The
+  // service-layer contract is pinned in detail by
+  // `e2e/admin/main-categories-config.spec.ts`; here we just verify the
+  // dashboard route is auth-gated like every other settings entry.
+  test('main-categories settings entry redirects unauthenticated users [REQ-MENUMGT-005]', async ({
+    page,
+  }) => {
+    await page.goto('/dashboard/settings');
     await page.waitForURL(/\/(login|admin)/, { timeout: 10000 });
     expect(page.url()).toMatch(/\/(login|admin)/);
   });
@@ -631,20 +694,72 @@ test.describe('Section 20: Public REST API', () => {
   // or rate-limit them (429) — never return 200 without a valid API key.
   const protectedEndpoints = [
     { method: 'GET' as const, path: '/api/public/menu', scope: 'menu:read' },
-    { method: 'GET' as const, path: '/api/public/menu/categories', scope: 'menu:read' },
-    { method: 'GET' as const, path: '/api/public/orders', scope: 'orders:read' },
-    { method: 'GET' as const, path: '/api/public/orders/stats', scope: 'orders:read' },
-    { method: 'GET' as const, path: '/api/public/orders/summary', scope: 'orders:read' },
-    { method: 'GET' as const, path: '/api/public/inventory', scope: 'inventory:read' },
-    { method: 'GET' as const, path: '/api/public/inventory/alerts', scope: 'inventory:read' },
-    { method: 'GET' as const, path: '/api/public/inventory/summary', scope: 'inventory:read' },
-    { method: 'GET' as const, path: '/api/public/customers', scope: 'customers:read' },
-    { method: 'GET' as const, path: '/api/public/customers/summary', scope: 'customers:read' },
+    {
+      method: 'GET' as const,
+      path: '/api/public/menu/categories',
+      scope: 'menu:read',
+    },
+    {
+      method: 'GET' as const,
+      path: '/api/public/orders',
+      scope: 'orders:read',
+    },
+    {
+      method: 'GET' as const,
+      path: '/api/public/orders/stats',
+      scope: 'orders:read',
+    },
+    {
+      method: 'GET' as const,
+      path: '/api/public/orders/summary',
+      scope: 'orders:read',
+    },
+    {
+      method: 'GET' as const,
+      path: '/api/public/inventory',
+      scope: 'inventory:read',
+    },
+    {
+      method: 'GET' as const,
+      path: '/api/public/inventory/alerts',
+      scope: 'inventory:read',
+    },
+    {
+      method: 'GET' as const,
+      path: '/api/public/inventory/summary',
+      scope: 'inventory:read',
+    },
+    {
+      method: 'GET' as const,
+      path: '/api/public/customers',
+      scope: 'customers:read',
+    },
+    {
+      method: 'GET' as const,
+      path: '/api/public/customers/summary',
+      scope: 'customers:read',
+    },
     { method: 'GET' as const, path: '/api/public/tabs', scope: 'tabs:read' },
-    { method: 'GET' as const, path: '/api/public/tabs/summary', scope: 'tabs:read' },
-    { method: 'GET' as const, path: '/api/public/settings', scope: 'settings:read' },
-    { method: 'GET' as const, path: '/api/public/rewards', scope: 'rewards:read' },
-    { method: 'GET' as const, path: '/api/public/sales/summary', scope: 'analytics:read' },
+    {
+      method: 'GET' as const,
+      path: '/api/public/tabs/summary',
+      scope: 'tabs:read',
+    },
+    {
+      method: 'GET' as const,
+      path: '/api/public/settings',
+      scope: 'settings:read',
+    },
+    {
+      method: 'GET' as const,
+      path: '/api/public/rewards',
+      scope: 'rewards:read',
+    },
+    {
+      method: 'GET' as const,
+      path: '/api/public/sales/summary',
+      scope: 'analytics:read',
+    },
   ];
 
   for (const endpoint of protectedEndpoints) {
@@ -656,22 +771,32 @@ test.describe('Section 20: Public REST API', () => {
     });
   }
 
-  test('POST /api/public/orders rejects unauthenticated requests', async ({ request }) => {
+  test('POST /api/public/orders rejects unauthenticated requests', async ({
+    request,
+  }) => {
     const response = await request.post('/api/public/orders', { data: {} });
     expect([401, 403, 429]).toContain(response.status());
   });
 
-  test('POST /api/public/payments rejects unauthenticated requests', async ({ request }) => {
+  test('POST /api/public/payments rejects unauthenticated requests', async ({
+    request,
+  }) => {
     const response = await request.post('/api/public/payments', { data: {} });
     expect([401, 403, 429]).toContain(response.status());
   });
 
-  test('POST /api/public/rewards/redeem rejects unauthenticated requests', async ({ request }) => {
-    const response = await request.post('/api/public/rewards/redeem', { data: {} });
+  test('POST /api/public/rewards/redeem rejects unauthenticated requests', async ({
+    request,
+  }) => {
+    const response = await request.post('/api/public/rewards/redeem', {
+      data: {},
+    });
     expect([401, 403, 429]).toContain(response.status());
   });
 
-  test('API returns JSON with standard response format', async ({ request }) => {
+  test('API returns JSON with standard response format', async ({
+    request,
+  }) => {
     const response = await request.get('/api/public/health');
     if (response.status() === 200) {
       const json = await response.json();
@@ -690,14 +815,21 @@ test.describe('Section 20: Public REST API', () => {
 // ===========================================================================
 test.describe('Section 20: Admin API Protection', () => {
   test('admin settings API requires admin session', async ({ request }) => {
-    const response = await request.post('/api/admin/settings/points-conversion-rate', {
-      data: { rate: 100 },
-    });
+    const response = await request.post(
+      '/api/admin/settings/points-conversion-rate',
+      {
+        data: { rate: 100 },
+      }
+    );
     expect([401, 403, 429]).toContain(response.status());
   });
 
-  test('admin settings impact API requires admin session', async ({ request }) => {
-    const response = await request.get('/api/admin/settings/points-conversion-rate/impact');
+  test('admin settings impact API requires admin session', async ({
+    request,
+  }) => {
+    const response = await request.get(
+      '/api/admin/settings/points-conversion-rate/impact'
+    );
     expect([401, 403, 429]).toContain(response.status());
   });
 });
@@ -713,7 +845,9 @@ test.describe('Section 22: Security Headers', () => {
 
   test('returns X-Content-Type-Options nosniff', async ({ request }) => {
     const response = await request.get('/');
-    expect(response.headers()['x-content-type-options']?.toLowerCase()).toBe('nosniff');
+    expect(response.headers()['x-content-type-options']?.toLowerCase()).toBe(
+      'nosniff'
+    );
   });
 
   test('returns Referrer-Policy header', async ({ request }) => {
@@ -774,7 +908,9 @@ test.describe('Section 23: Audit Logs', () => {
 // Section 24: Data Management & Privacy
 // ===========================================================================
 test.describe('Section 24: Data Management & Privacy', () => {
-  test('privacy page is publicly accessible and contains privacy content', async ({ page }) => {
+  test('privacy page is publicly accessible and contains privacy content', async ({
+    page,
+  }) => {
     await page.goto('/privacy');
     await expect(page).toHaveTitle(/Privacy|Wawa/i);
     const body = await page.textContent('body');
@@ -788,7 +924,9 @@ test.describe('Section 24: Data Management & Privacy', () => {
     expect(body?.toLowerCase()).toMatch(/data|delet/i);
   });
 
-  test('data requests admin page redirects unauthenticated users', async ({ page }) => {
+  test('data requests admin page redirects unauthenticated users', async ({
+    page,
+  }) => {
     await page.goto('/dashboard/settings/data-requests');
     await page.waitForURL(/\/(login|admin)/, { timeout: 10000 });
     expect(page.url()).toMatch(/\/(login|admin)/);
@@ -898,7 +1036,9 @@ test.describe('Section 27: Mobile-First Responsive', () => {
   ];
 
   for (const vp of viewports) {
-    test(`home page renders on ${vp.name} (${vp.width}x${vp.height})`, async ({ page }) => {
+    test(`home page renders on ${vp.name} (${vp.width}x${vp.height})`, async ({
+      page,
+    }) => {
       await page.setViewportSize({ width: vp.width, height: vp.height });
       await page.goto('/');
       await expect(page.locator('img[alt*="Wawa"]')).toBeVisible();
@@ -907,7 +1047,9 @@ test.describe('Section 27: Mobile-First Responsive', () => {
   }
 
   for (const vp of viewports) {
-    test(`menu page renders on ${vp.name} (${vp.width}x${vp.height})`, async ({ page }) => {
+    test(`menu page renders on ${vp.name} (${vp.width}x${vp.height})`, async ({
+      page,
+    }) => {
       await page.setViewportSize({ width: vp.width, height: vp.height });
       await page.goto('/menu');
       await page.waitForLoadState('networkidle');
@@ -937,13 +1079,17 @@ test.describe('Section 8: Tab System', () => {
 // Section 12: Order Management (Admin) — Route Protection
 // ===========================================================================
 test.describe('Section 12: Order Management', () => {
-  test('admin orders page redirects unauthenticated users', async ({ page }) => {
+  test('admin orders page redirects unauthenticated users', async ({
+    page,
+  }) => {
     await page.goto('/dashboard/orders');
     await page.waitForURL(/\/(login|admin)/, { timeout: 10000 });
     expect(page.url()).toMatch(/\/(login|admin)/);
   });
 
-  test('admin order tabs page redirects unauthenticated users', async ({ page }) => {
+  test('admin order tabs page redirects unauthenticated users', async ({
+    page,
+  }) => {
     await page.goto('/dashboard/orders/tabs');
     await page.waitForURL(/\/(login|admin)/, { timeout: 10000 });
     expect(page.url()).toMatch(/\/(login|admin)/);
@@ -958,10 +1104,14 @@ test.describe('Section 4: Unauthorized & Forbidden Pages', () => {
     await page.goto('/unauthorized');
     await page.waitForLoadState('networkidle');
     const body = await page.textContent('body');
-    expect(body?.toLowerCase()).toMatch(/unauthorized|access|denied|permission/i);
+    expect(body?.toLowerCase()).toMatch(
+      /unauthorized|access|denied|permission/i
+    );
   });
 
-  test('dashboard forbidden page redirects unauthenticated users', async ({ page }) => {
+  test('dashboard forbidden page redirects unauthenticated users', async ({
+    page,
+  }) => {
     await page.goto('/dashboard/forbidden');
     await page.waitForURL(/\/(login|admin)/, { timeout: 10000 });
     expect(page.url()).toMatch(/\/(login|admin)/);
@@ -972,7 +1122,9 @@ test.describe('Section 4: Unauthorized & Forbidden Pages', () => {
 // Section 2: Technical Stack — Server Rendering
 // ===========================================================================
 test.describe('Section 2: Technical Stack', () => {
-  test('pages are server-rendered (not empty on initial load)', async ({ page }) => {
+  test('pages are server-rendered (not empty on initial load)', async ({
+    page,
+  }) => {
     // Disable JavaScript to verify SSR
     await page.route('**/*.js', (route) => route.abort());
     const response = await page.goto('/');
@@ -1001,7 +1153,9 @@ test.describe('Section 2: Technical Stack', () => {
 // Section 7: Ordering System — Order Types in UI
 // ===========================================================================
 test.describe('Section 7: Ordering System', () => {
-  test('home page advertises all order types (dine-in, pickup, delivery)', async ({ page }) => {
+  test('home page advertises all order types (dine-in, pickup, delivery)', async ({
+    page,
+  }) => {
     await page.goto('/');
     const body = await page.textContent('body');
     expect(body).toContain('Dine In');
@@ -1025,7 +1179,9 @@ test.describe('Section 7: Ordering System', () => {
 test.describe('Section 21: Real-Time (Socket.IO)', () => {
   test('Socket.IO endpoint is available', async ({ request }) => {
     // Socket.IO handshake endpoint should respond (not 404)
-    const response = await request.get('/api/socket/socket.io/?EIO=4&transport=polling');
+    const response = await request.get(
+      '/api/socket/socket.io/?EIO=4&transport=polling'
+    );
     // Socket.IO returns 200 on successful polling handshake, or non-404
     expect(response.status()).not.toBe(404);
   });
@@ -1070,7 +1226,9 @@ test.describe('Cross-Cutting: Navigation Flows', () => {
     await expect(loginLink).toBeVisible();
   });
 
-  test('admin login page is accessible and distinct from customer login', async ({ page }) => {
+  test('admin login page is accessible and distinct from customer login', async ({
+    page,
+  }) => {
     await page.goto('/admin/login');
     const body = await page.textContent('body');
     expect(body).toContain('Admin Login');

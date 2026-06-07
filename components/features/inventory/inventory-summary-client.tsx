@@ -37,6 +37,8 @@ import type {
   IInventorySnapshot,
 } from '@/interfaces/inventory-snapshot.interface';
 import { computeMissingCost } from '@/lib/snapshot-missing-cost';
+import { getMainCategoriesAction } from '@/app/dashboard/settings/actions';
+import type { IMainCategoryConfig } from '@/interfaces/main-category.interface';
 
 interface InventoryItemRow extends IInventorySnapshotItem {
   notes?: string;
@@ -54,11 +56,32 @@ export function InventorySummaryClient() {
   const router = useRouter();
   const { toast } = useToast();
   const [date, setDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
-  const [category, setCategory] = useState<'food' | 'drinks'>('food');
+  // REQ-075 — Free-form slug; defaults to the first enabled main category.
+  const [category, setCategory] = useState<string>('food');
   const [items, setItems] = useState<InventoryItemRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [existingSnapshot, setExistingSnapshot] =
     useState<IInventorySnapshot | null>(null);
+  const [mainCategoryOptions, setMainCategoryOptions] = useState<
+    IMainCategoryConfig[]
+  >([]);
+
+  useEffect(() => {
+    getMainCategoriesAction().then((res) => {
+      if (res.success && res.data) {
+        const enabled = res.data
+          .filter((m) => m.isEnabled)
+          .sort((a, b) => a.order - b.order);
+        setMainCategoryOptions(enabled);
+        // If the default slug isn't registered (e.g. seed renamed), fall
+        // back to the first enabled main category.
+        if (enabled.length > 0 && !enabled.some((m) => m.slug === category)) {
+          setCategory(enabled[0].slug);
+        }
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     checkExistingSnapshot();
@@ -389,13 +412,18 @@ export function InventorySummaryClient() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="food">Food</SelectItem>
-                  <SelectItem value="drinks">Drinks</SelectItem>
+                  {mainCategoryOptions.map((m) => (
+                    <SelectItem key={m.slug} value={m.slug}>
+                      {m.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <p className="text-sm text-muted-foreground">
-                Food and drinks are reviewed separately. You can submit both on
-                the same day.
+                {/* REQ-075 — Copy generalised from the food/drinks pair to
+                    every registered main category. */}
+                Each main category is reviewed separately. You can submit
+                multiple categories on the same day.
               </p>
             </div>
           </div>

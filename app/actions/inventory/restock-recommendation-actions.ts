@@ -15,7 +15,8 @@ import {
 import { CategoryService } from '@/services/category-service';
 
 interface GetRestockRecommendationsParams {
-  mainCategory?: 'food' | 'drinks';
+  // REQ-075 — Free-form main-category slug (was `'food' | 'drinks'`).
+  mainCategory?: string;
   categories?: string[];
   days: number;
   priceMin?: number;
@@ -76,9 +77,19 @@ export async function getRestockRecommendationsAction(
   }
 }
 
+// REQ-075 — Return shape moved to the configurable-main-categories envelope.
+export type AvailableCategoriesEnvelope = {
+  mainCategories: Array<{
+    slug: string;
+    label: string;
+    order: number;
+    subCategories: string[];
+  }>;
+};
+
 export async function getAvailableCategoriesAction(): Promise<{
   success: boolean;
-  data: { drinks: string[]; food: string[] } | null;
+  data: AvailableCategoriesEnvelope | null;
   error?: string;
 }> {
   try {

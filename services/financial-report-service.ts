@@ -56,6 +56,23 @@ export interface DailySummaryReport {
       totalRevenue: number;
     };
     /**
+     * REQ-075 — `other` bucket aggregates revenue from items whose
+     * `mainCategory` is neither the legacy `food` nor `drinks` slug.
+     * Populated when an admin adds a new main category via the
+     * Main Categories settings UI. A `console.warn` fires when a row
+     * lands here so the operator can spot un-bucketed categories in
+     * logs even when the report UI doesn't surface the `other` total.
+     */
+    other: {
+      items: Array<{
+        name: string;
+        quantity: number;
+        price: number;
+        total: number;
+      }>;
+      totalRevenue: number;
+    };
+    /**
      * Order-type breakdown — revenue and order count per OrderType. Source
      * is `Order.orderType` on each order in the period; bucketed by sum
      * of `order.total` and a 1-per-order count. The bucket sums to the
@@ -86,11 +103,26 @@ export interface DailySummaryReport {
       }>;
       totalCost: number;
     };
+    /**
+     * REQ-075 — see `revenue.other` above. Mirror bucket for direct
+     * costs from menu items whose `mainCategory` is outside the legacy
+     * food/drinks pair.
+     */
+    other: {
+      items: Array<{
+        name: string;
+        quantity: number;
+        costPerUnit: number;
+        total: number;
+      }>;
+      totalCost: number;
+    };
     totalDirectCosts: number;
   };
   grossProfit: {
     food: number;
     drink: number;
+    other: number;
     total: number;
   };
   operatingExpenses: {
@@ -255,6 +287,8 @@ export class FinancialReportService {
       revenue: {
         food: { items: [], totalRevenue: 0 },
         drink: { items: [], totalRevenue: 0 },
+        // REQ-075 — extra bucket for non-food/non-drinks main categories.
+        other: { items: [], totalRevenue: 0 },
         byOrderType: {
           'dine-in': { revenue: 0, orderCount: 0 },
           delivery: { revenue: 0, orderCount: 0 },
@@ -266,11 +300,14 @@ export class FinancialReportService {
       costs: {
         food: { items: [], totalCost: 0 },
         drink: { items: [], totalCost: 0 },
+        // REQ-075 — mirrors `revenue.other` for cost-side aggregation.
+        other: { items: [], totalCost: 0 },
         totalDirectCosts: 0,
       },
       grossProfit: {
         food: 0,
         drink: 0,
+        other: 0,
         total: 0,
       },
       operatingExpenses: {
@@ -475,17 +512,32 @@ export class FinancialReportService {
         total: costTotal,
       };
 
-      // Categorize by food or drink using mainCategory
-      if (item.mainCategory === 'drinks') {
-        report.revenue.drink.items.push(revenueItem);
-        report.revenue.drink.totalRevenue += total;
-        report.costs.drink.items.push(costItem);
-        report.costs.drink.totalCost += costTotal;
-      } else {
-        report.revenue.food.items.push(revenueItem);
-        report.revenue.food.totalRevenue += total;
-        report.costs.food.items.push(costItem);
-        report.costs.food.totalCost += costTotal;
+      // REQ-075 — Categorise by main-category slug. The report keeps
+      // explicit `food` + `drink` buckets for back-compat with downstream
+      // dashboards; every other registered main category aggregates into
+      // `other` with a console.warn so the operator can spot unbucketed
+      // categories in logs and decide whether to extend the report.
+      switch (item.mainCategory) {
+        case 'food':
+          report.revenue.food.items.push(revenueItem);
+          report.revenue.food.totalRevenue += total;
+          report.costs.food.items.push(costItem);
+          report.costs.food.totalCost += costTotal;
+          break;
+        case 'drinks':
+          report.revenue.drink.items.push(revenueItem);
+          report.revenue.drink.totalRevenue += total;
+          report.costs.drink.items.push(costItem);
+          report.costs.drink.totalCost += costTotal;
+          break;
+        default:
+          console.warn(
+            `[financial-report-service] REQ-075 — Aggregating mainCategory "${item.mainCategory}" into "other" bucket for item "${item.name}". Extend the report or rename the main category if this should be a first-class bucket.`
+          );
+          report.revenue.other.items.push(revenueItem);
+          report.revenue.other.totalRevenue += total;
+          report.costs.other.items.push(costItem);
+          report.costs.other.totalCost += costTotal;
       }
     }
 
@@ -493,18 +545,26 @@ export class FinancialReportService {
     // totalRevenue = money actually received (payment breakdown total)
     // food/drink totals remain item-based for the detailed breakdown
     const itemRevenue =
-      report.revenue.food.totalRevenue + report.revenue.drink.totalRevenue;
+      report.revenue.food.totalRevenue +
+      report.revenue.drink.totalRevenue +
+      report.revenue.other.totalRevenue;
     report.revenue.totalRevenue = report.paymentBreakdown.total || itemRevenue;
     report.costs.totalDirectCosts =
-      report.costs.food.totalCost + report.costs.drink.totalCost;
+      report.costs.food.totalCost +
+      report.costs.drink.totalCost +
+      report.costs.other.totalCost;
 
     // Calculate gross profit (based on item revenue vs COGS)
     report.grossProfit.food =
       report.revenue.food.totalRevenue - report.costs.food.totalCost;
     report.grossProfit.drink =
       report.revenue.drink.totalRevenue - report.costs.drink.totalCost;
+    report.grossProfit.other =
+      report.revenue.other.totalRevenue - report.costs.other.totalCost;
     report.grossProfit.total =
-      report.grossProfit.food + report.grossProfit.drink;
+      report.grossProfit.food +
+      report.grossProfit.drink +
+      report.grossProfit.other;
 
     // Fetch expenses for the date
     const expenses = await ExpenseModel.find({
@@ -583,6 +643,7 @@ export class FinancialReportService {
       revenue: {
         food: { items: [], totalRevenue: 0 },
         drink: { items: [], totalRevenue: 0 },
+        other: { items: [], totalRevenue: 0 },
         byOrderType: {
           'dine-in': { revenue: 0, orderCount: 0 },
           delivery: { revenue: 0, orderCount: 0 },
@@ -594,11 +655,13 @@ export class FinancialReportService {
       costs: {
         food: { items: [], totalCost: 0 },
         drink: { items: [], totalCost: 0 },
+        other: { items: [], totalCost: 0 },
         totalDirectCosts: 0,
       },
       grossProfit: {
         food: 0,
         drink: 0,
+        other: 0,
         total: 0,
       },
       operatingExpenses: {
@@ -778,32 +841,52 @@ export class FinancialReportService {
         total: costTotal,
       };
 
-      if (item.mainCategory === 'drinks') {
-        report.revenue.drink.items.push(revenueItem);
-        report.revenue.drink.totalRevenue += total;
-        report.costs.drink.items.push(costItem);
-        report.costs.drink.totalCost += costTotal;
-      } else {
-        report.revenue.food.items.push(revenueItem);
-        report.revenue.food.totalRevenue += total;
-        report.costs.food.items.push(costItem);
-        report.costs.food.totalCost += costTotal;
+      // REQ-075 — see the matching switch in `generateDailySummary`.
+      switch (item.mainCategory) {
+        case 'food':
+          report.revenue.food.items.push(revenueItem);
+          report.revenue.food.totalRevenue += total;
+          report.costs.food.items.push(costItem);
+          report.costs.food.totalCost += costTotal;
+          break;
+        case 'drinks':
+          report.revenue.drink.items.push(revenueItem);
+          report.revenue.drink.totalRevenue += total;
+          report.costs.drink.items.push(costItem);
+          report.costs.drink.totalCost += costTotal;
+          break;
+        default:
+          console.warn(
+            `[financial-report-service] REQ-075 — Aggregating mainCategory "${item.mainCategory}" into "other" bucket (range report) for item "${item.name}".`
+          );
+          report.revenue.other.items.push(revenueItem);
+          report.revenue.other.totalRevenue += total;
+          report.costs.other.items.push(costItem);
+          report.costs.other.totalCost += costTotal;
       }
     }
 
     const rangeItemRevenue =
-      report.revenue.food.totalRevenue + report.revenue.drink.totalRevenue;
+      report.revenue.food.totalRevenue +
+      report.revenue.drink.totalRevenue +
+      report.revenue.other.totalRevenue;
     report.revenue.totalRevenue =
       report.paymentBreakdown.total || rangeItemRevenue;
     report.costs.totalDirectCosts =
-      report.costs.food.totalCost + report.costs.drink.totalCost;
+      report.costs.food.totalCost +
+      report.costs.drink.totalCost +
+      report.costs.other.totalCost;
 
     report.grossProfit.food =
       report.revenue.food.totalRevenue - report.costs.food.totalCost;
     report.grossProfit.drink =
       report.revenue.drink.totalRevenue - report.costs.drink.totalCost;
+    report.grossProfit.other =
+      report.revenue.other.totalRevenue - report.costs.other.totalCost;
     report.grossProfit.total =
-      report.grossProfit.food + report.grossProfit.drink;
+      report.grossProfit.food +
+      report.grossProfit.drink +
+      report.grossProfit.other;
 
     // Fetch expenses
     const expenses = await ExpenseModel.find({

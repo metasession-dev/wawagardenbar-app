@@ -1,9 +1,9 @@
 ---
-version: "v2026.06.06"
+version: 'v2026.06.06'
 release_shape: housekeeping
-generated_at: "2026-06-06"
-last_reviewed_at: "2026-06-06"
-generated_by: "generate-housekeeping-release-ticket.sh (DevAudit-Installer#116)"
+generated_at: '2026-06-06'
+last_reviewed_at: '2026-06-06'
+generated_by: 'generate-housekeeping-release-ticket.sh (DevAudit-Installer#116)'
 ---
 
 > ⚠️ **AUTO-GENERATED STUB — REPLACE BEFORE MERGE**
@@ -13,6 +13,7 @@ generated_by: "generate-housekeeping-release-ticket.sh (DevAudit-Installer#116)"
 > as bare-date `v2026.06.06`).
 >
 > **The operator must:**
+>
 > 1. Confirm the **Summary** below describes the actual intent of these
 >    commits — replace the placeholder if the auto-summary is generic.
 > 2. Fill in the **Sign-off** block with the operator's name + date +
@@ -32,7 +33,7 @@ generated_by: "generate-housekeeping-release-ticket.sh (DevAudit-Installer#116)"
 
 ## Summary
 
-REPLACE — one or two sentences describing what these housekeeping commits delivered. Examples: *"Documentation refresh for the v0.1.39 governance changes; no code paths touched."* / *"Dependency bumps (vitest 4.0.5 → 4.0.6, prettier 4.3.0 → 4.3.1) caught by Dependabot; no behavioural change."* / *"CI workflow housekeeping: retry-on-flake threshold raised, runner image pinned."*
+Develop-side framework paperwork for the REQ-074 cycle window. **No new ship event** in this housekeeping record — the REQ-074 customer PIN-flow E2E coverage feature itself shipped to production via PR [#318](https://github.com/metasession-dev/wawagardenbar-app/pull/318) → main `b8898d3` on 2026-06-06 15:52Z (RELEASED 2026-06-06 per [`RTM.md`](../../compliance/RTM.md) REQ-074 row). This v2026.06.06 record captures the develop-side housekeeping pushes that flowed alongside the tracked release: the close-out (#320), the Compliance Validation false-positives fix (#319), the verify-step button-name fix (#317), the original REQ-074 feature push (#316), and prior chore syncs (#312/#313/#314/#315). All of these landed via the lightweight path with `chore:` / `fix:` / `feat:` commit subjects that did not carry `[REQ-074]` brackets in the subject line; `derive-release-version.sh` therefore attributed them to the bare-date `v2026.06.06` fallback rather than to REQ-074's release record. **Companion docs-only PR** [#321](https://github.com/metasession-dev/wawagardenbar-app/pull/321) landed the auto-generated stubs themselves (the bot's `gh pr create` failed with HTTP 401; same pattern as v2026.06.05 PR #307); this PR fills the REPLACE markers.
 
 ## Commits in this release
 
@@ -54,21 +55,21 @@ REPLACE — one or two sentences describing what these housekeeping commits deli
 
 ## Risk Assessment
 
-REPLACE — confirm risk class for this release (typically LOW for housekeeping):
-
-- [ ] **LOW** — documentation, dependency bumps, CI tweaks, internal refactors. No user-visible behaviour change.
+- [x] **LOW** — documentation, dependency bumps, CI tweaks, internal refactors. No user-visible behaviour change.
 - [ ] **MEDIUM** — touches code paths an end-user reaches; user-visible change is small and well-contained.
 - [ ] **HIGH** — should not be a housekeeping release. If this is checked, **stop and re-tag the commits with `REQ-XXX`** so the release is tracked properly.
 
+Rationale: the actual feature delivery (REQ-074 customer PIN-flow E2E coverage) is recorded against REQ-074's tracked release — see [`RTM.md`](../../compliance/RTM.md) REQ-074 row + the [#318](https://github.com/metasession-dev/wawagardenbar-app/pull/318) release PR. This housekeeping record captures only the develop-side push artefacts (close-out, validator-fix, chore syncs) whose commit subjects lacked `[REQ-074]` brackets and therefore fell through to the bare-date fallback. Zero new user-visible behaviour change is attributable to this record.
+
 ## Test Evidence
 
-| Test Type | Status | Source |
-|---|---|---|
-| TypeScript | REPLACE — green / N/A | CI `typecheck` gate |
-| SAST | REPLACE — green / N/A | CI `SAST` gate |
-| Dependency audit | REPLACE — green / N/A | CI `dependency_audit` gate |
-| E2E | REPLACE — green / N/A | CI `e2e` gate |
-| Test reports | REPLACE — green / N/A | CI `test_report` gate |
+| Test Type        | Status                 | Source                                                                                                                                                   |
+| ---------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TypeScript       | green                  | CI `typecheck` gate (covered by REQ-074's tracked release [#318](https://github.com/metasession-dev/wawagardenbar-app/pull/318))                         |
+| SAST             | green                  | CI `SAST` gate (covered by REQ-074's tracked release)                                                                                                    |
+| Dependency audit | green                  | CI `dependency_audit` gate (covered by REQ-074's tracked release)                                                                                        |
+| E2E              | inherited from REQ-074 | CI `e2e` gate — REQ-074's focused E2E 7/7 pass against UAT; the 9 pre-existing pack flakes ride along but were operator-approved at REQ-074 release time |
+| Test reports     | green                  | CI `test_report` gate (covered by REQ-074's tracked release)                                                                                             |
 
 > Companion artefact: `compliance/security-summary-v2026.06.06.md` (auto-generated by `generate-security-summary.sh` in the same workflow run; contains the SAST + dep-audit findings detail).
 
@@ -80,9 +81,9 @@ REPLACE — confirm risk class for this release (typically LOW for housekeeping)
 
 ## Post-Deploy Actions
 
-| Type | Script / Command | Target | Required | Notes |
-|------|-----------------|--------|----------|-------|
-| — | None | — | — | Housekeeping releases typically have no post-deploy actions |
+| Type | Script / Command | Target | Required | Notes                                                       |
+| ---- | ---------------- | ------ | -------- | ----------------------------------------------------------- |
+| —    | None             | —      | —        | Housekeeping releases typically have no post-deploy actions |
 
 <!-- Replace the "None" row above if this release requires post-deploy work. -->
 
@@ -90,15 +91,16 @@ REPLACE — confirm risk class for this release (typically LOW for housekeeping)
 
 ## Sign-off
 
-| Role | Name | Date | Notes |
-|---|---|---|---|
-| Submitter | REPLACE | 2026-06-06 | Auto-generated by CI; reviewed + edited |
-| Reviewer (independent if project risk_tier ≠ low) | REPLACE | REPLACE | REPLACE |
+| Role                                              | Name         | Date         | Notes                                                                                    |
+| ------------------------------------------------- | ------------ | ------------ | ---------------------------------------------------------------------------------------- |
+| Submitter                                         | ostendo-io   | 2026-06-07   | Auto-generated stub edited to fill REPLACE markers + reflect actual push window          |
+| Reviewer (independent if project risk_tier ≠ low) | _to confirm_ | _to confirm_ | LOW-risk paperwork — independent reviewer not required by `Test_Policy.md` for this tier |
 
 ## Audit Trail
 
-| Date | Action | Actor | Notes |
-|------|--------|-------|-------|
-| 2026-06-06 | Stub auto-generated | devaudit-bot | Bare-date version v2026.06.06 |
-| REPLACE | Operator sign-off | REPLACE | REPLACE |
-| REPLACE | Submitted for UAT review | REPLACE | Via portal |
+| Date         | Action                             | Actor        | Notes                                                                                                                                                                                                      |
+| ------------ | ---------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-06-06   | Stub auto-generated                | devaudit-bot | Bare-date version v2026.06.06; bot's `gh pr create` failed with HTTP 401 (DevAudit-Installer [#122](https://github.com/metasession-dev/DevAudit-Installer/issues/122) tracks the upstream permissions fix) |
+| 2026-06-06   | Stub committed manually to develop | ostendo-io   | PR [#321](https://github.com/metasession-dev/wawagardenbar-app/pull/321) — bot did push the branch + commit; only `gh pr create` failed                                                                    |
+| 2026-06-07   | REPLACE markers filled             | ostendo-io   | This PR — operator review of push-window contents + risk class                                                                                                                                             |
+| _to confirm_ | Submitted for UAT review           | ostendo-io   | Via portal once this PR merges                                                                                                                                                                             |

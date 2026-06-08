@@ -382,15 +382,11 @@ export function SnapshotDetailsClient({
           <CardContent className="space-y-3">
             <div>
               <p className="text-sm text-muted-foreground">Category</p>
-              <Badge
-                variant="outline"
-                className={
-                  snapshot.mainCategory === 'food'
-                    ? 'bg-orange-50 text-orange-700 border-orange-200'
-                    : 'bg-blue-50 text-blue-700 border-blue-200'
-                }
-              >
-                {snapshot.mainCategory === 'food' ? 'Food' : 'Drinks'}
+              {/* REQ-075 — Free-form main-category label; per-category
+                  palette is a future REQ. */}
+              <Badge variant="outline">
+                {snapshot.mainCategory.charAt(0).toUpperCase() +
+                  snapshot.mainCategory.slice(1)}
               </Badge>
             </div>
             <div>

@@ -345,74 +345,76 @@ export function MenuItemDetailModal({
 
           <Separator />
 
-          {/* Portion Size Selector - Only for food items with portion options enabled */}
-          {item.mainCategory === 'food' &&
-            (item.portionOptions?.halfPortionEnabled ||
-              item.portionOptions?.quarterPortionEnabled) && (
-              <div>
-                <Label className="mb-3 block font-semibold">Portion Size</Label>
-                <RadioGroup
-                  value={portionSize}
-                  onValueChange={(value) =>
-                    setPortionSize(value as 'full' | 'half' | 'quarter')
-                  }
-                >
+          {/* REQ-075 — `mainCategory === 'food'` gate dropped; the
+              item's stored portion flags are authoritative now that
+              portion enablement is controlled per-main via the registry
+              `portionsEnabled` flag at create/edit time. */}
+          {(item.portionOptions?.halfPortionEnabled ||
+            item.portionOptions?.quarterPortionEnabled) && (
+            <div>
+              <Label className="mb-3 block font-semibold">Portion Size</Label>
+              <RadioGroup
+                value={portionSize}
+                onValueChange={(value) =>
+                  setPortionSize(value as 'full' | 'half' | 'quarter')
+                }
+              >
+                <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-accent">
+                  <RadioGroupItem value="full" id="full" />
+                  <Label
+                    htmlFor="full"
+                    className="flex-1 cursor-pointer font-normal"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>Full Portion</span>
+                      <span className="font-semibold">
+                        {formatPrice(item.price)}
+                      </span>
+                    </div>
+                  </Label>
+                </div>
+                {item.portionOptions?.halfPortionEnabled && (
                   <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-accent">
-                    <RadioGroupItem value="full" id="full" />
+                    <RadioGroupItem value="half" id="half" />
                     <Label
-                      htmlFor="full"
+                      htmlFor="half"
                       className="flex-1 cursor-pointer font-normal"
                     >
                       <div className="flex items-center justify-between">
-                        <span>Full Portion</span>
+                        <span>Half Portion (50%)</span>
                         <span className="font-semibold">
-                          {formatPrice(item.price)}
+                          {formatPrice(
+                            Math.round(item.price * 0.5) +
+                              (item.portionOptions?.halfPortionSurcharge || 0)
+                          )}
                         </span>
                       </div>
                     </Label>
                   </div>
-                  {item.portionOptions?.halfPortionEnabled && (
-                    <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-accent">
-                      <RadioGroupItem value="half" id="half" />
-                      <Label
-                        htmlFor="half"
-                        className="flex-1 cursor-pointer font-normal"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span>Half Portion (50%)</span>
-                          <span className="font-semibold">
-                            {formatPrice(
-                              Math.round(item.price * 0.5) +
-                                (item.portionOptions?.halfPortionSurcharge || 0)
-                            )}
-                          </span>
-                        </div>
-                      </Label>
-                    </div>
-                  )}
-                  {item.portionOptions?.quarterPortionEnabled && (
-                    <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-accent">
-                      <RadioGroupItem value="quarter" id="quarter" />
-                      <Label
-                        htmlFor="quarter"
-                        className="flex-1 cursor-pointer font-normal"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span>Quarter Portion (25%)</span>
-                          <span className="font-semibold">
-                            {formatPrice(
-                              Math.round(item.price * 0.25) +
-                                (item.portionOptions?.quarterPortionSurcharge ||
-                                  0)
-                            )}
-                          </span>
-                        </div>
-                      </Label>
-                    </div>
-                  )}
-                </RadioGroup>
-              </div>
-            )}
+                )}
+                {item.portionOptions?.quarterPortionEnabled && (
+                  <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-accent">
+                    <RadioGroupItem value="quarter" id="quarter" />
+                    <Label
+                      htmlFor="quarter"
+                      className="flex-1 cursor-pointer font-normal"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>Quarter Portion (25%)</span>
+                        <span className="font-semibold">
+                          {formatPrice(
+                            Math.round(item.price * 0.25) +
+                              (item.portionOptions?.quarterPortionSurcharge ||
+                                0)
+                          )}
+                        </span>
+                      </div>
+                    </Label>
+                  </div>
+                )}
+              </RadioGroup>
+            </div>
+          )}
 
           {/* REQ-031: Customization Picker — between Portion and Quantity */}
           {customizationGroups.length > 0 && (

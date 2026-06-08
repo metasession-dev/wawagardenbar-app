@@ -387,6 +387,11 @@ export class StaffPotService {
           : costByMenuItemId.get(item.menuItemId?.toString()) || 0;
         const itemValue = costPerUnit * systemCount;
 
+        // REQ-075 — Staff-pot loss-tracking continues to split into
+        // food + drink buckets for back-compat with the existing
+        // configurable percentage gates. Any other main category is
+        // ignored at this layer and surfaced via a console.warn so the
+        // operator notices unbucketed items in logs.
         if (item.mainCategory === 'food') {
           foodSystemTotal += systemCount;
           result.foodInventoryValue += itemValue;
@@ -399,6 +404,10 @@ export class StaffPotService {
           if (item.discrepancy < 0) {
             drinkLossUnits += Math.abs(item.discrepancy);
           }
+        } else {
+          console.warn(
+            `[staff-pot-service] REQ-075 — Skipping mainCategory "${item.mainCategory}" in loss aggregation. Staff-pot buckets are configured for food/drink only.`
+          );
         }
       }
     }

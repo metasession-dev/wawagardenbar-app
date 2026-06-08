@@ -2,7 +2,14 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { MoreHorizontal, Edit, Trash2, Eye, EyeOff, Upload } from 'lucide-react';
+import {
+  MoreHorizontal,
+  Edit,
+  Trash2,
+  Eye,
+  EyeOff,
+  Upload,
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -171,7 +178,12 @@ export function MenuItemsTable({ menuItems }: MenuItemsTableProps) {
     }
   }
 
-  function getCategoryBadgeColor(mainCategory: string): 'default' | 'secondary' {
+  function getCategoryBadgeColor(
+    mainCategory: string
+  ): 'default' | 'secondary' {
+    // REQ-075 — Two-tone palette only handles the legacy seed pair.
+    // Per-category colour metadata is a future REQ; until then anything
+    // outside `food` reads as secondary.
     return mainCategory === 'food' ? 'default' : 'secondary';
   }
 
@@ -197,7 +209,10 @@ export function MenuItemsTable({ menuItems }: MenuItemsTableProps) {
             <TableBody>
               {menuItems.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
+                  <TableCell
+                    colSpan={7}
+                    className="text-center text-muted-foreground"
+                  >
                     No menu items found
                   </TableCell>
                 </TableRow>
@@ -231,7 +246,9 @@ export function MenuItemsTable({ menuItems }: MenuItemsTableProps) {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-1">
-                        <Badge variant={getCategoryBadgeColor(item.mainCategory)}>
+                        <Badge
+                          variant={getCategoryBadgeColor(item.mainCategory)}
+                        >
                           {item.mainCategory}
                         </Badge>
                         <span className="text-xs text-muted-foreground">
@@ -244,7 +261,9 @@ export function MenuItemsTable({ menuItems }: MenuItemsTableProps) {
                     </TableCell>
                     <TableCell>{item.preparationTime} min</TableCell>
                     <TableCell>
-                      <Badge variant={item.isAvailable ? 'default' : 'secondary'}>
+                      <Badge
+                        variant={item.isAvailable ? 'default' : 'secondary'}
+                      >
                         {item.isAvailable ? 'Available' : 'Unavailable'}
                       </Badge>
                     </TableCell>
@@ -260,7 +279,9 @@ export function MenuItemsTable({ menuItems }: MenuItemsTableProps) {
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            onClick={() => router.push(`/dashboard/menu/${item._id}/edit`)}
+                            onClick={() =>
+                              router.push(`/dashboard/menu/${item._id}/edit`)
+                            }
                           >
                             <Edit className="mr-2 h-4 w-4" />
                             Edit
@@ -318,8 +339,8 @@ export function MenuItemsTable({ menuItems }: MenuItemsTableProps) {
           <DialogHeader>
             <DialogTitle>Delete Menu Item</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{selectedItem?.name}"? This action cannot be
-              undone.
+              Are you sure you want to delete "{selectedItem?.name}"? This
+              action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -330,7 +351,11 @@ export function MenuItemsTable({ menuItems }: MenuItemsTableProps) {
             >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={loading}>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={loading}
+            >
               {loading ? 'Deleting...' : 'Delete'}
             </Button>
           </DialogFooter>
@@ -372,7 +397,10 @@ export function MenuItemsTable({ menuItems }: MenuItemsTableProps) {
             >
               Cancel
             </Button>
-            <Button onClick={handleUploadImage} disabled={loading || !uploadFile}>
+            <Button
+              onClick={handleUploadImage}
+              disabled={loading || !uploadFile}
+            >
               {loading ? 'Uploading...' : 'Upload'}
             </Button>
           </DialogFooter>

@@ -49,27 +49,38 @@ async function getMenuItems() {
 async function getMenuStats() {
   await connectDB();
 
-  const [totalItems, availableItems, foodItems, drinkItems] = await Promise.all(
-    [
-      MenuItemModel.countDocuments({ kind: 'menu-item' }),
-      MenuItemModel.countDocuments({ kind: 'menu-item', isAvailable: true }),
-      MenuItemModel.countDocuments({
-        kind: 'menu-item',
-        mainCategory: 'food',
-      }),
-      MenuItemModel.countDocuments({
-        kind: 'menu-item',
-        mainCategory: 'drinks',
-      }),
-    ]
+  // REQ-075 — Per-main-category breakdown is now derived from the
+  // configurable registry rather than the hardcoded food/drinks pair.
+  const { SystemSettingsService } = await import(
+    '@/services/system-settings-service'
   );
+  const mainCategoriesAll = await SystemSettingsService.getMainCategories();
+  const enabledMains = mainCategoriesAll
+    .filter((m) => m.isEnabled)
+    .sort((a, b) => a.order - b.order);
+
+  const [totalItems, availableItems, ...perMainCounts] = await Promise.all([
+    MenuItemModel.countDocuments({ kind: 'menu-item' }),
+    MenuItemModel.countDocuments({ kind: 'menu-item', isAvailable: true }),
+    ...enabledMains.map((m) =>
+      MenuItemModel.countDocuments({
+        kind: 'menu-item',
+        mainCategory: m.slug,
+      })
+    ),
+  ]);
+
+  const perMain = enabledMains.map((m, i) => ({
+    slug: m.slug,
+    label: m.label,
+    count: perMainCounts[i],
+  }));
 
   return {
     totalItems,
     availableItems,
     unavailableItems: totalItems - availableItems,
-    foodItems,
-    drinkItems,
+    perMain,
   };
 }
 
@@ -79,11 +90,18 @@ async function getMenuStats() {
 async function MenuStats() {
   const stats = await getMenuStats();
 
+  const breakdown =
+    stats.perMain.length > 0
+      ? stats.perMain
+          .map((m) => `${m.count} ${m.label.toLowerCase()}`)
+          .join(', ')
+      : '';
+
   const cards = [
     {
       title: 'Total Items',
       value: stats.totalItems,
-      description: `${stats.foodItems} food, ${stats.drinkItems} drinks`,
+      description: breakdown,
     },
     {
       title: 'Available',

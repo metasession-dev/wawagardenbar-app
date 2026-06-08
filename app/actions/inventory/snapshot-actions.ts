@@ -21,20 +21,31 @@ interface ActionResult<T = void> {
 
 export async function generateSnapshotDataAction(
   date: string,
-  mainCategory?: 'food' | 'drinks'
+  // REQ-075 — Free-form main-category slug (was `'food' | 'drinks'`).
+  mainCategory?: string
 ): Promise<ActionResult<IInventorySnapshotItem[]>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
-    if (!session.userId || !session.role || !['admin', 'super-admin'].includes(session.role)) {
+    if (
+      !session.userId ||
+      !session.role ||
+      !['admin', 'super-admin'].includes(session.role)
+    ) {
       return { success: false, error: 'Unauthorized' };
     }
 
     await connectDB();
 
     const snapshotDate = new Date(date);
-    const items = await InventorySnapshotService.generateSnapshotData(snapshotDate, mainCategory);
+    const items = await InventorySnapshotService.generateSnapshotData(
+      snapshotDate,
+      mainCategory
+    );
 
     return {
       success: true,
@@ -51,13 +62,21 @@ export async function generateSnapshotDataAction(
 
 export async function submitSnapshotAction(
   data: ISubmitSnapshotData,
-  mainCategory: 'food' | 'drinks'
+  // REQ-075 — Free-form main-category slug (was `'food' | 'drinks'`).
+  mainCategory: string
 ): Promise<ActionResult<IInventorySnapshot>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
-    if (!session.userId || !session.role || !['admin', 'super-admin'].includes(session.role)) {
+    if (
+      !session.userId ||
+      !session.role ||
+      !['admin', 'super-admin'].includes(session.role)
+    ) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -80,7 +99,8 @@ export async function submitSnapshotAction(
     console.error('Error submitting snapshot:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to submit snapshot',
+      error:
+        error instanceof Error ? error.message : 'Failed to submit snapshot',
     };
   }
 }
@@ -90,7 +110,10 @@ export async function getPendingSnapshotsAction(): Promise<
 > {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     if (session.role !== 'super-admin') {
       return { success: false, error: 'Unauthorized' };
@@ -121,7 +144,10 @@ export async function getSnapshotDetailsAction(
 ): Promise<ActionResult<IInventorySnapshot>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     if (session.role !== 'super-admin') {
       return { success: false, error: 'Unauthorized' };
@@ -157,7 +183,10 @@ export async function approveSnapshotAction(
 ): Promise<ActionResult<IInventorySnapshot>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     if (session.role !== 'super-admin') {
       return { success: false, error: 'Unauthorized' };
@@ -182,7 +211,8 @@ export async function approveSnapshotAction(
     console.error('Error approving snapshot:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to approve snapshot',
+      error:
+        error instanceof Error ? error.message : 'Failed to approve snapshot',
     };
   }
 }
@@ -193,7 +223,10 @@ export async function rejectSnapshotAction(
 ): Promise<ActionResult<IInventorySnapshot>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     if (session.role !== 'super-admin') {
       return { success: false, error: 'Unauthorized' };
@@ -222,7 +255,8 @@ export async function rejectSnapshotAction(
     console.error('Error rejecting snapshot:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to reject snapshot',
+      error:
+        error instanceof Error ? error.message : 'Failed to reject snapshot',
     };
   }
 }
@@ -239,7 +273,10 @@ export async function getSnapshotHistoryAction(
 > {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     if (session.role !== 'super-admin') {
       return { success: false, error: 'Unauthorized' };
@@ -267,13 +304,21 @@ export async function getSnapshotHistoryAction(
 
 export async function checkExistingSnapshotAction(
   date: string,
-  mainCategory: 'food' | 'drinks'
+  // REQ-075 — Free-form main-category slug (was `'food' | 'drinks'`).
+  mainCategory: string
 ): Promise<ActionResult<IInventorySnapshot | null>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
-    if (!session.userId || !session.role || !['admin', 'super-admin'].includes(session.role)) {
+    if (
+      !session.userId ||
+      !session.role ||
+      !['admin', 'super-admin'].includes(session.role)
+    ) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -287,7 +332,9 @@ export async function checkExistingSnapshotAction(
     );
 
     // Serialize MongoDB objects to plain objects
-    const serializedSnapshot = snapshot ? JSON.parse(JSON.stringify(snapshot)) : null;
+    const serializedSnapshot = snapshot
+      ? JSON.parse(JSON.stringify(snapshot))
+      : null;
 
     return {
       success: true,
@@ -308,10 +355,16 @@ export async function updateSnapshotItemsAction(
 ): Promise<ActionResult<IInventorySnapshot>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     if (session.role !== 'super-admin') {
-      return { success: false, error: 'Unauthorized. Only super admins can edit snapshots.' };
+      return {
+        success: false,
+        error: 'Unauthorized. Only super admins can edit snapshots.',
+      };
     }
 
     await connectDB();
@@ -335,7 +388,10 @@ export async function updateSnapshotItemsAction(
     console.error('Error updating snapshot items:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update snapshot items',
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to update snapshot items',
     };
   }
 }
@@ -346,9 +402,16 @@ export async function resubmitSnapshotAction(
 ): Promise<ActionResult<IInventorySnapshot>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
-    if (!session.userId || !session.role || !['admin', 'super-admin'].includes(session.role)) {
+    if (
+      !session.userId ||
+      !session.role ||
+      !['admin', 'super-admin'].includes(session.role)
+    ) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -374,7 +437,8 @@ export async function resubmitSnapshotAction(
     console.error('Error resubmitting snapshot:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to resubmit snapshot',
+      error:
+        error instanceof Error ? error.message : 'Failed to resubmit snapshot',
     };
   }
 }

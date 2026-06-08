@@ -25,18 +25,39 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { getSnapshotHistoryAction } from '@/app/actions/inventory/snapshot-actions';
+import { getMainCategoriesAction } from '@/app/dashboard/settings/actions';
 import type { IInventorySnapshot } from '@/interfaces/inventory-snapshot.interface';
+import type { IMainCategoryConfig } from '@/interfaces/main-category.interface';
 
 export function PreviousInventoryUpdatesClient() {
   const router = useRouter();
   const { toast } = useToast();
   const [snapshots, setSnapshots] = useState<IInventorySnapshot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
-  const [categoryFilter, setCategoryFilter] = useState<'all' | 'food' | 'drinks'>('all');
-  const [dateRange, setDateRange] = useState<'7days' | '30days' | '90days' | 'all'>('30days');
+  const [statusFilter, setStatusFilter] = useState<
+    'all' | 'pending' | 'approved' | 'rejected'
+  >('all');
+  // REQ-075 — Free-form filter string; 'all' clears the mainCategory filter.
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [dateRange, setDateRange] = useState<
+    '7days' | '30days' | '90days' | 'all'
+  >('30days');
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  // REQ-075 — registry-driven main-category filter options.
+  const [mainCategoryOptions, setMainCategoryOptions] = useState<
+    IMainCategoryConfig[]
+  >([]);
+
+  useEffect(() => {
+    getMainCategoriesAction().then((res) => {
+      if (res.success && res.data) {
+        setMainCategoryOptions(
+          res.data.filter((m) => m.isEnabled).sort((a, b) => a.order - b.order)
+        );
+      }
+    });
+  }, []);
 
   useEffect(() => {
     loadSnapshots();
@@ -88,11 +109,32 @@ export function PreviousInventoryUpdatesClient() {
   function getStatusBadge(status: string) {
     switch (status) {
       case 'pending':
-        return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">Pending</Badge>;
+        return (
+          <Badge
+            variant="outline"
+            className="bg-amber-50 text-amber-700 border-amber-200"
+          >
+            Pending
+          </Badge>
+        );
       case 'approved':
-        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Approved</Badge>;
+        return (
+          <Badge
+            variant="outline"
+            className="bg-green-50 text-green-700 border-green-200"
+          >
+            Approved
+          </Badge>
+        );
       case 'rejected':
-        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Rejected</Badge>;
+        return (
+          <Badge
+            variant="outline"
+            className="bg-red-50 text-red-700 border-red-200"
+          >
+            Rejected
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -147,8 +189,11 @@ export function PreviousInventoryUpdatesClient() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="food">Food Only</SelectItem>
-                  <SelectItem value="drinks">Drinks Only</SelectItem>
+                  {mainCategoryOptions.map((m) => (
+                    <SelectItem key={m.slug} value={m.slug}>
+                      {m.label} Only
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -173,7 +218,11 @@ export function PreviousInventoryUpdatesClient() {
               </Select>
             </div>
             <div className="flex items-end">
-              <Button onClick={loadSnapshots} disabled={isLoading} className="w-full">
+              <Button
+                onClick={loadSnapshots}
+                disabled={isLoading}
+                className="w-full"
+              >
                 <Filter className="mr-2 h-4 w-4" />
                 Refresh
               </Button>
@@ -184,13 +233,13 @@ export function PreviousInventoryUpdatesClient() {
 
       <Card>
         <CardHeader>
-          <CardTitle>
-            Inventory Updates ({total})
-          </CardTitle>
+          <CardTitle>Inventory Updates ({total})</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">Loading...</div>
+            <div className="text-center py-8 text-muted-foreground">
+              Loading...
+            </div>
           ) : snapshots.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               No inventory updates found
@@ -219,19 +268,31 @@ export function PreviousInventoryUpdatesClient() {
                     return (
                       <TableRow key={snapshot._id}>
                         <TableCell className="font-medium">
-                          {format(new Date(snapshot.snapshotDate), 'MMM dd, yyyy')}
+                          {format(
+                            new Date(snapshot.snapshotDate),
+                            'MMM dd, yyyy'
+                          )}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={snapshot.mainCategory === 'food' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-blue-50 text-blue-700 border-blue-200'}>
-                            {snapshot.mainCategory === 'food' ? 'Food' : 'Drinks'}
+                          {/* REQ-075 — Label derived from the registry; styling
+                              defaults until per-category colour metadata exists. */}
+                          <Badge variant="outline">
+                            {mainCategoryOptions.find(
+                              (m) => m.slug === snapshot.mainCategory
+                            )?.label ?? snapshot.mainCategory}
                           </Badge>
                         </TableCell>
                         <TableCell>{snapshot.submittedByName}</TableCell>
                         <TableCell>
-                          {format(new Date(snapshot.submittedAt), 'MMM dd, yyyy HH:mm')}
+                          {format(
+                            new Date(snapshot.submittedAt),
+                            'MMM dd, yyyy HH:mm'
+                          )}
                         </TableCell>
                         <TableCell>{getStatusBadge(snapshot.status)}</TableCell>
-                        <TableCell className="text-right">{snapshot.items.length}</TableCell>
+                        <TableCell className="text-right">
+                          {snapshot.items.length}
+                        </TableCell>
                         <TableCell className="text-right">
                           {adjustmentCount > 0 ? (
                             <span className="text-amber-600 font-medium">
@@ -251,7 +312,9 @@ export function PreviousInventoryUpdatesClient() {
                             variant="ghost"
                             size="sm"
                             onClick={() =>
-                              router.push(`/dashboard/inventory/snapshots/${snapshot._id}`)
+                              router.push(
+                                `/dashboard/inventory/snapshots/${snapshot._id}`
+                              )
                             }
                           >
                             <Eye className="h-4 w-4 mr-2" />

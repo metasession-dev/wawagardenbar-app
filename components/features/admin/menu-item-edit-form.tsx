@@ -35,6 +35,7 @@ import { CustomizationOptionsBuilder } from './customization-options-builder';
 import { DietaryTagsSelector } from './dietary-tags-selector';
 import { DeleteMenuItemDialog } from './delete-menu-item-dialog';
 import { IMenuSettings } from '@/interfaces/menu-settings.interface';
+import { IMainCategoryConfig } from '@/interfaces/main-category.interface';
 import { IInventoryLocationConfig } from '@/interfaces';
 import { getUnitsOfMeasurementAction } from '@/app/actions/units-actions';
 import {
@@ -49,7 +50,9 @@ const menuItemSchema = z.object({
     .min(3, 'Name must be at least 3 characters')
     .max(100, 'Name must be less than 100 characters'),
   description: z.string().optional(),
-  mainCategory: z.enum(['food', 'drinks']),
+  // REQ-075 — Free-form main-category slug; form constrains the
+  // selection at runtime via `mainCategories`.
+  mainCategory: z.string().min(1, 'Main category is required'),
   category: z.string().min(1, 'Category is required'),
   price: z.number().min(0, 'Price must be 0 or greater'),
   preparationTime: z
@@ -91,6 +94,8 @@ type MenuItemFormData = z.infer<typeof menuItemSchema>;
 interface MenuItemEditFormProps {
   menuItem: any;
   availableCategories?: IMenuSettings;
+  // REQ-075 — Configurable main-category registry (enabled-only list).
+  mainCategories: IMainCategoryConfig[];
 }
 
 /**
@@ -99,6 +104,7 @@ interface MenuItemEditFormProps {
 export function MenuItemEditForm({
   menuItem,
   availableCategories,
+  mainCategories,
 }: MenuItemEditFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -424,25 +430,14 @@ export function MenuItemEditForm({
     }
   }
 
-  const foodCategories = availableCategories?.food
+  // REQ-075 — Sub-category options looked up by registered main slug;
+  // no food/drinks special-cases.
+  const categories = (availableCategories?.[mainCategory] ?? [])
     .filter((c) => c.isEnabled)
-    .sort((a, b) => a.order - b.order) || [
-    { value: 'main-courses', label: 'Main Courses' },
-    { value: 'starters', label: 'Starters' },
-    { value: 'desserts', label: 'Desserts' },
-  ];
+    .sort((a, b) => a.order - b.order);
 
-  const drinkCategories = availableCategories?.drinks
-    .filter((c) => c.isEnabled)
-    .sort((a, b) => a.order - b.order) || [
-    { value: 'beer-local', label: 'Beer (Local)' },
-    { value: 'beer-imported', label: 'Beer (Imported)' },
-    { value: 'beer-craft', label: 'Beer (Craft)' },
-    { value: 'wine', label: 'Wine' },
-    { value: 'soft-drinks', label: 'Soft Drinks' },
-  ];
-
-  const categories = mainCategory === 'food' ? foodCategories : drinkCategories;
+  const selectedMain = mainCategories.find((m) => m.slug === mainCategory);
+  const portionsEnabledForMain = selectedMain?.portionsEnabled === true;
 
   return (
     <div className="space-y-6">
@@ -492,17 +487,18 @@ export function MenuItemEditForm({
                 <Label htmlFor="mainCategory">Main Category *</Label>
                 <Select
                   value={mainCategory}
-                  onValueChange={(value) =>
-                    setValue('mainCategory', value as 'food' | 'drinks')
-                  }
+                  onValueChange={(value) => setValue('mainCategory', value)}
                   disabled={isLoading}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="food">Food</SelectItem>
-                    <SelectItem value="drinks">Drinks</SelectItem>
+                    {mainCategories.map((m) => (
+                      <SelectItem key={m.slug} value={m.slug}>
+                        {m.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 {errors.mainCategory && (
@@ -637,8 +633,9 @@ export function MenuItemEditForm({
           </CardContent>
         </Card>
 
-        {/* Portion Options - Only for Food Items */}
-        {mainCategory === 'food' && (
+        {/* REQ-075 — Portions gated by the registry's `portionsEnabled`
+            flag on the selected main category. */}
+        {portionsEnabledForMain && (
           <Card>
             <CardHeader>
               <CardTitle>Portion Options</CardTitle>

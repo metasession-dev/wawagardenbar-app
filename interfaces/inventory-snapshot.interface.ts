@@ -12,7 +12,9 @@ export interface IInventorySnapshotItem {
   menuItemId: string;
   menuItemName: string;
   inventoryId?: string;
-  mainCategory: 'food' | 'drinks';
+  // REQ-075 — Free-form string (was `'food' | 'drinks'`). Validation
+  // moves to the application layer via `MainCategoryService`.
+  mainCategory: string;
   category: string;
   systemInventoryCount: number;
   todaySalesCount: number;
@@ -30,7 +32,9 @@ export interface IInventorySnapshotItem {
 export interface IInventorySnapshot {
   _id: string;
   snapshotDate: Date;
-  mainCategory: 'food' | 'drinks';
+  // REQ-075 — Free-form string (was `'food' | 'drinks'`). Validation
+  // moves to the application layer via `MainCategoryService`.
+  mainCategory: string;
   submittedAt: Date;
   submittedBy: Types.ObjectId;
   submittedByName: string;
@@ -62,7 +66,7 @@ export interface ISubmitSnapshotData {
 
 export interface ISnapshotFilters {
   status?: 'pending' | 'approved' | 'rejected';
-  mainCategory?: 'food' | 'drinks';
+  mainCategory?: string;
   startDate?: Date;
   endDate?: Date;
   submittedBy?: string;

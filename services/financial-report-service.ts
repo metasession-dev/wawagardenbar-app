@@ -174,6 +174,44 @@ export interface DailySummaryReport {
   };
 }
 
+/**
+ * REQ-076 — Per-main-category report shape. Sibling to
+ * `DailySummaryReport` but scoped to a single registered main slug.
+ * Payments + tips deliberately omitted (see service-method JSDoc).
+ *
+ * @requirement REQ-076
+ * @requirement SRS REQ-MENUMGT-006
+ */
+export interface MainCategoryReport {
+  date: Date;
+  startDate?: Date;
+  endDate?: Date;
+  mainCategorySlug: string;
+  mainCategoryLabel: string;
+  revenue: {
+    items: Array<{
+      name: string;
+      quantity: number;
+      price: number;
+      total: number;
+    }>;
+    totalRevenue: number;
+    itemCount: number;
+  };
+  costs: {
+    items: Array<{
+      name: string;
+      quantity: number;
+      costPerUnit: number;
+      total: number;
+    }>;
+    totalCost: number;
+  };
+  grossProfit: number;
+  grossProfitMargin: number;
+  orderCount: number;
+}
+
 export class FinancialReportService {
   /**
    * @requirement REQ-013 - Aggregate partial payments from tabs into payment breakdown
@@ -925,5 +963,161 @@ export class FinancialReportService {
     }
 
     return report;
+  }
+
+  /**
+   * REQ-076 — Per-main-category report.
+   *
+   * Replicates the Daily Report's revenue / costs / gross-profit / items
+   * shape but scoped to one registered main-category slug. Reuses the
+   * same order-fetch + item-aggregation logic as `generateDailySummary`
+   * / `generateDateRangeReport`. Payments + tips are deliberately
+   * omitted (order-level data doesn't cleanly attribute to a single
+   * main when an order contains multiple categories). The aggregate
+   * Daily Report continues to expose those breakdowns.
+   *
+   * `orderCount` = distinct orders containing at least one item whose
+   * `mainCategory === mainCategorySlug`. Multi-main orders count toward
+   * each main's report; sums won't tie out to the aggregate Daily
+   * Report's order count by design.
+   *
+   * Label resolution: looks up the slug in
+   * `SystemSettingsService.getMainCategories()` at report time. If the
+   * slug isn't registered (e.g. just deleted), falls back to the slug
+   * itself as the label and continues — the operator can still see what
+   * data exists for the orphan slug.
+   *
+   * @requirement REQ-076
+   * @requirement SRS REQ-MENUMGT-006
+   */
+  static async generateMainCategoryReport(
+    startDate: Date,
+    endDate: Date,
+    mainCategorySlug: string
+  ): Promise<MainCategoryReport> {
+    await connectDB();
+
+    const start = startOfDayWAT(startDate);
+    const end = endOfDayWAT(endDate);
+
+    // Same paid-orders fetch as the daily / range reports — keeps the
+    // numbers aligned with the aggregate report for the same date(s).
+    const orders = await OrderModel.find({
+      paymentStatus: 'paid',
+      $or: [
+        { businessDate: { $gte: start, $lte: end } },
+        {
+          businessDate: { $exists: false },
+          paidAt: { $gte: start, $lte: end },
+        },
+        { businessDate: null, paidAt: { $gte: start, $lte: end } },
+      ],
+    }).lean();
+
+    // Resolve label from the registry. Fallback to slug if absent.
+    const mainCategories = await SystemSettingsService.getMainCategories();
+    const mainCategoryLabel =
+      mainCategories.find((m) => m.slug === mainCategorySlug)?.label ??
+      mainCategorySlug;
+
+    // Aggregate by menuItemId — match the same `itemMap` pattern used by
+    // generateDailySummary. Filtering by mainCategory happens AFTER the
+    // lookup because the order-embedded item doesn't carry that field.
+    const itemMap = new Map<
+      string,
+      {
+        name: string;
+        category: string;
+        mainCategory: string;
+        quantity: number;
+        price: number;
+        costPerUnit: number;
+      }
+    >();
+    const ordersContainingMain = new Set<string>();
+
+    for (const order of orders) {
+      let orderTouchedMain = false;
+      for (const item of order.items) {
+        const itemId = item.menuItemId.toString();
+
+        if (itemMap.has(itemId)) {
+          const existing = itemMap.get(itemId)!;
+          existing.quantity += item.quantity;
+          if (existing.mainCategory === mainCategorySlug) {
+            orderTouchedMain = true;
+          }
+        } else {
+          const menuItem = await MenuItemModel.findById(item.menuItemId).lean();
+          if (!menuItem) continue;
+          itemMap.set(itemId, {
+            name: item.name,
+            category: menuItem.category,
+            mainCategory: menuItem.mainCategory,
+            quantity: item.quantity,
+            price: item.price,
+            costPerUnit: item.costPerUnit || menuItem.costPerUnit || 0,
+          });
+          if (menuItem.mainCategory === mainCategorySlug) {
+            orderTouchedMain = true;
+          }
+        }
+      }
+      if (orderTouchedMain) {
+        ordersContainingMain.add(order._id.toString());
+      }
+    }
+
+    // Filter aggregated items to the selected main + build line totals.
+    const revenueItems: MainCategoryReport['revenue']['items'] = [];
+    const costItems: MainCategoryReport['costs']['items'] = [];
+    let totalRevenue = 0;
+    let totalCost = 0;
+    let itemCount = 0;
+
+    for (const [, item] of itemMap) {
+      if (item.mainCategory !== mainCategorySlug) continue;
+      const lineRevenue = item.price * item.quantity;
+      const lineCost = item.costPerUnit * item.quantity;
+      revenueItems.push({
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        total: lineRevenue,
+      });
+      costItems.push({
+        name: item.name,
+        quantity: item.quantity,
+        costPerUnit: item.costPerUnit,
+        total: lineCost,
+      });
+      totalRevenue += lineRevenue;
+      totalCost += lineCost;
+      itemCount += item.quantity;
+    }
+
+    const grossProfit = totalRevenue - totalCost;
+    const grossProfitMargin =
+      totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
+
+    return {
+      date: startDate,
+      startDate,
+      endDate,
+      mainCategorySlug,
+      mainCategoryLabel,
+      revenue: {
+        items: revenueItems,
+        totalRevenue,
+        itemCount,
+      },
+      costs: {
+        items: costItems,
+        totalCost,
+      },
+      grossProfit,
+      grossProfitMargin,
+      orderCount: ordersContainingMain.size,
+    };
   }
 }

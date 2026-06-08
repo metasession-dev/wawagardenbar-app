@@ -2,7 +2,10 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
-import type { DailySummaryReport } from '@/services/financial-report-service';
+import type {
+  DailySummaryReport,
+  MainCategoryReport,
+} from '@/services/financial-report-service';
 
 /**
  * Format currency for display
@@ -536,6 +539,226 @@ export function exportReportAsCSV(
   );
   link.style.visibility = 'hidden';
 
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// REQ-076 — Per-main-category report exports
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * REQ-076 — Compute the date-range portion of a filename / header for a
+ * per-main report. Same date for single-day; two dates joined for range.
+ */
+function mainCategoryDateLabel(report: MainCategoryReport): string {
+  const start = report.startDate ?? report.date;
+  const end = report.endDate ?? report.date;
+  const startStr = format(start, 'yyyy-MM-dd');
+  const endStr = format(end, 'yyyy-MM-dd');
+  return startStr === endStr ? startStr : `${startStr}-${endStr}`;
+}
+
+/**
+ * REQ-076 — Filename for a per-main-category export. Pattern:
+ *   `main-category-report-{slug}-{YYYY-MM-DD}[-{YYYY-MM-DD}].{ext}`
+ */
+export function mainCategoryReportFilename(
+  report: MainCategoryReport,
+  extension: 'pdf' | 'xlsx' | 'csv'
+): string {
+  return `main-category-report-${report.mainCategorySlug}-${mainCategoryDateLabel(
+    report
+  )}.${extension}`;
+}
+
+/**
+ * REQ-076 — Per-main-category report PDF export. Mirrors the structure
+ * of `exportReportAsPDF` (title, header, items tables, summary block)
+ * but scoped to one main and without payment / tip sections.
+ */
+export function exportMainCategoryReportAsPDF(
+  report: MainCategoryReport
+): void {
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  doc.setFontSize(20);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Wawa Garden Bar', pageWidth / 2, 15, { align: 'center' });
+
+  doc.setFontSize(14);
+  doc.text(`${report.mainCategoryLabel} Report`, pageWidth / 2, 24, {
+    align: 'center',
+  });
+
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Period: ${mainCategoryDateLabel(report)}`, pageWidth / 2, 31, {
+    align: 'center',
+  });
+
+  // Summary cards
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Summary', 14, 44);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.text(`Revenue: ${formatCurrency(report.revenue.totalRevenue)}`, 14, 52);
+  doc.text(`Cost: ${formatCurrency(report.costs.totalCost)}`, 14, 58);
+  doc.text(`Gross Profit: ${formatCurrency(report.grossProfit)}`, 14, 64);
+  doc.text(`Margin: ${report.grossProfitMargin.toFixed(2)}%`, 14, 70);
+  doc.text(`Items sold: ${report.revenue.itemCount}`, 14, 76);
+  doc.text(`Orders: ${report.orderCount}`, 14, 82);
+
+  // Revenue table
+  autoTable(doc, {
+    startY: 90,
+    head: [['Item', 'Qty', 'Unit Price', 'Line Total']],
+    body: report.revenue.items.map((i) => [
+      i.name,
+      i.quantity,
+      formatCurrency(i.price),
+      formatCurrency(i.total),
+    ]),
+    headStyles: { fillColor: [22, 160, 133] },
+    margin: { left: 14, right: 14 },
+  });
+
+  // Costs table — start after the revenue table
+  const finalY =
+    (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable
+      ?.finalY ?? 90;
+  autoTable(doc, {
+    startY: finalY + 6,
+    head: [['Item', 'Qty', 'Cost/Unit', 'Line Total']],
+    body: report.costs.items.map((i) => [
+      i.name,
+      i.quantity,
+      formatCurrency(i.costPerUnit),
+      formatCurrency(i.total),
+    ]),
+    headStyles: { fillColor: [192, 57, 43] },
+    margin: { left: 14, right: 14 },
+  });
+
+  // Honesty footer
+  const pageHeight = doc.internal.pageSize.getHeight();
+  doc.setFontSize(8);
+  doc.setTextColor(120);
+  doc.text(
+    'Note: Payments + tips are aggregate-only (see Daily Report). Multi-main orders count toward each main’s report.',
+    14,
+    pageHeight - 10
+  );
+
+  doc.save(mainCategoryReportFilename(report, 'pdf'));
+}
+
+/**
+ * REQ-076 — Per-main-category report Excel export. 3 sheets: Summary,
+ * Revenue, Costs.
+ */
+export function exportMainCategoryReportAsExcel(
+  report: MainCategoryReport
+): void {
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1: Summary
+  const summary = [
+    ['Wawa Garden Bar'],
+    [`${report.mainCategoryLabel} Report`],
+    [`Period: ${mainCategoryDateLabel(report)}`],
+    [],
+    ['Metric', 'Value'],
+    ['Revenue', report.revenue.totalRevenue],
+    ['Cost', report.costs.totalCost],
+    ['Gross Profit', report.grossProfit],
+    ['Margin (%)', Number(report.grossProfitMargin.toFixed(2))],
+    ['Items sold', report.revenue.itemCount],
+    ['Orders', report.orderCount],
+    [],
+    [
+      'Note: Payments + tips are aggregate-only (see Daily Report). Multi-main orders count toward each main’s report.',
+    ],
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summary), 'Summary');
+
+  // Sheet 2: Revenue
+  const revenueRows: Array<Array<string | number>> = [
+    ['Item', 'Qty', 'Unit Price', 'Line Total'],
+    ...report.revenue.items.map((i) => [i.name, i.quantity, i.price, i.total]),
+  ];
+  XLSX.utils.book_append_sheet(
+    wb,
+    XLSX.utils.aoa_to_sheet(revenueRows),
+    'Revenue'
+  );
+
+  // Sheet 3: Costs
+  const costRows: Array<Array<string | number>> = [
+    ['Item', 'Qty', 'Cost/Unit', 'Line Total'],
+    ...report.costs.items.map((i) => [
+      i.name,
+      i.quantity,
+      i.costPerUnit,
+      i.total,
+    ]),
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(costRows), 'Costs');
+
+  XLSX.writeFile(wb, mainCategoryReportFilename(report, 'xlsx'));
+}
+
+/**
+ * REQ-076 — Per-main-category report CSV export. Returns the CSV
+ * string in tests that don't need a file write. The browser download
+ * path runs only when `download === true`.
+ *
+ * The CSV string content is the same in both modes — tests assert on
+ * it directly without mocking the browser DOM.
+ */
+export function buildMainCategoryReportCSV(report: MainCategoryReport): string {
+  const lines: string[] = [];
+  lines.push('Wawa Garden Bar');
+  lines.push(`${report.mainCategoryLabel} Report`);
+  lines.push(`Period,${mainCategoryDateLabel(report)}`);
+  lines.push('');
+  lines.push('Metric,Value');
+  lines.push(`Revenue,${report.revenue.totalRevenue}`);
+  lines.push(`Cost,${report.costs.totalCost}`);
+  lines.push(`Gross Profit,${report.grossProfit}`);
+  lines.push(`Margin (%),${report.grossProfitMargin.toFixed(2)}`);
+  lines.push(`Items sold,${report.revenue.itemCount}`);
+  lines.push(`Orders,${report.orderCount}`);
+  lines.push('');
+  lines.push('Revenue items');
+  lines.push('Item,Qty,Unit Price,Line Total');
+  for (const i of report.revenue.items) {
+    lines.push(`${i.name},${i.quantity},${i.price},${i.total}`);
+  }
+  lines.push('');
+  lines.push('Cost items');
+  lines.push('Item,Qty,Cost/Unit,Line Total');
+  for (const i of report.costs.items) {
+    lines.push(`${i.name},${i.quantity},${i.costPerUnit},${i.total}`);
+  }
+  lines.push('');
+  lines.push(
+    'Note: Payments + tips are aggregate-only (see Daily Report). Multi-main orders count toward each main’s report.'
+  );
+  return lines.join('\n');
+}
+
+export function exportMainCategoryReportAsCSV(
+  report: MainCategoryReport
+): void {
+  const csv = buildMainCategoryReportCSV(report);
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = mainCategoryReportFilename(report, 'csv');
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

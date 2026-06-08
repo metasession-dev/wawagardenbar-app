@@ -17,7 +17,7 @@ export default async function ReportsPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {/* Daily Reports Card */}
-        <a 
+        <a
           href="/dashboard/reports/daily"
           className="rounded-lg border bg-card p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer hover:border-primary"
         >
@@ -30,15 +30,30 @@ export default async function ReportsPage() {
           </div>
         </a>
 
+        {/* REQ-076 — Per-main-category report */}
+        <a
+          href="/dashboard/reports/by-main-category"
+          className="rounded-lg border bg-card p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer hover:border-primary"
+          data-testid="by-main-category-tile"
+        >
+          <h3 className="text-lg font-semibold mb-2">
+            Per-Main-Category Report
+          </h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Revenue, costs + gross profit scoped to one main category at a time
+          </p>
+          <div className="text-xs text-primary font-semibold">
+            View Report →
+          </div>
+        </a>
+
         {/* Weekly Reports Card */}
         <div className="rounded-lg border bg-card p-6 shadow-sm hover:shadow-md transition-shadow">
           <h3 className="text-lg font-semibold mb-2">Weekly Report</h3>
           <p className="text-sm text-muted-foreground mb-4">
             Weekly performance trends and comparisons
           </p>
-          <div className="text-xs text-muted-foreground">
-            Coming soon...
-          </div>
+          <div className="text-xs text-muted-foreground">Coming soon...</div>
         </div>
 
         {/* Monthly Reports Card */}
@@ -47,9 +62,7 @@ export default async function ReportsPage() {
           <p className="text-sm text-muted-foreground mb-4">
             Comprehensive monthly financial overview
           </p>
-          <div className="text-xs text-muted-foreground">
-            Coming soon...
-          </div>
+          <div className="text-xs text-muted-foreground">Coming soon...</div>
         </div>
 
         {/* Expense Analysis Card */}
@@ -58,13 +71,11 @@ export default async function ReportsPage() {
           <p className="text-sm text-muted-foreground mb-4">
             Detailed breakdown of direct costs and operating expenses
           </p>
-          <div className="text-xs text-muted-foreground">
-            Coming soon...
-          </div>
+          <div className="text-xs text-muted-foreground">Coming soon...</div>
         </div>
 
         {/* Inventory Reports Card */}
-        <a 
+        <a
           href="/dashboard/reports/inventory"
           className="rounded-lg border bg-card p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer hover:border-primary"
         >
@@ -83,13 +94,11 @@ export default async function ReportsPage() {
           <p className="text-sm text-muted-foreground mb-4">
             Revenue analysis by category, time, and payment method
           </p>
-          <div className="text-xs text-muted-foreground">
-            Coming soon...
-          </div>
+          <div className="text-xs text-muted-foreground">Coming soon...</div>
         </div>
 
         {/* Profitability Report Card */}
-        <a 
+        <a
           href="/dashboard/reports/profitability"
           className="rounded-lg border bg-card p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer hover:border-primary"
         >
@@ -104,9 +113,12 @@ export default async function ReportsPage() {
       </div>
 
       <div className="rounded-lg border bg-muted/50 p-6 mt-6">
-        <h3 className="text-lg font-semibold mb-2">📊 Reports Implementation</h3>
+        <h3 className="text-lg font-semibold mb-2">
+          📊 Reports Implementation
+        </h3>
         <p className="text-sm text-muted-foreground mb-4">
-          The reports system is currently under development. Each report will provide:
+          The reports system is currently under development. Each report will
+          provide:
         </p>
         <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
           <li>Interactive date range selection</li>
@@ -116,7 +128,8 @@ export default async function ReportsPage() {
           <li>Detailed breakdowns by category</li>
         </ul>
         <p className="text-sm text-muted-foreground mt-4">
-          In the meantime, you can use the <strong>Expenses</strong> page to track and analyze your business expenses.
+          In the meantime, you can use the <strong>Expenses</strong> page to
+          track and analyze your business expenses.
         </p>
       </div>
     </div>

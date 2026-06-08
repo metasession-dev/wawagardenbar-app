@@ -326,7 +326,12 @@ function MainCategoryRow({
   isPending: boolean;
   onUpdate: (
     slug: string,
-    patch: { label?: string; isEnabled?: boolean; icon?: string },
+    patch: {
+      label?: string;
+      isEnabled?: boolean;
+      icon?: string;
+      portionsEnabled?: boolean;
+    },
     successMessage: string
   ) => void;
   onRename: (slug: string) => void;
@@ -345,7 +350,7 @@ function MainCategoryRow({
         <GripVertical className="h-5 w-5" />
       </div>
 
-      <div className="grid flex-1 gap-4 md:grid-cols-4 items-center">
+      <div className="grid flex-1 gap-4 md:grid-cols-5 items-center">
         <div className="space-y-1">
           <Label className="text-xs text-muted-foreground">Slug</Label>
           <div className="font-mono text-sm flex items-center gap-2">
@@ -416,6 +421,30 @@ function MainCategoryRow({
           />
           <Label className="text-xs font-normal text-muted-foreground">
             {cat.isEnabled ? 'Visible' : 'Hidden'}
+          </Label>
+        </div>
+
+        {/* REQ-075 — Portions toggle controls whether the Add / Edit
+            Menu Item forms surface the Half / Quarter portion section
+            for items under this main category. Customer-facing pages
+            honour the item's stored portionOptions flags regardless,
+            so toggling this off doesn't strip portions from existing
+            items — only hides the form section for new edits. */}
+        <div className="flex items-center gap-2">
+          <Switch
+            checked={cat.portionsEnabled === true}
+            onCheckedChange={(checked) =>
+              onUpdate(
+                cat.slug,
+                { portionsEnabled: checked },
+                `Portions ${checked ? 'enabled' : 'disabled'} for "${cat.label}"`
+              )
+            }
+            disabled={isPending}
+            data-testid={`portions-toggle-${cat.slug}`}
+          />
+          <Label className="text-xs font-normal text-muted-foreground">
+            {cat.portionsEnabled === true ? 'Portions on' : 'Portions off'}
           </Label>
         </div>
 

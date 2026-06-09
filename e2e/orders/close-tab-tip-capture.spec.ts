@@ -39,30 +39,72 @@ async function readTipsBreakdown(page: Page): Promise<{
 }> {
   return page.evaluate(() => {
     const result = { total: 0, cash: 0, card: 0, transfer: 0 };
+
+    const parseNGN = (s: string): number | null => {
+      const m = s.match(/(?:₦|NGN)\s*([\d,]+(?:\.\d+)?)/);
+      return m ? parseFloat(m[1].replace(/,/g, '')) : null;
+    };
+
+    // Find the Tips Received section heading + extract `... total`
+    // from the heading's text.
     const sectionHeading = Array.from(document.querySelectorAll('h3')).find(
       (h) => /Tips Received/i.test(h.textContent ?? '')
     );
     if (!sectionHeading) return result;
+    const totalAmount = parseNGN(sectionHeading.textContent ?? '');
+    if (totalAmount != null) result.total = totalAmount;
 
-    const totalMatch = (sectionHeading.textContent ?? '').match(
-      /(?:₦|NGN)\s*([\d,]+(?:\.\d+)?)\s*total/i
-    );
-    if (totalMatch) result.total = parseFloat(totalMatch[1].replace(/,/g, ''));
-
+    // Find the grid sibling. The tip-cards section lives directly
+    // under the heading in `tips-section.tsx`.
     const grid = sectionHeading.nextElementSibling;
     if (!grid) return result;
-    const cards = grid.querySelectorAll('[class*="rounded"]');
-    for (const card of cards) {
-      const titleText =
-        card.querySelector('[class*="font-medium"]')?.textContent?.trim() ?? '';
-      const amountText =
-        card.querySelector('[class*="text-2xl"]')?.textContent?.trim() ?? '';
-      const m = amountText.match(/(?:₦|NGN)\s*([\d,]+(?:\.\d+)?)/);
-      if (!m) continue;
-      const amount = parseFloat(m[1].replace(/,/g, ''));
-      if (titleText === 'Cash tips') result.cash = amount;
-      else if (titleText === 'POS / Card tips') result.card = amount;
-      else if (titleText === 'Transfer tips') result.transfer = amount;
+
+    // Walk every descendant element under the grid. For each one whose
+    // textContent starts with a known title ("Cash tips" / "POS / Card
+    // tips" / etc.) treat that element as the Card and look for ₦N
+    // anywhere inside it. More forgiving than relying on specific
+    // sub-class selectors (`[class*="text-2xl"]`) that quietly drift
+    // when CardContent / CardHeader markup changes.
+    const labels: Array<{ label: string; key: 'cash' | 'card' | 'transfer' }> =
+      [
+        { label: 'Cash tips', key: 'cash' },
+        { label: 'POS / Card tips', key: 'card' },
+        { label: 'Transfer tips', key: 'transfer' },
+      ];
+
+    const all = Array.from(grid.querySelectorAll('*')) as HTMLElement[];
+    for (const { label, key } of labels) {
+      // Locate the element whose own textContent (excluding children
+      // we'd over-greedily inherit from parents) STARTS with the label.
+      const titleEl = all.find((el) => {
+        const txt = (el.textContent ?? '').trim();
+        return txt === label || txt.startsWith(label + '\n');
+      });
+      if (!titleEl) continue;
+      // The amount lives in a sibling element of the title's CardHeader,
+      // i.e. inside the parent Card. Walk up until we find an ancestor
+      // containing a ₦ amount text.
+      let node: HTMLElement | null = titleEl.parentElement;
+      while (node && node !== grid) {
+        const amount = parseNGN(node.textContent ?? '');
+        // Reject the section-wide total ("₦300 total") — that text
+        // includes the word "total" or "tip"; the per-card amount does
+        // NOT include "total".
+        if (
+          amount != null &&
+          !/total/i.test(node.textContent ?? '') &&
+          // Don't match an ancestor that contains MULTIPLE labels
+          // (i.e. wrapped grid containing all cards).
+          !labels.some(
+            (l) =>
+              l.label !== label && (node?.textContent ?? '').includes(l.label)
+          )
+        ) {
+          result[key] = amount;
+          break;
+        }
+        node = node.parentElement;
+      }
     }
     return result;
   });

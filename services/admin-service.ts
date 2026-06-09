@@ -452,6 +452,12 @@ export class AdminService {
 
     const oldPermissions = admin.permissions;
     admin.permissions = data.permissions;
+    // `permissions` is Schema.Types.Mixed; Mongoose can't auto-detect
+    // changes to a Mixed path even when the whole value is reassigned.
+    // markModified is the documented pattern. Without it, REQ-076's
+    // `mainCategoryReportAccess` (a new sub-key the schema doesn't
+    // know about) gets silently dropped on save.
+    admin.markModified('permissions');
     await admin.save();
 
     const auditUser = await this.getUserForAudit(data.updatedBy);

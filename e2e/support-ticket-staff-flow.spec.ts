@@ -171,6 +171,13 @@ csrTest.describe('REQ-064 staff flow — queue → detail → reply → status',
       // The action revalidates the route; verify the new state on the page.
       await expect(statusSelect).toContainText(/resolved/i, { timeout: 5000 });
 
+      // `updateSupportStatusAction` fires inside startTransition (React 18+)
+      // → setStatus updates the trigger synchronously, but the server
+      // roundtrip + revalidatePath complete async. Wait for network to
+      // settle so the DB query below sees the persisted state, not the
+      // mid-flight optimistic state.
+      await page.waitForLoadState('networkidle');
+
       // DB-side verification: reply persisted + status flipped.
       const persisted = await readTicket(seeded.ticketId);
       expect(persisted?.status).toBe('resolved');

@@ -102,6 +102,48 @@ async function deleteTicketsByPhone(phone: string) {
   }
 }
 
+/**
+ * REQ-064 routing matrix: `support_text` from a NEW customer takes the
+ * welcome-template branch, NOT the ticket-create branch (intentional —
+ * new customers get a "here's how to reach us" template first; only
+ * already-engaged customers create tickets via the inbound bridge).
+ *
+ * To test the ticket-create branch we must seed the customer as
+ * `active`: phoneVerified + lastLoginAt within 30 days. Spec-local seed
+ * is cleaner than depending on UAT's drifting user data and matches
+ * the storage pattern used by REQ-073 / REQ-075 specs.
+ */
+async function seedActiveCustomer(phone: string): Promise<string> {
+  const { uri, dbName } = mongoConn();
+  const client = new MongoClient(uri);
+  try {
+    await client.connect();
+    const result = await client.db(dbName).collection('users').insertOne({
+      phone,
+      phoneVerified: true,
+      lastLoginAt: new Date(),
+      isGuest: false,
+      accountStatus: 'active',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    return String(result.insertedId);
+  } finally {
+    await client.close();
+  }
+}
+
+async function deleteUserByPhone(phone: string) {
+  const { uri, dbName } = mongoConn();
+  const client = new MongoClient(uri);
+  try {
+    await client.connect();
+    await client.db(dbName).collection('users').deleteMany({ phone });
+  } finally {
+    await client.close();
+  }
+}
+
 async function postInbound(
   request: APIRequestContext,
   payload: unknown
@@ -132,6 +174,7 @@ csrTest.describe('REQ-064 WhatsApp inbound → support ticket bridge', () => {
   csrTest.afterEach(async () => {
     if (phone) {
       await deleteTicketsByPhone(phone);
+      await deleteUserByPhone(phone);
       phone = null;
     }
   });
@@ -154,6 +197,13 @@ csrTest.describe('REQ-064 WhatsApp inbound → support ticket bridge', () => {
       guard(csrTest.skip, await isAuthenticated(page));
 
       phone = uniqueDigits();
+      // REQ-064 routing: `support_text` from a NEW customer takes the
+      // welcome-template branch (intentional — new customers get a
+      // "here's how to reach us" message first). Only `active`
+      // customers (phoneVerified + recent lastLoginAt) reach the
+      // ticket-create branch. Seed the customer in that state.
+      await seedActiveCustomer(phone);
+
       const body =
         'Hi, I think the delivery I got an hour ago was missing the sides, can someone check please?';
       const messageId = `wamid.E2E-${Date.now()}`;

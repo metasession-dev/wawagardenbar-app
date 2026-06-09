@@ -306,7 +306,23 @@ export async function seedAdminWithReportAccess(
     permissions.mainCategoryReportAccess = access;
   }
 
-  const username = `${prefix}-${Date.now().toString(36)}`;
+  // User-model enforces `username` maxlength: 30. The raw insertOne below
+  // bypasses Mongoose validation on INSERT, but the production paths the
+  // spec exercises (`authenticate()` → `admin.save()` to update
+  // lastLoginAt, `updateAdminPermissions()` → `admin.save()`) run full
+  // validation and reject a too-long username with
+  // `User validation failed: username (length 39) > 30`.
+  //
+  // The literal-prefix pattern (e.g. `e2e-req076-perms-XXXXXX-edit-YYYYYY`)
+  // produced 35-49 char usernames that silently violated this on every
+  // E2E run. Compress into a fixed-budget form: short stable prefix +
+  // run-local short id, total ≤ 30.
+  const shortId = Date.now().toString(36).slice(-6);
+  const shortPrefixHash = prefix
+    .replace(/[^a-z0-9]/g, '')
+    .slice(0, 18) // leave room for "-" + 6 char shortId + "-" + "e2e" tag
+    .toLowerCase();
+  const username = `e2e-${shortPrefixHash}-${shortId}`.slice(0, 30);
 
   return withDb(async (db) => {
     // `phone` has a unique index on UAT (users.phone_1). Multiple

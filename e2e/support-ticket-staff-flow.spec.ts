@@ -171,12 +171,15 @@ csrTest.describe('REQ-064 staff flow — queue → detail → reply → status',
       // The action revalidates the route; verify the new state on the page.
       await expect(statusSelect).toContainText(/resolved/i, { timeout: 5000 });
 
-      // `updateSupportStatusAction` fires inside startTransition (React 18+)
-      // → setStatus updates the trigger synchronously, but the server
-      // roundtrip + revalidatePath complete async. Wait for network to
-      // settle so the DB query below sees the persisted state, not the
-      // mid-flight optimistic state.
-      await page.waitForLoadState('networkidle');
+      // `updateSupportStatusAction` fires inside startTransition (React 18+).
+      // The trigger updates synchronously; the server roundtrip is async
+      // and disables the combobox while in flight (`disabled={isPending}`
+      // in the Select wrapper). `networkidle` is too coarse — it can
+      // settle before the action's POST starts, so the DB read below
+      // raced ahead and saw 'open'. Waiting for the combobox to become
+      // re-enabled is the deterministic signal that the action's full
+      // server roundtrip (including DB write + revalidatePath) is done.
+      await expect(statusSelect).not.toBeDisabled({ timeout: 10000 });
 
       // DB-side verification: reply persisted + status flipped.
       const persisted = await readTicket(seeded.ticketId);

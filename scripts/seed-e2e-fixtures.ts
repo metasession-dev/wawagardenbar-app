@@ -155,6 +155,7 @@ async function seedE2eFixtures() {
       minimumStock: 1,
       maximumStock: 50,
       unit: 'unit',
+      costPerUnit: 400, // schema-required (matches trackedMenuItem.costPerUnit)
       supplier: 'E2E Fixture Supplier',
       trackByLocation: true,
       locations: [

@@ -195,27 +195,15 @@ async function pickDateRange(
   startISO: string,
   endISO: string
 ): Promise<void> {
-  // The shadcn DateRangePicker renders a button with a calendar icon.
-  // It usually shows current placeholder; click to open the Calendar.
+  // The shadcn DateRangePicker trigger's accessible name is the
+  // currently-displayed date range (e.g. "Jun 09, 2026 - Jun 09, 2026"),
+  // not a static "Pick a date" placeholder. Match by 4-digit year inside
+  // the button text, with a fallback on the placeholder string for an
+  // empty initial state.
   const trigger = page
-    .locator('button')
-    .filter({ hasText: /Pick a date|Pick date|Today|—/ })
+    .getByRole('button', { name: /\d{4}|Pick a date/ })
     .first();
-  // Fallback: any button inside the controls block (the only popover
-  // trigger near the selector is the date picker).
-  let clicked = false;
-  try {
-    await trigger.click({ timeout: 2000 });
-    clicked = true;
-  } catch {
-    // try a more specific locator anchored on the calendar icon
-    await page
-      .getByRole('button', { name: /pick a date|calendar/i })
-      .first()
-      .click({ timeout: 2000 });
-    clicked = true;
-  }
-  if (!clicked) throw new Error('Could not open DateRangePicker calendar');
+  await trigger.click({ timeout: 5000 });
 
   // Navigate to target month — click "Go to previous month" button until
   // the displayed caption matches the target. react-day-picker exposes

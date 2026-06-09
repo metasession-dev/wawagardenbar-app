@@ -80,19 +80,17 @@ test.describe('REQ-076 — Admin Main-Category Report Access editor (REQ-MENUMGT
     // Currently unrestricted (from beforeAll seed). Untick.
     const unrestricted = page.getByTestId('unrestricted-checkbox');
     await unrestricted.click();
-    // Now per-main checkboxes are enabled. Tick food + drinks.
-    const foodCheckbox = page
+    // Now per-main checkboxes are enabled. Tick food + drinks via the
+    // Radix Checkbox's button role — simpler + more robust than the
+    // testid-wrapper-then-child-button chain (which was flaky in CI).
+    await page
       .getByTestId('main-category-checkbox-food')
       .locator('button[role="checkbox"]')
-      .first()
-      .or(page.getByTestId('main-category-checkbox-food').locator('button'));
-    await foodCheckbox.click();
-    const drinksCheckbox = page
+      .click();
+    await page
       .getByTestId('main-category-checkbox-drinks')
       .locator('button[role="checkbox"]')
-      .first()
-      .or(page.getByTestId('main-category-checkbox-drinks').locator('button'));
-    await drinksCheckbox.click();
+      .click();
 
     // Save
     await page.getByRole('button', { name: /save changes/i }).click();
@@ -127,13 +125,11 @@ test.describe('REQ-076 — Admin Main-Category Report Access editor (REQ-MENUMGT
     // previous test, click to toggle off.
     await page
       .getByTestId('main-category-checkbox-food')
-      .locator('button')
-      .first()
+      .locator('button[role="checkbox"]')
       .click();
     await page
       .getByTestId('main-category-checkbox-drinks')
-      .locator('button')
-      .first()
+      .locator('button[role="checkbox"]')
       .click();
 
     await page.getByRole('button', { name: /save changes/i }).click();

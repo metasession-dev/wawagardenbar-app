@@ -200,6 +200,17 @@ async function loginAs(
 ): Promise<void> {
   await page.goto('/admin/login');
   await page.waitForLoadState('networkidle');
+  // Dismiss the cookie consent banner if it's intercepting clicks on
+  // the Login button. It renders as a button "Got it" near the form;
+  // .catch() makes the dismissal best-effort.
+  await page
+    .getByRole('button', { name: /^got it$/i })
+    .first()
+    .click({ timeout: 1500 })
+    .catch(() => {
+      /* banner absent or already dismissed */
+    });
+
   // Username field — locate by label OR by name attribute
   const usernameField = page
     .getByLabel(/username|email/i)

@@ -186,8 +186,11 @@ async function pickSyntheticDate(
       .click({ timeout: 1500 })
       .catch(() => {});
   }
-  // single-day: click "1" twice
-  await page.getByRole('gridcell', { name: '1', exact: true }).first().click();
-  await page.getByRole('gridcell', { name: '1', exact: true }).first().click();
+  // Calendar day buttons have accessible names like
+  // "Wednesday, January 1st, 2020", not just "1". Match by the full
+  // ordinal date string. Single-day range = click same day twice.
+  const dayButton = /January 1st, 2020/;
+  await page.getByRole('button', { name: dayButton }).first().click();
+  await page.getByRole('button', { name: dayButton }).first().click();
   await page.keyboard.press('Escape');
 }

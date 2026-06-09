@@ -228,26 +228,40 @@ async function pickDateRange(
       });
   }
 
-  // Click day from
-  const dayFrom = String(new Date(startISO).getUTCDate());
-  await page
-    .getByRole('gridcell', { name: dayFrom, exact: true })
-    .first()
-    .click();
+  // Calendar day buttons have accessible names like
+  // "Wednesday, January 1st, 2020", not just the day number. Match
+  // each day-button by the full date string suffix.
+  const fromDate = new Date(startISO);
+  const toDate = new Date(endISO);
+  const fromLong = fromDate.toLocaleString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+  // The button text uses ordinal day ("1st", "2nd", …); compose by
+  // index. The regex is anchored on month + year + an ordinal day.
+  const ordinal = (n: number) => {
+    const s = ['th', 'st', 'nd', 'rd'];
+    const v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  };
+  const fromButton = new RegExp(
+    `${fromDate.toLocaleString('en-US', { month: 'long' })} ${ordinal(fromDate.getUTCDate())}, ${fromDate.getUTCFullYear()}`
+  );
+  await page.getByRole('button', { name: fromButton }).first().click();
 
   if (startISO !== endISO) {
-    const dayTo = String(new Date(endISO).getUTCDate());
-    await page
-      .getByRole('gridcell', { name: dayTo, exact: true })
-      .first()
-      .click();
+    const toButton = new RegExp(
+      `${toDate.toLocaleString('en-US', { month: 'long' })} ${ordinal(toDate.getUTCDate())}, ${toDate.getUTCFullYear()}`
+    );
+    await page.getByRole('button', { name: toButton }).first().click();
   } else {
     // Single-day range: click the same day twice
-    await page
-      .getByRole('gridcell', { name: dayFrom, exact: true })
-      .first()
-      .click();
+    await page.getByRole('button', { name: fromButton }).first().click();
   }
+  // Suppress unused variable warning — keep fromLong reference for
+  // future debugging if the regex changes.
+  void fromLong;
 
   // Close the calendar popover
   await page.keyboard.press('Escape');

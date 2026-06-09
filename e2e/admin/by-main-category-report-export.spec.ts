@@ -165,18 +165,12 @@ test.describe('REQ-076 — Per-main-category report exports (REQ-MENUMGT-006)', 
 async function pickSyntheticDate(
   page: import('@playwright/test').Page
 ): Promise<void> {
+  // Trigger's accessible name is the current date range (e.g.
+  // "Jun 09, 2026 - Jun 09, 2026") — match by 4-digit year.
   const trigger = page
-    .locator('button')
-    .filter({ hasText: /Pick a date|Pick date|Today|—/ })
+    .getByRole('button', { name: /\d{4}|Pick a date/ })
     .first();
-  try {
-    await trigger.click({ timeout: 2000 });
-  } catch {
-    await page
-      .getByRole('button', { name: /pick a date|calendar/i })
-      .first()
-      .click({ timeout: 2000 });
-  }
+  await trigger.click({ timeout: 5000 });
   const targetCaption = 'January 2020';
   for (let i = 0; i < 200; i += 1) {
     const captionVisible = await page

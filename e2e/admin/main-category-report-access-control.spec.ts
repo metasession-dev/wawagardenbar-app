@@ -211,9 +211,10 @@ async function loginAs(
     .first()
     .or(page.locator('input[name="password"]').first());
   await passwordField.fill(admin.password);
-  // Submit via the visible button
+  // Submit — button label is "Login" (one word) on the admin form;
+  // allow optional space and either variant.
   await page
-    .getByRole('button', { name: /sign in|log in/i })
+    .getByRole('button', { name: /^log\s*in$|^sign\s*in$/i })
     .first()
     .click();
   // Wait for the dashboard or redirect

@@ -64,6 +64,17 @@ export async function adminLoginAction(
         // login without needing a data backfill; only an explicit
         // toggle-off in the permissions editor sets this to false.
         incidentsAccess: admin.permissions.incidentsAccess !== false,
+        // REQ-076 — per-user main-category report access. Three valid
+        // shapes: undefined / null (back-compat, see all mains), [] (no
+        // access), or a slug array (restricted subset). Preserve the
+        // exact shape from the DB so the helper's resolution table
+        // distinguishes between "unrestricted" and "explicit deny-all".
+        ...(Array.isArray(admin.permissions.mainCategoryReportAccess)
+          ? {
+              mainCategoryReportAccess:
+                admin.permissions.mainCategoryReportAccess,
+            }
+          : {}),
       };
       console.log(
         '[Login] Saving permissions to session:',

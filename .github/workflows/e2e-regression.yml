@@ -60,6 +60,14 @@ jobs:
       E2E_SUPER_ADMIN_PASSWORD: E2eTest@2026!
       E2E_CSR_USERNAME: e2e-csr
       E2E_CSR_PASSWORD: E2eTest@2026!
+      # REQ-069 webhook specs sign synthetic payloads against these
+      # secrets; without them the signature comparison crashes
+      # server-side and the spec sees 500 instead of 401. Repo secrets
+      # set by operator (Settings → Secrets → Actions); must match the
+      # UAT server's values to keep parity.
+      MONNIFY_SECRET_KEY: ${{ secrets.MONNIFY_SECRET_KEY }}
+      PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
+      INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
 
     steps:
       - uses: actions/checkout@v4

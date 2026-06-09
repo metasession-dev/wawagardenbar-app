@@ -116,6 +116,68 @@ async function seedE2eFixtures() {
     });
     console.log('✓ Seeded 1 expense (operating / Utilities / ₦1,000)');
 
+    // ── trackByLocation inventory ──────────────────────────────────────────
+    // REQ-066 AC8 + AC9 specs (sale-point + over-sell) look up an
+    // Inventory document with: trackByLocation true + ≥2 locations +
+    // total stock ≥ 2. Specs MUTATE the document during their run
+    // (force one location empty, set defaultSalesLocation, etc.) — CI
+    // runs against a fresh Mongo each time so mutation persistence
+    // doesn't matter; the seed only needs to exist on first run.
+    //
+    // Idempotent via deletion by menuItemId before re-create.
+    const E2E_TBL_NAME_HINT = 'E2E-FIXTURE Track-By-Location';
+
+    // Pick (or create) a dedicated menu item so the seeded inventory
+    // doesn't conflict with the existing menu's stock-tracked items.
+    let trackedMenuItem = await MenuItemModel.findOne({
+      name: E2E_TBL_NAME_HINT,
+    });
+    if (!trackedMenuItem) {
+      trackedMenuItem = await MenuItemModel.create({
+        kind: 'menu-item',
+        name: E2E_TBL_NAME_HINT,
+        description: 'E2E fixture menu item for REQ-066 AC8/AC9 specs',
+        mainCategory: 'food',
+        category: foodMenuItem.category || 'food',
+        price: 1000,
+        costPerUnit: 400,
+        preparationTime: 1,
+        isAvailable: false, // hidden from customer menu
+        trackInventory: true,
+      });
+    }
+
+    await InventoryModel.deleteMany({ menuItemId: trackedMenuItem._id });
+
+    await InventoryModel.create({
+      menuItemId: trackedMenuItem._id,
+      currentStock: 10, // overwritten by pre-save hook from locations sum
+      minimumStock: 1,
+      maximumStock: 50,
+      unit: 'unit',
+      supplier: 'E2E Fixture Supplier',
+      trackByLocation: true,
+      locations: [
+        {
+          location: 'main-bar',
+          locationName: 'Main Bar',
+          currentStock: 5,
+          minimumStock: 1,
+        },
+        {
+          location: 'kitchen',
+          locationName: 'Kitchen',
+          currentStock: 5,
+          minimumStock: 1,
+        },
+      ],
+      defaultSalesLocation: 'main-bar',
+      preventOrdersWhenOutOfStock: false,
+    });
+    console.log(
+      '✓ Seeded 1 trackByLocation inventory (2 locations × 5 stock = 10 total) for REQ-066 AC8/AC9 specs'
+    );
+
     console.log('\n✅ E2E fixtures seeded.');
   } finally {
     await mongoose.connection.close();

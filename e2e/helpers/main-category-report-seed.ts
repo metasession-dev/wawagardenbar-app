@@ -309,9 +309,17 @@ export async function seedAdminWithReportAccess(
   const username = `${prefix}-${Date.now().toString(36)}`;
 
   return withDb(async (db) => {
+    // `phone` has a unique index on UAT (users.phone_1). Multiple
+    // seeded admins with `phone: null` collide on E11000. Generate
+    // a synthetic E.164-shaped phone per admin (a Nigeria-prefixed
+    // 13-char string derived from username) to avoid the clash.
+    // Real e2e admins from scripts/seed-e2e-admins.ts have phones
+    // assigned the same way.
+    const syntheticPhone = `+234${Date.now().toString().slice(-9)}${Math.floor(Math.random() * 10)}`;
     const result = await db.collection('users').insertOne({
       username,
       email: `${username}@e2e-req076.local`,
+      phone: syntheticPhone,
       password: hashed,
       firstName: 'E2E',
       lastName: 'REQ-076',

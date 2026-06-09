@@ -10,14 +10,18 @@ Maintain or bootstrap a project's e2e and visual regression test suite. Given an
 ## Scope
 
 **In scope**
+
 - End-to-end tests (UI-driven, user-flow level) in any framework.
 - Visual regression tests in any tool.
 - Maintaining an existing test pack — adding, updating, retiring tests.
 - Bootstrapping a new e2e suite when none exists, including framework selection, structure, configuration, a starter smoke test, and (optionally) CI integration.
 
 **Out of scope**
+
 - Unit, component, or API-only tests.
 - Performance, load, or accessibility audits, unless the project's e2e pack already includes them — in which case follow its lead.
+
+**Transport-layer specs that live in `e2e/`** (Node `fetch` against webhooks, `MongoClient` queries, `socket.io-client` assertions) ARE in scope — they exercise the deployed system end-to-end, just at the transport boundary rather than the UI. Their evidence form is `test-execution-summary.md`, not `evidenceShot` (see _Specs with no page object_ below). The "API-only tests" exclusion above means **unit-level** API contract tests that exercise a route handler in isolation, not transport-boundary integration tests against the running system.
 
 ## The workflow
 
@@ -29,10 +33,10 @@ Three things must be in hand before designing tests: the **test stack**, the **c
 
 **Detect the test stack** from the repo:
 
-- *E2E framework signals* — `playwright.config.*`, `cypress.config.*`, `wdio.conf.*`, `nightwatch.conf.*`, `codecept.conf.*`, `testcafe.config.*`. Failing that, check `package.json` dependencies for `@playwright/test`, `cypress`, `webdriverio`, `puppeteer`, `selenium-webdriver`, or Python equivalents (`pytest-playwright`, `selenium`, `splinter`).
-- *Test location* — common patterns: `e2e/`, `tests/e2e/`, `cypress/e2e/`, `playwright/`, `test/e2e/`, `__tests__/e2e/`.
-- *Visual regression tool* — Playwright or Cypress built-in snapshots, `cypress-image-snapshot`, `cypress-visual-regression`, `percy`, `applitools-eyes-*`, `chromatic`, `backstop.json`, `loki`, `reg-suit`. If none of these are present, the project doesn't do visual regression and you should only add it if the issue explicitly asks for it.
-- *Run command* — search `package.json` scripts for `e2e`, `test:e2e`, `cy:run`, `pw:test`. Failing that, check `Makefile`, `justfile`, `tox.ini`, `pyproject.toml`, CI config. If still unclear, ask.
+- _E2E framework signals_ — `playwright.config.*`, `cypress.config.*`, `wdio.conf.*`, `nightwatch.conf.*`, `codecept.conf.*`, `testcafe.config.*`. Failing that, check `package.json` dependencies for `@playwright/test`, `cypress`, `webdriverio`, `puppeteer`, `selenium-webdriver`, or Python equivalents (`pytest-playwright`, `selenium`, `splinter`).
+- _Test location_ — common patterns: `e2e/`, `tests/e2e/`, `cypress/e2e/`, `playwright/`, `test/e2e/`, `__tests__/e2e/`.
+- _Visual regression tool_ — Playwright or Cypress built-in snapshots, `cypress-image-snapshot`, `cypress-visual-regression`, `percy`, `applitools-eyes-*`, `chromatic`, `backstop.json`, `loki`, `reg-suit`. If none of these are present, the project doesn't do visual regression and you should only add it if the issue explicitly asks for it.
+- _Run command_ — search `package.json` scripts for `e2e`, `test:e2e`, `cy:run`, `pw:test`. Failing that, check `Makefile`, `justfile`, `tox.ini`, `pyproject.toml`, CI config. If still unclear, ask.
 
 **Detect the issue tracker** so you can read the input issue now and file defect issues later:
 
@@ -77,7 +81,7 @@ The bootstrap workflow:
 
 5. **Lay out the directory structure** for the project's expected scale: a top-level test directory (`e2e/` or whatever the framework's installer chose), with subfolders for specs, fixtures, page objects (or fixture-based equivalent), helpers, and visual specs if applicable. Write the structure as a short tree in your reply so the user can see what was created.
 
-6. **Configure for best practice** — base URL pointing at the project's dev server, retries on CI only, parallel workers, an HTML reporter, trace on first retry, `screenshot: 'only-on-failure'` (failure forensics — see *Evidence vs failure forensics* below for per-AC evidence capture), video retention on failure, and (if the framework supports it) auto-starting the dev server before the suite runs. Specifics per framework are in `references/bootstrap.md`.
+6. **Configure for best practice** — base URL pointing at the project's dev server, retries on CI only, parallel workers, an HTML reporter, trace on first retry, `screenshot: 'only-on-failure'` (failure forensics — see _Evidence vs failure forensics_ below for per-AC evidence capture), video retention on failure, and (if the framework supports it) auto-starting the dev server before the suite runs. Specifics per framework are in `references/bootstrap.md`.
 
 7. **Establish the abstraction pattern** — write one Page Object Model (or one fixture, depending on framework idioms) as a worked example so the change's tests in Phase 5 have a template to follow.
 
@@ -87,7 +91,7 @@ The bootstrap workflow:
 
 10. **Offer a CI job** — write the YAML (or equivalent) for the project's CI system, but **do not commit it without confirmation**. Show it inline first. On a **DevAudit** project, `.github/workflows/ci.yml` is generated and marked do-not-edit-manually — don't hand-edit it; instead drive the E2E gate from `sdlc-config.json`. If the suite must run against a **disposable local database** (the rule on any project with no separate test instance — never test against prod), set `e2e_setup_command` (e.g. `supabase start` + load schema + seed) and `e2e_env` (e.g. `E2E_LOCAL=1`, local coords, a dummy email key) so the gate severs production. See [Local-database E2E in CI](https://github.com/metasession-dev/DevAudit-Installer/blob/main/docs/e2e-local-db-ci.md), then `devaudit update` to regenerate.
 
-    **Upload both artefact shapes.** Playwright writes per-test artefacts to *two* places: `test-results/<spec>-<title>[-retryN]/{trace.zip, video.webm, *.png, error-context.md}` — **spec-named**, human-mappable — and `playwright-report/data/<content-hash>.zip` — **hash-named**, indexed by the HTML report. Ensure the project's CI uploads **both** `playwright-report/` (for the HTML viewer) and `test-results/` (for spec-named traces / videos / error-context). If only one is uploaded, propose a small follow-up PR to add the other — it costs ~80 MB of artefact storage and saves the operator from walking the HTML report's hash index to find a specific trace.
+    **Upload both artefact shapes.** Playwright writes per-test artefacts to _two_ places: `test-results/<spec>-<title>[-retryN]/{trace.zip, video.webm, *.png, error-context.md}` — **spec-named**, human-mappable — and `playwright-report/data/<content-hash>.zip` — **hash-named**, indexed by the HTML report. Ensure the project's CI uploads **both** `playwright-report/` (for the HTML viewer) and `test-results/` (for spec-named traces / videos / error-context). If only one is uploaded, propose a small follow-up PR to add the other — it costs ~80 MB of artefact storage and saves the operator from walking the HTML report's hash index to find a specific trace.
 
 11. **Write a short README** in the test directory explaining structure, how to run, how to add new tests, and how to update visual baselines. Future contributors (and the skill itself, on next invocation) will thank you.
 
@@ -107,11 +111,11 @@ You cannot write the right tests without understanding what changed and why. Spe
 
 3. **Read the surrounding app** enough to know how a real user reaches the changed area. Look at routing, navigation, and the one or two most adjacent features.
 
-4. **Write a short mental model** in your reply: *trigger → new behaviour → expected outcomes → likely side-effects*. If anything is ambiguous, ask the user before designing scenarios. Guesses here cascade into bad tests.
+4. **Write a short mental model** in your reply: _trigger → new behaviour → expected outcomes → likely side-effects_. If anything is ambiguous, ask the user before designing scenarios. Guesses here cascade into bad tests.
 
 ### Phase 3 — Design scenarios
 
-The goal is the *minimum* set of scenarios that, if they all pass, would give a reasonable person high confidence the change works as intended and hasn't broken adjacent functionality. "Minimum" is load-bearing: e2e tests are slow to run and expensive to maintain, and a bloated suite gets ignored.
+The goal is the _minimum_ set of scenarios that, if they all pass, would give a reasonable person high confidence the change works as intended and hasn't broken adjacent functionality. "Minimum" is load-bearing: e2e tests are slow to run and expensive to maintain, and a bloated suite gets ignored.
 
 Derive scenarios from these sources, in this order:
 
@@ -127,7 +131,7 @@ Derive scenarios from these sources, in this order:
 
 Resist padding. A new endpoint doesn't need a test that re-verifies login if login is already covered. Match the project's existing depth — if it covers one happy path per feature, don't add six.
 
-For each scenario, write a one-line description. Present the full grouped list to the user before writing any code: *"Here's the coverage I'd propose — anything to add or drop?"*
+For each scenario, write a one-line description. Present the full grouped list to the user before writing any code: _"Here's the coverage I'd propose — anything to add or drop?"_
 
 ### Phase 4 — Reconcile with existing tests
 
@@ -145,6 +149,7 @@ For the area touched by the change, look at what's already there.
 3. **Needs updating** — existing tests where the scenario is still valid but selectors, routes, or assertions have shifted.
 
 Present three lists to the user:
+
 - **To add** — new scenarios not already covered.
 - **To update** — existing tests needing adjustment.
 - **To delete** — genuinely obsolete tests, each with a one-line rationale.
@@ -162,6 +167,7 @@ Write the tests in the project's existing style.
 - **Check `references/common-patterns.md` before writing role-based locators** for component-library UI (shadcn/ui, Radix, MUI, etc.). A short appendix of known framework × library gotchas — `CardTitle` is a `<div>` not a heading; Radix `<Select>` renders two `role="combobox"` nodes; Next.js `<Link>` clicks don't fire network requests — saves a round-trip through a failing selector each time.
 
 For **visual regression** specifically:
+
 - New tests need baseline images. Generate them, but **do not auto-approve** — surface them for the user to verify before they're committed.
 - Use the project's existing breakpoints, viewports, and element-masking conventions.
 
@@ -176,7 +182,7 @@ Run the suite. Strategy:
 3. **For CI-driven verification, ensure the workflow accepts a subset input.** A `workflow_dispatch.inputs.specs` (or equivalent) lets a developer fire a scoped run without local infrastructure. Recommend setting this up if the project doesn't have it — the speed-up (~5–10 min vs ~30–60 min) is the difference between a tractable loop and a hated one.
 4. **For visual regression**, run the project's normal comparison mode against existing baselines.
 
-Triage every failure into one of these buckets *before* taking any action:
+Triage every failure into one of these buckets _before_ taking any action:
 
 **0. Read the page snapshot first.** Modern Playwright writes `test-results/<spec>-<title>[-retryN]/error-context.md` — a markdown accessibility-tree snapshot of the page at failure time. It's enough to triage selector / role / wait-condition failures without extracting the trace zip. Reach for the trace only when the snapshot is ambiguous (e.g. the failure depends on a transition or a network race the snapshot can't show).
 
@@ -191,7 +197,7 @@ Then bucket each failure:
 - **Visual diff — intended** — the snapshot changed because the change intentionally changed the UI. Update the baseline and surface it for user approval.
 - **Visual diff — unintended** — a snapshot changed somewhere the change shouldn't have affected. File it as a regression.
 
-**Then check for missed requirements.** For each numbered acceptance criterion from Phase 2, confirm at least one *passing* test covers it. An AC with no passing test — because no test was written, or because the test fails — is a missed requirement. File it.
+**Then check for missed requirements.** For each numbered acceptance criterion from Phase 2, confirm at least one _passing_ test covers it. An AC with no passing test — because no test was written, or because the test fails — is a missed requirement. File it.
 
 ### Phase 7 — Regression-pack handoff
 
@@ -199,7 +205,7 @@ After Phase 6 succeeds — green run, all ACs proved, defects filed for anything
 
 > **Every `*.spec.ts` (and `*.spec.tsx`) under `tests/e2e/` or `e2e/`.**
 
-There is no `regression/` sub-directory, no `@regression` tag, no manifest file. Being committed and merged to `develop` *is* the graduation step. Once that happens:
+There is no `regression/` sub-directory, no `@regression` tag, no manifest file. Being committed and merged to `develop` _is_ the graduation step. Once that happens:
 
 1. The next CI run (on this branch's PR, or on `develop` after merge) executes the new spec alongside every existing one.
 2. The evidenceShot helper sees `process.env.E2E_NEW_SPECS` (computed by CI as `git diff --diff-filter=A <merge-base>...HEAD`) and tags this branch's captures as `origin: 'feature'`.
@@ -213,7 +219,7 @@ Use whatever tracker integration you found in Phase 1: `gh issue create`, `glab 
 
 Each filed issue needs:
 
-- **Title** — short, specific, describes the symptom not the cause. *"Filter by status shows zero results when status=pending"*, not *"Filter broken"*.
+- **Title** — short, specific, describes the symptom not the cause. _"Filter by status shows zero results when status=pending"_, not _"Filter broken"_.
 - **Steps to reproduce** — numbered, minimal, exact.
 - **Expected vs actual** — on separate lines, no ambiguity.
 - **Environment** — branch, commit SHA, test command, browser/viewport if relevant.
@@ -228,13 +234,13 @@ Every defect filed from Phase 6 becomes `incident_report` evidence when (a) the 
 
 Classify the defect against this table when filing — the canonical version lives at `governance-doc-author/references/incident-classification.md`, mirrored here for the e2e workflow:
 
-| Defect characteristic | Frameworks/clauses attributed |
-|---|---|
-| **Any test failure / defect** (baseline — always) | `ISO29119.3.5.4` Test incident report |
-| **Ops impact** (downtime, persistent errors, perf regression, data corruption) | + `SOC2.CC7.2` System monitoring and incident response |
-| **Security vulnerability** (auth bypass, injection, data exposure) | + `SOC2.CC7.2` + relevant ISO 27001 controls |
-| **Personal data exposed / lost / mishandled** | + `GDPR.Art-33` (always — 72h supervisory notification) + `GDPR.Art-34` (when data subjects need notification) |
-| **AI/ML failure** (model hallucination, biased output, oversight bypass) | + relevant EU AI Act articles (`Art-9` risk, `Art-14` human oversight, `Art-15` accuracy/robustness) |
+| Defect characteristic                                                          | Frameworks/clauses attributed                                                                                  |
+| ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| **Any test failure / defect** (baseline — always)                              | `ISO29119.3.5.4` Test incident report                                                                          |
+| **Ops impact** (downtime, persistent errors, perf regression, data corruption) | + `SOC2.CC7.2` System monitoring and incident response                                                         |
+| **Security vulnerability** (auth bypass, injection, data exposure)             | + `SOC2.CC7.2` + relevant ISO 27001 controls                                                                   |
+| **Personal data exposed / lost / mishandled**                                  | + `GDPR.Art-33` (always — 72h supervisory notification) + `GDPR.Art-34` (when data subjects need notification) |
+| **AI/ML failure** (model hallucination, biased output, oversight bypass)       | + relevant EU AI Act articles (`Art-9` risk, `Art-14` human oversight, `Art-15` accuracy/robustness)           |
 
 **Baseline rule:** the first row is **mandatory**. Even a defect with no specific framework impact STILL produces a valid incident_report attributed to `ISO29119.3.5.4`. Never silently drop the artefact because "it's just a bug".
 
@@ -303,6 +309,15 @@ Wrap up with a summary the user can drop into the PR or ticket:
 - Defects filed — count, with links.
 - Missed requirements — count, with links.
 
+**Then feed the test-design record (devaudit#50).** The Stage 3 `test-execution-summary.md` (generated per `3-compile-evidence.md` Step 1a) carries a `## Test design` section at the top. Before Stage 3 finalises the file, populate that section with the design-time decisions this skill made, so the SDLC has a recorded trace that scope was _decided_, not implicit:
+
+- **Layers planned** — which of `unit | integration | e2e | visual | manual` applied to this REQ
+- **Layers covered** — same list with ✓ or `deferred`
+- **Deferrals** — explicit one-line rationale per deferred layer (`e2e N/A — schema-only, no UI yet` rather than silent absence)
+- **Skill invocation** — _"`e2e-test-engineer` invoked on turn N during Phase 2"_, with a turn pointer the reviewer can verify against the chat transcript
+
+If you authored or modified `e2e/**/*.spec.ts` directly without invoking this skill, that's a delegation gap — the `sdlc-implementer` Phase 2 audit (devaudit#132) will catch it before Phase 3. The honest record is: the skill ran (or didn't), the layers were chosen for stated reasons, and the test-execution-summary attribution points back at the chat turn where the decision happened.
+
 ---
 
 ## Evidence vs failure forensics
@@ -327,7 +342,7 @@ test('AC1: edit dialog opens with fields pre-filled', async ({ page }) => {
 - Call `evidenceShot` **immediately after** the AC-proving assertion, before navigating, closing dialogs, or any further interaction.
 - AC number is a separate argument (`ac: number`) — the helper composes the filename `REQ-XXX-AC<n>-<slug>.png`. The slug describes what the screenshot proves (`edit-dialog-prefilled`), NOT the AC number.
 - Slug is kebab-case lowercase (`[a-z0-9-]+`). Capitalised slugs, underscores, or spaces throw.
-- One **canonical** screenshot per AC; additional stage screenshots are tier-gated — see *Screenshot density per spec role* below.
+- One **canonical** screenshot per AC; additional stage screenshots are tier-gated — see _Screenshot density per spec role_ below.
 - Failure forensics stays untouched (`screenshot: 'only-on-failure'` + `trace: 'on-first-retry'`).
 
 The helper is shipped automatically into `e2e/helpers/evidence.ts` by the SDLC sync (node-stack consumers). Output lands at `compliance/evidence/<REQ-ID>/screenshots/REQ-XXX-AC<n>-<slug>.png` — commit these PNGs as part of the evidence pack so reviewers can corroborate the test-plan AC mapping.
@@ -350,7 +365,7 @@ test('AC7: stock dial completes the transition', async ({ page }) => {
   // Stage screenshots — fire while the spec is a feature artefact;
   // auto-suppress once it graduates into the regression pack.
   await openStockDial(page, item.id);
-  await evidenceShot(page, 'REQ-066', 7, 'dial-open',  { tier: 'feature' });
+  await evidenceShot(page, 'REQ-066', 7, 'dial-open', { tier: 'feature' });
   await advanceDial(page);
   await evidenceShot(page, 'REQ-066', 7, 'in-progress', { tier: 'feature' });
 
@@ -369,9 +384,30 @@ A reasonable default per AC:
 
 When to deviate:
 
-- **Single-shot ACs** (one assertion that's its own proof — e.g. *"the form submits and returns to the list"*) need only the canonical anchor. Don't manufacture stages just to hit the 1–3 band.
+- **Single-shot ACs** (one assertion that's its own proof — e.g. _"the form submits and returns to the list"_) need only the canonical anchor. Don't manufacture stages just to hit the 1–3 band.
 - **Long flows** (>3 meaningful transitions) keep all stages tier `'feature'`. The post-merge regression run still has the canonical anchor to corroborate the AC; the dense journey is on the feature PR for reviewers and in the audit-pack download for that release forever.
 - **Reviewer pushback that evidence feels thin** (single-shot per AC across a HIGH-risk REQ) almost always means tier `'feature'` stages are missing — add them on the feature branch where they actually fire, not after.
+
+### Specs with no page object — transport-layer evidence (devaudit#127)
+
+`evidenceShot` requires a Playwright `page` object. Specs that exercise behaviour at the transport layer — Node `fetch` against HTTP / webhook endpoints, `socket.io-client` connections, direct `MongoClient` queries, gRPC clients — have no `page` and **cannot call `evidenceShot`**. Examples from the wawagardenbar-app regression pack:
+
+- `e2e/payments/webhook-signature-rejection.spec.ts` — HMAC-SHA512 verification via Node `fetch`
+- `e2e/realtime/order-status-broadcast.spec.ts` — `socket.io-client` event assertion
+- `e2e/admin/menu-item-delete.spec.ts` — direct `MongoClient` + service-layer call
+
+These specs are still E2E (they exercise the deployed system end-to-end at the transport boundary), they belong in `e2e/`, and they run alongside UI specs. **Their evidence form is the per-spec entry in `test-execution-summary.md`** — the table of spec → pass/fail → asserted behaviour (signature rejected with HTTP 401, idempotent replay suppressed, broadcast received within Nms, soft-delete cascaded) is the load-bearing proof. The screenshot check is **N/A** for them; the release-completeness "behavioural proof" check is satisfied by the test-execution-summary upload alone.
+
+Discipline for transport specs:
+
+- Name the asserted behaviour in the test title using the same `[REQ-XXX][ACn]` bracket convention UI specs use. Reviewers grep on that.
+- The `test-execution-summary.md` table row should describe what the spec verified in operator-facing terms ("signature mismatch returns 401; payment row unchanged"), not in TypeScript-spec terms ("`expect(response.status).toBe(401)`").
+- If a transport spec _can_ be paired with a thin UI shim that screenshots the user-visible outcome (e.g. an admin dashboard surface that shows the rejected payment as "Failed — signature mismatch"), pair them — that buys back the screenshot evidence at the surface level. Otherwise: transport spec stands alone.
+- The portal's release-detail "screenshots" panel will show zero entries for purely-transport REQs; that's correct. Reviewers cross-reference `test-execution-summary.md` instead.
+
+This is **observation**, not gate-relaxation — these specs satisfy the SDLC evidence requirement; the screenshot mechanism doesn't apply.
+
+A `evidenceTrace(reqId, ac, slug, payload)` helper that writes a JSON sidecar (request/response/ledger shape) was considered as a Phase B; deferred until the portal grows a non-PNG evidence type. Today the test-execution-summary already carries the equivalent information at the table level.
 
 ---
 

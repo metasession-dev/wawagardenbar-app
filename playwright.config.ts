@@ -64,6 +64,19 @@ export default defineConfig({
     // Selects e2e/smoke/ + e2e/critical/ + the cross-REQ verification spec.
     // ~10-15 min wall-clock target per the 3-tier model (devaudit v0.1.53,
     // see SDLC/Test_Strategy.md § "E2E gating model — three tiers").
+    //
+    // `retries: 0` is load-bearing per #352: the retry-amplification of
+    // `describe.serial` blocks that write to the DB (create tab + record
+    // partial payment + close tab → daily-report-delta assertions) was
+    // the load-bearing #336 release-blocker. A retried serial group re-
+    // creates DB state, doubling the contribution to aggregate
+    // assertions. The critical tier's specs are refactored to use direct
+    // entity assertions (see SDLC/test-isolation.md) so they don't need
+    // retries to be reliable. Transient flakes manifest as a single PR-
+    // gate failure that the operator manually reruns — accepted trade for
+    // eliminating the spurious-doubling class entirely. Regression tier
+    // keeps `retries: 2` (top-level config) because the post-merge auto-
+    // issue safety net handles its noise.
     {
       name: 'critical',
       use: { ...devices['Desktop Chrome'] },
@@ -72,6 +85,7 @@ export default defineConfig({
         /e2e\/critical\/.*\.spec\.ts$/,
         /requirements-verification\.spec\.ts$/,
       ],
+      retries: 0,
       dependencies: ['auth-setup'],
     },
     // Regression — the full suite (smoke + critical + every authenticated

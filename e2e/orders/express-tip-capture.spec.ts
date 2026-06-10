@@ -42,30 +42,60 @@ async function readTipsBreakdown(page: Page): Promise<{
 }> {
   return page.evaluate(() => {
     const result = { total: 0, cash: 0, card: 0, transfer: 0 };
+
+    const parseNGN = (s: string): number | null => {
+      const m = s.match(/(?:₦|NGN)\s*([\d,]+(?:\.\d+)?)/);
+      return m ? parseFloat(m[1].replace(/,/g, '')) : null;
+    };
+
     const sectionHeading = Array.from(document.querySelectorAll('h3')).find(
       (h) => /Tips Received/i.test(h.textContent ?? '')
     );
     if (!sectionHeading) return result;
-
-    const totalMatch = (sectionHeading.textContent ?? '').match(
-      /(?:₦|NGN)\s*([\d,]+(?:\.\d+)?)\s*total/i
-    );
-    if (totalMatch) result.total = parseFloat(totalMatch[1].replace(/,/g, ''));
+    const totalAmount = parseNGN(sectionHeading.textContent ?? '');
+    if (totalAmount != null) result.total = totalAmount;
 
     const grid = sectionHeading.nextElementSibling;
     if (!grid) return result;
-    const cards = grid.querySelectorAll('[class*="rounded"]');
-    for (const card of cards) {
-      const titleText =
-        card.querySelector('[class*="font-medium"]')?.textContent?.trim() ?? '';
-      const amountText =
-        card.querySelector('[class*="text-2xl"]')?.textContent?.trim() ?? '';
-      const m = amountText.match(/(?:₦|NGN)\s*([\d,]+(?:\.\d+)?)/);
-      if (!m) continue;
-      const amount = parseFloat(m[1].replace(/,/g, ''));
-      if (titleText === 'Cash tips') result.cash = amount;
-      else if (titleText === 'POS / Card tips') result.card = amount;
-      else if (titleText === 'Transfer tips') result.transfer = amount;
+
+    // Same robust strategy as the close-tab-tip-capture sibling spec:
+    // find the title element by its known text + walk up its ancestor
+    // chain to the nearest container with a ₦amount that doesn't also
+    // mention "total" (the section-wide total).
+    const labels: Array<{ label: string; key: 'cash' | 'card' | 'transfer' }> =
+      [
+        { label: 'Cash tips', key: 'cash' },
+        { label: 'POS / Card tips', key: 'card' },
+        { label: 'Transfer tips', key: 'transfer' },
+      ];
+
+    const all = Array.from(grid.querySelectorAll('*')) as HTMLElement[];
+    for (const { label, key } of labels) {
+      const titleEl = all.find((el) => {
+        const txt = (el.textContent ?? '').trim();
+        return txt === label || txt.startsWith(label + '\n');
+      });
+      if (!titleEl) continue;
+      let node: HTMLElement | null = titleEl.parentElement;
+      while (node && node !== grid) {
+        const amount = parseNGN(node.textContent ?? '');
+        // Discriminate the section-wide total (h3 reads "Tips Received
+        // ₦300.00 total") from the per-card amount whose subtitle reads
+        // "100.0% of total tips" by requiring the section-total shape
+        // (only digits/commas/dots/whitespace between ₦ and "total").
+        if (
+          amount != null &&
+          !/₦[\d,.\s]+\s*total/i.test(node.textContent ?? '') &&
+          !labels.some(
+            (l) =>
+              l.label !== label && (node?.textContent ?? '').includes(l.label)
+          )
+        ) {
+          result[key] = amount;
+          break;
+        }
+        node = node.parentElement;
+      }
     }
     return result;
   });

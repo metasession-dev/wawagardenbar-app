@@ -5,6 +5,7 @@ import MenuItemModel from '@/models/menu-item-model';
 import InventoryModel from '@/models/inventory-model';
 import { ExpenseModel } from '@/models/expense-model';
 import { InventorySnapshotModel } from '@/models/inventory-snapshot-model';
+import SystemSettingsModel from '@/models/system-settings-model';
 
 dotenv.config({ path: '.env.local' });
 
@@ -115,6 +116,110 @@ async function seedE2eFixtures() {
       createdBy: superAdmin._id,
     });
     console.log('✓ Seeded 1 expense (operating / Utilities / ₦1,000)');
+
+    // ── trackByLocation inventory ──────────────────────────────────────────
+    // REQ-066 AC8 + AC9 specs (sale-point + over-sell) look up an
+    // Inventory document with: trackByLocation true + ≥2 locations +
+    // total stock ≥ 2. Specs MUTATE the document during their run
+    // (force one location empty, set defaultSalesLocation, etc.) — CI
+    // runs against a fresh Mongo each time so mutation persistence
+    // doesn't matter; the seed only needs to exist on first run.
+    //
+    // Idempotent via deletion by menuItemId before re-create.
+    const E2E_TBL_NAME_HINT = 'E2E-FIXTURE Track-By-Location';
+
+    // Pick (or create) a dedicated menu item so the seeded inventory
+    // doesn't conflict with the existing menu's stock-tracked items.
+    let trackedMenuItem = await MenuItemModel.findOne({
+      name: E2E_TBL_NAME_HINT,
+    });
+    if (!trackedMenuItem) {
+      trackedMenuItem = await MenuItemModel.create({
+        kind: 'menu-item',
+        name: E2E_TBL_NAME_HINT,
+        description: 'E2E fixture menu item for REQ-066 AC8/AC9 specs',
+        mainCategory: 'food',
+        category: foodMenuItem.category || 'food',
+        price: 1000,
+        costPerUnit: 400,
+        preparationTime: 1,
+        isAvailable: false, // hidden from customer menu
+        trackInventory: true,
+      });
+    }
+
+    await InventoryModel.deleteMany({ menuItemId: trackedMenuItem._id });
+
+    await InventoryModel.create({
+      menuItemId: trackedMenuItem._id,
+      currentStock: 10, // overwritten by pre-save hook from locations sum
+      minimumStock: 1,
+      maximumStock: 50,
+      unit: 'unit',
+      costPerUnit: 400, // schema-required (matches trackedMenuItem.costPerUnit)
+      supplier: 'E2E Fixture Supplier',
+      trackByLocation: true,
+      locations: [
+        {
+          location: 'main-bar',
+          locationName: 'Main Bar',
+          currentStock: 5,
+          minimumStock: 1,
+        },
+        {
+          location: 'kitchen',
+          locationName: 'Kitchen',
+          currentStock: 5,
+          minimumStock: 1,
+        },
+      ],
+      defaultSalesLocation: 'main-bar',
+      preventOrdersWhenOutOfStock: false,
+    });
+    console.log(
+      '✓ Seeded 1 trackByLocation inventory (2 locations × 5 stock = 10 total) for REQ-066 AC8/AC9 specs'
+    );
+
+    // ── Payment gateway settings (REQ-069 signature-verification specs) ───
+    // `PaystackService.getConfig` + `MonnifyService.getConfig` read secrets
+    // from the `payment-gateway-config` SystemSettings document, NOT env
+    // vars directly. The webhook signature-rejection specs (REQ-069 /
+    // SRS REQ-PAY-002) hit `/api/webhooks/{paystack,monnify}` with bad
+    // signatures and expect a 401. Without configured secrets, the route
+    // handlers throw "Paystack/Monnify secret key is not configured" and
+    // surface as 500. Seed from CI env vars so the validation path
+    // actually runs.
+    const paystackSecret = process.env.PAYSTACK_SECRET_KEY || '';
+    const paystackPublic = process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_e2e';
+    if (paystackSecret) {
+      await SystemSettingsModel.findOneAndUpdate(
+        { key: 'payment-gateway-config' },
+        {
+          $set: {
+            value: {
+              activeProvider: 'monnify',
+              paystack: {
+                enabled: true,
+                mode: 'test',
+                publicKey: paystackPublic,
+                secretKey: paystackSecret,
+              },
+              monnify: { enabled: true },
+            },
+            updatedBy: superAdmin._id,
+            updatedAt: new Date(),
+          },
+        },
+        { upsert: true, new: true }
+      );
+      console.log(
+        '✓ Seeded payment-gateway-config (paystack secret from env) for REQ-069 signature specs'
+      );
+    } else {
+      console.log(
+        '⚠️  PAYSTACK_SECRET_KEY env var missing — REQ-069 paystack specs will fail with 500 not 401'
+      );
+    }
 
     console.log('\n✅ E2E fixtures seeded.');
   } finally {

@@ -5,6 +5,7 @@ import { getIronSession } from 'iron-session';
 import { connectDB } from '@/lib/mongodb';
 import { AdminService } from '@/services/admin-service';
 import { sessionOptions, SessionData } from '@/lib/session';
+import { buildSessionPermissions } from '@/lib/admin-login-helpers';
 
 interface AdminLoginResult {
   success: boolean;
@@ -43,36 +44,19 @@ export async function adminLoginAction(
     session.name = admin.name || admin.username;
     session.role = admin.role;
 
-    // Sanitize permissions - only store the boolean flags we need
-    // This handles potential legacy data and keeps cookie size small
-    if (admin.permissions) {
-      console.log(
-        '[Login] Raw permissions from DB:',
-        JSON.stringify(admin.permissions)
-      );
-      session.permissions = {
-        orderManagement: !!admin.permissions.orderManagement,
-        menuManagement: !!admin.permissions.menuManagement,
-        inventoryManagement: !!admin.permissions.inventoryManagement,
-        rewardsAndLoyalty: !!admin.permissions.rewardsAndLoyalty,
-        reportsAndAnalytics: !!admin.permissions.reportsAndAnalytics,
-        expensesManagement: !!admin.permissions.expensesManagement,
-        settingsAndConfiguration: !!admin.permissions.settingsAndConfiguration,
-        kitchenManagement: !!admin.permissions.kitchenManagement,
-        // REQ-066 AC10 — new permission key. Default to true so existing
-        // users (whose DB record predates AC10) keep access on first
-        // login without needing a data backfill; only an explicit
-        // toggle-off in the permissions editor sets this to false.
-        incidentsAccess: admin.permissions.incidentsAccess !== false,
-      };
-      console.log(
-        '[Login] Saving permissions to session:',
-        JSON.stringify(session.permissions)
-      );
-    } else {
-      console.log('[Login] No permissions found for admin');
-      session.permissions = undefined;
-    }
+    // Sanitize permissions — extracted to `lib/admin-login-helpers.ts`
+    // so the field-by-field copy contract is unit-tested in isolation
+    // (pinning the REQ-066 + REQ-076 default + pass-through rules
+    // without standing up iron-session + Mongo + bcrypt).
+    console.log(
+      '[Login] Raw permissions from DB:',
+      JSON.stringify(admin.permissions)
+    );
+    session.permissions = buildSessionPermissions(admin.permissions);
+    console.log(
+      '[Login] Saving permissions to session:',
+      JSON.stringify(session.permissions)
+    );
 
     session.isGuest = false;
     session.isLoggedIn = true;

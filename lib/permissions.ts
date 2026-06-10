@@ -128,6 +128,73 @@ export function requiresSuperAdmin(route: string): boolean {
 }
 
 /**
+ * REQ-076 — Resolve which main-category slugs a session is allowed to
+ * see in `/dashboard/reports/by-main-category`.
+ *
+ * Resolution table (load-bearing — pinned by unit tests in
+ * `__tests__/lib/permissions.main-category-access.test.ts`):
+ *
+ * | Session state                                          | Returns           |
+ * | ------------------------------------------------------ | ----------------- |
+ * | `null` session                                         | `[]`              |
+ * | super-admin (any permission field value)               | all registered    |
+ * | `permissions.reportsAndAnalytics === false`            | `[]`              |
+ * | `permissions.mainCategoryReportAccess === undefined`   | all registered    |
+ * | `permissions.mainCategoryReportAccess === []`          | `[]`              |
+ * | `permissions.mainCategoryReportAccess === ['food']`    | `['food']` ∩ all  |
+ * | `mainCategoryReportAccess: ['food','xxx']`             | `['food']`        |
+ *
+ * Super-admin always bypasses to prevent operator lockout. CSR / admin
+ * users also need `reportsAndAnalytics: true` to reach ANY report page;
+ * `mainCategoryReportAccess` is an additional sub-filter on top.
+ *
+ * @param session     The active session (may be null for unauth).
+ * @param allRegisteredMainSlugs Registered enabled mains from
+ *                    `SystemSettingsService.getMainCategories()`. Caller
+ *                    is responsible for filtering to `isEnabled === true`
+ *                    if disabled mains should be excluded.
+ * @returns           Sorted array of slugs the session may view. Empty
+ *                    array means no access; the caller should redirect
+ *                    or 403.
+ */
+export function getAllowedMainCategoriesForReports(
+  session: SessionData | null,
+  allRegisteredMainSlugs: string[]
+): string[] {
+  if (!session?.role) return [];
+
+  // Super-admin bypass: always sees everything, even if the field is
+  // explicitly set to `[]`. Prevents accidental operator lockout.
+  if (session.role === 'super-admin') {
+    return [...allRegisteredMainSlugs];
+  }
+
+  // Non-super-admin needs the top-level report gate first.
+  if (session.permissions?.reportsAndAnalytics !== true) {
+    return [];
+  }
+
+  const access = session.permissions?.mainCategoryReportAccess;
+
+  // undefined / null → back-compat default: see all registered mains.
+  // Pre-REQ-076 admin users hit this branch.
+  if (access === undefined || access === null) {
+    return [...allRegisteredMainSlugs];
+  }
+
+  // Explicit empty array → no access to the per-main report page.
+  if (access.length === 0) {
+    return [];
+  }
+
+  // Subset → intersect with currently-registered mains. Slugs in the
+  // permission that no longer exist in the registry (e.g. after a
+  // delete) are silently filtered out — they wouldn't render anyway.
+  const registered = new Set(allRegisteredMainSlugs);
+  return access.filter((slug) => registered.has(slug));
+}
+
+/**
  * Get user's highest permission level
  */
 export function getPermissionLevel(role: UserRole | undefined): number {

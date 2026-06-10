@@ -2,11 +2,18 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { PermissionsEditor } from './permissions-editor';
+import { MainCategoryReportAccessEditor } from './main-category-report-access-editor';
 import { updateAdminPermissionsAction } from '@/app/actions/admin/admin-management-actions';
 import { IAdminPermissions, DEFAULT_ADMIN_PERMISSIONS } from '@/interfaces';
 import { Loader2, Save, RotateCcw, AlertCircle } from 'lucide-react';
@@ -23,11 +30,21 @@ interface Admin {
   accountStatus: string;
 }
 
-interface PermissionsManagementClientProps {
-  admin: Admin;
+interface MainCategoryOption {
+  slug: string;
+  label: string;
 }
 
-export function PermissionsManagementClient({ admin }: PermissionsManagementClientProps) {
+interface PermissionsManagementClientProps {
+  admin: Admin;
+  /** REQ-076 — Registered enabled mains for the new editor below. */
+  enabledMainCategories?: MainCategoryOption[];
+}
+
+export function PermissionsManagementClient({
+  admin,
+  enabledMainCategories = [],
+}: PermissionsManagementClientProps) {
   const router = useRouter();
   const [permissions, setPermissions] = useState<IAdminPermissions>(
     admin.permissions || DEFAULT_ADMIN_PERMISSIONS
@@ -36,9 +53,10 @@ export function PermissionsManagementClient({ admin }: PermissionsManagementClie
   const [error, setError] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
 
-  const displayName = admin.firstName && admin.lastName
-    ? `${admin.firstName} ${admin.lastName}`
-    : admin.username;
+  const displayName =
+    admin.firstName && admin.lastName
+      ? `${admin.firstName} ${admin.lastName}`
+      : admin.username;
 
   function handlePermissionsChange(newPermissions: IAdminPermissions) {
     setPermissions(newPermissions);
@@ -64,7 +82,9 @@ export function PermissionsManagementClient({ admin }: PermissionsManagementClie
         return;
       }
 
-      toast.success('Permissions updated successfully. The admin user must log out and log back in for changes to take effect.');
+      toast.success(
+        'Permissions updated successfully. The admin user must log out and log back in for changes to take effect.'
+      );
       setHasChanges(false);
       router.refresh();
     } catch (err) {
@@ -84,7 +104,11 @@ export function PermissionsManagementClient({ admin }: PermissionsManagementClie
               <CardTitle>Admin Information</CardTitle>
               <CardDescription>Current admin user details</CardDescription>
             </div>
-            <Badge variant={admin.accountStatus === 'active' ? 'default' : 'secondary'}>
+            <Badge
+              variant={
+                admin.accountStatus === 'active' ? 'default' : 'secondary'
+              }
+            >
               {admin.accountStatus}
             </Badge>
           </div>
@@ -92,7 +116,9 @@ export function PermissionsManagementClient({ admin }: PermissionsManagementClie
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Username</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Username
+              </p>
               <p className="text-base">{admin.username}</p>
             </div>
             <div>
@@ -100,7 +126,9 @@ export function PermissionsManagementClient({ admin }: PermissionsManagementClie
               <p className="text-base">{admin.email || 'Not provided'}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Display Name</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Display Name
+              </p>
               <p className="text-base">{displayName}</p>
             </div>
             <div>
@@ -135,7 +163,9 @@ export function PermissionsManagementClient({ admin }: PermissionsManagementClie
         <Alert className="mb-4">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            <strong>Important:</strong> After saving permission changes, the admin user must log out and log back in for the changes to take effect in their session.
+            <strong>Important:</strong> After saving permission changes, the
+            admin user must log out and log back in for the changes to take
+            effect in their session.
           </AlertDescription>
         </Alert>
         <PermissionsEditor
@@ -143,6 +173,26 @@ export function PermissionsManagementClient({ admin }: PermissionsManagementClie
           onChange={handlePermissionsChange}
           disabled={isLoading}
         />
+
+        {/* REQ-076 — Main-Category Report Access editor. */}
+        <div className="mt-4">
+          <MainCategoryReportAccessEditor
+            value={permissions.mainCategoryReportAccess}
+            onChange={(next) => {
+              const updated: IAdminPermissions = {
+                ...permissions,
+                mainCategoryReportAccess: next,
+              };
+              // Explicit-undefined needs an actual delete so the
+              // round-trip persists as "absent" not "null". JSON
+              // serialisation handles `undefined` as absent already,
+              // so the spread above is sufficient for the wire format.
+              handlePermissionsChange(updated);
+            }}
+            enabledMainCategories={enabledMainCategories}
+            disabled={isLoading}
+          />
+        </div>
       </div>
 
       {/* Action Buttons */}
@@ -163,10 +213,7 @@ export function PermissionsManagementClient({ admin }: PermissionsManagementClie
             <RotateCcw className="mr-2 h-4 w-4" />
             Reset Changes
           </Button>
-          <Button
-            onClick={handleSave}
-            disabled={isLoading || !hasChanges}
-          >
+          <Button onClick={handleSave} disabled={isLoading || !hasChanges}>
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

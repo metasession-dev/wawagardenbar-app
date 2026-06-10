@@ -1,4 +1,6 @@
 import { MongoClient, ObjectId } from 'mongodb';
+import { sealData } from 'iron-session';
+import type { BrowserContext, Page } from '@playwright/test';
 
 /**
  * REQ-074 — Customer journey E2E coverage (sub-issue #292).
@@ -140,6 +142,205 @@ export async function cleanupUserById(
     await client.connect();
     const db = client.db(conn.dbName);
     await db.collection('users').deleteOne({ _id: new ObjectId(userId) });
+  } finally {
+    await client.close();
+  }
+}
+
+// ─── Session-bake helpers (REQ-013 customer-flow specs) ────────────────────
+//
+// REQ-064 hardened the customer-flow surfaces (`/menu`, `/checkout`,
+// `MenuItemDetailModal.handleAddToCart`) so the client-side `useAuth()`
+// hook gates them: when `/api/auth/session` resolves without
+// `isLoggedIn`, the modal redirects to `/login?redirect=/menu`. Admin
+// storage state still produces a logged-in session for admin users
+// (admin/super-admin/csr ARE users), but there's a small race:
+// `useAuth()` fetches `/api/auth/session` on mount; if the user clicks
+// `Add to Cart` before the fetch resolves, `session` is `undefined`
+// and the gate redirects. The helpers below let a spec either:
+//
+//   (a) Spawn a separate browser context with a pre-baked CUSTOMER
+//       iron-session cookie (real customer role, not an admin acting
+//       as a customer), bypassing the PIN flow that's infeasible in CI
+//       without a stub SMS / WhatsApp backend.
+//
+//   (b) Stay on the existing admin storage state but wait for
+//       `/api/auth/session` to resolve before any auth-gated click,
+//       closing the race window.
+//
+// Both paths produce a cryptographically-valid `iron-session` cookie
+// that the Next.js process accepts identically to one minted by a
+// real PIN-verify flow.
+
+export interface SeededCustomerForSession {
+  _id: string;
+  phone: string;
+  email: string;
+  name: string;
+}
+
+/**
+ * Seed a verified-customer user document directly into Mongo. Skips
+ * Mongoose (and therefore Mongoose validation), matching the seed
+ * pattern in `e2e/helpers/main-category-report-seed.ts`. Defaults
+ * produce a unique phone + email + name per call.
+ *
+ * Unlike `waitForPin` + the verify-pin flow above, this seed assumes
+ * the spec wants a FULLY VERIFIED customer ready to consume in
+ * `bakeCustomerSessionCookie` — no PIN intercept required.
+ */
+export async function seedVerifiedCustomer(opts?: {
+  phone?: string;
+  email?: string;
+  name?: string;
+}): Promise<SeededCustomerForSession> {
+  const stamp = Date.now().toString(36).slice(-8);
+  const phone =
+    opts?.phone ||
+    `+234${Date.now().toString().slice(-9)}${Math.floor(Math.random() * 10)}`;
+  const email = opts?.email || `e2e-customer-${stamp}@e2e.local`;
+  const name = opts?.name || `E2E Customer ${stamp}`;
+
+  const conn = mongoConn();
+  const client = new MongoClient(conn.uri);
+  try {
+    await client.connect();
+    const result = await client.db(conn.dbName).collection('users').insertOne({
+      phone,
+      email,
+      name,
+      firstName: 'E2E',
+      lastName: 'Customer',
+      role: 'customer',
+      isAdmin: false,
+      isGuest: false,
+      phoneVerified: true,
+      emailVerified: true,
+      isVerified: true,
+      accountStatus: 'active',
+      lastLoginAt: new Date(),
+      totalSpent: 0,
+      totalOrders: 0,
+      rewardsEarned: 0,
+      loyaltyPoints: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    return { _id: String(result.insertedId), phone, email, name };
+  } finally {
+    await client.close();
+  }
+}
+
+/**
+ * Produce an `iron-session`-sealed cookie value for a seeded
+ * customer. Same password as the running app (`SESSION_PASSWORD`),
+ * same TTL as `lib/session.ts` (7 days), same shape as a real
+ * PIN-verify-action mint. The returned string is ready for
+ * `context.addCookies(...)`.
+ */
+export async function bakeCustomerSessionCookie(
+  customer: SeededCustomerForSession
+): Promise<string> {
+  const password = process.env.SESSION_PASSWORD;
+  if (!password) {
+    throw new Error(
+      'SESSION_PASSWORD env var is required to bake a customer session cookie. Set it before invoking the customer-auth setup or per-spec helper.'
+    );
+  }
+  return sealData(
+    {
+      userId: customer._id,
+      email: customer.email,
+      phone: customer.phone,
+      name: customer.name,
+      role: 'customer' as const,
+      isGuest: false,
+      isLoggedIn: true,
+      createdAt: Date.now(),
+    },
+    {
+      password,
+      ttl: 60 * 60 * 24 * 7, // matches lib/session.ts cookieOptions.maxAge
+    }
+  );
+}
+
+/**
+ * Attach a baked customer session cookie to a Playwright browser
+ * context. Use this when a spec needs a separate authenticated
+ * customer alongside the existing admin storage state (e.g.
+ * REQ-013's daily-report-payments where the admin creates the tab
+ * but the customer adds the order).
+ *
+ * @param baseUrl the running app's URL — Playwright derives the
+ *                cookie domain from it. Pass `process.env.BASE_URL ||
+ *                'http://localhost:3000'` in most specs.
+ */
+export async function attachCustomerSessionToContext(
+  context: BrowserContext,
+  customer: SeededCustomerForSession,
+  baseUrl: string
+): Promise<void> {
+  const cookieValue = await bakeCustomerSessionCookie(customer);
+  const cookieName = process.env.SESSION_COOKIE_NAME || 'wawa_session';
+  await context.addCookies([
+    {
+      name: cookieName,
+      value: cookieValue,
+      url: baseUrl,
+      httpOnly: true,
+      sameSite: 'Lax',
+      expires: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7,
+    },
+  ]);
+}
+
+/**
+ * Wait until `/api/auth/session` resolves on the current page. Used
+ * by specs that hit customer-facing routes with admin storage state
+ * — the race between the client-side `useAuth()` fetch and a user
+ * click on `Add to Cart` causes the modal to read `session ===
+ * undefined`, trip its logged-out branch, and redirect to /login.
+ *
+ * Non-throwing: if the session response was already cached or never
+ * fires (e.g. a SSR-hydrated page), the timeout fallback simply
+ * proceeds rather than failing the spec.
+ */
+export async function waitForAuthLoaded(
+  page: Page,
+  options?: { timeoutMs?: number }
+): Promise<void> {
+  const timeout = options?.timeoutMs ?? 10_000;
+  await page
+    .waitForResponse(
+      (resp) =>
+        resp.url().includes('/api/auth/session') &&
+        (resp.status() === 200 || resp.status() === 304),
+      { timeout }
+    )
+    .catch(() => {
+      /* hydrated from cache or already settled — proceed */
+    });
+}
+
+/**
+ * Cleanup the seeded customer + any orders or tabs created under
+ * their userId. Call from `afterAll` to keep UAT free of leaked
+ * fixtures.
+ */
+export async function cleanupSeededCustomer(
+  customer: SeededCustomerForSession
+): Promise<void> {
+  const conn = mongoConn();
+  const client = new MongoClient(conn.uri);
+  try {
+    await client.connect();
+    const db = client.db(conn.dbName);
+    const userId = new ObjectId(customer._id);
+    await db.collection('users').deleteOne({ _id: userId });
+    await db.collection('orders').deleteMany({ userId });
+    await db.collection('tabs').deleteMany({ userId });
   } finally {
     await client.close();
   }

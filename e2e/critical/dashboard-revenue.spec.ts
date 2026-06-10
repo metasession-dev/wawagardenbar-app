@@ -15,8 +15,8 @@
 import { test as base, expect, Page } from '@playwright/test';
 import path from 'path';
 
-const SUPER_ADMIN_FILE = path.join(__dirname, '../.auth/super-admin.json');
-const ADMIN_FILE = path.join(__dirname, '../.auth/admin.json');
+const SUPER_ADMIN_FILE = path.join(__dirname, '../../.auth/super-admin.json');
+const ADMIN_FILE = path.join(__dirname, '../../.auth/admin.json');
 
 const superAdminTest = base.extend({ storageState: SUPER_ADMIN_FILE });
 const adminTest = base.extend({ storageState: ADMIN_FILE });

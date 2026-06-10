@@ -1,13 +1,19 @@
 # Release Ticket: REQ-076 — Per-main-category reports + per-user access control
 
 **Status:** DRAFT
-**Date:** 2026-06-08
+**Date:** 2026-06-08 (release-anchor refreshed 2026-06-10)
 **Requirement ID:** REQ-076
 **Risk Level:** MEDIUM
 **GitHub Issue:** [#332](https://github.com/metasession-dev/wawagardenbar-app/issues/332)
-**Integration PR:** (this PR — to be opened against develop)
-**Release PR:** (single-REQ release path, `[REQ-076]` brackets in PR title for derive-release-version attribution)
+**Integration PR:** [#336 (develop → main)](https://github.com/metasession-dev/wawagardenbar-app/pull/336)
+**Release PR:** [#336 (develop → main)](https://github.com/metasession-dev/wawagardenbar-app/pull/336) — single-REQ release path, `[REQ-076]` brackets in PR title for derive-release-version attribution
 **Sign-off (dual-actor):** Pending portal UAT + Production approval.
+
+## Release-anchor note (2026-06-10)
+
+Today's intermediate merges (#353 `[REQ-013]`, #354 / #356 docs-only) drifted the `derive-release-version.sh` output away from `REQ-076` — #353's CI Pipeline ran with `[REQ-013]` in the latest commit subject and uploaded SAST + dependency-audit + test_report evidence to the `REQ-013` release entry on the portal instead of `REQ-076`. The release-PR #336's check-release-approval gate consequently queried `v2026.06.10` (the bare-date fallback) and saw no compliance-gate evidence on that entry.
+
+This commit re-anchors the release version: the bracketed `[REQ-076]` subject restores derive-release-version's output to `REQ-076`, the next CI Pipeline run on develop re-uploads SAST + dependency-audit + test_report to the `REQ-076` release entry, and the check-release-approval gate on #336 picks up the consolidated evidence. No code change — release infrastructure only.
 
 ---
 

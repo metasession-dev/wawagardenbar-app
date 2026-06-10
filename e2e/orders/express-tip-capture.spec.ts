@@ -79,9 +79,13 @@ async function readTipsBreakdown(page: Page): Promise<{
       let node: HTMLElement | null = titleEl.parentElement;
       while (node && node !== grid) {
         const amount = parseNGN(node.textContent ?? '');
+        // Discriminate the section-wide total (h3 reads "Tips Received
+        // ₦300.00 total") from the per-card amount whose subtitle reads
+        // "100.0% of total tips" by requiring the section-total shape
+        // (only digits/commas/dots/whitespace between ₦ and "total").
         if (
           amount != null &&
-          !/total/i.test(node.textContent ?? '') &&
+          !/₦[\d,.\s]+\s*total/i.test(node.textContent ?? '') &&
           !labels.some(
             (l) =>
               l.label !== label && (node?.textContent ?? '').includes(l.label)

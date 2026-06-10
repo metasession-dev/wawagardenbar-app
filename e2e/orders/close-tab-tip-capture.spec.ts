@@ -90,9 +90,15 @@ async function readTipsBreakdown(page: Page): Promise<{
         // Reject the section-wide total ("₦300 total") — that text
         // includes the word "total" or "tip"; the per-card amount does
         // NOT include "total".
+        // The section heading h3 reads "Tips Received \n ₦300.00 total"
+        // — only digits/commas/dots/whitespace between ₦ and "total". A
+        // per-card subtitle reads "100.0% of total tips" — non-digit
+        // chars between ₦ and "total". Discriminate by requiring the
+        // section-total shape so per-card subtitle text doesn't falsely
+        // reject the card's own amount.
         if (
           amount != null &&
-          !/total/i.test(node.textContent ?? '') &&
+          !/₦[\d,.\s]+\s*total/i.test(node.textContent ?? '') &&
           // Don't match an ancestor that contains MULTIPLE labels
           // (i.e. wrapped grid containing all cards).
           !labels.some(

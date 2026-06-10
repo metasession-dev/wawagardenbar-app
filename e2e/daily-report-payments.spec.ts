@@ -7,6 +7,7 @@
  */
 import { test as base, expect, Page } from '@playwright/test';
 import path from 'path';
+import { waitForAuthLoaded } from './helpers/customer-auth';
 
 const ADMIN_FILE = path.join(__dirname, '../.auth/admin.json');
 
@@ -123,6 +124,13 @@ test.describe
     // ── Navigate to menu ──────────────────────────────────────
     await page.goto(`/menu?tableNumber=${TEST_TABLE}`);
     await page.waitForLoadState('networkidle');
+    // REQ-064 hardened the customer flow: `MenuItemDetailModal`'s
+    // Add-to-Cart handler reads `useAuth().session?.isLoggedIn` and
+    // redirects to `/login?redirect=/menu` when the session is still
+    // `undefined`. With admin storage state the iron-session IS
+    // logged-in once `/api/auth/session` resolves, but the click can
+    // beat the fetch. Wait for that response before adding to cart.
+    await waitForAuthLoaded(page);
 
     // ── Add first in-stock menu item to cart ───────────────────
     const menuItem = page
@@ -327,6 +335,10 @@ test.describe
     // ── Add order via menu ────────────────────────────────────
     await page.goto(`/menu?tableNumber=${TEST_TABLE_OPEN}`);
     await page.waitForLoadState('networkidle');
+    // Same race fix as the first test — wait for `/api/auth/session`
+    // before the `MenuItemDetailModal` Add-to-Cart click so the modal
+    // doesn't redirect to /login under REQ-064's auth gate.
+    await waitForAuthLoaded(page);
 
     const menuItem = page
       .locator('[data-testid^="menu-item-"]')

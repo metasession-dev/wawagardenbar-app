@@ -9,7 +9,7 @@ import path from 'path';
  * admin sessions and verify structural correctness without mutating data.
  */
 
-const ADMIN_FILE = path.join(__dirname, '../.auth/admin.json');
+const ADMIN_FILE = path.join(__dirname, '../../.auth/admin.json');
 
 const adminTest = base.extend({
   storageState: ADMIN_FILE,

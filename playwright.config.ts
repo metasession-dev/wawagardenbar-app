@@ -54,11 +54,29 @@ export default defineConfig({
     {
       name: 'smoke',
       use: { ...devices['Desktop Chrome'] },
-      testMatch: [/e2e\/smoke\/.*\.spec\.ts$/, /requirements-verification\.spec\.ts$/],
+      testMatch: [
+        /e2e\/smoke\/.*\.spec\.ts$/,
+        /requirements-verification\.spec\.ts$/,
+      ],
       dependencies: ['auth-setup'],
     },
-    // Regression — the full suite (smoke + authenticated feature specs).
-    // Runs on PR→main and nightly.
+    // Critical — release-gating Must-tier coverage. PR-to-main gate.
+    // Selects e2e/smoke/ + e2e/critical/ + the cross-REQ verification spec.
+    // ~10-15 min wall-clock target per the 3-tier model (devaudit v0.1.53,
+    // see SDLC/Test_Strategy.md § "E2E gating model — three tiers").
+    {
+      name: 'critical',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: [
+        /e2e\/smoke\/.*\.spec\.ts$/,
+        /e2e\/critical\/.*\.spec\.ts$/,
+        /requirements-verification\.spec\.ts$/,
+      ],
+      dependencies: ['auth-setup'],
+    },
+    // Regression — the full suite (smoke + critical + every authenticated
+    // feature spec). Runs nightly + on push-to-main (auto-issues on failure
+    // per the 3-tier model's safety net) + workflow_dispatch.
     {
       name: 'regression',
       use: { ...devices['Desktop Chrome'] },

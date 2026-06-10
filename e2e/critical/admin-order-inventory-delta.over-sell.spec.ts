@@ -20,7 +20,7 @@
  */
 import { expect, type Page } from '@playwright/test';
 import { MongoClient, ObjectId } from 'mongodb';
-import { superAdminTest, isAuthenticated } from './kitchen/helpers';
+import { superAdminTest, isAuthenticated } from '../kitchen/helpers';
 
 function mongoConn() {
   return {

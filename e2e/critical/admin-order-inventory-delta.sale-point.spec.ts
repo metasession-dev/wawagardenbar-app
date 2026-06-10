@@ -19,8 +19,8 @@
  */
 import { expect, type Page } from '@playwright/test';
 import { MongoClient, ObjectId } from 'mongodb';
-import { superAdminTest, isAuthenticated } from './kitchen/helpers';
-import { evidenceShot } from './helpers/evidence';
+import { superAdminTest, isAuthenticated } from '../kitchen/helpers';
+import { evidenceShot } from '../helpers/evidence';
 
 function mongoConn() {
   return {

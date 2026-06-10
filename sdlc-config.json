@@ -47,9 +47,7 @@
   "uat": {
     "enabled": true,
     "url": "https://wawagardenbar-app-uat.up.railway.app/",
-    "required_risk_classes": [
-      "*"
-    ]
+    "required_risk_classes": ["*"]
   },
   "approval": {
     "mode": "dual_actor",
@@ -67,7 +65,7 @@
   "working_directory": ".",
   "source_dirs": "app/ lib/",
   "devaudit": {
-    "base_url": "https://devaudit.metasession.co",
+    "base_url": "https://devaudit.ai",
     "project_slug": "wgb",
     "api_key_secret": "DEVAUDIT_API_KEY"
   },

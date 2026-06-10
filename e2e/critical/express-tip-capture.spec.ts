@@ -2,27 +2,36 @@
  * @requirement REQ-035 — Tip recording at express checkout
  *
  * Verifies that the express create-order flow captures a tip and the
- * tip's payment method independently, and that the resulting Order
- * persists both fields.
+ * tip's payment method INDEPENDENTLY of the bill's payment method, and
+ * that the resulting Order persists both fields.
  *
- * The test exercises the realistic case the feature targets: customer
- * pays card while leaving a cash tip. Asserts the Daily Financial
- * Report's new "Tips Received" section shows the tip under the cash
- * bucket — independent of where the bill itself was attributed.
+ * Exercise scenario: customer pays card while leaving a cash tip.
  *
- * Skips gracefully if admin auth state isn't present (CI without seeded
- * admin credentials, or local dev without the auth.setup having run).
+ * Retry-safe assertion model (#352): instead of asserting on a daily-
+ * report aggregate delta (which retry-doubles when describe.serial
+ * blocks re-run after a failure), captures a timestamp before the UI
+ * flow and queries Mongo directly for the order with the exact
+ * (tipAmount + tipPaymentMethod + paymentMethod) shape created after
+ * that timestamp. The aggregation correctness is unit-tested at
+ * `__tests__/services/financial-report-service.tip.test.ts`.
+ *
+ * Cleanup in afterEach deletes the captured order — subsequent runs
+ * (retry, schedule, dispatch) start from a deterministic state.
+ *
+ * See SDLC/test-isolation.md for the contract.
  */
 import { test as base, expect, Page } from '@playwright/test';
 import path from 'path';
+import {
+  findRecentOrderWithTip,
+  deleteOrderById,
+} from '../helpers/db-assertions';
 
 const ADMIN_FILE = path.join(__dirname, '../../.auth/admin.json');
 
 const test = base.extend({
   storageState: ADMIN_FILE,
 });
-
-test.describe.configure({ mode: 'serial' });
 
 async function isAuthenticated(page: Page): Promise<boolean> {
   try {
@@ -34,87 +43,9 @@ async function isAuthenticated(page: Page): Promise<boolean> {
   }
 }
 
-async function readTipsBreakdown(page: Page): Promise<{
-  total: number;
-  cash: number;
-  card: number;
-  transfer: number;
-}> {
-  return page.evaluate(() => {
-    const result = { total: 0, cash: 0, card: 0, transfer: 0 };
-
-    const parseNGN = (s: string): number | null => {
-      const m = s.match(/(?:₦|NGN)\s*([\d,]+(?:\.\d+)?)/);
-      return m ? parseFloat(m[1].replace(/,/g, '')) : null;
-    };
-
-    const sectionHeading = Array.from(document.querySelectorAll('h3')).find(
-      (h) => /Tips Received/i.test(h.textContent ?? '')
-    );
-    if (!sectionHeading) return result;
-    const totalAmount = parseNGN(sectionHeading.textContent ?? '');
-    if (totalAmount != null) result.total = totalAmount;
-
-    const grid = sectionHeading.nextElementSibling;
-    if (!grid) return result;
-
-    // Same robust strategy as the close-tab-tip-capture sibling spec:
-    // find the title element by its known text + walk up its ancestor
-    // chain to the nearest container with a ₦amount that doesn't also
-    // mention "total" (the section-wide total).
-    const labels: Array<{ label: string; key: 'cash' | 'card' | 'transfer' }> =
-      [
-        { label: 'Cash tips', key: 'cash' },
-        { label: 'POS / Card tips', key: 'card' },
-        { label: 'Transfer tips', key: 'transfer' },
-      ];
-
-    const all = Array.from(grid.querySelectorAll('*')) as HTMLElement[];
-    for (const { label, key } of labels) {
-      const titleEl = all.find((el) => {
-        const txt = (el.textContent ?? '').trim();
-        return txt === label || txt.startsWith(label + '\n');
-      });
-      if (!titleEl) continue;
-      let node: HTMLElement | null = titleEl.parentElement;
-      while (node && node !== grid) {
-        const amount = parseNGN(node.textContent ?? '');
-        // Discriminate the section-wide total (h3 reads "Tips Received
-        // ₦300.00 total") from the per-card amount whose subtitle reads
-        // "100.0% of total tips" by requiring the section-total shape
-        // (only digits/commas/dots/whitespace between ₦ and "total").
-        if (
-          amount != null &&
-          !/₦[\d,.\s]+\s*total/i.test(node.textContent ?? '') &&
-          !labels.some(
-            (l) =>
-              l.label !== label && (node?.textContent ?? '').includes(l.label)
-          )
-        ) {
-          result[key] = amount;
-          break;
-        }
-        node = node.parentElement;
-      }
-    }
-    return result;
-  });
-}
-
-async function openTodayReport(page: Page) {
-  await page.goto('/dashboard/reports/daily');
-  await page.waitForLoadState('networkidle');
-  await page.getByRole('button', { name: 'Today' }).click();
-  await page.waitForLoadState('networkidle');
-  await page
-    .getByText('Generating report...')
-    .waitFor({ state: 'hidden', timeout: 15000 })
-    .catch(() => {});
-}
-
-test.describe.serial('REQ-035: express order tip capture', () => {
-  let baselineCashTips = 0;
+test.describe('REQ-035: express order tip capture', () => {
   const TIP = 500;
+  let createdOrderId: string | null = null;
 
   test.beforeEach(async ({ page }, testInfo) => {
     if (!(await isAuthenticated(page))) {
@@ -122,15 +53,22 @@ test.describe.serial('REQ-035: express order tip capture', () => {
     }
   });
 
-  test('AC7 baseline — read current cash-tip total', async ({ page }) => {
-    await openTodayReport(page);
-    const { cash } = await readTipsBreakdown(page);
-    baselineCashTips = cash;
+  test.afterEach(async () => {
+    if (createdOrderId) {
+      await deleteOrderById(createdOrderId).catch(() => {
+        /* idempotent cleanup — best-effort */
+      });
+      createdOrderId = null;
+    }
   });
 
-  test('AC1 + AC4 — record ₦500 cash tip on a card-paid express order', async ({
+  test('AC1 + AC4 — ₦500 cash tip on a card-paid express order persists with tipPaymentMethod:cash, paymentMethod:card', async ({
     page,
   }) => {
+    // Capture timestamp BEFORE the UI flow so the DB query that runs
+    // after creation can scope to "the order I just created".
+    const since = new Date();
+
     await page.goto('/dashboard/orders/express/create-order');
     await page.waitForLoadState('networkidle');
 
@@ -153,22 +91,16 @@ test.describe.serial('REQ-035: express order tip capture', () => {
     await expect(posBtn).toBeVisible({ timeout: 5000 });
     await posBtn.click();
 
-    // Enter the tip amount and override the method to cash.
+    // Enter the tip amount and override the tip method to cash.
     const tipInput = page.locator('#tip-amount');
     await expect(tipInput).toBeVisible();
     await tipInput.fill(String(TIP));
+
     // Tip method dropdown defaults to the bill method (POS / 'card');
-    // override to 'cash' to exercise AC4.
-    //
-    // The previous locator was `[id="tip-amount"] ~ * button` (CSS general-
-    // sibling), but `#tip-amount` is the <Input> itself, and the Select
-    // trigger button is a sibling of the input's *parent* div in the
-    // TipInputRow grid (components/features/orders/tip-input-row.tsx). The
-    // locator matched 0 elements, `isVisible()` returned false, the
-    // `if`-fallback silently skipped the override, the tip recorded under
-    // the bill's method (card), and AC7 read 0 cash tips. Use a
-    // document-order XPath to find the first combobox after the input, and
-    // fail loudly if the override path is missing.
+    // override to 'cash' to exercise AC4. Document-order XPath finds
+    // the first combobox after the tip input — fails loudly if the
+    // override path moves so we catch the regression before the test
+    // silently records the tip under the bill's method.
     const tipMethodTrigger = page
       .locator('#tip-amount')
       .locator('xpath=following::button[@role="combobox"][1]');
@@ -185,17 +117,20 @@ test.describe.serial('REQ-035: express order tip capture', () => {
 
     await page.waitForURL(/\/dashboard\/orders/, { timeout: 15000 });
     await page.waitForLoadState('networkidle');
-  });
 
-  test('AC7 — Daily Report Tips Received cash card increased by ₦500', async ({
-    page,
-  }) => {
-    await openTodayReport(page);
-    await expect(
-      page.locator('h3').filter({ hasText: /Tips Received/i })
-    ).toBeVisible({ timeout: 15000 });
-    const { cash, total } = await readTipsBreakdown(page);
-    expect(cash - baselineCashTips).toBeGreaterThanOrEqual(TIP);
-    expect(total).toBeGreaterThanOrEqual(cash);
+    // Direct DB assertion — retry-safe and concurrency-safe.
+    const order = await findRecentOrderWithTip({
+      since,
+      tipAmount: TIP,
+      tipPaymentMethod: 'cash',
+      paymentMethod: 'card',
+    });
+    expect(order).toBeTruthy();
+    expect(order.tipAmount).toBe(TIP);
+    expect(order.tipPaymentMethod).toBe('cash');
+    expect(order.paymentMethod).toBe('card');
+    expect(order.paymentStatus).toBe('paid');
+
+    createdOrderId = String(order._id);
   });
 });

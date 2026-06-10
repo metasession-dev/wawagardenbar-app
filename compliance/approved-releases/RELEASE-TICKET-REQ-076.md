@@ -1,13 +1,13 @@
 # Release Ticket: REQ-076 — Per-main-category reports + per-user access control
 
-**Status:** DRAFT
-**Date:** 2026-06-08 (release-anchor refreshed 2026-06-10)
+**Status:** RELEASED
+**Date:** 2026-06-08 (released 2026-06-10)
 **Requirement ID:** REQ-076
 **Risk Level:** MEDIUM
 **GitHub Issue:** [#332](https://github.com/metasession-dev/wawagardenbar-app/issues/332)
-**Integration PR:** [#336 (develop → main)](https://github.com/metasession-dev/wawagardenbar-app/pull/336)
-**Release PR:** [#336 (develop → main)](https://github.com/metasession-dev/wawagardenbar-app/pull/336) — single-REQ release path, `[REQ-076]` brackets in PR title for derive-release-version attribution
-**Sign-off (dual-actor):** Pending portal UAT + Production approval.
+**Integration PR:** [#333 (feat/REQ-076 → develop)](https://github.com/metasession-dev/wawagardenbar-app/pull/333)
+**Release PR:** [#336 (develop → main)](https://github.com/metasession-dev/wawagardenbar-app/pull/336) — single-REQ release path, `[REQ-076]` brackets in PR title for derive-release-version attribution; merged at `bab0f29` 2026-06-10 15:36:50Z.
+**Sign-off (dual-actor):** Portal UAT approved + Production approved + Marked as Released 2026-06-10.
 
 ## Release-anchor note (2026-06-10)
 
@@ -117,10 +117,10 @@ Revert the integration PR. The new optional field on `IAdminPermissions` is back
 ## Stage Approvals
 
 - [x] Stage 1 — Plan (operator confirmed 2 plan-time AskUserQuestion choices before coding)
-- [x] Stage 2 — Implement + unit-test (1181/4/0; tsc 0; 27 new cases)
-- [x] Stage 3 — Compile evidence (this evidence pack)
-- [ ] Stage 4 — Submit for UAT review (release PR + manual walkthrough)
-- [ ] Stage 5 — UAT review + production deployment + close-out
+- [x] Stage 2 — Implement + unit-test (1206/4/0 at close-out; tsc 0; 35 new cases — 27 at original land + 7 at #351 markModified + 2 at #353 no-double-count + 1 in-cycle minor)
+- [x] Stage 3 — Compile evidence (this evidence pack + #354 REQ-013 backfill + #356 test-ref fix that landed during this cycle)
+- [x] Stage 4 — Release PR #336 opened, portal UAT approved 2026-06-10
+- [x] Stage 5 — Production deployed at `bab0f29` 2026-06-10 15:36:50Z; portal Production approved + Marked as Released 2026-06-10
 
 ## Notes
 

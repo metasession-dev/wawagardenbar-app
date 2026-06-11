@@ -45,6 +45,21 @@
 - **E2E execution against UAT.** Per the project's `feedback_run_e2e_in_ci` memory, e2e specs are not executed locally — execution happens on the CI's critical-tier project on the release PR. Spec authoring + registration verified locally via `--list`. First real execution lands on the develop→main release PR's E2E gate.
 - **Retry-button click semantics not re-pinned.** AC4 (R-003) pins the button's _reachability_ + _enabled state_ inside the expansion container, not the action's outcome — that's REQ-066 AC10's domain and already e2e'd elsewhere. Combining the two specs would duplicate REQ-066 coverage without adding REQ-077 confidence.
 
+## Post-Phase-3 follow-up — critical-tier locator + R-003 row-expand fix
+
+The release PR #367's first critical-tier execution (the FIRST critical run for REQ-077 — earlier CI on develop only ran smoke, per PR #361's 3-tier model) surfaced two spec-side defects:
+
+| Spec                                                             | Symptom                                                                                       | Root cause                                                                                                                                                                                                                                                                              | Fix                                                                                                                                                                  |
+| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `e2e/critical/incidents-expansion.spec.ts:374`                   | `getByRole('button', { name: /retry now/i })` not found inside expanded panel                 | `<IncidentRetryButton>` has `aria-label="Retry inventory deduction for order {id}"` which is the ARIA accessible name; visible "Retry now" is child text. ARIA spec: aria-label wins over text for accessible-name computation.                                                         | Switch locator to `name: /retry inventory deduction/i` + add a `panel.getByText('Retry now')` visible-text guard for completeness.                                   |
+| `e2e/critical/admin-order-inventory-delta.over-sell.spec.ts:476` | `getByRole('button', { name: /retry inventory deduction for order .../i })` not found on page | Real **R-003 regression surface.** Before REQ-077 the button rendered inline on every row (always visible). REQ-077 PR #365 moved it inside the expansion panel — collapsed by default, not in the DOM until row-click. The R-003 risk register entry pre-flagged exactly this surface. | Add row-click step (`page.locator('tr', { hasText: handle.orderId }).click()`) before locating the button, then scope under `getByTestId('incident-details-panel')`. |
+
+**Implementation unchanged.** `IsRetryEligible` gate in `incident-details-panel.tsx` is correct; `IncidentRetryButton` is unchanged. R-003 + R-004 mitigation contracts remain in force per `risk-assessment.md`.
+
+**Follow-up PR:** `chore: fix REQ-077 critical-tier spec locators + REQ-066 AC10 row-expand [REQ-077]` — opened against develop; re-merge to develop + retrigger release PR #367's critical-tier gate is the verification path. Per `feedback_run_e2e_in_ci` we do not execute critical-tier specs locally.
+
+Phase 3 SoT-alignment artefacts (`srs-alignment.md`, `architecture-decision.md`, `risk-assessment.md`) are unchanged — no SRS items move, no ADR worthiness changes, R-003 + R-004 entries hold as written.
+
 ## Sign-off
 
 - **Test author:** ostendo-io (with `e2e-test-engineer` skill for e2e portion) — 2026-06-11

@@ -524,7 +524,21 @@ superAdminTest.describe(
         // Operator navigates to /dashboard/incidents + clicks Retry now.
         await page.goto('/dashboard/incidents?kind=inventory_deduction_failed');
         await page.waitForLoadState('networkidle');
-        const retryButton = page
+
+        // REQ-077 (PR #365) relocated <IncidentRetryButton> inside the
+        // expansion panel — collapsed by default. Find the incident row
+        // surfacing this orderId and click it to expand before reaching
+        // for the button. R-003 mitigation lives in the expansion now.
+        const incidentRow = page
+          .locator('tr', { hasText: handle.orderId })
+          .first();
+        await expect(incidentRow).toBeVisible({ timeout: 15000 });
+        await incidentRow.click();
+
+        const panel = page.getByTestId('incident-details-panel').first();
+        await expect(panel).toBeVisible({ timeout: 5000 });
+
+        const retryButton = panel
           .getByRole('button', {
             name: new RegExp(
               `retry inventory deduction for order ${handle.orderId}`,

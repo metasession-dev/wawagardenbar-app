@@ -367,12 +367,20 @@ superAdminTest.describe(
         await row.click();
 
         const panel = page.getByTestId('incident-details-panel').first();
-        // The existing <IncidentRetryButton> renders a button labelled
-        // "Retry now". Pin its presence inside the expanded panel —
+        // The existing <IncidentRetryButton> sets
+        // aria-label="Retry inventory deduction for order {orderId}"
+        // which is the button's accessible name (visible "Retry now"
+        // text is the child label, but aria-label wins per ARIA spec).
+        // Match the accessible name so getByRole resolves it —
         // R-003 mitigation: button is reachable from the new container.
-        const retryButton = panel.getByRole('button', { name: /retry now/i });
+        const retryButton = panel.getByRole('button', {
+          name: /retry inventory deduction/i,
+        });
         await expect(retryButton).toBeVisible();
         await expect(retryButton).toBeEnabled();
+        // Visible-text confirmation — the button still reads "Retry now"
+        // to the operator (regression guard if aria-label changes shape).
+        await expect(panel.getByText('Retry now')).toBeVisible();
         await evidenceShot(page, 'REQ-077', 4, 'retry-button-in-expansion');
       }
     );

@@ -2,6 +2,7 @@
  * @requirement REQ-048 — In-process reward-expiry scheduler (#117 P0 #3)
  * @requirement REQ-058 — In-process Instagram-rewards scheduler (#117 IG-5)
  * @requirement REQ-066 — In-process inventory-deduction reconciliation + stale-paid-order visibility scan (#277)
+ * @requirement REQ-078 — Env-var kill-switch for the inventory reconciliation job
  *
  * In-process scheduled jobs for the persistent Railway server. The app runs as
  * a long-lived custom Node server (`server.ts`), not serverless, so a simple
@@ -132,10 +133,20 @@ export function startScheduledJobs(): void {
   setInterval(() => void runInstagramRewardsJob(), HOUR_MS);
 
   // REQ-066 — Inventory reconciliation + stale-paid-order scan, every 15 min.
-  setTimeout(() => void runInventoryReconciliationJob(), INITIAL_DELAY_MS);
-  setInterval(() => void runInventoryReconciliationJob(), FIFTEEN_MIN_MS);
+  // REQ-078 — Operational kill-switch: set `DISABLE_INVENTORY_RECONCILIATION_JOB=true`
+  // in the env (Railway env var on prod) to skip registration. Reward-expiry +
+  // instagram-rewards stay on — only this job is gated. Match is strict `'true'`
+  // so common ambiguous values ('false', '1', '0', '') do not gate.
+  const inventoryReconcileDisabled =
+    process.env.DISABLE_INVENTORY_RECONCILIATION_JOB === 'true';
+  if (!inventoryReconcileDisabled) {
+    setTimeout(() => void runInventoryReconciliationJob(), INITIAL_DELAY_MS);
+    setInterval(() => void runInventoryReconciliationJob(), FIFTEEN_MIN_MS);
+  }
 
   console.warn(
-    '[scheduled-jobs] started (reward-expiry: hourly, instagram-rewards: hourly, inventory-reconcile: 15min)'
+    `[scheduled-jobs] started (reward-expiry: hourly, instagram-rewards: hourly, inventory-reconcile: ${
+      inventoryReconcileDisabled ? 'DISABLED' : '15min'
+    })`
   );
 }

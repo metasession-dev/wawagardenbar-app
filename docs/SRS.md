@@ -150,6 +150,10 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-INV-011      | Reconciliation cron + stale-paid scan                                   | Must     | regression | `lib/scheduled-jobs.ts`; `services/order-service.ts`; REQ-066                                                    |
 | REQ-INV-012      | `/dashboard/incidents` page + deduction-failure toast                   | Should   | regression | `app/dashboard/incidents/page.tsx`; REQ-066                                                                      |
 | REQ-INV-013      | Retry-now remediation + audit log                                       | Should   | regression | `app/actions/admin/incidents-actions.ts`; REQ-066                                                                |
+| REQ-INV-014      | Incidents queue row expansion UX                                        | Should   | regression | `app/dashboard/incidents/page.tsx`; `components/features/admin/incident-row.tsx`; REQ-077                        |
+| REQ-INV-015      | Incident details panel: errorDetails + Order snapshot                   | Should   | regression | `components/features/admin/incident-details-panel.tsx`; REQ-077                                                  |
+| REQ-INV-016      | Stale-paid-order incident: status-history trail                         | Could    | regression | `components/features/admin/incident-details-panel.tsx`; REQ-077                                                  |
+| REQ-INV-017      | Incidents URL state: filter + expanded-row hash                         | Could    | regression | `components/features/admin/incident-row.tsx`; REQ-077                                                            |
 | REQ-FIN-001      | Create + list expenses by date/filters                                  | Should   | regression | `app/actions/finance/expense-actions.ts:17,52`                                                                   |
 | REQ-FIN-002      | Bank statement (XLSX) import + dedupe                                   | Should   | regression | `app/actions/expenses/csv-import-actions.ts:31`                                                                  |
 | REQ-FIN-003      | Pending expense group submit/edit/approve                               | Should   | regression | `pending-expense-actions.ts:49`; REQ-026/032                                                                     |
@@ -778,6 +782,36 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 
 - **Given** an `inventory_deduction_failed` row whose underlying order has `inventoryDeducted: false` and stock now exists at the routed location, **When** an admin clicks Retry now, **Then** the deduction succeeds, the row's badge flips to ✓ Deducted, and an audit-log entry `incidents.retry_deduction_succeeded` is written.
 - **Given** an already-retried row whose `Order.inventoryDeducted` is already `true`, **When** Retry now is clicked again, **Then** the action exits idempotently with success and no further inventory or audit mutation.
+
+#### REQ-INV-014 — Incidents queue row expansion UX · **Should** · regression
+
+**Source:** `app/dashboard/incidents/page.tsx`, `components/features/admin/incident-row.tsx`; cross-ref REQ-077 AC1
+**Behaviour:** Each row on `/dashboard/incidents` is expandable inline via a click on the row or a leading chevron icon. Expansion is keyboard-accessible (Enter/Space) and announces state to assistive technology (`aria-expanded`). Multiple rows can be expanded simultaneously; the kind-filter chips at the top of the page are unaffected.
+
+- **Given** an admin/csr/super-admin on `/dashboard/incidents` with at least one row, **When** they click the row or its chevron, **Then** the row expands inline to reveal a details panel, the chevron rotates to indicate expanded state, and another row can be expanded simultaneously without collapsing the first.
+- **Given** keyboard navigation focus on a collapsed incident row, **When** the admin presses Enter or Space, **Then** the row toggles between expanded and collapsed and the screen-reader announces the state change.
+
+#### REQ-INV-015 — Incident details panel: errorDetails + Order snapshot · **Should** · regression
+
+**Source:** `components/features/admin/incident-details-panel.tsx`; cross-ref REQ-077 AC2 + AC3
+**Behaviour:** The expanded incident-row panel renders (1) the full `IncidentEventModel.errorDetails` JSON pretty-printed, (2) `createdAt` + `updatedAt` timestamps in ISO + human-relative forms, (3) the `entityId` as a clickable link to `/dashboard/orders/{entityId}`, and (4) for incident kinds whose `entityId` resolves to a valid Order, a snapshot block with `orderNumber`, `status`, `paymentStatus`, `paymentMethod`, `businessDate`, line items (name × quantity × subtotal), `total`, `tipAmount`, `inventoryDeducted` boolean, and `createdAt` / `paidAt` / `completedAt` timestamps.
+
+- **Given** an admin has expanded an `inventory_deduction_failed` row whose `entityId` resolves to a valid Order, **When** the panel renders, **Then** the panel shows the full `errorDetails` object (e.g. `{ message, actorUserId, actorRole }`) pretty-printed in a `<pre>` block, the createdAt timestamp in both ISO + "n minutes ago" forms, the entityId as a link to `/dashboard/orders/{entityId}`, and the Order snapshot block with the projected fields populated.
+- **Given** an expanded row whose `entityId` does NOT resolve to an Order, **When** the panel renders, **Then** the Order-snapshot block is omitted (replaced with a single "Linked order not found" line) and the rest of the panel renders normally.
+
+#### REQ-INV-016 — Stale-paid-order incident: status-history trail · **Could** · regression
+
+**Source:** `components/features/admin/incident-details-panel.tsx`; cross-ref REQ-077 AC4
+**Behaviour:** When the expanded incident has `kind: 'stale_paid_order'` and the linked Order has a populated `statusHistory` array, the panel renders the history as a chronological list (oldest → newest) showing each entry's status, timestamp, and optional note. This is the contextual data that lets the admin see which transition is stuck.
+
+- **Given** an admin has expanded a `stale_paid_order` incident whose linked Order has `statusHistory: [{status: 'confirmed', timestamp: T1}, {status: 'preparing', timestamp: T2}]`, **When** the panel renders, **Then** the status-history block lists both entries in chronological order with their timestamps and any associated notes.
+
+#### REQ-INV-017 — Incidents URL state: filter + expanded-row hash · **Could** · regression
+
+**Source:** `components/features/admin/incident-row.tsx`; cross-ref REQ-077 AC6
+**Behaviour:** The `?kind=` query param continues to drive the kind filter (REQ-INV-012 behaviour). Additionally, expanded-row IDs are encoded in the URL hash as `#open=<id1>,<id2>` (comma-separated ObjectId hex strings). On page load the hash is read and the named rows render as initially expanded. Hash content is validated against the `/^[a-f0-9]+$/` ObjectId pattern; malformed segments are silently ignored.
+
+- **Given** an admin on `/dashboard/incidents?kind=inventory_deduction_failed` who has expanded a row with `_id: 64a1...`, **When** they reload the page (or share the URL `/dashboard/incidents?kind=inventory_deduction_failed#open=64a1...` with another admin), **Then** the kind filter is preserved and the named row renders as initially expanded.
 
 ---
 

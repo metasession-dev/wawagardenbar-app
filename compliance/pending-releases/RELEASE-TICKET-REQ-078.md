@@ -1,14 +1,17 @@
 # Release Ticket: REQ-078 — Env-var kill-switch for the inventory reconciliation job
 
-**Status:** DRAFT
+**Status:** RELEASED
 **Date:** 2026-06-11
 **Requirement ID:** REQ-078
 **Risk Level:** LOW
 **GitHub Issue:** _(operator request via chat, no GH issue)_
 **Integration PR:** [#370 (feat/REQ-078-reconciliation-kill-switch → develop)](https://github.com/metasession-dev/wawagardenbar-app/pull/370) — merged 2026-06-11 (`3803aa8`)
-**Release PR:** (to be opened after this evidence pack lands on develop) — single-REQ release path, `[REQ-078]` brackets in PR title for `derive-release-version.sh` attribution.
-**Sign-off (dual-actor):** Pending portal UAT + Production approval. Per `solo_with_gap` framework reading: the AI-tooling actor (sdlc-implementer) and the human operator (portal approver) are distinct actors; this satisfies the four-eyes contract on a one-person team.
-**DevAudit Release:** [`devaudit.ai/projects/wgb/releases/REQ-078`](https://devaudit.ai/projects/wgb/releases/REQ-078) — release version `REQ-078`, status flips `draft` → `uat_review` on this evidence push.
+**Phase 3 Evidence PR:** [#371 (compliance/REQ-078-evidence-pack → develop)](https://github.com/metasession-dev/wawagardenbar-app/pull/371) — merged 2026-06-11 (`6222657`)
+**Release PR:** [#372 (develop → main)](https://github.com/metasession-dev/wawagardenbar-app/pull/372) — merged 2026-06-11 14:41:16Z (`cdc454a`). Title `release: inventory reconciliation kill-switch [REQ-078]` per `feedback_pr_title_req_brackets` for `derive-release-version.sh` attribution. REQ-077 close-out (#369) rode along on the same release.
+**Sign-off (dual-actor):** Portal UAT approved + Production approved + Marked as Released. Per `solo_with_gap` framework reading: the AI-tooling actor (sdlc-implementer) and the human operator (portal approver) are distinct actors; this satisfies the four-eyes contract on a one-person team.
+**DevAudit Release:** [`devaudit.ai/projects/wgb/releases/REQ-078`](https://devaudit.ai/projects/wgb/releases/REQ-078) — release version `REQ-078`, status `released`.
+
+**Post-deploy verification:** Post-Deploy Production Evidence SUCCESS ([run 27354933845](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/27354933845), 26s). Full E2E Regression on `main` SUCCESS — 489 tests passed, 22m45s ([run 27354933866](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/27354933866)). Production live on Railway via `main`. DevAudit Release Approval check needed one retrigger (initial run fired before portal-approve, status was `draft`) — same pattern as REQ-077.
 
 ---
 
@@ -77,9 +80,9 @@ Operator needs to disable the 15-min auto-retry on production (e.g. during a sal
 
 - [x] Stage 1 — Plan (operator confirmed Phase 0 "proceed" at the workflow-decision block)
 - [x] Stage 2 — Implement + unit-test (1232/4/0; tsc clean; 7 new cases) — landed via PR #370
-- [x] Stage 3 — Compile evidence (this evidence pack)
-- [ ] Stage 4 — Submit for UAT review (release PR + manual log-inspection walkthrough on UAT Railway)
-- [ ] Stage 5 — UAT review + production deployment + close-out
+- [x] Stage 3 — Compile evidence — landed via PR #371
+- [x] Stage 4 — Submit for UAT review — PR #372 opened + portal UAT approved
+- [x] Stage 5 — Production deployment + Production-approve + Mark as Released (2026-06-11) + close-out (this PR)
 
 ## Notes
 

@@ -1,14 +1,24 @@
 # Release Ticket: REQ-077 — Expandable incidents on /dashboard/incidents
 
-**Status:** DRAFT
+**Status:** RELEASED
 **Date:** 2026-06-11
 **Requirement ID:** REQ-077
 **Risk Level:** MEDIUM
 **GitHub Issue:** [#364](https://github.com/metasession-dev/wawagardenbar-app/issues/364)
 **Integration PR:** [#365 (feat/REQ-077 → develop)](https://github.com/metasession-dev/wawagardenbar-app/pull/365) — merged 2026-06-11 04:03:40Z (`bd7f798`)
-**Release PR:** (to be opened after this evidence pack lands on develop) — single-REQ release path, `[REQ-077]` brackets in PR title for `derive-release-version.sh` attribution.
-**Sign-off (dual-actor):** Pending portal UAT + Production approval. Per `solo_with_gap` framework reading: the AI-tooling actor (sdlc-implementer + sub-skills) and the human operator (portal approver) are distinct actors; this satisfies the four-eyes contract on a one-person team.
-**DevAudit Release:** [`devaudit.ai/projects/wgb/releases/REQ-077`](https://devaudit.ai/projects/wgb/releases/REQ-077) — release version `REQ-077`, status flips `draft` → `uat_review` on this evidence push.
+**Phase 3 Evidence PR:** [#366 (compliance/REQ-077-evidence-pack → develop)](https://github.com/metasession-dev/wawagardenbar-app/pull/366) — merged 2026-06-11 (`d58cac3`)
+**Release PR:** [#367 (develop → main)](https://github.com/metasession-dev/wawagardenbar-app/pull/367) — merged 2026-06-11 07:25:55Z (`bf5507c`). Title `release: expandable incidents [REQ-077]` per `feedback_pr_title_req_brackets` for `derive-release-version.sh` attribution.
+**In-cycle Hot-fix PR:** [#368 (chore/fix-req077-critical-spec-locators → develop)](https://github.com/metasession-dev/wawagardenbar-app/pull/368) — merged 2026-06-11 (`17c6a9d`). Two spec-side defects surfaced in #367's first critical-tier execution: (a) ARIA accessible-name mismatch on REQ-077 AC4 (R-003) spec; (b) **real R-003 regression** on REQ-066 AC10 spec (button moved inside expansion panel per design, AC10 spec located at page-scope). Implementation unchanged; tests-only fix.
+**Sign-off (dual-actor):** Portal UAT approved + Production approved + Marked as Released. Per `solo_with_gap` framework reading: the AI-tooling actor (sdlc-implementer + sub-skills) and the human operator (portal approver) are distinct actors; this satisfies the four-eyes contract on a one-person team.
+**DevAudit Release:** [`devaudit.ai/projects/wgb/releases/REQ-077`](https://devaudit.ai/projects/wgb/releases/REQ-077) — release version `REQ-077`, status `released`.
+
+**Post-deploy verification:** Post-Deploy Production Evidence SUCCESS ([run 27330938143](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/27330938143), 18s). Full E2E Regression on `main` SUCCESS — 489 tests passed, 23m11s ([run 27330938133](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/27330938133)). Production live on Railway via `main`.
+
+**Upstream follow-ups filed this cycle:**
+
+- [DevAudit-Installer #144](https://github.com/metasession-dev/DevAudit-Installer/issues/144) — skill-pause bug between sub-skill returns
+- [DevAudit-Installer #145](https://github.com/metasession-dev/DevAudit-Installer/issues/145) — sdlc-implementer Lightweight-path "wait for CI" instruction misleading when consumer ci.yml has no `pull_request:` trigger
+- [DevAudit-Installer #147](https://github.com/metasession-dev/DevAudit-Installer/issues/147) — Upload Evidence SHOTS glob cross-attribution + silent screenshot upload failure masking
 
 ---
 
@@ -72,22 +82,24 @@ All stubs authored by `requirements-aligner`; operator-edits to canonical Given/
 
 ## Quality Gates
 
-| Gate                                            | Expected    | Actual (2026-06-11)                                                                                       |
-| ----------------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------- |
-| `npx tsc --noEmit`                              | exit 0      | exit 0                                                                                                    |
-| `npx vitest run` (full)                         | 0 failures  | 1226 pass / 4 skip / 0 fail (+18 cases vs base)                                                           |
-| `npx playwright test --project=critical --list` | 9 new tests | 9 new tests under `[critical]` registered correctly                                                       |
-| Quality Gates (CI Pipeline)                     | green       | [run 27322979496](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/27322979496) (16m37s) |
-| Compliance Evidence Upload (CI)                 | green       | [run 27322979515](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/27322979515) (3m16s)  |
-| E2E Regression (critical tier) — release PR     | green       | _pending release-PR CI_                                                                                   |
+| Gate                                            | Expected    | Actual (2026-06-11)                                                                                                          |
+| ----------------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `npx tsc --noEmit`                              | exit 0      | exit 0                                                                                                                       |
+| `npx vitest run` (full)                         | 0 failures  | 1226 pass / 4 skip / 0 fail (+18 cases vs base)                                                                              |
+| `npx playwright test --project=critical --list` | 9 new tests | 9 new tests under `[critical]` registered correctly                                                                          |
+| Quality Gates (CI Pipeline)                     | green       | [run 27322979496](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/27322979496) (16m37s)                    |
+| Compliance Evidence Upload (CI)                 | green       | [run 27322979515](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/27322979515) (3m16s)                     |
+| E2E Regression (critical tier) — release PR     | green       | passed on retrigger after PR #368 spec fixes landed on develop                                                               |
+| E2E Regression (full pack) — post-deploy main   | green       | [run 27330938133](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/27330938133) — 489 tests passed (23m11s) |
+| Post-Deploy Production Evidence — main          | green       | [run 27330938143](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/27330938143) (18s)                       |
 
 ## Stage Approvals
 
 - [x] Stage 1 — Plan (operator confirmed Phase 0 "proceed" at workflow decision)
 - [x] Stage 2 — Implement + unit-test (1226/4/0; tsc clean; 18 new cases) — landed via PR #365
-- [x] Stage 3 — Compile evidence (this evidence pack)
-- [ ] Stage 4 — Submit for UAT review (release PR + manual walkthrough)
-- [ ] Stage 5 — UAT review + production deployment + close-out
+- [x] Stage 3 — Compile evidence — landed via PR #366
+- [x] Stage 4 — Submit for UAT review — PR #367 opened + portal UAT approved
+- [x] Stage 5 — Production deployment + Production-approve + Mark as Released (2026-06-11) + close-out (this PR)
 
 ## Notes
 

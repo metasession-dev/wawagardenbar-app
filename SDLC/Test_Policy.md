@@ -113,10 +113,10 @@ AI-generated code presents risks distinct from human-authored code:
 
 ### Permitted AI Tools
 
-| Tool | Permitted Use | Restrictions |
-|---|---|---|
-| Claude (Anthropic) | Code generation, test generation, documentation, review assistance | No deployment without human review |
-| GitHub Copilot | Inline code suggestions | Same review requirements as any AI-generated code |
+| Tool               | Permitted Use                                                      | Restrictions                                      |
+| ------------------ | ------------------------------------------------------------------ | ------------------------------------------------- |
+| Claude (Anthropic) | Code generation, test generation, documentation, review assistance | No deployment without human review                |
+| GitHub Copilot     | Inline code suggestions                                            | Same review requirements as any AI-generated code |
 
 Adding a new tool requires Engineering Leadership approval and updates to this policy, the Test Strategy, and relevant project Test Plans.
 
@@ -150,17 +150,31 @@ Testing effort is prioritized by risk level, determined at planning time:
 
 AI involvement in Medium or High categories raises risk by one level. The Test Strategy defines specific testing depth requirements per level.
 
+### E2E gate enforcement (v0.1.53+)
+
+The MoSCoW prioritisation of acceptance criteria maps onto three E2E gates, each enforced at a different point in the workflow:
+
+- **Must-tier ACs in the smoke subset** must pass on every push to the integration branch. Blocking — a red smoke gate stops the integration hop.
+- **Must-tier ACs in the critical subset** must pass on every PR to the release branch. Blocking — a red critical gate stops the release.
+- **Should/Could-tier ACs (full regression)** must pass on the next post-merge run to the release branch OR a hotfix issue is auto-filed. Not pre-merge blocking — the safety net is post-hoc triage by the operator within working hours.
+
+Operator override on a hotfix issue (accept-with-rationale) is logged on the issue itself + carried in the next release's `test-execution-summary.md` design record (devaudit#50). The framework does not permit silently shipping a failing test — every red regression spec ends as either fixed, reverted, or accepted-with-recorded-rationale.
+
+See Test_Strategy.md § _System Testing (E2E)_ — _E2E gating model_ for the tier definitions + cost philosophy.
+
 ---
 
 ## Roles & Responsibilities
 
 ### Engineering Leadership
+
 - Approve and maintain this policy
 - Allocate testing resources
 - Review metrics and drive improvement
 - Approve AI tool additions
 
 ### QA Team / Test Engineers
+
 - Design and execute strategies and plans
 - Develop and maintain automated suites
 - Report defects and verify fixes
@@ -168,6 +182,7 @@ AI involvement in Medium or High categories raises risk by one level. The Test S
 - Verify security scan results
 
 ### Developers
+
 - Write unit tests for all changes
 - Execute local testing before committing (including security scans)
 - Fix identified defects
@@ -175,6 +190,7 @@ AI involvement in Medium or High categories raises risk by one level. The Test S
 - Document AI use per project requirements
 
 ### Product Managers / Business Analysts
+
 - Define clear acceptance criteria
 - Participate in test planning and risk assessment
 - Review and approve completion reports
@@ -244,16 +260,16 @@ Training completion is tracked as ISO 27001 evidence.
 ```
 Test Policy (this document)
   → WHY we test, WHAT we commit to, WHO is responsible
-  
+
 Test Strategy
   → HOW we approach testing methodically
-  
+
 Test Architecture
   → WHAT we build tests with, HOW we structure the code
-  
+
 Periodic Security Review Schedule
   → WHEN periodic security activities happen
-  
+
 Project Test Plans (per product)
   → WHERE and WHEN for specific products
 ```
@@ -262,11 +278,11 @@ Project Test Plans (per product)
 
 ## Document Control
 
-| Version | Date | Author | Changes |
-|---|---|---|---|
-| 1.0 | January 2026 | Engineering Leadership | Initial creation |
-| 2.0 | March 2026 | Engineering Leadership | Added AI governance, security commitments |
-| 3.0 | March 2026 | Engineering Leadership | Clean boundary split — removed content now owned by Test Strategy (methodology) and Test Architecture (tooling) |
+| Version | Date         | Author                 | Changes                                                                                                         |
+| ------- | ------------ | ---------------------- | --------------------------------------------------------------------------------------------------------------- |
+| 1.0     | January 2026 | Engineering Leadership | Initial creation                                                                                                |
+| 2.0     | March 2026   | Engineering Leadership | Added AI governance, security commitments                                                                       |
+| 3.0     | March 2026   | Engineering Leadership | Clean boundary split — removed content now owned by Test Strategy (methodology) and Test Architecture (tooling) |
 
 **Next Review Date:** March 2027
 

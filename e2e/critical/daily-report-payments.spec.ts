@@ -7,9 +7,9 @@
  */
 import { test as base, expect, Page } from '@playwright/test';
 import path from 'path';
-import { waitForAuthLoaded } from './helpers/customer-auth';
+import { waitForAuthLoaded } from '../helpers/customer-auth';
 
-const ADMIN_FILE = path.join(__dirname, '../.auth/admin.json');
+const ADMIN_FILE = path.join(__dirname, '../../.auth/admin.json');
 
 const test = base.extend({
   storageState: ADMIN_FILE,
@@ -275,17 +275,37 @@ test.describe
     const cardDelta = updated.card - baseline.card;
     const totalDelta = updated.totalRevenue - baseline.totalRevenue;
 
-    // Partial payment (cash) must appear in Cash column
-    expect(cashDelta).toBe(partialAmount);
+    // Relaxed to `>=` per #352: the strict-equality version was the
+    // load-bearing #336 release-blocker. A retried serial-describe block
+    // re-created the tab + payments, doubling each value, and
+    // `.toBe(partialAmount)` failed with `cashDelta=1224 vs 612`. The
+    // critical project now sets `retries: 0` (see playwright.config.ts)
+    // so within-run doubling can't happen, but concurrent runs (cron +
+    // PR + dispatch all firing on the same day) can still contribute to
+    // the aggregate. The deterministic no-double-counting proof lives
+    // at `__tests__/services/financial-report-service.partial-payment-no-double-count.test.ts`;
+    // this E2E proves the bill/payment writes land on the UI flow.
+    expect(cashDelta).toBeGreaterThanOrEqual(partialAmount);
+    expect(cardDelta).toBeGreaterThanOrEqual(finalAmount);
+    expect(totalDelta).toBeGreaterThanOrEqual(tabTotal);
 
-    // Final payment (card) must appear in POS / Card column
-    expect(cardDelta).toBe(finalAmount);
-
-    // Total revenue must increase by exactly the tab total — no double-counting
-    expect(totalDelta).toBe(tabTotal);
-
-    // Cross-check: partial + final = tab total
+    // Cross-check: partial + final = tab total (deterministic — not a
+    // delta against the report, just basic arithmetic).
     expect(partialAmount + finalAmount).toBe(tabTotal);
+  });
+
+  // Cleanup the tab + its orders so subsequent runs (schedule, dispatch,
+  // or another PR) don't see this tab's contribution in their baselines.
+  // See SDLC/test-isolation.md.
+  test.afterAll(async () => {
+    if (tabId) {
+      try {
+        const { deleteTabById } = await import('../helpers/db-assertions');
+        await deleteTabById(tabId);
+      } catch {
+        /* best-effort cleanup */
+      }
+    }
   });
 });
 
@@ -440,5 +460,18 @@ test.describe
     // REQ-017: Total Revenue must also include partial payments
     // (totalRevenue = paymentBreakdown.total, not item-based)
     expect(totalDelta).toBeGreaterThanOrEqual(openPartialAmount);
+  });
+
+  // Cleanup the open tab + its orders so subsequent runs don't see this
+  // tab's partial payment in their baselines. See SDLC/test-isolation.md.
+  test.afterAll(async () => {
+    if (openTabId) {
+      try {
+        const { deleteTabById } = await import('../helpers/db-assertions');
+        await deleteTabById(openTabId);
+      } catch {
+        /* best-effort cleanup */
+      }
+    }
   });
 });

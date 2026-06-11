@@ -14,8 +14,8 @@ import path from 'path';
  * Tests are structural/smoke — they do not mutate production data.
  */
 
-const SUPER_ADMIN_FILE = path.join(__dirname, '../.auth/super-admin.json');
-const ADMIN_FILE = path.join(__dirname, '../.auth/admin.json');
+const SUPER_ADMIN_FILE = path.join(__dirname, '../../.auth/super-admin.json');
+const ADMIN_FILE = path.join(__dirname, '../../.auth/admin.json');
 
 const superAdminTest = base.extend({ storageState: SUPER_ADMIN_FILE });
 const adminTest = base.extend({ storageState: ADMIN_FILE });

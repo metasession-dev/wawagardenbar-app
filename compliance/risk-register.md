@@ -28,6 +28,66 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 
 ---
 
+### R-003 — IncidentRetryButton remediation regression when relocated into expansion container (REQ-077)
+
+**Opened:** 2026-06-10 (REQ-077, plan APPROVAL)
+**Severity:** Inherent medium × high → Residual low × high
+**Owner:** WGB maintainer
+
+**The risk:** REQ-077 wraps each `/dashboard/incidents` row in a new `<IncidentRow>` client component to deliver expand/collapse behaviour. The existing `<IncidentRetryButton>` — load-bearing for REQ-066 AC10 retry-now remediation of stuck inventory deductions — is reused inside the new expansion panel. If the relocation regresses the button's behaviour (event handlers don't fire, props don't propagate, or the action's idempotency guard breaks), admins cannot remediate stuck deductions until the next deploy cycle. Inherent likelihood medium (refactor surface), inherent impact high (loss of operational remediation path for a known failure class).
+
+**Mitigations applied in this REQ:**
+
+1. `<IncidentRetryButton>` is imported and rendered unchanged — same component, same `orderId` prop, no wrapping changes its rendering or event handlers.
+2. Unit test in `__tests__/services/incident-event-service.list-with-linked-orders.test.ts` pins the `inventoryDeducted` join logic so the conditional "Retry now visible vs ✓ Deducted" branch keeps firing.
+3. E2E spec at `e2e/critical/incidents-expansion.spec.ts` (delegated to `e2e-test-engineer`) covers AC4: "Given an undeducted `inventory_deduction_failed` incident, When I expand the row, Then `<IncidentRetryButton>` is visible inside the expansion AND clicking it triggers the existing `retryInventoryDeductionAction` flow with no regression".
+4. Critical-tier project (`retries: 0` per #352) gates the e2e on PR-to-main — a regression here fails the release gate.
+
+**Residual:** low likelihood (controls demonstrably preserve behaviour; component is referentially identical), high impact (the operational remediation path stays load-bearing — if the controls did fail, the consequence is unchanged from inherent).
+
+**Framework cross-references:**
+
+- ISO 27001 A.8.25 — Secure development life cycle (regression risk on existing security control)
+- SOC 2 CC8.1 — Change management
+
+**Review due:** 2027-06-10 (default 365d for MITIGATED entries on a UI surface; OPEN until residual demonstrated effective by the post-merge regression run on `main`).
+
+**Cross-links:** [REQ-077 implementation plan](plans/REQ-077/implementation-plan.md); REQ-066 (originating REQ for retry mechanism); REQ-INV-013 (SRS item for retry-now behaviour).
+
+---
+
+### R-004 — URL-hash-driven expansion state: fidelity + injection-surface defence (REQ-077)
+
+**Opened:** 2026-06-10 (REQ-077, plan APPROVAL)
+**Severity:** Inherent medium × medium → Residual low × low
+**Owner:** WGB maintainer
+
+**The risk:** REQ-077 introduces a URL hash mechanism (`#open=<id1>,<id2>`) so an admin sharing a URL preserves the set of expanded rows. Two failure classes share this surface:
+
+1. **State fidelity:** if the hash is read or written incorrectly, expanded rows collapse on reload (breaking AC6) or unrelated rows expand. UX regression, not a security issue.
+2. **Injection surface:** the hash is user-controlled input. If a hash segment is interpolated into the DOM via `dangerouslySetInnerHTML` or passed unsanitised into an `eval`/`new Function`-like sink, this is a stored-XSS class on a privileged page (`incidentsAccess` permission required, but staff own that permission). Inherent impact medium because the audience is admins.
+
+**Mitigations applied in this REQ:**
+
+1. Hash segments validated against `/^[a-f0-9]+$/` ObjectId regex inside `<IncidentRow>` parse path. Non-matching segments are silently discarded.
+2. Validated hash IDs drive `useState(initial)` for expansion state ONLY — never `dangerouslySetInnerHTML`, never `eval`, never any DOM-string-injection sink.
+3. On parse failure (no valid IDs found) the page defaults to all rows collapsed — graceful degradation, no errored UI.
+4. E2E spec at `e2e/critical/incidents-expansion.spec.ts` AC6 covers a round-trip: navigate with `?kind=...#open=<id>` → reload → assert expanded state persisted for the named ID. AC6 negative path: `#open=<garbage>` → assert no-op + page renders.
+5. Unit test in `__tests__/components/incident-row.hash-parse.test.tsx` pins the regex-validation contract.
+
+**Residual:** low likelihood (regex-validated, controls demonstrably keep the surface clean), low impact (no DOM-injection sink in the parsed-hash path; failures degrade to "no rows expanded" rather than to a security or correctness regression).
+
+**Framework cross-references:**
+
+- ISO 27001 A.8.28 — Secure coding (regex-validated user-input on a privileged page)
+- OWASP ASVS V4 §5 — Validation, sanitisation, and encoding (input validation at the boundary)
+
+**Review due:** 2027-06-10 (default 365d for MITIGATED entries; OPEN until residual demonstrated effective by the post-merge regression run on `main`).
+
+**Cross-links:** [REQ-077 implementation plan](plans/REQ-077/implementation-plan.md); REQ-INV-017 (SRS item for the URL-hash behaviour).
+
+---
+
 ## Closed
 
 ### R-002 — `xlsx` (SheetJS) high advisory — CLOSED (REQ-041, 2026-05-24)

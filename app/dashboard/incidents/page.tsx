@@ -3,47 +3,28 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
   TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { IncidentEventService } from '@/services/incident-event-service';
 import type { IncidentEventKind } from '@/models/incident-event-model';
-import OrderModel from '@/models/order-model';
-import { Types } from 'mongoose';
-import { IncidentRetryButton } from '@/components/features/admin/incident-retry-button';
+import { IncidentRow } from '@/components/features/admin/incident-row';
 
 export const dynamic = 'force-dynamic';
-
-const KIND_LABELS: Record<IncidentEventKind, string> = {
-  inventory_deduction_failed: 'Inventory deduction failed',
-  stale_paid_order: 'Stale paid order',
-};
-
-const KIND_VARIANTS: Record<
-  IncidentEventKind,
-  'default' | 'secondary' | 'destructive' | 'outline'
-> = {
-  inventory_deduction_failed: 'destructive',
-  stale_paid_order: 'secondary',
-};
-
-function timeSince(when: Date): string {
-  const ms = Date.now() - new Date(when).getTime();
-  const m = Math.floor(ms / 60_000);
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h`;
-  return `${Math.floor(h / 24)}d`;
-}
 
 /**
  * @requirement REQ-066 AC6 — Incidents queue
  * @requirement REQ-066 AC10 — per-row "Retry now" action for stuck
  *   `inventory_deduction_failed` events; row flips to ✓ Deducted once
  *   the underlying order's `inventoryDeducted` flag has been set.
+ * @requirement REQ-077 — Expandable incidents (REQ-INV-014/015/016/017)
+ *   each row is wrapped in `<IncidentRow>` so admins can expand inline
+ *   to see `errorDetails`, linked Order snapshot, and (for
+ *   stale_paid_order) the status-history trail. The server fetch
+ *   migrates from `list()` + inline `OrderModel.find` join to the new
+ *   `listWithLinkedOrders()` which projects the snapshot fields in one
+ *   query.
  */
 export default async function IncidentsPage({
   searchParams,
@@ -53,37 +34,10 @@ export default async function IncidentsPage({
   const params = await searchParams;
   const kindFilter = (params.kind ?? 'all') as IncidentEventKind | 'all';
 
-  const rows = await IncidentEventService.list({
+  const rows = await IncidentEventService.listWithLinkedOrders({
     kind: kindFilter,
     limit: 200,
   });
-
-  // REQ-066 AC10 — join per-row Order.inventoryDeducted state so the
-  // action column can render "Retry now" vs "✓ Deducted" without
-  // requiring a roundtrip per row. Only matters for the
-  // `inventory_deduction_failed` kind; other kinds skip the lookup.
-  const dedupOrderIds = Array.from(
-    new Set(
-      rows
-        .filter(
-          (r) =>
-            r.kind === 'inventory_deduction_failed' &&
-            Types.ObjectId.isValid(r.entityId)
-        )
-        .map((r) => r.entityId)
-    )
-  );
-  const orders = dedupOrderIds.length
-    ? await OrderModel.find(
-        { _id: { $in: dedupOrderIds.map((id) => new Types.ObjectId(id)) } },
-        { _id: 1, inventoryDeducted: 1 }
-      ).lean<
-        Array<{ _id: { toString: () => string }; inventoryDeducted: boolean }>
-      >()
-    : [];
-  const inventoryDeductedByOrderId = new Map<string, boolean>(
-    orders.map((o) => [o._id.toString(), !!o.inventoryDeducted])
-  );
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-6">
@@ -129,6 +83,7 @@ export default async function IncidentsPage({
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-8" aria-label="Expand"></TableHead>
                   <TableHead>Kind</TableHead>
                   <TableHead>Entity</TableHead>
                   <TableHead>Summary</TableHead>
@@ -137,46 +92,13 @@ export default async function IncidentsPage({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((r) => {
-                  const isDeductionFail =
-                    r.kind === 'inventory_deduction_failed';
-                  const alreadyDeducted = isDeductionFail
-                    ? inventoryDeductedByOrderId.get(r.entityId) === true
-                    : false;
-                  return (
-                    <TableRow key={String(r._id)}>
-                      <TableCell>
-                        <Badge variant={KIND_VARIANTS[r.kind]}>
-                          {KIND_LABELS[r.kind]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {r.entityId}
-                      </TableCell>
-                      <TableCell className="max-w-2xl text-sm">
-                        {r.summary}
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {timeSince(r.createdAt)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {isDeductionFail && alreadyDeducted && (
-                          <span className="text-xs text-muted-foreground">
-                            ✓ Deducted
-                          </span>
-                        )}
-                        {isDeductionFail && !alreadyDeducted && (
-                          <IncidentRetryButton orderId={r.entityId} />
-                        )}
-                        {!isDeductionFail && (
-                          <span className="text-xs text-muted-foreground">
-                            —
-                          </span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                {rows.map((r) => (
+                  <IncidentRow
+                    key={String(r._id)}
+                    incident={r}
+                    linkedOrder={r.linkedOrder}
+                  />
+                ))}
               </TableBody>
             </Table>
           )}

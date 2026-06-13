@@ -11,7 +11,7 @@
     "dev": "NODE_OPTIONS='--max-old-space-size=4096' tsx watch server.ts",
     "build": "next build",
     "start": "NODE_ENV=production tsx server.ts",
-    "lint": "next lint",
+    "lint": "eslint .",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "seed:menu": "tsx scripts/seed-menu.ts",
     "seed:users": "tsx scripts/seed-test-users.ts",
@@ -31,7 +31,8 @@
     "test:seed": "tsx tests/setup/seed-test-data.ts",
     "test:db:clean": "tsx tests/setup/db-cleanup.ts",
     "check:xlsx": "tsx scripts/check-xlsx-module.ts",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test": "vitest run"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

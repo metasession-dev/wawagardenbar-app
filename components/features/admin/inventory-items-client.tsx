@@ -1,3 +1,6 @@
+/**
+ * @requirement REQ-081 - Sellable inventory category cascade
+ */
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -5,7 +8,10 @@ import { useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Eye, Pencil, Archive, ArchiveRestore } from 'lucide-react';
-import { CategoryFilter } from './category-filter';
+import {
+  CategoryCascadeFilter,
+  type CategoryCascadeMainCategory,
+} from './category-cascade-filter';
 import {
   InventoryTable,
   type InventoryItem as TableInventoryItem,
@@ -44,50 +50,84 @@ interface InventoryItem {
 interface InventoryItemsClientProps {
   sellableInventory: InventoryItem[];
   kitchenInventory: InventoryItem[];
-  /**
-   * REQ-037 — Archived kitchen ingredients (soft-archived rows). Rendered
-   * inside the Kitchen tab when "Show archived" is toggled on; each row
-   * exposes a Restore action.
-   */
+  mainCategories: CategoryCascadeMainCategory[];
   archivedKitchenInventory?: InventoryItem[];
 }
 
 function InventoryTabContent({
   inventory,
+  mainCategories,
+  enableCategoryCascade = false,
   renderRowActions,
 }: {
   inventory: InventoryItem[];
+  mainCategories?: CategoryCascadeMainCategory[];
+  enableCategoryCascade?: boolean;
   renderRowActions?: (item: TableInventoryItem) => React.ReactNode;
 }) {
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedMainCategory, setSelectedMainCategory] = useState<
+    string | null
+  >(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  const categories = useMemo(() => {
-    const uniqueCategories = new Set(
-      inventory
-        .filter((item) => item.menuItemId?.category)
-        .map((item) => item.menuItemId!.category)
-    );
-    return Array.from(uniqueCategories).sort();
-  }, [inventory]);
+  const selectedMain =
+    mainCategories?.find(
+      (category) => category.slug === selectedMainCategory
+    ) ?? null;
 
   const filteredItems = useMemo(() => {
-    if (!selectedCategory) return inventory;
+    if (!enableCategoryCascade) return inventory;
+    if (!selectedMainCategory || !selectedCategory) return [];
     return inventory.filter(
-      (item) => item.menuItemId?.category === selectedCategory
+      (item) =>
+        item.menuItemId?.mainCategory === selectedMainCategory &&
+        item.menuItemId?.category === selectedCategory
     );
-  }, [inventory, selectedCategory]);
+  }, [
+    enableCategoryCascade,
+    inventory,
+    selectedCategory,
+    selectedMainCategory,
+  ]);
 
-  return (
-    <div className="space-y-4">
-      <CategoryFilter
-        categories={categories}
-        selectedCategory={selectedCategory}
-        onCategoryChange={setSelectedCategory}
-      />
+  if (!enableCategoryCascade) {
+    return (
       <InventoryTable
         inventory={filteredItems}
         renderRowActions={renderRowActions}
       />
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <CategoryCascadeFilter
+        mainCategories={mainCategories ?? []}
+        selectedMainCategory={selectedMainCategory}
+        selectedSubCategory={selectedCategory}
+        onMainCategoryChange={(mainCategory) => {
+          setSelectedMainCategory(mainCategory);
+          setSelectedCategory(null);
+        }}
+        onSubCategoryChange={setSelectedCategory}
+        emptySubCategoriesMessage={
+          selectedMain
+            ? `No enabled sub categories are configured under ${selectedMain.label}.`
+            : undefined
+        }
+      />
+      {selectedMainCategory && selectedCategory ? (
+        <InventoryTable
+          inventory={filteredItems}
+          renderRowActions={renderRowActions}
+        />
+      ) : (
+        <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
+          {selectedMainCategory
+            ? 'Select a sub category to view sellable inventory items.'
+            : 'Select a main category to start browsing sellable inventory items.'}
+        </div>
+      )}
     </div>
   );
 }
@@ -96,20 +136,14 @@ export function InventoryItemsClient({
   sellableInventory,
   kitchenInventory,
   archivedKitchenInventory = [],
+  mainCategories,
 }: InventoryItemsClientProps) {
   const [activeTab, setActiveTab] = useState<InventoryTab>('sellable');
   const router = useRouter();
-
-  // REQ-037 — Edit + Archive dialog state for the Kitchen tab. Single
-  // shared state at this level so the row buttons just set the target.
   const [editTarget, setEditTarget] = useState<TableInventoryItem | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<TableInventoryItem | null>(
     null
   );
-
-  // REQ-037 — "Show archived" reveals the archived sub-list with
-  // Restore actions per row. Hidden by default to keep the operator's
-  // attention on the active inventory.
   const [showArchived, setShowArchived] = useState(false);
   const [restoringId, setRestoringId] = useState<string | null>(null);
 
@@ -199,10 +233,14 @@ export function InventoryItemsClient({
           </TabsTrigger>
         </TabsList>
         <TabsContent value="sellable">
-          <InventoryTabContent inventory={sellableInventory} />
+          <InventoryTabContent
+            inventory={sellableInventory}
+            mainCategories={mainCategories}
+            enableCategoryCascade
+          />
         </TabsContent>
         <TabsContent value="kitchen" className="space-y-3">
-          <div className="flex justify-between items-center">
+          <div className="flex items-center justify-between">
             <Button
               variant="outline"
               size="sm"
@@ -220,14 +258,14 @@ export function InventoryItemsClient({
           />
           {showArchived && (
             <div
-              className="space-y-2 pt-4 border-t"
+              className="space-y-2 border-t pt-4"
               data-testid="archived-kitchen-section"
             >
               <h3 className="text-sm font-medium text-muted-foreground">
                 Archived ingredients ({archivedKitchenInventory.length})
               </h3>
               {archivedKitchenInventory.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic">
+                <p className="text-sm italic text-muted-foreground">
                   No archived ingredients.
                 </p>
               ) : (

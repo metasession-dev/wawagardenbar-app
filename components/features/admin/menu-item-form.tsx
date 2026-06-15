@@ -1,3 +1,6 @@
+/**
+ * @requirement REQ-081 - Clear stale sub-category selection when main category changes
+ */
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -136,6 +139,7 @@ export function MenuItemForm({
   const quarterPortionSurcharge = watch('quarterPortionSurcharge');
   const trackInventory = watch('trackInventory');
   const price = watch('price');
+  const category = watch('category');
 
   async function onSubmit(data: MenuItemFormData) {
     if (isLoading) return;
@@ -264,7 +268,10 @@ export function MenuItemForm({
           <Label htmlFor="mainCategory">Main Category *</Label>
           <Select
             value={mainCategory}
-            onValueChange={(value) => setValue('mainCategory', value)}
+            onValueChange={(value) => {
+              setValue('mainCategory', value);
+              setValue('category', '');
+            }}
             disabled={isLoading}
           >
             <SelectTrigger>
@@ -288,6 +295,7 @@ export function MenuItemForm({
         <div className="space-y-2">
           <Label htmlFor="category">Category *</Label>
           <Select
+            value={category}
             onValueChange={(value) => setValue('category', value)}
             disabled={isLoading}
           >

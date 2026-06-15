@@ -1,3 +1,6 @@
+/**
+ * @requirement REQ-081 - Sellable inventory category cascade
+ */
 import { Suspense } from 'react';
 import Link from 'next/link';
 import { connectDB } from '@/lib/mongodb';
@@ -8,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { InventoryItemsClient } from '@/components/features/admin/inventory-items-client';
 import type { InventoryKind } from '@/interfaces/inventory.interface';
 import { computeInventoryStatus } from '@/lib/expense-inventory-link';
+import { CategoryService } from '@/services/category-service';
 import {
   AlertTriangle,
   ArrowRightLeft,
@@ -153,18 +157,24 @@ async function InventoryStats() {
  * Inventory list (Sellable / Kitchen tabs — REQ-034 AC3).
  */
 async function InventoryList() {
-  const [sellableInventory, kitchenInventory, archivedKitchenInventory] =
-    await Promise.all([
-      getInventoryByKind('menu-item'),
-      getInventoryByKind('kitchen-ingredient'),
-      getInventoryByKind('kitchen-ingredient', true),
-    ]);
+  const [
+    sellableInventory,
+    kitchenInventory,
+    archivedKitchenInventory,
+    categories,
+  ] = await Promise.all([
+    getInventoryByKind('menu-item'),
+    getInventoryByKind('kitchen-ingredient'),
+    getInventoryByKind('kitchen-ingredient', true),
+    CategoryService.getCategories(),
+  ]);
 
   return (
     <InventoryItemsClient
       sellableInventory={sellableInventory}
       kitchenInventory={kitchenInventory}
       archivedKitchenInventory={archivedKitchenInventory}
+      mainCategories={categories.mainCategories}
     />
   );
 }

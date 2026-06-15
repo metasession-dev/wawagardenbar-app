@@ -86,6 +86,27 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 
 **Cross-links:** [REQ-077 implementation plan](plans/REQ-077/implementation-plan.md); REQ-INV-017 (SRS item for the URL-hash behaviour).
 
+### R-005 — Category cascade hides valid sellable items or disrupts express order context (REQ-081)
+
+**Opened:** 2026-06-15 (REQ-081, plan APPROVAL)
+**Severity:** Inherent medium × medium → Residual low × medium
+**Owner:** WGB maintainer
+**Review due:** 2027-06-15
+
+**The risk:** REQ-081 changes the way staff and admins discover menu items in the express order, menu management, and sellable inventory surfaces. If the cascade derives categories incorrectly, fails to handle legacy rows, or drops local state during back navigation, staff may be unable to find valid sellable items or may lose an in-progress express order/cart context. Inherent likelihood medium (shared UI/data-selection change across multiple admin surfaces); inherent impact medium (front-of-house order-entry friction and admin management mistakes, but no direct payment or data-loss path).
+
+**Controls / mitigations:**
+
+- Use `CategoryService.getCategories()` / configured registry data as the source of truth rather than hardcoded category lists.
+- Keep server-side express search filtering explicit on both `mainCategory` and `category` while retaining `kind:'menu-item'` and availability filters.
+- Keep selected order/cart/task items independent from category navigation state; changing main clears stale sub-category/item selection only.
+- Add empty states for no enabled sub-categories and no available items so valid zero-result states are observable rather than silent failures.
+- Add automated coverage for express cascade, back navigation, cross-main item selection, and at least one admin management surface.
+
+**Residual risk after controls:** low likelihood x medium impact. Remaining risk is stale/incorrect category metadata in production; the UI will make empty states visible and the registry/settings flow remains the correction path.
+
+**Cross-links:** [REQ-081 implementation plan](plans/REQ-081/implementation-plan.md); [#387](https://github.com/metasession-dev/wawagardenbar-app/issues/387); SRS REQ-ORDMGT-008 / REQ-MENUMGT-007 / REQ-INV-018.
+
 ---
 
 ## Closed

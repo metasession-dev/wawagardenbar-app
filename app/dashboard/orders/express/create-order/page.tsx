@@ -1,5 +1,6 @@
 /**
  * @requirement REQ-009 - Express Create Order flow
+ * @requirement REQ-081 - Main-category to sub-category cascade for express item selection
  */
 'use client';
 
@@ -19,6 +20,10 @@ import {
 } from '@/app/actions/admin/express-actions';
 import { CustomizationPickerDialog } from '@/components/features/menu/customization-picker-dialog';
 import { TipInputRow } from '@/components/features/orders/tip-input-row';
+import {
+  CategoryCascadeFilter,
+  type CategoryCascadeMainCategory,
+} from '@/components/features/admin/category-cascade-filter';
 import {
   summariseSelected,
   type SelectedCustomization,
@@ -87,11 +92,16 @@ function ExpressCreateOrderContent() {
 
   const [step, setStep] = useState<'menu' | 'checkout'>('menu');
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
+  const [mainCategories, setMainCategories] = useState<
+    CategoryCascadeMainCategory[]
+  >([]);
   const [openTabs, setOpenTabs] = useState<OpenTab[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedMainCategory, setSelectedMainCategory] = useState<
+    string | null
+  >(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   // REQ-031: when a clicked menu item has customization groups, open the
@@ -128,17 +138,13 @@ function ExpressCreateOrderContent() {
 
   async function loadInitialData() {
     setLoading(true);
-    const [menuResult, catResult, tabsResult] = await Promise.all([
-      expressSearchMenuAction({}),
+    const [catResult, tabsResult] = await Promise.all([
       expressGetCategoriesAction(),
       expressListOpenTabsAction(),
     ]);
 
-    if (menuResult.success && menuResult.data) {
-      setMenuItems(menuResult.data.items as unknown as MenuItem[]);
-    }
     if (catResult.success && catResult.data) {
-      setCategories(catResult.data.categories);
+      setMainCategories(catResult.data.mainCategories);
     }
     if (tabsResult.success && tabsResult.data) {
       setOpenTabs(tabsResult.data.tabs as unknown as OpenTab[]);
@@ -147,9 +153,19 @@ function ExpressCreateOrderContent() {
   }
 
   const searchMenu = useCallback(
-    async (query: string, category: string | null) => {
+    async (
+      query: string,
+      mainCategory: string | null,
+      category: string | null
+    ) => {
+      if (!mainCategory || !category) {
+        setMenuItems([]);
+        return;
+      }
+
       const result = await expressSearchMenuAction({
         query: query || undefined,
+        mainCategory: mainCategory || undefined,
         category: category || undefined,
       });
       if (result.success && result.data) {
@@ -161,10 +177,10 @@ function ExpressCreateOrderContent() {
 
   useEffect(() => {
     const timeout = setTimeout(() => {
-      searchMenu(searchQuery, selectedCategory);
+      searchMenu(searchQuery, selectedMainCategory, selectedCategory);
     }, 300);
     return () => clearTimeout(timeout);
-  }, [searchQuery, selectedCategory, searchMenu]);
+  }, [searchQuery, selectedMainCategory, selectedCategory, searchMenu]);
 
   function customizationsKey(c?: SelectedCustomization[]): string {
     if (!c || c.length === 0) return '';
@@ -255,6 +271,11 @@ function ExpressCreateOrderContent() {
       .reduce((sum, c) => sum + c.quantity, 0);
   }
 
+  const selectedMain =
+    mainCategories.find((category) => category.slug === selectedMainCategory) ??
+    null;
+  const canBrowseItems = Boolean(selectedMainCategory && selectedCategory);
+
   async function handleSubmit() {
     if (cart.length === 0) return;
 
@@ -329,8 +350,10 @@ function ExpressCreateOrderContent() {
         <div className="flex-1">
           <h1 className="text-2xl font-bold">Express: Create Order</h1>
           <p className="text-muted-foreground">
-            {step === 'menu' ? 'Select menu items' : 'Complete order'}
-            {preselectedTabId && ` — Adding to tab`}
+            {step === 'menu'
+              ? 'Select menu items by main category'
+              : 'Complete order'}
+            {preselectedTabId && ' - Adding to tab'}
           </p>
         </div>
         {step === 'menu' && cartCount > 0 && (
@@ -351,112 +374,124 @@ function ExpressCreateOrderContent() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search menu items..."
+              placeholder={
+                selectedCategory
+                  ? 'Search selected menu items...'
+                  : selectedMain
+                    ? 'Select a sub category to search items'
+                    : 'Select a main category to continue'
+              }
               className="pl-10"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              disabled={!canBrowseItems}
               autoFocus
             />
           </div>
 
-          {/* Categories */}
-          <div className="flex gap-2 flex-wrap">
-            <Button
-              variant={selectedCategory === null ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedCategory(null)}
-            >
-              All
-            </Button>
-            {categories.map((cat) => (
-              <Button
-                key={cat}
-                variant={selectedCategory === cat ? 'default' : 'outline'}
-                size="sm"
-                onClick={() =>
-                  setSelectedCategory(selectedCategory === cat ? null : cat)
-                }
-              >
-                {cat}
-              </Button>
-            ))}
-          </div>
+          <CategoryCascadeFilter
+            mainCategories={mainCategories}
+            selectedMainCategory={selectedMainCategory}
+            selectedSubCategory={selectedCategory}
+            onMainCategoryChange={(mainCategory) => {
+              setSelectedMainCategory(mainCategory);
+              setSelectedCategory(null);
+              setSearchQuery('');
+              setMenuItems([]);
+            }}
+            onSubCategoryChange={(category) => {
+              setSelectedCategory(category);
+              setSearchQuery('');
+              setMenuItems([]);
+            }}
+            emptySubCategoriesMessage={
+              selectedMain
+                ? `No enabled sub categories are configured under ${selectedMain.label}.`
+                : undefined
+            }
+          />
 
           {/* Menu Grid */}
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {menuItems.map((item) => {
-              const qty = getCartQuantity(item._id);
-              const stock = item.currentStock;
-              const isOutOfStock = item.stockStatus === 'out-of-stock';
-              const isLowStock = item.stockStatus === 'low-stock';
-              // Hard-block: out-of-stock items are not clickable from this
-              // grid. Staff who genuinely have stock in the back must
-              // adjust the count first via Inventory → Kitchen edit (or
-              // sellable item Add Stock on the detail page), then come
-              // back here. This keeps the inventory truthful.
-              return (
-                <Card
-                  key={item._id}
-                  aria-disabled={isOutOfStock}
-                  className={`transition-all ${
-                    isOutOfStock
-                      ? 'opacity-60 cursor-not-allowed'
-                      : `cursor-pointer ${
-                          qty > 0 ? 'ring-2 ring-primary' : 'hover:bg-accent/50'
-                        }`
-                  }`}
-                  onClick={() => {
-                    if (isOutOfStock) return;
-                    addToCart(item);
-                  }}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{item.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {item.category}
-                        </p>
-                        <p className="font-bold mt-1">
-                          ₦{item.price.toLocaleString()}
-                        </p>
-                        {(isOutOfStock || isLowStock) && (
-                          <p
-                            className={`text-xs mt-1 font-medium ${
-                              isOutOfStock
-                                ? 'text-destructive'
-                                : 'text-amber-700'
-                            }`}
-                          >
-                            {isOutOfStock
-                              ? 'Out of Stock'
-                              : `Low Stock${typeof stock === 'number' ? ` — ${stock} left` : ''}`}
-                          </p>
-                        )}
-                      </div>
-                      {qty > 0 && (
-                        <div
-                          className="flex items-center gap-1 ml-2"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {/* REQ-031: with customizations, multiple lines per menu item are possible.
-                              The +/- buttons no longer apply unambiguously; the staff manages quantity
-                              from the cart summary instead. Just show the count here. */}
-                          <span className="w-6 text-center font-bold text-sm">
-                            {qty}
-                          </span>
+          {canBrowseItems ? (
+            <>
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                {menuItems.map((item) => {
+                  const qty = getCartQuantity(item._id);
+                  const stock = item.currentStock;
+                  const isOutOfStock = item.stockStatus === 'out-of-stock';
+                  const isLowStock = item.stockStatus === 'low-stock';
+                  return (
+                    <Card
+                      key={item._id}
+                      aria-disabled={isOutOfStock}
+                      className={`transition-all ${
+                        isOutOfStock
+                          ? 'opacity-60 cursor-not-allowed'
+                          : `cursor-pointer ${
+                              qty > 0
+                                ? 'ring-2 ring-primary'
+                                : 'hover:bg-accent/50'
+                            }`
+                      }`}
+                      onClick={() => {
+                        if (isOutOfStock) return;
+                        addToCart(item);
+                      }}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{item.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {item.category}
+                            </p>
+                            <p className="font-bold mt-1">
+                              ₦{item.price.toLocaleString()}
+                            </p>
+                            {(isOutOfStock || isLowStock) && (
+                              <p
+                                className={`text-xs mt-1 font-medium ${
+                                  isOutOfStock
+                                    ? 'text-destructive'
+                                    : 'text-amber-700'
+                                }`}
+                              >
+                                {isOutOfStock
+                                  ? 'Out of Stock'
+                                  : `Low Stock${typeof stock === 'number' ? ` - ${stock} left` : ''}`}
+                              </p>
+                            )}
+                          </div>
+                          {qty > 0 && (
+                            <div
+                              className="ml-2 flex items-center gap-1"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <span className="w-6 text-center text-sm font-bold">
+                                {qty}
+                              </span>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
 
-          {menuItems.length === 0 && (
-            <p className="text-center text-muted-foreground py-8">
-              No menu items found
+              {menuItems.length === 0 && (
+                <p className="py-8 text-center text-muted-foreground">
+                  {searchQuery
+                    ? 'No matching menu items were found in this sub category.'
+                    : 'No available menu items were found in this sub category.'}
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="py-8 text-center text-muted-foreground">
+              {selectedMain
+                ? 'Choose a sub category to view menu items.'
+                : 'Choose a main category to start browsing menu items.'}
             </p>
           )}
         </>

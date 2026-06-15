@@ -64,6 +64,7 @@ git push origin develop
 ```
 
 **Branch roles:**
+
 - `main` — Production. Auto-deploys. Never commit directly.
 - `develop` — All work happens here. Permanent, never deleted.
 
@@ -74,6 +75,7 @@ git push origin develop
 Configure in GitHub → Settings → Branches → Branch protection rules:
 
 **`main` branch:**
+
 - [x] Require a pull request before merging
 - [x] Require approvals: 1 (adjust if team size requires more)
 - [x] Require status checks to pass before merging
@@ -84,6 +86,7 @@ Configure in GitHub → Settings → Branches → Branch protection rules:
 - [x] Do not allow bypassing the above settings
 
 **`develop` branch (optional but recommended):**
+
 - [x] Require status checks to pass (push-to-develop checks)
 
 ---
@@ -128,12 +131,12 @@ This is the **independent verification gate**. Tests run locally during developm
 
 ### What CI Must Run
 
-| Pipeline | Trigger | Jobs | Purpose |
-|---|---|---|---|
-| CI | Push to `develop` | TypeScript + SAST + dependency audit + E2E + build | Quality gates + independent verification |
-| Deploy | Merge to `main` | Auto-deploy to hosting platform | Production release |
+| Pipeline | Trigger           | Jobs                                               | Purpose                                  |
+| -------- | ----------------- | -------------------------------------------------- | ---------------------------------------- |
+| CI       | Push to `develop` | TypeScript + SAST + dependency audit + E2E + build | Quality gates + independent verification |
+| Deploy   | Merge to `main`   | Auto-deploy to hosting platform                    | Production release                       |
 
-PRs to `main` do not trigger a separate CI run. Branch protection required status checks ensure the commit already passed Quality Gates on the develop push. This avoids duplicate CI runs.
+PRs to the integration branch run `Quality Gates` before merge. PRs to `main` do not trigger a duplicate quality-gates run; branch protection required status checks ensure the commit already passed Quality Gates on the integration branch.
 
 ### GitHub Actions Workflow File
 
@@ -213,7 +216,7 @@ Dependency audit ─────────────────────
 E2E tests (ALL — e.g., 183) ──────────→   E2E tests (unauthenticated subset)
 E2E tests (authenticated — local only)     ✗ (credentials not in CI)
 Post-deploy verification (local only)      ✗ (runs after merge)
-                                           
+
 Evidence → compliance/evidence/REQ-XXX/    Evidence → uploaded to DevAudit
 (comprehensive, developer-produced)        (independent, tamper-resistant)
 ```
@@ -225,12 +228,14 @@ Both are required. Local evidence proves comprehensive testing. CI evidence prov
 These are generated for you by `devaudit install` / `devaudit update`. They come from the canonical templates in the DevAudit-Installer repo (`sdlc/files/ci/`):
 
 **`check-release-approval.yml`** (workflow "Release Approval Gate") — release approval gate:
+
 - Runs on PRs to `main` and `workflow_dispatch`
 - Queries DevAudit for release approval status
 - Blocks merge unless the release is approved
 - Add `DevAudit Release Approval` (the job name) as a required status check on `main`
 
 **`post-deploy-prod.yml`** — Production evidence capture:
+
 - Runs on push to `main` (after merge)
 - Waits for deployment, runs production smoke tests
 - Uploads production evidence to DevAudit (`environment: production`)
@@ -375,25 +380,25 @@ If any step fails, fix the configuration before starting real work.
 
 ## Setup Checklist
 
-| Step | Status |
-|---|---|
-| Repository created | [ ] |
-| `develop` branch created | [ ] |
-| Production environment configured (auto-deploy from `main`) | [ ] |
-| UAT environment configured (auto-deploy from `develop`) | [ ] |
-| Branch protection configured | [ ] |
-| Compliance directories created (including `periodic/` subdirs) | [ ] |
-| RTM initialized | [ ] |
-| CI workflow file created (`.github/workflows/ci.yml`) | [ ] |
-| CI verified — all jobs pass on test PR | [ ] |
-| Required status checks added to branch protection | [ ] |
-| Local tooling installed (Semgrep, Playwright) | [ ] |
-| Git hooks configured (Husky, Commitlint, lint-staged) | [ ] |
-| Hook verification passed (commitlint, pre-push tsc) | [ ] |
-| AI assistant SDLC rules configured (CLAUDE.md / .windsurfrules / .cursorrules) | [ ] |
-| DevAudit evidence upload configured in CI | [ ] |
-| Project Test Plan created | [ ] |
-| End-to-end pipeline verified with test change | [ ] |
+| Step                                                                                                   | Status |
+| ------------------------------------------------------------------------------------------------------ | ------ |
+| Repository created                                                                                     | [ ]    |
+| `develop` branch created                                                                               | [ ]    |
+| Production environment configured (auto-deploy from `main`)                                            | [ ]    |
+| UAT environment configured (auto-deploy from `develop`)                                                | [ ]    |
+| Branch protection configured                                                                           | [ ]    |
+| Compliance directories created (including `periodic/` subdirs)                                         | [ ]    |
+| RTM initialized                                                                                        | [ ]    |
+| CI workflow file created (`.github/workflows/ci.yml`)                                                  | [ ]    |
+| CI verified — all jobs pass on test PR                                                                 | [ ]    |
+| Required status checks added to branch protection                                                      | [ ]    |
+| Local tooling installed (Semgrep, Playwright)                                                          | [ ]    |
+| Git hooks configured (Husky, Commitlint, lint-staged)                                                  | [ ]    |
+| Hook verification passed (commitlint, pre-push tsc)                                                    | [ ]    |
+| AI assistant SDLC rules configured (AGENTS.md / CLAUDE.md / GEMINI.md / .windsurfrules / .cursorrules) | [ ]    |
+| DevAudit evidence upload configured in CI                                                              | [ ]    |
+| Project Test Plan created                                                                              | [ ]    |
+| End-to-end pipeline verified with test change                                                          | [ ]    |
 
 ---
 

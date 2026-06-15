@@ -133,6 +133,42 @@ fi
 # Strip any trailing slash so we don't double-up later.
 DEVAUDIT_BASE_URL="${DEVAUDIT_BASE_URL%/}"
 
+# --- Base-URL drift check (devaudit-installer#143) ---
+# When the portal moves host (e.g. devaudit.metasession.co → devaudit.ai)
+# Cloudflare / the origin replies 301/302 with a Location header pointing
+# at the new host. Every consumer's CI that still uses the old base URL
+# fails every upload until DEVAUDIT_BASE_URL is rotated. We don't want
+# the failure mode to be a silent "evidence didn't upload" — surface the
+# drift loudly at the top of the run so the operator knows to rotate the
+# secret. (We still upload via `curl -L` so the run itself succeeds; the
+# warning is the nudge to fix the secret, not a hard stop.)
+probe_base_url_drift() {
+  # `${var:-}` so `set -u` doesn't trip if curl isn't installed or the
+  # network is offline. Probe with -I (HEAD); fall back to GET if HEAD
+  # is rejected by the upstream proxy. 5s connect + 10s overall is
+  # plenty for a redirect-only probe — we never read a body.
+  local probe_url="${DEVAUDIT_BASE_URL}/api/health"
+  local resp
+  resp=$(curl -sI -o /dev/null --max-time 10 --connect-timeout 5 \
+    -w "%{http_code} %{redirect_url}" "$probe_url" 2>/dev/null || true)
+  local code="${resp%% *}"
+  local redirect_url="${resp#* }"
+  if [[ "$code" =~ ^30[1278]$ ]] && [ -n "$redirect_url" ] && [ "$redirect_url" != " " ]; then
+    local old_host new_host
+    old_host=$(printf '%s' "$DEVAUDIT_BASE_URL" | sed -E 's|^https?://([^/]+).*|\1|')
+    new_host=$(printf '%s' "$redirect_url"      | sed -E 's|^https?://([^/]+).*|\1|')
+    if [ -n "$new_host" ] && [ "$old_host" != "$new_host" ]; then
+      echo "WARNING: DEVAUDIT_BASE_URL host '${old_host}' redirects to '${new_host}'."
+      echo "         Rotate the DEVAUDIT_BASE_URL secret in your CI environment to"
+      echo "         the new host to avoid silent breakage. (Uploads will still"
+      echo "         succeed this run — curl follows the redirect — but the"
+      echo "         underlying secret should be updated.)"
+      echo "         Ref: https://github.com/metasession-dev/DevAudit-Installer/issues/143"
+    fi
+  fi
+}
+probe_base_url_drift
+
 # --- Build metadata JSON ---
 # Assemble entries first; only emit `{ ... }` if at least one field is
 # set. Each entry is a `"key":"value"` JSON pair with the value
@@ -195,6 +231,8 @@ TOTAL_SIZE=0
 UPLOAD_URL="${DEVAUDIT_BASE_URL}/api/evidence/upload"
 MAX_ATTEMPTS=${UPLOAD_MAX_ATTEMPTS:-5}
 INITIAL_BACKOFF_SECONDS=${UPLOAD_INITIAL_BACKOFF_SECONDS:-1}
+UPLOAD_CONNECT_TIMEOUT_SECONDS=${UPLOAD_CONNECT_TIMEOUT_SECONDS:-10}
+UPLOAD_MAX_TIME_SECONDS=${UPLOAD_MAX_TIME_SECONDS:-120}
 
 is_unedited_starter_stub() {
   # Match BOTH banner phrasings the SDLC has shipped (v0.1.36 changed
@@ -213,8 +251,15 @@ for FILE in "${FILES[@]}"; do
   fi
   FILE_SIZE=$(stat -c%s "$FILE" 2>/dev/null || stat -f%z "$FILE")
   echo -n "Uploading ${FILENAME}... "
+  # `-L` follows 3xx redirects (devaudit-installer#143). The portal host
+  # has moved before (devaudit.metasession.co → devaudit.ai); without -L
+  # every consumer's CI silently fails on a stale base URL. `--max-redirs 3`
+  # bounds the follow so a misconfigured redirect loop can't hang CI.
   CURL_ARGS=(
-    -X POST "$UPLOAD_URL"
+    -X POST -L --max-redirs 3
+    --connect-timeout "$UPLOAD_CONNECT_TIMEOUT_SECONDS"
+    --max-time "$UPLOAD_MAX_TIME_SECONDS"
+    "$UPLOAD_URL"
     -H "Authorization: Bearer ${DEVAUDIT_API_KEY}"
     -F "file=@${FILE}"
     -F "projectSlug=${PROJECT_SLUG}"
@@ -237,11 +282,31 @@ for FILE in "${FILES[@]}"; do
   BACKOFF=$INITIAL_BACKOFF_SECONDS
   HTTP_CODE=0
   RESP_BODY_FILE=""
+  RESP_HEADERS_FILE=""
+  LAST_CURL_ERROR=""
   while [ "$ATTEMPT" -le "$MAX_ATTEMPTS" ]; do
     [ -n "$RESP_BODY_FILE" ] && rm -f "$RESP_BODY_FILE"
     RESP_BODY_FILE=$(mktemp)
     RESP_HEADERS_FILE=$(mktemp)
-    HTTP_CODE=$(curl -s -o "$RESP_BODY_FILE" -D "$RESP_HEADERS_FILE" -w "%{http_code}" "${CURL_ARGS[@]}")
+    CURL_EXIT=0
+    HTTP_CODE=$(curl -s -o "$RESP_BODY_FILE" -D "$RESP_HEADERS_FILE" -w "%{http_code}" "${CURL_ARGS[@]}") || CURL_EXIT=$?
+    if [ "$CURL_EXIT" -ne 0 ]; then
+      LAST_CURL_ERROR="curl exit ${CURL_EXIT}"
+      if [ "$CURL_EXIT" -eq 28 ]; then
+        LAST_CURL_ERROR="${LAST_CURL_ERROR} (timed out after ${UPLOAD_MAX_TIME_SECONDS}s)"
+      fi
+      if [ "$ATTEMPT" -lt "$MAX_ATTEMPTS" ]; then
+        WAIT_SECONDS=$BACKOFF
+        echo -n "(${LAST_CURL_ERROR}, retry in ${WAIT_SECONDS}s) "
+        rm -f "$RESP_HEADERS_FILE"
+        sleep "$WAIT_SECONDS"
+        ATTEMPT=$((ATTEMPT + 1))
+        BACKOFF=$((BACKOFF * 2))
+        continue
+      fi
+      rm -f "$RESP_HEADERS_FILE"
+      break
+    fi
     if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
       rm -f "$RESP_HEADERS_FILE"
       break
@@ -277,8 +342,14 @@ for FILE in "${FILES[@]}"; do
     SUCCEEDED=$((SUCCEEDED + 1))
     TOTAL_SIZE=$((TOTAL_SIZE + FILE_SIZE))
   else
-    echo "FAILED (HTTP ${HTTP_CODE} after ${ATTEMPT} attempt(s))"
-    echo "  Response: $(head -c 500 "$RESP_BODY_FILE")"
+    if [ -n "$LAST_CURL_ERROR" ]; then
+      echo "FAILED (${LAST_CURL_ERROR} after ${ATTEMPT} attempt(s))"
+    else
+      echo "FAILED (HTTP ${HTTP_CODE} after ${ATTEMPT} attempt(s))"
+    fi
+    if [ -s "$RESP_BODY_FILE" ]; then
+      echo "  Response: $(head -c 500 "$RESP_BODY_FILE")"
+    fi
     rm -f "$RESP_BODY_FILE"
     FAILED=$((FAILED + 1))
   fi

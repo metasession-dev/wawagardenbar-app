@@ -36,9 +36,10 @@ The default way to implement a tracked change is the **`sdlc-implementer`** skil
 ### For ALL Code Changes (including bug fixes)
 
 Even if a change doesn't need a REQ entry:
+
 1. Review existing tests that cover the changed code
 2. Update or add tests BEFORE committing
-3. Run all gates locally — do not push without verifying no regressions
+3. Run the applicable local checks from the approved scope/test plan — do not push without verifying the change-relevant commands pass
 4. If the change affects financial calculations, user-facing data, or access control — it needs a REQ entry regardless of size
 
 What needs a REQ entry: New features → always. Bug fixes affecting financial data, user-facing behaviour, access control → always. Internal logic → only if MEDIUM/HIGH risk. Typos, formatting, dependency bumps → never.
@@ -48,10 +49,11 @@ What needs a REQ entry: New features → always. Bug fixes affecting financial d
 When creating an issue via `gh issue create`, ALWAYS append this to the body:
 
 ## SDLC Checklist
+
 - [ ] Requirement: RTM entry created (or confirmed trivial)
 - [ ] Planning: test-scope.md and test-plan.md created (or confirmed trivial)
 - [ ] Tests: existing tests reviewed, tests updated/added
-- [ ] Gates: all pass locally (tsc, semgrep, audit, playwright)
+- [ ] Gates: applicable local checks pass; CI/UAT full gates pass where required
 - [ ] Evidence: compiled and uploaded (if tracked requirement)
 
 ### Requirement Planning (do this BEFORE coding)
@@ -77,21 +79,24 @@ Read `SDLC/2-implement-and-test.md` for full details. Summary:
 - **Before coding:** Verify ALL exist: `ls compliance/evidence/REQ-XXX/test-scope.md` AND `ls compliance/evidence/REQ-XXX/test-plan.md`. If either is missing, STOP and run planning workflow first. For MEDIUM/HIGH also verify `implementation-plan.md` exists.
 - **Phase 1 — Unit tests (TDD):** Write unit tests before implementation. Tests should initially fail. **CHECKPOINT:** Unit test coverage matches test plan.
 - **Phase 2 — Implementation:** Write the code. Unit tests should now pass. **CHECKPOINT:** All unit tests green.
-- **Phase 3 — E2E tests:** Write E2E tests against the working implementation. **CHECKPOINT:** All E2E tests green.
-- **Phase 4 — All gates:** Run full gate suite (TypeScript, SAST, dep audit, all tests, build). **CHECKPOINT:** All gates green, push to develop.
+- **Phase 3 — E2E tests:** Write E2E tests against the working implementation when the test plan calls for E2E coverage. Before starting a full local E2E suite, confirm local prerequisites (services, database, secrets, seeded auth/test data, browsers). If prerequisites are missing, run the targeted local checks from the test plan and let CI/UAT provide the authoritative full E2E gate.
+- **Phase 4 — All gates:** Run the applicable local gate suite for the change (TypeScript/SAST/dep audit/unit or targeted tests/build as specified). **CHECKPOINT:** Local scoped checks are green, then push to develop for authoritative CI gates.
 - Every commit: conventional format with `Ref: REQ-XXX` and `Co-Authored-By` for AI.
 - Add `@requirement REQ-XXX` JSDoc headers to modified files.
 - Log AI prompts in `compliance/evidence/REQ-XXX/ai-prompts.md` for MEDIUM/HIGH risk.
 
 ### Before Pushing
 
-Run ALL gates — every one must pass:
+Run the local checks required by the approved test plan/scope. For a typical code change this includes:
+
 ```
 npx tsc --noEmit                    # 0 errors
 semgrep scan --config auto src/     # 0 high/critical
 npm audit --audit-level=high        # 0 vulnerabilities
-npx playwright test                 # all pass
+npm test                            # unit/integration tests pass
 ```
+
+**Full local E2E boundary:** Do NOT start `npx playwright test` locally unless you have confirmed the local environment has every required service, database, secret, seeded fixture, authenticated test setup, and browser dependency. For LOW-risk docs/tooling/script-only changes, run the targeted commands in the approved test plan and rely on CI/UAT for the full E2E gate unless the operator explicitly requests a local full-suite run.
 
 **Verify test plan tests are written:** For tracked requirements, check that every test file referenced in `compliance/evidence/REQ-XXX/test-plan.md` exists and passes. If `test-plan.md` lists tests that haven't been written yet, STOP — write and run the tests before pushing.
 
@@ -101,16 +106,18 @@ npx playwright test                 # all pass
 gh run list --branch develop --limit 1
 ```
 
-Do NOT proceed to evidence compilation or PR creation until CI is green. If CI fails, fix locally and re-push.
+Do NOT proceed to evidence compilation or PR creation until CI is green. If CI fails, fix locally and re-push. CI/UAT is the authoritative full E2E verification environment when local prerequisites are unavailable.
 
 ### Evidence Storage Rule
 
 Markdown stays in git. Binary/JSON evidence goes to DevAudit portal.
 
 Upload to DevAudit (NEVER commit to git):
+
 - E2E results (JSON), screenshots (PNG/JPG), SAST results (JSON), dependency audit (JSON), unit test output (TXT), test reports (HTML)
 
 Keep in git (small markdown, needs PR review):
+
 - compliance/RTM.md, test-scope.md, security-summary.md, ai-use-note.md, ai-prompts.md, release tickets
 
 ### After Implementation
@@ -134,6 +141,7 @@ Read `SDLC/3-compile-evidence.md` for full details, including release ticket tem
 **Do NOT create the PR until ready to merge.** Every push to `develop` while a PR is open triggers duplicate CI runs. The PR is the merge request, not the development workspace.
 
 Before creating a PR, verify ALL of the following:
+
 - [ ] All development and iteration is complete
 - [ ] CI green on develop (not stale): `gh run list --branch develop --limit 1`
 - [ ] Working tree clean: `git status`

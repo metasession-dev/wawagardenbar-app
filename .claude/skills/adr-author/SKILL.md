@@ -207,7 +207,7 @@ I have reviewed the ADR-worthiness verdict above and confirm:
 
 **Step 2 — Tag for upload.** The CI's `compliance-evidence.yml` uploads this file as `evidence_type=architecture_decision` (added to META-COMPLY's `EVIDENCE_TYPE_REGISTRY` in the paired sub-PR). The framework-coverage matrix maps this to clauses per `framework-registry-auditor`'s review — see the META-COMPLY-side PR for the final clause attributions (v1 may ship orphan-by-design if the auditor rejects proposed mappings; see [`requirements-aligner`](../requirements-aligner/SKILL.md) for the precedent).
 
-**Step 3 — Hand-off back to `sdlc-implementer`.** The skill's job ends at the artefact + the operator sign-off. The parent orchestrator continues with the rest of Stage 3.
+**Step 3 — Return to the running `sdlc-implementer` context.** The skill's job ends at the artefact + the operator sign-off. The orchestrator immediately continues with the rest of Stage 3 inline — no pause, no operator nudge needed. (Skills run in the same invocation context; control returns synchronously when this skill exits. See `sdlc-implementer/SKILL.md` § _Sub-skill return semantics_.)
 
 ### Phase 3 — Per-REQ ad-hoc audit
 
@@ -264,4 +264,4 @@ Per the [#119 review](https://github.com/metasession-dev/DevAudit-Installer/issu
 - `sdlc/files/_common/skills/requirements-aligner/SKILL.md` — sibling skill (same SoT-alignment family); see for the symmetric shape (Stage 1 + Stage 3 hooks; advisory-then-blocking enforcement).
 - Sibling skill (forthcoming): `risk-register-keeper` (DevAudit-Installer#121).
 - Meta-reviewer (META-COMPLY): `framework-registry-auditor` reviews the `architecture_decision` evidence type's clause mappings before the META-COMPLY sub-PR opens. Per the [#119 sequencing](https://github.com/metasession-dev/DevAudit-Installer/issues/119#issuecomment-4631840651).
-- Existing ADRs in the framework itself: `DevAudit-Installer/docs/ADR/ADR-001-polyglot-sdlc-architecture.md`, `docs/devaudit-cli/ADR-001-language-and-distribution.md` — the pattern this skill maintains.
+- Existing ADRs in the framework itself: [`DevAudit-Installer/docs/ADR/ADR-001-polyglot-sdlc-architecture.md`](https://github.com/metasession-dev/DevAudit-Installer/blob/main/docs/ADR/ADR-001-polyglot-sdlc-architecture.md) — the pattern this skill maintains.

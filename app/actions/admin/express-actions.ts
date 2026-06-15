@@ -2,6 +2,7 @@
 
 /**
  * @requirement REQ-009 - Express Actions: accelerated admin tab, order, and close flows
+ * @requirement REQ-081 - Main-category to sub-category cascade for express item selection
  */
 
 import { cookies } from 'next/headers';
@@ -16,6 +17,7 @@ import MenuItemModel from '@/models/menu-item-model';
 import InventoryModel from '@/models/inventory-model';
 import { ITab, IMenuItem } from '@/interfaces';
 import { computeInventoryStatus } from '@/lib/expense-inventory-link';
+import { CategoryService } from '@/services/category-service';
 import {
   reconcileAndValidateOrderLines,
   type MenuItemForReconcile,
@@ -133,8 +135,15 @@ export type ExpressMenuItem = IMenuItem & {
   currentStock?: number;
 };
 
+export interface ExpressMainCategory {
+  slug: string;
+  label: string;
+  subCategories: string[];
+}
+
 export async function expressSearchMenuAction(params: {
   query?: string;
+  mainCategory?: string;
   category?: string;
 }): Promise<ActionResult<{ items: ExpressMenuItem[] }>> {
   try {
@@ -159,6 +168,10 @@ export async function expressSearchMenuAction(params: {
 
     if (params.category) {
       filter.category = params.category;
+    }
+
+    if (params.mainCategory) {
+      filter.mainCategory = params.mainCategory;
     }
 
     const items = await MenuItemModel.find(filter)
@@ -208,19 +221,16 @@ export async function expressSearchMenuAction(params: {
  * Get menu categories for filtering
  */
 export async function expressGetCategoriesAction(): Promise<
-  ActionResult<{ categories: string[] }>
+  ActionResult<{ mainCategories: ExpressMainCategory[] }>
 > {
   try {
     await requireAdminSession();
-    await connectDB();
 
-    const categories = await MenuItemModel.distinct('category', {
-      isAvailable: true,
-    });
+    const categories = await CategoryService.getCategories();
 
     return {
       success: true,
-      data: { categories: categories.sort() },
+      data: { mainCategories: categories.mainCategories },
     };
   } catch (error) {
     return {

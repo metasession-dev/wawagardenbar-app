@@ -119,6 +119,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-ORDMGT-005   | Cancel order: reason required, paid blocked                             | Should   | regression | `order-management-actions.ts`                                                                                    |
 | REQ-ORDMGT-006   | Manual payment recording                                                | Should   | regression | `order-payment-actions.ts:16`                                                                                    |
 | REQ-ORDMGT-007   | Order completion → inventory deduction chokepoint                       | Must     | regression | `services/order-service.ts:806`; REQ-066                                                                         |
+| REQ-ORDMGT-008   | Express order item selection uses main-category cascade                 | Should   | regression | `app/dashboard/orders/express/create-order/page.tsx`; `app/actions/admin/express-actions.ts`; REQ-081            |
 | REQ-TABMGT-001   | Tab list with status filter + stats                                     | Should   | regression | `app/dashboard/orders/tabs/page.tsx`                                                                             |
 | REQ-TABMGT-002   | Tab detail with partial payments                                        | Should   | regression | `tabs/[tabId]/page.tsx:82`; REQ-012/035/036                                                                      |
 | REQ-TABMGT-003   | Admin pay tab with method + independent tip                             | Should   | regression | `admin-pay-tab-dialog`; REQ-036                                                                                  |
@@ -135,6 +136,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-MENUMGT-004  | Delete/duplicate item                                                   | Could    | extended   | `menu-items-client`                                                                                              |
 | REQ-MENUMGT-005  | Configurable main categories (rename / add / delete, reference-blocked) | Should   | regression | `app/dashboard/settings/page.tsx`; `services/main-category-service.ts`; REQ-075                                  |
 | REQ-MENUMGT-006  | Per-main-category report + per-user access control                      | Should   | regression | `app/dashboard/reports/by-main-category/`; `services/financial-report-service.ts`; `lib/permissions.ts`; REQ-076 |
+| REQ-MENUMGT-007  | Menu management item lists use main-category cascade                    | Should   | regression | `components/features/admin/menu-items-client.tsx`; `menu-item-form.tsx`; `menu-item-edit-form.tsx`; REQ-081      |
 | REQ-CUST-001     | Customer list (csr/super-admin)                                         | Should   | regression | `app/dashboard/customers/page.tsx`                                                                               |
 | REQ-CUST-002     | Delete + recreate customer by email                                     | Could    | extended   | REQ-027                                                                                                          |
 | REQ-INV-001      | Inventory list with live status                                         | Should   | regression | `app/dashboard/inventory/page.tsx:77`                                                                            |
@@ -154,6 +156,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-INV-015      | Incident details panel: errorDetails + Order snapshot                   | Should   | regression | `components/features/admin/incident-details-panel.tsx`; REQ-077                                                  |
 | REQ-INV-016      | Stale-paid-order incident: status-history trail                         | Could    | regression | `components/features/admin/incident-details-panel.tsx`; REQ-077                                                  |
 | REQ-INV-017      | Incidents URL state: filter + expanded-row hash                         | Could    | regression | `components/features/admin/incident-row.tsx`; REQ-077                                                            |
+| REQ-INV-018      | Sellable inventory list uses menu main-category cascade                 | Should   | regression | `components/features/admin/inventory-items-client.tsx`; REQ-081                                                  |
 | REQ-FIN-001      | Create + list expenses by date/filters                                  | Should   | regression | `app/actions/finance/expense-actions.ts:17,52`                                                                   |
 | REQ-FIN-002      | Bank statement (XLSX) import + dedupe                                   | Should   | regression | `app/actions/expenses/csv-import-actions.ts:31`                                                                  |
 | REQ-FIN-003      | Pending expense group submit/edit/approve                               | Should   | regression | `pending-expense-actions.ts:49`; REQ-026/032                                                                     |
@@ -538,6 +541,15 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 - **Given** a confirmed/in-progress order with stock-tracked items, **When** kitchen-display or an admin marks it `completed`, **Then** `completeOrder` calls `deductStockForOrder`, flips `inventoryDeducted: true` on success, and the items' inventory rows decrement (per REQ-INV-009).
 - **Given** insufficient stock at the routed sale point, **When** `completeOrder` runs, **Then** `Order.status` still flips to `completed`, `Order.inventoryDeducted` stays `false`, the action result returns `deductionFailed: true`, and an `inventory_deduction_failed` IncidentEvent is recorded (REQ-INV-010).
 
+#### REQ-ORDMGT-008 — Express order category cascade · **Should** · regression
+
+**Source:** `app/dashboard/orders/express/create-order/page.tsx`, `app/actions/admin/express-actions.ts`; cross-ref REQ-081.
+**Behaviour:** Express order item selection starts with enabled configured main menu categories, then shows only sub-categories for the selected main, then shows only sellable `kind:'menu-item'` items matching both selections. The cart/order context is preserved while staff navigate back from items to sub-categories and from sub-categories to main categories, so one order can include items from multiple mains.
+
+- **Given** a staff member opens `/dashboard/orders/express/create-order`, **When** the page first renders, **Then** it shows enabled main menu categories and does not show sub-category choices or menu items until a main category is selected.
+- **Given** a selected main category, **When** staff selects one of its sub-categories, **Then** the item grid shows only available menu items whose `mainCategory` and `category` match the current selections.
+- **Given** staff has already added items to the cart, **When** they navigate back to sub-categories or main categories and add an item from another main, **Then** the existing cart lines remain and the new item is added to the same order context.
+
 ---
 
 ## Feature Area 11 — Tab Management (TABMGT)
@@ -669,6 +681,15 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 - **Given** the super-admin opens `/dashboard/settings/admins/<adminId>/permissions`, **When** the Main-Category Report Access section renders, **Then** an "Unrestricted" checkbox + a multi-select of registered enabled mains let them set `undefined`, `[]`, or `['food', 'snacks', …]`.
 
 **Honest limitations (documented in the report's footer):** Payments + tips are NOT split per main category (they're order-level and multi-category; payment/tip breakdowns stay on the aggregate Daily Report only). Operating expenses are NOT split per main category. Order count = distinct orders containing at least one item from the selected main; multi-main orders count toward each main's report, so sums don't tie out to the aggregate Daily Report's order count.
+
+#### REQ-MENUMGT-007 — Menu management category cascade · **Should** · regression
+
+**Source:** `components/features/admin/menu-items-client.tsx`, `components/features/admin/menu-item-form.tsx`, `components/features/admin/menu-item-edit-form.tsx`; cross-ref REQ-081.
+**Behaviour:** Admin menu-management item browsing starts from the configured main-category registry, then narrows to sub-categories under the selected main. Create and edit forms keep the existing main-category-before-sub-category flow and clear an invalid sub-category value when the selected main category changes.
+
+- **Given** a super-admin opens `/dashboard/menu`, **When** the list filters render, **Then** enabled main categories are shown first and sub-categories are hidden until a main category is selected.
+- **Given** a selected main category, **When** the super-admin selects a sub-category, **Then** the menu item table shows only sellable items matching both selections, with a lightweight way back to the main-category list.
+- **Given** the create or edit form has a sub-category selected, **When** the super-admin changes the main category to one that does not contain that sub-category, **Then** the stale sub-category value is cleared before save.
 
 ---
 
@@ -812,6 +833,15 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 **Behaviour:** The `?kind=` query param continues to drive the kind filter (REQ-INV-012 behaviour). Additionally, expanded-row IDs are encoded in the URL hash as `#open=<id1>,<id2>` (comma-separated ObjectId hex strings). On page load the hash is read and the named rows render as initially expanded. Hash content is validated against the `/^[a-f0-9]+$/` ObjectId pattern; malformed segments are silently ignored.
 
 - **Given** an admin on `/dashboard/incidents?kind=inventory_deduction_failed` who has expanded a row with `_id: 64a1...`, **When** they reload the page (or share the URL `/dashboard/incidents?kind=inventory_deduction_failed#open=64a1...` with another admin), **Then** the kind filter is preserved and the named row renders as initially expanded.
+
+#### REQ-INV-018 — Sellable inventory category cascade · **Should** · regression
+
+**Source:** `components/features/admin/inventory-items-client.tsx`; cross-ref REQ-081.
+**Behaviour:** The sellable inventory management tab uses the same configured main-category -> sub-category cascade as menu management when filtering inventory rows backed by menu items. Kitchen ingredient COGS categories remain a separate taxonomy and are not reclassified by this requirement.
+
+- **Given** an admin opens `/dashboard/inventory` on the sellable inventory tab, **When** the filters render, **Then** enabled main menu categories are shown first and sub-categories are hidden until a main category is selected.
+- **Given** a selected main and sub-category, **When** the sellable inventory list renders, **Then** only inventory rows whose linked menu item matches both selections are shown.
+- **Given** the selected main changes, **When** the prior selected sub-category does not belong to the new main, **Then** the stale sub-category filter is cleared without changing inventory records.
 
 ---
 

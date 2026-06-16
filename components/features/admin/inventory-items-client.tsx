@@ -69,6 +69,7 @@ function InventoryTabContent({
     string | null
   >(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const selectedMain =
     mainCategories?.find(
@@ -78,14 +79,27 @@ function InventoryTabContent({
   const filteredItems = useMemo(() => {
     if (!enableCategoryCascade) return inventory;
     if (!selectedMainCategory || !selectedCategory) return [];
-    return inventory.filter(
-      (item) =>
-        item.menuItemId?.mainCategory === selectedMainCategory &&
-        item.menuItemId?.category === selectedCategory
-    );
+
+    const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+
+    return inventory.filter((item) => {
+      const itemName = item.menuItemId?.name ?? '';
+      const itemCategory = item.menuItemId?.category ?? '';
+      const itemMainCategory = item.menuItemId?.mainCategory ?? '';
+
+      return (
+        itemMainCategory === selectedMainCategory &&
+        itemCategory === selectedCategory &&
+        (!normalizedSearchQuery ||
+          itemName.toLowerCase().includes(normalizedSearchQuery) ||
+          itemCategory.toLowerCase().includes(normalizedSearchQuery) ||
+          itemMainCategory.toLowerCase().includes(normalizedSearchQuery))
+      );
+    });
   }, [
     enableCategoryCascade,
     inventory,
+    searchQuery,
     selectedCategory,
     selectedMainCategory,
   ]);
@@ -105,11 +119,18 @@ function InventoryTabContent({
         mainCategories={mainCategories ?? []}
         selectedMainCategory={selectedMainCategory}
         selectedSubCategory={selectedCategory}
+        searchQuery={searchQuery}
+        onSearchQueryChange={setSearchQuery}
+        selectedItemsSearchPlaceholder="Search selected inventory items..."
         onMainCategoryChange={(mainCategory) => {
           setSelectedMainCategory(mainCategory);
           setSelectedCategory(null);
+          setSearchQuery('');
         }}
-        onSubCategoryChange={setSelectedCategory}
+        onSubCategoryChange={(subCategory) => {
+          setSelectedCategory(subCategory);
+          setSearchQuery('');
+        }}
         emptySubCategoriesMessage={
           selectedMain
             ? `No enabled sub categories are configured under ${selectedMain.label}.`

@@ -31,7 +31,6 @@ import {
 import type { ICustomization } from '@/interfaces/menu-item.interface';
 import {
   ArrowLeft,
-  Search,
   Plus,
   Minus,
   ShoppingCart,
@@ -370,29 +369,13 @@ function ExpressCreateOrderContent() {
       {/* Menu Selection Step */}
       {step === 'menu' && (
         <>
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder={
-                selectedCategory
-                  ? 'Search selected menu items...'
-                  : selectedMain
-                    ? 'Select a sub category to search items'
-                    : 'Select a main category to continue'
-              }
-              className="pl-10"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              disabled={!canBrowseItems}
-              autoFocus
-            />
-          </div>
-
           <CategoryCascadeFilter
             mainCategories={mainCategories}
             selectedMainCategory={selectedMainCategory}
             selectedSubCategory={selectedCategory}
+            searchQuery={searchQuery}
+            onSearchQueryChange={setSearchQuery}
+            selectedItemsSearchPlaceholder="Search selected menu items..."
             onMainCategoryChange={(mainCategory) => {
               setSelectedMainCategory(mainCategory);
               setSelectedCategory(null);

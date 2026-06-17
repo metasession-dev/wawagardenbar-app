@@ -39,14 +39,12 @@ export function MenuItemsClient({
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredItems = useMemo(() => {
-    if (!selectedMainCategory || !selectedCategory) return [];
-
     const normalizedSearchQuery = searchQuery.trim().toLowerCase();
 
     return menuItems.filter(
       (item) =>
-        item.mainCategory === selectedMainCategory &&
-        item.category === selectedCategory &&
+        (!selectedMainCategory || item.mainCategory === selectedMainCategory) &&
+        (!selectedCategory || item.category === selectedCategory) &&
         (!normalizedSearchQuery ||
           item.name.toLowerCase().includes(normalizedSearchQuery) ||
           item.description.toLowerCase().includes(normalizedSearchQuery) ||
@@ -84,14 +82,12 @@ export function MenuItemsClient({
             : undefined
         }
       />
-      {selectedMainCategory && selectedCategory ? (
-        <MenuItemsTable menuItems={filteredItems} />
-      ) : (
+      {selectedMainCategory && !selectedCategory ? (
         <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
-          {selectedMainCategory
-            ? 'Select a sub category to view menu items.'
-            : 'Select a main category to start browsing menu items.'}
+          Select a sub category to view menu items.
         </div>
+      ) : (
+        <MenuItemsTable menuItems={filteredItems} />
       )}
     </div>
   );

@@ -78,7 +78,6 @@ function InventoryTabContent({
 
   const filteredItems = useMemo(() => {
     if (!enableCategoryCascade) return inventory;
-    if (!selectedMainCategory || !selectedCategory) return [];
 
     const normalizedSearchQuery = searchQuery.trim().toLowerCase();
 
@@ -88,8 +87,8 @@ function InventoryTabContent({
       const itemMainCategory = item.menuItemId?.mainCategory ?? '';
 
       return (
-        itemMainCategory === selectedMainCategory &&
-        itemCategory === selectedCategory &&
+        (!selectedMainCategory || itemMainCategory === selectedMainCategory) &&
+        (!selectedCategory || itemCategory === selectedCategory) &&
         (!normalizedSearchQuery ||
           itemName.toLowerCase().includes(normalizedSearchQuery) ||
           itemCategory.toLowerCase().includes(normalizedSearchQuery) ||
@@ -137,17 +136,15 @@ function InventoryTabContent({
             : undefined
         }
       />
-      {selectedMainCategory && selectedCategory ? (
+      {selectedMainCategory && !selectedCategory ? (
+        <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
+          Select a sub category to view sellable inventory items.
+        </div>
+      ) : (
         <InventoryTable
           inventory={filteredItems}
           renderRowActions={renderRowActions}
         />
-      ) : (
-        <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
-          {selectedMainCategory
-            ? 'Select a sub category to view sellable inventory items.'
-            : 'Select a main category to start browsing sellable inventory items.'}
-        </div>
       )}
     </div>
   );

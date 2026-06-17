@@ -13,6 +13,7 @@ REQ-081 is a user-facing workflow change across order entry and admin management
 
 - Express create-order category cascade: main category first, then sub-category, then matching available sellable items.
 - Express, menu-management, and sellable-inventory contextual search while preserving the main-category -> sub-category browsing flow.
+- Cross-category search: when no sub-category is selected, a search query returns matching available sellable items across all categories; when a sub-category is selected, results are scoped to that selection only.
 - Express cart/order context preservation while navigating back to sub-category and main-category steps.
 - Cross-main item addition in one express cart.
 - Express server action filtering on both `mainCategory` and `category` while keeping `kind:'menu-item'` and `isAvailable` constraints.
@@ -40,6 +41,7 @@ REQ-081 is a user-facing workflow change across order entry and admin management
 - [ ] AC8: Given admin opens sellable inventory, when filters render, then main categories precede sub-categories, search remains enabled, and linked inventory rows filter by both selections plus search text.
 - [ ] AC9: Given no sub-categories or no items exist for a selected step, when the user reaches it, then a clear empty state is shown.
 - [ ] AC10: Given permissions and registry settings exist, when the cascade is used, then permissions remain unchanged and category choices come from the configured registry/source of truth.
+- [ ] AC11: Given no sub-category is selected on express order, menu management, or sellable inventory, when a search query is typed, then matching available items across all categories are returned; given a sub-category is selected, then only items in that sub-category are returned.
 
 ## Risk-Based Depth
 

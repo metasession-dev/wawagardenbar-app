@@ -36,7 +36,13 @@ REQ-081 changes staff/admin item discovery so express create order, menu managem
 
 **Dependencies Added/Changed:**
 
-- No dependency changes in REQ-081.
+- No new dependencies added by REQ-081.
+- Dependency audit remediation performed in commit `fe509db`:
+  - Applied `npm audit fix` automated patches.
+  - Added package overrides: `form-data >=4.0.4`, `ws >=8.20.2`.
+  - `ws` upgraded to `ws@8.21.0`.
+  - Vulnerabilities reduced from 13 to 3 moderate issues.
+  - Remaining: PostCSS@8.4.31 nested under Next.js (no fix available).
 
 ## Test Evidence
 
@@ -49,12 +55,12 @@ REQ-081 changes staff/admin item discovery so express create order, menu managem
 
 ## Security Evidence
 
-| Check            | Result    | Evidence Location                                 |
-| ---------------- | --------- | ------------------------------------------------- |
-| SAST             | PASS      | CI and DevAudit release evidence                  |
-| Dependency Audit | PASS      | CI and DevAudit release evidence                  |
-| Access Control   | Unchanged | `compliance/evidence/REQ-081/security-summary.md` |
-| Audit Log        | Unchanged | `compliance/evidence/REQ-081/security-summary.md` |
+| Check            | Result                                                  | Evidence Location                                 |
+| ---------------- | ------------------------------------------------------- | ------------------------------------------------- |
+| SAST             | PASS                                                    | CI and DevAudit release evidence                  |
+| Dependency Audit | PASS (3 moderate issues remain, PostCSS nested in Next) | Commit `fe509db` and `security-summary.md`        |
+| Access Control   | Unchanged                                               | `compliance/evidence/REQ-081/security-summary.md` |
+| Audit Log        | Unchanged                                               | `compliance/evidence/REQ-081/security-summary.md` |
 
 ## Acceptance Criteria
 
@@ -92,9 +98,10 @@ Medium risk because the change affects shared admin/staff item-selection behavio
 
 ## Audit Trail
 
-| Date       | Action                   | Actor                         | Notes                                                        |
-| ---------- | ------------------------ | ----------------------------- | ------------------------------------------------------------ |
-| 2026-06-15 | Requirement created      | OpenAI Codex                  | REQ-081 planned from issue #387.                             |
-| 2026-06-15 | Implementation completed | OpenAI Codex                  | Category cascade implementation committed as `b7c1d29`.      |
-| 2026-06-15 | Tests passed             | OpenAI Codex / GitHub Actions | CI run 27546511660 passed Quality Gates and Upload Evidence. |
-| 2026-06-15 | Submitted for review     | pending                       | Integration PR to `develop` not yet opened.                  |
+| Date       | Action                       | Actor                         | Notes                                                        |
+| ---------- | ---------------------------- | ----------------------------- | ------------------------------------------------------------ |
+| 2026-06-15 | Requirement created          | OpenAI Codex                  | REQ-081 planned from issue #387.                             |
+| 2026-06-15 | Implementation completed     | OpenAI Codex                  | Category cascade implementation committed as `b7c1d29`.      |
+| 2026-06-15 | Tests passed                 | OpenAI Codex / GitHub Actions | CI run 27546511660 passed Quality Gates and Upload Evidence. |
+| 2026-06-17 | Dependency audit remediation | OpenAI Codex                  | Commit `fe509db` - reduced vulnerabilities from 13 to 3.     |
+| 2026-06-17 | Submitted for review         | pending                       | Integration PR to `develop` ready to open.                   |

@@ -157,7 +157,7 @@ function ExpressCreateOrderContent() {
       mainCategory: string | null,
       category: string | null
     ) => {
-      if (!mainCategory || !category) {
+      if (!mainCategory && !category && !query) {
         setMenuItems([]);
         return;
       }

@@ -26,10 +26,10 @@ REQ-081 changes staff/admin item discovery so express create order, menu managem
 **Files Modified:**
 
 - `app/dashboard/orders/express/create-order/page.tsx` - express item selection now uses the main-category to sub-category cascade with back navigation and cart preservation.
-- `app/actions/admin/express-actions.ts` - express search accepts `mainCategory` and category loading returns the grouped registry-backed envelope.
+- `app/actions/admin/express-actions.ts` - express search accepts `mainCategory` and category loading returns the grouped registry-backed envelope. Search guard updated so a text query fires across all categories when no cascade selection exists.
 - `components/features/admin/category-cascade-filter.tsx` - shared compact cascade selector for admin surfaces.
-- `app/dashboard/menu/page.tsx` and `components/features/admin/menu-items-client.tsx` - menu management now filters main -> sub before showing rows.
-- `app/dashboard/inventory/page.tsx` and `components/features/admin/inventory-items-client.tsx` - sellable inventory now filters main -> sub.
+- `app/dashboard/menu/page.tsx` and `components/features/admin/menu-items-client.tsx` - menu management now filters main -> sub before showing rows. Search applies across all items when no sub-category is selected.
+- `app/dashboard/inventory/page.tsx` and `components/features/admin/inventory-items-client.tsx` - sellable inventory now filters main -> sub. Search applies across all linked menu items when no sub-category is selected.
 - `components/features/admin/menu-item-form.tsx` and `components/features/admin/menu-item-edit-form.tsx` - stale sub-category values are cleared when the main category changes.
 - `__tests__/services/category-service.kind-filter.test.ts` and `e2e/menu-category-cascade.spec.ts` - focused automated coverage for the new cascade behavior.
 - `docs/SRS.md`, `compliance/RTM.md`, `compliance/evidence/REQ-081/*` - requirement and evidence updates.
@@ -70,6 +70,7 @@ REQ-081 changes staff/admin item discovery so express create order, menu managem
 - [x] Sellable inventory uses the same cascade before showing rows.
 - [x] Menu create/edit forms clear invalid sub-category selections.
 - [x] Category registry remains the source of truth and permissions remain unchanged.
+- [x] Search with no sub-category selected returns matching items across all categories; search with a sub-category selected scopes results to that sub-category only (AC11).
 - [x] CI TypeScript, SAST, dependency audit, E2E, build, and evidence upload passed.
 - [x] AI use documented.
 
@@ -98,10 +99,11 @@ Medium risk because the change affects shared admin/staff item-selection behavio
 
 ## Audit Trail
 
-| Date       | Action                       | Actor                         | Notes                                                        |
-| ---------- | ---------------------------- | ----------------------------- | ------------------------------------------------------------ |
-| 2026-06-15 | Requirement created          | OpenAI Codex                  | REQ-081 planned from issue #387.                             |
-| 2026-06-15 | Implementation completed     | OpenAI Codex                  | Category cascade implementation committed as `b7c1d29`.      |
-| 2026-06-15 | Tests passed                 | OpenAI Codex / GitHub Actions | CI run 27546511660 passed Quality Gates and Upload Evidence. |
-| 2026-06-17 | Dependency audit remediation | OpenAI Codex                  | Commit `fe509db` - reduced vulnerabilities from 13 to 3.     |
-| 2026-06-17 | Submitted for review         | pending                       | Integration PR to `develop` ready to open.                   |
+| Date       | Action                       | Actor                         | Notes                                                                                                   |
+| ---------- | ---------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------- |
+| 2026-06-15 | Requirement created          | OpenAI Codex                  | REQ-081 planned from issue #387.                                                                        |
+| 2026-06-15 | Implementation completed     | OpenAI Codex                  | Category cascade implementation committed as `b7c1d29`.                                                 |
+| 2026-06-15 | Tests passed                 | OpenAI Codex / GitHub Actions | CI run 27546511660 passed Quality Gates and Upload Evidence.                                            |
+| 2026-06-17 | Dependency audit remediation | OpenAI Codex                  | Commit `fe509db` - reduced vulnerabilities from 13 to 3.                                                |
+| 2026-06-17 | Scope expanded - AC11 added  | OpenAI Codex                  | Cross-category search folded into REQ-081; test-scope, implementation-plan, and release ticket updated. |
+| 2026-06-17 | Submitted for review         | pending                       | Integration PR #389 open; evidence updated to reflect expanded scope.                                   |

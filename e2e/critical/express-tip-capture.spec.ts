@@ -26,6 +26,7 @@ import {
   findRecentOrderWithTip,
   deleteOrderById,
 } from '../helpers/db-assertions';
+import { revealFirstExpressMenuCard } from '../helpers/express-menu';
 
 const ADMIN_FILE = path.join(__dirname, '../../.auth/admin.json');
 
@@ -72,9 +73,8 @@ test.describe('REQ-035: express order tip capture', () => {
     await page.goto('/dashboard/orders/express/create-order');
     await page.waitForLoadState('networkidle');
 
-    // Pick the first menu item.
-    const menuCard = page.locator('.grid .cursor-pointer').first();
-    await expect(menuCard).toBeVisible({ timeout: 10000 });
+    // Pick the first menu item (walks the REQ-081 category cascade).
+    const menuCard = await revealFirstExpressMenuCard(page);
     await menuCard.click();
 
     // Proceed to checkout.

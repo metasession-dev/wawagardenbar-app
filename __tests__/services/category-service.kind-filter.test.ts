@@ -10,6 +10,8 @@
  * plan (`services/category-service.ts` × 3, `express-actions.ts` × 1,
  * `order-edit-actions.ts` × 2) plus the additional customer-facing
  * surfaces (search, by-id, distinct categories) are all covered.
+ *
+ * @requirement REQ-081 - Express main-category filtering and grouped category envelope
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
@@ -101,6 +103,9 @@ vi.mock('@/models/menu-item-model', () => ({
 
 vi.mock('@/models/inventory-model', () => ({
   default: {
+    find: vi.fn(() => ({
+      lean: vi.fn(async () => []),
+    })),
     findOne: vi.fn(() => ({
       lean: vi.fn(async () => null),
     })),
@@ -194,5 +199,55 @@ describe('REQ-034 AC2 — services/category-service.ts', () => {
       kind: 'menu-item',
     });
     expect(result.available).toBe(false);
+  });
+});
+
+describe('REQ-081 — app/actions/admin/express-actions.ts', () => {
+  it('expressSearchMenuAction filters by mainCategory and category', async () => {
+    const { expressSearchMenuAction } = await import(
+      '@/app/actions/admin/express-actions'
+    );
+
+    await expressSearchMenuAction({
+      query: 'pepper',
+      mainCategory: 'food',
+      category: 'soups',
+    });
+
+    expect(lastFilter('find')).toMatchObject({
+      isAvailable: true,
+      kind: 'menu-item',
+      mainCategory: 'food',
+      category: 'soups',
+    });
+    expect(lastFilter('find').$or).toEqual([
+      { name: { $regex: 'pepper', $options: 'i' } },
+      { description: { $regex: 'pepper', $options: 'i' } },
+      { tags: { $regex: 'pepper', $options: 'i' } },
+    ]);
+  });
+
+  it('expressGetCategoriesAction returns the grouped main-category envelope', async () => {
+    const { expressGetCategoriesAction } = await import(
+      '@/app/actions/admin/express-actions'
+    );
+
+    const result = await expressGetCategoriesAction();
+
+    expect(result.success).toBe(true);
+    expect(result.data?.mainCategories).toEqual([
+      {
+        slug: 'food',
+        label: 'Food',
+        order: 0,
+        subCategories: [],
+      },
+      {
+        slug: 'drinks',
+        label: 'Drinks',
+        order: 1,
+        subCategories: [],
+      },
+    ]);
   });
 });

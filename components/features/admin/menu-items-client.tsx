@@ -1,7 +1,13 @@
+/**
+ * @requirement REQ-081 - Menu management category cascade
+ */
 'use client';
 
-import { useState, useMemo } from 'react';
-import { CategoryFilter } from './category-filter';
+import { useMemo, useState } from 'react';
+import {
+  CategoryCascadeFilter,
+  type CategoryCascadeMainCategory,
+} from './category-cascade-filter';
 import { MenuItemsTable } from './menu-items-table';
 
 interface MenuItem {
@@ -19,29 +25,70 @@ interface MenuItem {
 
 interface MenuItemsClientProps {
   menuItems: MenuItem[];
+  mainCategories: CategoryCascadeMainCategory[];
 }
 
-export function MenuItemsClient({ menuItems }: MenuItemsClientProps) {
-  const [selectedCategory, setSelectedCategory] = useState('');
-
-  const categories = useMemo(() => {
-    const uniqueCategories = new Set(menuItems.map((item) => item.category));
-    return Array.from(uniqueCategories).sort();
-  }, [menuItems]);
+export function MenuItemsClient({
+  menuItems,
+  mainCategories,
+}: MenuItemsClientProps) {
+  const [selectedMainCategory, setSelectedMainCategory] = useState<
+    string | null
+  >(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const filteredItems = useMemo(() => {
-    if (!selectedCategory) return menuItems;
-    return menuItems.filter((item) => item.category === selectedCategory);
-  }, [menuItems, selectedCategory]);
+    const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+
+    return menuItems.filter(
+      (item) =>
+        (!selectedMainCategory || item.mainCategory === selectedMainCategory) &&
+        (!selectedCategory || item.category === selectedCategory) &&
+        (!normalizedSearchQuery ||
+          item.name.toLowerCase().includes(normalizedSearchQuery) ||
+          item.description.toLowerCase().includes(normalizedSearchQuery) ||
+          item.tags.some((tag) =>
+            tag.toLowerCase().includes(normalizedSearchQuery)
+          ))
+    );
+  }, [menuItems, searchQuery, selectedMainCategory, selectedCategory]);
+
+  const selectedMain =
+    mainCategories.find((category) => category.slug === selectedMainCategory) ??
+    null;
 
   return (
     <div className="space-y-4">
-      <CategoryFilter
-        categories={categories}
-        selectedCategory={selectedCategory}
-        onCategoryChange={setSelectedCategory}
+      <CategoryCascadeFilter
+        mainCategories={mainCategories}
+        selectedMainCategory={selectedMainCategory}
+        selectedSubCategory={selectedCategory}
+        searchQuery={searchQuery}
+        onSearchQueryChange={setSearchQuery}
+        selectedItemsSearchPlaceholder="Search selected menu items..."
+        onMainCategoryChange={(mainCategory) => {
+          setSelectedMainCategory(mainCategory);
+          setSelectedCategory(null);
+          setSearchQuery('');
+        }}
+        onSubCategoryChange={(subCategory) => {
+          setSelectedCategory(subCategory);
+          setSearchQuery('');
+        }}
+        emptySubCategoriesMessage={
+          selectedMain
+            ? `No enabled sub categories are configured under ${selectedMain.label}.`
+            : undefined
+        }
       />
-      <MenuItemsTable menuItems={filteredItems} />
+      {selectedMainCategory && !selectedCategory ? (
+        <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
+          Select a sub category to view menu items.
+        </div>
+      ) : (
+        <MenuItemsTable menuItems={filteredItems} />
+      )}
     </div>
   );
 }

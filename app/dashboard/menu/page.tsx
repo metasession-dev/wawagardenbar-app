@@ -1,3 +1,6 @@
+/**
+ * @requirement REQ-081 - Menu management category cascade
+ */
 import { Suspense } from 'react';
 import Link from 'next/link';
 import { connectDB } from '@/lib/mongodb';
@@ -7,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MenuItemsClient } from '@/components/features/admin/menu-items-client';
+import { CategoryService } from '@/services/category-service';
 
 /**
  * Get all menu items (customer-facing only — kind:'menu-item').
@@ -136,9 +140,17 @@ async function MenuStats() {
  * Menu items table wrapper
  */
 async function MenuItemsList() {
-  const menuItems = await getMenuItems();
+  const [menuItems, categories] = await Promise.all([
+    getMenuItems(),
+    CategoryService.getCategories(),
+  ]);
 
-  return <MenuItemsClient menuItems={menuItems} />;
+  return (
+    <MenuItemsClient
+      menuItems={menuItems}
+      mainCategories={categories.mainCategories}
+    />
+  );
 }
 
 /**

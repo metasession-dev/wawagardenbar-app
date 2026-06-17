@@ -1,3 +1,6 @@
+/**
+ * @requirement REQ-081 - Clear stale sub-category selection when main category changes
+ */
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -147,8 +150,10 @@ export function MenuItemEditForm({
           );
           setAvailableLocations(activeLocations);
           // Set default to defaultReceivingLocation if available
-          if (result.data.defaultReceivingLocation && !initialLocation) {
-            setInitialLocation(result.data.defaultReceivingLocation);
+          if (result.data.defaultReceivingLocation) {
+            setInitialLocation(
+              (current) => current || result.data.defaultReceivingLocation || ''
+            );
           }
         }
       } catch (error) {
@@ -487,7 +492,10 @@ export function MenuItemEditForm({
                 <Label htmlFor="mainCategory">Main Category *</Label>
                 <Select
                   value={mainCategory}
-                  onValueChange={(value) => setValue('mainCategory', value)}
+                  onValueChange={(value) => {
+                    setValue('mainCategory', value);
+                    setValue('category', '');
+                  }}
                   disabled={isLoading}
                 >
                   <SelectTrigger>

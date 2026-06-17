@@ -10,6 +10,7 @@
  */
 import { test as base, expect, Page } from '@playwright/test';
 import path from 'path';
+import { revealFirstExpressMenuCard } from '../helpers/express-menu';
 
 const ADMIN_FILE = path.join(__dirname, '../../.auth/admin.json');
 
@@ -144,9 +145,8 @@ test.describe('REQ-014: Orders Page — Reconciliation', () => {
     await page.goto('/dashboard/orders/express/create-order');
     await page.waitForLoadState('networkidle');
 
-    // Wait for menu items to load and click the first card to add to cart
-    const menuCard = page.locator('.grid .cursor-pointer').first();
-    await expect(menuCard).toBeVisible({ timeout: 10000 });
+    // Reveal the menu grid via the REQ-081 category cascade, then add first item
+    const menuCard = await revealFirstExpressMenuCard(page);
     await menuCard.click();
 
     // The checkout button should appear (shows cart count)

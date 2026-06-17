@@ -12,6 +12,7 @@
 
 import { test as base, expect, Page } from '@playwright/test';
 import path from 'path';
+import { revealFirstExpressMenuCard } from './helpers/express-menu';
 
 const SUPER_ADMIN_FILE = path.join(__dirname, '../.auth/super-admin.json');
 
@@ -40,10 +41,11 @@ superAdminTest.describe('REQ-031: Customization picker — user journeys', () =>
       await page.goto('/dashboard/orders/express/create-order');
       await page.waitForLoadState('networkidle');
 
-      // Look for any menu-item card on the express page. Items with
-      // customization groups will open the picker dialog when clicked.
-      const cardsCount = await page.getByRole('button').count();
-      if (cardsCount === 0) {
+      // REQ-081 cascade: reveal the menu grid by walking the category
+      // cascade before searching for a card that opens the picker.
+      try {
+        await revealFirstExpressMenuCard(page);
+      } catch {
         testInfo.skip(true, 'No menu items found on UAT — skipping');
         return;
       }

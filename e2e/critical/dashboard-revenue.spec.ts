@@ -14,6 +14,7 @@
  */
 import { test as base, expect, Page } from '@playwright/test';
 import path from 'path';
+import { revealFirstExpressMenuCard } from '../helpers/express-menu';
 
 const SUPER_ADMIN_FILE = path.join(__dirname, '../../.auth/super-admin.json');
 const ADMIN_FILE = path.join(__dirname, '../../.auth/admin.json');
@@ -159,8 +160,7 @@ adminTest.describe.serial(
       await page.goto('/dashboard/orders/express/create-order');
       await page.waitForLoadState('networkidle');
 
-      const menuCard = page.locator('.grid .cursor-pointer').first();
-      await expect(menuCard).toBeVisible({ timeout: 10000 });
+      const menuCard = await revealFirstExpressMenuCard(page);
       await menuCard.click();
 
       const checkoutBtn = page.getByRole('button', { name: /Checkout/i });

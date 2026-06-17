@@ -5,7 +5,7 @@
 **Requirement ID:** REQ-081
 **Risk Level:** MEDIUM
 **GitHub Issue:** [#387](https://github.com/metasession-dev/wawagardenbar-app/issues/387)
-**Integration PR:** pending
+**Integration PR:** [#389](https://github.com/metasession-dev/wawagardenbar-app/pull/389)
 **DevAudit Release:** `REQ-081`
 
 ---

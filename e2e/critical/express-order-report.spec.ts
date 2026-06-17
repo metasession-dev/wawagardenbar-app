@@ -15,6 +15,7 @@
  */
 import { test as base, expect, Page } from '@playwright/test';
 import path from 'path';
+import { revealFirstExpressMenuCard } from '../helpers/express-menu';
 
 const ADMIN_FILE = path.join(__dirname, '../../.auth/admin.json');
 
@@ -129,9 +130,8 @@ test.describe.serial('Express standalone order — Cash payment', () => {
     await page.goto('/dashboard/orders/express/create-order');
     await page.waitForLoadState('networkidle');
 
-    // Wait for menu grid and add first item
-    const menuCard = page.locator('.grid .cursor-pointer').first();
-    await expect(menuCard).toBeVisible({ timeout: 10000 });
+    // Reveal the menu grid via the REQ-081 category cascade, then add first item
+    const menuCard = await revealFirstExpressMenuCard(page);
 
     // Read the item price before adding
     const priceText = await menuCard.locator('.font-bold').last().textContent();
@@ -206,8 +206,7 @@ test.describe.serial('Express standalone order — POS payment', () => {
     await page.goto('/dashboard/orders/express/create-order');
     await page.waitForLoadState('networkidle');
 
-    const menuCard = page.locator('.grid .cursor-pointer').first();
-    await expect(menuCard).toBeVisible({ timeout: 10000 });
+    const menuCard = await revealFirstExpressMenuCard(page);
     await menuCard.click();
 
     const checkoutBtn = page.getByRole('button', { name: /Checkout/i });
@@ -276,8 +275,7 @@ test.describe.serial('Express standalone order — Transfer payment', () => {
     await page.goto('/dashboard/orders/express/create-order');
     await page.waitForLoadState('networkidle');
 
-    const menuCard = page.locator('.grid .cursor-pointer').first();
-    await expect(menuCard).toBeVisible({ timeout: 10000 });
+    const menuCard = await revealFirstExpressMenuCard(page);
     await menuCard.click();
 
     const checkoutBtn = page.getByRole('button', { name: /Checkout/i });
@@ -393,9 +391,8 @@ async function expressAddOrderToTab(
 ): Promise<number> {
   await page.waitForLoadState('networkidle');
 
-  // Menu items should already be loaded
-  const menuCard = page.locator('.grid .cursor-pointer').first();
-  await expect(menuCard).toBeVisible({ timeout: 10000 });
+  // Reveal the menu grid via the REQ-081 category cascade, then add first item
+  const menuCard = await revealFirstExpressMenuCard(page);
   await menuCard.click();
 
   const checkoutBtn = page.getByRole('button', { name: /Checkout/i });
@@ -700,8 +697,7 @@ test.describe.serial('Express tab with multiple orders — single close', () => 
     await page.waitForLoadState('networkidle');
 
     // Select menu item
-    const menuCard = page.locator('.grid .cursor-pointer').first();
-    await expect(menuCard).toBeVisible({ timeout: 10000 });
+    const menuCard = await revealFirstExpressMenuCard(page);
     await menuCard.click();
 
     // Add a second unit
@@ -796,8 +792,7 @@ test.describe('Express orders appear on orders page', () => {
     await page.goto('/dashboard/orders/express/create-order');
     await page.waitForLoadState('networkidle');
 
-    const menuCard = page.locator('.grid .cursor-pointer').first();
-    await expect(menuCard).toBeVisible({ timeout: 10000 });
+    const menuCard = await revealFirstExpressMenuCard(page);
     await menuCard.click();
 
     const checkoutBtn = page.getByRole('button', { name: /Checkout/i });

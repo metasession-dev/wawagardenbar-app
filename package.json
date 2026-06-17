@@ -116,5 +116,9 @@
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.6.3",
     "vitest": "^4.1.8"
+  },
+  "overrides": {
+    "form-data": ">=4.0.4",
+    "ws": ">=8.20.2"
   }
 }

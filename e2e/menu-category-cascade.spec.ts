@@ -1,8 +1,8 @@
 /**
  * @requirement REQ-081 - Main-category to sub-category cascade across express
- * order and admin menu management
+ * order, menu management, and sellable inventory
  */
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { superAdminTest, isAuthenticated } from './kitchen/helpers';
 
 interface CategoryPath {
@@ -16,6 +16,17 @@ async function checkoutCount(page: Page): Promise<number> {
   const text = (await button.textContent()) ?? '';
   const match = text.match(/Checkout \((\d+)\)/i);
   return match ? Number(match[1]) : 0;
+}
+
+async function expectVisibleRowsToMatch(
+  rowLocator: Locator,
+  expectedText: string
+) {
+  const rows = await rowLocator.allTextContents();
+  expect(rows.length).toBeGreaterThan(0);
+  for (const row of rows) {
+    expect(row.toLowerCase()).toContain(expectedText.toLowerCase());
+  }
 }
 
 async function findPathWithContent(
@@ -69,7 +80,7 @@ superAdminTest.describe('REQ-081: category cascade', () => {
   });
 
   superAdminTest(
-    'express order starts at main categories and preserves cart across main-category changes',
+    'express order starts at main categories, keeps search enabled, and preserves cart across main-category changes',
     async ({ page }, testInfo) => {
       await page.goto('/dashboard/orders/express/create-order');
       await page.waitForLoadState('networkidle');
@@ -78,9 +89,7 @@ superAdminTest.describe('REQ-081: category cascade', () => {
       await expect(
         page.getByText('Choose a main category to continue.')
       ).toBeVisible();
-      await expect(
-        page.getByPlaceholder('Select a main category to continue')
-      ).toBeDisabled();
+      await expect(page.getByTestId('category-cascade-search')).toBeEnabled();
 
       const firstPath = await findPathWithContent(
         page,
@@ -98,6 +107,22 @@ superAdminTest.describe('REQ-081: category cascade', () => {
       await expect(
         page.getByTestId('category-cascade-selection')
       ).toBeVisible();
+
+      const firstItemName = (
+        (await page
+          .locator('[aria-disabled] p.font-medium')
+          .first()
+          .textContent()) ?? ''
+      ).trim();
+      expect(firstItemName).not.toBe('');
+
+      await page.getByTestId('category-cascade-search').fill(firstItemName);
+      await page.waitForTimeout(400);
+      await expectVisibleRowsToMatch(
+        page.locator('[aria-disabled]'),
+        firstItemName
+      );
+
       await page.locator('[aria-disabled="false"]').first().click();
       const firstCheckoutCount = await checkoutCount(page);
       expect(firstCheckoutCount).toBeGreaterThan(0);
@@ -135,7 +160,7 @@ superAdminTest.describe('REQ-081: category cascade', () => {
   );
 
   superAdminTest(
-    'menu management requires main then sub-category selection before showing rows',
+    'menu management requires main then sub-category selection before showing rows and supports search',
     async ({ page }, testInfo) => {
       await page.goto('/dashboard/menu');
       await page.waitForLoadState('networkidle');
@@ -144,6 +169,7 @@ superAdminTest.describe('REQ-081: category cascade', () => {
       await expect(
         page.getByText('Select a main category to start browsing menu items.')
       ).toBeVisible();
+      await expect(page.getByTestId('category-cascade-search')).toBeEnabled();
       await expect(
         page.getByTestId('category-cascade-main-options')
       ).toBeVisible();
@@ -170,6 +196,20 @@ superAdminTest.describe('REQ-081: category cascade', () => {
         'No menu items found'
       );
 
+      const firstItemName = (
+        (await page
+          .locator('tbody tr')
+          .first()
+          .locator('td')
+          .nth(1)
+          .textContent()) ?? ''
+      ).trim();
+      expect(firstItemName).not.toBe('');
+
+      await page.getByTestId('category-cascade-search').fill(firstItemName);
+      await page.waitForTimeout(250);
+      await expectVisibleRowsToMatch(page.locator('tbody tr'), firstItemName);
+
       await page.getByRole('button', { name: 'Sub Categories' }).click();
       await expect(
         page.getByTestId('category-cascade-sub-options')
@@ -178,6 +218,46 @@ superAdminTest.describe('REQ-081: category cascade', () => {
       await expect(
         page.getByTestId('category-cascade-main-options')
       ).toBeVisible();
+    }
+  );
+
+  superAdminTest(
+    'sellable inventory search works inside the selected cascade path',
+    async ({ page }, testInfo) => {
+      await page.goto('/dashboard/inventory');
+      await page.waitForLoadState('networkidle');
+
+      await expect(page.getByTestId('category-cascade')).toBeVisible();
+      await expect(page.getByTestId('category-cascade-search')).toBeEnabled();
+
+      const path = await findPathWithContent(page, async (currentPage) => {
+        const firstRow = currentPage.locator('tbody tr').first();
+        if ((await firstRow.count()) === 0) return false;
+        const text = ((await firstRow.textContent()) ?? '').trim();
+        return text !== 'No inventory items found';
+      });
+
+      if (!path) {
+        testInfo.skip(
+          true,
+          'No sellable-inventory main/sub-category path with visible rows found'
+        );
+        return;
+      }
+
+      const firstItemName = (
+        (await page
+          .locator('tbody tr')
+          .first()
+          .locator('td')
+          .first()
+          .textContent()) ?? ''
+      ).trim();
+      expect(firstItemName).not.toBe('');
+
+      await page.getByTestId('category-cascade-search').fill(firstItemName);
+      await page.waitForTimeout(250);
+      await expectVisibleRowsToMatch(page.locator('tbody tr'), firstItemName);
     }
   );
 });

@@ -36,15 +36,25 @@ export function MenuItemsClient({
     string | null
   >(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const filteredItems = useMemo(() => {
     if (!selectedMainCategory || !selectedCategory) return [];
+
+    const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+
     return menuItems.filter(
       (item) =>
         item.mainCategory === selectedMainCategory &&
-        item.category === selectedCategory
+        item.category === selectedCategory &&
+        (!normalizedSearchQuery ||
+          item.name.toLowerCase().includes(normalizedSearchQuery) ||
+          item.description.toLowerCase().includes(normalizedSearchQuery) ||
+          item.tags.some((tag) =>
+            tag.toLowerCase().includes(normalizedSearchQuery)
+          ))
     );
-  }, [menuItems, selectedMainCategory, selectedCategory]);
+  }, [menuItems, searchQuery, selectedMainCategory, selectedCategory]);
 
   const selectedMain =
     mainCategories.find((category) => category.slug === selectedMainCategory) ??
@@ -56,11 +66,18 @@ export function MenuItemsClient({
         mainCategories={mainCategories}
         selectedMainCategory={selectedMainCategory}
         selectedSubCategory={selectedCategory}
+        searchQuery={searchQuery}
+        onSearchQueryChange={setSearchQuery}
+        selectedItemsSearchPlaceholder="Search selected menu items..."
         onMainCategoryChange={(mainCategory) => {
           setSelectedMainCategory(mainCategory);
           setSelectedCategory(null);
+          setSearchQuery('');
         }}
-        onSubCategoryChange={setSelectedCategory}
+        onSubCategoryChange={(subCategory) => {
+          setSelectedCategory(subCategory);
+          setSearchQuery('');
+        }}
         emptySubCategoriesMessage={
           selectedMain
             ? `No enabled sub categories are configured under ${selectedMain.label}.`

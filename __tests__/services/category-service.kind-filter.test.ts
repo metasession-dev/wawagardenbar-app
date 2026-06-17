@@ -220,6 +220,11 @@ describe('REQ-081 — app/actions/admin/express-actions.ts', () => {
       mainCategory: 'food',
       category: 'soups',
     });
+    expect(lastFilter('find').$or).toEqual([
+      { name: { $regex: 'pepper', $options: 'i' } },
+      { description: { $regex: 'pepper', $options: 'i' } },
+      { tags: { $regex: 'pepper', $options: 'i' } },
+    ]);
   });
 
   it('expressGetCategoriesAction returns the grouped main-category envelope', async () => {

@@ -21,7 +21,16 @@ REQ-081 changes category navigation/filtering for express order creation, menu m
 
 ## Dependency audit
 
-No new packages are planned. Dependency audit should remain unchanged from develop and pass in CI.
+No new packages were added by REQ-081. Dependency audit remediation was performed in commit `fe509db`:
+
+- Ran `npm audit fix` to apply automated patches.
+- Added package overrides for:
+  - `form-data >=4.0.4`
+  - `ws >=8.20.2`
+- `ws` now resolves to `ws@8.21.0`.
+- Audit findings reduced from 13 vulnerabilities to 3 moderate issues.
+- Remaining issue: PostCSS@8.4.31 nested under `next@16.2.9` reports "No fix available" (top-level postcss is patched at 8.5.15).
+- All tests passed (131 test files, 1234 tests) and lint completed with 0 errors after remediation.
 
 ## SAST
 

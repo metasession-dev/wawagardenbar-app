@@ -10,9 +10,9 @@ generated_at: 2026-06-15T07:30:00Z
 
 | AC      | SRS item                                                  | Action this cycle                                                                                            |
 | ------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| AC1-AC5 | **REQ-ORDMGT-008** (new)                                  | Added express order category cascade item under Order Management.                                            |
-| AC6-AC7 | **REQ-MENUMGT-007** (new)                                 | Added menu-management category cascade item under Menu Management.                                           |
-| AC8     | **REQ-INV-018** (new)                                     | Added sellable inventory category cascade item under Inventory Management.                                   |
+| AC1-AC5 | **REQ-ORDMGT-008** (new)                                  | Added express order category cascade and contextual-search item under Order Management.                      |
+| AC6-AC7 | **REQ-MENUMGT-007** (new)                                 | Added menu-management category cascade and contextual-search item under Menu Management.                     |
+| AC8     | **REQ-INV-018** (new)                                     | Added sellable inventory category cascade and contextual-search item under Inventory Management.             |
 | AC9     | **REQ-ORDMGT-008 / REQ-MENUMGT-007 / REQ-INV-018**        | Empty-state behaviour is part of each cascade surface.                                                       |
 | AC10    | **REQ-MENUMGT-005** (existing) plus new cascade SRS items | Source-of-truth registry remains REQ-MENUMGT-005; cascade use is captured by the new surface-specific items. |
 
@@ -25,7 +25,7 @@ generated_at: 2026-06-15T07:30:00Z
 I have reviewed the AC-to-SRS-item traces above and confirm:
 
 - [ ] Each AC has a defensible SRS item.
-- [ ] New SRS items (REQ-ORDMGT-008 / REQ-MENUMGT-007 / REQ-INV-018) accurately describe the expected behaviour.
+- [ ] New SRS items (REQ-ORDMGT-008 / REQ-MENUMGT-007 / REQ-INV-018) accurately describe the expected cascade and search behaviour.
 - [ ] Stale items: none flagged this cycle.
 
 **Reviewer:** pending

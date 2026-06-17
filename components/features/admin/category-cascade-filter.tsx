@@ -100,32 +100,35 @@ export function CategoryCascadeFilter({
         data-testid="category-cascade"
         className="space-y-3 rounded-lg border bg-muted/20 p-4"
       >
-        {renderSearchInput('Search main categories...')}
-        <div>
-          <p className="text-sm font-medium">Main Menu Categories</p>
-          <p className="text-xs text-muted-foreground">
-            Choose a main category to continue.
-          </p>
-        </div>
-        <div
-          data-testid="category-cascade-main-options"
-          className="flex flex-wrap gap-2"
-        >
-          {filteredMainCategories.map((category) => (
-            <Button
-              key={category.slug}
-              variant="outline"
-              size="sm"
-              onClick={() => onMainCategoryChange(category.slug)}
+        {renderSearchInput(
+          normalizedSearchQuery
+            ? 'Search menu items...'
+            : 'Search main categories...'
+        )}
+        {!normalizedSearchQuery && (
+          <>
+            <div>
+              <p className="text-sm font-medium">Main Menu Categories</p>
+              <p className="text-xs text-muted-foreground">
+                Choose a main category to continue.
+              </p>
+            </div>
+            <div
+              data-testid="category-cascade-main-options"
+              className="flex flex-wrap gap-2"
             >
-              {category.label}
-            </Button>
-          ))}
-        </div>
-        {filteredMainCategories.length === 0 && (
-          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-            No main categories match your search.
-          </div>
+              {filteredMainCategories.map((category) => (
+                <Button
+                  key={category.slug}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onMainCategoryChange(category.slug)}
+                >
+                  {category.label}
+                </Button>
+              ))}
+            </div>
+          </>
         )}
       </div>
     );

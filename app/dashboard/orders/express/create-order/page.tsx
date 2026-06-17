@@ -273,7 +273,9 @@ function ExpressCreateOrderContent() {
   const selectedMain =
     mainCategories.find((category) => category.slug === selectedMainCategory) ??
     null;
-  const canBrowseItems = Boolean(selectedMainCategory && selectedCategory);
+  const canBrowseItems = Boolean(
+    (selectedMainCategory && selectedCategory) || searchQuery.trim()
+  );
 
   async function handleSubmit() {
     if (cart.length === 0) return;
@@ -465,7 +467,9 @@ function ExpressCreateOrderContent() {
               {menuItems.length === 0 && (
                 <p className="py-8 text-center text-muted-foreground">
                   {searchQuery
-                    ? 'No matching menu items were found in this sub category.'
+                    ? selectedCategory
+                      ? 'No matching menu items were found in this sub category.'
+                      : 'No matching menu items were found.'
                     : 'No available menu items were found in this sub category.'}
                 </p>
               )}

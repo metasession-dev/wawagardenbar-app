@@ -38,9 +38,9 @@ export function MenuItemsClient({
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredItems = useMemo(() => {
-    const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
 
+  const filteredItems = useMemo(() => {
     return menuItems.filter(
       (item) =>
         (!selectedMainCategory || item.mainCategory === selectedMainCategory) &&
@@ -52,11 +52,20 @@ export function MenuItemsClient({
             tag.toLowerCase().includes(normalizedSearchQuery)
           ))
     );
-  }, [menuItems, searchQuery, selectedMainCategory, selectedCategory]);
+  }, [
+    menuItems,
+    normalizedSearchQuery,
+    selectedMainCategory,
+    selectedCategory,
+  ]);
 
   const selectedMain =
     mainCategories.find((category) => category.slug === selectedMainCategory) ??
     null;
+
+  const canBrowseItems = Boolean(
+    (selectedMainCategory && selectedCategory) || normalizedSearchQuery
+  );
 
   return (
     <div className="space-y-4">
@@ -82,12 +91,14 @@ export function MenuItemsClient({
             : undefined
         }
       />
-      {selectedMainCategory && !selectedCategory ? (
-        <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
-          Select a sub category to view menu items.
-        </div>
-      ) : (
+      {canBrowseItems ? (
         <MenuItemsTable menuItems={filteredItems} />
+      ) : (
+        <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
+          {selectedMain
+            ? 'Select a sub category to view menu items.'
+            : 'Select a main category to start browsing menu items.'}
+        </div>
       )}
     </div>
   );

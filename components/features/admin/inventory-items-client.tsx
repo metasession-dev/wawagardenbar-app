@@ -112,6 +112,11 @@ function InventoryTabContent({
     );
   }
 
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const canBrowseItems = Boolean(
+    (selectedMainCategory && selectedCategory) || normalizedSearchQuery
+  );
+
   return (
     <div className="space-y-4">
       <CategoryCascadeFilter
@@ -136,15 +141,17 @@ function InventoryTabContent({
             : undefined
         }
       />
-      {selectedMainCategory && !selectedCategory ? (
-        <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
-          Select a sub category to view sellable inventory items.
-        </div>
-      ) : (
+      {canBrowseItems ? (
         <InventoryTable
           inventory={filteredItems}
           renderRowActions={renderRowActions}
         />
+      ) : (
+        <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
+          {selectedMain
+            ? 'Select a sub category to view sellable inventory items.'
+            : 'Select a main category to start browsing sellable inventory items.'}
+        </div>
       )}
     </div>
   );

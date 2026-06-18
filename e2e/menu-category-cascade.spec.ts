@@ -202,6 +202,8 @@ superAdminTest.describe('REQ-081: category cascade', () => {
           .first()
           .locator('td')
           .nth(1)
+          .locator('p')
+          .first()
           .textContent()) ?? ''
       ).trim();
       expect(firstItemName).not.toBe('');

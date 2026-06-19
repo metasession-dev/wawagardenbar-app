@@ -1,10 +1,11 @@
 /**
  * @requirement REQ-009 - Express Create Order flow
  * @requirement REQ-081 - Main-category to sub-category cascade for express item selection
+ * @requirement REQ-082 - Progressive category display with grouped items
  */
 'use client';
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -157,8 +158,11 @@ function ExpressCreateOrderContent() {
       mainCategory: string | null,
       category: string | null
     ) => {
-      if (!mainCategory && !category && !query) {
-        setMenuItems([]);
+      if (!query && !mainCategory && !category) {
+        const allResult = await expressSearchMenuAction({});
+        if (allResult.success && allResult.data) {
+          setMenuItems(allResult.data.items as unknown as MenuItem[]);
+        }
         return;
       }
 
@@ -270,12 +274,32 @@ function ExpressCreateOrderContent() {
       .reduce((sum, c) => sum + c.quantity, 0);
   }
 
-  const selectedMain =
-    mainCategories.find((category) => category.slug === selectedMainCategory) ??
-    null;
-  const canBrowseItems = Boolean(
-    (selectedMainCategory && selectedCategory) || searchQuery.trim()
-  );
+  const groupedMenuItems = useMemo(() => {
+    const groups: Record<string, Record<string, MenuItem[]>> = {};
+    for (const item of menuItems) {
+      const main = item.mainCategory;
+      const sub = item.category;
+      if (!groups[main]) groups[main] = {};
+      if (!groups[main][sub]) groups[main][sub] = [];
+      groups[main][sub].push(item);
+    }
+    return groups;
+  }, [menuItems]);
+
+  const mainCategoryLabels = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const cat of mainCategories) {
+      map[cat.slug] = cat.label;
+    }
+    return map;
+  }, [mainCategories]);
+
+  function formatLabel(slug: string) {
+    return slug
+      .split('-')
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
+  }
 
   async function handleSubmit() {
     if (cart.length === 0) return;
@@ -377,109 +401,174 @@ function ExpressCreateOrderContent() {
             selectedSubCategory={selectedCategory}
             searchQuery={searchQuery}
             onSearchQueryChange={setSearchQuery}
-            selectedItemsSearchPlaceholder="Search selected menu items..."
+            selectedItemsSearchPlaceholder="Search menu items..."
             onMainCategoryChange={(mainCategory) => {
               setSelectedMainCategory(mainCategory);
               setSelectedCategory(null);
-              setSearchQuery('');
-              setMenuItems([]);
             }}
             onSubCategoryChange={(category) => {
               setSelectedCategory(category);
-              setSearchQuery('');
-              setMenuItems([]);
             }}
-            emptySubCategoriesMessage={
-              selectedMain
-                ? `No enabled sub categories are configured under ${selectedMain.label}.`
-                : undefined
-            }
           />
 
           {/* Menu Grid */}
-          {canBrowseItems ? (
-            <>
-              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                {menuItems.map((item) => {
-                  const qty = getCartQuantity(item._id);
-                  const stock = item.currentStock;
-                  const isOutOfStock = item.stockStatus === 'out-of-stock';
-                  const isLowStock = item.stockStatus === 'low-stock';
-                  return (
-                    <Card
-                      key={item._id}
-                      aria-disabled={isOutOfStock}
-                      className={`transition-all ${
-                        isOutOfStock
-                          ? 'opacity-60 cursor-not-allowed'
-                          : `cursor-pointer ${
-                              qty > 0
-                                ? 'ring-2 ring-primary'
-                                : 'hover:bg-accent/50'
-                            }`
-                      }`}
-                      onClick={() => {
-                        if (isOutOfStock) return;
-                        addToCart(item);
-                      }}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">{item.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {item.category}
-                            </p>
-                            <p className="font-bold mt-1">
-                              ₦{item.price.toLocaleString()}
-                            </p>
-                            {(isOutOfStock || isLowStock) && (
-                              <p
-                                className={`text-xs mt-1 font-medium ${
-                                  isOutOfStock
-                                    ? 'text-destructive'
-                                    : 'text-amber-700'
-                                }`}
-                              >
-                                {isOutOfStock
-                                  ? 'Out of Stock'
-                                  : `Low Stock${typeof stock === 'number' ? ` - ${stock} left` : ''}`}
-                              </p>
-                            )}
-                          </div>
-                          {qty > 0 && (
-                            <div
-                              className="ml-2 flex items-center gap-1"
-                              onClick={(e) => e.stopPropagation()}
+          {menuItems.length === 0 ? (
+            <p className="py-8 text-center text-muted-foreground">
+              {searchQuery
+                ? 'No matching menu items were found.'
+                : 'No available menu items were found.'}
+            </p>
+          ) : selectedCategory ? (
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+              {menuItems.map((item) => {
+                const qty = getCartQuantity(item._id);
+                const stock = item.currentStock;
+                const isOutOfStock = item.stockStatus === 'out-of-stock';
+                const isLowStock = item.stockStatus === 'low-stock';
+                return (
+                  <Card
+                    key={item._id}
+                    aria-disabled={isOutOfStock}
+                    className={`transition-all ${
+                      isOutOfStock
+                        ? 'opacity-60 cursor-not-allowed'
+                        : `cursor-pointer ${
+                            qty > 0
+                              ? 'ring-2 ring-primary'
+                              : 'hover:bg-accent/50'
+                          }`
+                    }`}
+                    onClick={() => {
+                      if (isOutOfStock) return;
+                      addToCart(item);
+                    }}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{item.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {item.category}
+                          </p>
+                          <p className="font-bold mt-1">
+                            ₦{item.price.toLocaleString()}
+                          </p>
+                          {(isOutOfStock || isLowStock) && (
+                            <p
+                              className={`text-xs mt-1 font-medium ${
+                                isOutOfStock
+                                  ? 'text-destructive'
+                                  : 'text-amber-700'
+                              }`}
                             >
-                              <span className="w-6 text-center text-sm font-bold">
-                                {qty}
-                              </span>
-                            </div>
+                              {isOutOfStock
+                                ? 'Out of Stock'
+                                : `Low Stock${typeof stock === 'number' ? ` - ${stock} left` : ''}`}
+                            </p>
                           )}
                         </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-
-              {menuItems.length === 0 && (
-                <p className="py-8 text-center text-muted-foreground">
-                  {searchQuery
-                    ? selectedCategory
-                      ? 'No matching menu items were found in this sub category.'
-                      : 'No matching menu items were found.'
-                    : 'No available menu items were found in this sub category.'}
-                </p>
-              )}
-            </>
+                        {qty > 0 && (
+                          <div
+                            className="ml-2 flex items-center gap-1"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <span className="w-6 text-center text-sm font-bold">
+                              {qty}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
           ) : (
-            <p className="py-8 text-center text-muted-foreground">
-              {selectedMain
-                ? 'Choose a sub category to view menu items.'
-                : 'Choose a main category to start browsing menu items.'}
-            </p>
+            <div className="space-y-6">
+              {Object.entries(groupedMenuItems).map(([mainSlug, subGroups]) => (
+                <div key={mainSlug} className="space-y-3">
+                  <h3 className="text-sm font-semibold text-foreground">
+                    {mainCategoryLabels[mainSlug] ?? formatLabel(mainSlug)}
+                  </h3>
+                  {Object.entries(subGroups).map(([subSlug, items]) => (
+                    <div key={subSlug} className="space-y-2">
+                      {!selectedMainCategory && (
+                        <p className="text-xs font-medium text-muted-foreground">
+                          {formatLabel(subSlug)}
+                        </p>
+                      )}
+                      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                        {items.map((item) => {
+                          const qty = getCartQuantity(item._id);
+                          const stock = item.currentStock;
+                          const isOutOfStock =
+                            item.stockStatus === 'out-of-stock';
+                          const isLowStock = item.stockStatus === 'low-stock';
+                          return (
+                            <Card
+                              key={item._id}
+                              aria-disabled={isOutOfStock}
+                              className={`transition-all ${
+                                isOutOfStock
+                                  ? 'opacity-60 cursor-not-allowed'
+                                  : `cursor-pointer ${
+                                      qty > 0
+                                        ? 'ring-2 ring-primary'
+                                        : 'hover:bg-accent/50'
+                                    }`
+                              }`}
+                              onClick={() => {
+                                if (isOutOfStock) return;
+                                addToCart(item);
+                              }}
+                            >
+                              <CardContent className="p-4">
+                                <div className="flex justify-between items-start">
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-medium truncate">
+                                      {item.name}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {item.category}
+                                    </p>
+                                    <p className="font-bold mt-1">
+                                      ₦{item.price.toLocaleString()}
+                                    </p>
+                                    {(isOutOfStock || isLowStock) && (
+                                      <p
+                                        className={`text-xs mt-1 font-medium ${
+                                          isOutOfStock
+                                            ? 'text-destructive'
+                                            : 'text-amber-700'
+                                        }`}
+                                      >
+                                        {isOutOfStock
+                                          ? 'Out of Stock'
+                                          : `Low Stock${typeof stock === 'number' ? ` - ${stock} left` : ''}`}
+                                      </p>
+                                    )}
+                                  </div>
+                                  {qty > 0 && (
+                                    <div
+                                      className="ml-2 flex items-center gap-1"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <span className="w-6 text-center text-sm font-bold">
+                                        {qty}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
           )}
         </>
       )}

@@ -1,5 +1,6 @@
 /**
  * @requirement REQ-081 - Shared main-category to sub-category cascade picker
+ * @requirement REQ-082 - Progressive category display with grouped items
  */
 'use client';
 
@@ -33,10 +34,6 @@ function formatCategoryLabel(category: string) {
     .join(' ');
 }
 
-function matchesSearchTerm(value: string, searchQuery: string) {
-  return value.toLowerCase().includes(searchQuery);
-}
-
 export function CategoryCascadeFilter({
   mainCategories,
   selectedMainCategory,
@@ -45,7 +42,7 @@ export function CategoryCascadeFilter({
   onSubCategoryChange,
   searchQuery,
   onSearchQueryChange,
-  selectedItemsSearchPlaceholder = 'Search selected items...',
+  selectedItemsSearchPlaceholder = 'Search menu items...',
   emptyMainCategoriesMessage = 'No main categories available.',
   emptySubCategoriesMessage = 'No sub categories available for this main category.',
 }: CategoryCascadeFilterProps) {
@@ -55,21 +52,8 @@ export function CategoryCascadeFilter({
   const hasSearch =
     typeof searchQuery === 'string' &&
     typeof onSearchQueryChange === 'function';
-  const normalizedSearchQuery = searchQuery?.trim().toLowerCase() ?? '';
-  const filteredMainCategories = mainCategories.filter(
-    (category) =>
-      !normalizedSearchQuery ||
-      matchesSearchTerm(category.label, normalizedSearchQuery) ||
-      matchesSearchTerm(category.slug, normalizedSearchQuery)
-  );
-  const filteredSubCategories = (selectedMain?.subCategories ?? []).filter(
-    (category) =>
-      !normalizedSearchQuery ||
-      matchesSearchTerm(formatCategoryLabel(category), normalizedSearchQuery) ||
-      matchesSearchTerm(category, normalizedSearchQuery)
-  );
 
-  function renderSearchInput(placeholder: string) {
+  function renderSearchInput() {
     if (!hasSearch) return null;
 
     return (
@@ -79,9 +63,114 @@ export function CategoryCascadeFilter({
           data-testid="category-cascade-search"
           value={searchQuery ?? ''}
           onChange={(event) => onSearchQueryChange?.(event.target.value)}
-          placeholder={placeholder}
+          placeholder={selectedItemsSearchPlaceholder}
           className="pl-10"
         />
+      </div>
+    );
+  }
+
+  function renderBreadcrumb() {
+    return (
+      <div
+        data-testid="category-cascade-selection"
+        className="flex flex-wrap items-center gap-2 text-sm"
+      >
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            onSubCategoryChange(null);
+            onMainCategoryChange(null);
+          }}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          All Categories
+        </Button>
+        {selectedMain && (
+          <>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onSubCategoryChange(null)}
+            >
+              {selectedMain.label}
+            </Button>
+          </>
+        )}
+        {selectedMain && selectedSubCategory && (
+          <>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            <span className="font-medium text-foreground">
+              {formatCategoryLabel(selectedSubCategory)}
+            </span>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  function renderMainCategoryButtons() {
+    return (
+      <div
+        data-testid="category-cascade-main-options"
+        className="flex flex-wrap gap-2"
+      >
+        {mainCategories.map((category) => (
+          <Button
+            key={category.slug}
+            variant={
+              selectedMainCategory === category.slug ? 'default' : 'outline'
+            }
+            size="sm"
+            onClick={() => {
+              if (selectedMainCategory === category.slug) {
+                onMainCategoryChange(null);
+              } else {
+                onMainCategoryChange(category.slug);
+                onSubCategoryChange(null);
+              }
+            }}
+          >
+            {category.label}
+          </Button>
+        ))}
+      </div>
+    );
+  }
+
+  function renderSubCategoryButtons() {
+    if (!selectedMain) return null;
+    if (selectedMain.subCategories.length === 0) {
+      return (
+        <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+          {emptySubCategoriesMessage}
+        </div>
+      );
+    }
+
+    return (
+      <div
+        data-testid="category-cascade-sub-options"
+        className="flex flex-wrap gap-2"
+      >
+        {selectedMain.subCategories.map((category) => (
+          <Button
+            key={category}
+            variant={selectedSubCategory === category ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => {
+              if (selectedSubCategory === category) {
+                onSubCategoryChange(null);
+              } else {
+                onSubCategoryChange(category);
+              }
+            }}
+          >
+            {formatCategoryLabel(category)}
+          </Button>
+        ))}
       </div>
     );
   }
@@ -94,135 +183,15 @@ export function CategoryCascadeFilter({
     );
   }
 
-  if (!selectedMain) {
-    return (
-      <div
-        data-testid="category-cascade"
-        className="space-y-3 rounded-lg border bg-muted/20 p-4"
-      >
-        {renderSearchInput(
-          normalizedSearchQuery
-            ? 'Search menu items...'
-            : 'Search main categories...'
-        )}
-        {!normalizedSearchQuery && (
-          <>
-            <div>
-              <p className="text-sm font-medium">Main Menu Categories</p>
-              <p className="text-xs text-muted-foreground">
-                Choose a main category to continue.
-              </p>
-            </div>
-            <div
-              data-testid="category-cascade-main-options"
-              className="flex flex-wrap gap-2"
-            >
-              {filteredMainCategories.map((category) => (
-                <Button
-                  key={category.slug}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onMainCategoryChange(category.slug)}
-                >
-                  {category.label}
-                </Button>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
-    );
-  }
-
-  if (!selectedSubCategory) {
-    return (
-      <div
-        data-testid="category-cascade"
-        className="space-y-3 rounded-lg border bg-muted/20 p-4"
-      >
-        {renderSearchInput('Search sub categories...')}
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-medium">{selectedMain.label}</p>
-            <p className="text-xs text-muted-foreground">
-              Select a sub category.
-            </p>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onMainCategoryChange(null)}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Main Categories
-          </Button>
-        </div>
-        {selectedMain.subCategories.length === 0 ? (
-          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-            {emptySubCategoriesMessage}
-          </div>
-        ) : (
-          <div
-            data-testid="category-cascade-sub-options"
-            className="flex flex-wrap gap-2"
-          >
-            {filteredSubCategories.map((category) => (
-              <Button
-                key={category}
-                variant="outline"
-                size="sm"
-                onClick={() => onSubCategoryChange(category)}
-              >
-                {formatCategoryLabel(category)}
-              </Button>
-            ))}
-          </div>
-        )}
-        {selectedMain.subCategories.length > 0 &&
-          filteredSubCategories.length === 0 && (
-            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              No sub categories match your search.
-            </div>
-          )}
-      </div>
-    );
-  }
-
   return (
     <div
-      data-testid="category-cascade-selection"
+      data-testid="category-cascade"
       className="space-y-3 rounded-lg border bg-muted/20 p-4"
     >
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onSubCategoryChange(null)}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Sub Categories
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              onSubCategoryChange(null);
-              onMainCategoryChange(null);
-            }}
-          >
-            Main Categories
-          </Button>
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <span className="font-medium text-foreground">
-              {selectedMain.label}
-            </span>
-            <ChevronRight className="h-4 w-4" />
-            <span>{formatCategoryLabel(selectedSubCategory)}</span>
-          </div>
-        </div>
-      </div>
-      {renderSearchInput(selectedItemsSearchPlaceholder)}
+      {renderSearchInput()}
+      {renderBreadcrumb()}
+      {renderMainCategoryButtons()}
+      {selectedMain && renderSubCategoryButtons()}
     </div>
   );
 }

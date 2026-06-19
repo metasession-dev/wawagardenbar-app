@@ -1,5 +1,6 @@
 /**
  * @requirement REQ-081 - Menu management category cascade
+ * @requirement REQ-082 - Progressive category display with grouped items
  */
 'use client';
 
@@ -59,13 +60,32 @@ export function MenuItemsClient({
     selectedCategory,
   ]);
 
-  const selectedMain =
-    mainCategories.find((category) => category.slug === selectedMainCategory) ??
-    null;
+  const groupedItems = useMemo(() => {
+    const groups: Record<string, Record<string, MenuItem[]>> = {};
+    for (const item of filteredItems) {
+      const main = item.mainCategory;
+      const sub = item.category;
+      if (!groups[main]) groups[main] = {};
+      if (!groups[main][sub]) groups[main][sub] = [];
+      groups[main][sub].push(item);
+    }
+    return groups;
+  }, [filteredItems]);
 
-  const canBrowseItems = Boolean(
-    (selectedMainCategory && selectedCategory) || normalizedSearchQuery
-  );
+  const mainCategoryLabels = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const cat of mainCategories) {
+      map[cat.slug] = cat.label;
+    }
+    return map;
+  }, [mainCategories]);
+
+  function formatLabel(slug: string) {
+    return slug
+      .split('-')
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
+  }
 
   return (
     <div className="space-y-4">
@@ -75,29 +95,42 @@ export function MenuItemsClient({
         selectedSubCategory={selectedCategory}
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
-        selectedItemsSearchPlaceholder="Search selected menu items..."
+        selectedItemsSearchPlaceholder="Search menu items..."
         onMainCategoryChange={(mainCategory) => {
           setSelectedMainCategory(mainCategory);
           setSelectedCategory(null);
-          setSearchQuery('');
         }}
         onSubCategoryChange={(subCategory) => {
           setSelectedCategory(subCategory);
-          setSearchQuery('');
         }}
-        emptySubCategoriesMessage={
-          selectedMain
-            ? `No enabled sub categories are configured under ${selectedMain.label}.`
-            : undefined
-        }
       />
-      {canBrowseItems ? (
+      {filteredItems.length === 0 ? (
+        <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
+          {normalizedSearchQuery
+            ? 'No menu items match your search.'
+            : 'No menu items found.'}
+        </div>
+      ) : selectedCategory ? (
         <MenuItemsTable menuItems={filteredItems} />
       ) : (
-        <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
-          {selectedMain
-            ? 'Select a sub category to view menu items.'
-            : 'Select a main category to start browsing menu items.'}
+        <div className="space-y-6">
+          {Object.entries(groupedItems).map(([mainSlug, subGroups]) => (
+            <div key={mainSlug} className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground">
+                {mainCategoryLabels[mainSlug] ?? formatLabel(mainSlug)}
+              </h3>
+              {Object.entries(subGroups).map(([subSlug, items]) => (
+                <div key={subSlug} className="space-y-2">
+                  {!selectedMainCategory && (
+                    <p className="text-xs font-medium text-muted-foreground">
+                      {formatLabel(subSlug)}
+                    </p>
+                  )}
+                  <MenuItemsTable menuItems={items} />
+                </div>
+              ))}
+            </div>
+          ))}
         </div>
       )}
     </div>

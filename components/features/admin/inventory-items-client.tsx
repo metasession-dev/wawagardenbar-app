@@ -1,5 +1,6 @@
 /**
  * @requirement REQ-081 - Sellable inventory category cascade
+ * @requirement REQ-082 - Progressive category display with grouped items
  */
 'use client';
 
@@ -71,11 +72,6 @@ function InventoryTabContent({
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const selectedMain =
-    mainCategories?.find(
-      (category) => category.slug === selectedMainCategory
-    ) ?? null;
-
   const filteredItems = useMemo(() => {
     if (!enableCategoryCascade) return inventory;
 
@@ -103,6 +99,27 @@ function InventoryTabContent({
     selectedMainCategory,
   ]);
 
+  const groupedItems = useMemo(() => {
+    if (!enableCategoryCascade) return {};
+    const groups: Record<string, Record<string, InventoryItem[]>> = {};
+    for (const item of filteredItems) {
+      const main = item.menuItemId?.mainCategory ?? 'uncategorized';
+      const sub = item.menuItemId?.category ?? 'uncategorized';
+      if (!groups[main]) groups[main] = {};
+      if (!groups[main][sub]) groups[main][sub] = [];
+      groups[main][sub].push(item);
+    }
+    return groups;
+  }, [filteredItems, enableCategoryCascade]);
+
+  const mainCategoryLabels = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const cat of mainCategories ?? []) {
+      map[cat.slug] = cat.label;
+    }
+    return map;
+  }, [mainCategories]);
+
   if (!enableCategoryCascade) {
     return (
       <InventoryTable
@@ -113,9 +130,13 @@ function InventoryTabContent({
   }
 
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
-  const canBrowseItems = Boolean(
-    (selectedMainCategory && selectedCategory) || normalizedSearchQuery
-  );
+
+  function formatLabel(slug: string) {
+    return slug
+      .split('-')
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
+  }
 
   return (
     <div className="space-y-4">
@@ -125,32 +146,48 @@ function InventoryTabContent({
         selectedSubCategory={selectedCategory}
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
-        selectedItemsSearchPlaceholder="Search selected inventory items..."
+        selectedItemsSearchPlaceholder="Search inventory items..."
         onMainCategoryChange={(mainCategory) => {
           setSelectedMainCategory(mainCategory);
           setSelectedCategory(null);
-          setSearchQuery('');
         }}
         onSubCategoryChange={(subCategory) => {
           setSelectedCategory(subCategory);
-          setSearchQuery('');
         }}
-        emptySubCategoriesMessage={
-          selectedMain
-            ? `No enabled sub categories are configured under ${selectedMain.label}.`
-            : undefined
-        }
       />
-      {canBrowseItems ? (
+      {filteredItems.length === 0 ? (
+        <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
+          {normalizedSearchQuery
+            ? 'No inventory items match your search.'
+            : 'No inventory items found.'}
+        </div>
+      ) : selectedCategory ? (
         <InventoryTable
           inventory={filteredItems}
           renderRowActions={renderRowActions}
         />
       ) : (
-        <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
-          {selectedMain
-            ? 'Select a sub category to view sellable inventory items.'
-            : 'Select a main category to start browsing sellable inventory items.'}
+        <div className="space-y-6">
+          {Object.entries(groupedItems).map(([mainSlug, subGroups]) => (
+            <div key={mainSlug} className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground">
+                {mainCategoryLabels[mainSlug] ?? formatLabel(mainSlug)}
+              </h3>
+              {Object.entries(subGroups).map(([subSlug, items]) => (
+                <div key={subSlug} className="space-y-2">
+                  {!selectedMainCategory && (
+                    <p className="text-xs font-medium text-muted-foreground">
+                      {formatLabel(subSlug)}
+                    </p>
+                  )}
+                  <InventoryTable
+                    inventory={items}
+                    renderRowActions={renderRowActions}
+                  />
+                </div>
+              ))}
+            </div>
+          ))}
         </div>
       )}
     </div>

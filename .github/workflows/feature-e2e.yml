@@ -63,6 +63,13 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps
 
+      - name: Set database URI from dynamic port
+        run: |
+          DB_PORT="${{ job.services.mongodb.ports['27017:27017'] }}"
+          echo "MONGODB_WAWAGARDENBAR_APP_URI=mongodb://localhost:${DB_PORT}" >> "$GITHUB_ENV"
+          echo "MONGODB_URI=mongodb://localhost:${DB_PORT}" >> "$GITHUB_ENV"
+          echo "Database on port: ${DB_PORT}"
+
       - name: E2E setup (seed DB + auth users)
         env:
           MONGODB_URI: mongodb://localhost:27017

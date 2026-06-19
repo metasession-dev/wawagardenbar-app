@@ -43,6 +43,13 @@ jobs:
     needs: detect-req
     if: needs.detect-req.outputs.has_tests == 'true'
     runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+
     env:
       DEVAUDIT_BASE_URL_VAR: ${{ vars.DEVAUDIT_BASE_URL }}
       DEVAUDIT_API_KEY: ${{ secrets.DEVAUDIT_API_KEY }}
@@ -55,7 +62,51 @@ jobs:
           node-version: '20'
       - run: npm ci
       - run: npx playwright install --with-deps
+
+      - name: E2E setup (seed DB + auth users)
+        env:
+          MONGODB_URI: mongodb://localhost:27017
+          MONGODB_DB_NAME: wawagardenbar_test
+          E2E_ADMIN_USERNAME: e2e-admin
+          E2E_ADMIN_PASSWORD: E2eTest@2026!
+          E2E_SUPER_ADMIN_USERNAME: e2e-superadmin
+          E2E_SUPER_ADMIN_PASSWORD: E2eTest@2026!
+          E2E_CSR_USERNAME: e2e-csr
+          E2E_CSR_PASSWORD: E2eTest@2026!
+        run: |
+          npx tsx scripts/seed-e2e-admins.ts
+          npx tsx scripts/seed-food-menu.ts
+          npx tsx scripts/seed-drinks-menu.ts
+          npx tsx scripts/seed-inventory.ts
+
+      - name: Kill stale dev server
+        run: lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+
+      - name: Start dev server
+        env:
+          MONGODB_URI: mongodb://localhost:27017
+          MONGODB_DB_NAME: wawagardenbar_test
+          E2E_ADMIN_USERNAME: e2e-admin
+          E2E_ADMIN_PASSWORD: E2eTest@2026!
+          E2E_SUPER_ADMIN_USERNAME: e2e-superadmin
+          E2E_SUPER_ADMIN_PASSWORD: E2eTest@2026!
+          E2E_CSR_USERNAME: e2e-csr
+          E2E_CSR_PASSWORD: E2eTest@2026!
+        run: npm run dev &
+
+      - name: Wait for dev server
+        run: npx wait-on http://localhost:3000 --timeout 120000
+
       - name: Run in-scope E2E
+        env:
+          MONGODB_URI: mongodb://localhost:27017
+          MONGODB_DB_NAME: wawagardenbar_test
+          E2E_ADMIN_USERNAME: e2e-admin
+          E2E_ADMIN_PASSWORD: E2eTest@2026!
+          E2E_SUPER_ADMIN_USERNAME: e2e-superadmin
+          E2E_SUPER_ADMIN_PASSWORD: E2eTest@2026!
+          E2E_CSR_USERNAME: e2e-csr
+          E2E_CSR_PASSWORD: E2eTest@2026!
         run: |
           REQ_ID="${{ needs.detect-req.outputs.req_id }}"
           npx playwright test --grep "$REQ_ID"

@@ -28,3 +28,13 @@ Pure UI/UX change — progressive category display with grouped items. No new AP
 No new attack surfaces introduced. The change replaces a drill-down cascade with progressive disclosure — same data, same auth, same server actions. The `expressSearchMenuAction` server action was already validated under REQ-081 and accepts optional category/search parameters with existing input sanitization.
 
 Evidence uploaded to DevAudit project: wawagardenbar-app
+
+### UAT Verification
+
+- **Environment:** https://wawagardenbar-app-uat.up.railway.app
+- **Health check:** PASS — `{"status":"healthy"}` (2026-06-20T05:41:46Z, uptime ~20min)
+- **Deploy:** Railway auto-deploy from develop (commit bc99be8)
+- **CI Gates:** All passed (TypeScript, SAST, Dependency Audit, E2E smoke, Build) — run 27861458621
+- **DevAudit portal:** Gate evidence (SAST, dependency audit, E2E results) uploaded to REQ-082 release
+- **Feature verification:** E2E tests (`--grep REQ-082`) passed in CI — progressive category display, grouped items, search, breadcrumb navigation all verified
+- **UAT Approval:** Operator-approved 2026-06-20

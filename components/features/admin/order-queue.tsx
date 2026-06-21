@@ -13,6 +13,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { subscribeToOrders } from '@/lib/socket-client';
 
 interface OrderQueueProps {
   initialOrders: Order[];
@@ -21,11 +22,18 @@ interface OrderQueueProps {
 /**
  * Order queue component
  * Displays list of orders with filtering and selection
+ * @requirement REQ-083 — socket subscription for real-time status updates
  */
 export function OrderQueue({ initialOrders }: OrderQueueProps) {
   const router = useRouter();
-  const { orders, setOrders, selectedOrders, toggleSelectOrder } =
-    useOrderStore();
+  const {
+    orders,
+    setOrders,
+    selectedOrders,
+    toggleSelectOrder,
+    updateOrder,
+    removeOrder,
+  } = useOrderStore();
 
   const [activeTab, setActiveTab] = useState('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -36,6 +44,22 @@ export function OrderQueue({ initialOrders }: OrderQueueProps) {
   useEffect(() => {
     setOrders(initialOrders);
   }, [initialOrders, setOrders]);
+
+  // Subscribe to order Socket.io events for real-time status updates
+  useEffect(() => {
+    const unsubscribe = subscribeToOrders({
+      onOrderUpdated: (data) => {
+        const newStatus = data.status ?? data.updates?.status;
+        const terminalStatuses = ['completed', 'cancelled'];
+        if (terminalStatuses.includes(newStatus)) {
+          removeOrder(data.orderId);
+        } else {
+          updateOrder(data.orderId, { status: newStatus });
+        }
+      },
+    });
+    return unsubscribe;
+  }, [updateOrder, removeOrder]);
 
   // Filter and search orders
   const filteredOrders = useMemo(() => {

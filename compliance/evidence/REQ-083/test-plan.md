@@ -7,7 +7,8 @@
 
 ## Tests to Add
 
-- [ ] `e2e/realtime/order-status-revert.spec.ts` — Verify completed orders don't revert on kitchen display; verify `order:updated` socket payload has top-level `status` field
+- [x] `e2e/realtime/order-status-revert.spec.ts` — Socket-level: verify `order:updated` payload has top-level `status` field for orders + kitchen-display rooms
+- [x] `e2e/realtime/order-status-revert-ui.spec.ts` — Browser-level: verify completed orders removed from kitchen grid (with evidenceShot); verify non-terminal status updates in-place
 
 ## Tests to Update
 
@@ -19,13 +20,13 @@
 
 ## Functional Test Mapping
 
-| Acceptance Criterion                            | Test File                                | Test Name                                       |
-| ----------------------------------------------- | ---------------------------------------- | ----------------------------------------------- |
-| AC1 — completed order removed from kitchen grid | e2e/realtime/order-status-revert.spec.ts | completed order removed from kitchen display    |
-| AC2 — non-terminal status updates in-place      | e2e/realtime/order-status-revert.spec.ts | preparing status updates without revert         |
-| AC3 — socket payload has top-level status       | e2e/realtime/order-status-revert.spec.ts | order-updated payload contains top-level status |
-| AC4 — order queue socket subscription           | e2e/realtime/order-status-revert.spec.ts | order queue receives socket status update       |
-| AC5 — cancelled order removed from kitchen grid | e2e/realtime/order-status-revert.spec.ts | cancelled order removed from kitchen display    |
+| Acceptance Criterion                            | Test File                                   | Test Name                                                                  |
+| ----------------------------------------------- | ------------------------------------------- | -------------------------------------------------------------------------- |
+| AC1 — completed order removed from kitchen grid | e2e/realtime/order-status-revert-ui.spec.ts | AC1 — completed order is removed from kitchen grid immediately (no revert) |
+| AC2 — non-terminal status updates in-place      | e2e/realtime/order-status-revert-ui.spec.ts | AC2 — preparing status updates in-place on kitchen card (no revert)        |
+| AC3 — socket payload has top-level status       | e2e/realtime/order-status-revert.spec.ts    | AC3: orders room receives order:updated with top-level status field        |
+| AC4 — order queue socket subscription           | e2e/realtime/order-status-revert.spec.ts    | AC3 (orders room subscription covers queue)                                |
+| AC5 — cancelled order removed from kitchen grid | e2e/realtime/order-status-revert.spec.ts    | AC5: kitchen-display room receives order:updated with cancelled status     |
 
 ## Non-Functional Tests (MEDIUM)
 

@@ -186,6 +186,7 @@ jobs:
           E2E_SUPER_ADMIN_PASSWORD: E2eTest@2026!
           E2E_CSR_USERNAME: e2e-csr
           E2E_CSR_PASSWORD: E2eTest@2026!
+          INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
         run: npm run dev &
 
       - name: Wait for dev server
@@ -234,6 +235,7 @@ jobs:
           E2E_SUPER_ADMIN_PASSWORD: E2eTest@2026!
           E2E_CSR_USERNAME: e2e-csr
           E2E_CSR_PASSWORD: E2eTest@2026!
+          INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
         run: npx playwright test --project=smoke --reporter=json,html
       # ── Gate 5: Build ──
 

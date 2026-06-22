@@ -18,8 +18,6 @@ import { test, expect } from '@playwright/test';
 import { tagTest } from '../helpers/test-tags';
 import { evidenceShot } from '../helpers/evidence';
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
-
 // ---------------------------------------------------------------------------
 // Customer checkout — unauthenticated
 // ---------------------------------------------------------------------------

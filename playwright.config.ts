@@ -56,6 +56,7 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
       testMatch: [
         /e2e\/smoke\/.*\.spec\.ts$/,
+        /e2e\/realtime\/.*\.spec\.ts$/,
         /requirements-verification\.spec\.ts$/,
       ],
       dependencies: ['auth-setup'],

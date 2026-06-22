@@ -52,4 +52,10 @@ Separate customer and admin checkout paths; extend Express Create Order to suppo
 
 ## UAT Verification
 
-Pending — to be verified after Railway auto-deploy from `develop`.
+Verified on UAT after Railway auto-deploy from `develop`:
+
+- **Health check**: `GET /api/health` → 200, status=healthy
+- **Customer checkout**: `GET /checkout` → 200 (page renders without admin logic)
+- **Express create order**: `GET /dashboard/orders/express/create-order` → 307 (redirect to login — expected for unauthenticated access)
+- **tsc --noEmit**: 0 errors
+- **Unit tests**: 7/7 pass

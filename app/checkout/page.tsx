@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { MainLayout } from '@/components/shared/layout';
-import { CheckoutForm } from '@/components/features/checkout/checkout-form';
+import { CustomerCheckoutForm } from '@/components/features/checkout/customer-checkout-form';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export const metadata = {
@@ -13,7 +13,7 @@ export default function CheckoutPage() {
     <MainLayout>
       <div className="container mx-auto px-4 py-8">
         <Suspense fallback={<CheckoutSkeleton />}>
-          <CheckoutForm />
+          <CustomerCheckoutForm />
         </Suspense>
       </div>
     </MainLayout>

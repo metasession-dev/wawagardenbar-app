@@ -12,19 +12,16 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { CreditCard, Building2, Hash, Smartphone, CheckCircle2 } from 'lucide-react';
-import { AdminPaymentOption } from './admin-payment-option';
+import {
+  CreditCard,
+  Building2,
+  Hash,
+  Smartphone,
+  CheckCircle2,
+} from 'lucide-react';
 
 interface PaymentMethodStepProps {
   form: UseFormReturn<any>;
-  isAdmin?: boolean;
-  onAdminManualPayment?: (data: {
-    paymentType: 'cash' | 'transfer' | 'card';
-    paymentReference: string;
-    comments?: string;
-  }) => void;
-  onAdminFullCheckout?: () => void;
-  isProcessing?: boolean;
 }
 
 const paymentMethods = [
@@ -74,25 +71,7 @@ const paymentMethods = [
   },
 ];
 
-export function PaymentMethodStep({ 
-  form, 
-  isAdmin = false, 
-  onAdminManualPayment, 
-  onAdminFullCheckout,
-  isProcessing = false 
-}: PaymentMethodStepProps) {
-  // Show admin payment option for admins
-  if (isAdmin && onAdminManualPayment && onAdminFullCheckout) {
-    return (
-      <AdminPaymentOption
-        onManualPayment={onAdminManualPayment}
-        onFullCheckout={onAdminFullCheckout}
-        isProcessing={isProcessing}
-      />
-    );
-  }
-
-  // Show standard payment gateway options for customers
+export function PaymentMethodStep({ form }: PaymentMethodStepProps) {
   return (
     <div className="space-y-6">
       <FormField
@@ -143,7 +122,9 @@ export function PaymentMethodStep({
                                   <Icon className="h-5 w-5" />
                                 </div>
                                 <div>
-                                  <p className="font-semibold">{method.label}</p>
+                                  <p className="font-semibold">
+                                    {method.label}
+                                  </p>
                                   <p className="text-sm text-muted-foreground">
                                     {method.description}
                                   </p>
@@ -156,15 +137,17 @@ export function PaymentMethodStep({
                                     How it works:
                                   </p>
                                   <ul className="space-y-1">
-                                    {method.instructions.map((instruction, index) => (
-                                      <li
-                                        key={index}
-                                        className="flex items-start gap-2 text-sm text-muted-foreground"
-                                      >
-                                        <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary" />
-                                        <span>{instruction}</span>
-                                      </li>
-                                    ))}
+                                    {method.instructions.map(
+                                      (instruction, index) => (
+                                        <li
+                                          key={index}
+                                          className="flex items-start gap-2 text-sm text-muted-foreground"
+                                        >
+                                          <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary" />
+                                          <span>{instruction}</span>
+                                        </li>
+                                      )
+                                    )}
                                   </ul>
                                 </div>
                               )}
@@ -178,7 +161,8 @@ export function PaymentMethodStep({
               </RadioGroup>
             </FormControl>
             <FormDescription>
-              Choose your preferred payment method. You'll be redirected to complete the payment securely.
+              Choose your preferred payment method. You'll be redirected to
+              complete the payment securely.
             </FormDescription>
             <FormMessage />
           </FormItem>
@@ -195,7 +179,9 @@ export function PaymentMethodStep({
                 Secure Payment
               </p>
               <p className="text-sm text-green-800 dark:text-green-200">
-                All payments are processed securely through Monnify. Your payment information is encrypted and never stored on our servers.
+                All payments are processed securely through Monnify. Your
+                payment information is encrypted and never stored on our
+                servers.
               </p>
             </div>
           </div>

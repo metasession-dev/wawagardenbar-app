@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
 import { sessionOptions, SessionData } from '@/lib/session';
 import { TabService } from '@/services';
+import { AdminTabCheckoutForm } from '@/components/features/tabs/admin-tab-checkout-form';
 
 interface DashboardTabCheckoutPageProps {
   params: Promise<{
@@ -12,9 +13,15 @@ interface DashboardTabCheckoutPageProps {
 
 async function getTabForCheckout(tabId: string) {
   const cookieStore = await cookies();
-  const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+  const session = await getIronSession<SessionData>(
+    cookieStore,
+    sessionOptions
+  );
 
-  if (!session.userId || (session.role !== 'admin' && session.role !== 'super-admin')) {
+  if (
+    !session.userId ||
+    (session.role !== 'admin' && session.role !== 'super-admin')
+  ) {
     redirect('/dashboard');
   }
 
@@ -32,14 +39,18 @@ async function getTabForCheckout(tabId: string) {
 }
 
 /**
- * Dashboard tab checkout page
- * Redirects to customer checkout flow for payment processing
+ * @requirement REQ-084 - Admin tab checkout with manual payment form
+ * @requirement REQ-TABMGT-003 - Admin pay tab
  */
-export default async function DashboardTabCheckoutPage({ params }: DashboardTabCheckoutPageProps) {
+export default async function DashboardTabCheckoutPage({
+  params,
+}: DashboardTabCheckoutPageProps) {
   const { tabId } = await params;
-  await getTabForCheckout(tabId);
+  const { tab } = await getTabForCheckout(tabId);
 
-  // Redirect to customer checkout page
-  // This allows admin to use the same payment flow as customers
-  redirect(`/orders/tabs/${tabId}/checkout`);
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <AdminTabCheckoutForm tab={tab} />
+    </div>
+  );
 }

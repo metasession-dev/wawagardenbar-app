@@ -247,6 +247,9 @@ export async function expressGetCategoriesAction(): Promise<
  * @requirement REQ-035 — accepts optional `tipAmount` + `tipPaymentMethod`
  * for the immediate-pay branch. The tip's payment method is independent
  * of the bill's `paymentMethod` (default = paymentMethod, override-able).
+ * @requirement REQ-084 — accepts `orderType`, `customerInfo`, `deliveryInfo`,
+ * `pickupTime` for pickup/delivery support. Uses SettingsService.calculateOrderTotals
+ * for correct fee/tax computation per order type.
  */
 export async function expressCreateOrderAction(params: {
   items: Array<{
@@ -258,11 +261,24 @@ export async function expressCreateOrderAction(params: {
     specialInstructions?: string;
     customizations?: SelectedCustomization[];
   }>;
+  orderType?: 'dine-in' | 'pickup' | 'delivery' | 'pay-now';
   tabId?: string;
   tableNumber?: string;
   paymentMethod?: 'cash' | 'transfer' | 'card';
   paymentReference?: string;
   customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  deliveryInfo?: {
+    street: string;
+    city: string;
+    state: string;
+    country: string;
+    postalCode?: string;
+    landmark?: string;
+    instructions?: string;
+  };
+  pickupTime?: string;
   tipAmount?: number;
   tipPaymentMethod?: 'cash' | 'transfer' | 'card';
 }): Promise<ActionResult<{ order: any; tab?: ITab }>> {
@@ -317,9 +333,9 @@ export async function expressCreateOrderAction(params: {
     }
     const subtotal = reconciled.recomputedSubtotal;
 
-    const orderType = params.tabId
-      ? ('dine-in' as const)
-      : ('pay-now' as const);
+    const orderType =
+      params.orderType ??
+      (params.tabId ? ('dine-in' as const) : ('pay-now' as const));
     const items = params.items.map((item) => {
       const menuItem = menuMap.get(item.menuItemId);
       const basePrice = menuItem?.price ?? item.price;
@@ -351,20 +367,38 @@ export async function expressCreateOrderAction(params: {
       };
     });
 
+    // REQ-084: use SettingsService.calculateOrderTotals for correct
+    // service fee, delivery fee, and tax computation per order type.
+    const { SettingsService } = await import('@/services');
+    const totals = await SettingsService.calculateOrderTotals(
+      subtotal,
+      orderType
+    );
+
     const order = await OrderService.createOrder({
       orderType,
       items: items as any,
       subtotal,
-      tax: 0,
-      deliveryFee: 0,
+      tax: totals.tax,
+      deliveryFee: totals.deliveryFee,
       discount: 0,
-      total: subtotal,
+      total: totals.total,
       createdBy: session.userId,
       createdByRole: session.role as 'admin' | 'super-admin',
       guestName: params.customerName || 'Walk-in Customer',
+      guestPhone: params.customerPhone,
+      guestEmail: params.customerEmail,
       dineInDetails: params.tableNumber
         ? ({ tableNumber: params.tableNumber } as any)
         : undefined,
+      deliveryDetails:
+        orderType === 'delivery' && params.deliveryInfo
+          ? (params.deliveryInfo as any)
+          : undefined,
+      pickupDetails:
+        orderType === 'pickup' && params.pickupTime
+          ? ({ pickupTime: params.pickupTime } as any)
+          : undefined,
     });
 
     // For pay-now orders, mark as paid immediately with the chosen payment method.

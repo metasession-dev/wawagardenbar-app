@@ -1,6 +1,11 @@
+/**
+ * @requirement REQ-084 - Separate customer and admin checkout paths
+ * @requirement REQ-CHECKOUT-001 - Multi-step checkout renders & validates per step
+ * @requirement REQ-AUTHC-003 - Guest checkout (no PIN)
+ */
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,32 +22,28 @@ import { TabOptionsStep } from './tab-options-step';
 import { TipInputStep } from './tip-input-step';
 import { OrderSummary } from './order-summary';
 import { OrderStatusDialog } from './order-status-dialog';
-import { AdminCheckoutIndicator } from './admin-checkout-indicator';
 import {
   createOrder,
   initializePayment,
 } from '@/app/actions/payment/payment-actions';
-import { completeOrderPaymentManuallyAction } from '@/app/actions/admin/order-payment-actions';
 import {
   createTabAction,
   getOpenTabForTableAction,
 } from '@/app/actions/tabs/tab-actions';
 import { checkUserTabRestrictionsAction } from '@/app/actions/tabs/tab-restriction-actions';
-import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, UserCircle2 } from 'lucide-react';
 import { ITab } from '@/interfaces';
 import { useAuth } from '@/hooks/use-auth';
 import { Skeleton } from '@/components/ui/skeleton';
+import Link from 'next/link';
 
 const checkoutSchema = z
   .object({
-    // Customer Info
     customerName: z.string().min(2, 'Name must be at least 2 characters'),
     customerEmail: z.string().email('Invalid email address'),
     customerPhone: z
       .string()
       .min(10, 'Phone number must be at least 10 digits'),
-
-    // Order Details (conditional based on order type)
     orderType: z.enum(['dine-in', 'pickup', 'delivery', 'pay-now']),
     tableNumber: z.string().optional(),
     pickupTime: z.string().optional(),
@@ -55,32 +56,20 @@ const checkoutSchema = z
     deliveryLandmark: z.string().optional(),
     deliveryInstructions: z.string().optional(),
     specialInstructions: z.string().optional(),
-
-    // Tab options (for dine-in only)
     useTab: z.enum(['pay-now', 'new-tab', 'existing-tab']).optional(),
-
-    // Tip
     tipAmount: z.number().min(0).optional(),
-    // REQ-036 — independent tip payment method, required when tipAmount > 0.
     tipPaymentMethod: z.enum(['cash', 'transfer', 'card']).optional(),
-
-    // Payment
     paymentMethod: z
       .enum(['CARD', 'ACCOUNT_TRANSFER', 'USSD', 'PHONE_NUMBER'], {
         required_error: 'Please select a payment method',
       })
       .optional(),
-
-    // Save preferences
     savePhone: z.boolean().optional(),
     saveAddress: z.boolean().optional(),
   })
   .refine(
     (data) => {
-      // Table number is required for dine-in orders
-      if (data.orderType === 'dine-in' && !data.tableNumber) {
-        return false;
-      }
+      if (data.orderType === 'dine-in' && !data.tableNumber) return false;
       return true;
     },
     {
@@ -90,10 +79,7 @@ const checkoutSchema = z
   )
   .refine(
     (data) => {
-      // Pickup time is required for pickup orders
-      if (data.orderType === 'pickup' && !data.pickupTime) {
-        return false;
-      }
+      if (data.orderType === 'pickup' && !data.pickupTime) return false;
       return true;
     },
     {
@@ -103,10 +89,7 @@ const checkoutSchema = z
   )
   .refine(
     (data) => {
-      // Delivery street is required for delivery orders
-      if (data.orderType === 'delivery' && !data.deliveryStreet) {
-        return false;
-      }
+      if (data.orderType === 'delivery' && !data.deliveryStreet) return false;
       return true;
     },
     {
@@ -116,23 +99,14 @@ const checkoutSchema = z
   )
   .refine(
     (data) => {
-      // Delivery city is required for delivery orders
-      if (data.orderType === 'delivery' && !data.deliveryCity) {
-        return false;
-      }
+      if (data.orderType === 'delivery' && !data.deliveryCity) return false;
       return true;
     },
-    {
-      message: 'City is required for delivery orders',
-      path: ['deliveryCity'],
-    }
+    { message: 'City is required for delivery orders', path: ['deliveryCity'] }
   )
   .refine(
     (data) => {
-      // Delivery state is required for delivery orders
-      if (data.orderType === 'delivery' && !data.deliveryState) {
-        return false;
-      }
+      if (data.orderType === 'delivery' && !data.deliveryState) return false;
       return true;
     },
     {
@@ -142,10 +116,7 @@ const checkoutSchema = z
   )
   .refine(
     (data) => {
-      // Delivery country is required for delivery orders
-      if (data.orderType === 'delivery' && !data.deliveryCountry) {
-        return false;
-      }
+      if (data.orderType === 'delivery' && !data.deliveryCountry) return false;
       return true;
     },
     {
@@ -155,10 +126,7 @@ const checkoutSchema = z
   )
   .refine(
     (data) => {
-      // REQ-036 — tipPaymentMethod is required when tipAmount > 0.
-      if ((data.tipAmount ?? 0) > 0 && !data.tipPaymentMethod) {
-        return false;
-      }
+      if ((data.tipAmount ?? 0) > 0 && !data.tipPaymentMethod) return false;
       return true;
     },
     {
@@ -177,7 +145,7 @@ const baseSteps = [
   { id: 5, name: 'Payment', description: 'Choose payment method' },
 ];
 
-export function CheckoutForm() {
+export function CustomerCheckoutForm() {
   const router = useRouter();
   const { toast } = useToast();
   const {
@@ -186,7 +154,7 @@ export function CheckoutForm() {
     clearCart,
     tableNumber: storeTableNumber,
   } = useCartStore();
-  const { user, isAuthenticated, role, isLoading: isLoadingUser } = useAuth();
+  const { user, isAuthenticated, isLoading: isLoadingUser } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
@@ -205,21 +173,6 @@ export function CheckoutForm() {
     redirectUrl?: string;
     redirectLabel?: string;
   } | null>(null);
-  const [adminPaymentData, setAdminPaymentData] = useState<{
-    paymentType: 'cash' | 'transfer' | 'card';
-    paymentReference: string;
-    comments?: string;
-  } | null>(null);
-  const [useAdminFullCheckout, setUseAdminFullCheckout] = useState(false);
-
-  // Use ref to avoid race condition with state updates
-  const adminPaymentDataRef = useRef<{
-    paymentType: 'cash' | 'transfer' | 'card';
-    paymentReference: string;
-    comments?: string;
-  } | null>(null);
-
-  const isAdmin = role === 'csr' || role === 'admin' || role === 'super-admin';
 
   const form = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
@@ -250,7 +203,6 @@ export function CheckoutForm() {
   const useTab = form.watch('useTab');
   const tableNumber = form.watch('tableNumber');
 
-  // Pre-populate form with user data
   useEffect(() => {
     if (isAuthenticated && user) {
       const hasData = user.name || user.phone || user.email;
@@ -263,40 +215,18 @@ export function CheckoutForm() {
     }
   }, [isAuthenticated, user, form]);
 
-  // Initialize order type and table number from store
   useEffect(() => {
     if (storeTableNumber) {
       form.setValue('orderType', 'dine-in');
       form.setValue('tableNumber', storeTableNumber);
-      // We don't lock the table here, allowing admin/staff to change it if needed
       setIsTableLocked(false);
     }
   }, [storeTableNumber, form]);
 
-  // Fetch existing tab for user when dine-in is selected (Initial load)
   useEffect(() => {
     async function fetchExistingTab() {
       if (orderType === 'dine-in') {
-        // Admins are never restricted
-        if (isAdmin) {
-          setIsTableLocked(false);
-          setExistingTab(null);
-
-          // If admin has a table number from store, check for existing tab at that table
-          if (storeTableNumber) {
-            const result = await getOpenTabForTableAction(storeTableNumber);
-            if (result.success && result.data?.tab) {
-              setExistingTab(result.data.tab);
-              form.setValue('tableNumber', storeTableNumber);
-              form.setValue('useTab', 'existing-tab');
-            }
-          }
-          return;
-        }
-
-        // Customers: Check restrictions using server action
         const restrictions = await checkUserTabRestrictionsAction();
-
         if (restrictions.isRestricted && restrictions.existingTab) {
           setExistingTab(restrictions.existingTab);
           form.setValue('tableNumber', restrictions.existingTab.tableNumber);
@@ -309,47 +239,28 @@ export function CheckoutForm() {
       }
     }
     fetchExistingTab();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orderType, storeTableNumber, isAdmin]);
+  }, [orderType, storeTableNumber, form]);
 
-  // Watch table number input and check for existing tabs (Debounced)
   useEffect(() => {
-    // If table is locked, we don't need to search as it's already set
     if (isTableLocked || !tableNumber) return;
-
-    // Reset occupied status when input changes (before search)
     setIsTabOccupied(false);
-
     const timer = setTimeout(async () => {
-      // Only search if table number has content
       if (tableNumber.length < 1) return;
-
       try {
         const result = await getOpenTabForTableAction(tableNumber);
         if (result.success && result.data?.tab) {
           const tab = result.data.tab;
-          console.log('Found existing tab for table', tableNumber);
-
-          // Check permissions: Admin OR Owner
-          // user.id comes from useAuth hook which fetches from /api/auth/user
-          const isAdmin =
-            role === 'csr' || role === 'admin' || role === 'super-admin';
-          // Note: tab.userId is likely a string from JSON serialization, user.id is string
-          // Cast to string for comparison to avoid TS error with ObjectId
           const isMyTab = user?.id && tab.userId?.toString() === user.id;
-
-          if (isAdmin || isMyTab) {
+          if (isMyTab) {
             setExistingTab(tab);
             form.setValue('useTab', 'existing-tab');
             setIsTabOccupied(false);
           } else {
-            // Tab exists but not authorized to join
             setExistingTab(null);
             form.setValue('useTab', 'new-tab');
             setIsTabOccupied(true);
           }
         } else {
-          // No tab found
           setExistingTab(null);
           form.setValue('useTab', 'new-tab');
           setIsTabOccupied(false);
@@ -357,56 +268,32 @@ export function CheckoutForm() {
       } catch (error) {
         console.error('Error checking table:', error);
       }
-    }, 500); // 500ms debounce
-
+    }, 500);
     return () => clearTimeout(timer);
-  }, [tableNumber, isTableLocked, form, role, user]);
+  }, [tableNumber, isTableLocked, form, user]);
 
-  // Adjust steps based on order type and tab choice
   useEffect(() => {
     if (orderType === 'dine-in') {
       if (useTab === 'new-tab' || useTab === 'existing-tab') {
-        // If using a tab, skip Tip and Payment steps
-        setSteps([
-          baseSteps[0], // Customer Info
-          baseSteps[1], // Order Details
-          baseSteps[2], // Tab Options
-        ]);
+        setSteps([baseSteps[0], baseSteps[1], baseSteps[2]]);
       } else {
-        // For Pay Now, include all steps
         setSteps(baseSteps);
       }
     } else {
-      // For pickup/delivery, skip tab options step
-      setSteps([
-        baseSteps[0], // Customer Info
-        baseSteps[1], // Order Details
-        baseSteps[3], // Tip
-        baseSteps[4], // Payment
-      ]);
+      setSteps([baseSteps[0], baseSteps[1], baseSteps[3], baseSteps[4]]);
     }
   }, [orderType, useTab]);
 
-  // Redirect if cart is empty, unless we're showing the success dialog
   useEffect(() => {
-    // Don't redirect if we have a success status (meaning order just completed)
-    if (orderStatus?.status === 'success') {
-      return;
-    }
-
-    if (items.length === 0) {
-      router.push('/menu');
-    }
+    if (orderStatus?.status === 'success') return;
+    if (items.length === 0) router.push('/menu');
   }, [items.length, router, orderStatus]);
 
-  // Generate idempotency key when component mounts
   useEffect(() => {
-    // Generate a unique key for this checkout session
     const key = `checkout-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
     setIdempotencyKey(key);
   }, []);
 
-  // Reset submission state when component unmounts
   useEffect(() => {
     return () => {
       setHasSubmitted(false);
@@ -414,43 +301,24 @@ export function CheckoutForm() {
     };
   }, []);
 
-  if (items.length === 0) {
-    return null;
-  }
+  if (items.length === 0) return null;
 
   async function onSubmit(data: CheckoutFormData) {
-    // Prevent submission during navigation or double submission
-    if (isNavigating) {
-      console.log('Preventing submission during navigation');
-      return;
-    }
-
-    if (isSubmitting || hasSubmitted) {
-      console.log('Preventing duplicate submission:', {
-        isSubmitting,
-        hasSubmitted,
-      });
-      return;
-    }
-
-    console.log('Starting order submission');
+    if (isNavigating) return;
+    if (isSubmitting || hasSubmitted) return;
     setIsSubmitting(true);
     setHasSubmitted(true);
 
     try {
-      // Handle tab creation if needed
       let tabId: string | undefined;
-
       if (data.orderType === 'dine-in' && data.useTab !== 'pay-now') {
         if (data.useTab === 'new-tab') {
-          // Create new tab with customer details
           const tabResult = await createTabAction({
             tableNumber: data.tableNumber || '',
             customerName: data.customerName,
             customerEmail: data.customerEmail,
             customerPhone: data.customerPhone,
           });
-
           if (!tabResult.success || !tabResult.data) {
             setOrderStatus({
               status: 'error',
@@ -463,14 +331,12 @@ export function CheckoutForm() {
             setHasSubmitted(false);
             return;
           }
-
           tabId = tabResult.data.tab._id.toString();
         } else if (data.useTab === 'existing-tab' && existingTab) {
           tabId = existingTab._id.toString();
         }
       }
 
-      // Step 1: Create order
       const orderResult = await createOrder({
         orderType: data.orderType,
         items,
@@ -497,7 +363,6 @@ export function CheckoutForm() {
         specialInstructions: data.specialInstructions,
         tabId,
         tipAmount: data.tipAmount || 0,
-        // REQ-036 — forward the explicit tip method when set.
         tipPaymentMethod: data.tipPaymentMethod,
         savePhone: data.savePhone,
         saveAddress: data.saveAddress,
@@ -519,69 +384,22 @@ export function CheckoutForm() {
 
       const { orderId } = orderResult.data;
 
-      // If using a tab, don't initialize payment yet
       if (tabId) {
-        // Redirect admins to dashboard, customers to customer view
-        const tabRedirectUrl =
-          role === 'csr' || role === 'admin' || role === 'super-admin'
-            ? `/dashboard/orders/tabs/${tabId}`
-            : `/orders/tabs/${tabId}`;
-
         setOrderStatus({
           status: 'success',
           title: 'Order Added to Tab!',
           message:
             'Your order has been successfully added to your tab. You can add more orders or pay when ready.',
-          redirectUrl: tabRedirectUrl,
+          redirectUrl: `/orders/tabs/${tabId}`,
           redirectLabel: 'View Tab',
         });
         setShowStatusDialog(true);
-        // Don't clear cart here - let the dialog handle it when user navigates
         setIsSubmitting(false);
         setHasSubmitted(false);
         return;
       }
 
-      // Step 2: Handle admin manual payment if selected
-      const paymentData = adminPaymentDataRef.current || adminPaymentData;
-      if (isAdmin && paymentData && !useAdminFullCheckout) {
-        const paymentResult = await completeOrderPaymentManuallyAction({
-          orderId,
-          paymentType: paymentData.paymentType,
-          paymentReference: paymentData.paymentReference,
-          comments: paymentData.comments,
-        });
-
-        if (!paymentResult.success) {
-          setOrderStatus({
-            status: 'error',
-            title: 'Payment Failed',
-            message:
-              paymentResult.message ||
-              'Failed to process manual payment. Please try again.',
-          });
-          setShowStatusDialog(true);
-          setIsSubmitting(false);
-          setHasSubmitted(false);
-          return;
-        }
-
-        // Success - redirect to order details
-        setOrderStatus({
-          status: 'success',
-          title: 'Order Paid Successfully!',
-          message: 'The order has been created and marked as paid.',
-          redirectUrl: `/dashboard/orders/${orderId}`,
-          redirectLabel: 'View Order',
-        });
-        setShowStatusDialog(true);
-        setIsSubmitting(false);
-        setHasSubmitted(false);
-        return;
-      }
-
-      // Step 3: Initialize payment gateway (for customers or admin full checkout)
-      if (!data.paymentMethod && !adminPaymentData) {
+      if (!data.paymentMethod) {
         setOrderStatus({
           status: 'error',
           title: 'Payment Method Required',
@@ -598,7 +416,7 @@ export function CheckoutForm() {
         amount: getTotalPrice() + (data.tipAmount || 0),
         customerName: data.customerName,
         customerEmail: data.customerEmail,
-        paymentMethods: data.paymentMethod ? [data.paymentMethod] : ['CARD'],
+        paymentMethods: [data.paymentMethod],
       });
 
       if (!paymentResult.success || !paymentResult.data) {
@@ -615,10 +433,8 @@ export function CheckoutForm() {
         return;
       }
 
-      // Step 3: Redirect to Monnify checkout
       const { checkoutUrl } = paymentResult.data;
 
-      // Show profile update success if applicable
       if (isAuthenticated && (data.savePhone || data.saveAddress)) {
         toast({
           title: 'Profile Updated',
@@ -626,10 +442,7 @@ export function CheckoutForm() {
         });
       }
 
-      // Clear cart
       clearCart();
-
-      // Small delay to show toast before redirect
       setTimeout(() => {
         window.location.href = checkoutUrl;
       }, 500);
@@ -648,31 +461,16 @@ export function CheckoutForm() {
   }
 
   async function handleNext() {
-    console.log('handleNext called', {
-      currentStep,
-      stepsLength: steps.length,
-      isNavigating,
-    });
-
-    // Prevent rapid consecutive navigation
-    if (isNavigating) {
-      console.log('Navigation already in progress, ignoring');
-      return;
-    }
-
+    if (isNavigating) return;
     setIsNavigating(true);
 
-    // Validate current step before proceeding
     let fieldsToValidate: (keyof CheckoutFormData)[] = [];
 
     if (currentStep === 1) {
-      // Customer Info step
       fieldsToValidate = ['customerName', 'customerEmail', 'customerPhone'];
     } else if (currentStep === 2) {
-      // Order Details step
       fieldsToValidate = ['orderType'];
       const currentOrderType = form.getValues('orderType');
-
       if (currentOrderType === 'delivery') {
         fieldsToValidate.push(
           'deliveryStreet',
@@ -684,69 +482,58 @@ export function CheckoutForm() {
         fieldsToValidate.push('pickupTime');
       } else if (currentOrderType === 'dine-in') {
         fieldsToValidate.push('tableNumber');
-
-        // Check if table is occupied (and not ours)
         if (isTabOccupied) {
-          console.log('Table occupied, preventing next step');
           setIsNavigating(false);
           return;
         }
       }
     } else if (currentStep === 3 && orderType === 'dine-in') {
-      // Tab options step for dine-in
       fieldsToValidate = ['useTab'];
     } else if (currentStep === 4) {
-      // Tip step - optional, no validation needed
       fieldsToValidate = [];
     } else if (
       currentStep === 5 ||
       (currentStep === 4 && orderType !== 'dine-in')
     ) {
-      // Payment method step - only validate if paying now
       if (useTab === 'pay-now' || orderType !== 'dine-in') {
         fieldsToValidate = ['paymentMethod'];
       }
     }
 
-    // Trigger validation for current step fields
     const isValid =
       fieldsToValidate.length === 0 || (await form.trigger(fieldsToValidate));
 
-    console.log('Validation result', {
-      isValid,
-      currentStep,
-      stepsLength: steps.length,
-    });
-
     if (isValid && currentStep < steps.length) {
-      console.log('Advancing to next step', {
-        from: currentStep,
-        to: currentStep + 1,
-      });
       setCurrentStep(currentStep + 1);
-      // Reset navigation flag after a brief delay to ensure state update completes
-      setTimeout(() => {
-        console.log('Navigation lock released');
-        setIsNavigating(false);
-      }, 300);
+      setTimeout(() => setIsNavigating(false), 300);
     } else {
-      console.log('Not advancing - validation failed or at last step');
-      // Reset immediately if validation failed or at last step
       setIsNavigating(false);
     }
   }
 
   function handleBack() {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    }
+    if (currentStep > 1) setCurrentStep(currentStep - 1);
   }
 
   return (
     <div className="mx-auto max-w-6xl">
-      {/* Admin Indicator */}
-      {isAdmin && (
-        <AdminCheckoutIndicator currentStep={steps[currentStep - 1]?.name} />
+      {/* Guest Banner */}
+      {!isAuthenticated && (
+        <div className="mb-6 flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950">
+          <UserCircle2 className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+              Continuing as Guest
+            </p>
+            <p className="text-sm text-blue-700 dark:text-blue-300">
+              You can order without signing in.{' '}
+              <Link href="/login" className="underline font-medium">
+                Sign in
+              </Link>{' '}
+              to save your details and track orders.
+            </p>
+          </div>
+        </div>
       )}
 
       {/* Progress Steps */}
@@ -790,34 +577,13 @@ export function CheckoutForm() {
           onSubmit={form.handleSubmit(onSubmit)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
-              console.log('Enter key pressed', {
-                currentStep,
-                stepsLength: steps.length,
-                isNavigating,
-              });
-
-              // IMMEDIATELY stop propagation to prevent Enter from reaching buttons
               e.preventDefault();
               e.stopPropagation();
-
-              // If navigation is in progress, ignore this key press
-              if (isNavigating) {
-                console.log('Navigation in progress, ignoring Enter key');
-                return;
-              }
-
-              // If not on the last step, advance to next
+              if (isNavigating) return;
               if (currentStep < steps.length) {
-                console.log('Calling handleNext to advance step');
                 handleNext();
               } else {
-                console.log(
-                  'On last step, manually triggering form submission'
-                );
-                // Manually trigger form submission only if not navigating
-                if (!isNavigating) {
-                  form.handleSubmit(onSubmit)();
-                }
+                if (!isNavigating) form.handleSubmit(onSubmit)();
               }
             }
           }}
@@ -862,48 +628,12 @@ export function CheckoutForm() {
                   )}
                   {currentStep === 5 &&
                     orderType === 'dine-in' &&
-                    useTab === 'pay-now' && (
-                      <PaymentMethodStep
-                        form={form}
-                        isAdmin={isAdmin}
-                        onAdminManualPayment={(data) => {
-                          // Set both ref and state - ref is used immediately, state for UI
-                          adminPaymentDataRef.current = data;
-                          setAdminPaymentData(data);
-                          setUseAdminFullCheckout(false);
-                          form.handleSubmit(onSubmit)();
-                        }}
-                        onAdminFullCheckout={() => {
-                          adminPaymentDataRef.current = null;
-                          setUseAdminFullCheckout(true);
-                          setAdminPaymentData(null);
-                          handleNext();
-                        }}
-                        isProcessing={isSubmitting}
-                      />
-                    )}
+                    useTab === 'pay-now' && <PaymentMethodStep form={form} />}
                   {currentStep === 3 && orderType !== 'dine-in' && (
                     <TipInputStep form={form} subtotal={getTotalPrice()} />
                   )}
                   {currentStep === 4 && orderType !== 'dine-in' && (
-                    <PaymentMethodStep
-                      form={form}
-                      isAdmin={isAdmin}
-                      onAdminManualPayment={(data) => {
-                        // Set both ref and state - ref is used immediately, state for UI
-                        adminPaymentDataRef.current = data;
-                        setAdminPaymentData(data);
-                        setUseAdminFullCheckout(false);
-                        form.handleSubmit(onSubmit)();
-                      }}
-                      onAdminFullCheckout={() => {
-                        adminPaymentDataRef.current = null;
-                        setUseAdminFullCheckout(true);
-                        setAdminPaymentData(null);
-                        handleNext();
-                      }}
-                      isProcessing={isSubmitting}
-                    />
+                    <PaymentMethodStep form={form} />
                   )}
 
                   {/* Navigation Buttons */}
@@ -963,12 +693,10 @@ export function CheckoutForm() {
           onOpenChange={(open) => {
             setShowStatusDialog(open);
             if (!open) {
-              // If user closes success dialog, clear cart and go to menu
               if (orderStatus?.status === 'success') {
                 clearCart();
                 router.push('/menu');
               }
-              // Reset order status when dialog closes
               setOrderStatus(null);
             }
           }}

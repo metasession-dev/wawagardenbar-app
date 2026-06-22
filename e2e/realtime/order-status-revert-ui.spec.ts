@@ -16,6 +16,7 @@ import { expect, type Page } from '@playwright/test';
 import { MongoClient, ObjectId } from 'mongodb';
 import { superAdminTest, isAuthenticated } from '../kitchen/helpers';
 import { evidenceShot } from '../helpers/evidence';
+import { tagTest } from '../helpers/test-tags';
 
 function mongoConn(): { uri: string; dbName: string } {
   return {
@@ -148,6 +149,7 @@ superAdminTest.describe(
     superAdminTest(
       'AC1 — completed order is removed from kitchen grid immediately (no revert)',
       async ({ page }: { page: Page }) => {
+        tagTest('REQ-083', 1);
         guard(superAdminTest.skip, await isAuthenticated(page));
 
         handle = await seedOrder('ready');
@@ -205,6 +207,7 @@ superAdminTest.describe(
     superAdminTest(
       'AC2 — preparing status updates in-place on kitchen card (no revert)',
       async ({ page }: { page: Page }) => {
+        tagTest('REQ-083', 2);
         guard(superAdminTest.skip, await isAuthenticated(page));
 
         handle = await seedOrder('confirmed');

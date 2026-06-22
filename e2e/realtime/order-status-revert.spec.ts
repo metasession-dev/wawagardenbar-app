@@ -23,6 +23,7 @@ import {
   disconnectAll,
   triggerInternalEmit,
 } from '../helpers/socket-listener';
+import { tagTest } from '../helpers/test-tags';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || '';
@@ -47,6 +48,7 @@ test.describe('REQ-083 — order:updated payload carries top-level status (REQ-R
   });
 
   test('AC3: orders room receives order:updated with top-level status field', async () => {
+    tagTest('REQ-083', 3);
     const orderId = `e2e-req083-${Date.now()}-a`;
     const client = await connectClient(BASE_URL);
     sockets.push(client);
@@ -80,6 +82,7 @@ test.describe('REQ-083 — order:updated payload carries top-level status (REQ-R
   });
 
   test('AC1: kitchen-display room receives order:updated with completed status', async () => {
+    tagTest('REQ-083', 1);
     const orderId = `e2e-req083-${Date.now()}-b`;
     const client = await connectClient(BASE_URL);
     sockets.push(client);
@@ -109,6 +112,7 @@ test.describe('REQ-083 — order:updated payload carries top-level status (REQ-R
   });
 
   test('AC5: kitchen-display room receives order:updated with cancelled status', async () => {
+    tagTest('REQ-083', 5);
     const orderId = `e2e-req083-${Date.now()}-c`;
     const client = await connectClient(BASE_URL);
     sockets.push(client);
@@ -138,6 +142,7 @@ test.describe('REQ-083 — order:updated payload carries top-level status (REQ-R
   });
 
   test('AC2: non-terminal status (preparing) propagates top-level status', async () => {
+    tagTest('REQ-083', 2);
     const orderId = `e2e-req083-${Date.now()}-d`;
     const client = await connectClient(BASE_URL);
     sockets.push(client);

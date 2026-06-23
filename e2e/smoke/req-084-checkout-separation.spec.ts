@@ -10,6 +10,15 @@
  *   AC7  — Admin tab checkout renders AdminTabCheckoutForm (no redirect)
  *   AC10 — Express create order: customer info fields appear for pickup/delivery
  *   AC11 — Admin tab checkout: no Monnify URL, manual payment
+ *
+ * NOTE on the express create-order flow:
+ *   The page has TWO steps. It loads on the `menu` step (category cascade +
+ *   item grid). The "Order Type" selector (Dine-in/Pickup/Delivery/Pay Now)
+ *   only renders on the `checkout` step, which is reached by (1) adding an
+ *   item to the cart and (2) clicking the "Checkout (N)" button. Earlier
+ *   versions of this spec waited for "Order Type" while still on the menu
+ *   step, which never appears there — hence the false "stuck loading" skips.
+ *   We now follow the proven pattern from e2e/menu-category-cascade.spec.ts.
  */
 import { test, expect, type Page } from '@playwright/test';
 import { superAdminTest, isAuthenticated } from '../kitchen/helpers';
@@ -101,14 +110,55 @@ async function injectCart(page: Page) {
       customizations: undefined,
     };
     const cartState = {
-      state: {
-        items: [cartItem],
-        isOpen: false,
-      },
+      state: { items: [cartItem], isOpen: false },
       version: 0,
     };
     window.localStorage.setItem('wawa-cart-storage', JSON.stringify(cartState));
   });
+}
+
+/**
+ * Drive the express create-order page from the menu step to the checkout
+ * step so the "Order Type" selector is rendered.
+ *
+ * Returns false (so the caller can skip) if no in-stock items are seeded.
+ * Mirrors the proven flow in e2e/menu-category-cascade.spec.ts.
+ */
+async function gotoExpressCheckoutStep(page: Page): Promise<boolean> {
+  await page.goto('/dashboard/orders/express/create-order');
+  await page.waitForLoadState('networkidle');
+
+  // The page loads on the menu step. Wait for the category cascade to render
+  // (this is the reliable "page loaded" signal, not the Order Type heading).
+  await expect(page.getByTestId('category-cascade')).toBeVisible({ timeout: 60000 });
+
+  // Give the item grid a moment to populate from the categories.
+  await page.waitForTimeout(500);
+  const inStock = page.locator('[aria-disabled="false"]');
+  if ((await inStock.count()) === 0) {
+    return false;
+  }
+
+  // Add the first in-stock item to the cart.
+  await inStock.first().click();
+
+  // Some items open a customization picker dialog instead of adding directly.
+  // If the dialog appears, confirm with "Add to Order".
+  await page.waitForTimeout(400);
+  const addToOrder = page.getByRole('button', { name: /add to order/i });
+  if (await addToOrder.isVisible().catch(() => false)) {
+    await addToOrder.click();
+    await page.waitForTimeout(300);
+  }
+
+  // The "Checkout (N)" button appears once the cart has items.
+  const checkoutBtn = page.getByRole('button', { name: /Checkout \(/i });
+  await expect(checkoutBtn).toBeVisible({ timeout: 10000 });
+  await checkoutBtn.click();
+
+  // Now on the checkout step — the Order Type selector is rendered.
+  await expect(page.getByText('Order Type')).toBeVisible({ timeout: 10000 });
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -120,7 +170,6 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
     tagTest('REQ-084', 1);
 
     await injectCart(page);
-
     await page.goto(`${BASE_URL}/checkout`);
     await page.waitForLoadState('networkidle');
 
@@ -129,7 +178,7 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
     }
 
     await expect(page.getByText(/continuing as guest/i)).toBeVisible({ timeout: 15000 });
-    // Use .first() — there are two "Sign in" links (navbar + guest banner)
+    // Two "Sign in" links exist (navbar + guest banner) — assert the first.
     await expect(page.getByRole('link', { name: /sign in/i }).first()).toBeVisible();
     await evidenceShot(page, 'REQ-084', 1, 'guest-banner-visible');
   });
@@ -138,7 +187,6 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
     tagTest('REQ-084', 3);
 
     await injectCart(page);
-
     await page.goto(`${BASE_URL}/checkout`);
     await page.waitForLoadState('networkidle');
 
@@ -153,12 +201,10 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
 
 // ---------------------------------------------------------------------------
 // Admin express create order — requires super-admin auth
-// The first test in the suite pre-warms the route (triggers Next.js dev
-// mode compilation). Subsequent tests navigate again and load quickly.
 // ---------------------------------------------------------------------------
 
 superAdminTest.describe('REQ-084 — Express create order order type selector', () => {
-  superAdminTest.describe.configure({ timeout: 120_000 });
+  superAdminTest.describe.configure({ timeout: 90_000 });
 
   superAdminTest.beforeEach(async ({ page }, testInfo) => {
     if (!(await isAuthenticated(page))) {
@@ -167,22 +213,15 @@ superAdminTest.describe('REQ-084 — Express create order order type selector', 
     }
   });
 
-  // AC4 runs first and acts as the pre-warm test — it has a generous timeout.
-  // If the page loads, subsequent tests (AC5, AC10) will be fast.
   superAdminTest('AC4: Pickup time field appears when Pickup selected', async ({ page }) => {
     tagTest('REQ-084', 4);
 
-    await page.goto('/dashboard/orders/express/create-order');
-    try {
-      // First visit triggers dev mode compilation — wait up to 120s
-      await expect(page.getByText('Order Type')).toBeVisible({ timeout: 120_000 });
-    } catch {
-      await page.screenshot({ path: 'test-results/express-order-stuck-loading-ac4.png' });
-      superAdminTest.skip(true, 'Express create-order page stuck in loading state');
+    if (!(await gotoExpressCheckoutStep(page))) {
+      superAdminTest.skip(true, 'No in-stock express items seeded');
     }
 
     await page.getByRole('button', { name: /pickup/i }).click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     await expect(page.locator('#pickupTime')).toBeVisible({ timeout: 10000 });
     await evidenceShot(page, 'REQ-084', 4, 'pickup-time-field');
@@ -191,17 +230,12 @@ superAdminTest.describe('REQ-084 — Express create order order type selector', 
   superAdminTest('AC5: Delivery address fields appear when Delivery selected', async ({ page }) => {
     tagTest('REQ-084', 5);
 
-    await page.goto('/dashboard/orders/express/create-order');
-    try {
-      // Route should already be compiled from AC4 — 30s is plenty
-      await expect(page.getByText('Order Type')).toBeVisible({ timeout: 30000 });
-    } catch {
-      await page.screenshot({ path: 'test-results/express-order-stuck-loading-ac5.png' });
-      superAdminTest.skip(true, 'Express create-order page stuck in loading state');
+    if (!(await gotoExpressCheckoutStep(page))) {
+      superAdminTest.skip(true, 'No in-stock express items seeded');
     }
 
     await page.getByRole('button', { name: /delivery/i }).click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     await expect(page.locator('#deliveryStreet')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('#deliveryCity')).toBeVisible();
@@ -211,16 +245,12 @@ superAdminTest.describe('REQ-084 — Express create order order type selector', 
   superAdminTest('AC10: Customer info fields appear for pickup/delivery', async ({ page }) => {
     tagTest('REQ-084', 10);
 
-    await page.goto('/dashboard/orders/express/create-order');
-    try {
-      await expect(page.getByText('Order Type')).toBeVisible({ timeout: 30000 });
-    } catch {
-      await page.screenshot({ path: 'test-results/express-order-stuck-loading-ac10.png' });
-      superAdminTest.skip(true, 'Express create-order page stuck in loading state');
+    if (!(await gotoExpressCheckoutStep(page))) {
+      superAdminTest.skip(true, 'No in-stock express items seeded');
     }
 
     await page.getByRole('button', { name: /pickup/i }).click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     await expect(page.locator('#customerName')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('#customerPhone')).toBeVisible();

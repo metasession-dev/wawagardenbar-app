@@ -36,6 +36,8 @@ test.describe('REQ-063 profile preferences — email-marketing toggle @smoke', (
     await expect(switchEl).toHaveAttribute('data-state', 'checked');
 
     await page.getByRole('button', { name: /save preferences/i }).click();
-    await expect(page.getByText(/preferences updated/i)).toBeVisible();
+    await expect(
+      page.getByText('Preferences updated', { exact: true })
+    ).toBeVisible();
   });
 });

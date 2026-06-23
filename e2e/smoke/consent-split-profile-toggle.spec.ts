@@ -26,16 +26,15 @@ test.describe('REQ-063 profile preferences — email-marketing toggle @smoke', (
     // Diagnostic: confirm we're on /profile and not redirected to /login
     await expect(page).toHaveURL(/\/profile/, { timeout: 10000 });
 
-    // Debug: dump page content and URL to diagnose blank page
-    const bodyText = await page
-      .locator('body')
-      .innerText({ timeout: 5000 })
-      .catch(() => 'FAILED_TO_GET_BODY_TEXT');
+    // Debug: dump page HTML to diagnose the "This page couldn't load" error
+    const html = await page.content();
     console.log(
       'AC5 DEBUG — URL:',
       page.url(),
-      'bodyText:',
-      bodyText.substring(0, 500)
+      'htmlLength:',
+      html.length,
+      'html:',
+      html.substring(0, 2000)
     );
 
     const preferencesTab = page.getByRole('tab', { name: /preferences/i });

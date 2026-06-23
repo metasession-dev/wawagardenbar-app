@@ -19,17 +19,30 @@ test.describe('REQ-063 profile preferences — email-marketing toggle @smoke', (
   test('AC5 — toggling "Email — offers & promotions" persists emailMarketing + audit timestamp', async ({
     page,
   }) => {
+    const logs: { type: string; text: string }[] = [];
+    page.on('console', (msg) => {
+      const text = msg.text();
+      if (
+        text.includes('error') ||
+        text.includes('Error') ||
+        text.includes('profile')
+      ) {
+        logs.push({ type: msg.type(), text: text.substring(0, 500) });
+      }
+    });
+    page.on('pageerror', (err) => {
+      logs.push({ type: 'pageerror', text: err.message.substring(0, 500) });
+    });
+
     await loginAsCustomer(page);
     await page.goto('/profile');
     await page.waitForLoadState('networkidle');
 
-    // Debug: capture error details from the Next.js error page
-    const bodyText = await page
-      .locator('body')
-      .textContent({ timeout: 5000 })
-      .catch(() => 'NO_BODY');
     console.log('AC5 DEBUG — URL:', page.url());
-    console.log('AC5 DEBUG — bodyText:', bodyText?.substring(0, 2000));
+    console.log(
+      'AC5 DEBUG — logs:',
+      JSON.stringify(logs, null, 2).substring(0, 3000)
+    );
 
     const preferencesTab = page.getByRole('tab', { name: /preferences/i });
     await expect(preferencesTab).toBeVisible({ timeout: 10000 });

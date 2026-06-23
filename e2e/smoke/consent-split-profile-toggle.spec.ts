@@ -16,22 +16,26 @@ import { test, expect } from '@playwright/test';
 import { loginAsCustomer } from './helpers';
 
 test.describe('REQ-063 profile preferences — email-marketing toggle @smoke', () => {
-  test(
-    'AC5 — toggling "Email — offers & promotions" persists emailMarketing + audit timestamp',
-    async ({ page }) => {
-      await loginAsCustomer(page);
-      await page.goto('/profile');
-      await page.getByRole('tab', { name: /preferences/i }).click();
+  test('AC5 — toggling "Email — offers & promotions" persists emailMarketing + audit timestamp', async ({
+    page,
+  }) => {
+    await loginAsCustomer(page);
+    await page.goto('/profile');
+    await page.waitForLoadState('networkidle');
 
-      const switchEl = page.locator('#email-marketing');
-      await expect(switchEl).toBeVisible();
-      await expect(switchEl).toHaveAttribute('data-state', 'unchecked');
+    const preferencesTab = page.getByRole('tab', { name: /preferences/i });
+    await expect(preferencesTab).toBeVisible();
+    await preferencesTab.click({ trial: true });
+    await preferencesTab.click();
 
-      await switchEl.click();
-      await expect(switchEl).toHaveAttribute('data-state', 'checked');
+    const switchEl = page.locator('#email-marketing');
+    await expect(switchEl).toBeVisible();
+    await expect(switchEl).toHaveAttribute('data-state', 'unchecked');
 
-      await page.getByRole('button', { name: /save preferences/i }).click();
-      await expect(page.getByText(/preferences updated/i)).toBeVisible();
-    }
-  );
+    await switchEl.click();
+    await expect(switchEl).toHaveAttribute('data-state', 'checked');
+
+    await page.getByRole('button', { name: /save preferences/i }).click();
+    await expect(page.getByText(/preferences updated/i)).toBeVisible();
+  });
 });

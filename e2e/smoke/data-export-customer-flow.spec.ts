@@ -14,21 +14,25 @@ import { test, expect } from '@playwright/test';
 import { loginAsCustomer } from './helpers';
 
 test.describe('REQ-065 data export customer download flow @smoke', () => {
-  test(
-    'AC4 — /profile "Download my data" button triggers a JSON download',
-    async ({ page }) => {
-      await loginAsCustomer(page);
-      await page.goto('/profile');
+  test('AC4 — /profile "Download my data" button triggers a JSON download', async ({
+    page,
+  }) => {
+    await loginAsCustomer(page);
+    await page.goto('/profile');
+    await page.waitForLoadState('networkidle');
 
-      // The "Your data" Card lives below the tabs.
-      await expect(page.getByText(/your data/i).first()).toBeVisible();
+    // The "Your data" Card lives below the tabs.
+    await expect(page.getByText(/your data/i).first()).toBeVisible();
 
-      const downloadPromise = page.waitForEvent('download');
-      await page.getByRole('button', { name: /download my data/i }).click();
-      const download = await downloadPromise;
-      expect(download.suggestedFilename()).toMatch(
-        /^wawa-data-[^-]+-\d{4}-\d{2}-\d{2}\.json$/
-      );
-    }
-  );
+    const downloadBtn = page.getByRole('button', { name: /download my data/i });
+    await expect(downloadBtn).toBeVisible();
+    await downloadBtn.click({ trial: true });
+
+    const downloadPromise = page.waitForEvent('download');
+    await downloadBtn.click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(
+      /^wawa-data-[^-]+-\d{4}-\d{2}-\d{2}\.json$/
+    );
+  });
 });

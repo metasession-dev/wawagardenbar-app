@@ -81,14 +81,10 @@ async function cleanupTab(tabId: string) {
 
 /**
  * Navigate to the express create-order page and wait for it to render.
- * The page has a loading state (Loader2 spinner) while fetching
- * categories via server actions. We wait for the spinner to disappear
- * and the order-type buttons to appear.
- *
- * If the page is stuck in loading (server actions hang), we skip the
- * test rather than letting it time out.
+ * Returns true if the page loaded successfully, false if stuck in
+ * loading state (server actions hang in CI dev mode).
  */
-async function gotoExpressOrder(page: import('@playwright/test').Page) {
+async function gotoExpressOrder(page: import('@playwright/test').Page): Promise<boolean> {
   await page.goto(`${BASE_URL}/dashboard/orders/express/create-order`);
   await page.waitForLoadState('networkidle');
 
@@ -97,16 +93,14 @@ async function gotoExpressOrder(page: import('@playwright/test').Page) {
     throw new Error('Express create-order page redirected to login');
   }
 
-  // The page shows a Loader2 spinner while loading. Wait for the
-  // order type buttons to appear. If they don't appear within 30s,
-  // the server actions may be hanging — skip the test.
-  const pickupBtn = page.getByRole('button', { name: /pickup/i });
-  const visible = await pickupBtn.isVisible({ timeout: 30000 }).catch(() => false);
+  // Wait for the pickup button to appear (renders after loading=false)
+  const visible = await page.getByRole('button', { name: /pickup/i })
+    .isVisible({ timeout: 30000 }).catch(() => false);
   if (!visible) {
-    // Capture a screenshot for debugging, then skip
     await evidenceShot(page, 'REQ-084', 0, 'express-order-stuck-loading');
-    test.skip(true, 'Express create-order page stuck in loading state — server actions may be hanging in CI');
+    return false;
   }
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -171,7 +165,10 @@ superAdminTest.describe('REQ-084 — Express create order order type selector', 
     tagTest('REQ-084', 4);
     guard(superAdminTest.skip, await isAuthenticated(page));
 
-    await gotoExpressOrder(page);
+    const loaded = await gotoExpressOrder(page);
+    if (!loaded) {
+      superAdminTest.skip(true, 'Express create-order page stuck in loading state');
+    }
 
     await page.getByRole('button', { name: /pickup/i }).click();
     await page.waitForTimeout(500);
@@ -184,7 +181,10 @@ superAdminTest.describe('REQ-084 — Express create order order type selector', 
     tagTest('REQ-084', 5);
     guard(superAdminTest.skip, await isAuthenticated(page));
 
-    await gotoExpressOrder(page);
+    const loaded = await gotoExpressOrder(page);
+    if (!loaded) {
+      superAdminTest.skip(true, 'Express create-order page stuck in loading state');
+    }
 
     await page.getByRole('button', { name: /delivery/i }).click();
     await page.waitForTimeout(500);
@@ -198,7 +198,10 @@ superAdminTest.describe('REQ-084 — Express create order order type selector', 
     tagTest('REQ-084', 10);
     guard(superAdminTest.skip, await isAuthenticated(page));
 
-    await gotoExpressOrder(page);
+    const loaded = await gotoExpressOrder(page);
+    if (!loaded) {
+      superAdminTest.skip(true, 'Express create-order page stuck in loading state');
+    }
 
     await page.getByRole('button', { name: /pickup/i }).click();
     await page.waitForTimeout(500);

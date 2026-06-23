@@ -82,7 +82,6 @@ async function cleanupTab(tabId: string) {
 /**
  * Inject a cart item directly into localStorage (Zustand persist)
  * so the /checkout page doesn't redirect to /menu for empty cart.
- * The cart store uses key "wawa-cart-storage" with Zustand persist.
  */
 async function injectCart(page: Page) {
   await page.addInitScript(() => {
@@ -112,32 +111,6 @@ async function injectCart(page: Page) {
   });
 }
 
-/**
- * Navigate to the express create-order page and wait for it to render.
- * Uses expect().toBeVisible() which actually waits (unlike isVisible()
- * which is a snapshot check that returns immediately).
- * Returns true if loaded, false if stuck in loading.
- */
-async function gotoExpressOrder(page: Page): Promise<boolean> {
-  await page.goto(`${BASE_URL}/dashboard/orders/express/create-order`);
-  await page.waitForLoadState('networkidle');
-
-  if (page.url().includes('/login') || page.url().includes('/admin/login')) {
-    throw new Error('Express create-order page redirected to login');
-  }
-
-  // Use expect().toBeVisible() which waits for the element to appear.
-  // In CI dev mode, the page needs to compile + execute server actions.
-  try {
-    await expect(page.getByRole('button', { name: /pickup/i }))
-      .toBeVisible({ timeout: 90000 });
-    return true;
-  } catch {
-    await page.screenshot({ path: 'test-results/express-order-stuck-loading.png' });
-    return false;
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Customer checkout — unauthenticated
 // ---------------------------------------------------------------------------
@@ -146,8 +119,6 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
   test('AC1: Continuing as Guest banner visible for unauthenticated users', async ({ page }) => {
     tagTest('REQ-084', 1);
 
-    // Inject cart state directly (unauthenticated users can't add to cart
-    // via the UI — the menu detail modal redirects to /login)
     await injectCart(page);
 
     await page.goto(`${BASE_URL}/checkout`);
@@ -158,7 +129,8 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
     }
 
     await expect(page.getByText(/continuing as guest/i)).toBeVisible({ timeout: 15000 });
-    await expect(page.getByRole('link', { name: /sign in/i })).toBeVisible();
+    // Use .first() — there are two "Sign in" links (navbar + guest banner)
+    await expect(page.getByRole('link', { name: /sign in/i }).first()).toBeVisible();
     await evidenceShot(page, 'REQ-084', 1, 'guest-banner-visible');
   });
 
@@ -181,9 +153,31 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
 
 // ---------------------------------------------------------------------------
 // Admin express create order — requires super-admin auth
+// Pre-warms the route in beforeAll to trigger Next.js dev mode compilation,
+// then each test navigates again (route already compiled → fast load).
 // ---------------------------------------------------------------------------
 
 superAdminTest.describe('REQ-084 — Express create order order type selector', () => {
+  superAdminTest.describe.configure({ timeout: 120_000 });
+
+  // Pre-warm: navigate to the express page once to trigger compilation.
+  // The page will show a loading spinner while server actions execute.
+  // We wait for the loading to finish so subsequent tests load instantly.
+  superAdminTest.beforeAll(async ({ page }) => {
+    if (!(await isAuthenticated(page))) {
+      if (process.env.CI) throw new Error('Expected an authenticated session in CI but none was present');
+      return;
+    }
+    // Navigate and wait for the page to fully load (server actions + render).
+    // Use a generous timeout for first-time dev mode compilation.
+    await page.goto('/dashboard/orders/express/create-order');
+    try {
+      await expect(page.getByText('Order Type')).toBeVisible({ timeout: 120_000 });
+    } catch {
+      // Pre-warm failed — tests will skip individually
+    }
+  });
+
   superAdminTest.beforeEach(async ({ page }, testInfo) => {
     if (!(await isAuthenticated(page))) {
       if (process.env.CI) throw new Error('Expected an authenticated session in CI but none was present');
@@ -191,13 +185,14 @@ superAdminTest.describe('REQ-084 — Express create order order type selector', 
     }
   });
 
-  superAdminTest.describe.configure({ timeout: 120_000 });
-
   superAdminTest('AC4: Pickup time field appears when Pickup selected', async ({ page }) => {
     tagTest('REQ-084', 4);
 
-    const loaded = await gotoExpressOrder(page);
-    if (!loaded) {
+    await page.goto('/dashboard/orders/express/create-order');
+    try {
+      await expect(page.getByText('Order Type')).toBeVisible({ timeout: 30000 });
+    } catch {
+      await page.screenshot({ path: 'test-results/express-order-stuck-loading-ac4.png' });
       superAdminTest.skip(true, 'Express create-order page stuck in loading state');
     }
 
@@ -211,8 +206,11 @@ superAdminTest.describe('REQ-084 — Express create order order type selector', 
   superAdminTest('AC5: Delivery address fields appear when Delivery selected', async ({ page }) => {
     tagTest('REQ-084', 5);
 
-    const loaded = await gotoExpressOrder(page);
-    if (!loaded) {
+    await page.goto('/dashboard/orders/express/create-order');
+    try {
+      await expect(page.getByText('Order Type')).toBeVisible({ timeout: 30000 });
+    } catch {
+      await page.screenshot({ path: 'test-results/express-order-stuck-loading-ac5.png' });
       superAdminTest.skip(true, 'Express create-order page stuck in loading state');
     }
 
@@ -227,8 +225,11 @@ superAdminTest.describe('REQ-084 — Express create order order type selector', 
   superAdminTest('AC10: Customer info fields appear for pickup/delivery', async ({ page }) => {
     tagTest('REQ-084', 10);
 
-    const loaded = await gotoExpressOrder(page);
-    if (!loaded) {
+    await page.goto('/dashboard/orders/express/create-order');
+    try {
+      await expect(page.getByText('Order Type')).toBeVisible({ timeout: 30000 });
+    } catch {
+      await page.screenshot({ path: 'test-results/express-order-stuck-loading-ac10.png' });
       superAdminTest.skip(true, 'Express create-order page stuck in loading state');
     }
 

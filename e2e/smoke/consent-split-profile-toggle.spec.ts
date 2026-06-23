@@ -23,6 +23,15 @@ test.describe('REQ-063 profile preferences — email-marketing toggle @smoke', (
     await page.goto('/profile');
     await page.waitForLoadState('networkidle');
 
+    // Debug: dump page HTML to diagnose error page
+    const html = await page.content();
+    console.log(
+      'AC5 DEBUG — URL:',
+      page.url(),
+      'html:',
+      html.substring(0, 3000)
+    );
+
     const preferencesTab = page.getByRole('tab', { name: /preferences/i });
     await expect(preferencesTab).toBeVisible({ timeout: 10000 });
     await preferencesTab.click({ trial: true });

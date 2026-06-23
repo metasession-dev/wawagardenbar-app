@@ -97,7 +97,7 @@ async function gotoExpressOrder(page: import('@playwright/test').Page): Promise<
   const visible = await page.getByRole('button', { name: /pickup/i })
     .isVisible({ timeout: 30000 }).catch(() => false);
   if (!visible) {
-    await evidenceShot(page, 'REQ-084', 0, 'express-order-stuck-loading');
+    await page.screenshot({ path: 'test-results/express-order-stuck-loading.png' });
     return false;
   }
   return true;

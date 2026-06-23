@@ -49,6 +49,7 @@ async function seedOrder(
       status,
       items: [
         {
+          menuItemId: new ObjectId(),
           name: 'E2E Test Item',
           price: 500,
           quantity: 1,

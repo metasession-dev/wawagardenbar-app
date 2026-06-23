@@ -79,6 +79,20 @@ async function cleanupTab(tabId: string) {
   }
 }
 
+/**
+ * Navigate to the express create-order page and wait for it to fully
+ * render (loading spinner gone, order-type buttons visible).
+ */
+async function gotoExpressOrder(page: import('@playwright/test').Page) {
+  await page.goto(`${BASE_URL}/dashboard/orders/express/create-order`);
+
+  // Wait for the loading spinner to disappear and the Order Type
+  // card to appear. The page sets loading=true while fetching
+  // categories; if the fetch fails the spinner stays forever.
+  // Wait for the "Order Type" heading which only renders after loading.
+  await expect(page.getByText('Order Type', { exact: true })).toBeVisible({ timeout: 30000 });
+}
+
 // ---------------------------------------------------------------------------
 // Customer checkout — unauthenticated
 // ---------------------------------------------------------------------------
@@ -87,7 +101,6 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
   test('AC1: Continuing as Guest banner visible for unauthenticated users', async ({ page }) => {
     tagTest('REQ-084', 1);
 
-    // Add an item to cart via menu so checkout doesn't redirect
     await page.goto(`${BASE_URL}/menu`);
     await page.waitForLoadState('networkidle');
 
@@ -100,7 +113,6 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
     await page.goto(`${BASE_URL}/checkout`);
     await page.waitForLoadState('networkidle');
 
-    // If redirected back to /menu (empty cart), skip
     if (page.url().includes('/menu')) {
       test.skip(true, 'Cart empty — checkout redirected to /menu.');
     }
@@ -136,8 +148,6 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
 
 // ---------------------------------------------------------------------------
 // Admin express create order — requires super-admin auth
-// The page has a loading state (Loader2 spinner) that must disappear
-// before the order type buttons are clickable.
 // ---------------------------------------------------------------------------
 
 superAdminTest.describe('REQ-084 — Express create order order type selector', () => {
@@ -145,10 +155,7 @@ superAdminTest.describe('REQ-084 — Express create order order type selector', 
     tagTest('REQ-084', 4);
     guard(superAdminTest.skip, await isAuthenticated(page));
 
-    await page.goto(`${BASE_URL}/dashboard/orders/express/create-order`);
-
-    // Wait for the loading spinner to disappear
-    await expect(page.getByRole('button', { name: /pickup/i })).toBeVisible({ timeout: 30000 });
+    await gotoExpressOrder(page);
 
     // Click the Pickup button
     await page.getByRole('button', { name: /pickup/i }).click();
@@ -163,10 +170,7 @@ superAdminTest.describe('REQ-084 — Express create order order type selector', 
     tagTest('REQ-084', 5);
     guard(superAdminTest.skip, await isAuthenticated(page));
 
-    await page.goto(`${BASE_URL}/dashboard/orders/express/create-order`);
-
-    // Wait for the loading spinner to disappear
-    await expect(page.getByRole('button', { name: /delivery/i })).toBeVisible({ timeout: 30000 });
+    await gotoExpressOrder(page);
 
     // Click the Delivery button
     await page.getByRole('button', { name: /delivery/i }).click();
@@ -182,10 +186,7 @@ superAdminTest.describe('REQ-084 — Express create order order type selector', 
     tagTest('REQ-084', 10);
     guard(superAdminTest.skip, await isAuthenticated(page));
 
-    await page.goto(`${BASE_URL}/dashboard/orders/express/create-order`);
-
-    // Wait for the loading spinner to disappear
-    await expect(page.getByRole('button', { name: /pickup/i })).toBeVisible({ timeout: 30000 });
+    await gotoExpressOrder(page);
 
     // Select Pickup
     await page.getByRole('button', { name: /pickup/i }).click();
@@ -220,9 +221,7 @@ superAdminTest.describe('REQ-084 — Admin tab checkout (manual payment)', () =>
     await page.goto(`${BASE_URL}/dashboard/orders/tabs/${tabId}/checkout`);
     await page.waitForLoadState('networkidle');
 
-    // Should stay on the checkout route (no redirect)
     await expect(page).toHaveURL(/\/dashboard\/orders\/tabs\/.*\/checkout/, { timeout: 10000 });
-    // AdminTabCheckoutForm renders with manual payment options
     await expect(page.getByText(/cash|transfer|card/i).first()).toBeVisible({ timeout: 10000 });
     await evidenceShot(page, 'REQ-084', 7, 'admin-tab-checkout-form');
   });
@@ -234,10 +233,8 @@ superAdminTest.describe('REQ-084 — Admin tab checkout (manual payment)', () =>
     await page.goto(`${BASE_URL}/dashboard/orders/tabs/${tabId}/checkout`);
     await page.waitForLoadState('networkidle');
 
-    // No Monnify gateway redirect or URL
     await expect(page).toHaveURL(/\/dashboard\/orders\/tabs\/.*\/checkout/, { timeout: 10000 });
     await expect(page.getByText(/monnify|payment gateway/i)).not.toBeVisible();
-    // Manual payment options present
     await expect(page.getByText(/cash|transfer|card/i).first()).toBeVisible({ timeout: 10000 });
     await evidenceShot(page, 'REQ-084', 11, 'no-monnify-manual-payment');
   });

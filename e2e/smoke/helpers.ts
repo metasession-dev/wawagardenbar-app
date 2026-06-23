@@ -63,6 +63,22 @@ export function uniquePhone(): { phone: string; digits: string } {
 export async function loginAsCustomer(page: Page): Promise<{ phone: string; digits: string }> {
   const { phone, digits } = uniquePhone();
 
+  // Pre-seed cookie-consent so the fixed-bottom CookieConsentBanner never
+  // mounts. Otherwise it (a) intercepts clicks on bottom-of-page controls
+  // (e.g. "Download my data") and (b) shifts layout on its post-hydration
+  // useEffect, leaving top controls "not stable" for Playwright. Applies to
+  // every navigation in this context, including the later /profile load.
+  await page.addInitScript(() => {
+    try {
+      window.localStorage.setItem(
+        'cookieConsent',
+        JSON.stringify({ acceptedAt: new Date().toISOString(), version: 'v1' })
+      );
+    } catch {
+      /* localStorage unavailable — banner dismissal is best-effort */
+    }
+  });
+
   await page.goto('/login');
   await page.getByText('Traditional text message to your phone').click();
   await page.fill('#phone', phone);

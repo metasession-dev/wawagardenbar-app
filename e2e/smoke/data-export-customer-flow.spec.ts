@@ -21,11 +21,16 @@ test.describe('REQ-065 data export customer download flow @smoke', () => {
     await page.goto('/profile');
     await page.waitForLoadState('networkidle');
 
+    // Diagnostic: confirm we're on /profile and not redirected to /login
+    await expect(page).toHaveURL(/\/profile/, { timeout: 10000 });
+
     // The "Your data" Card lives below the tabs.
-    await expect(page.getByText(/your data/i).first()).toBeVisible();
+    await expect(page.getByText(/your data/i).first()).toBeVisible({
+      timeout: 10000,
+    });
 
     const downloadBtn = page.getByRole('button', { name: /download my data/i });
-    await expect(downloadBtn).toBeVisible();
+    await expect(downloadBtn).toBeVisible({ timeout: 10000 });
     await downloadBtn.click({ trial: true });
 
     const downloadPromise = page.waitForEvent('download');

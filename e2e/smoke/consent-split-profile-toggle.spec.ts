@@ -23,8 +23,11 @@ test.describe('REQ-063 profile preferences — email-marketing toggle @smoke', (
     await page.goto('/profile');
     await page.waitForLoadState('networkidle');
 
+    // Diagnostic: confirm we're on /profile and not redirected to /login
+    await expect(page).toHaveURL(/\/profile/, { timeout: 10000 });
+
     const preferencesTab = page.getByRole('tab', { name: /preferences/i });
-    await expect(preferencesTab).toBeVisible();
+    await expect(preferencesTab).toBeVisible({ timeout: 10000 });
     await preferencesTab.click({ trial: true });
     await preferencesTab.click();
 

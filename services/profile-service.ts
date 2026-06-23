@@ -2,6 +2,7 @@ import { Types } from 'mongoose';
 import { connectDB } from '@/lib/mongodb';
 import User from '@/models/user-model';
 import Order from '@/models/order-model';
+import '@/models/menu-item-model';
 import { IUser, IAddress } from '@/interfaces';
 import { writeFile, unlink } from 'fs/promises';
 import path from 'path';

@@ -21,13 +21,6 @@ test.describe('REQ-065 data export customer download flow @smoke', () => {
     await page.goto('/profile');
     await page.waitForLoadState('networkidle');
 
-    // Diagnostic: confirm we're on /profile and not redirected to /login
-    await expect(page).toHaveURL(/\/profile/, { timeout: 10000 });
-
-    // Check if the page is actually rendering content
-    const h1 = page.getByRole('heading', { name: /my profile/i });
-    await expect(h1).toBeVisible({ timeout: 10000 });
-
     // The "Your data" Card lives below the tabs.
     await expect(page.getByText(/your data/i).first()).toBeVisible({
       timeout: 10000,

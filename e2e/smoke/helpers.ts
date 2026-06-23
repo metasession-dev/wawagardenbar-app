@@ -90,7 +90,16 @@ export async function loginAsCustomer(page: Page): Promise<{ phone: string; digi
 
   await page.fill('#pin', pin as string);
   await page.getByRole('button', { name: /verify & login/i }).click();
-  await expect(page).not.toHaveURL(/\/login(\?|$)/, { timeout: 15000 });
+
+  // Wait for the post-verify client redirect (router.push to the landing page,
+  // e.g. /menu) to FULLY settle. Returning the moment the URL merely leaves
+  // /login leaves that navigation in-flight, which then clobbers a subsequent
+  // page.goto('/profile') — detaching the profile DOM and aborting in-flight
+  // requests. Waiting for the committed landing URL + networkidle prevents it.
+  await page.waitForURL((url: URL) => !/^\/login(\/|$)/.test(url.pathname), {
+    timeout: 15000,
+  });
+  await page.waitForLoadState('networkidle');
 
   return { phone, digits };
 }

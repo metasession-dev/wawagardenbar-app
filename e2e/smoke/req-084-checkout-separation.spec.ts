@@ -153,30 +153,12 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
 
 // ---------------------------------------------------------------------------
 // Admin express create order — requires super-admin auth
-// Pre-warms the route in beforeAll to trigger Next.js dev mode compilation,
-// then each test navigates again (route already compiled → fast load).
+// The first test in the suite pre-warms the route (triggers Next.js dev
+// mode compilation). Subsequent tests navigate again and load quickly.
 // ---------------------------------------------------------------------------
 
 superAdminTest.describe('REQ-084 — Express create order order type selector', () => {
   superAdminTest.describe.configure({ timeout: 120_000 });
-
-  // Pre-warm: navigate to the express page once to trigger compilation.
-  // The page will show a loading spinner while server actions execute.
-  // We wait for the loading to finish so subsequent tests load instantly.
-  superAdminTest.beforeAll(async ({ page }) => {
-    if (!(await isAuthenticated(page))) {
-      if (process.env.CI) throw new Error('Expected an authenticated session in CI but none was present');
-      return;
-    }
-    // Navigate and wait for the page to fully load (server actions + render).
-    // Use a generous timeout for first-time dev mode compilation.
-    await page.goto('/dashboard/orders/express/create-order');
-    try {
-      await expect(page.getByText('Order Type')).toBeVisible({ timeout: 120_000 });
-    } catch {
-      // Pre-warm failed — tests will skip individually
-    }
-  });
 
   superAdminTest.beforeEach(async ({ page }, testInfo) => {
     if (!(await isAuthenticated(page))) {
@@ -185,12 +167,15 @@ superAdminTest.describe('REQ-084 — Express create order order type selector', 
     }
   });
 
+  // AC4 runs first and acts as the pre-warm test — it has a generous timeout.
+  // If the page loads, subsequent tests (AC5, AC10) will be fast.
   superAdminTest('AC4: Pickup time field appears when Pickup selected', async ({ page }) => {
     tagTest('REQ-084', 4);
 
     await page.goto('/dashboard/orders/express/create-order');
     try {
-      await expect(page.getByText('Order Type')).toBeVisible({ timeout: 30000 });
+      // First visit triggers dev mode compilation — wait up to 120s
+      await expect(page.getByText('Order Type')).toBeVisible({ timeout: 120_000 });
     } catch {
       await page.screenshot({ path: 'test-results/express-order-stuck-loading-ac4.png' });
       superAdminTest.skip(true, 'Express create-order page stuck in loading state');
@@ -208,6 +193,7 @@ superAdminTest.describe('REQ-084 — Express create order order type selector', 
 
     await page.goto('/dashboard/orders/express/create-order');
     try {
+      // Route should already be compiled from AC4 — 30s is plenty
       await expect(page.getByText('Order Type')).toBeVisible({ timeout: 30000 });
     } catch {
       await page.screenshot({ path: 'test-results/express-order-stuck-loading-ac5.png' });

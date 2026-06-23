@@ -81,16 +81,28 @@ async function cleanupTab(tabId: string) {
 
 /**
  * Navigate to the express create-order page and wait for it to fully
- * render (loading spinner gone, order-type buttons visible).
+ * render. The page has a loading state while fetching categories.
+ * We wait for any button to appear (the order type buttons render
+ * after loading=false). If the page redirects to login, we skip.
  */
 async function gotoExpressOrder(page: import('@playwright/test').Page) {
   await page.goto(`${BASE_URL}/dashboard/orders/express/create-order`);
 
-  // Wait for the loading spinner to disappear and the Order Type
-  // card to appear. The page sets loading=true while fetching
-  // categories; if the fetch fails the spinner stays forever.
-  // Wait for the "Order Type" heading which only renders after loading.
-  await expect(page.getByText('Order Type', { exact: true })).toBeVisible({ timeout: 30000 });
+  // Wait for URL to stabilize (redirect to login would change URL)
+  await page.waitForLoadState('networkidle');
+
+  // If redirected to login, the session isn't working for this page
+  if (page.url().includes('/login') || page.url().includes('/admin/login')) {
+    throw new Error('Express create-order page redirected to login — session not valid for admin routes');
+  }
+
+  // Wait for the loading spinner to disappear. The page renders a
+  // Loader2 spinner while loading=true. After loading=false, the
+  // Order Type card with buttons appears.
+  // Try waiting for any text that appears in the loaded state.
+  await expect(
+    page.getByText(/order type|dine-in|pickup|delivery/i).first()
+  ).toBeVisible({ timeout: 30000 });
 }
 
 // ---------------------------------------------------------------------------
@@ -157,11 +169,9 @@ superAdminTest.describe('REQ-084 — Express create order order type selector', 
 
     await gotoExpressOrder(page);
 
-    // Click the Pickup button
     await page.getByRole('button', { name: /pickup/i }).click();
     await page.waitForTimeout(500);
 
-    // Pickup time field should be visible
     await expect(page.locator('#pickupTime')).toBeVisible({ timeout: 10000 });
     await evidenceShot(page, 'REQ-084', 4, 'pickup-time-field');
   });
@@ -172,11 +182,9 @@ superAdminTest.describe('REQ-084 — Express create order order type selector', 
 
     await gotoExpressOrder(page);
 
-    // Click the Delivery button
     await page.getByRole('button', { name: /delivery/i }).click();
     await page.waitForTimeout(500);
 
-    // Delivery address fields should be visible
     await expect(page.locator('#deliveryStreet')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('#deliveryCity')).toBeVisible();
     await evidenceShot(page, 'REQ-084', 5, 'delivery-address-fields');
@@ -188,11 +196,9 @@ superAdminTest.describe('REQ-084 — Express create order order type selector', 
 
     await gotoExpressOrder(page);
 
-    // Select Pickup
     await page.getByRole('button', { name: /pickup/i }).click();
     await page.waitForTimeout(500);
 
-    // Customer info fields should be visible
     await expect(page.locator('#customerName')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('#customerPhone')).toBeVisible();
     await evidenceShot(page, 'REQ-084', 10, 'customer-info-pickup');

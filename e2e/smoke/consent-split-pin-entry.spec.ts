@@ -7,13 +7,9 @@
  * picked persists each independently to the user's preferences and
  * stamps `communicationPreferencesUpdatedAt`.
  *
- * ⏸ DEFERRED (test.fixme): same blocker as `customer-auth.spec.ts` —
- * the SMS/email PIN delivery is server-side and FATAL on failure when no
- * provider is configured. `sendPinAction` rejects before the PIN-entry
- * step is reachable. Un-fixme once a local provider mock exists (a fake
- * AfricasTalking endpoint via AFRICASTALKING_API_URL in the e2e setup).
- *
- * The helpers + assertions below are ready for that day.
+ * Enabled in CI via ENABLE_E2E_PIN_INTERCEPT=true (REQ-074): sendPinAction
+ * persists the PIN to Mongo and returns success without dispatching real SMS,
+ * so the PIN-entry step (with the three consent checkboxes) is reachable.
  *
  * SRS: REQ-AUTHC-001 (PIN login) — extends with REQ-063's consent surface.
  * @smoke
@@ -65,7 +61,7 @@ async function requestSmsPinForNewUser(page: Page, phone: string) {
 }
 
 test.describe('REQ-063 PIN-entry consent split @smoke', () => {
-  test.fixme(
+  test(
     'AC1 — new-user PIN entry renders 3 labelled consent checkboxes with correct defaults',
     async ({ page }) => {
       const { phone } = uniquePhone();
@@ -98,7 +94,7 @@ test.describe('REQ-063 PIN-entry consent split @smoke', () => {
     }
   );
 
-  test.fixme(
+  test(
     'AC1+AC3 — opting into all three persists each independently and stamps audit timestamp',
     async ({ page }) => {
       const { phone, digits } = uniquePhone();

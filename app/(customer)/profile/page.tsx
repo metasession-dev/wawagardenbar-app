@@ -17,6 +17,7 @@ import { ProfileService } from '@/services';
 import { sessionOptions, SessionData } from '@/lib/session';
 import { PersonalInfoTab } from '@/components/features/profile/personal-info-tab';
 import { AddressesTab } from '@/components/features/profile/addresses-tab';
+import { PreferencesTab } from '@/components/features/profile/preferences-tab';
 import { DataExportButton } from '@/components/features/profile/data-export-button';
 
 export const metadata = {
@@ -70,9 +71,10 @@ export default async function ProfilePage({
 
         {/* Tabbed Interface */}
         <Tabs defaultValue={defaultTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:inline-grid">
+          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
             <TabsTrigger value="personal">Personal Info</TabsTrigger>
             <TabsTrigger value="addresses">Addresses</TabsTrigger>
+            <TabsTrigger value="preferences">Preferences</TabsTrigger>
           </TabsList>
 
           {/* Personal Info Tab */}
@@ -102,6 +104,23 @@ export default async function ProfilePage({
               <CardContent>
                 <Suspense fallback={<Skeleton className="h-96 w-full" />}>
                   <AddressesTab addresses={serializedProfile.addresses} />
+                </Suspense>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* REQ-063 — Communication preferences (incl. email-marketing toggle). */}
+          <TabsContent value="preferences" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Preferences</CardTitle>
+                <CardDescription>
+                  Manage your communication and dietary preferences
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+                  <PreferencesTab preferences={serializedProfile.preferences} />
                 </Suspense>
               </CardContent>
             </Card>

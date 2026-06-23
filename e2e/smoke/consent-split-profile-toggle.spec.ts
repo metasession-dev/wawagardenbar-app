@@ -6,20 +6,20 @@
  * `emailMarketing: true` to the user's preferences and server-stamps
  * `communicationPreferencesUpdatedAt`.
  *
- * ⏸ DEFERRED (test.fixme): the profile page requires an authenticated
- * CUSTOMER session, but the customer auth setup is the same PIN flow
- * blocked by the SMS-fatal issue in `customer-auth.spec.ts`. Un-fixme
- * once a customer storageState (or SMS provider mock) lands.
+ * Logs in a fresh customer via the passwordless PIN flow (enabled in CI by
+ * ENABLE_E2E_PIN_INTERCEPT=true — REQ-074), then drives the Preferences tab.
  *
  * @smoke
  * @requirement REQ-063
  */
 import { test, expect } from '@playwright/test';
+import { loginAsCustomer } from './helpers';
 
 test.describe('REQ-063 profile preferences — email-marketing toggle @smoke', () => {
-  test.fixme(
+  test(
     'AC5 — toggling "Email — offers & promotions" persists emailMarketing + audit timestamp',
     async ({ page }) => {
+      await loginAsCustomer(page);
       await page.goto('/profile');
       await page.getByRole('tab', { name: /preferences/i }).click();
 

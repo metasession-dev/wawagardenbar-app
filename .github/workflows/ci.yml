@@ -187,6 +187,10 @@ jobs:
           E2E_CSR_USERNAME: e2e-csr
           E2E_CSR_PASSWORD: E2eTest@2026!
           INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
+          # REQ-074 — skip the real SMS/email dispatch in sendPinAction so the
+          # customer passwordless PIN-login flow completes in CI. The PIN is
+          # persisted to Mongo; specs read it back via getVerificationPinByPhone.
+          ENABLE_E2E_PIN_INTERCEPT: 'true'
         run: npm run dev &
 
       - name: Wait for dev server

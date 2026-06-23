@@ -11,7 +11,7 @@
  *   AC10 — Express create order: customer info fields appear for pickup/delivery
  *   AC11 — Admin tab checkout: no Monnify URL, manual payment
  */
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { superAdminTest, isAuthenticated } from '../kitchen/helpers';
 import { tagTest } from '../helpers/test-tags';
 import { evidenceShot } from '../helpers/evidence';
@@ -80,57 +80,62 @@ async function cleanupTab(tabId: string) {
 }
 
 /**
- * Add an item to the cart by navigating to /menu and clicking the
- * first "Add to Cart" button. In CI dev mode, the /menu page may
- * take a while to compile and render, so we use a generous timeout.
- * Returns true if an item was added, false otherwise.
+ * Inject a cart item directly into localStorage (Zustand persist)
+ * so the /checkout page doesn't redirect to /menu for empty cart.
+ * The cart store uses key "wawa-cart-storage" with Zustand persist.
  */
-async function addMenuItemToCart(page: import('@playwright/test').Page): Promise<boolean> {
-  await page.goto(`${BASE_URL}/menu`);
-
-  // Wait for any menu item card to appear (dev mode compilation
-  // can take 20+ seconds on first visit).
-  const itemCard = page.locator('[class*="card"]').first();
-  const cardVisible = await itemCard.isVisible({ timeout: 30000 }).catch(() => false);
-  if (!cardVisible) return false;
-
-  // Find and click the first "Add to Cart" button
-  const addToCartBtn = page.getByRole('button', { name: /add to cart/i }).first();
-  const btnVisible = await addToCartBtn.isVisible({ timeout: 10000 }).catch(() => false);
-  if (!btnVisible) return false;
-
-  await addToCartBtn.click();
-  // Wait for cart to update
-  await page.waitForTimeout(2000);
-  return true;
+async function injectCart(page: Page) {
+  await page.addInitScript(() => {
+    const cartItem = {
+      id: 'e2e-test-item',
+      menuItemId: 'e2e-test-item',
+      name: 'E2E Test Item',
+      price: 500,
+      quantity: 1,
+      portionSize: 'full',
+      portionMultiplier: 1.0,
+      subtotal: 500,
+      image: undefined,
+      category: 'food',
+      specialInstructions: undefined,
+      preparationTime: 20,
+      customizations: undefined,
+    };
+    const cartState = {
+      state: {
+        items: [cartItem],
+        isOpen: false,
+      },
+      version: 0,
+    };
+    window.localStorage.setItem('wawa-cart-storage', JSON.stringify(cartState));
+  });
 }
 
 /**
  * Navigate to the express create-order page and wait for it to render.
- * In CI dev mode, the first visit triggers Next.js compilation which
- * can take 30+ seconds. We use a 90s timeout to accommodate this.
- * Returns true if the page loaded successfully, false if stuck.
+ * Uses expect().toBeVisible() which actually waits (unlike isVisible()
+ * which is a snapshot check that returns immediately).
+ * Returns true if loaded, false if stuck in loading.
  */
-async function gotoExpressOrder(page: import('@playwright/test').Page): Promise<boolean> {
+async function gotoExpressOrder(page: Page): Promise<boolean> {
   await page.goto(`${BASE_URL}/dashboard/orders/express/create-order`);
-
-  // Check for login redirect
   await page.waitForLoadState('networkidle');
+
   if (page.url().includes('/login') || page.url().includes('/admin/login')) {
     throw new Error('Express create-order page redirected to login');
   }
 
-  // Wait for the pickup button to appear. In dev mode, the page
-  // needs to: (1) compile the route, (2) render the client component,
-  // (3) execute server actions via POST, (4) set loading=false.
-  // This can take 60+ seconds on first visit in CI.
-  const visible = await page.getByRole('button', { name: /pickup/i })
-    .isVisible({ timeout: 90000 }).catch(() => false);
-  if (!visible) {
+  // Use expect().toBeVisible() which waits for the element to appear.
+  // In CI dev mode, the page needs to compile + execute server actions.
+  try {
+    await expect(page.getByRole('button', { name: /pickup/i }))
+      .toBeVisible({ timeout: 90000 });
+    return true;
+  } catch {
     await page.screenshot({ path: 'test-results/express-order-stuck-loading.png' });
     return false;
   }
-  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -141,17 +146,15 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
   test('AC1: Continuing as Guest banner visible for unauthenticated users', async ({ page }) => {
     tagTest('REQ-084', 1);
 
-    const added = await addMenuItemToCart(page);
+    // Inject cart state directly (unauthenticated users can't add to cart
+    // via the UI — the menu detail modal redirects to /login)
+    await injectCart(page);
 
     await page.goto(`${BASE_URL}/checkout`);
     await page.waitForLoadState('networkidle');
 
     if (page.url().includes('/menu')) {
-      if (!added) {
-        test.skip(true, 'No menu items available to add to cart — checkout redirected to /menu.');
-      } else {
-        test.skip(true, 'Cart empty after adding item — checkout redirected to /menu.');
-      }
+      test.skip(true, 'Cart injection failed — checkout redirected to /menu.');
     }
 
     await expect(page.getByText(/continuing as guest/i)).toBeVisible({ timeout: 15000 });
@@ -162,17 +165,13 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
   test('AC3: No admin payment options on customer checkout', async ({ page }) => {
     tagTest('REQ-084', 3);
 
-    const added = await addMenuItemToCart(page);
+    await injectCart(page);
 
     await page.goto(`${BASE_URL}/checkout`);
     await page.waitForLoadState('networkidle');
 
     if (page.url().includes('/menu')) {
-      if (!added) {
-        test.skip(true, 'No menu items available to add to cart — checkout redirected to /menu.');
-      } else {
-        test.skip(true, 'Cart empty after adding item — checkout redirected to /menu.');
-      }
+      test.skip(true, 'Cart injection failed — checkout redirected to /menu.');
     }
 
     await expect(page.getByText(/manual payment|admin payment|cash on hand|admin checkout|price override/i)).not.toBeVisible();
@@ -182,8 +181,6 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
 
 // ---------------------------------------------------------------------------
 // Admin express create order — requires super-admin auth
-// Uses test.beforeEach to check auth once per test, and a 90s timeout
-// for the express page to load in CI dev mode.
 // ---------------------------------------------------------------------------
 
 superAdminTest.describe('REQ-084 — Express create order order type selector', () => {
@@ -194,7 +191,6 @@ superAdminTest.describe('REQ-084 — Express create order order type selector', 
     }
   });
 
-  // Override test timeout to 120s for dev mode compilation
   superAdminTest.describe.configure({ timeout: 120_000 });
 
   superAdminTest('AC4: Pickup time field appears when Pickup selected', async ({ page }) => {

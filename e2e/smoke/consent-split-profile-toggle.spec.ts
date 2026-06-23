@@ -26,6 +26,10 @@ test.describe('REQ-063 profile preferences — email-marketing toggle @smoke', (
     // Diagnostic: confirm we're on /profile and not redirected to /login
     await expect(page).toHaveURL(/\/profile/, { timeout: 10000 });
 
+    // Check if the page is actually rendering content
+    const h1 = page.getByRole('heading', { name: /my profile/i });
+    await expect(h1).toBeVisible({ timeout: 10000 });
+
     const preferencesTab = page.getByRole('tab', { name: /preferences/i });
     await expect(preferencesTab).toBeVisible({ timeout: 10000 });
     await preferencesTab.click({ trial: true });

@@ -47,8 +47,13 @@ Separate customer and admin checkout paths; extend Express Create Order to suppo
 
 ## Test Coverage
 
-- 7 unit tests covering: orderType=pickup, orderType=delivery, calculateOrderTotals usage, default orderType fallbacks, serviceFee exclusion, price override removal verification.
+- 8 unit tests covering: orderType=pickup, orderType=delivery, calculateOrderTotals usage, default orderType fallbacks, serviceFee exclusion, price override removal verification.
+- 15 E2E tests covering AC1-AC12 (all pass): guest banner, guest checkout submission, Monnify-only options, express pickup/delivery fields, admin tab checkout, anonymous menu-to-checkout flow.
 - `tsc --noEmit` clean (0 errors).
+
+## Additional Fix (2026-06-24)
+
+- **AC12**: Removed login gate from `MenuItemDetailModal.handleAddToCart` that was blocking anonymous users from adding items to cart on `/menu`. The `useAuth` check redirected to `/login` before the item could be added, contradicting AC1/AC2 guest checkout flow. E2E test AC12 verifies the full anonymous flow: browse menu → add to cart → checkout without login redirect.
 
 ## UAT Verification
 
@@ -58,4 +63,5 @@ Verified on UAT after Railway auto-deploy from `develop`:
 - **Customer checkout**: `GET /checkout` → 200 (page renders without admin logic)
 - **Express create order**: `GET /dashboard/orders/express/create-order` → 307 (redirect to login — expected for unauthenticated access)
 - **tsc --noEmit**: 0 errors
-- **Unit tests**: 7/7 pass
+- **Unit tests**: 8/8 pass
+- **E2E tests**: 15/15 pass (0 skipped)

@@ -93,13 +93,18 @@ async function main() {
 
     const businessDate = deriveBusinessDate(paidAt, cutoff);
 
+    const updateFields: Record<string, unknown> = { businessDate };
+    if (!order.paymentMethod) {
+      updateFields.paymentMethod = order.tabId ? 'card' : 'cash';
+    }
+
     if (!DRY_RUN) {
       await db
         .collection('orders')
-        .updateOne({ _id: order._id }, { $set: { businessDate } });
+        .updateOne({ _id: order._id }, { $set: updateFields });
     } else {
       console.log(
-        `  Order ${order._id}: paidAt=${paidAt.toISOString()} → businessDate=${businessDate.toISOString()}`
+        `  Order ${order._id}: paidAt=${paidAt.toISOString()} → businessDate=${businessDate.toISOString()}, paymentMethod=${updateFields.paymentMethod ?? '(already set)'}`
       );
     }
     ordersUpdated++;
@@ -127,13 +132,18 @@ async function main() {
 
     const businessDate = deriveBusinessDate(refTime, cutoff);
 
+    const tabUpdateFields: Record<string, unknown> = { businessDate };
+    if (!tab.paymentMethod) {
+      tabUpdateFields.paymentMethod = 'cash';
+    }
+
     if (!DRY_RUN) {
       await db
         .collection('tabs')
-        .updateOne({ _id: tab._id }, { $set: { businessDate } });
+        .updateOne({ _id: tab._id }, { $set: tabUpdateFields });
     } else {
       console.log(
-        `  Tab ${tab._id}: refTime=${refTime.toISOString()} → businessDate=${businessDate.toISOString()}`
+        `  Tab ${tab._id}: refTime=${refTime.toISOString()} → businessDate=${businessDate.toISOString()}, paymentMethod=${tabUpdateFields.paymentMethod ?? '(already set)'}`
       );
     }
     tabsUpdated++;

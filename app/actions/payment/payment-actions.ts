@@ -153,12 +153,6 @@ export async function createOrder(input: CreateOrderInput): Promise<{
           // and run the linked-inventory deduction at fulfilment.
           customizations: item.customizations ?? [],
           subtotal: itemSubtotal,
-          originalPrice: item.originalPrice,
-          priceOverridden: item.priceOverridden || false,
-          priceOverrideReason: item.priceOverrideReason,
-          priceOverriddenBy:
-            item.priceOverridden && userId ? userId : undefined,
-          priceOverriddenAt: item.priceOverridden ? new Date() : undefined,
         };
       }),
       // If user is logged in, use userId; otherwise use guest info

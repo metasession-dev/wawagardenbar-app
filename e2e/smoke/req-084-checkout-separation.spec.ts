@@ -58,7 +58,9 @@ async function seedTab(): Promise<string> {
     await db.collection('tabs').insertOne({
       _id: tabId,
       tabNumber: `E2E-084-${Date.now()}`,
+      tableNumber: 'T-084',
       status: 'open',
+      paymentStatus: 'unpaid',
       items: [
         {
           name: 'E2E Test Item',
@@ -69,7 +71,7 @@ async function seedTab(): Promise<string> {
           subtotal: 500,
         },
       ],
-      totalAmount: 500,
+      total: 500,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -227,15 +229,11 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
     await page.waitForTimeout(800);
     await page.getByRole('button', { name: /Next/i }).first().click();
 
-    // Step 3 — Tab options: open a new tab.
-    await page.getByRole('radio', { name: /Open a Tab/i }).check();
+    // Step 3 — Tab options: open a new tab, then submit.
+    // For dine-in + new-tab there are only 3 steps; the Next button
+    // becomes the "Add to Tab" submit button once new-tab is selected.
+    await page.locator('label[for="new-tab"]').click();
     await page.waitForTimeout(200);
-    await page.getByRole('button', { name: /Next/i }).first().click();
-
-    // Step 4 — Tip.
-    await page.getByRole('button', { name: /Next/i }).first().click();
-
-    // Step 5 — Submit ("Add to Tab").
     await page.getByRole('button', { name: /Add to Tab/i }).click();
 
     // Order created without authentication; success dialog appears.
@@ -270,9 +268,9 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
     await page.getByRole('button', { name: /Next/i }).first().click();
 
     // Step 2 — Order details: switch to pickup to reach payment method quickly.
-    await page.getByRole('button', { name: /pickup/i }).click();
+    await page.locator('label[for="pickup"]').click();
     await page.waitForTimeout(300);
-    await page.locator('input[name="pickupTime"]').fill('2026-01-01T12:00');
+    await page.locator('input[type="datetime-local"]').fill('2026-01-01T12:00');
     await page.getByRole('button', { name: /Next/i }).first().click();
 
     // Step 3 — Tip.
@@ -389,8 +387,10 @@ superAdminTest.describe(
         const submitBtn = page.getByRole('button', { name: /Create Order/i });
         await expect(submitBtn).toBeDisabled();
 
-        // Fill the pickup time and assert the button becomes enabled.
+        // Fill the pickup time, customer name, and phone to enable the button.
         await page.locator('#pickupTime').fill('2026-01-01T12:00');
+        await page.locator('#customerName').fill('Pickup E2E');
+        await page.locator('#customerPhone').fill('08011223344');
         await expect(submitBtn).toBeEnabled();
         await evidenceShot(page, 'REQ-084', 4, 'pickup-time-required');
       }

@@ -72,6 +72,7 @@ async function seedTab(): Promise<string> {
         },
       ],
       total: 500,
+      orders: [],
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -221,17 +222,23 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
       .fill('guest-e2e@example.com');
     await page.locator('input[name="customerPhone"]').fill('08011223344');
     await page.getByRole('button', { name: /Next/i }).first().click();
+    await expect(page.getByText('Order Details')).toBeVisible({
+      timeout: 10000,
+    });
 
     // Step 2 — Order details (dine-in default).
     const tableNumber = `E2E-${Date.now()}`;
     await page.locator('input[name="tableNumber"]').fill(tableNumber);
     // Wait for the debounced tab-occupancy check to complete.
-    await page.waitForTimeout(800);
+    await page.waitForTimeout(2500);
     await page.getByRole('button', { name: /Next/i }).first().click();
+    await expect(page.getByText('Payment Options')).toBeVisible({
+      timeout: 10000,
+    });
 
     // Step 3 — Tab options: open a new tab, then submit.
-    // For dine-in + new-tab there are only 3 steps; the Next button
-    // becomes the "Add to Tab" submit button once new-tab is selected.
+    // For dine-in + new-tab there are only 3 steps; the button is already
+    // the submit button.
     await page.locator('label[for="new-tab"]').click();
     await page.waitForTimeout(200);
     await page.getByRole('button', { name: /Add to Tab/i }).click();
@@ -266,15 +273,23 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
       .fill('guest-e2e@example.com');
     await page.locator('input[name="customerPhone"]').fill('08011223344');
     await page.getByRole('button', { name: /Next/i }).first().click();
+    await expect(page.getByText('Order Details')).toBeVisible({
+      timeout: 10000,
+    });
 
     // Step 2 — Order details: switch to pickup to reach payment method quickly.
     await page.locator('label[for="pickup"]').click();
-    await page.waitForTimeout(300);
+    await expect(page.locator('input[type="datetime-local"]')).toBeVisible({
+      timeout: 10000,
+    });
     await page.locator('input[type="datetime-local"]').fill('2026-01-01T12:00');
     await page.getByRole('button', { name: /Next/i }).first().click();
 
     // Step 3 — Tip.
     await page.getByRole('button', { name: /Next/i }).first().click();
+    await expect(page.getByText('Payment Method')).toBeVisible({
+      timeout: 10000,
+    });
 
     // Step 4 — Payment method: Monnify options should be visible.
     await expect(
@@ -381,7 +396,9 @@ superAdminTest.describe(
         }
 
         await page.getByRole('button', { name: /pickup/i }).click();
-        await page.waitForTimeout(300);
+        await expect(page.locator('#pickupTime')).toBeVisible({
+          timeout: 10000,
+        });
 
         // Leave pickup time empty — submit button must be disabled.
         const submitBtn = page.getByRole('button', { name: /Create Order/i });
@@ -391,7 +408,8 @@ superAdminTest.describe(
         await page.locator('#pickupTime').fill('2026-01-01T12:00');
         await page.locator('#customerName').fill('Pickup E2E');
         await page.locator('#customerPhone').fill('08011223344');
-        await expect(submitBtn).toBeEnabled();
+        await page.waitForTimeout(500);
+        await expect(submitBtn).toBeEnabled({ timeout: 10000 });
         await evidenceShot(page, 'REQ-084', 4, 'pickup-time-required');
       }
     );
@@ -406,7 +424,9 @@ superAdminTest.describe(
         }
 
         await page.getByRole('button', { name: /delivery/i }).click();
-        await page.waitForTimeout(300);
+        await expect(page.locator('#deliveryStreet')).toBeVisible({
+          timeout: 10000,
+        });
 
         // Submit button is disabled while required delivery/customer fields are empty.
         const submitBtn = page.getByRole('button', { name: /Create Order/i });
@@ -418,7 +438,8 @@ superAdminTest.describe(
         await page.locator('#deliveryState').fill('Lagos State');
         await page.locator('#customerName').fill('Delivery E2E');
         await page.locator('#customerPhone').fill('08011223344');
-        await expect(submitBtn).toBeEnabled();
+        await page.waitForTimeout(500);
+        await expect(submitBtn).toBeEnabled({ timeout: 10000 });
         await evidenceShot(page, 'REQ-084', 5, 'delivery-fields-required');
       }
     );
@@ -433,7 +454,9 @@ superAdminTest.describe(
         }
 
         await page.getByRole('button', { name: /pickup/i }).click();
-        await page.waitForTimeout(300);
+        await expect(page.locator('#pickupTime')).toBeVisible({
+          timeout: 10000,
+        });
         await page.locator('#pickupTime').fill('2026-01-01T12:00');
 
         // Leave customer name and phone empty — submit button must be disabled.
@@ -443,7 +466,8 @@ superAdminTest.describe(
         // Fill the required customer info and assert the button becomes enabled.
         await page.locator('#customerName').fill('Pickup E2E');
         await page.locator('#customerPhone').fill('08011223344');
-        await expect(submitBtn).toBeEnabled();
+        await page.waitForTimeout(500);
+        await expect(submitBtn).toBeEnabled({ timeout: 10000 });
         await evidenceShot(page, 'REQ-084', 10, 'customer-info-required');
       }
     );

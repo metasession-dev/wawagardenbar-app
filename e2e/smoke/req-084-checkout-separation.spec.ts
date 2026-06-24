@@ -262,10 +262,11 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
     await menuCard.click();
     await page.waitForTimeout(500);
 
-    // Click "Add to Cart" inside the modal.
+    // Click "Add to Cart" inside the modal (scoped to dialog to avoid
+    // matching the card's "Add to Cart" button which only opens the modal).
     const addToCartBtn = page
-      .getByRole('button', { name: /add to cart/i })
-      .first();
+      .getByRole('dialog')
+      .getByRole('button', { name: /add to cart/i });
     await expect(addToCartBtn).toBeVisible({ timeout: 5000 });
     await addToCartBtn.click();
 

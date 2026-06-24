@@ -317,8 +317,34 @@ function ExpressCreateOrderContent() {
       .join(' ');
   }
 
+  function hasRequiredFields(): boolean {
+    if (orderType === 'delivery') {
+      return !!(
+        deliveryStreet &&
+        deliveryCity &&
+        deliveryState &&
+        customerName &&
+        customerPhone
+      );
+    }
+    if (orderType === 'pickup') {
+      return !!(pickupTime && customerName && customerPhone);
+    }
+    return true;
+  }
+
   async function handleSubmit() {
     if (cart.length === 0) return;
+
+    if (!hasRequiredFields()) {
+      toast({
+        title: 'Missing required fields',
+        description:
+          'Please fill in all required fields before creating the order.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     setSubmitting(true);
     const result = await expressCreateOrderAction({
@@ -921,7 +947,11 @@ function ExpressCreateOrderContent() {
               (orderType === 'dine-in' &&
                 !selectedTabId &&
                 openTabs.length > 0) ||
-              (orderType === 'delivery' && (!deliveryStreet || !deliveryCity))
+              (orderType === 'delivery' &&
+                (!deliveryStreet || !deliveryCity || !deliveryState)) ||
+              (orderType === 'pickup' && !pickupTime) ||
+              ((orderType === 'pickup' || orderType === 'delivery') &&
+                (!customerName || !customerPhone))
             }
           >
             {submitting ? (

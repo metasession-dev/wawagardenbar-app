@@ -104,7 +104,7 @@ export function OrderDetailsStep({
             <FormControl>
               <RadioGroup
                 onValueChange={field.onChange}
-                defaultValue={field.value}
+                value={field.value}
                 className="grid gap-4 sm:grid-cols-2 md:grid-cols-4"
               >
                 <Label

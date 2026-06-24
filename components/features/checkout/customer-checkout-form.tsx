@@ -153,6 +153,7 @@ export function CustomerCheckoutForm() {
     getTotalPrice,
     clearCart,
     tableNumber: storeTableNumber,
+    hydrated: cartHydrated,
   } = useCartStore();
   const { user, isAuthenticated, isLoading: isLoadingUser } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
@@ -288,8 +289,8 @@ export function CustomerCheckoutForm() {
 
   useEffect(() => {
     if (orderStatus?.status === 'success') return;
-    if (items.length === 0) router.push('/menu');
-  }, [items.length, router, orderStatus]);
+    if (cartHydrated && items.length === 0) router.push('/menu');
+  }, [cartHydrated, items.length, router, orderStatus]);
 
   useEffect(() => {
     const key = `checkout-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;

@@ -222,7 +222,7 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
       .fill('guest-e2e@example.com');
     await page.locator('input[name="customerPhone"]').fill('08011223344');
     await page.getByRole('button', { name: /Next/i }).first().click();
-    await expect(page.getByText('Order Details')).toBeVisible({
+    await expect(page.locator('form').getByText('Order Details')).toBeVisible({
       timeout: 10000,
     });
 
@@ -232,9 +232,11 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
     // Wait for the debounced tab-occupancy check to complete.
     await page.waitForTimeout(2500);
     await page.getByRole('button', { name: /Next/i }).first().click();
-    await expect(page.getByText('Payment Options')).toBeVisible({
-      timeout: 10000,
-    });
+    await expect(page.locator('form').getByText('Payment Options')).toBeVisible(
+      {
+        timeout: 10000,
+      }
+    );
 
     // Step 3 — Tab options: open a new tab, then submit.
     // For dine-in + new-tab there are only 3 steps; the button is already
@@ -273,7 +275,7 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
       .fill('guest-e2e@example.com');
     await page.locator('input[name="customerPhone"]').fill('08011223344');
     await page.getByRole('button', { name: /Next/i }).first().click();
-    await expect(page.getByText('Order Details')).toBeVisible({
+    await expect(page.locator('form').getByText('Order Details')).toBeVisible({
       timeout: 10000,
     });
 
@@ -287,7 +289,7 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
 
     // Step 3 — Tip.
     await page.getByRole('button', { name: /Next/i }).first().click();
-    await expect(page.getByText('Payment Method')).toBeVisible({
+    await expect(page.locator('form').getByText('Payment Method')).toBeVisible({
       timeout: 10000,
     });
 

@@ -245,6 +245,51 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
     await evidenceShot(page, 'REQ-084', 1, 'guest-banner-visible');
   });
 
+  test('AC12: Anonymous user can add item to cart and reach checkout without login redirect', async ({
+    page,
+  }) => {
+    tagTest('REQ-084', 12);
+
+    // Start as a completely anonymous user — no cart injection, no auth.
+    await page.goto('/menu');
+    await page.waitForLoadState('networkidle');
+
+    // Wait for menu items to render.
+    const menuCard = page.locator('[data-testid^="menu-item-"]').first();
+    await expect(menuCard).toBeVisible({ timeout: 15000 });
+
+    // Click the first menu item to open the detail modal.
+    await menuCard.click();
+    await page.waitForTimeout(500);
+
+    // Click "Add to Cart" inside the modal.
+    const addToCartBtn = page
+      .getByRole('button', { name: /add to cart/i })
+      .first();
+    await expect(addToCartBtn).toBeVisible({ timeout: 5000 });
+    await addToCartBtn.click();
+
+    // Wait for the cart badge to show 1 item (proves add-to-cart worked).
+    await expect(page.locator('[data-testid="cart-button"]')).toContainText(
+      '1',
+      { timeout: 10000 }
+    );
+
+    // Navigate to checkout — should NOT redirect to /login.
+    await page.goto('/checkout');
+    await page.waitForLoadState('networkidle');
+
+    // Verify we're on /checkout, not redirected to /login or /menu.
+    expect(page.url()).not.toContain('/login');
+    expect(page.url()).not.toContain('/menu');
+
+    // Verify the "Continue as Guest" banner is visible.
+    await expect(page.getByText(/continuing as guest/i)).toBeVisible({
+      timeout: 15000,
+    });
+    await evidenceShot(page, 'REQ-084', 12, 'anonymous-menu-to-checkout');
+  });
+
   test('AC2: Guest checkout submission creates an order without auth', async ({
     page,
   }) => {

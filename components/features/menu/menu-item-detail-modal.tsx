@@ -21,8 +21,6 @@ import { Minus, Plus, AlertCircle, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useCartStore } from '@/stores/cart-store';
 import { validateCartItem } from '@/app/actions/cart/cart-actions';
-import { useAuth } from '@/hooks/use-auth';
-import { useRouter } from 'next/navigation';
 import { CustomizationPicker } from '@/components/features/menu/customization-picker';
 import { derivePickerState } from '@/lib/customization-picker-state';
 import type { SelectedCustomization } from '@/lib/customization-validation';
@@ -51,8 +49,6 @@ export function MenuItemDetailModal({
   const [isAdding, setIsAdding] = useState(false);
   const { toast } = useToast();
   const { addItem, openCart } = useCartStore();
-  const { session } = useAuth();
-  const router = useRouter();
 
   // REQ-031: picker validity gates Add-to-Cart for required groups
   const customizationGroups = item.customizations ?? [];
@@ -126,17 +122,6 @@ export function MenuItemDetailModal({
   }, [portionSize, item.currentStock]);
 
   async function handleAddToCart() {
-    // Check if user is logged in (customers, admins, and super-admins can all add to cart)
-    // Admin users who logged in via /admin/login should have session.isLoggedIn = true
-    if (!session?.isLoggedIn && !session?.userId) {
-      toast({
-        title: 'Login Required',
-        description: 'Please register to continue',
-      });
-      router.push('/login?redirect=/menu');
-      return;
-    }
-
     setIsAdding(true);
 
     try {

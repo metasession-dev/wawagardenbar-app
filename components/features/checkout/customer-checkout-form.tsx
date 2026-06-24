@@ -250,7 +250,9 @@ export function CustomerCheckoutForm() {
         const result = await getOpenTabForTableAction(tableNumber);
         if (result.success && result.data?.tab) {
           const tab = result.data.tab;
-          const isMyTab = user?.id && tab.userId?.toString() === user.id;
+          const isMyTab = tab.userId
+            ? user?.id && tab.userId.toString() === user.id
+            : true;
           if (isMyTab) {
             setExistingTab(tab);
             form.setValue('useTab', 'existing-tab');

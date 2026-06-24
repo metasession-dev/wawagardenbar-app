@@ -4,6 +4,7 @@
  *
  * Covers E2E-testable acceptance criteria:
  *   AC1  — "Continuing as Guest" banner visible for unauthenticated users
+ *   AC2  — Guest checkout submission creates an order without authentication
  *   AC3  — Only Monnify gateway options on customer checkout (no manual)
  *   AC4  — Express create order: pickup time field appears when Pickup selected
  *   AC5  — Express create order: delivery address fields appear when Delivery selected
@@ -28,12 +29,12 @@ import { MongoClient, ObjectId } from 'mongodb';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
-function guard(
-  skip: (cond: boolean, reason: string) => void,
-  ok: boolean
-) {
+function guard(skip: (cond: boolean, reason: string) => void, ok: boolean) {
   if (ok) return;
-  if (process.env.CI) throw new Error('Expected an authenticated session in CI but none was present');
+  if (process.env.CI)
+    throw new Error(
+      'Expected an authenticated session in CI but none was present'
+    );
   skip(true, 'super-admin session unavailable (local only)');
 }
 
@@ -58,14 +59,16 @@ async function seedTab(): Promise<string> {
       _id: tabId,
       tabNumber: `E2E-084-${Date.now()}`,
       status: 'open',
-      items: [{
-        name: 'E2E Test Item',
-        price: 500,
-        quantity: 1,
-        portionSize: 'full',
-        portionMultiplier: 1.0,
-        subtotal: 500,
-      }],
+      items: [
+        {
+          name: 'E2E Test Item',
+          price: 500,
+          quantity: 1,
+          portionSize: 'full',
+          portionMultiplier: 1.0,
+          subtotal: 500,
+        },
+      ],
       totalAmount: 500,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -130,7 +133,9 @@ async function gotoExpressCheckoutStep(page: Page): Promise<boolean> {
 
   // The page loads on the menu step. Wait for the category cascade to render
   // (this is the reliable "page loaded" signal, not the Order Type heading).
-  await expect(page.getByTestId('category-cascade')).toBeVisible({ timeout: 60000 });
+  await expect(page.getByTestId('category-cascade')).toBeVisible({
+    timeout: 60000,
+  });
 
   // Give the item grid a moment to populate from the categories.
   await page.waitForTimeout(500);
@@ -166,7 +171,9 @@ async function gotoExpressCheckoutStep(page: Page): Promise<boolean> {
 // ---------------------------------------------------------------------------
 
 test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
-  test('AC1: Continuing as Guest banner visible for unauthenticated users', async ({ page }) => {
+  test('AC1: Continuing as Guest banner visible for unauthenticated users', async ({
+    page,
+  }) => {
     tagTest('REQ-084', 1);
 
     await injectCart(page);
@@ -177,13 +184,70 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
       test.skip(true, 'Cart injection failed — checkout redirected to /menu.');
     }
 
-    await expect(page.getByText(/continuing as guest/i)).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(/continuing as guest/i)).toBeVisible({
+      timeout: 15000,
+    });
     // Two "Sign in" links exist (navbar + guest banner) — assert the first.
-    await expect(page.getByRole('link', { name: /sign in/i }).first()).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: /sign in/i }).first()
+    ).toBeVisible();
     await evidenceShot(page, 'REQ-084', 1, 'guest-banner-visible');
   });
 
-  test('AC3: No admin payment options on customer checkout', async ({ page }) => {
+  test('AC2: Guest checkout submission creates an order without auth', async ({
+    page,
+  }) => {
+    tagTest('REQ-084', 2);
+
+    await injectCart(page);
+    await page.goto(`${BASE_URL}/checkout`);
+    await page.waitForLoadState('networkidle');
+
+    if (page.url().includes('/menu')) {
+      test.skip(true, 'Cart injection failed — checkout redirected to /menu.');
+    }
+
+    // Wait for the auth/session fetch to settle and the skeleton to disappear.
+    await page.waitForSelector('input[name="customerName"]', {
+      timeout: 15000,
+    });
+
+    // Step 1 — Customer info.
+    await page.locator('input[name="customerName"]').fill('Guest E2E');
+    await page
+      .locator('input[name="customerEmail"]')
+      .fill('guest-e2e@example.com');
+    await page.locator('input[name="customerPhone"]').fill('08011223344');
+    await page.getByRole('button', { name: /Next/i }).first().click();
+
+    // Step 2 — Order details (dine-in default).
+    const tableNumber = `E2E-${Date.now()}`;
+    await page.locator('input[name="tableNumber"]').fill(tableNumber);
+    // Wait for the debounced tab-occupancy check to complete.
+    await page.waitForTimeout(800);
+    await page.getByRole('button', { name: /Next/i }).first().click();
+
+    // Step 3 — Tab options: open a new tab.
+    await page.locator('#new-tab').click();
+    await page.waitForTimeout(200);
+    await page.getByRole('button', { name: /Next/i }).first().click();
+
+    // Step 4 — Tip.
+    await page.getByRole('button', { name: /Next/i }).first().click();
+
+    // Step 5 — Submit ("Add to Tab").
+    await page.getByRole('button', { name: /Add to Tab/i }).click();
+
+    // Order created without authentication; success dialog appears.
+    await expect(page.getByText(/Order Added to Tab/i).first()).toBeVisible({
+      timeout: 15000,
+    });
+    await evidenceShot(page, 'REQ-084', 2, 'guest-checkout-submitted');
+  });
+
+  test('AC3: Only Monnify gateway options on customer checkout', async ({
+    page,
+  }) => {
     tagTest('REQ-084', 3);
 
     await injectCart(page);
@@ -194,7 +258,19 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
       test.skip(true, 'Cart injection failed — checkout redirected to /menu.');
     }
 
-    await expect(page.getByText(/manual payment|admin payment|cash on hand|admin checkout|price override/i)).not.toBeVisible();
+    await expect(
+      page.getByText(
+        /manual payment|admin payment|cash on hand|admin checkout|price override/i
+      )
+    ).not.toBeVisible();
+    // Assert the positive case: Monnify gateway options are visible.
+    await expect(page.getByText('Card Payment')).toBeVisible();
+    await expect(page.getByText('Bank Transfer')).toBeVisible();
+    await expect(page.getByText('USSD')).toBeVisible();
+    await expect(page.getByText('Phone Number')).toBeVisible();
+    await expect(
+      page.getByText(/processed securely through Monnify/i)
+    ).toBeVisible();
     await evidenceShot(page, 'REQ-084', 3, 'monnify-only-options');
   });
 });
@@ -203,60 +279,161 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
 // Admin express create order — requires super-admin auth
 // ---------------------------------------------------------------------------
 
-superAdminTest.describe('REQ-084 — Express create order order type selector', () => {
-  superAdminTest.describe.configure({ timeout: 90_000 });
+superAdminTest.describe(
+  'REQ-084 — Express create order order type selector',
+  () => {
+    superAdminTest.describe.configure({ timeout: 90_000 });
 
-  superAdminTest.beforeEach(async ({ page }, testInfo) => {
-    if (!(await isAuthenticated(page))) {
-      if (process.env.CI) throw new Error('Expected an authenticated session in CI but none was present');
-      testInfo.skip(true, 'super-admin auth missing (local only)');
-    }
-  });
+    superAdminTest.beforeEach(async ({ page }, testInfo) => {
+      if (!(await isAuthenticated(page))) {
+        if (process.env.CI)
+          throw new Error(
+            'Expected an authenticated session in CI but none was present'
+          );
+        testInfo.skip(true, 'super-admin auth missing (local only)');
+      }
+    });
 
-  superAdminTest('AC4: Pickup time field appears when Pickup selected', async ({ page }) => {
-    tagTest('REQ-084', 4);
+    superAdminTest(
+      'AC4: Pickup time field appears when Pickup selected',
+      async ({ page }) => {
+        tagTest('REQ-084', 4);
 
-    if (!(await gotoExpressCheckoutStep(page))) {
-      superAdminTest.skip(true, 'No in-stock express items seeded');
-    }
+        if (!(await gotoExpressCheckoutStep(page))) {
+          superAdminTest.skip(true, 'No in-stock express items seeded');
+        }
 
-    await page.getByRole('button', { name: /pickup/i }).click();
-    await page.waitForTimeout(300);
+        await page.getByRole('button', { name: /pickup/i }).click();
+        await page.waitForTimeout(300);
 
-    await expect(page.locator('#pickupTime')).toBeVisible({ timeout: 10000 });
-    await evidenceShot(page, 'REQ-084', 4, 'pickup-time-field');
-  });
+        await expect(page.locator('#pickupTime')).toBeVisible({
+          timeout: 10000,
+        });
+        await evidenceShot(page, 'REQ-084', 4, 'pickup-time-field');
+      }
+    );
 
-  superAdminTest('AC5: Delivery address fields appear when Delivery selected', async ({ page }) => {
-    tagTest('REQ-084', 5);
+    superAdminTest(
+      'AC5: Delivery address fields appear when Delivery selected',
+      async ({ page }) => {
+        tagTest('REQ-084', 5);
 
-    if (!(await gotoExpressCheckoutStep(page))) {
-      superAdminTest.skip(true, 'No in-stock express items seeded');
-    }
+        if (!(await gotoExpressCheckoutStep(page))) {
+          superAdminTest.skip(true, 'No in-stock express items seeded');
+        }
 
-    await page.getByRole('button', { name: /delivery/i }).click();
-    await page.waitForTimeout(300);
+        await page.getByRole('button', { name: /delivery/i }).click();
+        await page.waitForTimeout(300);
 
-    await expect(page.locator('#deliveryStreet')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('#deliveryCity')).toBeVisible();
-    await evidenceShot(page, 'REQ-084', 5, 'delivery-address-fields');
-  });
+        await expect(page.locator('#deliveryStreet')).toBeVisible({
+          timeout: 10000,
+        });
+        await expect(page.locator('#deliveryCity')).toBeVisible();
+        await evidenceShot(page, 'REQ-084', 5, 'delivery-address-fields');
+      }
+    );
 
-  superAdminTest('AC10: Customer info fields appear for pickup/delivery', async ({ page }) => {
-    tagTest('REQ-084', 10);
+    superAdminTest(
+      'AC10: Customer info fields appear for pickup/delivery',
+      async ({ page }) => {
+        tagTest('REQ-084', 10);
 
-    if (!(await gotoExpressCheckoutStep(page))) {
-      superAdminTest.skip(true, 'No in-stock express items seeded');
-    }
+        if (!(await gotoExpressCheckoutStep(page))) {
+          superAdminTest.skip(true, 'No in-stock express items seeded');
+        }
 
-    await page.getByRole('button', { name: /pickup/i }).click();
-    await page.waitForTimeout(300);
+        await page.getByRole('button', { name: /pickup/i }).click();
+        await page.waitForTimeout(300);
 
-    await expect(page.locator('#customerName')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('#customerPhone')).toBeVisible();
-    await evidenceShot(page, 'REQ-084', 10, 'customer-info-pickup');
-  });
-});
+        await expect(page.locator('#customerName')).toBeVisible({
+          timeout: 10000,
+        });
+        await expect(page.locator('#customerPhone')).toBeVisible();
+        await evidenceShot(page, 'REQ-084', 10, 'customer-info-pickup');
+      }
+    );
+
+    superAdminTest(
+      'AC4: Pickup time is required before submission',
+      async ({ page }) => {
+        tagTest('REQ-084', 4);
+
+        if (!(await gotoExpressCheckoutStep(page))) {
+          superAdminTest.skip(true, 'No in-stock express items seeded');
+        }
+
+        await page.getByRole('button', { name: /pickup/i }).click();
+        await page.waitForTimeout(300);
+
+        // Leave pickup time empty and attempt to submit.
+        const submitBtn = page.getByRole('button', { name: /Create Order/i });
+        await expect(submitBtn).toBeVisible();
+        await submitBtn.click();
+
+        // The order should not be created without a pickup time.
+        await expect(
+          page.getByText(/pickup time is required|please fill in/i).first()
+        ).toBeVisible({ timeout: 5000 });
+        await expect(page).not.toHaveURL(/\/dashboard\/orders/);
+        await evidenceShot(page, 'REQ-084', 4, 'pickup-time-required');
+      }
+    );
+
+    superAdminTest(
+      'AC5: Delivery address fields are required before submission',
+      async ({ page }) => {
+        tagTest('REQ-084', 5);
+
+        if (!(await gotoExpressCheckoutStep(page))) {
+          superAdminTest.skip(true, 'No in-stock express items seeded');
+        }
+
+        await page.getByRole('button', { name: /delivery/i }).click();
+        await page.waitForTimeout(300);
+
+        // Submit button is disabled while required street/city fields are empty.
+        const submitBtn = page.getByRole('button', { name: /Create Order/i });
+        await expect(submitBtn).toBeDisabled();
+
+        // Fill the required fields and assert the button becomes enabled.
+        await page.locator('#deliveryStreet').fill('123 Main St');
+        await page.locator('#deliveryCity').fill('Lagos');
+        await expect(submitBtn).toBeEnabled();
+        await evidenceShot(page, 'REQ-084', 5, 'delivery-fields-required');
+      }
+    );
+
+    superAdminTest(
+      'AC10: Customer info fields are required before submission',
+      async ({ page }) => {
+        tagTest('REQ-084', 10);
+
+        if (!(await gotoExpressCheckoutStep(page))) {
+          superAdminTest.skip(true, 'No in-stock express items seeded');
+        }
+
+        await page.getByRole('button', { name: /pickup/i }).click();
+        await page.waitForTimeout(300);
+        await page.locator('#pickupTime').fill('2025-01-01T12:00');
+
+        // Leave customer name and phone empty and attempt to submit.
+        const submitBtn = page.getByRole('button', { name: /Create Order/i });
+        await submitBtn.click();
+
+        // The order should not be created without customer info.
+        await expect(
+          page
+            .getByText(
+              /customer name is required|phone is required|please fill in/i
+            )
+            .first()
+        ).toBeVisible({ timeout: 5000 });
+        await expect(page).not.toHaveURL(/\/dashboard\/orders/);
+        await evidenceShot(page, 'REQ-084', 10, 'customer-info-required');
+      }
+    );
+  }
+);
 
 // ---------------------------------------------------------------------------
 // Admin tab checkout — requires super-admin auth
@@ -273,28 +450,54 @@ superAdminTest.describe('REQ-084 — Admin tab checkout (manual payment)', () =>
     if (tabId) await cleanupTab(tabId);
   });
 
-  superAdminTest('AC7: AdminTabCheckoutForm renders — no redirect', async ({ page }) => {
-    tagTest('REQ-084', 7);
-    guard(superAdminTest.skip, await isAuthenticated(page));
+  superAdminTest(
+    'AC7: AdminTabCheckoutForm renders — no redirect',
+    async ({ page }) => {
+      tagTest('REQ-084', 7);
+      guard(superAdminTest.skip, await isAuthenticated(page));
 
-    await page.goto(`${BASE_URL}/dashboard/orders/tabs/${tabId}/checkout`);
-    await page.waitForLoadState('networkidle');
+      await page.goto(`${BASE_URL}/dashboard/orders/tabs/${tabId}/checkout`);
+      await page.waitForLoadState('networkidle');
 
-    await expect(page).toHaveURL(/\/dashboard\/orders\/tabs\/.*\/checkout/, { timeout: 10000 });
-    await expect(page.getByText(/cash|transfer|card/i).first()).toBeVisible({ timeout: 10000 });
-    await evidenceShot(page, 'REQ-084', 7, 'admin-tab-checkout-form');
-  });
+      await expect(page).toHaveURL(/\/dashboard\/orders\/tabs\/.*\/checkout/, {
+        timeout: 10000,
+      });
+      await expect(page.getByText(/cash|transfer|card/i).first()).toBeVisible({
+        timeout: 10000,
+      });
+      await evidenceShot(page, 'REQ-084', 7, 'admin-tab-checkout-form');
+    }
+  );
 
-  superAdminTest('AC11: No Monnify checkout URL — manual payment only', async ({ page }) => {
-    tagTest('REQ-084', 11);
-    guard(superAdminTest.skip, await isAuthenticated(page));
+  superAdminTest(
+    'AC11: No Monnify checkout URL — manual payment only',
+    async ({ page }) => {
+      tagTest('REQ-084', 11);
+      guard(superAdminTest.skip, await isAuthenticated(page));
 
-    await page.goto(`${BASE_URL}/dashboard/orders/tabs/${tabId}/checkout`);
-    await page.waitForLoadState('networkidle');
+      await page.goto(`${BASE_URL}/dashboard/orders/tabs/${tabId}/checkout`);
+      await page.waitForLoadState('networkidle');
 
-    await expect(page).toHaveURL(/\/dashboard\/orders\/tabs\/.*\/checkout/, { timeout: 10000 });
-    await expect(page.getByText(/monnify|payment gateway/i)).not.toBeVisible();
-    await expect(page.getByText(/cash|transfer|card/i).first()).toBeVisible({ timeout: 10000 });
-    await evidenceShot(page, 'REQ-084', 11, 'no-monnify-manual-payment');
-  });
+      await expect(page).toHaveURL(/\/dashboard\/orders\/tabs\/.*\/checkout/, {
+        timeout: 10000,
+      });
+      await expect(
+        page.getByText(/monnify|payment gateway/i)
+      ).not.toBeVisible();
+      await expect(page.getByText(/cash|transfer|card/i).first()).toBeVisible({
+        timeout: 10000,
+      });
+
+      // Submit the manual payment (cash default) and verify the tab closes
+      // without a Monnify redirect.
+      await page.getByRole('button', { name: /Close Tab/i }).click();
+      await expect(page).toHaveURL(/\/dashboard\/orders\/tabs\/.*\/?$/, {
+        timeout: 10000,
+      });
+      await expect(
+        page.getByText(/paid|closed|successful/i).first()
+      ).toBeVisible({ timeout: 10000 });
+      await evidenceShot(page, 'REQ-084', 11, 'no-monnify-manual-payment');
+    }
+  );
 });

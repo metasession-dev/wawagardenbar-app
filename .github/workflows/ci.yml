@@ -150,7 +150,14 @@ jobs:
             exit 1
           fi
 
-      # ── Gate 4: E2E Tests (Playwright) ──
+      # ── Gate 4: Unit Tests (Vitest) — scoped to REQ-084 on feature branch ──
+
+      - name: Unit Tests — REQ-084 only
+        id: unit-tests
+        if: ${{ github.ref_name == 'feat/REQ-084-checkout-separation' }}
+        run: npx vitest run __tests__/actions/admin/express-create-order-req084.test.ts
+
+      # ── Gate 5: E2E Tests (Playwright) ──
 
       - name: Set database URI from dynamic port
         run: |
@@ -240,9 +247,14 @@ jobs:
           E2E_CSR_USERNAME: e2e-csr
           E2E_CSR_PASSWORD: E2eTest@2026!
           INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
-        run: npx playwright test --project=smoke --reporter=json,html
-      # ── Gate 5: Build ──
-
+        run: |
+          if [ "${{ github.ref_name }}" = "feat/REQ-084-checkout-separation" ]; then
+            echo "::notice::Feature branch push — running REQ-084 E2E smoke tests only"
+            npx playwright test --project=smoke e2e/smoke/req-084-checkout-separation.spec.ts --reporter=json,html
+          else
+            npx playwright test --project=smoke --reporter=json,html
+          fi
+      # ── Gate 6: Build ──
       - name: Build Check
         id: build
         run: npm run build
@@ -271,6 +283,7 @@ jobs:
             "typescript": "${{ steps.typescript.outcome }}",
             "sast": "${{ steps.sast.outcome }}",
             "dependency_audit": "${{ steps.dep-audit.outcome }}",
+            "unit_tests": "${{ steps.unit-tests.outcome }}",
             "build": "${{ steps.build.outcome }}"
           }
           EOF

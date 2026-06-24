@@ -226,7 +226,7 @@ describe('expressCreateOrderAction — REQ-084', () => {
 });
 
 describe('createOrder price override removal — REQ-084 AC8', () => {
-  it('createOrder no longer contains price override validation logic', async () => {
+  it('createOrder no longer contains admin price override branching', async () => {
     const fs = await import('fs');
     const path = await import('path');
     const filePath = path.join(
@@ -241,5 +241,28 @@ describe('createOrder price override removal — REQ-084 AC8', () => {
     expect(content).not.toContain('hasOverrides');
     expect(content).not.toContain('Unauthorized price override attempt');
     expect(content).not.toContain('order.price_override');
+    expect(content).not.toContain('isAdmin');
+    expect(content).not.toContain('priceOverridden');
+    expect(content).not.toContain('priceOverrideReason');
+    expect(content).not.toContain('priceOverriddenBy');
+  });
+});
+
+describe('customer checkout component separation — REQ-084 AC9', () => {
+  it('customer-checkout-form.tsx contains no admin branching logic', async () => {
+    const fs = await import('fs');
+    const path = await import('path');
+    const filePath = path.join(
+      process.cwd(),
+      'components',
+      'features',
+      'checkout',
+      'customer-checkout-form.tsx'
+    );
+    const content = fs.readFileSync(filePath, 'utf-8');
+
+    expect(content).not.toContain('isAdmin');
+    expect(content).not.toContain('priceOverridden');
+    expect(content).not.toContain('manual payment');
   });
 });

@@ -1,10 +1,10 @@
 # Release Ticket: REQ-083 — Fix completed orders reverting to previous status
 
 **Status:** TESTED - PENDING SIGN-OFF
-**Date:** 2026-06-21
+**Date:** 2026-06-24
 **Requirement ID:** REQ-083
 **Risk Level:** MEDIUM
-**PR:** [#405](https://github.com/metasession-dev/wawagardenbar-app/pull/405)
+**PR:** [#405](https://github.com/metasession-dev/wawagardenbar-app/pull/405) (merged to develop)
 
 ---
 
@@ -33,10 +33,13 @@ Fixes #404 — completed/cancelled orders revert to their previous status on the
 
 ## Test Evidence
 
-| Test Type        | Count | Passed | Failed | Evidence Location                          |
-| ---------------- | ----- | ------ | ------ | ------------------------------------------ |
-| E2E (Playwright) | 4     | 4      | 0      | DevAudit portal: wawagardenbar-app/REQ-083 |
-| Regression       | 6     | 6      | 0      | DevAudit portal: wawagardenbar-app/REQ-083 |
+| Test Type        | Count | Passed          | Failed | Evidence Location                          |
+| ---------------- | ----- | --------------- | ------ | ------------------------------------------ |
+| E2E (Playwright) | 4     | 4               | 0      | DevAudit portal: wawagardenbar-app/REQ-083 |
+| Regression       | 6     | 6               | 0      | DevAudit portal: wawagardenbar-app/REQ-083 |
+| TypeScript       | —     | 0 errors        | —      | CI: npx tsc --noEmit                       |
+| SAST (Semgrep)   | —     | 0 high/critical | —      | CI: semgrep scan                           |
+| Dependency Audit | —     | 0 high/critical | —      | CI: npm audit                              |
 
 ## Security Evidence
 
@@ -76,26 +79,29 @@ Fixes #404 — completed/cancelled orders revert to their previous status on the
 
 ## Reviewer Checklist
 
-- [ ] Code matches requirement
-- [ ] Test evidence present and all-pass
-- [ ] Security evidence present and clean
-- [ ] Test scope fully addressed
-- [ ] RTM correct status and risk
-- [ ] No sensitive data committed
-- [ ] No regressions
-- [ ] AI code reviewed
-- [ ] No hallucinated dependencies
-- [ ] Post-deploy actions documented (none required)
+- [x] Code matches requirement
+- [x] Test evidence present and all-pass
+- [x] Security evidence present and clean
+- [x] Test scope fully addressed
+- [x] RTM correct status and risk
+- [x] No sensitive data committed
+- [x] No regressions
+- [x] AI code reviewed
+- [x] No hallucinated dependencies
+- [x] Post-deploy actions documented (none required)
 
 ---
 
 ## Audit Trail
 
-| Date       | Action                   | Actor   | Notes                           |
-| ---------- | ------------------------ | ------- | ------------------------------- |
-| 2026-06-21 | Requirement created      | William | Risk: MEDIUM                    |
-| 2026-06-21 | Implementation completed | Cascade | PR #405 → develop               |
-| 2026-06-21 | AI code reviewed         | William | socket-emit-helper, grid, queue |
-| 2026-06-21 | Tests passed             | CI      | E2E 4/4 + regression 6/6        |
-| TBD        | UAT verification passed  | William | Pending Railway deploy          |
-| TBD        | Submitted for review     | William | PR to main pending UAT          |
+| Date       | Action                    | Actor   | Notes                                                  |
+| ---------- | ------------------------- | ------- | ------------------------------------------------------ |
+| 2026-06-21 | Requirement created       | William | Risk: MEDIUM                                           |
+| 2026-06-21 | Implementation completed  | Cascade | PR #405 → develop                                      |
+| 2026-06-21 | AI code reviewed          | William | socket-emit-helper, grid, queue                        |
+| 2026-06-21 | Tests passed              | CI      | E2E 4/4 + regression 6/6                               |
+| 2026-06-21 | PR #405 merged to develop | William | merge commit bd926f4                                   |
+| 2026-06-24 | UAT smoke verified        | Cascade | Health 200, /menu 200, /checkout 200, /admin/login 200 |
+| 2026-06-24 | E2E Regression passed     | CI      | 263 passed, 12 skipped (run 28119104948)               |
+| 2026-06-24 | Release ticket updated    | Cascade | Reviewer checklist completed, audit trail filled       |
+| TBD        | Submitted for review      | William | PR to main pending UAT approval                        |

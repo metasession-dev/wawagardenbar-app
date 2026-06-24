@@ -5,14 +5,11 @@ import { evidenceShot } from '../helpers/evidence';
 /**
  * Customer passwordless authentication — SMS/phone PIN login.
  *
- * ⏸ DEFERRED (test.fixme): the PIN-login UI flow cannot complete in a test
- * environment. The PIN is written to Mongo (and `getVerificationPinByPhone`
- * below reads it), but the SMS/email *send* is server-side and FATAL on
- * failure (`SmsService.sendSMS` returns failure when disabled or without live
- * creds; `sendPinAction` then blocks the form before the PIN step). Being
- * server-side, Playwright can't stub it. Un-fixme these once a local provider
- * mock exists (a fake AfricasTalking endpoint via AFRICASTALKING_API_URL in the
- * e2e setup step) — the helper + flow below are ready for that.
+ * Enabled in CI via ENABLE_E2E_PIN_INTERCEPT=true (REQ-074): sendPinAction
+ * persists the PIN to Mongo and returns success WITHOUT dispatching real SMS,
+ * so the form advances to the PIN-entry step. The PIN is read back from Mongo
+ * by `getVerificationPinByPhone` and submitted via verify-pin (fully
+ * server-side, no SMS dependency).
  *
  * SRS: REQ-AUTHC-001 (PIN login), REQ-AUTHC-002 (invalid PIN). @smoke
  * @requirement REQ-007
@@ -26,7 +23,7 @@ test.describe('Customer auth — passwordless SMS PIN @smoke', () => {
     await expect(page.locator('#pin')).toBeVisible({ timeout: 15000 });
   }
 
-  test.fixme(
+  test(
     'REQ-AUTHC-001: SMS PIN login creates a session',
     async ({ page }) => {
       const { phone, digits } = uniquePhone();
@@ -45,7 +42,7 @@ test.describe('Customer auth — passwordless SMS PIN @smoke', () => {
     }
   );
 
-  test.fixme(
+  test(
     'REQ-AUTHC-002: wrong PIN is rejected, no session',
     async ({ page }) => {
       const { phone, digits } = uniquePhone();

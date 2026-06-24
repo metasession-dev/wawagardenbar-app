@@ -13,10 +13,12 @@ interface KitchenOrderGridProps {
 /**
  * Kitchen order grid component
  * Real-time grid of active orders with auto-refresh
+ * @requirement REQ-083 — terminal statuses remove from store instead of router.refresh() race
  */
 export function KitchenOrderGrid({ initialOrders }: KitchenOrderGridProps) {
   const router = useRouter();
-  const { orders, setOrders, addOrder, updateOrder } = useOrderStore();
+  const { orders, setOrders, addOrder, updateOrder, removeOrder } =
+    useOrderStore();
   const [flashingOrder, setFlashingOrder] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -32,18 +34,24 @@ export function KitchenOrderGrid({ initialOrders }: KitchenOrderGridProps) {
         addOrder(order);
         setFlashingOrder(order._id);
         playNewOrderSound();
-        
+
         // Remove flash after 3 seconds
         setTimeout(() => setFlashingOrder(null), 3000);
       },
       onOrderUpdated: (data) => {
-        updateOrder(data.orderId, { status: data.status });
-        router.refresh();
+        const newStatus = data.status ?? data.updates?.status;
+        const terminalStatuses = ['completed', 'cancelled'];
+        if (terminalStatuses.includes(newStatus)) {
+          removeOrder(data.orderId);
+        } else {
+          updateOrder(data.orderId, { status: newStatus });
+          router.refresh();
+        }
       },
     });
 
     return unsubscribe;
-  }, [addOrder, updateOrder, router]);
+  }, [addOrder, updateOrder, removeOrder, router]);
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
@@ -73,10 +81,12 @@ export function KitchenOrderGrid({ initialOrders }: KitchenOrderGridProps) {
   const sortedOrders = [...activeOrders].sort((a, b) => {
     // Priority: pending/confirmed > preparing > ready
     const statusOrder = { pending: 0, confirmed: 0, preparing: 1, ready: 2 };
-    const statusDiff = statusOrder[a.status as keyof typeof statusOrder] - statusOrder[b.status as keyof typeof statusOrder];
-    
+    const statusDiff =
+      statusOrder[a.status as keyof typeof statusOrder] -
+      statusOrder[b.status as keyof typeof statusOrder];
+
     if (statusDiff !== 0) return statusDiff;
-    
+
     // Then by age (oldest first)
     return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
   });
@@ -86,7 +96,9 @@ export function KitchenOrderGrid({ initialOrders }: KitchenOrderGridProps) {
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
           <p className="text-3xl text-gray-400 mb-2">No active orders</p>
-          <p className="text-xl text-gray-500">Orders will appear here when placed</p>
+          <p className="text-xl text-gray-500">
+            Orders will appear here when placed
+          </p>
         </div>
       </div>
     );

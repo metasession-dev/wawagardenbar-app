@@ -82,9 +82,7 @@ test.describe('REQ-035: express order tip capture', () => {
     await expect(checkoutBtn).toBeVisible({ timeout: 5000 });
     await checkoutBtn.click();
 
-    const payNowBtn = page.locator('button').filter({ hasText: 'Pay Now' });
-    await expect(payNowBtn).toBeVisible({ timeout: 5000 });
-    await payNowBtn.click();
+    // REQ-084: order type defaults to 'pay-now' — no separate Pay Now step.
 
     // Choose POS as the bill payment method.
     const posBtn = page.locator('button').filter({ hasText: 'POS' }).first();
@@ -111,7 +109,7 @@ test.describe('REQ-035: express order tip capture', () => {
     await cashOption.click();
 
     // Submit.
-    const payBtn = page.getByRole('button', { name: /Pay ₦/i });
+    const payBtn = page.getByRole('button', { name: /Create Order.*₦/i });
     await expect(payBtn).toBeVisible({ timeout: 5000 });
     await payBtn.click();
 

@@ -74,6 +74,10 @@ jobs:
       E2E_SUPER_ADMIN_PASSWORD: E2eTest@2026!
       E2E_CSR_USERNAME: e2e-csr
       E2E_CSR_PASSWORD: E2eTest@2026!
+      # REQ-074 — skip real SMS/email dispatch in sendPinAction so the
+      # customer passwordless PIN-login flow completes in CI. The PIN is
+      # persisted to Mongo; specs read it back via getVerificationPinByPhone.
+      ENABLE_E2E_PIN_INTERCEPT: 'true'
       # REQ-069 webhook specs sign synthetic payloads against these
       # secrets; without them the signature comparison crashes
       # server-side and the spec sees 500 instead of 401. Repo secrets

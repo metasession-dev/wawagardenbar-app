@@ -410,6 +410,13 @@ jobs:
             for TICKET in compliance/pending-releases/RELEASE-TICKET-REQ-*.md; do
               [ -f "$TICKET" ] || continue
               REQ_ID=$(basename "$TICKET" .md | sed 's/^RELEASE-TICKET-//')
+              # devaudit-installer#192 — skip REQs already in a terminal
+              # release directory. See ci.yml.template for full rationale.
+              if compgen -G "compliance/approved-releases/RELEASE-TICKET-${REQ_ID}.md" > /dev/null 2>&1 \
+                 || compgen -G "compliance/superseded-releases/RELEASE-TICKET-${REQ_ID}.md" > /dev/null 2>&1; then
+                echo "Skipping ${REQ_ID}: already in a terminal release directory (stale pending ticket)"
+                continue
+              fi
               IN_SCOPE_REQS+=("$REQ_ID")
             done
           fi
@@ -606,7 +613,14 @@ jobs:
           if [ -d compliance/pending-releases ]; then
             for TICKET in compliance/pending-releases/RELEASE-TICKET-REQ-*.md; do
               [ -f "$TICKET" ] || continue
-              REQS+=("$(basename "$TICKET" .md | sed 's/^RELEASE-TICKET-//')")
+              REQ_ID=$(basename "$TICKET" .md | sed 's/^RELEASE-TICKET-//')
+              # devaudit-installer#192 — skip REQs already in a terminal
+              # release directory. See ci.yml.template for full rationale.
+              if compgen -G "compliance/approved-releases/RELEASE-TICKET-${REQ_ID}.md" > /dev/null 2>&1 \
+                 || compgen -G "compliance/superseded-releases/RELEASE-TICKET-${REQ_ID}.md" > /dev/null 2>&1; then
+                continue
+              fi
+              REQS+=("$REQ_ID")
             done
           fi
           if [ "${#REQS[@]}" -eq 0 ]; then
@@ -639,6 +653,13 @@ jobs:
               (cd e2e-artifacts && zip -qr playwright-report.zip playwright-report/) 2>/dev/null || true
             fi
             if [ -f e2e-artifacts/playwright-report.zip ]; then
+              # DevAudit-Installer#189 — the Playwright HTML report zip
+              # (~50–100MB) exceeds the portal's multipart body parser
+              # limit. The JSON results above are the canonical evidence;
+              # the HTML report is a human-facing convenience. Soft-fail
+              # so the job doesn't block on a portal-side size limit.
+              # Once the portal's presigned R2 URL flow is live (#189
+              # Option C), this can be reverted to a hard fail.
               if bash scripts/upload-evidence.sh \
                 wgb "$REQ" test_report \
                 e2e-artifacts/playwright-report.zip \
@@ -647,8 +668,7 @@ jobs:
               then
                 :
               else
-                echo "::warning::playwright HTML report upload failed for ${REQ}"
-                UPLOAD_FAILURES=$((UPLOAD_FAILURES + 1))
+                echo "::warning::playwright HTML report upload failed for ${REQ} (non-blocking — JSON results are canonical evidence)"
               fi
             fi
           done

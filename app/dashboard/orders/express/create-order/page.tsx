@@ -2,6 +2,7 @@
  * @requirement REQ-009 - Express Create Order flow
  * @requirement REQ-081 - Main-category to sub-category cascade for express item selection
  * @requirement REQ-082 - Progressive category display with grouped items
+ * @requirement REQ-084 - Extended with order type selector (dine-in, pickup, delivery, pay-now)
  */
 'use client';
 
@@ -41,6 +42,9 @@ import {
   Banknote,
   Building2,
   Receipt,
+  Utensils,
+  Bike,
+  Clock,
 } from 'lucide-react';
 
 interface MenuItem {
@@ -109,10 +113,22 @@ function ExpressCreateOrderContent() {
   const [pickerItem, setPickerItem] = useState<MenuItem | null>(null);
 
   // Checkout state
-  const [destination, setDestination] = useState<'tab' | 'pay-now'>(
-    preselectedTabId ? 'tab' : 'tab'
-  );
+  // REQ-084: order type selector replaces the old tab/pay-now toggle.
+  const [orderType, setOrderType] = useState<
+    'dine-in' | 'pickup' | 'delivery' | 'pay-now'
+  >(preselectedTabId ? 'dine-in' : 'pay-now');
   const [selectedTabId, setSelectedTabId] = useState(preselectedTabId || '');
+  // REQ-084: customer info for pickup/delivery orders.
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
+  // REQ-084: pickup time for pickup orders.
+  const [pickupTime, setPickupTime] = useState('');
+  // REQ-084: delivery address for delivery orders.
+  const [deliveryStreet, setDeliveryStreet] = useState('');
+  const [deliveryCity, setDeliveryCity] = useState('');
+  const [deliveryState, setDeliveryState] = useState('');
+  const [deliveryInstructions, setDeliveryInstructions] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<
     'cash' | 'transfer' | 'card'
   >('cash');
@@ -301,8 +317,34 @@ function ExpressCreateOrderContent() {
       .join(' ');
   }
 
+  function hasRequiredFields(): boolean {
+    if (orderType === 'delivery') {
+      return !!(
+        deliveryStreet &&
+        deliveryCity &&
+        deliveryState &&
+        customerName &&
+        customerPhone
+      );
+    }
+    if (orderType === 'pickup') {
+      return !!(pickupTime && customerName && customerPhone);
+    }
+    return true;
+  }
+
   async function handleSubmit() {
     if (cart.length === 0) return;
+
+    if (!hasRequiredFields()) {
+      toast({
+        title: 'Missing required fields',
+        description:
+          'Please fill in all required fields before creating the order.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     setSubmitting(true);
     const result = await expressCreateOrderAction({
@@ -316,26 +358,37 @@ function ExpressCreateOrderContent() {
         portionSize: c.portionSize,
         customizations: c.customizations,
       })),
-      tabId: destination === 'tab' ? selectedTabId : undefined,
+      orderType,
+      tabId: orderType === 'dine-in' ? selectedTabId : undefined,
       tableNumber: preselectedTable || undefined,
-      paymentMethod: destination === 'pay-now' ? paymentMethod : undefined,
-      paymentReference:
-        destination === 'pay-now' && paymentReference
-          ? paymentReference
+      paymentMethod:
+        orderType !== 'dine-in' || !selectedTabId ? paymentMethod : undefined,
+      paymentReference: paymentReference || undefined,
+      customerName: customerName || undefined,
+      customerPhone: customerPhone || undefined,
+      customerEmail: customerEmail || undefined,
+      deliveryInfo:
+        orderType === 'delivery'
+          ? {
+              street: deliveryStreet,
+              city: deliveryCity,
+              state: deliveryState,
+              country: 'Nigeria',
+              instructions: deliveryInstructions || undefined,
+            }
           : undefined,
+      pickupTime: orderType === 'pickup' ? pickupTime : undefined,
       // REQ-035 — only forward tip on pay-now; tab orders don't pay yet.
-      tipAmount:
-        destination === 'pay-now' && tipAmount > 0 ? tipAmount : undefined,
-      tipPaymentMethod:
-        destination === 'pay-now' && tipAmount > 0
-          ? effectiveTipMethod
-          : undefined,
+      tipAmount: tipAmount > 0 ? tipAmount : undefined,
+      tipPaymentMethod: tipAmount > 0 ? effectiveTipMethod : undefined,
     });
 
     if (result.success) {
       toast({
         title:
-          destination === 'tab' ? 'Order Added to Tab' : 'Order Created & Paid',
+          orderType === 'dine-in' && selectedTabId
+            ? 'Order Added to Tab'
+            : 'Order Created',
         description: result.message,
       });
       router.push('/dashboard/orders');
@@ -647,37 +700,55 @@ function ExpressCreateOrderContent() {
             </CardContent>
           </Card>
 
-          {/* Destination */}
+          {/* REQ-084: Order Type Selector */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Destination</CardTitle>
+              <CardTitle className="text-lg">Order Type</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <Button
-                  variant={destination === 'tab' ? 'default' : 'outline'}
+                  variant={orderType === 'dine-in' ? 'default' : 'outline'}
                   className="h-16 flex-col gap-1"
-                  onClick={() => setDestination('tab')}
+                  onClick={() => setOrderType('dine-in')}
                 >
-                  <Receipt className="h-5 w-5" />
-                  Add to Tab
+                  <Utensils className="h-5 w-5" />
+                  Dine-in
                 </Button>
                 <Button
-                  variant={destination === 'pay-now' ? 'default' : 'outline'}
+                  variant={orderType === 'pickup' ? 'default' : 'outline'}
                   className="h-16 flex-col gap-1"
-                  onClick={() => setDestination('pay-now')}
+                  onClick={() => setOrderType('pickup')}
+                >
+                  <Clock className="h-5 w-5" />
+                  Pickup
+                </Button>
+                <Button
+                  variant={orderType === 'delivery' ? 'default' : 'outline'}
+                  className="h-16 flex-col gap-1"
+                  onClick={() => setOrderType('delivery')}
+                >
+                  <Bike className="h-5 w-5" />
+                  Delivery
+                </Button>
+                <Button
+                  variant={orderType === 'pay-now' ? 'default' : 'outline'}
+                  className="h-16 flex-col gap-1"
+                  onClick={() => setOrderType('pay-now')}
                 >
                   <CreditCard className="h-5 w-5" />
                   Pay Now
                 </Button>
               </div>
 
-              {destination === 'tab' && (
+              {/* Dine-in: tab selection */}
+              {orderType === 'dine-in' && (
                 <div className="space-y-2">
                   <Label>Select Tab</Label>
                   {openTabs.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
-                      No open tabs available
+                      No open tabs available. Order will be created without a
+                      tab.
                     </p>
                   ) : (
                     <div className="space-y-2 max-h-48 overflow-y-auto">
@@ -711,7 +782,103 @@ function ExpressCreateOrderContent() {
                 </div>
               )}
 
-              {destination === 'pay-now' && (
+              {/* Pickup: pickup time */}
+              {orderType === 'pickup' && (
+                <div className="space-y-2">
+                  <Label htmlFor="pickupTime">Pickup Time</Label>
+                  <Input
+                    id="pickupTime"
+                    type="datetime-local"
+                    value={pickupTime}
+                    onChange={(e) => setPickupTime(e.target.value)}
+                  />
+                </div>
+              )}
+
+              {/* Delivery: address fields */}
+              {orderType === 'delivery' && (
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="deliveryStreet">Street Address</Label>
+                    <Input
+                      id="deliveryStreet"
+                      placeholder="Street address"
+                      value={deliveryStreet}
+                      onChange={(e) => setDeliveryStreet(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="deliveryCity">City</Label>
+                      <Input
+                        id="deliveryCity"
+                        placeholder="City"
+                        value={deliveryCity}
+                        onChange={(e) => setDeliveryCity(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="deliveryState">State</Label>
+                      <Input
+                        id="deliveryState"
+                        placeholder="State"
+                        value={deliveryState}
+                        onChange={(e) => setDeliveryState(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="deliveryInstructions">
+                      Delivery Instructions (optional)
+                    </Label>
+                    <Input
+                      id="deliveryInstructions"
+                      placeholder="Landmark, gate instructions, etc."
+                      value={deliveryInstructions}
+                      onChange={(e) => setDeliveryInstructions(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Customer info for pickup/delivery */}
+              {(orderType === 'pickup' || orderType === 'delivery') && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="customerName">Customer Name</Label>
+                      <Input
+                        id="customerName"
+                        placeholder="Full name"
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="customerPhone">Phone</Label>
+                      <Input
+                        id="customerPhone"
+                        placeholder="Phone number"
+                        value={customerPhone}
+                        onChange={(e) => setCustomerPhone(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="customerEmail">Email (optional)</Label>
+                    <Input
+                      id="customerEmail"
+                      type="email"
+                      placeholder="Email address"
+                      value={customerEmail}
+                      onChange={(e) => setCustomerEmail(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Payment for non-tab orders */}
+              {!(orderType === 'dine-in' && selectedTabId) && (
                 <div className="space-y-4">
                   <Label>Payment Method</Label>
                   <div className="grid grid-cols-3 gap-3">
@@ -753,7 +920,7 @@ function ExpressCreateOrderContent() {
                       />
                     </div>
                   )}
-                  {/* REQ-035 — tip capture on the pay-now branch. */}
+                  {/* REQ-035 — tip capture */}
                   <TipInputRow
                     tipAmount={tipAmount}
                     onTipAmountChange={setTipAmount}
@@ -777,19 +944,26 @@ function ExpressCreateOrderContent() {
             disabled={
               submitting ||
               cart.length === 0 ||
-              (destination === 'tab' && !selectedTabId)
+              (orderType === 'dine-in' &&
+                !selectedTabId &&
+                openTabs.length > 0) ||
+              (orderType === 'delivery' &&
+                (!deliveryStreet || !deliveryCity || !deliveryState)) ||
+              (orderType === 'pickup' && !pickupTime) ||
+              ((orderType === 'pickup' || orderType === 'delivery') &&
+                (!customerName || !customerPhone))
             }
           >
             {submitting ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : destination === 'tab' ? (
+            ) : orderType === 'dine-in' && selectedTabId ? (
               <Receipt className="h-4 w-4 mr-2" />
             ) : (
               <CreditCard className="h-4 w-4 mr-2" />
             )}
-            {destination === 'tab'
+            {orderType === 'dine-in' && selectedTabId
               ? 'Add Order to Tab'
-              : `Pay ₦${cartTotal.toLocaleString()}`}
+              : `Create Order · ₦${cartTotal.toLocaleString()}`}
           </Button>
         </div>
       )}

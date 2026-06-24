@@ -25,6 +25,7 @@ interface CartStore {
   items: CartItem[];
   isOpen: boolean;
   tableNumber?: string;
+  hydrated: boolean;
 
   // Actions
   addItem: (
@@ -62,6 +63,7 @@ export const useCartStore = create<CartStore>()(
       items: [],
       isOpen: false,
       tableNumber: undefined,
+      hydrated: false,
 
       addItem: (item) => {
         // Delegates merge-key + portion-defaulting logic to the pure helper.
@@ -221,6 +223,9 @@ export const useCartStore = create<CartStore>()(
         // same legacy line. So legacy carts continue to work unchanged; the
         // version bump is a marker, not a destructive migration.
         return state;
+      },
+      onRehydrateStorage: () => () => {
+        useCartStore.setState({ hydrated: true });
       },
     }
   )

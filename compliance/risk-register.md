@@ -109,6 +109,59 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 
 ---
 
+### R-006 — Admin payment options leak into customer checkout after path separation (REQ-084)
+
+**Opened:** 2026-06-22 (REQ-084, plan APPROVAL)
+**Severity:** Inherent low × medium → Residual low × low
+**Owner:** WGB maintainer
+**Review due:** 2027-06-22
+
+**The risk:** REQ-084 strips admin logic from the shared `CheckoutForm` and renames it to `CustomerCheckoutForm`. If the separation is incomplete — admin payment options (manual cash/transfer/card) remain renderable on `/checkout` — customers could see payment methods intended for staff use only. Inherent likelihood low (the refactor explicitly removes all `isAdmin` branching and `AdminPaymentOption` import); inherent impact medium (customers seeing admin-only UI is a UX + trust issue, not a direct security breach since Monnify gateway is the only functional payment path).
+
+**Mitigations applied in this REQ:**
+
+1. All `isAdmin` conditional branches removed from `customer-checkout-form.tsx`; `PaymentMethodStep` no longer accepts `isAdmin` prop.
+2. `AdminPaymentOption` import removed from `PaymentMethodStep`; component always renders Monnify gateway options only.
+3. AC3 + AC9 verify no admin payment options are visible on `/checkout` and no `isAdmin` branching exists in the customer component.
+
+**Residual:** low likelihood (controls demonstrably remove the surface), low impact (worst case is a UX confusion, not a payment-security breach).
+
+**Framework cross-references:**
+
+- ISO 27001 A.8.25 — Secure development life cycle (separation of concerns in payment UI)
+- SOC 2 CC8.1 — Change management
+
+**Cross-links:** [REQ-084 implementation plan](plans/REQ-084/implementation-plan.md); [#406](https://github.com/metasession-dev/wawagardenbar-app/issues/406); SRS REQ-CHECKOUT-001 / REQ-CHECKOUT-010.
+
+---
+
+### R-007 — Price override logic remains accessible to non-admin users after removal from createOrder (REQ-084)
+
+**Opened:** 2026-06-22 (REQ-084, plan APPROVAL)
+**Severity:** Inherent low × high → Residual low × high
+**Owner:** WGB maintainer
+**Review due:** 2027-06-22
+
+**The risk:** REQ-084 removes the admin price override validation block from `createOrder` server action in `payment-actions.ts`. The price override capability moves to `expressCreateOrderAction` which requires admin session. If the removal is incomplete or the customer-facing `createOrder` still accepts price override parameters, a non-admin user could submit modified item prices. Inherent likelihood low (the validation block is explicitly removed and `createOrder` no longer processes price override fields); inherent impact high (price manipulation on customer checkout is a financial integrity issue).
+
+**Mitigations applied in this REQ:**
+
+1. Price override validation block (including `hasOverrides` / `priceOverridden` logic) removed entirely from `createOrder` in `payment-actions.ts`.
+2. Price override capability moves to `expressCreateOrderAction` which is gated by `requireAdminSession`.
+3. AC8 verifies no `isAdmin` / `priceOverridden` / `hasOverrides` branching exists in `createOrder`.
+
+**Residual:** low likelihood (the surface is removed, not just gated), high impact (if controls failed, price manipulation is a financial integrity issue — the impact is unchanged from inherent).
+
+**Framework cross-references:**
+
+- ISO 27001 A.8.25 — Secure development life cycle (removal of privileged functionality from customer-facing surface)
+- SOC 2 CC8.1 — Change management
+- SOC 2 CC6.1 — Logical access controls (price override restricted to admin session)
+
+**Cross-links:** [REQ-084 implementation plan](plans/REQ-084/implementation-plan.md); [#406](https://github.com/metasession-dev/wawagardenbar-app/issues/406); SRS REQ-ORDMGT-004.
+
+---
+
 ## Closed
 
 ### R-002 — `xlsx` (SheetJS) high advisory — CLOSED (REQ-041, 2026-05-24)

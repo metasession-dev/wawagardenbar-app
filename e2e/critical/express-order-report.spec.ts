@@ -145,17 +145,13 @@ test.describe.serial('Express standalone order — Cash payment', () => {
     await expect(checkoutBtn).toBeVisible({ timeout: 5000 });
     await checkoutBtn.click();
 
-    // Select "Pay Now"
-    const payNowBtn = page.locator('button').filter({ hasText: 'Pay Now' });
-    await expect(payNowBtn).toBeVisible({ timeout: 5000 });
-    await payNowBtn.click();
-
+    // REQ-084: order type defaults to 'pay-now' — no separate Pay Now step.
     // Cash is the default payment method — verify it's selected
     const cashBtn = page.locator('button').filter({ hasText: 'Cash' }).first();
     await expect(cashBtn).toBeVisible();
 
     // Read the total from the submit button
-    const payBtn = page.getByRole('button', { name: /Pay ₦/i });
+    const payBtn = page.getByRole('button', { name: /Create Order.*₦/i });
     await expect(payBtn).toBeVisible({ timeout: 5000 });
     const payBtnText = (await payBtn.textContent()) ?? '';
     orderTotal = parseNGN(payBtnText);
@@ -213,11 +209,7 @@ test.describe.serial('Express standalone order — POS payment', () => {
     await expect(checkoutBtn).toBeVisible({ timeout: 5000 });
     await checkoutBtn.click();
 
-    // Select "Pay Now"
-    const payNowBtn = page.locator('button').filter({ hasText: 'Pay Now' });
-    await expect(payNowBtn).toBeVisible({ timeout: 5000 });
-    await payNowBtn.click();
-
+    // REQ-084: order type defaults to 'pay-now' — no separate Pay Now step.
     // Select POS payment method
     const posBtn = page.locator('button').filter({ hasText: 'POS' }).first();
     await expect(posBtn).toBeVisible({ timeout: 5000 });
@@ -229,7 +221,7 @@ test.describe.serial('Express standalone order — POS payment', () => {
     await refInput.fill('E2E-POS-' + Date.now());
 
     // Read total and submit
-    const payBtn = page.getByRole('button', { name: /Pay ₦/i });
+    const payBtn = page.getByRole('button', { name: /Create Order.*₦/i });
     await expect(payBtn).toBeVisible({ timeout: 5000 });
     const payBtnText = (await payBtn.textContent()) ?? '';
     orderTotal = parseNGN(payBtnText);
@@ -282,10 +274,7 @@ test.describe.serial('Express standalone order — Transfer payment', () => {
     await expect(checkoutBtn).toBeVisible({ timeout: 5000 });
     await checkoutBtn.click();
 
-    // Select "Pay Now"
-    const payNowBtn = page.locator('button').filter({ hasText: 'Pay Now' });
-    await expect(payNowBtn).toBeVisible({ timeout: 5000 });
-    await payNowBtn.click();
+    // REQ-084: order type defaults to 'pay-now' — no separate Pay Now step.
 
     // Select Transfer payment method
     const transferBtn = page
@@ -301,7 +290,7 @@ test.describe.serial('Express standalone order — Transfer payment', () => {
     await refInput.fill('E2E-TRF-' + Date.now());
 
     // Read total and submit
-    const payBtn = page.getByRole('button', { name: /Pay ₦/i });
+    const payBtn = page.getByRole('button', { name: /Create Order.*₦/i });
     await expect(payBtn).toBeVisible({ timeout: 5000 });
     const payBtnText = (await payBtn.textContent()) ?? '';
     orderTotal = parseNGN(payBtnText);
@@ -713,10 +702,10 @@ test.describe.serial('Express tab with multiple orders — single close', () => 
     await expect(checkoutBtn).toBeVisible({ timeout: 5000 });
     await checkoutBtn.click();
 
-    // Select "Add to Tab" (should be default)
-    const tabDestBtn = page.locator('button').filter({ hasText: 'Add to Tab' });
-    await expect(tabDestBtn).toBeVisible({ timeout: 5000 });
-    await tabDestBtn.click();
+    // REQ-084: Select "Dine-in" order type to reveal tab selection
+    const dineInBtn = page.locator('button').filter({ hasText: 'Dine-in' });
+    await expect(dineInBtn).toBeVisible({ timeout: 5000 });
+    await dineInBtn.click();
 
     // Select the tab (find one with our table number)
     const tabOption = page
@@ -799,17 +788,14 @@ test.describe('Express orders appear on orders page', () => {
     await expect(checkoutBtn).toBeVisible({ timeout: 5000 });
     await checkoutBtn.click();
 
-    const payNowBtn = page.locator('button').filter({ hasText: 'Pay Now' });
-    await expect(payNowBtn).toBeVisible({ timeout: 5000 });
-    await payNowBtn.click();
-
+    // REQ-084: order type defaults to 'pay-now' — no separate Pay Now step.
     // Cash is default
-    const payBtn = page.getByRole('button', { name: /Pay ₦/i });
+    const payBtn = page.getByRole('button', { name: /Create Order.*₦/i });
     await expect(payBtn).toBeVisible({ timeout: 5000 });
     await payBtn.click();
 
     // Verify success toast
-    await expect(page.getByText(/Order Created & Paid/i).first()).toBeVisible({
+    await expect(page.getByText(/Order Created/i).first()).toBeVisible({
       timeout: 10000,
     });
 

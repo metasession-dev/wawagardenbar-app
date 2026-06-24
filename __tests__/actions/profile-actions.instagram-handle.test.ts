@@ -11,7 +11,7 @@
  * action (which would pull in mongodb, models, audit-log, etc.).
  */
 import { describe, it, expect } from 'vitest';
-import { instagramHandleSchema } from '@/app/actions/profile/profile-actions';
+import { instagramHandleSchema } from '@/lib/validation/profile';
 
 describe('REQ-057 instagramHandleSchema', () => {
   it('AC3 — accepts bare handle "foo"', () => {

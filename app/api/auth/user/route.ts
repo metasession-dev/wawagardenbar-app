@@ -14,10 +14,7 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
     );
 
     if (!session.isLoggedIn || !session.userId || session.isGuest) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     await connectDB();
@@ -26,16 +23,14 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
     );
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     // Compute full name from firstName and lastName
-    const fullName = user.firstName && user.lastName
-      ? `${user.firstName} ${user.lastName}`
-      : user.name || user.email.split('@')[0];
+    const fullName =
+      user.firstName && user.lastName
+        ? `${user.firstName} ${user.lastName}`
+        : user.name || user.email?.split('@')[0] || '';
 
     return NextResponse.json({
       user: {
@@ -74,10 +69,7 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
     );
 
     if (!session.isLoggedIn || !session.userId || session.isGuest) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -87,10 +79,7 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
     const user = await UserModel.findById(session.userId);
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     if (name !== undefined) {

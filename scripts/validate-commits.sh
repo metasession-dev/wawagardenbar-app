@@ -64,7 +64,7 @@ while IFS= read -r sha; do
   TYPE=$(echo "$SUBJECT" | grep -oE '^[a-z]+' || true)
   case "$TYPE" in
     feat|fix|refactor|perf)
-      if ! echo "$SUBJECT" | grep -qP '\[REQ-\d{3,}\]' \
+      if ! echo "$SUBJECT" | grep -qP '\[REQ-\d{3,}(?:[/\dA-Za-z-]+)*\]' \
         && ! echo "$BODY" | grep -qiP 'Ref:\s*REQ-\d{3,}'; then
         echo "ERROR [$SHORT]: '$TYPE' is an implementation commit but cites no requirement."
         echo "       Add [REQ-XXX] to the subject or a 'Ref: REQ-XXX' trailer. Start work"

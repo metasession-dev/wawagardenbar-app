@@ -10,10 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { IUser } from '@/interfaces';
-import {
-  updateProfileAction,
-  instagramHandleSchema,
-} from '@/app/actions/profile/profile-actions';
+import { instagramHandleSchema } from '@/lib/validation/profile';
+import { updateProfileAction } from '@/app/actions/profile/profile-actions';
 
 const profileSchema = z.object({
   firstName: z.string().min(1, 'First name is required').max(50),

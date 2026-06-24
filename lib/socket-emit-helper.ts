@@ -1,6 +1,7 @@
 /**
  * Helper to emit socket events from server actions
  * Uses internal API route to trigger socket emissions
+ * @requirement REQ-083 — top-level `status` propagated in order-updated payload
  */
 
 const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET || 'dev-secret-key';
@@ -25,7 +26,10 @@ export async function emitSocketEvent(event: string, data: any): Promise<void> {
   }
 }
 
-export async function emitBatchUpdateEvent(orderIds: string[], action: string): Promise<void> {
+export async function emitBatchUpdateEvent(
+  orderIds: string[],
+  action: string
+): Promise<void> {
   await emitSocketEvent('batch-update', { orderIds, action });
 }
 
@@ -56,11 +60,15 @@ export async function emitOrderUpdatedEvent(
   await emitSocketEvent('order-updated', {
     orderId,
     updates,
+    status: updates?.status,
     action,
     updatedBy,
   });
 }
 
-export async function emitOrderCancelledEvent(orderId: string, reason: string): Promise<void> {
+export async function emitOrderCancelledEvent(
+  orderId: string,
+  reason: string
+): Promise<void> {
   await emitSocketEvent('order-cancelled', { orderId, reason });
 }

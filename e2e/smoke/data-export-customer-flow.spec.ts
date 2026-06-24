@@ -4,34 +4,37 @@
  * AC4 — Authenticated customer visits /profile → clicks "Download my data"
  * → browser receives a JSON download with the expected filename.
  *
- * ⏸ DEFERRED (test.fixme): same blocker as `customer-auth.spec.ts` —
- * the customer PIN-login is server-side SMS-fatal without a provider
- * mock. AC4 needs a logged-in customer session, which requires either
- * a customer storageState (none exist yet — auth.setup only creates
- * staff sessions) or completing the PIN flow (blocked). Un-fixme once
- * a local provider mock exists (`AFRICASTALKING_API_URL` wired into
- * the e2e setup).
+ * AC4 logs in a fresh customer via the passwordless PIN flow (enabled in CI
+ * by ENABLE_E2E_PIN_INTERCEPT=true — REQ-074), then exercises the export.
  *
  * @smoke
  * @requirement REQ-065
  */
 import { test, expect } from '@playwright/test';
+import { loginAsCustomer } from './helpers';
 
 test.describe('REQ-065 data export customer download flow @smoke', () => {
-  test.fixme(
-    'AC4 — /profile "Download my data" button triggers a JSON download',
-    async ({ page }) => {
-      await page.goto('/profile');
+  test('AC4 — /profile "Download my data" button triggers a JSON download', async ({
+    page,
+  }) => {
+    await loginAsCustomer(page);
+    await page.goto('/profile');
+    await page.waitForLoadState('networkidle');
 
-      // The "Your data" Card lives below the tabs.
-      await expect(page.getByText(/your data/i).first()).toBeVisible();
+    // The "Your data" Card lives below the tabs.
+    await expect(page.getByText(/your data/i).first()).toBeVisible({
+      timeout: 10000,
+    });
 
-      const downloadPromise = page.waitForEvent('download');
-      await page.getByRole('button', { name: /download my data/i }).click();
-      const download = await downloadPromise;
-      expect(download.suggestedFilename()).toMatch(
-        /^wawa-data-[^-]+-\d{4}-\d{2}-\d{2}\.json$/
-      );
-    }
-  );
+    const downloadBtn = page.getByRole('button', { name: /download my data/i });
+    await expect(downloadBtn).toBeVisible({ timeout: 10000 });
+    await downloadBtn.click({ trial: true });
+
+    const downloadPromise = page.waitForEvent('download');
+    await downloadBtn.click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(
+      /^wawa-data-[^-]+-\d{4}-\d{2}-\d{2}\.json$/
+    );
+  });
 });

@@ -154,10 +154,7 @@ test.describe('REQ-014: Orders Page — Reconciliation', () => {
     await expect(checkoutBtn).toBeVisible({ timeout: 5000 });
     await checkoutBtn.click();
 
-    // Select "Pay Now" destination
-    const payNowBtn = page.locator('button').filter({ hasText: 'Pay Now' });
-    await expect(payNowBtn).toBeVisible({ timeout: 5000 });
-    await payNowBtn.click();
+    // REQ-084: order type defaults to 'pay-now' — no separate Pay Now step.
 
     // Select Cash payment method. `filter({ hasText: 'Cash' })` over `button`
     // now matches two elements (strict-mode violation), so we anchor on the
@@ -168,8 +165,8 @@ test.describe('REQ-014: Orders Page — Reconciliation', () => {
     await expect(cashBtn).toBeVisible({ timeout: 5000 });
     await cashBtn.click();
 
-    // Submit — "Pay ₦X,XXX"
-    const payBtn = page.getByRole('button', { name: /Pay ₦/i });
+    // Submit — "Create Order · ₦X,XXX"
+    const payBtn = page.getByRole('button', { name: /Create Order.*₦/i });
     await expect(payBtn).toBeVisible({ timeout: 5000 });
     await payBtn.click();
 

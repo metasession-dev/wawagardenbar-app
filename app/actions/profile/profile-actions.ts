@@ -8,6 +8,7 @@ import { ProfileService, OrderService, TabService } from '@/services';
 import { sessionOptions, SessionData } from '@/lib/session';
 import { IUser, IAddress, IPreferences } from '@/interfaces';
 import { AuditLogService } from '@/services/audit-log-service';
+import { instagramHandleSchema } from '@/lib/validation/profile';
 
 /**
  * Action result type
@@ -21,31 +22,6 @@ interface ActionResult<T = unknown> {
 /**
  * Validation schemas
  */
-
-/**
- * @requirement REQ-057 — Instagram handle zod pipe (IG-2).
- *
- * Exported so the client form schema can mirror it and both layers
- * apply the SAME transform + refine — no drift between client and
- * server.
- *
- * Pipe stages:
- *   1. `.max(30)` — guard the input size before the transform allocates.
- *   2. `.transform(strip-`@`-and-trim)` — normalise common paste shapes
- *      so the user can paste `@foo` or ` foo ` and have it just work.
- *   3. `.refine(IG-char-regex)` — validates the POST-strip handle
- *      against Instagram's actual handle character set
- *      (`[a-zA-Z0-9._]{1,30}`). Empty-string `''` is the explicit
- *      "clear handle" sentinel and is allowed through.
- */
-export const instagramHandleSchema = z
-  .string()
-  .max(30, 'Handle is too long')
-  .transform((v) => v.replace(/^@/, '').trim())
-  .refine((v) => v === '' || /^[a-zA-Z0-9._]{1,30}$/.test(v), {
-    message: 'Only letters, numbers, periods, and underscores; max 30 chars',
-  });
-
 const updateProfileSchema = z.object({
   firstName: z.string().min(1).max(50).optional(),
   lastName: z.string().min(1).max(50).optional(),

@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-063",
+  "ac": 3,
+  "slug": "audit-timestamp-stamped",
+  "specFile": "e2e/smoke/consent-split-pin-entry.spec.ts",
+  "capturedAt": "2026-06-23T15:12:29.047Z"
+}

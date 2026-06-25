@@ -25,18 +25,33 @@ The default way to implement a tracked change is the **`sdlc-implementer`** skil
 
 **This is enforced, not just advised.** `feat` / `fix` / `refactor` / `perf` commits that cite no requirement (`[REQ-XXX]` in the subject or a `Ref: REQ-XXX` trailer) are **rejected** locally by the commit-msg hook (commitlint) and at PR CI by `validate-commits.sh` (which `--no-verify` cannot skip). So implementation work cannot reach `develop` without a requirement — which is also what keeps release labels correct (the version-deriver only falls back to a bare date for genuine housekeeping, never for real feature work). Housekeeping commit types remain exempt.
 
+### MANDATORY: `sdlc-implementer` prompt before implementation (devaudit-installer#199)
+
+When the user requests implementation of an issue (e.g. "implement issue #N", "fix issue #N", "do issue #N", "implement #N"), you MUST prompt before writing any code:
+
+> Implementing #N using sdlc-implementer, can I proceed?
+
+Wait for the user's yes/no response. Do NOT begin implementation until they answer.
+
+- **YES** → invoke the `sdlc-implementer` skill immediately. The skill drives Phase 0 (triage) through Phase 4 (PR + UAT review).
+- **NO** → proceed with manual implementation outside the skill. The user has explicitly opted out; respect their choice and do not ask again for the same issue.
+
+This prompt is **mandatory and structural** — it is not advisory. The `sdlc-implementer` is the default entry point; manual implementation is the explicit opt-out. Skipping the prompt and jumping straight into code is the same class of inertia-trap bug as #132 (e2e delegation bypass).
+
+The only exception: if the user's request is clearly housekeeping ("bump a dep", "fix a typo", "update docs") and does not involve `feat`/`fix`/`refactor`/`perf` commit types, skip the prompt and proceed directly.
+
 ### Before ANY Code Change
 
-1. Ask: "Which GitHub Issue is this for?" before writing code. Fetch it with `gh issue view NNN`.
-2. If no issue exists: ask if one should be created. When creating via `gh issue create`, ALWAYS append the SDLC checklist to the body (see below).
-3. If new requirement needed: read `SDLC/1-plan-requirement.md` and follow it BEFORE implementing.
-4. If trivial (typo/formatting): proceed without requirement but use conventional commit format.
-5. Verify `develop` branch: `git branch --show-current` — never implement on `main`.
+1. If the user has NOT been prompted for `sdlc-implementer` and the change is not trivial housekeeping, stop and run the mandatory prompt above before continuing.
+2. Ask: "Which GitHub Issue is this for?" before writing code. Fetch it with `gh issue view NNN`.
+3. If no issue exists: ask if one should be created. When creating via `gh issue create`, ALWAYS append the SDLC checklist to the body (see below).
+4. If new requirement needed: read `SDLC/1-plan-requirement.md` and follow it BEFORE implementing.
+5. If trivial (typo/formatting): proceed without requirement but use conventional commit format.
+6. Verify `develop` branch: `git branch --show-current` — never implement on `main`.
 
 ### For ALL Code Changes (including bug fixes)
 
 Even if a change doesn't need a REQ entry:
-
 1. Review existing tests that cover the changed code
 2. Update or add tests BEFORE committing
 3. Run the applicable local checks from the approved scope/test plan — do not push without verifying the change-relevant commands pass
@@ -49,7 +64,6 @@ What needs a REQ entry: New features → always. Bug fixes affecting financial d
 When creating an issue via `gh issue create`, ALWAYS append this to the body:
 
 ## SDLC Checklist
-
 - [ ] Requirement: RTM entry created (or confirmed trivial)
 - [ ] Planning: test-scope.md and test-plan.md created (or confirmed trivial)
 - [ ] Tests: existing tests reviewed, tests updated/added
@@ -88,7 +102,6 @@ Read `SDLC/2-implement-and-test.md` for full details. Summary:
 ### Before Pushing
 
 Run the local checks required by the approved test plan/scope. For a typical code change this includes:
-
 ```
 npx tsc --noEmit                    # 0 errors
 semgrep scan --config auto src/     # 0 high/critical
@@ -113,11 +126,9 @@ Do NOT proceed to evidence compilation or PR creation until CI is green. If CI f
 Markdown stays in git. Binary/JSON evidence goes to DevAudit portal.
 
 Upload to DevAudit (NEVER commit to git):
-
 - E2E results (JSON), screenshots (PNG/JPG), SAST results (JSON), dependency audit (JSON), unit test output (TXT), test reports (HTML)
 
 Keep in git (small markdown, needs PR review):
-
 - compliance/RTM.md, test-scope.md, security-summary.md, ai-use-note.md (YAML frontmatter — devaudit-installer#197), ai-agent-handoff.md (if AI agent changed mid-implementation), ai-prompts.md, release tickets
 
 ### AI Contributor Tracking (devaudit-installer#197)
@@ -148,7 +159,6 @@ Read `SDLC/3-compile-evidence.md` for full details, including release ticket tem
 **Do NOT create the PR until ready to merge.** Every push to `develop` while a PR is open triggers duplicate CI runs. The PR is the merge request, not the development workspace.
 
 Before creating a PR, verify ALL of the following:
-
 - [ ] All development and iteration is complete
 - [ ] CI green on develop (not stale): `gh run list --branch develop --limit 1`
 - [ ] Working tree clean: `git status`

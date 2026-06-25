@@ -1,10 +1,10 @@
 ---
-title: 'Implementation plan — REQ-XXX'
-requirement_id: 'REQ-XXX'
-risk_class: 'REPLACE — HIGH | MEDIUM | LOW'
-change_type: 'REPLACE — feat | fix | refactor | perf | chore | docs | ci | build | test | compliance | revert'
-authored_by: 'REPLACE — operator / agent'
-authored_at: 'REPLACE — YYYY-MM-DD'
+title: "Implementation plan — REQ-XXX"
+requirement_id: "REQ-XXX"
+risk_class: "REPLACE — HIGH | MEDIUM | LOW"
+change_type: "REPLACE — feat | fix | refactor | perf | chore | docs | ci | build | test | compliance | revert"
+authored_by: "REPLACE — operator / agent"
+authored_at: "REPLACE — YYYY-MM-DD"
 ---
 
 > ⚠️ **STARTER TEMPLATE — REPLACE EVERY `REPLACE` MARKER BEFORE COMMITTING.**
@@ -76,11 +76,11 @@ List every UI, API, background job, and report **that a real user touches** in t
 - **Already works** — existing code already handles it correctly (link the file / route as evidence)
 - **Out of scope (waived)** — explicitly deferred, with one-sentence justification and a follow-up issue link
 
-| Surface                 | URL / file                                           | Status                                                                     |
-| ----------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------- |
-| [e.g. Customer cart]    | `/menu` modal — `components/features/menu/…`         | In scope                                                                   |
-| [e.g. Staff POS]        | `/dashboard/orders/express/…`                        | Out of scope (waived) — front-of-house flow not used yet, follow-up #NN    |
-| [e.g. Admin Edit Order] | `/dashboard/orders/[id]/edit` — `app/admin/orders/…` | Already works — existing customisation picker handles the new fields as-is |
+| Surface                 | URL / file                                            | Status                                                                       |
+| ----------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------- |
+| [e.g. Customer cart]    | `/menu` modal — `components/features/menu/…`          | In scope                                                                     |
+| [e.g. Staff POS]        | `/dashboard/orders/express/…`                         | Out of scope (waived) — front-of-house flow not used yet, follow-up #NN      |
+| [e.g. Admin Edit Order] | `/dashboard/orders/[id]/edit` — `app/admin/orders/…`  | Already works — existing customisation picker handles the new fields as-is   |
 
 **Rule of thumb:** if the AC list reads _"the schema accepts X"_ or _"the resolver returns Y"_ but never _"the user can do Z in the UI and see the result in the UI"_, the surface inventory is incomplete and the plan is not ready for approval. The matching test-scope ACs in Step 7 must each pin to a surface listed here.
 

@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-007",
+  "ac": 1,
+  "slug": "authc-001-pin-entered",
+  "specFile": "e2e/smoke/customer-auth.spec.ts",
+  "capturedAt": "2026-06-23T15:12:28.607Z"
+}

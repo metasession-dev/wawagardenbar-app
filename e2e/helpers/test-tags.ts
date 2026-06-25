@@ -42,17 +42,13 @@ const REQ_ID_RE = /^REQ-[A-Z0-9-]+$/;
  */
 export function tagTest(reqId: string, ac: number | readonly number[]): void {
   if (!REQ_ID_RE.test(reqId)) {
-    throw new Error(
-      `tagTest: invalid reqId "${reqId}" (must match ${REQ_ID_RE})`
-    );
+    throw new Error(`tagTest: invalid reqId "${reqId}" (must match ${REQ_ID_RE})`);
   }
   const acs = Array.isArray(ac) ? ac : [ac];
   const info = test.info();
   for (const n of acs) {
     if (!Number.isInteger(n) || n <= 0) {
-      throw new Error(
-        `tagTest: invalid ac "${n}" (must be a positive integer)`
-      );
+      throw new Error(`tagTest: invalid ac "${n}" (must be a positive integer)`);
     }
     info.annotations.push({ type: 'req', description: `${reqId} AC${n}` });
   }

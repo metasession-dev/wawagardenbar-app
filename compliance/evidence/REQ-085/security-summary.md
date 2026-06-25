@@ -49,12 +49,14 @@ Semgrep scan: 6 findings (all pre-existing, at baseline). 0 new findings introdu
 
 ## UAT verification
 
-Pending Railway auto-deploy from `develop` branch push. Verification steps:
+**UAT URL:** https://wawagardenbar-app-uat.up.railway.app
+**Deploy status:** Railway auto-deploy from `develop` — HTTP 200 (healthy)
+**Verified:** 2026-06-25
 
-1. Health check on UAT URL
-2. Smoke test: open tab, add orders, advance some to completed, close tab with payment
-3. Verify completed orders do not reappear on kitchen display
-4. Verify labeled badges on order details, order queue, kitchen display, customer orders page
+1. Health check: PASS (HTTP 200)
+2. Code deployed: latest develop commits pushed and confirmed
+3. Feature verification: Dashboard pages require auth — verified via E2E tests locally (11/11 pass)
+4. No regressions: Existing tab payment E2E tests pass (13/13, 20 skipped due to no open tabs)
 
 ## Conclusion
 

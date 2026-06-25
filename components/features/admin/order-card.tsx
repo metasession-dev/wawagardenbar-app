@@ -43,6 +43,7 @@ interface OrderCardProps {
 /**
  * Order card component
  * Displays individual order with status and actions
+ * @requirement REQ-085 - Payment status badge shown alongside kitchen status badge
  */
 export function OrderCard({
   order,
@@ -283,6 +284,17 @@ export function OrderCard({
             >
               {order.status}
             </Badge>
+            {order.paymentStatus && (
+              <Badge
+                variant={
+                  order.paymentStatus === 'paid' ? 'default' : 'secondary'
+                }
+                className="text-xs"
+                data-testid="order-payment-badge"
+              >
+                Payment: {order.paymentStatus}
+              </Badge>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm">

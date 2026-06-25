@@ -336,6 +336,8 @@ export class TabService {
      * For gateway payments, map to the closest manual equivalent.
      * Gateway methods (card/transfer/ussd/phone) are preserved as-is since
      * the Order model enum supports them.
+     * @requirement REQ-085 - Do NOT reset order `status` — kitchen workflow owns it.
+     * Only payment-related fields are updated here.
      */
     await OrderModel.updateMany(
       { _id: { $in: tab.orders } },
@@ -343,7 +345,6 @@ export class TabService {
         $set: {
           paymentStatus: 'paid',
           paidAt: new Date(),
-          status: 'confirmed',
           paymentMethod: 'card',
           businessDate: resolvedBusinessDate,
         },
@@ -804,6 +805,8 @@ export class TabService {
 
     /**
      * @requirement REQ-013 - Set paymentMethod on orders for accurate daily report
+     * @requirement REQ-085 - Do NOT reset order `status` — kitchen workflow owns it.
+     * Only payment-related fields are updated here.
      */
     await OrderModel.updateMany(
       { _id: { $in: tab.orders } },
@@ -811,7 +814,6 @@ export class TabService {
         $set: {
           paymentStatus: 'paid',
           paidAt: new Date(),
-          status: 'confirmed',
           paymentMethod: params.paymentType,
           businessDate: resolvedBusinessDate,
         },

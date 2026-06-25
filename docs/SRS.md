@@ -101,6 +101,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-ORDER-002    | Orders & Tabs page lists orders + tabs (auth)                                       | Must     | smoke      | `app/(customer)/orders/page.tsx`                                                                                 |
 | REQ-ORDER-003    | Guest sees own open tabs by guestId/email                                           | Should   | regression | `app/(customer)/orders/page.tsx:55`                                                                              |
 | REQ-ORDER-004    | Pay & close tab from customer side                                                  | Should   | regression | `app/(customer)/orders/tabs/[tabId]/checkout/`                                                                   |
+| REQ-ORDER-005    | Labeled kitchen/payment status badges on order surfaces                             | Must     | regression | `order-details-header.tsx`, `order-card.tsx`, `orders/page.tsx`; REQ-085                                         |
 | REQ-PROFILE-001  | View/edit personal info                                                             | Should   | regression | `app/(customer)/profile/page.tsx`, `personal-info-tab.tsx`                                                       |
 | REQ-PROFILE-002  | Address CRUD + default address                                                      | Could    | extended   | `addresses-tab.tsx`                                                                                              |
 | REQ-REWARDC-001  | Rewards page shows active rewards, codes, expiry                                    | Should   | regression | `app/(customer)/profile/rewards/page.tsx`                                                                        |
@@ -128,12 +129,15 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-TABMGT-003   | Admin pay tab with method + independent tip                                         | Should   | regression | `admin-pay-tab-dialog`; REQ-036                                                                                  |
 | REQ-TABMGT-004   | Delete tab (guard closed/paid)                                                      | Could    | extended   | `delete-tab-dialog`                                                                                              |
 | REQ-TABMGT-005   | Admin tab checkout: manual payment (no Monnify redirect)                            | Must     | regression | `components/features/admin/admin-tab-checkout-form.tsx`; REQ-084                                                 |
+| REQ-TABMGT-006   | Tab payment preserves order fulfillment status                                      | Must     | regression | `services/tab-service.ts`; REQ-085                                                                               |
 | REQ-KITCHEN-001  | Kitchen display shows active orders real-time                                       | Should   | regression | `app/dashboard/kitchen-display/page.tsx`                                                                         |
 | REQ-KITCHEN-002  | `kitchenManagement` gates kitchen routes                                            | Must     | regression | `app/dashboard/kitchen/layout.tsx`; REQ-034                                                                      |
 | REQ-KITCHEN-003  | Recipe CRUD + validation                                                            | Should   | regression | `services/recipe-service.ts:41`; REQ-034                                                                         |
 | REQ-KITCHEN-004  | Make-a-batch deducts ingredients, yields stock                                      | Should   | regression | `app/dashboard/kitchen/production/page.tsx`; REQ-034                                                             |
 | REQ-KITCHEN-005  | Void batch (super-admin only)                                                       | Could    | extended   | `production-history`; REQ-034                                                                                    |
 | REQ-KITCHEN-006  | Kitchen ingredient CRUD                                                             | Could    | extended   | REQ-037                                                                                                          |
+| REQ-KITCHEN-007  | Completed orders do not reappear on kitchen display after tab payment               | Must     | regression | `services/tab-service.ts`; REQ-085                                                                               |
+| REQ-KITCHEN-008  | Payment status indicator on kitchen order card                                      | Should   | regression | `components/features/kitchen/kitchen-order-card.tsx`; REQ-085                                                    |
 | REQ-MENUMGT-001  | Menu item list + stats (super-admin)                                                | Should   | regression | `app/dashboard/menu/page.tsx`                                                                                    |
 | REQ-MENUMGT-002  | Create menu item (+ optional inventory)                                             | Should   | regression | `app/actions/admin/menu-actions.ts:60`                                                                           |
 | REQ-MENUMGT-003  | Edit item incl. customization inventory links                                       | Should   | regression | `menu/[itemId]/edit/page.tsx`; REQ-030                                                                           |
@@ -394,6 +398,14 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 
 > ⚠ **Known gap (#117 P0#4):** rewards cannot be applied on this tab path — eligible rewards come back empty (see REQ-CHECKOUT-009). Test the close-tab/payment flow without expecting a rewards step.
 
+#### REQ-ORDER-005 — Labeled kitchen/payment status badges on order surfaces · **Must** · regression
+
+**Source:** `components/features/admin/order-details-header.tsx`, `components/features/admin/order-card.tsx`, `app/(customer)/orders/page.tsx`; cross-ref REQ-085.
+
+- **Given** an admin views an order detail page, **When** the order has distinct kitchen and payment statuses, **Then** the header shows labeled badges: "Kitchen: \<status\>" and "Payment: \<status\>".
+- **Given** an admin views the order queue, **When** an order has been paid, **Then** the order card shows both a kitchen status badge and a small "Payment: \<status\>" indicator.
+- **Given** a customer views their orders page, **When** an order has distinct kitchen and payment statuses, **Then** badges are labeled "Kitchen: \<status\>" and "Payment: \<status\>" instead of bare values.
+
 ---
 
 ## Feature Area 5 — Customer Profile (PROFILE)
@@ -619,6 +631,14 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 - **Given** an open tab with orders, **When** staff use the admin tab checkout form, **Then** manual payment method options (cash/transfer/card) are shown.
 - **Given** staff select a payment method and submit, **When** the tab is closed, **Then** the tab status moves to `closed`, all attached orders are marked paid, and no Monnify redirect URL is returned.
 
+#### REQ-TABMGT-006 — Tab payment preserves order fulfillment status · **Must** · regression
+
+**Source:** `services/tab-service.ts` (`markTabPaid`, `completeTabPaymentManually`); cross-ref REQ-085.
+**Behaviour:** When a tab is closed and payment is processed (either manually or via Monnify gateway), only payment-related fields (`paymentStatus`, `paidAt`, `paymentMethod`, `businessDate`) are updated on the tab's orders. The kitchen/fulfillment `status` field is never modified by tab payment — it is owned by the kitchen display workflow.
+
+- **Given** a dine-in tab with orders in various statuses (pending, preparing, ready, completed), **When** an admin closes the tab with manual payment, **Then** all orders retain their original `status` — none are reset to `confirmed`.
+- **Given** a dine-in tab with orders in various statuses, **When** the tab is paid via Monnify gateway webhook, **Then** all orders retain their original `status` — none are reset to `confirmed`.
+
 ---
 
 ## Feature Area 12 — Kitchen (KITCHEN)
@@ -660,6 +680,20 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 **Source:** cross-ref REQ-037 (`e2e/kitchen/inventory-crud.spec.ts`)
 
 - **Given** the kitchen inventory tab, **When** a super-admin edits or deletes an ingredient, **Then** the change persists and the sellable/kitchen counts update.
+
+#### REQ-KITCHEN-007 — Completed orders do not reappear on kitchen display after tab payment · **Must** · regression
+
+**Source:** `services/tab-service.ts`; cross-ref REQ-085.
+**Behaviour:** When a tab is closed and paid, orders that have already reached `completed` status (with `inventoryDeducted: true`) must not regress to an active kitchen display status. This prevents double inventory deduction and duplicate `IncidentEvent` rows.
+
+- **Given** a tab with a completed order (`status: 'completed'`, `inventoryDeducted: true`), **When** the tab is closed and paid, **Then** the completed order does NOT reappear on the kitchen display and no second inventory deduction occurs.
+
+#### REQ-KITCHEN-008 — Payment status indicator on kitchen order card · **Should** · regression
+
+**Source:** `components/features/kitchen/kitchen-order-card.tsx`; cross-ref REQ-085.
+**Behaviour:** A small, non-disruptive payment status indicator (icon + text) is shown on the kitchen order card when an order has been paid, so kitchen staff can see payment status without affecting their workflow.
+
+- **Given** kitchen staff view the kitchen display, **When** an order has been paid, **Then** a small payment status indicator (CheckCircle icon + "Paid" text) is visible on the kitchen order card.
 
 ---
 

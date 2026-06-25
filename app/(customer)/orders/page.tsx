@@ -7,10 +7,25 @@ import { MainLayout } from '@/components/shared/layout';
 import { Container } from '@/components/shared/layout';
 import { PageHeader } from '@/components/shared/ui';
 import { EmptyState } from '@/components/shared/ui';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ShoppingBag, Clock, CheckCircle, XCircle, ChefHat, Package, Receipt, CreditCard } from 'lucide-react';
+import {
+  ShoppingBag,
+  Clock,
+  CheckCircle,
+  XCircle,
+  ChefHat,
+  Package,
+  Receipt,
+  CreditCard,
+} from 'lucide-react';
 import { sessionOptions, SessionData } from '@/lib/session';
 import { OrderService, TabService } from '@/services';
 import { OrderStatus } from '@/interfaces';
@@ -23,7 +38,10 @@ export const metadata: Metadata = {
 export default async function OrdersPage() {
   // Check authentication
   const cookieStore = await cookies();
-  const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+  const session = await getIronSession<SessionData>(
+    cookieStore,
+    sessionOptions
+  );
 
   if (!session.isLoggedIn) {
     redirect('/login?redirect=/orders');
@@ -49,43 +67,51 @@ export default async function OrdersPage() {
     );
   } else if (session.isGuest) {
     // Guest Logic
-    // Guests mainly use tabs for now. 
+    // Guests mainly use tabs for now.
     // If we want to show past orders for guests, we'd need to track them by guestId in OrderService too.
-    
+
     if (session.guestId) {
-      // We can reuse listOpenTabs but here we want ALL tabs? 
+      // We can reuse listOpenTabs but here we want ALL tabs?
       // TabService.listOpenTabs only returns open ones.
       // Let's check if we can list all tabs for guest.
       // Currently TabService doesn't have listAllTabsForGuest.
       // We can fallback to listOpenTabs for now or use listOpenTabs logic but without status filter?
       // Actually, let's just use listOpenTabs for guests as they likely only care about current session.
-      
-      const openTabs = await TabService.listOpenTabs({ guestId: session.guestId });
+
+      const openTabs = await TabService.listOpenTabs({
+        guestId: session.guestId,
+      });
       allTabs = openTabs;
     } else if (session.email) {
-      const openTabs = await TabService.listOpenTabs({ customerEmail: session.email });
+      const openTabs = await TabService.listOpenTabs({
+        customerEmail: session.email,
+      });
       allTabs = openTabs;
     }
   }
 
   // Serialize for client components
-  const serializedOrders = standaloneOrders.map((order: any) => JSON.parse(JSON.stringify(order)));
-  
+  const serializedOrders = standaloneOrders.map((order: any) =>
+    JSON.parse(JSON.stringify(order))
+  );
+
   // Fully serialize tabs to plain objects
-  const serializedTabs = JSON.parse(JSON.stringify(allTabs)).map((tab: any) => ({
-    _id: tab._id,
-    tabNumber: tab.tabNumber,
-    tableNumber: tab.tableNumber,
-    status: tab.status,
-    orders: Array.isArray(tab.orders) ? tab.orders : [],
-    subtotal: tab.subtotal,
-    serviceFee: tab.serviceFee,
-    tax: tab.tax,
-    tipAmount: tab.tipAmount,
-    total: tab.total,
-    paymentStatus: tab.paymentStatus,
-    openedAt: tab.openedAt,
-  }));
+  const serializedTabs = JSON.parse(JSON.stringify(allTabs)).map(
+    (tab: any) => ({
+      _id: tab._id,
+      tabNumber: tab.tabNumber,
+      tableNumber: tab.tableNumber,
+      status: tab.status,
+      orders: Array.isArray(tab.orders) ? tab.orders : [],
+      subtotal: tab.subtotal,
+      serviceFee: tab.serviceFee,
+      tax: tab.tax,
+      tipAmount: tab.tipAmount,
+      total: tab.total,
+      paymentStatus: tab.paymentStatus,
+      openedAt: tab.openedAt,
+    })
+  );
 
   return (
     <MainLayout>
@@ -158,7 +184,8 @@ function TabCard({ tab }: { tab: any }) {
               </Badge>
             </CardTitle>
             <CardDescription>
-              Table {tab.tableNumber} • Opened {new Date(tab.openedAt).toLocaleDateString('en-US', {
+              Table {tab.tableNumber} • Opened{' '}
+              {new Date(tab.openedAt).toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric',
@@ -169,7 +196,9 @@ function TabCard({ tab }: { tab: any }) {
           </div>
           <div className="text-right">
             <p className="text-2xl font-bold">₦{tab.total.toLocaleString()}</p>
-            <Badge variant={tab.paymentStatus === 'paid' ? 'default' : 'secondary'}>
+            <Badge
+              variant={tab.paymentStatus === 'paid' ? 'default' : 'secondary'}
+            >
               {tab.paymentStatus === 'paid' ? 'Paid' : 'Unpaid'}
             </Badge>
           </div>
@@ -188,11 +217,15 @@ function TabCard({ tab }: { tab: any }) {
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal:</span>
-                <span className="font-medium">₦{tab.subtotal.toLocaleString()}</span>
+                <span className="font-medium">
+                  ₦{tab.subtotal.toLocaleString()}
+                </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Service Fee:</span>
-                <span className="font-medium">₦{tab.serviceFee.toLocaleString()}</span>
+                <span className="font-medium">
+                  ₦{tab.serviceFee.toLocaleString()}
+                </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Tax:</span>
@@ -201,7 +234,9 @@ function TabCard({ tab }: { tab: any }) {
               {tab.tipAmount > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Tip:</span>
-                  <span className="font-medium">₦{tab.tipAmount.toLocaleString()}</span>
+                  <span className="font-medium">
+                    ₦{tab.tipAmount.toLocaleString()}
+                  </span>
                 </div>
               )}
             </div>
@@ -216,7 +251,10 @@ function TabCard({ tab }: { tab: any }) {
               </Button>
             </Link>
             {tab.status === 'open' && (
-              <Link href={`/orders/tabs/${tab._id}/checkout`} className="flex-1">
+              <Link
+                href={`/orders/tabs/${tab._id}/checkout`}
+                className="flex-1"
+              >
                 <Button className="w-full">
                   <CreditCard className="mr-2 h-4 w-4" />
                   Pay & Close Tab
@@ -232,15 +270,23 @@ function TabCard({ tab }: { tab: any }) {
 
 /**
  * Order card component
+ * @requirement REQ-085 - Labeled Kitchen/Payment badges for customer clarity
  */
 function OrderCard({ order }: { order: any }) {
   function getStatusBadge(status: OrderStatus) {
-    const variants: Record<OrderStatus, { variant: any; icon: any; label: string }> = {
+    const variants: Record<
+      OrderStatus,
+      { variant: any; icon: any; label: string }
+    > = {
       pending: { variant: 'secondary', icon: Clock, label: 'Pending' },
       confirmed: { variant: 'default', icon: CheckCircle, label: 'Confirmed' },
       preparing: { variant: 'default', icon: ChefHat, label: 'Preparing' },
       ready: { variant: 'default', icon: Package, label: 'Ready' },
-      'out-for-delivery': { variant: 'default', icon: Package, label: 'Out for Delivery' },
+      'out-for-delivery': {
+        variant: 'default',
+        icon: Package,
+        label: 'Out for Delivery',
+      },
       delivered: { variant: 'default', icon: CheckCircle, label: 'Delivered' },
       completed: { variant: 'default', icon: CheckCircle, label: 'Completed' },
       cancelled: { variant: 'destructive', icon: XCircle, label: 'Cancelled' },
@@ -252,19 +298,19 @@ function OrderCard({ order }: { order: any }) {
     return (
       <Badge variant={config.variant as any}>
         <Icon className="mr-1 h-3 w-3" />
-        {config.label}
+        Kitchen: {config.label}
       </Badge>
     );
   }
 
   function getPaymentBadge(paymentStatus: string) {
     if (paymentStatus === 'paid') {
-      return <Badge variant="default">Paid</Badge>;
+      return <Badge variant="default">Payment: Paid</Badge>;
     }
     if (paymentStatus === 'pending') {
-      return <Badge variant="secondary">Payment Pending</Badge>;
+      return <Badge variant="secondary">Payment: Pending</Badge>;
     }
-    return <Badge variant="destructive">Failed</Badge>;
+    return <Badge variant="destructive">Payment: Failed</Badge>;
   }
 
   return (
@@ -287,7 +333,9 @@ function OrderCard({ order }: { order: any }) {
             </CardDescription>
           </div>
           <div className="text-right">
-            <p className="text-2xl font-bold">₦{order.total.toLocaleString()}</p>
+            <p className="text-2xl font-bold">
+              ₦{order.total.toLocaleString()}
+            </p>
             {getPaymentBadge(order.paymentStatus)}
           </div>
         </div>
@@ -306,13 +354,15 @@ function OrderCard({ order }: { order: any }) {
                 } else if (item.portionSize === 'quarter') {
                   quantityDisplay = `${item.quantity} × 1/4x`;
                 }
-                
+
                 return (
                   <div key={index} className="flex justify-between text-sm">
                     <span className="text-muted-foreground">
                       {quantityDisplay} {item.name}
                     </span>
-                    <span className="font-medium">₦{item.subtotal.toLocaleString()}</span>
+                    <span className="font-medium">
+                      ₦{item.subtotal.toLocaleString()}
+                    </span>
                   </div>
                 );
               })}
@@ -321,13 +371,20 @@ function OrderCard({ order }: { order: any }) {
 
           {/* Order Type & Details */}
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span className="capitalize">{order.orderType.replace('-', ' ')}</span>
-            {order.orderType === 'dine-in' && order.dineInDetails?.tableNumber && (
-              <span>• Table {order.dineInDetails.tableNumber}</span>
-            )}
-            {order.orderType === 'delivery' && order.deliveryDetails?.address && (
-              <span>• {order.deliveryDetails.address.street}, {order.deliveryDetails.address.city}</span>
-            )}
+            <span className="capitalize">
+              {order.orderType.replace('-', ' ')}
+            </span>
+            {order.orderType === 'dine-in' &&
+              order.dineInDetails?.tableNumber && (
+                <span>• Table {order.dineInDetails.tableNumber}</span>
+              )}
+            {order.orderType === 'delivery' &&
+              order.deliveryDetails?.address && (
+                <span>
+                  • {order.deliveryDetails.address.street},{' '}
+                  {order.deliveryDetails.address.city}
+                </span>
+              )}
           </div>
 
           {/* Actions */}

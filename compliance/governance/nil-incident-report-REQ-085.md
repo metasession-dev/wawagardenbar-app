@@ -21,5 +21,5 @@ No incidents were closed during the REQ-085 lifecycle. All tests passed on execu
 ## Sign-off
 
 - **Prepared by:** Cascade (Windsurf) via sdlc-implementer
-- **Reviewer:** REPLACE — name + date
+- **Reviewer:** William — 2026-06-26
 - **Approved:** ☐

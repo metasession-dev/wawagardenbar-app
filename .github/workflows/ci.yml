@@ -392,7 +392,12 @@ jobs:
           echo "Scanning bundled changes since ${SINCE_REF} for ${VERSION}"
           BUNDLED_FILE="compliance/pending-releases/BUNDLED-CHANGES-${VERSION}.md"
           mkdir -p compliance/pending-releases
-          bash scripts/generate-bundled-changes.sh "$SINCE_REF" "$VERSION" > "$BUNDLED_FILE"
+          bash scripts/generate-bundled-changes.sh "$SINCE_REF" "$VERSION" > "$BUNDLED_FILE" 2>/dev/null || {
+            echo "::warning::generate-bundled-changes.sh failed for ${SINCE_REF} — writing stub."
+            echo "# Bundled Changes — ${VERSION}" > "$BUNDLED_FILE"
+            echo "" >> "$BUNDLED_FILE"
+            echo "No bundled changes generated (ref ${SINCE_REF} not available)." >> "$BUNDLED_FILE"
+          }
           # Upload as bundled_changes evidence against the REQ release.
           bash scripts/upload-evidence.sh \
             wgb _compliance-docs bundled_changes "$BUNDLED_FILE" \

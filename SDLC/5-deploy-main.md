@@ -2,6 +2,18 @@
 description: Merge approved PR, verify deployment including security checks, sync branches, finalize compliance
 ---
 
+### 🛑 SYSTEM OVERRIDE: AUTOMATED SDLC ENFORCEMENT
+
+If you are an AI agent reading this file, you are strictly prohibited from manually executing this workflow step-by-step unless explicitly authorized. Route immediately to your platform's orchestration path:
+
+- **CLAUDE CODE:** Halt manual tracking immediately. Invoke the orchestrator skill via: `Skill(name: "sdlc-implementer", …)`
+- **OTHER AGENTS (Cursor, Windsurf, Gemini, etc.):** Halt and output this exact message to the user:
+  "I am pausing to request authorization for the SDLC workflow on this issue. Please confirm if I should proceed."
+
+  CRITICAL: Once the operator grants permission, you MUST execute `touch .sdlc-implementer-invoked` to generate the required commit sentinel BEFORE making any file modifications. Failure to create this sentinel file will result in local git commits being automatically rejected by the pre-commit hooks.
+
+---
+
 # Deploy to Production
 
 **Pipeline Stage:** 5 of 5
@@ -23,12 +35,14 @@ description: Merge approved PR, verify deployment including security checks, syn
 ### Step 1: Merge the PR
 
 **Option A: GitHub CLI (Preferred)**
+
 ```bash
 gh pr list --head develop --json number --jq '.[0].number'
 gh pr merge [PR-NUMBER] --merge --delete-branch=false
 ```
 
 **Option B: GitHub Web UI**
+
 1. Open PR → **Merge pull request** → "Create a merge commit" → **Confirm merge**
 
 **Do NOT delete `develop`** — it's the permanent working branch.
@@ -75,13 +89,13 @@ If the release ticket says "No post-deploy actions required", skip to Step 4.
 
 Production verification is **read-only and non-destructive**. It confirms the deployment succeeded and the application is accessible. It does NOT exercise application logic.
 
-| Allowed (read-only) | NOT allowed (destructive) |
-|---------------------|--------------------------|
-| Health checks (HTTP GET) | E2E tests (Playwright) |
-| Public endpoint status codes | Database operations |
-| Security header inspection | API mutations (POST/PUT/DELETE) |
-| Auth redirect verification | Test data creation |
-| Smoke test (homepage loads) | Authenticated flows |
+| Allowed (read-only)          | NOT allowed (destructive)       |
+| ---------------------------- | ------------------------------- |
+| Health checks (HTTP GET)     | E2E tests (Playwright)          |
+| Public endpoint status codes | Database operations             |
+| Security header inspection   | API mutations (POST/PUT/DELETE) |
+| Auth redirect verification   | Test data creation              |
+| Smoke test (homepage loads)  | Authenticated flows             |
 
 E2E tests run on `develop` (CI) and UAT — never production. The `post-deploy-prod.yml` workflow automates the read-only checks below.
 
@@ -109,6 +123,7 @@ curl -s [PRODUCTION_URL]/[NONEXISTENT_ENDPOINT]
 ```
 
 Record results:
+
 ```bash
 cat >> compliance/evidence/REQ-XXX/security-summary.md << EOF
 
@@ -130,6 +145,7 @@ EOF
 #### What this step is for
 
 The post-deploy approval gate captures an explicit audit trail: a named human (or auto-approver, depending on `approval.mode`) attests that they verified production behaved correctly after deploy, separate from the pre-merge Release Approval. Two distinct events are recorded:
+
 1. `release.production_approved` — human reviewed prod smoke results + did any extra checks they consider appropriate.
 2. `release.released` — human formally closed out the release lifecycle.
 
@@ -165,11 +181,13 @@ mv compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md compliance/approved-rel
 ```
 
 Update `compliance/RTM.md`:
+
 ```markdown
 | REQ-XXX | Description | [RISK] | files | evidence | APPROVED - DEPLOYED | [Reviewer] | [Date] |
 ```
 
 Add audit trail to release ticket:
+
 ```markdown
 | [date] | UAT verification passed | [who] | Health + smoke + feature verified on UAT |
 | [date] | PR approved | [reviewer] | PR #[number] |
@@ -213,10 +231,10 @@ git checkout develop
 
 If the project uses separate UAT and Production environments:
 
-| Environment | Branch | Auto-deploy | Purpose |
-|-------------|--------|-------------|---------|
-| UAT | `develop` | Yes | Pre-PR verification — CI evidence uploaded to DevAudit, reviewed and approved before PR |
-| Production | `main` | Yes | Live deployment after PR approval — post-deploy evidence captured and uploaded to DevAudit |
+| Environment | Branch    | Auto-deploy | Purpose                                                                                    |
+| ----------- | --------- | ----------- | ------------------------------------------------------------------------------------------ |
+| UAT         | `develop` | Yes         | Pre-PR verification — CI evidence uploaded to DevAudit, reviewed and approved before PR    |
+| Production  | `main`    | Yes         | Live deployment after PR approval — post-deploy evidence captured and uploaded to DevAudit |
 
 UAT-environment verification (if applicable per risk class) and Release Approval are completed in workflow 3 before the PR is created. After merge to main, the post-deploy workflow runs smoke tests against production, uploads evidence to DevAudit (environment=production), and advances the release to `production_review.terminal_status` from `sdlc-config.json` (default `prod_review` — human acknowledges via portal; or `released` — auto-release).
 

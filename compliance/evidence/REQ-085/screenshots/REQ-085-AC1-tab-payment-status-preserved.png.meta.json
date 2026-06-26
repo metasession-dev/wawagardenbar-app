@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-085",
+  "ac": 1,
+  "slug": "tab-payment-status-preserved",
+  "specFile": "e2e/critical/tab-payment-no-status-reset.spec.ts",
+  "capturedAt": "2026-06-25T16:09:11.377Z"
+}

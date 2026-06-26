@@ -3,7 +3,6 @@
 Detailed guidance for setting up an e2e suite from scratch. Read this when Phase 1b of `SKILL.md` is in play.
 
 ## Contents
-
 1. Framework selection matrix (by tech stack)
 2. Visual regression tool selection
 3. Official installer commands
@@ -20,40 +19,40 @@ Recommend a primary, mention the runner-up, get user confirmation before install
 
 ### Web apps — JavaScript / TypeScript
 
-| Stack                               | Primary         | Runner-up | Rationale                                                                                                                            |
-| ----------------------------------- | --------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| React / Next.js / Remix             | **Playwright**  | Cypress   | Fast, parallel by default, multi-browser, first-party TS, built-in visual regression, excellent trace viewer.                        |
-| Vue / Nuxt                          | **Playwright**  | Cypress   | Same reasons.                                                                                                                        |
-| Angular                             | **Playwright**  | Cypress   | Playwright has overtaken Cypress as the Angular community default; Cypress still common in established Angular shops.                |
-| Svelte / SvelteKit                  | **Playwright**  | —         | SvelteKit's official template ships Playwright.                                                                                      |
-| Static sites / SSG                  | **Playwright**  | Cypress   | Either works; Playwright is simpler to set up.                                                                                       |
-| Legacy multi-browser-grid needs     | **WebdriverIO** | Selenium  | Needed when integrating with existing Sauce Labs / BrowserStack grids or non-Chromium-family browsers beyond what Playwright covers. |
-| Anything requiring real IE11 (rare) | **Selenium**    | —         | Only Selenium still targets IE.                                                                                                      |
+| Stack | Primary | Runner-up | Rationale |
+|---|---|---|---|
+| React / Next.js / Remix | **Playwright** | Cypress | Fast, parallel by default, multi-browser, first-party TS, built-in visual regression, excellent trace viewer. |
+| Vue / Nuxt | **Playwright** | Cypress | Same reasons. |
+| Angular | **Playwright** | Cypress | Playwright has overtaken Cypress as the Angular community default; Cypress still common in established Angular shops. |
+| Svelte / SvelteKit | **Playwright** | — | SvelteKit's official template ships Playwright. |
+| Static sites / SSG | **Playwright** | Cypress | Either works; Playwright is simpler to set up. |
+| Legacy multi-browser-grid needs | **WebdriverIO** | Selenium | Needed when integrating with existing Sauce Labs / BrowserStack grids or non-Chromium-family browsers beyond what Playwright covers. |
+| Anything requiring real IE11 (rare) | **Selenium** | — | Only Selenium still targets IE. |
 
 ### Mobile
 
-| Stack                               | Primary                           | Runner-up                     | Rationale                                                                             |
-| ----------------------------------- | --------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------- |
-| React Native                        | **Detox**                         | Appium                        | Native, fast, integrates with RN test infra.                                          |
-| Native iOS / Android cross-platform | **Appium**                        | Maestro                       | Industry standard; Maestro is gaining popularity for simpler flows.                   |
-| Mobile web                          | **Playwright** (mobile emulation) | Appium (for real-device need) | Playwright covers viewport + UA emulation; Appium for real-device touch interactions. |
+| Stack | Primary | Runner-up | Rationale |
+|---|---|---|---|
+| React Native | **Detox** | Appium | Native, fast, integrates with RN test infra. |
+| Native iOS / Android cross-platform | **Appium** | Maestro | Industry standard; Maestro is gaining popularity for simpler flows. |
+| Mobile web | **Playwright** (mobile emulation) | Appium (for real-device need) | Playwright covers viewport + UA emulation; Appium for real-device touch interactions. |
 
 ### Desktop
 
-| Stack    | Primary                        | Runner-up                      | Rationale                                    |
-| -------- | ------------------------------ | ------------------------------ | -------------------------------------------- |
-| Electron | **Playwright**                 | WebdriverIO + Electron service | Playwright has first-party Electron support. |
-| Tauri    | **WebdriverIO** + Tauri driver | —                              | Official path.                               |
+| Stack | Primary | Runner-up | Rationale |
+|---|---|---|---|
+| Electron | **Playwright** | WebdriverIO + Electron service | Playwright has first-party Electron support. |
+| Tauri | **WebdriverIO** + Tauri driver | — | Official path. |
 
 ### Backend-rendered / non-JS web apps
 
-| Stack                                          | Primary                                           | Runner-up               | Rationale                                                              |
-| ---------------------------------------------- | ------------------------------------------------- | ----------------------- | ---------------------------------------------------------------------- |
-| Python (Django, Flask, FastAPI with templates) | **pytest-playwright**                             | Selenium + pytest       | Same Playwright engine, idiomatic for Python test suites.              |
-| Ruby on Rails                                  | **Capybara + Cuprite**                            | Capybara + Selenium     | Cuprite uses CDP, faster than Selenium.                                |
-| Java (Spring etc.)                             | **Playwright for Java**                           | Selenium + JUnit/TestNG | Playwright Java is mature; Selenium still dominant in enterprise Java. |
-| .NET                                           | **Playwright for .NET**                           | Selenium + NUnit/xUnit  | Playwright .NET is well-supported.                                     |
-| PHP (Laravel, Symfony)                         | **Playwright via PHP** or **Pest browser plugin** | Codeception             | Pest's browser plugin is gaining ground for Laravel.                   |
+| Stack | Primary | Runner-up | Rationale |
+|---|---|---|---|
+| Python (Django, Flask, FastAPI with templates) | **pytest-playwright** | Selenium + pytest | Same Playwright engine, idiomatic for Python test suites. |
+| Ruby on Rails | **Capybara + Cuprite** | Capybara + Selenium | Cuprite uses CDP, faster than Selenium. |
+| Java (Spring etc.) | **Playwright for Java** | Selenium + JUnit/TestNG | Playwright Java is mature; Selenium still dominant in enterprise Java. |
+| .NET | **Playwright for .NET** | Selenium + NUnit/xUnit | Playwright .NET is well-supported. |
+| PHP (Laravel, Symfony) | **Playwright via PHP** or **Pest browser plugin** | Codeception | Pest's browser plugin is gaining ground for Laravel. |
 
 ### When to question the default
 
@@ -67,14 +66,14 @@ Recommend a primary, mention the runner-up, get user confirmation before install
 
 Only add visual regression if the user asked for it or the originating issue is visually significant. Default off for greenfield bootstrap unless explicitly requested.
 
-| Need                                               | Recommendation                    | Notes                                                                                 |
-| -------------------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------- |
-| Default for Playwright                             | **`toHaveScreenshot()` built-in** | Zero extra deps; baselines stored in repo. Configure `threshold` and `maxDiffPixels`. |
-| Default for Cypress                                | **`cypress-image-snapshot`**      | Or `cypress-visual-regression`. Both store baselines in repo.                         |
-| Default for WebdriverIO                            | **`@wdio/visual-service`**        | Maintained, image-comparison-based.                                                   |
-| Default for BackstopJS-style standalone            | **BackstopJS**                    | Use only if not integrating with an e2e framework above.                              |
-| Cross-team approval workflow needed                | **Percy** or **Chromatic**        | Cloud, web-based diff review. Chromatic is Storybook-friendly. Percy is generic.      |
-| Heavy use of AI-assisted diffing / dynamic content | **Applitools**                    | Commercial, ML-based comparison, handles dynamic content gracefully. Higher cost.     |
+| Need | Recommendation | Notes |
+|---|---|---|
+| Default for Playwright | **`toHaveScreenshot()` built-in** | Zero extra deps; baselines stored in repo. Configure `threshold` and `maxDiffPixels`. |
+| Default for Cypress | **`cypress-image-snapshot`** | Or `cypress-visual-regression`. Both store baselines in repo. |
+| Default for WebdriverIO | **`@wdio/visual-service`** | Maintained, image-comparison-based. |
+| Default for BackstopJS-style standalone | **BackstopJS** | Use only if not integrating with an e2e framework above. |
+| Cross-team approval workflow needed | **Percy** or **Chromatic** | Cloud, web-based diff review. Chromatic is Storybook-friendly. Percy is generic. |
+| Heavy use of AI-assisted diffing / dynamic content | **Applitools** | Commercial, ML-based comparison, handles dynamic content gracefully. Higher cost. |
 
 Baseline strategy on first bootstrap: generate baselines locally, then have the user verify each one before committing. Never auto-approve baselines in CI on first run.
 

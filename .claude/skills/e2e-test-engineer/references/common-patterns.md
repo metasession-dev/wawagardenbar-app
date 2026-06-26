@@ -22,13 +22,9 @@ returns zero matches even though the card visibly shows that title.
 
 ```ts
 // Prefer a data-testid on the card.
-await page
-  .getByTestId('card-units-of-measurement')
-  .getByText('Units of Measurement');
+await page.getByTestId('card-units-of-measurement').getByText('Units of Measurement');
 // Or scope by exact text inside the card's title slot.
-await page.locator('[data-slot="card-title"]', {
-  hasText: 'Units of Measurement',
-});
+await page.locator('[data-slot="card-title"]', { hasText: 'Units of Measurement' });
 ```
 
 If the project owns the card markup, the cheap fix is to wrap the title text
@@ -94,9 +90,7 @@ is against `"Filter Tabs1"`, not `"Filter Tabs"`.
 // Drop exact: when the title has decorative siblings.
 await page.getByText('Filter Tabs');
 // Or scope by the specific text node.
-await page
-  .locator('[data-slot="card-title"]')
-  .filter({ hasText: 'Filter Tabs' });
+await page.locator('[data-slot="card-title"]').filter({ hasText: 'Filter Tabs' });
 ```
 
 The same pattern bites any title slot that mixes a text label with a

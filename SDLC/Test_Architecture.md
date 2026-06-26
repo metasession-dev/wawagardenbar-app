@@ -25,28 +25,24 @@ These standards apply to all Metasession products, client engagements, and inter
 ## 1. Architectural Principles
 
 ### DRY (Don't Repeat Yourself)
-
 - Reusable test utilities and helper functions across suites
 - Shared fixtures and base classes
 - Centralized configuration management
 - Common assertion libraries and custom matchers
 
 ### Isolation
-
 - Each test runs independently without side effects
 - Database state reset between test runs
 - External dependencies mocked to prevent flakiness
 - Parallel execution enabled without interference
 
 ### Speed over Exhaustiveness
-
 - Fast feedback prioritized (unit tests < 30 seconds)
 - Parallelization and sharding for E2E suites
-- Strategic test selection based on code changes — first concrete implementation is the three-tier E2E gating model (smoke / critical / regression), see Test_Strategy.md § _E2E gating model_ (v0.1.53+)
+- Strategic test selection based on code changes — first concrete implementation is the three-tier E2E gating model (smoke / critical / regression), see Test_Strategy.md § *E2E gating model* (v0.1.53+)
 - Regression suites optimized for execution time
 
 ### Traceability
-
 - Tests linked to requirements via ticket IDs
 - BDD feature files tagged with requirement references
 - Automated requirement-test-result mapping
@@ -57,38 +53,38 @@ These standards apply to all Metasession products, client engagements, and inter
 
 ### Unit Layer (Foundation)
 
-| Attribute | Standard                                               |
-| --------- | ------------------------------------------------------ |
-| Coverage  | Minimum 70% for critical modules                       |
-| Speed     | Suite completes in < 30 seconds                        |
-| Scope     | Individual functions, methods, components in isolation |
-| Mocking   | External dependencies must be mocked                   |
+| Attribute | Standard |
+|---|---|
+| Coverage | Minimum 70% for critical modules |
+| Speed | Suite completes in < 30 seconds |
+| Scope | Individual functions, methods, components in isolation |
+| Mocking | External dependencies must be mocked |
 
 ### Integration Layer (Middle)
 
-| Attribute | Standard                                                    |
-| --------- | ----------------------------------------------------------- |
-| Coverage  | Minimum 80% of integration points                           |
-| Scope     | Component interactions, service integrations, API contracts |
-| Data      | In-memory databases or MSW for API mocking                  |
+| Attribute | Standard |
+|---|---|
+| Coverage | Minimum 80% of integration points |
+| Scope | Component interactions, service integrations, API contracts |
+| Data | In-memory databases or MSW for API mocking |
 
 ### E2E Layer (Top)
 
-| Attribute       | Standard                                   |
-| --------------- | ------------------------------------------ |
-| Coverage        | 100% of critical user paths                |
-| Scope           | Complete user journeys from UI to database |
-| Browser support | Chromium, Firefox, WebKit                  |
-| BDD             | playwright-bdd for acceptance criteria     |
+| Attribute | Standard |
+|---|---|
+| Coverage | 100% of critical user paths |
+| Scope | Complete user journeys from UI to database |
+| Browser support | Chromium, Firefox, WebKit |
+| BDD | playwright-bdd for acceptance criteria |
 
 ### Additional Layers
 
-| Layer             | Standard                                      |
-| ----------------- | --------------------------------------------- |
-| Security          | SAST, SCA, DAST (see Section 3)               |
-| Performance       | Load and stress testing before major releases |
-| Accessibility     | WCAG 2.1 AA for public-facing features        |
-| Visual regression | Optional, recommended for UI-heavy products   |
+| Layer | Standard |
+|---|---|
+| Security | SAST, SCA, DAST (see Section 3) |
+| Performance | Load and stress testing before major releases |
+| Accessibility | WCAG 2.1 AA for public-facing features |
+| Visual regression | Optional, recommended for UI-heavy products |
 
 ---
 
@@ -96,50 +92,50 @@ These standards apply to all Metasession products, client engagements, and inter
 
 ### Test Frameworks
 
-| Purpose               | Tool                      | Notes                   |
-| --------------------- | ------------------------- | ----------------------- |
-| Unit testing (TS/JS)  | Jest or Vitest            | Project chooses one     |
-| Unit testing (Python) | pytest                    |                         |
-| Component testing     | React Testing Library     |                         |
-| E2E testing           | Playwright                | Organizational standard |
-| BDD integration       | playwright-bdd            |                         |
-| API mocking           | MSW (Mock Service Worker) |                         |
-| HTTP mocking          | Nock                      | Node.js environments    |
+| Purpose | Tool | Notes |
+|---|---|---|
+| Unit testing (TS/JS) | Jest or Vitest | Project chooses one |
+| Unit testing (Python) | pytest | |
+| Component testing | React Testing Library | |
+| E2E testing | Playwright | Organizational standard |
+| BDD integration | playwright-bdd | |
+| API mocking | MSW (Mock Service Worker) | |
+| HTTP mocking | Nock | Node.js environments |
 
 ### Test Management
 
-| Purpose              | Tool                                |
-| -------------------- | ----------------------------------- |
-| Test case management | Qase                                |
-| CI/CD                | GitHub Actions                      |
-| Reporting            | Playwright HTML Reporter, JUnit XML |
+| Purpose | Tool |
+|---|---|
+| Test case management | Qase |
+| CI/CD | GitHub Actions |
+| Reporting | Playwright HTML Reporter, JUnit XML |
 
 ### Security Testing
 
-| Purpose                   | Tool                     | When                            |
-| ------------------------- | ------------------------ | ------------------------------- |
-| SAST (static analysis)    | Semgrep and/or SonarQube | Every commit                    |
-| SCA (dependency scanning) | Snyk                     | Every commit                    |
-| Dependency updates        | Dependabot               | Continuous                      |
-| DAST (dynamic testing)    | OWASP ZAP                | Periodic / pre-release          |
-| Supply chain analysis     | Socket.dev               | Optional, for enhanced analysis |
+| Purpose | Tool | When |
+|---|---|---|
+| SAST (static analysis) | Semgrep and/or SonarQube | Every commit |
+| SCA (dependency scanning) | Snyk | Every commit |
+| Dependency updates | Dependabot | Continuous |
+| DAST (dynamic testing) | OWASP ZAP | Periodic / pre-release |
+| Supply chain analysis | Socket.dev | Optional, for enhanced analysis |
 
 ### Performance Testing
 
-| Purpose         | Tool       |
-| --------------- | ---------- |
-| Load testing    | Artillery  |
+| Purpose | Tool |
+|---|---|
+| Load testing | Artillery |
 | Web performance | Lighthouse |
 
 ### Development Tooling
 
-| Purpose          | Tool                              |
-| ---------------- | --------------------------------- |
-| Git hooks        | Husky                             |
-| Commit linting   | commitlint (Conventional Commits) |
-| Code linting     | ESLint                            |
-| Code formatting  | Prettier                          |
-| Containerization | Docker                            |
+| Purpose | Tool |
+|---|---|
+| Git hooks | Husky |
+| Commit linting | commitlint (Conventional Commits) |
+| Code linting | ESLint |
+| Code formatting | Prettier |
+| Containerization | Docker |
 
 ---
 
@@ -203,13 +199,13 @@ Products must implement:
 
 ### Strategy by Test Level
 
-| Test Level  | Data Strategy          | Rationale                         |
-| ----------- | ---------------------- | --------------------------------- |
-| Unit        | Mocked data            | Fast, predictable                 |
-| Integration | In-memory DB or MSW    | Isolated, controlled              |
-| E2E (local) | Test database (Docker) | Real behavior, containerized      |
-| E2E (CI)    | Ephemeral database     | Production-like, auto-provisioned |
-| Staging     | Dedicated staging DB   | Production-equivalent, anonymized |
+| Test Level | Data Strategy | Rationale |
+|---|---|---|
+| Unit | Mocked data | Fast, predictable |
+| Integration | In-memory DB or MSW | Isolated, controlled |
+| E2E (local) | Test database (Docker) | Real behavior, containerized |
+| E2E (CI) | Ephemeral database | Production-like, auto-provisioned |
+| Staging | Dedicated staging DB | Production-equivalent, anonymized |
 
 ### Data Factories (Required)
 
@@ -233,16 +229,16 @@ Products must implement:
 
 All products implement these stages in order:
 
-| Stage                | Purpose                                    | Exit Criteria            |
-| -------------------- | ------------------------------------------ | ------------------------ |
-| 1. Lint              | ESLint + Prettier validation               | 0 errors                 |
-| 2. Type Check        | Strict compilation                         | 0 errors                 |
-| 3. Unit Tests        | Component-level testing with coverage      | Meets coverage target    |
-| 4. Security Scans    | SAST + SCA                                 | 0 high/critical findings |
-| 5. Integration Tests | API and service validation                 | All pass                 |
-| 6. E2E Tests         | Full Playwright suite with parallelization | All critical paths pass  |
-| 7. Build             | Production build verification              | Succeeds                 |
-| 8. Report            | Artifact upload and status reporting       | Artifacts stored         |
+| Stage | Purpose | Exit Criteria |
+|---|---|---|
+| 1. Lint | ESLint + Prettier validation | 0 errors |
+| 2. Type Check | Strict compilation | 0 errors |
+| 3. Unit Tests | Component-level testing with coverage | Meets coverage target |
+| 4. Security Scans | SAST + SCA | 0 high/critical findings |
+| 5. Integration Tests | API and service validation | All pass |
+| 6. E2E Tests | Full Playwright suite with parallelization | All critical paths pass |
+| 7. Build | Production build verification | Succeeds |
+| 8. Report | Artifact upload and status reporting | Artifacts stored |
 
 PR cannot merge unless all stages pass.
 
@@ -263,25 +259,21 @@ PR cannot merge unless all stages pass.
 Hook templates are provided in `sdlc/files/hooks/` in the DevAudit repository. Copy them into your project during setup (see `0-project-setup.md` Step 5c).
 
 **Pre-commit** (`.husky/pre-commit` — template: `hooks/pre-commit`):
-
 - Runs lint-staged on staged files (ESLint + Prettier)
 - Blocks commit on failure
 
 **Commit-msg** (`.husky/commit-msg` — template: `hooks/commit-msg`):
-
 - Runs commitlint to validate Conventional Commits format
 - Required format: `type(scope): description`
 - Warns on missing `Ref: REQ-XXX` and `Co-Authored-By` trailers
 - Configuration: `commitlint.config.mjs` (template: `hooks/commitlint.config.mjs`)
 
 **Pre-push** (`.husky/pre-push` — template: `hooks/pre-push`):
-
 - TypeScript compilation check (`tsc --noEmit`) as a fast gate
 - Full test suite, SAST, and dependency audit run in CI — not in the pre-push hook (too slow for a local gate)
 - Blocks push on TypeScript errors
 
 **Setup:**
-
 ```bash
 npm install --save-dev husky @commitlint/cli @commitlint/config-conventional lint-staged
 npx husky init
@@ -297,17 +289,17 @@ npm pkg set scripts.prepare="husky"
 
 ## 8. Artifact Storage
 
-| Artifact             | Storage                      | Retention              |
-| -------------------- | ---------------------------- | ---------------------- |
-| Test results (HTML)  | GitHub Actions artifacts     | 90 days                |
-| Screenshots          | GitHub Actions artifacts     | 90 days                |
-| Videos               | GitHub Actions artifacts     | 90 days                |
-| Coverage reports     | Codecov                      | Indefinite             |
-| JUnit XML            | GitHub Actions + Qase        | 90 days + Indefinite   |
-| Release artifacts    | AWS S3 / Azure Blob          | 3-7 years (compliance) |
-| Security scans       | Snyk + SonarQube dashboards  | Indefinite             |
-| SAST evidence (JSON) | Project compliance directory | 3 years minimum        |
-| Dependency audits    | Project compliance directory | 3 years minimum        |
+| Artifact | Storage | Retention |
+|---|---|---|
+| Test results (HTML) | GitHub Actions artifacts | 90 days |
+| Screenshots | GitHub Actions artifacts | 90 days |
+| Videos | GitHub Actions artifacts | 90 days |
+| Coverage reports | Codecov | Indefinite |
+| JUnit XML | GitHub Actions + Qase | 90 days + Indefinite |
+| Release artifacts | AWS S3 / Azure Blob | 3-7 years (compliance) |
+| Security scans | Snyk + SonarQube dashboards | Indefinite |
+| SAST evidence (JSON) | Project compliance directory | 3 years minimum |
+| Dependency audits | Project compliance directory | 3 years minimum |
 
 ### Flakiness Handling (Required)
 
@@ -322,14 +314,14 @@ npm pkg set scripts.prepare="husky"
 
 ### Naming Conventions
 
-| File Type         | Pattern                   | Example                   |
-| ----------------- | ------------------------- | ------------------------- |
-| Unit tests        | `*.test.ts`, `*.test.tsx` | `auth.test.ts`            |
-| Integration tests | `*.integration.test.ts`   | `api.integration.test.ts` |
-| E2E tests         | `*.spec.ts`               | `login.spec.ts`           |
-| BDD features      | `*.feature`               | `authentication.feature`  |
-| Page objects      | `*Page.ts` (PascalCase)   | `LoginPage.ts`            |
-| Accessibility     | `*.a11y.test.ts`          | `navigation.a11y.test.ts` |
+| File Type | Pattern | Example |
+|---|---|---|
+| Unit tests | `*.test.ts`, `*.test.tsx` | `auth.test.ts` |
+| Integration tests | `*.integration.test.ts` | `api.integration.test.ts` |
+| E2E tests | `*.spec.ts` | `login.spec.ts` |
+| BDD features | `*.feature` | `authentication.feature` |
+| Page objects | `*Page.ts` (PascalCase) | `LoginPage.ts` |
+| Accessibility | `*.a11y.test.ts` | `navigation.a11y.test.ts` |
 
 ### ESLint Configuration
 
@@ -417,13 +409,13 @@ module.exports = {
 
 ## 11. Coverage & Quality Thresholds
 
-| Metric                                | Target      |
-| ------------------------------------- | ----------- |
+| Metric | Target |
+|---|---|
 | Unit test coverage (critical modules) | 70% minimum |
-| Integration point coverage            | 80% minimum |
-| Critical user path E2E coverage       | 100%        |
-| Security scan (high/critical)         | 0 findings  |
-| Accessibility (public-facing)         | WCAG 2.1 AA |
+| Integration point coverage | 80% minimum |
+| Critical user path E2E coverage | 100% |
+| Security scan (high/critical) | 0 findings |
+| Accessibility (public-facing) | WCAG 2.1 AA |
 
 ### Quality Metrics (Required Tracking)
 
@@ -455,10 +447,10 @@ Each product creates a product-specific Test Plan that:
 
 ## Document Control
 
-| Version | Date         | Author  | Changes                                                                                                                                                                                                                           |
-| ------- | ------------ | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1.0     | January 2026 | QA Team | Initial creation                                                                                                                                                                                                                  |
-| 2.0     | March 2026   | QA Team | Clean boundary split — removed compliance/governance content (now in Policy), removed methodology content (now in Strategy). Architecture now owns tools, patterns, code standards, CI config only. Added security tooling table. |
+| Version | Date | Author | Changes |
+|---|---|---|---|
+| 1.0 | January 2026 | QA Team | Initial creation |
+| 2.0 | March 2026 | QA Team | Clean boundary split — removed compliance/governance content (now in Policy), removed methodology content (now in Strategy). Architecture now owns tools, patterns, code standards, CI config only. Added security tooling table. |
 
 **Next Review Date:** March 2027
 

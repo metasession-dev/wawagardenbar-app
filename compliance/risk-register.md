@@ -162,6 +162,30 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 
 ---
 
+### R-008 — Tab payment resets order status causing kitchen display re-population and double inventory deduction (REQ-085)
+
+**Opened:** 2026-06-25 (REQ-085); **Mitigated:** 2026-06-25 (REQ-085)
+**Severity:** High (payments + inventory intersection)
+**Owner:** WGB maintainer
+
+**The risk:** `TabService.markTabPaid` and `TabService.completeTabPaymentManually` unconditionally set `status: 'confirmed'` on all tab orders during payment processing. This regresses completed/preparing/ready orders back to `confirmed`, causing them to reappear on the kitchen display. If kitchen staff re-process these orders to `completed`, a second inventory deduction can occur (partial deduction edge case), and duplicate `IncidentEvent` rows are created with "insufficient stock" errors.
+
+**Mitigations applied in this REQ:**
+
+1. Removed `status: 'confirmed'` from the `$set` in both `markTabPaid` and `completeTabPaymentManually` `updateMany` calls — tab payment now only updates payment-related fields (`paymentStatus`, `paidAt`, `paymentMethod`, `businessDate`).
+2. Added labeled "Kitchen:" and "Payment:" badges to order surfaces so staff can distinguish fulfillment status from payment status.
+3. Added payment status indicator on kitchen order card for kitchen staff awareness.
+
+**Residual likelihood × impact:** low × high (the root cause is removed; residual risk is that already-affected orders in production need manual correction — operational artifact, not a code risk)
+
+**Framework cross-references:** ISO27001.A.8.25 (secure SDLC — bug fix in payment path); SOC2.CC7.2 (system monitoring — prevents spurious inventory incidents)
+
+**Review due:** 2027-06-25 (annual review — verify no regression introduced the field back)
+
+**Cross-links:** [REQ-085 implementation plan](plans/REQ-085/implementation-plan.md); [#410](https://github.com/metasession-dev/wawagardenbar-app/issues/410); SRS REQ-TABMGT-006, REQ-KITCHEN-007.
+
+---
+
 ## Closed
 
 ### R-002 — `xlsx` (SheetJS) high advisory — CLOSED (REQ-041, 2026-05-24)

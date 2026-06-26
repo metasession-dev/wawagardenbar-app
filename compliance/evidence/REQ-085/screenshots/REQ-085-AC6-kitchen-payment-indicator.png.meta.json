@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-085",
+  "ac": 6,
+  "slug": "kitchen-payment-indicator",
+  "specFile": "e2e/critical/tab-payment-no-status-reset.spec.ts",
+  "capturedAt": "2026-06-25T16:09:08.052Z"
+}

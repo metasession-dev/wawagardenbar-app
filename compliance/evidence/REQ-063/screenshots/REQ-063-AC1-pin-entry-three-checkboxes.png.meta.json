@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-063",
+  "ac": 1,
+  "slug": "pin-entry-three-checkboxes",
+  "specFile": "e2e/smoke/consent-split-pin-entry.spec.ts",
+  "capturedAt": "2026-06-23T15:12:26.926Z"
+}

@@ -11,10 +11,10 @@ The skill is **Phase A scope** (per [DevAudit-Installer#119](https://github.com/
 
 ## What this skill owns
 
-| Artefact                                                                 | Lives at                   | Tier                 |
-| ------------------------------------------------------------------------ | -------------------------- | -------------------- |
-| `docs/SRS.md` (the SoT, project-spanning)                                | Top-level project docs     | 2 (project strategy) |
-| `compliance/evidence/REQ-XXX/srs-alignment.md` (per-REQ Tier 3 evidence) | Per-REQ evidence directory | 3 (per-REQ)          |
+| Artefact | Lives at | Tier |
+|---|---|---|
+| `docs/SRS.md` (the SoT, project-spanning) | Top-level project docs | 2 (project strategy) |
+| `compliance/evidence/REQ-XXX/srs-alignment.md` (per-REQ Tier 3 evidence) | Per-REQ evidence directory | 3 (per-REQ) |
 
 The skill does **not** own the SRS prose conventions (operator decision). It does propose new `REQ-AREA-NNN` IDs + Given/When/Then stubs the operator then edits.
 
@@ -44,10 +44,10 @@ Five phases. Phase 0 routes; Phases 1–2 are the SDLC stage hooks; Phases 3–4
 
 Determine what's being aligned:
 
-- **Stage-1 plan APPROVAL** — `sdlc-implementer` (or operator) says _"align SRS for REQ-XXX before approving the plan"_ → Phase 1.
-- **Stage-3 evidence pack** — `sdlc-implementer` (or operator) says _"drop the srs-alignment.md for REQ-XXX"_ → Phase 2.
-- **Per-REQ ad-hoc audit** — operator says _"is the SRS in sync with REQ-XXX?"_ / _"what SRS items did this REQ need?"_ → Phase 3.
-- **Branch-wide audit** — operator says _"audit SRS drift across this branch"_ / _"every REQ on develop since main needs an SRS check"_ → Phase 4.
+- **Stage-1 plan APPROVAL** — `sdlc-implementer` (or operator) says *"align SRS for REQ-XXX before approving the plan"* → Phase 1.
+- **Stage-3 evidence pack** — `sdlc-implementer` (or operator) says *"drop the srs-alignment.md for REQ-XXX"* → Phase 2.
+- **Per-REQ ad-hoc audit** — operator says *"is the SRS in sync with REQ-XXX?"* / *"what SRS items did this REQ need?"* → Phase 3.
+- **Branch-wide audit** — operator says *"audit SRS drift across this branch"* / *"every REQ on develop since main needs an SRS check"* → Phase 4.
 
 The skill does not fire spontaneously. The parent skill (`sdlc-implementer`) invokes it at Stages 1 + 3 per the parent's SKILL.md delegation contract.
 
@@ -58,19 +58,18 @@ Input: the REQ's `compliance/plans/REQ-XXX/implementation-plan.md` plus the work
 **Step 1 — Parse the AC table.** The implementation plan template carries an "Acceptance Criteria" or equivalent section listing AC1, AC2, … with one-line descriptions of each behavioural change.
 
 **Step 2 — Fuzzy-match each AC against `docs/SRS.md`.** For each AC, search the SRS for items whose:
-
-- _Title_ phrase appears in the AC description, OR
-- _Implementation source-of-truth_ footnote names a file the AC's diff touches, OR
-- _Given/When/Then_ prose semantically aligns with the AC (use the AC's verbs + nouns as the match-key).
+- *Title* phrase appears in the AC description, OR
+- *Implementation source-of-truth* footnote names a file the AC's diff touches, OR
+- *Given/When/Then* prose semantically aligns with the AC (use the AC's verbs + nouns as the match-key).
 
 **Step 3 — Categorise each AC:**
 
-| AC ⇒ SRS state                                                                                                                              | Action                                                                                                                            |
-| ------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **Exact match** — AC traces 1:1 to an existing SRS item, no behavioural delta                                                               | Record the mapping; no SRS edit needed                                                                                            |
-| **Match + drift** — existing SRS item covers the AC's surface but the behaviour has shifted (e.g. new field, new edge case, new error path) | Flag the item as _potentially stale_; the plan must mark it for update in this cycle OR justify why the SRS prose still covers it |
-| **No match** — AC introduces behaviour the SRS doesn't yet describe                                                                         | Propose new `REQ-AREA-NNN` (next free ID per area — see Step 4) with a Given/When/Then stub the operator edits                    |
-| **Reverse drift** — an SRS item points at code that's been removed in this REQ                                                              | Propose deprecation: the SRS item is now obsolete                                                                                 |
+| AC ⇒ SRS state | Action |
+|---|---|
+| **Exact match** — AC traces 1:1 to an existing SRS item, no behavioural delta | Record the mapping; no SRS edit needed |
+| **Match + drift** — existing SRS item covers the AC's surface but the behaviour has shifted (e.g. new field, new edge case, new error path) | Flag the item as *potentially stale*; the plan must mark it for update in this cycle OR justify why the SRS prose still covers it |
+| **No match** — AC introduces behaviour the SRS doesn't yet describe | Propose new `REQ-AREA-NNN` (next free ID per area — see Step 4) with a Given/When/Then stub the operator edits |
+| **Reverse drift** — an SRS item points at code that's been removed in this REQ | Propose deprecation: the SRS item is now obsolete |
 
 **Step 4 — Allocate new SRS-IDs.** Scan `docs/SRS.md` for the max-existing ID per `REQ-AREA` prefix (`REQ-ORDER`, `REQ-INV`, `REQ-OPS`, etc.) and propose `+1` for each new item. The skill does NOT support cross-branch ID coordination — if two parallel branches both consume the same next-free ID, git merge on `docs/SRS.md` is the canonical conflict signal. Re-run the skill post-merge to re-allocate.
 
@@ -79,23 +78,22 @@ Input: the REQ's `compliance/plans/REQ-XXX/implementation-plan.md` plus the work
 ```markdown
 ## SRS items proposed/touched
 
-| AC  | SRS item                     | Status                | Notes                            |
-| --- | ---------------------------- | --------------------- | -------------------------------- |
-| AC1 | REQ-ORDER-005 (existing)     | unchanged             | Trace-only                       |
-| AC2 | REQ-INV-010 (new — proposed) | stub                  | <one-line behaviour description> |
-| AC3 | REQ-INV-011 (new — proposed) | stub                  | <one-line>                       |
-| AC4 | REQ-ORDER-002 (existing)     | stale — update needed | <one-line: what's drifted>       |
+| AC | SRS item | Status | Notes |
+|---|---|---|---|
+| AC1 | REQ-ORDER-005 (existing) | unchanged | Trace-only |
+| AC2 | REQ-INV-010 (new — proposed) | stub | <one-line behaviour description> |
+| AC3 | REQ-INV-011 (new — proposed) | stub | <one-line> |
+| AC4 | REQ-ORDER-002 (existing) | stale — update needed | <one-line: what's drifted> |
 ```
 
 For **deferred** items (the operator decides the AC genuinely doesn't need an SRS entry), the row carries `@srs-deferred: <reason>` so the deferral is visible.
 
 **Step 6 — Block plan APPROVAL** until each AC has either:
-
 - (a) an existing SRS item it traces to, with no drift, OR
 - (b) a new SRS-ID stub added in this cycle, OR
 - (c) an explicit `@srs-deferred: <reason>` annotation in the AC row.
 
-The block is configurable via `sdlc-config.json` — see _Configuration_ below. For projects with sparse SRS, the **ramp-up mode** defaults to audit-only for the first N runs (default 5) so operators get used to the surface before it starts blocking.
+The block is configurable via `sdlc-config.json` — see *Configuration* below. For projects with sparse SRS, the **ramp-up mode** defaults to audit-only for the first N runs (default 5) so operators get used to the surface before it starts blocking.
 
 ### Phase 2 — Stage-3 evidence pack hook
 
@@ -114,17 +112,16 @@ generated_at: <ISO timestamp>
 
 ## ACs traced
 
-| AC  | SRS item      | Action this cycle              |
-| --- | ------------- | ------------------------------ |
-| AC1 | REQ-ORDER-005 | unchanged                      |
-| AC2 | REQ-INV-010   | added (new — see Phase 1 stub) |
-| AC3 | REQ-INV-011   | added (new)                    |
-| AC4 | REQ-ORDER-002 | updated (drift)                |
+| AC | SRS item | Action this cycle |
+|---|---|---|
+| AC1 | REQ-ORDER-005 | unchanged |
+| AC2 | REQ-INV-010 | added (new — see Phase 1 stub) |
+| AC3 | REQ-INV-011 | added (new) |
+| AC4 | REQ-ORDER-002 | updated (drift) |
 
 ## Operator sign-off
 
 I have reviewed the AC-to-SRS-item traces above and confirm:
-
 - [ ] Each AC has a defensible SRS item.
 - [ ] New SRS items have been edited from stubs to canonical Given/When/Then prose.
 - [ ] Stale items have been brought current.
@@ -135,11 +132,16 @@ I have reviewed the AC-to-SRS-item traces above and confirm:
 
 **Step 2 — Tag for upload.** The CI's `compliance-evidence.yml` uploads this file as `evidence_type=srs_alignment` (added to META-COMPLY's `EVIDENCE_TYPE_REGISTRY` in the paired sub-PR). The framework-coverage matrix then closes `ISO29119.3.4` (Test Plan — requirements traceability) and `SOC2.CC2.1` (Communication of policies — when paired with INSTRUCTIONS.md) for this REQ.
 
-**Step 3 — Return to the running `sdlc-implementer` context.** The skill's job ends at the artefact + the operator sign-off. The orchestrator immediately continues with the rest of Stage 3 (security summary, evidence upload, release ticket) inline — no pause, no operator nudge needed. (Skills run in the same invocation context; control returns synchronously when this skill exits. See `sdlc-implementer/SKILL.md` § _Sub-skill return semantics_.)
+**Step 3 — Return gap status to the running `sdlc-implementer` context (devaudit-installer#212 Gap 3).** In addition to producing the artefact, the skill returns a **gap status** to `sdlc-implementer`:
+
+- `CLEAN` — all ACs trace to SRS items, no unresolved drift. The orchestrator continues with the rest of Stage 3.
+- `GAPS_FOUND` — one or more ACs don't trace to SRS items, or drift is unresolved (no `@srs-deferred` annotation). Return the gap details (which ACs, what's missing). The orchestrator handles the gap per its [requirements gap flow](../sdlc-implementer/SKILL.md#requirements-gap-flow-devaudit-installer212): if `block_on_stage_3: true`, halt for the operator to resolve; if false, warn and continue.
+
+The `block_on_stage_3` check verifies **artefact content** (no unresolved gaps without `@srs-deferred`), not just artefact existence. A `srs-alignment.md` with unresolved gaps and no `@srs-deferred` annotations fails the block. (Skills run in the same invocation context; control returns synchronously when this skill exits. See `sdlc-implementer/SKILL.md` § *Sub-skill return semantics*.)
 
 ### Phase 3 — Per-REQ ad-hoc audit
 
-Same logic as Phase 1's Step 2 + Step 3, but produces a markdown report rather than blocking. Useful when an operator asks _"is REQ-XXX's SRS coverage healthy?"_ outside the SDLC orchestration flow.
+Same logic as Phase 1's Step 2 + Step 3, but produces a markdown report rather than blocking. Useful when an operator asks *"is REQ-XXX's SRS coverage healthy?"* outside the SDLC orchestration flow.
 
 ### Phase 4 — Branch-wide audit
 

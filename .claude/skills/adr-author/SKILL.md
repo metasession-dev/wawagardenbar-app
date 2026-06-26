@@ -11,10 +11,10 @@ The skill is **Phase A scope** (per [DevAudit-Installer#120](https://github.com/
 
 ## What this skill owns
 
-| Artefact                                                                         | Lives at                   | Tier                 |
-| -------------------------------------------------------------------------------- | -------------------------- | -------------------- |
-| `docs/ADR/ADR-NNN-<slug>.md` (the SoT, project-spanning)                         | Top-level project docs     | 2 (project strategy) |
-| `compliance/evidence/REQ-XXX/architecture-decision.md` (per-REQ Tier 3 evidence) | Per-REQ evidence directory | 3 (per-REQ)          |
+| Artefact | Lives at | Tier |
+|---|---|---|
+| `docs/ADR/ADR-NNN-<slug>.md` (the SoT, project-spanning) | Top-level project docs | 2 (project strategy) |
+| `compliance/evidence/REQ-XXX/architecture-decision.md` (per-REQ Tier 3 evidence) | Per-REQ evidence directory | 3 (per-REQ) |
 
 The skill does **not** own the canonical ADR prose. It drafts a stub the operator edits to publication-grade wording. Inventing decision rationale without operator review is exactly the kind of silent-drift this skill exists to prevent.
 
@@ -22,7 +22,7 @@ The skill does **not** own the canonical ADR prose. It drafts a stub the operato
 
 **In scope**
 
-- Phase 1 (Stage-1 hook) — judge "is this REQ architecturally significant?" → if yes, allocate `ADR-NNN` + draft Context/Decision/Consequences/Alternatives/Status stub → inject ADR-NNN reference into implementation plan's _Architecture Decisions_ section.
+- Phase 1 (Stage-1 hook) — judge "is this REQ architecturally significant?" → if yes, allocate `ADR-NNN` + draft Context/Decision/Consequences/Alternatives/Status stub → inject ADR-NNN reference into implementation plan's *Architecture Decisions* section.
 - Phase 2 (Stage-3 hook) — drop `compliance/evidence/REQ-XXX/architecture-decision.md` pointing at the ADR file (or recording the no-ADR rationale).
 - Per-REQ ADR-worthiness audit (operator invocation).
 
@@ -30,7 +30,7 @@ The skill does **not** own the canonical ADR prose. It drafts a stub the operato
 
 - Drafting canonical ADR prose end-to-end — the skill drafts a stub; the operator authors final wording.
 - Supersession lifecycle — when ADR-007 supersedes ADR-003, both stay on disk; ADR-003's status flips to `Superseded by ADR-007`. Deferred to Phase B.
-- Stale-decision detection — when the file referenced by ADR-007's _Decision_ section is heavily modified in a new REQ without producing a new ADR. Deferred to Phase B.
+- Stale-decision detection — when the file referenced by ADR-007's *Decision* section is heavily modified in a new REQ without producing a new ADR. Deferred to Phase B.
 - Cross-link maintenance to SRS items (`requirements-aligner`'s domain) or risk-register entries (`risk-register-keeper`'s domain) — the skills cross-reference each other in their stubs but Phase B owns the bidirectional consistency.
 - Framework-clause mapping of the `architecture_decision` evidence type — that's META-COMPLY's `framework-registry-auditor`.
 
@@ -42,9 +42,9 @@ Five phases. Phase 0 routes; Phases 1–2 are the SDLC stage hooks; Phase 3 is t
 
 Determine what's being decided:
 
-- **Stage-1 plan APPROVAL** — `sdlc-implementer` (or operator) says _"check ADR-worthiness for REQ-XXX before approving the plan"_ / _"does this need an ADR?"_ → Phase 1.
-- **Stage-3 evidence pack** — `sdlc-implementer` (or operator) says _"drop the architecture-decision.md for REQ-XXX"_ → Phase 2.
-- **Per-REQ ad-hoc audit** — operator says _"is REQ-XXX's architectural decision documented?"_ / _"audit ADR-worthiness across this branch"_ → Phase 3.
+- **Stage-1 plan APPROVAL** — `sdlc-implementer` (or operator) says *"check ADR-worthiness for REQ-XXX before approving the plan"* / *"does this need an ADR?"* → Phase 1.
+- **Stage-3 evidence pack** — `sdlc-implementer` (or operator) says *"drop the architecture-decision.md for REQ-XXX"* → Phase 2.
+- **Per-REQ ad-hoc audit** — operator says *"is REQ-XXX's architectural decision documented?"* / *"audit ADR-worthiness across this branch"* → Phase 3.
 
 The skill does not fire spontaneously. The parent skill (`sdlc-implementer`) invokes it at Stages 1 + 3 per the parent's SKILL.md delegation contract.
 
@@ -54,22 +54,22 @@ Input: the REQ's `compliance/plans/REQ-XXX/implementation-plan.md` plus the work
 
 **Step 1 — Read the file list + diff.** Identify which files the REQ touches.
 
-**Step 2 — Apply the ADR-worthiness decision tree.** The skill judges _architectural significance_ via these signals — any one matching ⇒ ADR warranted:
+**Step 2 — Apply the ADR-worthiness decision tree.** The skill judges *architectural significance* via these signals — any one matching ⇒ ADR warranted:
 
-| Signal                                         | Examples                                                                            | Verdict                 |
-| ---------------------------------------------- | ----------------------------------------------------------------------------------- | ----------------------- |
-| New third-party runtime dependency             | adding `redis`, `bull`, a new ORM, a new auth provider package                      | ADR                     |
-| New external service                           | introducing Stripe, Twilio, a new SaaS integration                                  | ADR                     |
-| New database / cache / queue tier              | adding Redis alongside Postgres, swapping MongoDB for Postgres                      | ADR                     |
-| Pattern change spanning > 3 files              | moving from REST handlers to RPC, swapping auth flow across the API surface         | ADR                     |
-| Schema-level data model change                 | new tables that other tables FK to, fundamental relationship changes                | ADR                     |
-| Risk classification HIGH or CRITICAL           | per `Test_Policy.md` §Risk-Based Testing                                            | ADR (operator confirms) |
-| File-path signal                               | `sdlc-config.json:adr_author.file_paths_signal_architecture` matches a touched file | ADR (operator confirms) |
-| Bug fix touching ≤ 3 files in `app/` or `lib/` | a typo, a copy edit, a null-guard, a one-place validation                           | no ADR                  |
-| Single-file refactor                           | extracting one function, renaming one variable                                      | no ADR                  |
-| Styling tweak                                  | CSS-only, Tailwind class shuffle                                                    | no ADR                  |
-| Dependency bump                                | `npm update foo` with no API change                                                 | no ADR                  |
-| Documentation                                  | `docs/`, `README.md`, doc-comments                                                  | no ADR                  |
+| Signal | Examples | Verdict |
+|---|---|---|
+| New third-party runtime dependency | adding `redis`, `bull`, a new ORM, a new auth provider package | ADR |
+| New external service | introducing Stripe, Twilio, a new SaaS integration | ADR |
+| New database / cache / queue tier | adding Redis alongside Postgres, swapping MongoDB for Postgres | ADR |
+| Pattern change spanning > 3 files | moving from REST handlers to RPC, swapping auth flow across the API surface | ADR |
+| Schema-level data model change | new tables that other tables FK to, fundamental relationship changes | ADR |
+| Risk classification HIGH or CRITICAL | per `Test_Policy.md` §Risk-Based Testing | ADR (operator confirms) |
+| File-path signal | `sdlc-config.json:adr_author.file_paths_signal_architecture` matches a touched file | ADR (operator confirms) |
+| Bug fix touching ≤ 3 files in `app/` or `lib/` | a typo, a copy edit, a null-guard, a one-place validation | no ADR |
+| Single-file refactor | extracting one function, renaming one variable | no ADR |
+| Styling tweak | CSS-only, Tailwind class shuffle | no ADR |
+| Dependency bump | `npm update foo` with no API change | no ADR |
+| Documentation | `docs/`, `README.md`, doc-comments | no ADR |
 
 **Step 3 — Branch on verdict:**
 
@@ -83,11 +83,11 @@ Input: the REQ's `compliance/plans/REQ-XXX/implementation-plan.md` plus the work
 
 ```markdown
 ---
-adr_id: 'ADR-NNN'
-status: 'Proposed'
-date: 'YYYY-MM-DD'
-authored_by: 'REPLACE — operator / agent'
-related_reqs: ['REQ-XXX']
+adr_id: "ADR-NNN"
+status: "Proposed"
+date: "YYYY-MM-DD"
+authored_by: "REPLACE — operator / agent"
+related_reqs: ["REQ-XXX"]
 supersedes: []
 superseded_by: null
 ---
@@ -96,7 +96,7 @@ superseded_by: null
 
 ## Status
 
-**Proposed** (DRAFT — operator to flip to _Accepted_ on plan APPROVAL)
+**Proposed** (DRAFT — operator to flip to *Accepted* on plan APPROVAL)
 
 ## Context
 
@@ -129,17 +129,17 @@ REPLACE — what other paths were on the table and why they were ruled out. At l
 - Supersedes / superseded-by: REPLACE — fill if this ADR replaces a prior one
 ```
 
-The stub is **draft-quality**; the operator edits each REPLACE marker before flipping the status from _Proposed_ to _Accepted_.
+The stub is **draft-quality**; the operator edits each REPLACE marker before flipping the status from *Proposed* to *Accepted*.
 
-**Step 6 — Inject ADR-NNN reference into the implementation plan.** The plan's _Architecture Decisions_ section (converted from inline bullets to ADR-NNN references in this PR — see `Implementation_Plan_TEMPLATE.md`) gets a row added:
+**Step 6 — Inject ADR-NNN reference into the implementation plan.** The plan's *Architecture Decisions* section (converted from inline bullets to ADR-NNN references in this PR — see `Implementation_Plan_TEMPLATE.md`) gets a row added:
 
 ```markdown
 ## Architecture decisions
 
-- **ADR-NNN — <decision title>** — Proposed by `adr-author` skill. Draft at `docs/ADR/ADR-NNN-<slug>.md`. Operator edits + flips status to _Accepted_ before plan APPROVAL.
+- **ADR-NNN — <decision title>** — Proposed by `adr-author` skill. Draft at `docs/ADR/ADR-NNN-<slug>.md`. Operator edits + flips status to *Accepted* before plan APPROVAL.
 ```
 
-**Step 7 — No-ADR rationale.** When the verdict is _no ADR_, the plan's _Architecture decisions_ section gets:
+**Step 7 — No-ADR rationale.** When the verdict is *no ADR*, the plan's *Architecture decisions* section gets:
 
 ```markdown
 ## Architecture decisions
@@ -147,14 +147,13 @@ The stub is **draft-quality**; the operator edits each REPLACE marker before fli
 - **No ADR needed** — REPLACE one-line rationale. Examples: "Bug fix touching only `lib/services/order-service.ts:applyDiscount` — no structural change." / "CSS-only adjustment to dashboard layout — no behavioural or dependency change." / "Dependency bump from `foo@1.2.3` to `foo@1.2.5` (patch-level, no API change)."
 ```
 
-The annotation is visible audit evidence that the _question was asked and answered_ — auditors examine the negative case as well as the positive.
+The annotation is visible audit evidence that the *question was asked and answered* — auditors examine the negative case as well as the positive.
 
 **Step 8 — Block plan APPROVAL** until each REQ has either:
-
 - (a) an ADR file in this PR (status: Proposed → Accepted by operator), OR
 - (b) an explicit "No ADR needed — <rationale>" annotation.
 
-The block is configurable via `sdlc-config.json` — see _Configuration_ below. Per the [#119 review](https://github.com/metasession-dev/DevAudit-Installer/issues/119#issuecomment-4631840651) defaults, advisory-with-strong-recommend in v1 (`block_on_stage_1: false`).
+The block is configurable via `sdlc-config.json` — see *Configuration* below. Per the [#119 review](https://github.com/metasession-dev/DevAudit-Installer/issues/119#issuecomment-4631840651) defaults, advisory-with-strong-recommend in v1 (`block_on_stage_1: false`).
 
 ### Phase 2 — Stage-3 evidence pack hook
 
@@ -184,13 +183,13 @@ When **Produced ADR-NNN**:
 
 - **ADR file:** `docs/ADR/ADR-NNN-<slug>.md`
 - **Status:** Accepted (operator-confirmed during plan APPROVAL)
-- **Summary:** REPLACE — one sentence from the ADR's _Decision_ section
+- **Summary:** REPLACE — one sentence from the ADR's *Decision* section
 - **Affected files:** REPLACE — the file-path signals that triggered the verdict
 - **Cross-references:** REPLACE — SRS items, risk-register entries
 
 When **No ADR needed**:
 
-- **Rationale:** REPLACE — one-line description copied from the plan's _Architecture decisions_ section
+- **Rationale:** REPLACE — one-line description copied from the plan's *Architecture decisions* section
 - **Signals examined:** REPLACE — which signals from the decision tree were checked + how each scored
 
 ## Operator sign-off
@@ -207,11 +206,11 @@ I have reviewed the ADR-worthiness verdict above and confirm:
 
 **Step 2 — Tag for upload.** The CI's `compliance-evidence.yml` uploads this file as `evidence_type=architecture_decision` (added to META-COMPLY's `EVIDENCE_TYPE_REGISTRY` in the paired sub-PR). The framework-coverage matrix maps this to clauses per `framework-registry-auditor`'s review — see the META-COMPLY-side PR for the final clause attributions (v1 may ship orphan-by-design if the auditor rejects proposed mappings; see [`requirements-aligner`](../requirements-aligner/SKILL.md) for the precedent).
 
-**Step 3 — Return to the running `sdlc-implementer` context.** The skill's job ends at the artefact + the operator sign-off. The orchestrator immediately continues with the rest of Stage 3 inline — no pause, no operator nudge needed. (Skills run in the same invocation context; control returns synchronously when this skill exits. See `sdlc-implementer/SKILL.md` § _Sub-skill return semantics_.)
+**Step 3 — Return to the running `sdlc-implementer` context.** The skill's job ends at the artefact + the operator sign-off. The orchestrator immediately continues with the rest of Stage 3 inline — no pause, no operator nudge needed. (Skills run in the same invocation context; control returns synchronously when this skill exits. See `sdlc-implementer/SKILL.md` § *Sub-skill return semantics*.)
 
 ### Phase 3 — Per-REQ ad-hoc audit
 
-Same logic as Phase 1's Step 2 + Step 3, but produces a markdown report rather than blocking. Useful when an operator asks _"does REQ-XXX need an ADR?"_ outside the SDLC orchestration flow, or runs _"audit ADR-worthiness across this branch"_ to surface gaps.
+Same logic as Phase 1's Step 2 + Step 3, but produces a markdown report rather than blocking. Useful when an operator asks *"does REQ-XXX need an ADR?"* outside the SDLC orchestration flow, or runs *"audit ADR-worthiness across this branch"* to surface gaps.
 
 ### Phase 4 — Report
 
@@ -253,13 +252,13 @@ Per the [#119 review](https://github.com/metasession-dev/DevAudit-Installer/issu
 
 **Sibling-skill awareness.** When this skill drafts an ADR, cross-link the SRS items the decision affects (from `requirements-aligner`'s output) and the risk-register entries the decision touches (from `risk-register-keeper` when that skill ships). The three SoT-alignment skills work together; each produces its own per-REQ Tier 3 artefact but they share the per-REQ context. v1 carries the cross-references as inline references the operator fills in; Phase B will own bidirectional consistency.
 
-**The negative case is audit evidence too.** A "No ADR needed — <rationale>" annotation is what an auditor examines to confirm the question was asked. An empty _Architecture decisions_ section is the silent-drift failure mode. Always inject one or the other; never leave the section unannotated.
+**The negative case is audit evidence too.** A "No ADR needed — <rationale>" annotation is what an auditor examines to confirm the question was asked. An empty *Architecture decisions* section is the silent-drift failure mode. Always inject one or the other; never leave the section unannotated.
 
 ## References
 
 - [DevAudit-Installer#120](https://github.com/metasession-dev/DevAudit-Installer/issues/120) — the issue this skill closes, with the case study + the locked Phase A scope.
 - `sdlc-implementer/SKILL.md` Phase 1 + Phase 3 — the parent-skill invocation contract.
-- `sdlc/files/_common/Implementation_Plan_TEMPLATE.md` — _Architecture decisions_ section converted from inline bullets to ADR-NNN reference list in this PR (companion change).
+- `sdlc/files/_common/Implementation_Plan_TEMPLATE.md` — *Architecture decisions* section converted from inline bullets to ADR-NNN reference list in this PR (companion change).
 - `sdlc/files/_common/1-plan-requirement.md` — stage-1 doc updated to point at the skill (companion change).
 - `sdlc/files/_common/skills/requirements-aligner/SKILL.md` — sibling skill (same SoT-alignment family); see for the symmetric shape (Stage 1 + Stage 3 hooks; advisory-then-blocking enforcement).
 - Sibling skill (forthcoming): `risk-register-keeper` (DevAudit-Installer#121).

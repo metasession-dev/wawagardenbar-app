@@ -12,6 +12,7 @@ interface OrderDetailsHeaderProps {
 /**
  * Order details header component
  * Displays order number, status, type, and timing information
+ * @requirement REQ-085 - Labeled badges distinguish kitchen status from payment status
  */
 export function OrderDetailsHeader({ order }: OrderDetailsHeaderProps) {
   const getStatusColor = (status: string) => {
@@ -72,10 +73,12 @@ export function OrderDetailsHeader({ order }: OrderDetailsHeaderProps) {
           {/* Left Side - Order Info */}
           <div className="space-y-2">
             <div className="flex items-center gap-3">
-              <div className={`w-3 h-3 rounded-full ${getStatusColor(order.status)}`} />
+              <div
+                className={`w-3 h-3 rounded-full ${getStatusColor(order.status)}`}
+              />
               <h1 className="text-3xl font-bold">Order #{order.orderNumber}</h1>
             </div>
-            
+
             <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
               {/* Order Type */}
               <div className="flex items-center gap-2">
@@ -95,7 +98,11 @@ export function OrderDetailsHeader({ order }: OrderDetailsHeaderProps) {
               <span>•</span>
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
-                <span>{formatDistanceToNow(new Date(order.createdAt), { addSuffix: true })}</span>
+                <span>
+                  {formatDistanceToNow(new Date(order.createdAt), {
+                    addSuffix: true,
+                  })}
+                </span>
               </div>
 
               {/* Estimated Completion */}
@@ -108,14 +115,36 @@ export function OrderDetailsHeader({ order }: OrderDetailsHeaderProps) {
             </div>
           </div>
 
-          {/* Right Side - Status Badge */}
-          <div>
-            <Badge 
-              variant={getStatusBadgeVariant(order.status)} 
-              className="text-lg px-4 py-2 capitalize"
-            >
-              {order.status}
-            </Badge>
+          {/* Right Side - Kitchen + Payment Status Badges */}
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-muted-foreground">
+                Kitchen:
+              </span>
+              <Badge
+                variant={getStatusBadgeVariant(order.status)}
+                className="text-lg px-4 py-2 capitalize"
+                data-testid="order-kitchen-status-badge"
+              >
+                {order.status}
+              </Badge>
+            </div>
+            {order.paymentStatus && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-muted-foreground">
+                  Payment:
+                </span>
+                <Badge
+                  variant={
+                    order.paymentStatus === 'paid' ? 'default' : 'secondary'
+                  }
+                  className="capitalize"
+                  data-testid="order-payment-status-badge"
+                >
+                  {order.paymentStatus}
+                </Badge>
+              </div>
+            )}
           </div>
         </div>
       </CardContent>

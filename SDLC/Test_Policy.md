@@ -113,10 +113,10 @@ AI-generated code presents risks distinct from human-authored code:
 
 ### Permitted AI Tools
 
-| Tool               | Permitted Use                                                      | Restrictions                                      |
-| ------------------ | ------------------------------------------------------------------ | ------------------------------------------------- |
-| Claude (Anthropic) | Code generation, test generation, documentation, review assistance | No deployment without human review                |
-| GitHub Copilot     | Inline code suggestions                                            | Same review requirements as any AI-generated code |
+| Tool | Permitted Use | Restrictions |
+|---|---|---|
+| Claude (Anthropic) | Code generation, test generation, documentation, review assistance | No deployment without human review |
+| GitHub Copilot | Inline code suggestions | Same review requirements as any AI-generated code |
 
 Adding a new tool requires Engineering Leadership approval and updates to this policy, the Test Strategy, and relevant project Test Plans.
 
@@ -160,21 +160,19 @@ The MoSCoW prioritisation of acceptance criteria maps onto three E2E gates, each
 
 Operator override on a hotfix issue (accept-with-rationale) is logged on the issue itself + carried in the next release's `test-execution-summary.md` design record (devaudit#50). The framework does not permit silently shipping a failing test — every red regression spec ends as either fixed, reverted, or accepted-with-recorded-rationale.
 
-See Test_Strategy.md § _System Testing (E2E)_ — _E2E gating model_ for the tier definitions + cost philosophy.
+See Test_Strategy.md § *System Testing (E2E)* — *E2E gating model* for the tier definitions + cost philosophy.
 
 ---
 
 ## Roles & Responsibilities
 
 ### Engineering Leadership
-
 - Approve and maintain this policy
 - Allocate testing resources
 - Review metrics and drive improvement
 - Approve AI tool additions
 
 ### QA Team / Test Engineers
-
 - Design and execute strategies and plans
 - Develop and maintain automated suites
 - Report defects and verify fixes
@@ -182,7 +180,6 @@ See Test_Strategy.md § _System Testing (E2E)_ — _E2E gating model_ for the ti
 - Verify security scan results
 
 ### Developers
-
 - Write unit tests for all changes
 - Execute local testing before committing (including security scans)
 - Fix identified defects
@@ -190,7 +187,6 @@ See Test_Strategy.md § _System Testing (E2E)_ — _E2E gating model_ for the ti
 - Document AI use per project requirements
 
 ### Product Managers / Business Analysts
-
 - Define clear acceptance criteria
 - Participate in test planning and risk assessment
 - Review and approve completion reports
@@ -260,16 +256,16 @@ Training completion is tracked as ISO 27001 evidence.
 ```
 Test Policy (this document)
   → WHY we test, WHAT we commit to, WHO is responsible
-
+  
 Test Strategy
   → HOW we approach testing methodically
-
+  
 Test Architecture
   → WHAT we build tests with, HOW we structure the code
-
+  
 Periodic Security Review Schedule
   → WHEN periodic security activities happen
-
+  
 Project Test Plans (per product)
   → WHERE and WHEN for specific products
 ```
@@ -278,11 +274,11 @@ Project Test Plans (per product)
 
 ## Document Control
 
-| Version | Date         | Author                 | Changes                                                                                                         |
-| ------- | ------------ | ---------------------- | --------------------------------------------------------------------------------------------------------------- |
-| 1.0     | January 2026 | Engineering Leadership | Initial creation                                                                                                |
-| 2.0     | March 2026   | Engineering Leadership | Added AI governance, security commitments                                                                       |
-| 3.0     | March 2026   | Engineering Leadership | Clean boundary split — removed content now owned by Test Strategy (methodology) and Test Architecture (tooling) |
+| Version | Date | Author | Changes |
+|---|---|---|---|
+| 1.0 | January 2026 | Engineering Leadership | Initial creation |
+| 2.0 | March 2026 | Engineering Leadership | Added AI governance, security commitments |
+| 3.0 | March 2026 | Engineering Leadership | Clean boundary split — removed content now owned by Test Strategy (methodology) and Test Architecture (tooling) |
 
 **Next Review Date:** March 2027
 

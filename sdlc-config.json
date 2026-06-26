@@ -30,7 +30,11 @@
     "E2E_SUPER_ADMIN_USERNAME": "e2e-superadmin",
     "E2E_SUPER_ADMIN_PASSWORD": "E2eTest@2026!",
     "E2E_CSR_USERNAME": "e2e-csr",
-    "E2E_CSR_PASSWORD": "E2eTest@2026!"
+    "E2E_CSR_PASSWORD": "E2eTest@2026!",
+    "INTERNAL_API_SECRET": "${{ secrets.INTERNAL_API_SECRET }}",
+    "MONNIFY_SECRET_KEY": "${{ secrets.MONNIFY_SECRET_KEY }}",
+    "PAYSTACK_SECRET_KEY": "${{ secrets.PAYSTACK_SECRET_KEY }}",
+    "ENABLE_E2E_PIN_INTERCEPT": "true"
   },
   "paths_ignore": [
     "SDLC/**",

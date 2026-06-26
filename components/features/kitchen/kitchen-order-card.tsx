@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { updateOrderStatusAction } from '@/app/actions/admin/order-management-actions';
-import { Clock, User, Loader2, AlertCircle } from 'lucide-react';
+import { Clock, User, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { format, formatDistanceToNow, differenceInMinutes } from 'date-fns';
 import { useRouter } from 'next/navigation';
 
@@ -17,6 +17,7 @@ interface KitchenOrderCardProps {
 /**
  * Kitchen order card component
  * Large, readable display for kitchen staff
+ * @requirement REQ-085 - Payment status indicator for kitchen staff awareness
  */
 export function KitchenOrderCard({ order }: KitchenOrderCardProps) {
   const [isUpdating, setIsUpdating] = useState(false);
@@ -162,6 +163,15 @@ export function KitchenOrderCard({ order }: KitchenOrderCardProps) {
           </div>
           <div className="text-right">
             {getPriorityBadge()}
+            {order.paymentStatus === 'paid' && (
+              <div
+                className="flex items-center justify-end gap-1 mt-1"
+                data-testid="kitchen-payment-indicator"
+              >
+                <CheckCircle className="h-4 w-4 text-green-400" />
+                <span className="text-sm text-green-400 font-medium">Paid</span>
+              </div>
+            )}
             <div className="flex items-center gap-2 text-gray-300 mt-2">
               <Clock className="h-5 w-5" />
               <span className="text-xl font-semibold">{orderAge} min</span>

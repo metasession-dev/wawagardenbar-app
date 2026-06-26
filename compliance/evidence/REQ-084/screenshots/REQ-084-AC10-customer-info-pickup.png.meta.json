@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-084",
+  "ac": 10,
+  "slug": "customer-info-pickup",
+  "specFile": "e2e/smoke/req-084-checkout-separation.spec.ts",
+  "capturedAt": "2026-06-24T10:59:45.366Z"
+}

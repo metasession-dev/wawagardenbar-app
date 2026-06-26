@@ -186,6 +186,11 @@ jobs:
           E2E_SUPER_ADMIN_PASSWORD: E2eTest@2026!
           E2E_CSR_USERNAME: e2e-csr
           E2E_CSR_PASSWORD: E2eTest@2026!
+          INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
+          # REQ-074 — skip the real SMS/email dispatch in sendPinAction so the
+          # customer passwordless PIN-login flow completes in CI. The PIN is
+          # persisted to Mongo; specs read it back via getVerificationPinByPhone.
+          ENABLE_E2E_PIN_INTERCEPT: 'true'
         run: npm run dev &
 
       - name: Wait for dev server
@@ -234,6 +239,13 @@ jobs:
           E2E_SUPER_ADMIN_PASSWORD: E2eTest@2026!
           E2E_CSR_USERNAME: e2e-csr
           E2E_CSR_PASSWORD: E2eTest@2026!
+          INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
+          MONNIFY_SECRET_KEY: ${{ secrets.MONNIFY_SECRET_KEY }}
+          PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
+          # REQ-074 — skip the real SMS/email dispatch in sendPinAction so the
+          # customer passwordless PIN-login flow completes in CI. The PIN is
+          # persisted to Mongo; specs read it back via getVerificationPinByPhone.
+          ENABLE_E2E_PIN_INTERCEPT: 'true'
         run: npx playwright test --project=smoke --reporter=json,html
       # ── Gate 5: Build ──
 

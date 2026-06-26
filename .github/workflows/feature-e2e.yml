@@ -92,6 +92,10 @@ jobs:
           E2E_SUPER_ADMIN_PASSWORD: E2eTest@2026!
           E2E_CSR_USERNAME: e2e-csr
           E2E_CSR_PASSWORD: E2eTest@2026!
+          INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
+          MONNIFY_SECRET_KEY: ${{ secrets.MONNIFY_SECRET_KEY }}
+          PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
+          ENABLE_E2E_PIN_INTERCEPT: true
         run: |
           npx tsx scripts/seed-e2e-admins.ts
           npx tsx scripts/seed-food-menu.ts
@@ -111,6 +115,10 @@ jobs:
           E2E_SUPER_ADMIN_PASSWORD: E2eTest@2026!
           E2E_CSR_USERNAME: e2e-csr
           E2E_CSR_PASSWORD: E2eTest@2026!
+          INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
+          MONNIFY_SECRET_KEY: ${{ secrets.MONNIFY_SECRET_KEY }}
+          PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
+          ENABLE_E2E_PIN_INTERCEPT: true
         run: npm run dev &
 
       - name: Wait for dev server
@@ -151,6 +159,10 @@ jobs:
           E2E_SUPER_ADMIN_PASSWORD: E2eTest@2026!
           E2E_CSR_USERNAME: e2e-csr
           E2E_CSR_PASSWORD: E2eTest@2026!
+          INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
+          MONNIFY_SECRET_KEY: ${{ secrets.MONNIFY_SECRET_KEY }}
+          PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
+          ENABLE_E2E_PIN_INTERCEPT: true
         run: |
           REQ_ID="${{ needs.detect-req.outputs.req_id }}"
           npx playwright test --grep "$REQ_ID" --reporter=json,html

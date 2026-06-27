@@ -167,6 +167,10 @@ jobs:
           E2E_SUPER_ADMIN_PASSWORD: E2eTest@2026!
           E2E_CSR_USERNAME: e2e-csr
           E2E_CSR_PASSWORD: E2eTest@2026!
+          INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
+          MONNIFY_SECRET_KEY: ${{ secrets.MONNIFY_SECRET_KEY }}
+          PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
+          ENABLE_E2E_PIN_INTERCEPT: true
         run: |
           npx tsx scripts/seed-e2e-admins.ts
           npx tsx scripts/seed-food-menu.ts
@@ -187,10 +191,9 @@ jobs:
           E2E_CSR_USERNAME: e2e-csr
           E2E_CSR_PASSWORD: E2eTest@2026!
           INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
-          # REQ-074 — skip the real SMS/email dispatch in sendPinAction so the
-          # customer passwordless PIN-login flow completes in CI. The PIN is
-          # persisted to Mongo; specs read it back via getVerificationPinByPhone.
-          ENABLE_E2E_PIN_INTERCEPT: 'true'
+          MONNIFY_SECRET_KEY: ${{ secrets.MONNIFY_SECRET_KEY }}
+          PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
+          ENABLE_E2E_PIN_INTERCEPT: true
         run: npm run dev &
 
       - name: Wait for dev server
@@ -242,10 +245,7 @@ jobs:
           INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
           MONNIFY_SECRET_KEY: ${{ secrets.MONNIFY_SECRET_KEY }}
           PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
-          # REQ-074 — skip the real SMS/email dispatch in sendPinAction so the
-          # customer passwordless PIN-login flow completes in CI. The PIN is
-          # persisted to Mongo; specs read it back via getVerificationPinByPhone.
-          ENABLE_E2E_PIN_INTERCEPT: 'true'
+          ENABLE_E2E_PIN_INTERCEPT: true
         run: npx playwright test --project=smoke --reporter=json,html
       # ── Gate 5: Build ──
 
@@ -318,6 +318,8 @@ jobs:
       DEVAUDIT_API_KEY: ${{ secrets.DEVAUDIT_API_KEY }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Resolve DevAudit base URL
         run: |
@@ -360,14 +362,18 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "Release version: ${VERSION}"
 
-      - name: Ensure release exists
+      - name: Check release exists (no creation — deferred to upload-evidence)
         if: env.DEVAUDIT_BASE_URL != ''
         run: |
+          # Release creation is deferred to the upload-evidence job (which
+          # runs after gates pass) so the portal never shows a release from
+          # a push where gates weren't verified (devaudit-installer#226).
+          # This step only checks whether the release already exists (e.g.
+          # created earlier by sdlc-implementer Phase 1 step 3).
           chmod +x scripts/upload-evidence.sh 2>/dev/null || true
-          # Create the release in DevAudit (no evidence yet — just registration)
           bash scripts/upload-evidence.sh \
             wgb _compliance-docs release_registration README.md \
-            --release ${{ steps.version.outputs.version }} --create-release-if-missing \
+            --release ${{ steps.version.outputs.version }} \
             --environment uat --category planning \
             --git-sha ${{ github.sha }} --branch ${{ github.ref_name }} || true
 
@@ -389,15 +395,18 @@ jobs:
           if [ -z "$SINCE_REF" ]; then
             SINCE_REF="HEAD~50"
           fi
+          if ! git rev-parse --verify "$SINCE_REF" >/dev/null 2>&1; then
+            echo "::warning::Ref ${SINCE_REF} not found — falling back to HEAD~10"
+            SINCE_REF="HEAD~10"
+          fi
+          if ! git rev-parse --verify "$SINCE_REF" >/dev/null 2>&1; then
+            echo "::warning::Ref ${SINCE_REF} not found — skipping bundled changes"
+            exit 0
+          fi
           echo "Scanning bundled changes since ${SINCE_REF} for ${VERSION}"
           BUNDLED_FILE="compliance/pending-releases/BUNDLED-CHANGES-${VERSION}.md"
           mkdir -p compliance/pending-releases
-          bash scripts/generate-bundled-changes.sh "$SINCE_REF" "$VERSION" > "$BUNDLED_FILE" 2>/dev/null || {
-            echo "::warning::generate-bundled-changes.sh failed for ${SINCE_REF} — writing stub."
-            echo "# Bundled Changes — ${VERSION}" > "$BUNDLED_FILE"
-            echo "" >> "$BUNDLED_FILE"
-            echo "No bundled changes generated (ref ${SINCE_REF} not available)." >> "$BUNDLED_FILE"
-          }
+          bash scripts/generate-bundled-changes.sh "$SINCE_REF" "$VERSION" > "$BUNDLED_FILE"
           # Upload as bundled_changes evidence against the REQ release.
           bash scripts/upload-evidence.sh \
             wgb _compliance-docs bundled_changes "$BUNDLED_FILE" \
@@ -515,6 +524,11 @@ jobs:
         if: env.DEVAUDIT_BASE_URL != ''
         run: |
           chmod +x scripts/upload-evidence.sh 2>/dev/null || true
+          # --create-release-if-missing is intentionally here (post-gate) rather
+          # than in register-release. This ensures the portal release record only
+          # appears after gates have run — even if gates failed, the release
+          # record is created here so failure evidence attaches to it.
+          # (devaudit-installer#226)
           FLAGS="--git-sha ${{ github.sha }} --ci-run-id ${{ github.run_id }} --branch ${{ github.ref_name }}"
           FLAGS="${FLAGS} --release ${{ needs.register-release.outputs.version }} --create-release-if-missing"
           FLAGS="${FLAGS} --environment uat"

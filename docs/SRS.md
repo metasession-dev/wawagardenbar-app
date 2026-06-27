@@ -124,6 +124,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-ORDMGT-007   | Order completion → inventory deduction chokepoint                                   | Must     | regression | `services/order-service.ts:806`; REQ-066                                                                         |
 | REQ-ORDMGT-008   | Express order item selection uses main-category cascade and contextual search       | Should   | regression | `app/dashboard/orders/express/create-order/page.tsx`; `app/actions/admin/express-actions.ts`; REQ-081            |
 | REQ-ORDMGT-009   | Express create order: order type selector + customer info for pickup/delivery       | Must     | regression | `app/dashboard/orders/express/create-order/page.tsx`; `app/actions/admin/express-actions.ts`; REQ-084            |
+| REQ-ORDMGT-010   | Admin Order Management section on orders dashboard                                  | Should   | smoke      | `app/dashboard/orders/page.tsx`; REQ-086                                                                         |
 | REQ-TABMGT-001   | Tab list with status filter + stats                                                 | Should   | regression | `app/dashboard/orders/tabs/page.tsx`                                                                             |
 | REQ-TABMGT-002   | Tab detail with partial payments                                                    | Should   | regression | `tabs/[tabId]/page.tsx:82`; REQ-012/035/036                                                                      |
 | REQ-TABMGT-003   | Admin pay tab with method + independent tip                                         | Should   | regression | `admin-pay-tab-dialog`; REQ-036                                                                                  |
@@ -592,6 +593,14 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 - **Given** a staff member opens the express create order form, **When** they select "Pickup", **Then** a pickup time field appears and is required before submission.
 - **Given** a staff member opens the express create order form, **When** they select "Delivery", **Then** delivery address fields and customer info fields appear and are required.
 - **Given** a delivery express order, **When** the order is submitted, **Then** `calculateOrderTotals` receives `orderType: 'delivery'` and delivery fees are applied.
+
+#### REQ-ORDMGT-010 — Admin Order Management section · **Should** · smoke
+
+**Source:** `app/dashboard/orders/page.tsx`; cross-ref REQ-086.
+**Behaviour:** The orders dashboard groups admin operational shortcuts into an "Admin Order Management" section containing Create Tab, Create Order, Close Tab, and Inventory Summary. A separate "Quick Actions" section contains Open a Order, Open a New Tab, and Add to Existing Tab. The Admin Order Management section uses a neutral icon (ClipboardList) and a 4-column grid on desktop. Quick Actions uses a 3-column grid on desktop.
+
+- **Given** an admin opens `/dashboard/orders`, **When** the page renders, **Then** a section titled "Admin Order Management" is visible containing cards for Create a new Tab, Create a new Order, Close a Tab, and Inventory Summary.
+- **Given** an admin opens `/dashboard/orders`, **When** the "Quick Actions" section renders, **Then** it contains only Open a Order, Open a New Tab, and Add to Existing Tab.
 
 ---
 

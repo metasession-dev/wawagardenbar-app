@@ -34,3 +34,13 @@ Evidence uploaded to DevAudit project: wgb_compliance-docs
 - UAT Smoke test: PASS (HTTP 200 on /menu, title tag correct)
 - Feature verification: PASS — E2E test "orders page shows Admin Order Management and Quick Actions sections" covers AC1-AC3, AC6; AC4-AC5 verified by code inspection (grid class + icon import in page.tsx); AC7 verified by doc review
 - UAT URL: https://wawagardenbar-app-uat.up.railway.app/
+
+## Production Post-Deploy Verification — 2026-06-27
+
+- PROD Health check: PASS (HTTP 200 on /api/health)
+- PROD Homepage: PASS (HTTP 200)
+- PROD Menu: PASS (HTTP 200)
+- PROD Admin redirect: PASS (HTTP 307 — unauthenticated redirect)
+- PROD Security headers: PASS (CSP, HSTS, X-Content-Type-Options, X-Frame-Options: DENY)
+- PROD No stack traces: PASS (generic HTML error page for nonexistent route)
+- PROD URL: https://wawagardenbar-app-production-45c8.up.railway.app

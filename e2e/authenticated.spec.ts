@@ -1,5 +1,7 @@
 import { test as base, expect, Page } from '@playwright/test';
 import path from 'path';
+import { tagTest } from './helpers/test-tags';
+import { evidenceShot } from './helpers/evidence';
 
 /**
  * E2E Tests — REQ-007: Authenticated Feature Verification
@@ -164,6 +166,7 @@ adminTest.describe('Section 12: Order Management', () => {
   adminTest(
     'orders page shows Admin Order Management and Quick Actions sections',
     async ({ page }) => {
+      tagTest('REQ-086', [1, 2, 3, 6]);
       await page.goto('/dashboard/orders');
       await page.waitForLoadState('networkidle');
       await expect(page.locator('text=Admin Order Management')).toBeVisible();
@@ -175,6 +178,14 @@ adminTest.describe('Section 12: Order Management', () => {
       expect(body).toContain('Inventory Summary');
       expect(body).toContain('Create a new Tab');
       expect(body).toContain('Close a Tab');
+      await evidenceShot(page, 'REQ-086', 1, 'admin-order-management-heading');
+      await evidenceShot(
+        page,
+        'REQ-086',
+        2,
+        'inventory-summary-in-admin-section'
+      );
+      await evidenceShot(page, 'REQ-086', 3, 'quick-actions-cards');
     }
   );
 });

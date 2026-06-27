@@ -4,7 +4,7 @@
 **Date:** 2026-06-27
 **Requirement ID:** REQ-086
 **Risk Level:** LOW
-**PR:** Will be linked when PR is created
+**PR:** [#422](https://github.com/metasession-dev/wawagardenbar-app/pull/422)
 
 ---
 

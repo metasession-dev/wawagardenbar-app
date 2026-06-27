@@ -1,14 +1,14 @@
 # SOP-MANUAL-ADMIN-001: Order Queue Management
 
-| Field              | Value                                      |
-|--------------------|--------------------------------------------|
-| **Document ID**    | SOP-MANUAL-ADMIN-001                              |
-| **Title**          | Order Queue Management                     |
-| **Version**        | 1.0                                        |
-| **Effective Date** | March 7, 2026                              |
-| **Department**     | Operations / Management                    |
-| **Applies To**     | Admin, Super-Admin                         |
-| **Status**         | Active                                     |
+| Field              | Value                   |
+| ------------------ | ----------------------- |
+| **Document ID**    | SOP-MANUAL-ADMIN-001    |
+| **Title**          | Order Queue Management  |
+| **Version**        | 1.0                     |
+| **Effective Date** | March 7, 2026           |
+| **Department**     | Operations / Management |
+| **Applies To**     | Admin, Super-Admin      |
+| **Status**         | Active                  |
 
 ---
 
@@ -21,7 +21,7 @@
    - [Part 2: Processing Orders](#part-2-processing-orders)
    - [Part 3: Managing Order Issues](#part-3-managing-order-issues)
    - [Part 4: Tab Oversight](#part-4-tab-oversight)
-   - [Part 5: Using Quick Actions](#part-5-using-quick-actions)
+   - [Part 5: Using Admin Order Management and Quick Actions](#part-5-using-admin-order-management-and-quick-actions)
    - [Part 6: Order Analytics (Super-Admin)](#part-6-order-analytics-super-admin)
 4. [Quick Reference](#4-quick-reference)
 5. [Common Scenarios](#5-common-scenarios)
@@ -50,7 +50,7 @@ This SOP covers the following activities:
 - Processing orders through their lifecycle: `pending`, `confirmed`, `preparing`, `ready`, `delivered`, `completed`.
 - Managing order issues including delays, cancellations, and price overrides.
 - Overseeing tab management at `/dashboard/orders/tabs`.
-- Using quick actions to create manual orders and tabs.
+- Using admin order management and quick actions to create manual orders, tabs, and review inventory.
 - Reviewing order analytics (Super-Admin only) at `/dashboard/orders/analytics`.
 
 This SOP does not cover:
@@ -65,12 +65,12 @@ This SOP does not cover:
 
 ### 2.1 Access Requirements
 
-| Requirement            | Detail                                                        |
-|------------------------|---------------------------------------------------------------|
-| Valid admin account     | Must have an active account with `admin` or `super-admin` role |
-| `orderManagement` permission | Granted by default to the Admin role                    |
-| Network access         | Active connection to the application server                   |
-| Supported browser      | Modern browser with JavaScript and WebSocket support enabled  |
+| Requirement                  | Detail                                                         |
+| ---------------------------- | -------------------------------------------------------------- |
+| Valid admin account          | Must have an active account with `admin` or `super-admin` role |
+| `orderManagement` permission | Granted by default to the Admin role                           |
+| Network access               | Active connection to the application server                    |
+| Supported browser            | Modern browser with JavaScript and WebSocket support enabled   |
 
 ### 2.2 Authentication
 
@@ -99,7 +99,8 @@ The order queue relies on **Socket.IO** for real-time updates. After logging in:
 2. Navigate to `/dashboard/orders`.
 3. The page displays the following sections from top to bottom:
    - **Navigation cards** -- Tabs Display, Kitchen Display, and Analytics (Super-Admin only).
-   - **Quick Actions** -- Open a Order, Open a New Tab, Add to Existing Tab, Inventory Summary.
+   - **Admin Order Management** -- Create a new Tab, Create a new Order, Close a Tab, Inventory Summary.
+   - **Quick Actions** -- Open a Order, Open a New Tab, Add to Existing Tab.
    - **Order Statistics cards** -- Total Orders, Pending, Preparing, Completed.
    - **Order Queue** -- The primary list of all orders with filtering and search.
 
@@ -107,14 +108,14 @@ The order queue relies on **Socket.IO** for real-time updates. After logging in:
 
 Each order card displays a colored status dot and a status badge. The mapping is as follows:
 
-| Status        | Dot Color | Badge Style   | Meaning                                       |
-|---------------|-----------|---------------|-----------------------------------------------|
-| `pending`     | Yellow    | Secondary     | New order awaiting admin acknowledgment        |
-| `confirmed`   | Cyan      | Default       | Order acknowledged, not yet sent to kitchen    |
-| `preparing`   | Blue      | Default       | Kitchen is actively preparing the order        |
-| `ready`       | Green     | Default       | Order is ready for pickup or delivery          |
-| `completed`   | Gray      | Outline       | Order has been fulfilled and closed            |
-| `cancelled`   | Red       | Destructive   | Order has been cancelled                       |
+| Status      | Dot Color | Badge Style | Meaning                                     |
+| ----------- | --------- | ----------- | ------------------------------------------- |
+| `pending`   | Yellow    | Secondary   | New order awaiting admin acknowledgment     |
+| `confirmed` | Cyan      | Default     | Order acknowledged, not yet sent to kitchen |
+| `preparing` | Blue      | Default     | Kitchen is actively preparing the order     |
+| `ready`     | Green     | Default     | Order is ready for pickup or delivery       |
+| `completed` | Gray      | Outline     | Order has been fulfilled and closed         |
+| `cancelled` | Red       | Destructive | Order has been cancelled                    |
 
 Additional visual indicators:
 
@@ -127,15 +128,15 @@ Additional visual indicators:
 
 **Status tabs** across the top of the Order Queue provide quick filtering:
 
-| Tab        | Shows                                                      |
-|------------|-------------------------------------------------------------|
-| All        | Every order in the system                                   |
-| Active     | Orders with status `pending`, `confirmed`, `preparing`, or `ready` |
-| Pending    | Only `pending` orders                                       |
-| Confirmed  | Only `confirmed` orders                                     |
-| Preparing  | Only `preparing` orders                                     |
-| Ready      | Only `ready` orders                                         |
-| Completed  | Only `completed` orders                                     |
+| Tab       | Shows                                                              |
+| --------- | ------------------------------------------------------------------ |
+| All       | Every order in the system                                          |
+| Active    | Orders with status `pending`, `confirmed`, `preparing`, or `ready` |
+| Pending   | Only `pending` orders                                              |
+| Confirmed | Only `confirmed` orders                                            |
+| Preparing | Only `preparing` orders                                            |
+| Ready     | Only `ready` orders                                                |
+| Completed | Only `completed` orders                                            |
 
 Each tab displays a count of matching orders in parentheses.
 
@@ -196,17 +197,17 @@ When a new order arrives with `pending` status:
 
 **Valid status transitions from `pending`**:
 
-| Target Status  | Action                  |
-|----------------|-------------------------|
-| `preparing`    | Start Preparing button  |
-| `cancelled`    | Cancel Order button     |
+| Target Status | Action                 |
+| ------------- | ---------------------- |
+| `preparing`   | Start Preparing button |
+| `cancelled`   | Cancel Order button    |
 
 **Valid status transitions from `confirmed`**:
 
-| Target Status  | Action                  |
-|----------------|-------------------------|
-| `preparing`    | Start Preparing button  |
-| `cancelled`    | Cancel Order button     |
+| Target Status | Action                 |
+| ------------- | ---------------------- |
+| `preparing`   | Start Preparing button |
+| `cancelled`   | Cancel Order button    |
 
 #### 3.2.3 Monitoring Preparation Progress
 
@@ -219,10 +220,10 @@ Once an order is in `preparing` status:
 
 **Valid status transitions from `preparing`**:
 
-| Target Status  | Action               |
-|----------------|-----------------------|
-| `ready`        | Mark Ready button     |
-| `cancelled`    | Cancel Order button   |
+| Target Status | Action              |
+| ------------- | ------------------- |
+| `ready`       | Mark Ready button   |
+| `cancelled`   | Cancel Order button |
 
 #### 3.2.4 Marking Orders as Delivered / Completed
 
@@ -238,10 +239,10 @@ When an order with `ready` status has been handed to the customer:
 
 **Valid status transitions from `ready`**:
 
-| Target Status  | Action                |
-|----------------|-----------------------|
-| `completed`    | Complete Order button |
-| `cancelled`    | Cancel Order button   |
+| Target Status | Action                |
+| ------------- | --------------------- |
+| `completed`   | Complete Order button |
+| `cancelled`   | Cancel Order button   |
 
 **Note**: `completed` and `cancelled` are terminal states. No further transitions are possible once an order reaches either state.
 
@@ -340,11 +341,37 @@ To view detailed tab information, click on a tab to navigate to `/dashboard/orde
 
 ---
 
-### Part 5: Using Quick Actions
+### Part 5: Using Admin Order Management and Quick Actions
 
-The **Quick Actions** section on the Orders Dashboard provides four shortcuts:
+The Orders Dashboard provides two shortcut sections:
 
-#### 3.5.1 Creating Manual Orders ("Open a Order")
+- **Admin Order Management** -- Create a new Tab, Create a new Order, Close a Tab, Inventory Summary.
+- **Quick Actions** -- Open a Order, Open a New Tab, Add to Existing Tab.
+
+#### 3.5.1 Creating a New Tab ("Create a new Tab")
+
+1. Click **"Create a new Tab"** in the Admin Order Management section.
+2. This navigates to `/dashboard/orders/express/create-tab`.
+3. Enter the table number and confirm to open a tab for that table with minimal steps.
+
+#### 3.5.2 Creating a New Order ("Create a new Order")
+
+1. Click **"Create a new Order"** in the Admin Order Management section.
+2. This navigates to `/dashboard/orders/express/create-order`.
+3. Search the menu, add items, and either pay immediately or add to a tab.
+
+#### 3.5.3 Closing a Tab ("Close a Tab")
+
+1. Click **"Close a Tab"** in the Admin Order Management section.
+2. This navigates to `/dashboard/orders/express/close-tab`.
+3. Select the tab, review the summary, and record the payment.
+
+#### 3.5.4 Inventory Summary
+
+1. Click **"Inventory Summary"** in the Admin Order Management section.
+2. This navigates to `/dashboard/orders/inventory-summary` for reviewing and adjusting daily inventory counts.
+
+#### 3.5.5 Creating Manual Orders ("Open a Order")
 
 1. Click **"Open a Order"** in the Quick Actions section.
 2. This navigates to `/menu`, where you can browse the menu and build an order on behalf of a customer.
@@ -354,7 +381,7 @@ The **Quick Actions** section on the Orders Dashboard provides four shortcuts:
    - `createdByRole`: `admin` or `super-admin`.
 5. The order appears in the Order Queue immediately via real-time update.
 
-#### 3.5.2 Creating Tabs from Admin Side ("Open a New Tab")
+#### 3.5.6 Creating Tabs from Admin Side ("Open a New Tab")
 
 1. Click **"Open a New Tab"** in the Quick Actions section.
 2. A `CreateTabDialog` opens.
@@ -363,16 +390,11 @@ The **Quick Actions** section on the Orders Dashboard provides four shortcuts:
 4. Confirm to create the tab.
 5. The new tab appears on the Tabs Management page.
 
-#### 3.5.3 Adding to an Existing Tab
+#### 3.5.7 Adding to an Existing Tab
 
 1. Click **"Add to Existing Tab"** in the Quick Actions section.
 2. This navigates to `/dashboard/orders/tabs` where you can select an open tab.
 3. From the tab detail page, add new orders to the selected tab.
-
-#### 3.5.4 Inventory Summary
-
-1. Click **"Inventory Summary"** in the Quick Actions section.
-2. This navigates to `/dashboard/orders/inventory-summary` for reviewing and adjusting daily inventory counts.
 
 ---
 
@@ -413,28 +435,28 @@ cancelled   cancelled    cancelled   cancelled
 
 ### Valid Status Transitions (System-Enforced)
 
-| Current Status | Allowed Transitions       |
-|----------------|---------------------------|
-| `pending`      | `preparing`, `cancelled`  |
-| `confirmed`    | `preparing`, `cancelled`  |
-| `preparing`    | `ready`, `cancelled`      |
-| `ready`        | `completed`, `cancelled`  |
-| `completed`    | (none -- terminal state)  |
-| `cancelled`    | (none -- terminal state)  |
+| Current Status | Allowed Transitions      |
+| -------------- | ------------------------ |
+| `pending`      | `preparing`, `cancelled` |
+| `confirmed`    | `preparing`, `cancelled` |
+| `preparing`    | `ready`, `cancelled`     |
+| `ready`        | `completed`, `cancelled` |
+| `completed`    | (none -- terminal state) |
+| `cancelled`    | (none -- terminal state) |
 
 ### Order Types
 
-| Type       | Key Details                                           |
-|------------|-------------------------------------------------------|
-| `dine-in`  | Table number required; QR code scan tracked           |
-| `pickup`   | Preferred pickup time; live countdown on order card    |
-| `delivery` | Full address; delivery instructions; delivery fee     |
-| `pay-now`  | Immediate payment at point of order                   |
+| Type       | Key Details                                         |
+| ---------- | --------------------------------------------------- |
+| `dine-in`  | Table number required; QR code scan tracked         |
+| `pickup`   | Preferred pickup time; live countdown on order card |
+| `delivery` | Full address; delivery instructions; delivery fee   |
+| `pay-now`  | Immediate payment at point of order                 |
 
 ### Portion Sizes
 
 | Size      | Multiplier |
-|-----------|------------|
+| --------- | ---------- |
 | `full`    | 1x         |
 | `half`    | 1/2x       |
 | `quarter` | 1/4x       |
@@ -449,17 +471,17 @@ cancelled   cancelled    cancelled   cancelled
 
 ### Key Dashboard Routes
 
-| Route                                    | Purpose                        | Access            |
-|------------------------------------------|--------------------------------|-------------------|
-| `/dashboard/orders`                      | Main order queue               | Admin, Super-Admin |
-| `/dashboard/orders/{orderId}`            | Order detail and actions       | Admin, Super-Admin |
-| `/dashboard/orders/tabs`                 | Tab management                 | Admin, Super-Admin |
-| `/dashboard/orders/tabs/{tabId}`         | Tab detail                     | Admin, Super-Admin |
-| `/dashboard/orders/tabs/{tabId}/checkout`| Tab checkout                   | Admin, Super-Admin |
-| `/dashboard/orders/analytics`            | Order analytics                | Super-Admin only   |
-| `/dashboard/orders/inventory-summary`    | Daily inventory summary        | Admin, Super-Admin |
-| `/dashboard/orders/inventory-updates`    | Inventory update log           | Admin, Super-Admin |
-| `/dashboard/kitchen`                     | Kitchen Display System         | Admin, Super-Admin, Kitchen Staff |
+| Route                                     | Purpose                  | Access                            |
+| ----------------------------------------- | ------------------------ | --------------------------------- |
+| `/dashboard/orders`                       | Main order queue         | Admin, Super-Admin                |
+| `/dashboard/orders/{orderId}`             | Order detail and actions | Admin, Super-Admin                |
+| `/dashboard/orders/tabs`                  | Tab management           | Admin, Super-Admin                |
+| `/dashboard/orders/tabs/{tabId}`          | Tab detail               | Admin, Super-Admin                |
+| `/dashboard/orders/tabs/{tabId}/checkout` | Tab checkout             | Admin, Super-Admin                |
+| `/dashboard/orders/analytics`             | Order analytics          | Super-Admin only                  |
+| `/dashboard/orders/inventory-summary`     | Daily inventory summary  | Admin, Super-Admin                |
+| `/dashboard/orders/inventory-updates`     | Inventory update log     | Admin, Super-Admin                |
+| `/dashboard/kitchen`                      | Kitchen Display System   | Admin, Super-Admin, Kitchen Staff |
 
 ---
 
@@ -493,7 +515,7 @@ cancelled   cancelled    cancelled   cancelled
 
 ### Scenario 4: Opening a Tab for a Walk-In Table
 
-1. On the Orders Dashboard, click **"Open a New Tab"** in Quick Actions.
+1. On the Orders Dashboard, click **"Open a New Tab"** in the Quick Actions section.
 2. Enter the table number in the dialog.
 3. If the table already has an active tab, the system will reject the request.
 4. Once the tab is created, navigate to the menu to add orders to the tab.
@@ -522,6 +544,7 @@ cancelled   cancelled    cancelled   cancelled
 **Symptom**: New orders are not appearing automatically.
 
 **Resolution**:
+
 1. Check the browser console for WebSocket connection errors.
 2. Click the **Refresh** button in the Order Queue header to force a manual reload.
 3. Verify that the Socket.IO server is running and accessible.
@@ -533,6 +556,7 @@ cancelled   cancelled    cancelled   cancelled
 **Symptom**: Clicking a status transition button results in an error message such as "Cannot transition from [status] to [status]".
 
 **Resolution**:
+
 1. The system enforces a strict state machine. Refer to the Valid Status Transitions table in Section 4.
 2. Verify the current order status matches your expectation by refreshing the page.
 3. If the order was updated by another admin or via the kitchen display, the local view may be stale.
@@ -542,6 +566,7 @@ cancelled   cancelled    cancelled   cancelled
 **Symptom**: Error message "Cannot cancel paid orders. Please process a refund instead."
 
 **Resolution**:
+
 1. Paid orders cannot be directly cancelled.
 2. Process a refund through the payment management system first.
 3. After the refund is processed, the payment status will update to `refunded`.
@@ -551,6 +576,7 @@ cancelled   cancelled    cancelled   cancelled
 **Symptom**: The Cancel Order button is disabled, with a message "Cannot cancel orders from tabs in settling status".
 
 **Resolution**:
+
 1. The tab is currently undergoing payment settlement.
 2. Wait for the settlement to complete, or reopen the tab to allow modifications.
 3. Once the tab is no longer in `settling` status, the cancellation option becomes available.
@@ -560,6 +586,7 @@ cancelled   cancelled    cancelled   cancelled
 **Symptom**: The order count on statistics cards does not match the filtered queue.
 
 **Resolution**:
+
 1. Statistics cards show counts across all orders (not limited to the current filter).
 2. The Pending card counts both `pending` and `confirmed` orders.
 3. Click the **Refresh** button to reload current data.
@@ -569,6 +596,7 @@ cancelled   cancelled    cancelled   cancelled
 **Symptom**: Order shows `completed` but inventory was not deducted.
 
 **Resolution**:
+
 1. The system attempts inventory deduction upon order completion. If it fails, the order status still updates to `completed`.
 2. Check the order detail page for the `inventoryDeducted` field.
 3. If `false`, manually trigger inventory deduction or notify the inventory manager.
@@ -578,14 +606,14 @@ cancelled   cancelled    cancelled   cancelled
 
 ## 7. Related Procedures
 
-| Document ID     | Title                              | Description                                    |
-|-----------------|------------------------------------|------------------------------------------------|
-| (Planned)       | Kitchen Display Operations         | SOP for kitchen staff using `/dashboard/kitchen` |
-| (Planned)       | Tab Settlement and Payment         | Detailed procedures for tab checkout flows      |
-| (Planned)       | Inventory Management               | SOP for stock tracking and adjustments          |
-| (Planned)       | Refund Processing                  | SOP for handling refunds on paid orders         |
-| (Planned)       | Admin User Management              | SOP for managing admin accounts and permissions |
-| (Planned)       | Audit Log Review                   | SOP for reviewing and exporting audit trails    |
+| Document ID | Title                      | Description                                      |
+| ----------- | -------------------------- | ------------------------------------------------ |
+| (Planned)   | Kitchen Display Operations | SOP for kitchen staff using `/dashboard/kitchen` |
+| (Planned)   | Tab Settlement and Payment | Detailed procedures for tab checkout flows       |
+| (Planned)   | Inventory Management       | SOP for stock tracking and adjustments           |
+| (Planned)   | Refund Processing          | SOP for handling refunds on paid orders          |
+| (Planned)   | Admin User Management      | SOP for managing admin accounts and permissions  |
+| (Planned)   | Audit Log Review           | SOP for reviewing and exporting audit trails     |
 
 ---
 
@@ -593,18 +621,18 @@ cancelled   cancelled    cancelled   cancelled
 
 ### Revision History
 
-| Version | Date           | Author          | Description                  |
-|---------|----------------|-----------------|------------------------------|
-| 1.0     | March 7, 2026  | Operations Team | Initial release              |
+| Version | Date          | Author          | Description     |
+| ------- | ------------- | --------------- | --------------- |
+| 1.0     | March 7, 2026 | Operations Team | Initial release |
 
 ### Approval
 
 | Role            | Name | Signature | Date |
-|-----------------|------|-----------|------|
+| --------------- | ---- | --------- | ---- |
 | Operations Lead |      |           |      |
 | Super-Admin     |      |           |      |
 | General Manager |      |           |      |
 
 ---
 
-*This document is controlled. Unauthorized copies are uncontrolled. Verify the current version before use.*
+_This document is controlled. Unauthorized copies are uncontrolled. Verify the current version before use._

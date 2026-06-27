@@ -22,7 +22,6 @@ import {
   PlusCircle,
   FilePlus,
   ClipboardList,
-  Zap,
   Plus,
   XCircle,
 } from 'lucide-react';
@@ -66,6 +65,7 @@ function QueueSkeleton() {
 }
 
 /**
+ * @requirement REQ-086
  * Orders dashboard page
  * Main order management interface
  */
@@ -142,13 +142,13 @@ export default async function OrdersPage() {
         )}
       </div>
 
-      {/* Express Actions */}
+      {/* Admin Order Management */}
       <div>
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-          <Zap className="h-5 w-5 text-amber-500" />
-          Express Actions
+          <ClipboardList className="h-5 w-5 text-amber-500" />
+          Admin Order Management
         </h2>
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Link href="/dashboard/orders/express/create-tab">
             <Card className="hover:bg-accent/50 transition-all hover:shadow-md cursor-pointer h-full border-l-4 border-l-amber-500 group">
               <CardHeader>
@@ -193,13 +193,29 @@ export default async function OrdersPage() {
               </CardHeader>
             </Card>
           </Link>
+
+          {/* Inventory Summary (moved from Quick Actions) */}
+          <Link href="/dashboard/orders/inventory-summary">
+            <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full border-l-4 border-l-emerald-500">
+              <CardHeader>
+                <CardTitle className="flex items-center text-lg">
+                  <ClipboardList className="h-5 w-5 mr-2 text-emerald-500" />
+                  Inventory Summary
+                  <ArrowRight className="ml-auto h-4 w-4 opacity-50" />
+                </CardTitle>
+                <CardDescription>
+                  Review and adjust daily inventory counts.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
         </div>
       </div>
 
-      {/* Order Actions */}
+      {/* Quick Actions */}
       <div>
         <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-3">
           {/* Open a Order */}
           <Link href="/menu">
             <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full border-l-4 border-l-purple-500">
@@ -246,22 +262,6 @@ export default async function OrdersPage() {
                 </CardTitle>
                 <CardDescription>
                   Find an open tab to add new orders to it.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
-
-          {/* Daily Inventory Summary */}
-          <Link href="/dashboard/orders/inventory-summary">
-            <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full border-l-4 border-l-emerald-500">
-              <CardHeader>
-                <CardTitle className="flex items-center text-lg">
-                  <ClipboardList className="h-5 w-5 mr-2 text-emerald-500" />
-                  Inventory Summary
-                  <ArrowRight className="ml-auto h-4 w-4 opacity-50" />
-                </CardTitle>
-                <CardDescription>
-                  Review and adjust daily inventory counts.
                 </CardDescription>
               </CardHeader>
             </Card>

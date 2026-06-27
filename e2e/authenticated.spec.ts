@@ -161,16 +161,22 @@ adminTest.describe('Section 12: Order Management', () => {
     await expect(page.locator('text=Kitchen Display')).toBeVisible();
   });
 
-  adminTest('orders page shows Quick Actions section', async ({ page }) => {
-    await page.goto('/dashboard/orders');
-    await page.waitForLoadState('networkidle');
-    await expect(page.locator('text=Quick Actions')).toBeVisible();
-    const body = await page.textContent('body');
-    expect(body).toContain('Open a Order');
-    expect(body).toContain('Open a New Tab');
-    expect(body).toContain('Add to Existing Tab');
-    expect(body).toContain('Inventory Summary');
-  });
+  adminTest(
+    'orders page shows Admin Order Management and Quick Actions sections',
+    async ({ page }) => {
+      await page.goto('/dashboard/orders');
+      await page.waitForLoadState('networkidle');
+      await expect(page.locator('text=Admin Order Management')).toBeVisible();
+      await expect(page.locator('text=Quick Actions')).toBeVisible();
+      const body = await page.textContent('body');
+      expect(body).toContain('Open a Order');
+      expect(body).toContain('Open a New Tab');
+      expect(body).toContain('Add to Existing Tab');
+      expect(body).toContain('Inventory Summary');
+      expect(body).toContain('Create a new Tab');
+      expect(body).toContain('Close a Tab');
+    }
+  );
 });
 
 superAdminTest.describe(

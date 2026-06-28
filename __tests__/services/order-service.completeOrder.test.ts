@@ -224,4 +224,51 @@ describe('REQ-066 OrderService.completeOrder', () => {
     expect(result.success).toBe(false);
     expect(mockDeductStock).not.toHaveBeenCalled();
   });
+
+  it('REQ-087 AC3 — partial failure: writes IncidentEvent with per-item breakdown', async () => {
+    const order = mockOrder();
+    mockFindById.mockResolvedValue(order);
+    mockDeductStock.mockResolvedValue({
+      allSucceeded: false,
+      results: [
+        {
+          menuItemId: '507f1f77bcf86cd7994390aa',
+          itemName: 'Item A',
+          status: 'deducted',
+          quantity: 2,
+          linkedResults: [],
+        },
+        {
+          menuItemId: '507f1f77bcf86cd7994390bb',
+          itemName: 'Item B',
+          status: 'failed',
+          error: 'Insufficient stock at chiller1',
+          quantity: 3,
+          linkedResults: [],
+        },
+      ],
+    });
+
+    const { OrderService } = await import('@/services/order-service');
+    const result = await OrderService.completeOrder({
+      orderId: '507f1f77bcf86cd799439011',
+      actorUserId: 'staff-1',
+      actorRole: 'csr',
+    });
+
+    expect(result.success).toBe(true);
+    expect(order.status).toBe('completed');
+    expect(order.inventoryDeducted).toBe(false);
+    expect(order.inventoryDeductionDetails).toHaveLength(2);
+    expect(mockRecordIncident).toHaveBeenCalledTimes(1);
+    const incArg = mockRecordIncident.mock.calls[0][0];
+    expect(incArg.kind).toBe('inventory_deduction_failed');
+    expect(incArg.errorDetails).toHaveProperty('deductedItems');
+    expect(incArg.errorDetails).toHaveProperty('failedItems');
+    expect(incArg.errorDetails).toHaveProperty('skippedItems');
+    expect(incArg.errorDetails.failedItems).toHaveLength(1);
+    expect(incArg.errorDetails.failedItems[0].error).toMatch(
+      /insufficient stock/i
+    );
+  });
 });

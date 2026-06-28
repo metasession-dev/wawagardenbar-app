@@ -1,5 +1,6 @@
 /**
  * @requirement REQ-066 — IncidentEventService
+ * @requirement REQ-088 — Extended with new kinds + getUnresolvedSummary for daily cron
  *
  * Thin write/read surface around `IncidentEventModel`. Every catch site
  * that used to `console.error` and walk away now calls `recordIncident`.
@@ -84,6 +85,8 @@ export interface IncidentWithLinkedOrder extends IncidentEventLean {
 const ORDER_ENTITY_KINDS: ReadonlyArray<IncidentEventKind> = [
   'inventory_deduction_failed',
   'stale_paid_order',
+  'points_award_failed',
+  'reward_grant_failed',
 ];
 
 export class IncidentEventService {
@@ -203,5 +206,36 @@ export class IncidentEventService {
       createdAt: { $gte: since },
     }).lean<IIncidentEvent | null>();
     return found !== null;
+  }
+
+  /**
+   * REQ-088 — Unresolved incident summary for the daily admin digest.
+   *
+   * Returns a grouped count by kind. "Unresolved" = no matching resolved
+   * marker exists (the IncidentEvent schema does not have a `resolved`
+   * boolean field yet; resolution is tracked by the absence of new
+   * incidents for the same entity+kind within the dedup window). For
+   * now, this returns all incidents created in the last 24h grouped by
+   * kind — the daily summary cron uses this to decide whether to send.
+   *
+   * @returns `{ total: number, byKind: Array<{ kind: IncidentEventKind, count: number }> }`
+   */
+  static async getUnresolvedSummary(withinHours = 24): Promise<{
+    total: number;
+    byKind: Array<{ kind: IncidentEventKind; count: number }>;
+  }> {
+    await connectDB();
+    const since = new Date(Date.now() - withinHours * 60 * 60 * 1000);
+    const rows = await IncidentEventModel.aggregate<{
+      _id: IncidentEventKind;
+      count: number;
+    }>([
+      { $match: { createdAt: { $gte: since } } },
+      { $group: { _id: '$kind', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ]);
+    const byKind = rows.map((r) => ({ kind: r._id, count: r.count }));
+    const total = byKind.reduce((sum, r) => sum + r.count, 0);
+    return { total, byKind };
   }
 }

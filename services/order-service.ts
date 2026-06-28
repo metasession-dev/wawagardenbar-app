@@ -432,7 +432,21 @@ export class OrderService {
         await InventoryService.restoreStockForOrder(orderId);
       } catch (error) {
         console.error('Error restoring inventory:', error);
-        // Don't fail the cancellation if inventory restoration fails
+        try {
+          const { IncidentEventService } = await import(
+            './incident-event-service'
+          );
+          await IncidentEventService.recordIncident({
+            kind: 'inventory_deduction_failed',
+            entityId: orderId,
+            summary: `Inventory restoration failed for cancelled order ${orderId}`,
+            errorDetails: {
+              message: error instanceof Error ? error.message : String(error),
+            },
+          });
+        } catch {
+          // IncidentEvent write failure must not abort the cancel
+        }
       }
     }
 
@@ -447,6 +461,22 @@ export class OrderService {
           `[REQ-048] Failed to reverse points for cancelled order ${orderId}:`,
           error
         );
+        try {
+          const { IncidentEventService } = await import(
+            './incident-event-service'
+          );
+          await IncidentEventService.recordIncident({
+            kind: 'points_award_failed',
+            entityId: orderId,
+            summary: `Points reversal failed for cancelled order ${orderId}`,
+            errorDetails: {
+              message: error instanceof Error ? error.message : String(error),
+              userId: String(order.userId),
+            },
+          });
+        } catch {
+          // IncidentEvent write failure must not abort the cancel
+        }
       }
     }
 
@@ -459,6 +489,21 @@ export class OrderService {
         `[REQ-048] Failed to restore rewards for cancelled order ${orderId}:`,
         error
       );
+      try {
+        const { IncidentEventService } = await import(
+          './incident-event-service'
+        );
+        await IncidentEventService.recordIncident({
+          kind: 'reward_grant_failed',
+          entityId: orderId,
+          summary: `Reward restoration failed for cancelled order ${orderId}`,
+          errorDetails: {
+            message: error instanceof Error ? error.message : String(error),
+          },
+        });
+      } catch {
+        // IncidentEvent write failure must not abort the cancel
+      }
     }
 
     return order.toObject();
@@ -757,6 +802,22 @@ export class OrderService {
         );
       } catch (error) {
         console.error('Error calculating rewards:', error);
+        try {
+          const { IncidentEventService } = await import(
+            './incident-event-service'
+          );
+          await IncidentEventService.recordIncident({
+            kind: 'reward_grant_failed',
+            entityId: params.orderId,
+            summary: `Reward calculation failed for order ${params.orderId}`,
+            errorDetails: {
+              message: error instanceof Error ? error.message : String(error),
+              userId: String(order.userId),
+            },
+          });
+        } catch {
+          // IncidentEvent write failure must not abort the payment capture
+        }
       }
     }
 

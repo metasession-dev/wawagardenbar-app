@@ -1,5 +1,6 @@
 /**
  * @requirement REQ-066 — Persistent silent-fail audit log
+ * @requirement REQ-088 — Extended with points/notification/reward/webhook kinds
  *
  * The pattern the codebase has repeatedly fallen into: a try/catch that
  * swallows a load-bearing side-effect and emits a `console.error`. The
@@ -14,22 +15,31 @@
  * outcome"). IncidentEvent is the unhappy-path audit ("Y threw or
  * stayed in a bad state, here's what we know").
  *
- * Initial kinds:
+ * Kinds:
  *   - `inventory_deduction_failed` — `deductStockForOrder` threw at the
  *     kitchen-completion site. Order still flips to `completed`; the
  *     reconciliation cron retries the deduction.
  *   - `stale_paid_order` — a paid order has sat outside
  *     completed/cancelled for longer than the configured threshold.
  *     Visibility-only; no automated remediation.
- *
- * Future REQs add more `kind`s as other catch sites get migrated off
- * `console.error`.
+ *   - `points_award_failed` — points award or reversal threw inside a
+ *     catch site that previously swallowed the error.
+ *   - `notification_delivery_failed` — NotificationLog persistence or
+ *     notification send path failed in a non-recoverable way.
+ *   - `reward_grant_failed` — reward calculation or grant threw inside
+ *     a webhook or admin action catch site.
+ *   - `webhook_replay_mismatch` — a webhook replay produced a state
+ *     mismatch (e.g. duplicate side-effect detected after the fact).
  */
 import { Schema, model, models, type Model, type Document } from 'mongoose';
 
 export type IncidentEventKind =
   | 'inventory_deduction_failed'
-  | 'stale_paid_order';
+  | 'stale_paid_order'
+  | 'points_award_failed'
+  | 'notification_delivery_failed'
+  | 'reward_grant_failed'
+  | 'webhook_replay_mismatch';
 
 export interface IIncidentEvent extends Document {
   kind: IncidentEventKind;
@@ -44,7 +54,14 @@ const incidentEventSchema = new Schema<IIncidentEvent>(
   {
     kind: {
       type: String,
-      enum: ['inventory_deduction_failed', 'stale_paid_order'],
+      enum: [
+        'inventory_deduction_failed',
+        'stale_paid_order',
+        'points_award_failed',
+        'notification_delivery_failed',
+        'reward_grant_failed',
+        'webhook_replay_mismatch',
+      ],
       required: true,
     },
     entityId: { type: String, required: true },

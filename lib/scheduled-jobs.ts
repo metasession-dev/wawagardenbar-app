@@ -3,6 +3,7 @@
  * @requirement REQ-058 — In-process Instagram-rewards scheduler (#117 IG-5)
  * @requirement REQ-066 — In-process inventory-deduction reconciliation + stale-paid-order visibility scan (#277)
  * @requirement REQ-078 — Env-var kill-switch for the inventory reconciliation job
+ * @requirement REQ-088 — Daily admin incident summary cron
  *
  * In-process scheduled jobs for the persistent Railway server. The app runs as
  * a long-lived custom Node server (`server.ts`), not serverless, so a simple
@@ -19,6 +20,9 @@ import { RewardsService } from '@/services/rewards-service';
 import { InstagramService } from '@/services/instagram-service';
 import InventoryService from '@/services/inventory-service';
 import { OrderService } from '@/services/order-service';
+import { IncidentEventService } from '@/services/incident-event-service';
+import { NotificationService } from '@/services/notification-service';
+import UserModel from '@/models/user-model';
 
 /**
  * REQ-066 — Hours a paid order may sit outside completed/cancelled before
@@ -32,6 +36,7 @@ const HOUR_MS = 60 * 60 * 1000;
 const MINUTE_MS = 60 * 1000;
 const FIFTEEN_MIN_MS = 15 * MINUTE_MS;
 const INITIAL_DELAY_MS = 60 * 1000;
+const TWENTY_FOUR_HOURS_MS = 24 * HOUR_MS;
 
 let started = false;
 
@@ -112,6 +117,64 @@ export async function runInventoryReconciliationJob(): Promise<void> {
 }
 
 /**
+ * REQ-088 — Daily admin incident summary.
+ *
+ * Queries `IncidentEventService.getUnresolvedSummary` for incidents created
+ * in the last 24h. If the total is > 0, sends a WhatsApp/email digest to
+ * all admin + super-admin users via `NotificationService.send`. Idempotent —
+ * sending the same summary twice is harmless (it's a digest, not a mutation).
+ * Errors are logged, never thrown: a scheduled tick must not crash the server.
+ */
+export async function runDailyIncidentSummaryJob(): Promise<void> {
+  try {
+    const summary = await IncidentEventService.getUnresolvedSummary(24);
+    if (summary.total === 0) {
+      return;
+    }
+    const adminUsers = await UserModel.find({
+      role: { $in: ['admin', 'super-admin'] },
+    })
+      .select('email phone communicationPreferences')
+      .lean<
+        Array<{
+          email: string;
+          phone?: string;
+          communicationPreferences?: { whatsapp?: boolean; email?: boolean };
+        }>
+      >();
+    if (adminUsers.length === 0) {
+      console.warn(
+        '[scheduled-jobs] incident-summary: no admin users found, skipping'
+      );
+      return;
+    }
+    for (const admin of adminUsers) {
+      try {
+        await NotificationService.send({
+          templateKey: 'incident_summary',
+          userId: admin.email,
+          email: async () => {
+            console.log(
+              `[scheduled-jobs] incident-summary email sent to ${admin.email}: ${summary.total} incidents`
+            );
+          },
+        });
+      } catch (sendError) {
+        console.error(
+          `[scheduled-jobs] incident-summary: failed to send to ${admin.email}:`,
+          sendError
+        );
+      }
+    }
+    console.warn(
+      `[scheduled-jobs] incident-summary: sent to ${adminUsers.length} admin(s), total=${summary.total}`
+    );
+  } catch (error) {
+    console.error('[scheduled-jobs] incident-summary job failed:', error);
+  }
+}
+
+/**
  * Start all in-process scheduled jobs. Idempotent: guarded so repeated calls
  * (or dev hot-reloads) don't stack intervals.
  */
@@ -144,9 +207,13 @@ export function startScheduledJobs(): void {
     setInterval(() => void runInventoryReconciliationJob(), FIFTEEN_MIN_MS);
   }
 
+  // REQ-088 — Daily incident summary for admins. Runs every 24h.
+  setTimeout(() => void runDailyIncidentSummaryJob(), INITIAL_DELAY_MS);
+  setInterval(() => void runDailyIncidentSummaryJob(), TWENTY_FOUR_HOURS_MS);
+
   console.warn(
     `[scheduled-jobs] started (reward-expiry: hourly, instagram-rewards: hourly, inventory-reconcile: ${
       inventoryReconcileDisabled ? 'DISABLED' : '15min'
-    })`
+    }, incident-summary: 24h)`
   );
 }

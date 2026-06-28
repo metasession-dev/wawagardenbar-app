@@ -17,6 +17,8 @@
  * `defaultSalesLocation` to pre-test state and removes the test order.
  *
  * @requirement REQ-066
+ * @requirement REQ-087 — per-item deduction tracking, IncidentEvent
+ * shape changed from top-level errorDetails.message to failedItems array
  */
 import { expect, type Page } from '@playwright/test';
 import { MongoClient, ObjectId } from 'mongodb';

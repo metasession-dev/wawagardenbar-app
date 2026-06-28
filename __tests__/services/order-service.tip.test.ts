@@ -70,7 +70,10 @@ vi.mock('@/models/tab-model', () => ({
 
 vi.mock('@/services/inventory-service', () => ({
   default: {
-    deductStockForOrder: vi.fn().mockResolvedValue(undefined),
+    deductStockForOrder: vi.fn().mockResolvedValue({
+      allSucceeded: true,
+      results: [],
+    }),
   },
 }));
 

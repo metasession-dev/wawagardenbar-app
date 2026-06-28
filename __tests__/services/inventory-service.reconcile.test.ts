@@ -1,10 +1,15 @@
 /**
  * @requirement REQ-066 — InventoryService.reconcileMissedDeductions
+ * @requirement REQ-087 — now consumes per-item result object
  *
  * AC4: cron-side backstop. Finds orders with `status === 'completed' AND
  * inventoryDeducted === false`; retries `deductStockForOrder`; on success
  * flips the flag. On failure writes an `IncidentEvent` tagged
  * `inventory_deduction_failed`. Pure retry — never mutates order status.
+ *
+ * With REQ-087, deductStockForOrder returns a result object instead of
+ * throwing. Partial failures (allSucceeded=false) write an IncidentEvent
+ * with per-item breakdown. Only allSucceeded=true flips inventoryDeducted.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -80,7 +85,18 @@ describe('REQ-066 InventoryService.reconcileMissedDeductions', () => {
       .default;
     const deductSpy = vi
       .spyOn(InventoryService, 'deductStockForOrder')
-      .mockResolvedValue(undefined as never);
+      .mockResolvedValue({
+        allSucceeded: true,
+        results: [
+          {
+            menuItemId: '507f1f77bcf86cd7994390aa',
+            itemName: 'Item A',
+            status: 'deducted',
+            quantity: 2,
+            linkedResults: [],
+          },
+        ],
+      } as never);
 
     const result = await InventoryService.reconcileMissedDeductions();
 
@@ -93,7 +109,7 @@ describe('REQ-066 InventoryService.reconcileMissedDeductions', () => {
     deductSpy.mockRestore();
   });
 
-  it('AC4 — failure: writes IncidentEvent, does not flip flag', async () => {
+  it('AC4 — failure (throw): writes IncidentEvent, does not flip flag', async () => {
     const order = mockOrder('507f1f77bcf86cd799439011');
     mockFind.mockReturnValue(chainable([order]));
     const InventoryService = (await import('@/services/inventory-service'))
@@ -111,14 +127,54 @@ describe('REQ-066 InventoryService.reconcileMissedDeductions', () => {
       kind: 'inventory_deduction_failed',
       entityId: '507f1f77bcf86cd799439011',
     });
-    expect(mockUpdateOne).not.toHaveBeenCalled();
     deductSpy.mockRestore();
   });
 
-  it('AC10 — dedup: when dedupRecent returns true, no new IncidentEvent is written', async () => {
+  it('REQ-087 — partial failure: writes IncidentEvent with per-item breakdown, does not flip flag', async () => {
     const order = mockOrder('507f1f77bcf86cd799439011');
     mockFind.mockReturnValue(chainable([order]));
-    mockDedupRecent.mockResolvedValueOnce(true); // simulate recent dup
+    const InventoryService = (await import('@/services/inventory-service'))
+      .default;
+    const deductSpy = vi
+      .spyOn(InventoryService, 'deductStockForOrder')
+      .mockResolvedValue({
+        allSucceeded: false,
+        results: [
+          {
+            menuItemId: '507f1f77bcf86cd7994390aa',
+            itemName: 'Item A',
+            status: 'deducted',
+            quantity: 2,
+            linkedResults: [],
+          },
+          {
+            menuItemId: '507f1f77bcf86cd7994390bb',
+            itemName: 'Item B',
+            status: 'failed',
+            error: 'Insufficient stock',
+            quantity: 3,
+            linkedResults: [],
+          },
+        ],
+      } as never);
+
+    const result = await InventoryService.reconcileMissedDeductions();
+
+    expect(result.failed).toBe(1);
+    expect(result.succeeded).toBe(0);
+    expect(mockUpdateOne).toHaveBeenCalledTimes(1);
+    expect(mockRecordIncident).toHaveBeenCalledTimes(1);
+    const incArg = mockRecordIncident.mock.calls[0][0];
+    expect(incArg.errorDetails).toHaveProperty('deductedItems');
+    expect(incArg.errorDetails).toHaveProperty('failedItems');
+    expect(incArg.errorDetails.failedItems).toHaveLength(1);
+    deductSpy.mockRestore();
+  });
+
+  it('AC10 — dedup (throw path): when dedupRecent returns true, no new IncidentEvent is written', async () => {
+    const order = mockOrder('507f1f77bcf86cd799439011');
+    mockFind.mockReturnValue(chainable([order]));
+    mockDedupRecent.mockResolvedValueOnce(true);
     const InventoryService = (await import('@/services/inventory-service'))
       .default;
     const deductSpy = vi
@@ -138,7 +194,7 @@ describe('REQ-066 InventoryService.reconcileMissedDeductions', () => {
     deductSpy.mockRestore();
   });
 
-  it('AC10 — dedup: when dedupRecent returns false, a fresh IncidentEvent is written', async () => {
+  it('AC10 — dedup (throw path): when dedupRecent returns false, a fresh IncidentEvent is written', async () => {
     const order = mockOrder('507f1f77bcf86cd799439011');
     mockFind.mockReturnValue(chainable([order]));
     mockDedupRecent.mockResolvedValueOnce(false); // no recent dup

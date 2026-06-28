@@ -1,6 +1,7 @@
 /**
  * @requirement REQ-066 AC10 — retryInventoryDeductionAction is the
  * server action behind the "Retry now" button on /dashboard/incidents.
+ * @requirement REQ-087 — now consumes IDeductionResult from deductStockForOrder
  *
  * Contract:
  *   - Requires the `incidentsAccess` permission (via requirePermission).
@@ -13,6 +14,8 @@
  *   - Returns { success: true, warning: <error message> } when the
  *     underlying deductStockForOrder throws (matches the AC9 ActionResult
  *     shape so the UI's existing warning-toast pattern fires).
+ *   - Returns { success: true, warning: <partial summary> } when
+ *     deductStockForOrder returns allSucceeded=false (REQ-087).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Types } from 'mongoose';
@@ -116,7 +119,18 @@ describe('retryInventoryDeductionAction', () => {
       inventoryDeducted: false,
       status: 'completed',
     });
-    mockDeductStock.mockResolvedValue(undefined);
+    mockDeductStock.mockResolvedValue({
+      allSucceeded: true,
+      results: [
+        {
+          menuItemId: '507f1f77bcf86cd7994390aa',
+          itemName: 'Item A',
+          status: 'deducted',
+          quantity: 2,
+          linkedResults: [],
+        },
+      ],
+    });
     const { retryInventoryDeductionAction } = await import(
       '@/app/actions/admin/incidents-actions'
     );

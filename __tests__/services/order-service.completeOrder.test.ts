@@ -1,12 +1,17 @@
 /**
  * @requirement REQ-066 — OrderService.completeOrder is the canonical
  * single chokepoint for marking an order completed + deducting inventory.
+ * @requirement REQ-087 — now consumes IDeductionResult from deductStockForOrder
  *
  * AC1: flips status to 'completed', adds status-history, calls
  * deductStockForOrder under the `!inventoryDeducted` guard, writes
  * audit-log entry, saves. On deduction throw, writes IncidentEvent
  * tagged `inventory_deduction_failed` but DOES NOT block the status
  * flip — kitchen workflow must not stall.
+ *
+ * With REQ-087, deductStockForOrder returns a result object. Partial
+ * failures (allSucceeded=false) write an IncidentEvent with per-item
+ * breakdown. Only allSucceeded=true sets inventoryDeducted=true.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -72,7 +77,18 @@ describe('REQ-066 OrderService.completeOrder', () => {
   it('AC1 — happy path: flips status, deducts, sets flags, writes audit log', async () => {
     const order = mockOrder();
     mockFindById.mockResolvedValue(order);
-    mockDeductStock.mockResolvedValue(undefined);
+    mockDeductStock.mockResolvedValue({
+      allSucceeded: true,
+      results: [
+        {
+          menuItemId: '507f1f77bcf86cd7994390aa',
+          itemName: 'Item A',
+          status: 'deducted',
+          quantity: 2,
+          linkedResults: [],
+        },
+      ],
+    });
 
     const { OrderService } = await import('@/services/order-service');
     const result = await OrderService.completeOrder({
@@ -167,7 +183,10 @@ describe('REQ-066 OrderService.completeOrder', () => {
   it('AC9 — happy path: deductionFailed is undefined when the deduction succeeds', async () => {
     const order = mockOrder();
     mockFindById.mockResolvedValue(order);
-    mockDeductStock.mockResolvedValue(undefined);
+    mockDeductStock.mockResolvedValue({
+      allSucceeded: true,
+      results: [],
+    });
 
     const { OrderService } = await import('@/services/order-service');
     const result = await OrderService.completeOrder({

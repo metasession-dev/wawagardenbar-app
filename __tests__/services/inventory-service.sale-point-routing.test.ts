@@ -162,9 +162,11 @@ describe('deductStockForOrder — defaultSalesLocation routing', () => {
     });
     mockInventoryFindOne.mockResolvedValue(inv);
 
-    await expect(
-      InventoryService.deductStockForOrder(ORDER_ID)
-    ).rejects.toThrow(/insufficient stock/i);
+    const result = await InventoryService.deductStockForOrder(ORDER_ID);
+
+    expect(result.allSucceeded).toBe(false);
+    expect(result.results[0].status).toBe('failed');
+    expect(result.results[0].error).toMatch(/insufficient stock/i);
 
     const locs = inv.locations as LocationDoc[];
     // Store stays full — the manager must move stock forward, not the system.
@@ -262,9 +264,11 @@ describe('deductStockForOrder — defaultSalesLocation routing', () => {
     });
     mockInventoryFindOne.mockResolvedValue(inv);
 
-    await expect(
-      InventoryService.deductStockForOrder(ORDER_ID)
-    ).rejects.toThrow(/insufficient stock/i);
+    const result = await InventoryService.deductStockForOrder(ORDER_ID);
+
+    expect(result.allSucceeded).toBe(false);
+    expect(result.results[0].status).toBe('failed');
+    expect(result.results[0].error).toMatch(/insufficient stock/i);
     expect(inv.save).not.toHaveBeenCalled();
   });
 

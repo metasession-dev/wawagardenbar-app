@@ -1,6 +1,10 @@
 import { Types } from 'mongoose';
 import type { PaymentMethod } from './payment-method.interface';
 
+/**
+ * @requirement REQ-087 — Per-item inventory deduction tracking types
+ */
+
 export type OrderType = 'dine-in' | 'pickup' | 'delivery' | 'pay-now';
 
 export type PortionSize = 'full' | 'half' | 'quarter';
@@ -64,6 +68,42 @@ export interface IDineInDetails {
   qrCodeScanned: boolean;
 }
 
+export type InventoryDeductionStatus = 'pending' | 'deducted' | 'failed';
+
+export interface ILinkedDeductionResult {
+  inventoryId: Types.ObjectId;
+  status: InventoryDeductionStatus;
+  error?: string;
+}
+
+export interface IInventoryDeductionDetail {
+  menuItemId: Types.ObjectId;
+  itemName: string;
+  status: InventoryDeductionStatus;
+  error?: string;
+  deductedAt?: Date;
+  quantity: number;
+  linkedDeductions: ILinkedDeductionResult[];
+}
+
+export interface IDeductionItemResult {
+  menuItemId: string;
+  itemName: string;
+  status: 'deducted' | 'failed' | 'skipped';
+  error?: string;
+  quantity: number;
+  linkedResults: Array<{
+    inventoryId: string;
+    status: InventoryDeductionStatus;
+    error?: string;
+  }>;
+}
+
+export interface IDeductionResult {
+  allSucceeded: boolean;
+  results: IDeductionItemResult[];
+}
+
 export interface IOrder {
   _id: Types.ObjectId;
   orderNumber: string;
@@ -118,6 +158,7 @@ export interface IOrder {
   inventoryDeducted: boolean;
   inventoryDeductedAt?: Date;
   inventoryDeductedBy?: Types.ObjectId;
+  inventoryDeductionDetails?: IInventoryDeductionDetail[];
   estimatedCompletionTime?: Date;
   preparationStartedAt?: Date;
   kitchenPriority?: 'normal' | 'urgent';

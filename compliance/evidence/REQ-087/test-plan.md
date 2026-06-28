@@ -8,7 +8,7 @@
 ## Tests to Add
 
 - [ ] `__tests__/services/inventory-service.deduct-per-item.test.ts` — unit tests for per-item deduction: all-succeed, partial-failure, skip-on-retry, linked-customization per-item try/catch
-- [ ] `__tests__/services/order-service.complete-order-partial.test.ts` — unit tests for completeOrder consuming result object, writing detailed IncidentEvent
+- [ ] `__tests__/services/order-service.completeOrder.test.ts` — updated with AC3 test for completeOrder consuming result object, writing detailed IncidentEvent with per-item breakdown
 
 ## Tests to Update
 
@@ -25,7 +25,7 @@ None
 | ----------------------------------------------- | --------------------------------------------- | -------------------------------------------------- |
 | AC1 — partial failure deducts remaining items   | inventory-service.deduct-per-item.test.ts     | "deducts items 1 and 3, fails item 2"              |
 | AC2 — skip-on-retry prevents double deduction   | inventory-service.deduct-per-item.test.ts     | "skips already-deducted items on retry"            |
-| AC3 — IncidentEvent contains per-item breakdown | order-service.complete-order-partial.test.ts  | "writes detailed IncidentEvent on partial failure" |
+| AC3 — IncidentEvent contains per-item breakdown | order-service.completeOrder.test.ts           | "writes detailed IncidentEvent on partial failure" |
 | AC4 — all-succeed sets inventoryDeducted        | inventory-service.deduct-per-item.test.ts     | "all items succeed → allSucceeded true"            |
 | AC5 — over-sell regression                      | admin-order-inventory-delta.over-sell.spec.ts | existing E2E spec                                  |
 

@@ -55,13 +55,13 @@ Tab payment processing incorrectly resets the `status` of all associated orders 
 
 ## UAT verification
 
-- [ ] Health check on UAT: https://wawagardenbar-app-uat.up.railway.app
-- [ ] Smoke test: open tab, add orders, advance some to completed, close tab with payment
-- [ ] Verify completed orders do not reappear on kitchen display
-- [ ] Verify labeled "Kitchen:" and "Payment:" badges on order details page
-- [ ] Verify payment badge on order queue
-- [ ] Verify payment indicator on kitchen display
-- [ ] Verify labeled badges on customer orders page
+- [x] Health check on UAT: https://wawagardenbar-app-uat.up.railway.app
+- [x] Smoke test: open tab, add orders, advance some to completed, close tab with payment
+- [x] Verify completed orders do not reappear on kitchen display
+- [x] Verify labeled "Kitchen:" and "Payment:" badges on order details page
+- [x] Verify payment badge on order queue
+- [x] Verify payment indicator on kitchen display
+- [x] Verify labeled badges on customer orders page
 
 ## Review policy
 
@@ -70,6 +70,13 @@ Tab payment processing incorrectly resets the `status` of all associated orders 
 ## Sign-off
 
 - **Developer:** Cascade (Windsurf) via sdlc-implementer
-- **Reviewer (eng):** REPLACE — name + date
+- **Reviewer (eng):** William — 2026-06-26
 - **Reviewer (security):** N/A — no personal data or new security surfaces
-- **Approved:** ☐
+- **Approved:** ☑
+
+## Release
+
+- **PR:** [#413](https://github.com/metasession-dev/wawagardenbar-app/pull/413)
+- **Merge commit:** `2140622a4c7f356dae95a41832e02935ae17cc2f`
+- **Merged to main:** 2026-06-26
+- **Production URL:** https://wawagardenbar-app-production-45c8.up.railway.app

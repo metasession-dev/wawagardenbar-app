@@ -1,6 +1,6 @@
 # Release Ticket: REQ-081 - Category cascade selection across admin item workflows
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-06-15
 **Requirement ID:** REQ-081
 **Risk Level:** MEDIUM

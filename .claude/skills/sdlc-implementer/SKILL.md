@@ -266,7 +266,7 @@ Runs **first**, before any `REQ-XXX` is assigned. It decides which of the six ch
 3. **Announce a "Workflow Decision" block** (template below): change-type, commit-type, whether a `REQ-XXX` is needed, risk class, which stages/gates run, which approvals the **operator** must perform (UAT four-eyes, Production approval), and what is **skipped**.
 4. **Pause policy — pause-when-it-matters.** Pause for explicit confirmation on **tracked / heavier** paths, or when classification is **ambiguous**; **announce-and-auto-proceed** on trivial / housekeeping. The operator can always reclassify ("treat this as housekeeping" / "this is HIGH risk").
 5. **Route — and stay on to completion.** A route is a choice of _which workflow to drive_, never a hand-off that abandons the operator. Whatever the path, the skill keeps guiding step by step until no further action is required (typically: merged).
-   - **tracked** (feature / bug fix / refactor / perf) → continue into Phase 1 below (full Stages 1–5). **Write the skill-invocation sentinel** (devaudit-installer#226): `echo "INVOKED $(date -u +%Y-%m-%dT%H:%M:%SZ)" > .sdlc-implementer-invoked`. This file is gitignored and never committed — it's a local-only signal that the pre-push hook checks before allowing `feat`/`fix`/`refactor`/`perf` commits to be pushed. Without this sentinel, the pre-push hook will refuse the push and `validate-commits.sh` in CI will flag missing RTM provenance.
+   - **tracked** (feature / bug fix / refactor / perf) → continue into Phase 1 below (full Stages 1–5). **Write the skill-invocation sentinel** (devaudit-installer#226): `npx devaudit-sdlc --phase=issue`. This invokes the v0.2.0 CLI engine, which appends a JSON phase record to `.sdlc-implementer-invoked` (a gitignored, local-only file). The pre-push hook checks for this file's existence before allowing `feat`/`fix`/`refactor`/`perf` commits to be pushed. Without this sentinel, the pre-push hook will refuse the push and `validate-commits.sh` in CI will flag missing RTM provenance. Each subsequent phase transition (Phase 1, 2, 3, 4, 5) must also invoke `npx devaudit-sdlc --phase=<N>` to append its phase record to the sentinel.
    - **housekeeping / trivial** → drive the **Lightweight path** below to completion. No `REQ-XXX`, no RTM row, no evidence pack, no portal release approvals — but the skill still branches, runs the gates, opens the PR, and walks the operator through review → merge.
    - **compliance-doc-only** → drive the same Lightweight path as a docs push (or PR, per the project's flow) referencing the **existing** `REQ-XXX`: no new requirement and no quality-gate ceremony, but driven through to merge.
 6. **Write labels back.** Apply the inferred `type:*` / `risk:*` labels so the issue ends up labelled — `gh label create <label> --force` to ensure the label exists (idempotent; no failure if a label-seeding step never ran), then `gh issue edit <N> --add-label <label>`. Future triage is then a glance.
@@ -416,17 +416,27 @@ These files are the CI validator's expected artefacts. Without them, `validate-c
 
    The classification question: "Did the implementation deviate from the plan's approach (how to build it), or did the plan's requirements deviate from reality (what to build)?" If the former, note and continue. If the latter, trigger the requirements gap flow.
 
-5. **Run gates locally, cheap-first.** The gates are not equivalent-cost — `npm run lint` is seconds, `npx playwright test` is 30–60 minutes. Iterate on the fast gates; spend the e2e cost once.
+4b. **Reconcile test-plan.md file paths with actual files (devaudit-installer#241).** After writing/updating tests (both unit and E2E), diff the actual test file paths against `compliance/evidence/REQ-XXX/test-plan.md`. The test plan was authored during Stage 1 with predicted file paths — during implementation, tests are often added to existing files instead of creating new ones. This is a natural drift, but it must be reconciled before committing so `validate-compliance-artifacts.sh` doesn't fail at PR time.
 
-   **Fast gates** (run on every change, ideally pre-commit):
-   - `npm run lint` (or stack-adapter equivalent)
-   - `npx tsc --noEmit` (or stack-adapter equivalent)
-   - `npx vitest run` (unit/integration)
-   - `semgrep scan --config auto`
-   - `npm audit --audit-level=high` (or stack-adapter equivalent)
+For each file path referenced in `test-plan.md`:
 
-   **E2E gate** — run _once_, after the fast gates are clean:
-   - `npx playwright test` (delegated to `e2e-test-engineer`, which has its own focused-iteration discipline for within-e2e fix-and-verify loops)
+- If the file exists on disk → OK, no action needed.
+- If the file does not exist → check whether a test covering the same AC was added to a different file. If so, update `test-plan.md` to reference the actual file path.
+- If the file does not exist and no equivalent test was found → **HALT**: "test-plan.md references <file> but no test file exists and no equivalent test covering the same AC was found. Either create the test file, update test-plan.md to point to the actual test file, or remove the entry if the AC is no longer relevant."
+
+Commit the updated `test-plan.md` alongside the test code. This is a file-path reconciliation — it does not change the AC table (that's the step 5b plan ↔ test-scope AC consistency check, which is separate and checks AC drift, not file-path drift). 5. **Run gates locally, cheap-first.** The gates are not equivalent-cost — `npm run lint` is seconds, `npx playwright test` is 30–60 minutes. Iterate on the fast gates; spend the e2e cost once.
+
+**Fast gates** (run on every change, ideally pre-commit):
+
+- `npm run lint` (or stack-adapter equivalent)
+- `npx tsc --noEmit` (or stack-adapter equivalent)
+- `npx vitest run` (unit/integration)
+- `semgrep scan --config auto`
+- `npm audit --audit-level=high` (or stack-adapter equivalent)
+
+**E2E gate** — run _once_, after the fast gates are clean:
+
+- `npx playwright test` (delegated to `e2e-test-engineer`, which has its own focused-iteration discipline for within-e2e fix-and-verify loops)
 
 5b. **E2E gate verification — mandatory before commit (devaudit-installer#226).** After running gates in step 5, verify the E2E gate actually ran before proceeding to step 7 (commit). This is the skill-level enforcement that backs the pre-push hook.
 
@@ -436,7 +446,10 @@ Check whether the change touches UI-facing files:
 git diff --name-only "$INTEGRATION_BRANCH"...HEAD -- 'app/**/*.tsx' 'src/**/*.tsx' 'pages/**/*.tsx' 'app/**/*.jsx' 'src/**/*.jsx' 'pages/**/*.jsx'
 ```
 
-- **If UI-facing files are present:** check for `.e2e-gate-passed` sentinel file (written by `e2e-test-engineer` after a successful run) or `playwright-report/` directory with recent content. If neither exists, **HALT**: "E2E gate was not run. The change touches UI-facing files. Run `npx playwright test` (or invoke `e2e-test-engineer`) before committing. The pre-push hook will also block this push."
+- **If UI-facing files are present:** check for `.e2e-gate-passed` sentinel file (written by `e2e-test-engineer` after a successful run) or `playwright-report/` directory with recent content. If neither exists, **HALT**: "E2E gate was not run. The change touches UI-facing files. Run `npx playwright test` (or invoke `e2e-test-engineer`) before committing. Do not defer to CI — install Playwright browsers with `npx playwright install` if needed. The pre-push hook will also block this push."
+
+  **Also check for `.e2e-evidence-wired` sentinel (devaudit-installer#226).** If `e2e/**/*.spec.ts` files were authored or modified, verify the `.e2e-evidence-wired` sentinel exists (written by `e2e-test-engineer` Phase 5½ after validating `tagTest()` and `evidenceShot()` calls). If missing, **HALT**: "Evidence wiring validation (Phase 5½) was not run. The change includes E2E spec files but no evidence wiring sentinel. Invoke `e2e-test-engineer` to validate `tagTest()` and `evidenceShot()` calls before committing. The pre-push hook will also block this push."
+
 - **If no UI-facing files (API-only, config, docs):** skip the check. Note the exemption in the commit body: "E2E gate skipped — no UI-facing files in this change."
 - **If `e2e-test-engineer` was invoked and determined e2e is not needed** (e.g. schema-only change): the skill writes `.e2e-gate-passed` with a `NOT_NEEDED` reason. The sentinel check passes. Note the exemption in the commit body: "E2E gate not needed — e2e-test-engineer assessed no UI surface (turn N)."
 
@@ -497,6 +510,14 @@ git diff --name-only "$INTEGRATION_BRANCH"...HEAD -- 'app/**/*.tsx' 'src/**/*.ts
    - Leave the sign-off section with REPLACE markers — the operator fills it in.
    - The nil report uploads as `incident_report` evidence via `compliance-evidence.yml`'s `upload_incident_report` function, flipping `ISO29119.3.5.4` to COVERED for clean releases.
    - If incidents WERE closed, skip nil report generation — the populated incident report(s) from `incident-export.yml` serve as the evidence.
+
+5b. **Validate test-execution-summary.md gate states (devaudit-installer#240).** Before uploading evidence, verify that `compliance/evidence/REQ-XXX/test-execution-summary.md` does not contain invalid gate states. Run:
+
+```bash
+bash scripts/validate-test-summary.sh origin/main
+```
+
+If the validator fails, fix the summary before proceeding. E2E gate results must be one of: `PASS`, `FAIL`, `NOT_NEEDED` (with reason), or `SKIPPED` (with operator-approved rationale). The word "deferred" must never appear in `test-execution-summary.md` — not as a gate state, not in prose, not in final assessment. "Deferred to CI" and "Playwright browsers not installed locally" are environment issues, not gate states. The CI validator (`validate-test-summary.sh`) will reject any summary containing "deferred" or "browsers not installed" on PRs to main.
 
 6. **Organise artefacts** under `compliance/evidence/REQ-XXX/` with date-prefixed naming:
 

@@ -193,3 +193,49 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 **Original gap (accepted at onboarding 2026-05-24):** `xlsx` `^0.18.5` carried two high CVEs — CVE-2023-30533 (prototype pollution) and CVE-2024-22363 (ReDoS) — reachable via the expense-import parse path (`XLSX.read` on uploaded files in `app/actions/expenses/csv-import-actions.ts`). No fix exists on the npm registry (SheetJS publishes patched builds only via its CDN), so `npm audit fix` could not resolve it; `xlsx` was whitelisted in `sdlc-config.json` `accepted_dep_risks` to let onboarding proceed.
 
 **Resolution (REQ-041, 2026-05-24):** Pinned `xlsx` to the patched SheetJS CDN build **0.20.3** (≥ 0.19.3 and ≥ 0.20.2, fixing both CVEs) in `package.json`; lockfile refreshed. `npm audit --audit-level=high` now exits 0 — `xlsx` is no longer flagged at any level (7 residual moderate advisories remain, below the `--audit-level=high` gate). `xlsx` removed from `accepted_dep_risks` and `ci.yml` regenerated, so the dependency-audit gate is now fully strict (hard-fails on any unaccepted high/critical). Evidence: `compliance/evidence/REQ-041/`.
+
+### R-009 — Per-item deduction contract change breaks callers if return type assumption leaks (REQ-087)
+
+**Accepted:** 2026-06-28
+**Severity:** low × high
+**Owner:** WGB maintainer
+
+**The gap:** `deductStockForOrder` changed from `Promise<void>` (throws on failure) to `Promise<IDeductionResult>` (returns structured result object). Any future caller that assumes the old throw-on-failure contract would silently ignore failures instead of catching the throw.
+
+**Mitigations landed in this REQ:**
+
+1. Only two callers exist: `completeOrder` (order-service.ts) and `reconcileMissedDeductions` (inventory-service.ts). Both updated to consume `IDeductionResult`.
+2. 7 new unit tests verify both callers handle the result object correctly (partial failure, skip-on-retry, all-succeed).
+3. TypeScript compiler enforces the new return type — any missed caller would fail `tsc --noEmit`.
+
+**Residual likelihood × impact:** low × high (TypeScript type system prevents silent contract violations; residual risk is a future caller using `any` typing to bypass the compiler check)
+
+**Framework cross-references:** ISO27001.A.8.25 (secure SDLC — contract change in financial data path); SOC2.CC3.2 (risk identification)
+
+**Review due:** 2027-06-28 (annual review — verify no new callers bypass type checking)
+
+**Cross-links:** [REQ-087 implementation plan](evidence/REQ-087/implementation-plan.md); [#411](https://github.com/metasession-dev/wawagardenbar-app/issues/411); SRS REQ-INV-012, REQ-INV-013.
+
+---
+
+### R-010 — Existing orders without `inventoryDeductionDetails` field cause null-reference errors (REQ-087)
+
+**Accepted:** 2026-06-28
+**Severity:** low × medium
+**Owner:** WGB maintainer
+
+**The gap:** Existing orders in production do not have the `inventoryDeductionDetails` subdocument array. Code that accesses this field without a null/empty check could throw a null-reference error.
+
+**Mitigations landed in this REQ:**
+
+1. Mongoose schema defines `inventoryDeductionDetails` with `default: []` — existing documents get an empty array on access.
+2. `reconcileMissedDeductions` iterates only items in the array; empty array = treat all items as pending (existing behaviour preserved).
+3. Unit test `AC2 — skip-on-retry` verifies backward-compatible behaviour with empty `inventoryDeductionDetails`.
+
+**Residual likelihood × impact:** low × medium (Mongoose default handles the gap; residual risk is direct MongoDB queries bypassing Mongoose schema defaults)
+
+**Framework cross-references:** ISO27001.A.8.25 (secure SDLC — schema backward compatibility); SOC2.CC3.2 (risk identification)
+
+**Review due:** 2027-06-28 (annual review — verify no direct MongoDB queries assume field presence)
+
+**Cross-links:** [REQ-087 implementation plan](evidence/REQ-087/implementation-plan.md); [#411](https://github.com/metasession-dev/wawagardenbar-app/issues/411); SRS REQ-INV-012.

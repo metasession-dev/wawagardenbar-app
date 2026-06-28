@@ -58,3 +58,4 @@ next-env.d.ts
 # DevAudit sentinel files (devaudit-installer#226)
 .e2e-gate-passed
 .sdlc-implementer-invoked
+.e2e-evidence-wired

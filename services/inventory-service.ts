@@ -7,6 +7,7 @@ import { sendLowStockAlertEmail } from '@/lib/email';
 import { SystemSettingsService } from '@/services/system-settings-service';
 import { resolveLinkedInventoryFor } from '@/lib/customization-inventory';
 import type { InventoryKind } from '@/interfaces/inventory.interface';
+import type { IDeductionResult, IDeductionItemResult } from '@/interfaces';
 
 /**
  * Inventory Service
@@ -113,51 +114,138 @@ class InventoryService {
   }
 
   /**
-   * Deduct stock for completed order
-   * Called when order status changes to 'completed'
+   * @requirement REQ-087 — Per-item inventory deduction with skip-on-retry
+   *
+   * Deduct stock for completed order. Each item is deducted independently
+   * in its own try/catch — one item failing does not prevent other items
+   * from being deducted. Already-deducted items (tracked in
+   * `order.inventoryDeductionDetails`) are skipped to prevent double
+   * deduction on retry.
+   *
+   * Returns a result object instead of throwing. Callers should check
+   * `allSucceeded` and persist `results` to `inventoryDeductionDetails`.
    */
-  static async deductStockForOrder(orderId: string): Promise<void> {
+  static async deductStockForOrder(orderId: string): Promise<IDeductionResult> {
     const order = await OrderModel.findById(orderId);
 
     if (!order) {
       throw new Error('Order not found');
     }
 
-    // Loop through order items
-    for (const item of order.items) {
-      const menuItem = await MenuItemModel.findById(item.menuItemId);
+    const results: IDeductionItemResult[] = [];
 
-      if (!menuItem) {
+    for (const item of order.items) {
+      const menuItemIdStr = item.menuItemId.toString();
+      const itemName = item.name || menuItemIdStr;
+      const actualQuantity = item.quantity * (item.portionMultiplier || 1.0);
+
+      const existing = order.inventoryDeductionDetails?.find(
+        (d) =>
+          d.menuItemId.toString() === menuItemIdStr && d.status === 'deducted'
+      );
+
+      if (existing) {
+        results.push({
+          menuItemId: menuItemIdStr,
+          itemName,
+          status: 'skipped',
+          quantity: actualQuantity,
+          linkedResults: [],
+        });
         continue;
       }
 
-      const actualQuantity = item.quantity * (item.portionMultiplier || 1.0);
+      const result: IDeductionItemResult = {
+        menuItemId: menuItemIdStr,
+        itemName,
+        status: 'deducted',
+        quantity: actualQuantity,
+        linkedResults: [],
+      };
 
-      if (menuItem.trackInventory) {
-        // Base inventory deduction
-        const inventory = await InventoryModel.findOne({
-          menuItemId: item.menuItemId,
-        });
+      try {
+        const menuItem = await MenuItemModel.findById(item.menuItemId);
 
-        if (inventory) {
-          InventoryService.applyOrderStockDelta(inventory, -actualQuantity);
+        if (!menuItem) {
+          result.status = 'failed';
+          result.error = `MenuItem not found: ${menuItemIdStr}`;
+          results.push(result);
+          continue;
+        }
 
-          let reason = 'Sale';
-          let notes: string | undefined;
+        if (menuItem.trackInventory) {
+          const inventory = await InventoryModel.findOne({
+            menuItemId: item.menuItemId,
+          });
 
-          if (item.portionSize === 'half') {
-            reason = 'Sale (Half Portion)';
-            notes = `${item.quantity}x half portions (${actualQuantity} units deducted)`;
-          } else if (item.portionSize === 'quarter') {
-            reason = 'Sale (Quarter Portion)';
-            notes = `${item.quantity}x quarter portions (${actualQuantity} units deducted)`;
+          if (inventory) {
+            InventoryService.applyOrderStockDelta(inventory, -actualQuantity);
+
+            let reason = 'Sale';
+            let notes: string | undefined;
+
+            if (item.portionSize === 'half') {
+              reason = 'Sale (Half Portion)';
+              notes = `${item.quantity}x half portions (${actualQuantity} units deducted)`;
+            } else if (item.portionSize === 'quarter') {
+              reason = 'Sale (Quarter Portion)';
+              notes = `${item.quantity}x quarter portions (${actualQuantity} units deducted)`;
+            }
+
+            await StockMovementModel.create({
+              inventoryId: inventory._id,
+              quantity: -actualQuantity,
+              type: 'deduction' as const,
+              reason,
+              performedBy: new mongoose.Types.ObjectId(
+                '000000000000000000000000'
+              ),
+              timestamp: new Date(),
+              category: 'sale' as const,
+              orderId: order._id,
+              performedByName: 'System',
+              notes,
+            });
+
+            if (inventory.currentStock <= 0) {
+              inventory.status = 'out-of-stock';
+            } else if (inventory.currentStock <= inventory.minimumStock) {
+              inventory.status = 'low-stock';
+            } else {
+              inventory.status = 'in-stock';
+            }
+
+            inventory.totalSales += actualQuantity;
+            inventory.lastSaleDate = new Date();
+
+            await inventory.save();
+
+            if (
+              inventory.status === 'low-stock' ||
+              inventory.status === 'out-of-stock'
+            ) {
+              await this.sendLowStockAlert(inventory);
+            }
           }
+        }
+
+        const linked = resolveLinkedInventoryFor(
+          menuItem,
+          item.customizations || []
+        );
+
+        for (const { inventoryId, deductionPerUnit } of linked) {
+          const linkedInv = await InventoryModel.findById(inventoryId);
+          if (!linkedInv) continue;
+
+          const linkedAmount = actualQuantity * deductionPerUnit;
+          InventoryService.applyOrderStockDelta(linkedInv, -linkedAmount);
 
           await StockMovementModel.create({
-            inventoryId: inventory._id,
-            quantity: -actualQuantity,
+            inventoryId: linkedInv._id,
+            quantity: -linkedAmount,
             type: 'deduction' as const,
-            reason,
+            reason: 'Sale (linked customization option)',
             performedBy: new mongoose.Types.ObjectId(
               '000000000000000000000000'
             ),
@@ -165,76 +253,40 @@ class InventoryService {
             category: 'sale' as const,
             orderId: order._id,
             performedByName: 'System',
-            notes,
           });
 
-          if (inventory.currentStock <= 0) {
-            inventory.status = 'out-of-stock';
-          } else if (inventory.currentStock <= inventory.minimumStock) {
-            inventory.status = 'low-stock';
+          if (linkedInv.currentStock <= 0) {
+            linkedInv.status = 'out-of-stock';
+          } else if (linkedInv.currentStock <= linkedInv.minimumStock) {
+            linkedInv.status = 'low-stock';
           } else {
-            inventory.status = 'in-stock';
+            linkedInv.status = 'in-stock';
           }
 
-          inventory.totalSales += actualQuantity;
-          inventory.lastSaleDate = new Date();
+          linkedInv.totalSales += linkedAmount;
+          linkedInv.lastSaleDate = new Date();
 
-          await inventory.save();
+          await linkedInv.save();
 
           if (
-            inventory.status === 'low-stock' ||
-            inventory.status === 'out-of-stock'
+            linkedInv.status === 'low-stock' ||
+            linkedInv.status === 'out-of-stock'
           ) {
-            await this.sendLowStockAlert(inventory);
+            await this.sendLowStockAlert(linkedInv);
           }
         }
-      }
 
-      // Linked customization-option deduction (runs independently of base trackInventory)
-      const linked = resolveLinkedInventoryFor(
-        menuItem,
-        item.customizations || []
-      );
-      for (const { inventoryId, deductionPerUnit } of linked) {
-        const linkedInv = await InventoryModel.findById(inventoryId);
-        if (!linkedInv) continue;
-
-        const linkedAmount = actualQuantity * deductionPerUnit;
-        InventoryService.applyOrderStockDelta(linkedInv, -linkedAmount);
-
-        await StockMovementModel.create({
-          inventoryId: linkedInv._id,
-          quantity: -linkedAmount,
-          type: 'deduction' as const,
-          reason: 'Sale (linked customization option)',
-          performedBy: new mongoose.Types.ObjectId('000000000000000000000000'),
-          timestamp: new Date(),
-          category: 'sale' as const,
-          orderId: order._id,
-          performedByName: 'System',
-        });
-
-        if (linkedInv.currentStock <= 0) {
-          linkedInv.status = 'out-of-stock';
-        } else if (linkedInv.currentStock <= linkedInv.minimumStock) {
-          linkedInv.status = 'low-stock';
-        } else {
-          linkedInv.status = 'in-stock';
-        }
-
-        linkedInv.totalSales += linkedAmount;
-        linkedInv.lastSaleDate = new Date();
-
-        await linkedInv.save();
-
-        if (
-          linkedInv.status === 'low-stock' ||
-          linkedInv.status === 'out-of-stock'
-        ) {
-          await this.sendLowStockAlert(linkedInv);
-        }
+        results.push(result);
+      } catch (error) {
+        result.status = 'failed';
+        result.error = error instanceof Error ? error.message : String(error);
+        results.push(result);
       }
     }
+
+    const allSucceeded = results.every((r) => r.status !== 'failed');
+
+    return { allSucceeded, results };
   }
 
   /**
@@ -1298,16 +1350,16 @@ class InventoryService {
 
   /**
    * @requirement REQ-066 — Reconciliation cron backstop
+   * @requirement REQ-087 — Now consumes per-item result object
    *
    * Scans for orders that the kitchen-completion chokepoint marked
-   * `completed` but whose `deductStockForOrder` threw at the time. Each
-   * such order gets a retry attempt. Successful retries flip the
-   * `inventoryDeducted` flag. Failed retries write a fresh
-   * `IncidentEvent` so the operator sees it didn't resolve.
+   * `completed` but whose `deductStockForOrder` had partial failures.
+   * Each such order gets a retry attempt. With REQ-087, already-deducted
+   * items are automatically skipped. Successful retries (allSucceeded)
+   * flip the `inventoryDeducted` flag. Partial failures write a fresh
+   * `IncidentEvent` with per-item breakdown.
    *
-   * Pure retry — never mutates `Order.status`. The operator stipulated
-   * that no cron may set status to 'completed'; that contract is
-   * preserved here.
+   * Pure retry — never mutates `Order.status`.
    */
   static async reconcileMissedDeductions(
     limit: number = 100
@@ -1335,26 +1387,66 @@ class InventoryService {
     for (const order of orders) {
       const orderId = order._id.toString();
       try {
-        await InventoryService.deductStockForOrder(orderId);
-        // Persist the flag flip; we don't use Mongoose doc here so go via
-        // a direct $set (the find above used .lean()).
+        const result = await InventoryService.deductStockForOrder(orderId);
+
         await OrderModel.updateOne(
           { _id: order._id, inventoryDeducted: false },
           {
             $set: {
-              inventoryDeducted: true,
-              inventoryDeductedAt: new Date(),
+              inventoryDeductionDetails: result.results.map((r) => ({
+                menuItemId: r.menuItemId,
+                itemName: r.itemName,
+                status: r.status,
+                error: r.error,
+                deductedAt: r.status === 'deducted' ? new Date() : undefined,
+                quantity: r.quantity,
+                linkedDeductions: r.linkedResults.map((lr) => ({
+                  inventoryId: lr.inventoryId,
+                  status: lr.status,
+                  error: lr.error,
+                })),
+              })),
+              ...(result.allSucceeded && {
+                inventoryDeducted: true,
+                inventoryDeductedAt: new Date(),
+              }),
             },
           }
         );
-        succeeded += 1;
+
+        if (result.allSucceeded) {
+          succeeded += 1;
+        } else {
+          const isDup = await IncidentEventService.dedupRecent({
+            kind: 'inventory_deduction_failed',
+            entityId: orderId,
+            withinHours: 1,
+          });
+          if (!isDup) {
+            await IncidentEventService.recordIncident({
+              kind: 'inventory_deduction_failed',
+              entityId: orderId,
+              summary:
+                'reconciliation retry of deductStockForOrder had partial failure',
+              errorDetails: {
+                message: 'Some items could not be deducted',
+                actorRole: 'system_reconciliation',
+                deductedItems: result.results.filter(
+                  (r) => r.status === 'deducted'
+                ),
+                failedItems: result.results.filter(
+                  (r) => r.status === 'failed'
+                ),
+                skippedItems: result.results.filter(
+                  (r) => r.status === 'skipped'
+                ),
+              },
+            });
+          }
+          failed += 1;
+        }
       } catch (error) {
         try {
-          // REQ-066 AC10 — dedup so a single stuck order doesn't spam a
-          // fresh IncidentEvent every 15 min until it resolves. Matches
-          // the existing pattern in OrderService.scanStalePaidOrders.
-          // 1-hour window means at most one row per stuck order per
-          // hour (4 retries condensed into 1 event).
           const isDup = await IncidentEventService.dedupRecent({
             kind: 'inventory_deduction_failed',
             entityId: orderId,

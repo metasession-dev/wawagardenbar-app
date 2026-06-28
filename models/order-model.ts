@@ -6,10 +6,17 @@ import {
   IDeliveryDetails,
   IPickupDetails,
   IDineInDetails,
+  IInventoryDeductionDetail,
+  ILinkedDeductionResult,
   OrderType,
   OrderStatus,
 } from '../interfaces';
 import { PAYMENT_METHODS_FULL } from '../interfaces/payment-method.interface';
+
+/**
+ * @requirement REQ-087 — inventoryDeductionDetails subdocument schema
+ * for per-item deduction tracking with skip-on-retry.
+ */
 
 const orderItemSchema = new Schema<IOrderItem>(
   {
@@ -87,6 +94,44 @@ const dineInDetailsSchema = new Schema<IDineInDetails>(
   {
     tableNumber: { type: String, required: true },
     qrCodeScanned: { type: Boolean, default: false },
+  },
+  { _id: false }
+);
+
+const linkedDeductionSchema = new Schema<ILinkedDeductionResult>(
+  {
+    inventoryId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Inventory',
+      required: true,
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'deducted', 'failed'],
+      default: 'pending',
+    },
+    error: { type: String },
+  },
+  { _id: false }
+);
+
+const inventoryDeductionDetailSchema = new Schema<IInventoryDeductionDetail>(
+  {
+    menuItemId: {
+      type: Schema.Types.ObjectId,
+      ref: 'MenuItem',
+      required: true,
+    },
+    itemName: { type: String, required: true },
+    status: {
+      type: String,
+      enum: ['pending', 'deducted', 'failed'],
+      default: 'pending',
+    },
+    error: { type: String },
+    deductedAt: { type: Date },
+    quantity: { type: Number, required: true },
+    linkedDeductions: { type: [linkedDeductionSchema], default: [] },
   },
   { _id: false }
 );
@@ -202,6 +247,10 @@ const orderSchema = new Schema<IOrder>(
     inventoryDeducted: { type: Boolean, default: false },
     inventoryDeductedAt: { type: Date },
     inventoryDeductedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    inventoryDeductionDetails: {
+      type: [inventoryDeductionDetailSchema],
+      default: [],
+    },
     estimatedCompletionTime: { type: Date },
     preparationStartedAt: { type: Date },
     kitchenPriority: {

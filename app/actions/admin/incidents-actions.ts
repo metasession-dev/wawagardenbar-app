@@ -13,23 +13,22 @@ import type { ActionResult } from './order-management-actions';
  * @requirement REQ-066 AC10 — operator-initiated retry of a stuck
  * inventory deduction. Bound to the per-row "Retry now" button on
  * `/dashboard/incidents`.
+ * @requirement REQ-087 — now consumes per-item result object.
  *
- * Calls `InventoryService.deductStockForOrder` directly. The function
- * is idempotent — it guards on `inventoryDeducted` internally — so
- * clicking Retry Now on an already-deducted order is a no-op.
+ * Calls `InventoryService.deductStockForOrder` directly. With REQ-087,
+ * already-deducted items are automatically skipped — no double
+ * deduction. The function returns a result object instead of throwing.
  *
- * On success: returns `{ success: true, message: 'Inventory deducted.' }`.
+ * On all-succeeded: returns `{ success: true, message: 'Inventory deducted.' }`.
  * On already-deducted: returns `{ success: true, message: 'Already
  *   deducted — no change.' }`.
- * On throw: returns `{ success: true, warning: <error message> }`
- *   matching the AC9 shape so the UI surfaces a destructive-variant
- *   toast pointing at /dashboard/incidents. The action does NOT write a
- *   new IncidentEvent — the cron's 1-hour dedup handles that.
+ * On partial failure: returns `{ success: true, warning: <summary> }`
+ *   with per-item breakdown in the warning message.
+ * On throw: returns `{ success: true, warning: <error message> }`.
  */
 export async function retryInventoryDeductionAction(
   orderId: string
 ): Promise<ActionResult> {
-  // RBAC + permission gate. Throws redirect on denial.
   const session = await requirePermission('incidentsAccess');
 
   if (!Types.ObjectId.isValid(orderId)) {
@@ -54,12 +53,11 @@ export async function retryInventoryDeductionAction(
     };
   }
 
+  let result;
   try {
-    await InventoryService.deductStockForOrder(orderId);
+    result = await InventoryService.deductStockForOrder(orderId);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    // Audit-log the retry attempt itself so the action history is
-    // traceable even when the deduction kept failing.
     try {
       await AuditLogService.createLog({
         userId: session.userId || '',
@@ -76,18 +74,61 @@ export async function retryInventoryDeductionAction(
     return { success: true, warning: message };
   }
 
-  // Persist the flag flip (deductStockForOrder mutates the inventory
-  // document but does NOT touch the order's inventoryDeducted flag).
   await OrderModel.updateOne(
     { _id: new Types.ObjectId(orderId), inventoryDeducted: false },
     {
       $set: {
-        inventoryDeducted: true,
-        inventoryDeductedAt: new Date(),
-        inventoryDeductedBy: new Types.ObjectId(session.userId || ''),
+        inventoryDeductionDetails: result.results.map((r) => ({
+          menuItemId: new Types.ObjectId(r.menuItemId),
+          itemName: r.itemName,
+          status: r.status === 'skipped' ? 'deducted' : r.status,
+          error: r.error,
+          deductedAt:
+            r.status === 'deducted' || r.status === 'skipped'
+              ? new Date()
+              : undefined,
+          quantity: r.quantity,
+          linkedDeductions: r.linkedResults.map((lr) => ({
+            inventoryId: new Types.ObjectId(lr.inventoryId),
+            status: lr.status,
+            error: lr.error,
+          })),
+        })),
+        ...(result.allSucceeded && {
+          inventoryDeducted: true,
+          inventoryDeductedAt: new Date(),
+          inventoryDeductedBy: new Types.ObjectId(session.userId || ''),
+        }),
       },
     }
   );
+
+  if (!result.allSucceeded) {
+    const failedNames = result.results
+      .filter((r) => r.status === 'failed')
+      .map((r) => `${r.itemName}: ${r.error}`)
+      .join('; ');
+    const warning = `Partial deduction — failed items: ${failedNames}`;
+    try {
+      await AuditLogService.createLog({
+        userId: session.userId || '',
+        userEmail: session.email || '',
+        userRole: session.role || '',
+        action: 'incidents.retry_deduction_partial',
+        resource: 'order',
+        resourceId: orderId,
+        details: {
+          failedItems: result.results.filter((r) => r.status === 'failed'),
+          deductedItems: result.results.filter((r) => r.status === 'deducted'),
+          skippedItems: result.results.filter((r) => r.status === 'skipped'),
+        },
+      });
+    } catch {
+      /* non-fatal */
+    }
+    revalidatePath('/dashboard/incidents');
+    return { success: true, warning };
+  }
 
   try {
     await AuditLogService.createLog({

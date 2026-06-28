@@ -854,14 +854,64 @@ export class OrderService {
     if (!order.inventoryDeducted) {
       try {
         const InventoryService = (await import('./inventory-service')).default;
-        await InventoryService.deductStockForOrder(opts.orderId);
-        order.inventoryDeducted = true;
-        order.inventoryDeductedAt = new Date();
-        order.inventoryDeductedBy =
-          opts.actorUserId as unknown as Types.ObjectId;
+        const result = await InventoryService.deductStockForOrder(opts.orderId);
+
+        order.inventoryDeductionDetails = result.results.map((r) => ({
+          menuItemId: new Types.ObjectId(r.menuItemId),
+          itemName: r.itemName,
+          status: r.status === 'skipped' ? 'deducted' : r.status,
+          error: r.error,
+          deductedAt:
+            r.status === 'deducted' || r.status === 'skipped'
+              ? new Date()
+              : undefined,
+          quantity: r.quantity,
+          linkedDeductions: r.linkedResults.map((lr) => ({
+            inventoryId: new Types.ObjectId(lr.inventoryId),
+            status: lr.status,
+            error: lr.error,
+          })),
+        }));
+
+        if (result.allSucceeded) {
+          order.inventoryDeducted = true;
+          order.inventoryDeductedAt = new Date();
+          order.inventoryDeductedBy =
+            opts.actorUserId as unknown as Types.ObjectId;
+        } else {
+          deductionError = 'Some items could not be deducted';
+          try {
+            const { IncidentEventService } = await import(
+              './incident-event-service'
+            );
+            await IncidentEventService.recordIncident({
+              kind: 'inventory_deduction_failed',
+              entityId: opts.orderId,
+              summary: 'Partial inventory deduction failure',
+              errorDetails: {
+                message: deductionError,
+                actorUserId: opts.actorUserId,
+                actorRole: opts.actorRole,
+                deductedItems: result.results.filter(
+                  (r) => r.status === 'deducted'
+                ),
+                failedItems: result.results.filter(
+                  (r) => r.status === 'failed'
+                ),
+                skippedItems: result.results.filter(
+                  (r) => r.status === 'skipped'
+                ),
+              },
+            });
+            incidentWritten = true;
+          } catch (logErr) {
+            console.error(
+              '[OrderService.completeOrder] IncidentEvent write also failed:',
+              logErr
+            );
+          }
+        }
       } catch (error) {
-        // Workflow must not stall — log incident, leave the deducted
-        // flag false. Reconciliation cron retries.
         deductionError = error instanceof Error ? error.message : String(error);
         try {
           const { IncidentEventService } = await import(

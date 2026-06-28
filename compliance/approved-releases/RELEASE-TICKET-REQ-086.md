@@ -1,6 +1,6 @@
 # Release Ticket: REQ-086 — Rename Express Actions to Admin Order Management
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-06-27
 **Requirement ID:** REQ-086
 **Risk Level:** LOW

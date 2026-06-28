@@ -17,6 +17,8 @@
  * `defaultSalesLocation` to pre-test state and removes the test order.
  *
  * @requirement REQ-066
+ * @requirement REQ-087 — per-item deduction tracking, IncidentEvent
+ * shape changed from top-level errorDetails.message to failedItems array
  */
 import { expect, type Page } from '@playwright/test';
 import { MongoClient, ObjectId } from 'mongodb';
@@ -389,9 +391,15 @@ superAdminTest.describe(
           .toBe('inventory_deduction_failed');
         const incident = await readLatestIncident(handle.orderId);
         expect(incident).not.toBeNull();
-        expect(incident!.summary).toMatch(/deductStockForOrder/i);
-        expect(incident!.errorDetails?.message).toMatch(/insufficient stock/i);
-        expect(incident!.errorDetails?.message).toContain(handle.salePointCode);
+        expect(incident!.kind).toBe('inventory_deduction_failed');
+        expect(incident!.errorDetails?.failedItems).toBeDefined();
+        expect(incident!.errorDetails?.failedItems).toHaveLength(1);
+        expect(incident!.errorDetails?.failedItems[0]?.error).toMatch(
+          /insufficient stock/i
+        );
+        expect(incident!.errorDetails?.failedItems[0]?.error).toContain(
+          handle.salePointCode
+        );
 
         // Inventory counts unchanged — no over-deduction, no clamp-at-zero.
         const afterLocs = await readLocations(handle.inventoryId);

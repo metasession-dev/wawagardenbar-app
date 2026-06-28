@@ -339,10 +339,9 @@ describe('REQ-030: deductStockForOrder — linked customization options', () => 
     // Simulate: the linked inventory record was deleted after the menu item was saved
     state.inventories.delete(INV_OGBONO);
 
-    await expect(
-      InventoryService.deductStockForOrder('order-1')
-    ).resolves.toBeUndefined();
+    const result = await InventoryService.deductStockForOrder('order-1');
 
+    expect(result.allSucceeded).toBe(true);
     expect(poundoInv.currentStock).toBe(49); // base still deducts
     expect(state.stockMovements).toHaveLength(1); // only base
   });

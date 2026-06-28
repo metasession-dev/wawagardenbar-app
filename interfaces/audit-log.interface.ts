@@ -51,7 +51,8 @@ export type AuditAction =
   // REQ-066 AC10 — operator-initiated retry of a stuck deduction via
   // the /dashboard/incidents page. Both success + failure paths log.
   | 'incidents.retry_deduction_succeeded'
-  | 'incidents.retry_deduction_failed';
+  | 'incidents.retry_deduction_failed'
+  | 'incidents.retry_deduction_partial';
 
 export interface IAuditLog {
   _id: Types.ObjectId;

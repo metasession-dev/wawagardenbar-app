@@ -35,6 +35,27 @@ vi.mock('@/services/order-service', () => ({
   },
 }));
 
+vi.mock('@/services/incident-event-service', () => ({
+  IncidentEventService: {
+    getUnresolvedSummary: vi.fn().mockResolvedValue({ total: 0, byKind: [] }),
+  },
+}));
+
+vi.mock('@/services/notification-service', () => ({
+  NotificationService: {
+    send: vi.fn().mockResolvedValue({}),
+  },
+}));
+
+vi.mock('@/models/user-model', () => ({
+  default: {
+    find: vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      lean: vi.fn().mockResolvedValue([]),
+    }),
+  },
+}));
+
 import {
   runRewardExpiryJob,
   runInstagramRewardsJob,
@@ -101,9 +122,10 @@ describe('REQ-048 + REQ-058 + REQ-078: startScheduledJobs', () => {
     startScheduledJobs();
     startScheduledJobs(); // second call must not stack intervals
     // REQ-048 reward-expiry (hourly) + REQ-058 instagram-rewards (hourly)
-    // + REQ-066 inventory-reconcile + stale-paid scan (15-min) = 3 intervals.
+    // + REQ-066 inventory-reconcile + stale-paid scan (15-min)
+    // + REQ-088 daily-incident-summary (24h) = 4 intervals.
     // Idempotency guard prevents stacking on the second call.
-    expect(intervalSpy).toHaveBeenCalledTimes(3);
+    expect(intervalSpy).toHaveBeenCalledTimes(4);
   });
 
   it('REQ-078 AC1 — DISABLE_INVENTORY_RECONCILIATION_JOB=true skips the inventory-reconcile registration', async () => {
@@ -113,10 +135,11 @@ describe('REQ-048 + REQ-058 + REQ-078: startScheduledJobs', () => {
     const timeoutSpy = vi.spyOn(global, 'setTimeout');
     const { startScheduledJobs } = await loadFreshModule();
     startScheduledJobs();
-    // Two intervals — reward-expiry + instagram-rewards. NOT inventory-reconcile.
-    expect(intervalSpy).toHaveBeenCalledTimes(2);
-    // Two setTimeout calls (the initial-delay catch-ups for reward + IG only).
-    expect(timeoutSpy).toHaveBeenCalledTimes(2);
+    // Three intervals — reward-expiry + instagram-rewards + daily-incident-summary.
+    // NOT inventory-reconcile.
+    expect(intervalSpy).toHaveBeenCalledTimes(3);
+    // Three setTimeout calls (the initial-delay catch-ups for reward + IG + incident-summary).
+    expect(timeoutSpy).toHaveBeenCalledTimes(3);
   });
 
   it('REQ-078 AC2 — env var unset behaves as today (inventory-reconcile registered)', async () => {
@@ -125,7 +148,7 @@ describe('REQ-048 + REQ-058 + REQ-078: startScheduledJobs', () => {
     const intervalSpy = vi.spyOn(global, 'setInterval');
     const { startScheduledJobs } = await loadFreshModule();
     startScheduledJobs();
-    expect(intervalSpy).toHaveBeenCalledTimes(3);
+    expect(intervalSpy).toHaveBeenCalledTimes(4);
   });
 
   it('REQ-078 AC2 — env=false does NOT disable (only literal "true" matches)', async () => {
@@ -134,7 +157,7 @@ describe('REQ-048 + REQ-058 + REQ-078: startScheduledJobs', () => {
     const intervalSpy = vi.spyOn(global, 'setInterval');
     const { startScheduledJobs } = await loadFreshModule();
     startScheduledJobs();
-    expect(intervalSpy).toHaveBeenCalledTimes(3);
+    expect(intervalSpy).toHaveBeenCalledTimes(4);
   });
 
   it('REQ-078 AC2 — arbitrary non-"true" string does NOT disable', async () => {
@@ -143,7 +166,7 @@ describe('REQ-048 + REQ-058 + REQ-078: startScheduledJobs', () => {
     const intervalSpy = vi.spyOn(global, 'setInterval');
     const { startScheduledJobs } = await loadFreshModule();
     startScheduledJobs();
-    expect(intervalSpy).toHaveBeenCalledTimes(3);
+    expect(intervalSpy).toHaveBeenCalledTimes(4);
   });
 
   it('REQ-078 AC3 — startup log reflects the gate decision', async () => {
@@ -165,9 +188,10 @@ describe('REQ-048 + REQ-058 + REQ-078: startScheduledJobs', () => {
     const intervalSpy = vi.spyOn(global, 'setInterval');
     const { startScheduledJobs } = await loadFreshModule();
     startScheduledJobs();
-    // Two intervals registered (reward + IG). HOUR_MS = 3600000 used for both.
+    // Three intervals registered (reward + IG + incident-summary).
+    // HOUR_MS = 3600000 used for reward + IG; 86400000 (24h) for incident-summary.
     const intervalDelays = intervalSpy.mock.calls.map((c) => c[1]);
-    expect(intervalDelays).toEqual([3600000, 3600000]);
+    expect(intervalDelays).toEqual([3600000, 3600000, 86400000]);
     // 15-minute interval (900000) should NOT appear.
     expect(intervalDelays).not.toContain(900000);
   });

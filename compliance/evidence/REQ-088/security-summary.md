@@ -68,8 +68,10 @@ N/A — no AI behaviour introduced or changed.
 ## UAT verification
 
 - **UAT URL:** https://wawagardenbar-app-uat.up.railway.app
-- **Status:** Pending Railway auto-deploy from `develop`
-- **Smoke test:** To be verified after deploy
+- **Deploy status:** Deployed (Railway auto-deploy from `develop`)
+- **Health check:** PASS — `GET /api/health` returns 200 `{"status":"healthy"}`
+- **Incidents page:** PASS — `/dashboard/incidents` returns 307 (redirect to login for unauthenticated — expected RBAC behaviour)
+- **Smoke test:** PASS — application responsive, no deploy errors
 
 ## Rollback plan
 

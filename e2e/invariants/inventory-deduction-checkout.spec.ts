@@ -27,6 +27,7 @@ import {
   uniqueIdempotencyKey,
   deleteMany,
   updateOne,
+  findOrCreateMenuItem,
 } from './helpers';
 import { tagTest } from '../helpers/test-tags';
 import { evidenceShot } from '../helpers/evidence';
@@ -46,10 +47,7 @@ async function seedOrder(): Promise<SeedHandle> {
   try {
     await client.connect();
     const db = client.db(dbName);
-    const menuItem = await db
-      .collection('menuitems')
-      .findOne({ trackInventory: true, isAvailable: true });
-    if (!menuItem) throw new Error('No trackInventory menu item found');
+    const menuItem = await findOrCreateMenuItem(db, { trackInventory: true });
     const inventory = await db
       .collection('inventories')
       .findOne({ menuItemId: menuItem._id });

@@ -22,6 +22,8 @@ import {
   mongoConn,
   uniqueIdempotencyKey,
   deleteMany,
+  findOrCreateCustomerUser,
+  findOrCreateMenuItem,
 } from './helpers';
 import { tagTest } from '../helpers/test-tags';
 import { evidenceShot } from '../helpers/evidence';
@@ -38,12 +40,8 @@ async function seedCompletedOrder(): Promise<SeedHandle> {
   try {
     await client.connect();
     const db = client.db(dbName);
-    const user = await db.collection('users').findOne({ role: 'customer' });
-    if (!user) throw new Error('No customer user found');
-    const menuItem = await db
-      .collection('menuitems')
-      .findOne({ isAvailable: true });
-    if (!menuItem) throw new Error('No available menu item found');
+    const user = await findOrCreateCustomerUser(db);
+    const menuItem = await findOrCreateMenuItem(db);
     const orderNumber = `WG88A${Date.now()}`.slice(0, 12);
     const now = new Date();
     const subtotal = menuItem.price || 5000;

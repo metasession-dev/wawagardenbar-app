@@ -18,6 +18,7 @@ import {
   guard,
   mongoConn,
   deleteMany,
+  findOrCreateCustomerUser,
 } from './helpers';
 import { tagTest } from '../helpers/test-tags';
 import { evidenceShot } from '../helpers/evidence';
@@ -33,8 +34,7 @@ async function findUserForReward(): Promise<SeedHandle> {
   try {
     await client.connect();
     const db = client.db(dbName);
-    const user = await db.collection('users').findOne({ role: 'customer' });
-    if (!user) throw new Error('No customer user found');
+    const user = await findOrCreateCustomerUser(db);
     return {
       userId: user._id.toString(),
       rewardCode: `E2E-RWD-${Date.now()}`,

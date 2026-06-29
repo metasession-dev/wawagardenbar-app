@@ -23,6 +23,8 @@ import {
   uniqueIdempotencyKey,
   deleteMany,
   updateOne,
+  findOrCreateCustomerUser,
+  findOrCreateMenuItem,
 } from './helpers';
 import { tagTest } from '../helpers/test-tags';
 import { evidenceShot } from '../helpers/evidence';
@@ -43,16 +45,12 @@ async function seedCompletedDeductedOrder(): Promise<SeedHandle> {
   try {
     await client.connect();
     const db = client.db(dbName);
-    const menuItem = await db
-      .collection('menuitems')
-      .findOne({ trackInventory: true, isAvailable: true });
-    if (!menuItem) throw new Error('No trackInventory menu item found');
+    const menuItem = await findOrCreateMenuItem(db, { trackInventory: true });
     const inventory = await db
       .collection('inventories')
       .findOne({ menuItemId: menuItem._id });
     if (!inventory) throw new Error('No inventory row found');
-    const user = await db.collection('users').findOne({ role: 'customer' });
-    if (!user) throw new Error('No customer user found');
+    const user = await findOrCreateCustomerUser(db);
     const stockBeforeDeduction = computeStockFromInventory(inventory as never);
     const trackByLocation = Boolean(
       (inventory as { trackByLocation?: boolean }).trackByLocation

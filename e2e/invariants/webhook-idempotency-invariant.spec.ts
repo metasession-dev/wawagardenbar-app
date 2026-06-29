@@ -25,6 +25,7 @@ import {
   baseUrl,
   uniqueIdempotencyKey,
   deleteMany,
+  findOrCreateCustomerUser,
 } from './helpers';
 
 interface SeedHandle {
@@ -40,8 +41,7 @@ async function seedPendingOrder(): Promise<SeedHandle> {
   try {
     await client.connect();
     const db = client.db(dbName);
-    const user = await db.collection('users').findOne({ role: 'customer' });
-    if (!user) throw new Error('No customer user found');
+    const user = await findOrCreateCustomerUser(db);
     const paymentReference = `E2E-REQ088-WH-${Date.now()}`;
     const transactionReference = `MNIF-TXN-${Date.now()}`;
     const now = new Date();

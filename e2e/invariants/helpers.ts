@@ -215,3 +215,76 @@ export async function clickOrderActionOnOrdersPage(
 export function uniqueIdempotencyKey(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
+
+/**
+ * Find a customer user or create one if none exists (CI resilience).
+ * Returns the user document.
+ */
+export async function findOrCreateCustomerUser(
+  db: import('mongodb').Db
+): Promise<import('mongodb').WithId<import('mongodb').Document>> {
+  const existing = await db.collection('users').findOne({ role: 'customer' });
+  if (existing) return existing;
+  const now = new Date();
+  const result = await db.collection('users').insertOne({
+    email: `e2e-customer-${Date.now()}@test.wawagardenbar.com`,
+    firstName: 'E2E',
+    lastName: 'Customer',
+    role: 'customer',
+    pointsBalance: 0,
+    createdAt: now,
+    updatedAt: now,
+  });
+  return {
+    _id: result.insertedId,
+    email: `e2e-customer-${Date.now()}@test.wawagardenbar.com`,
+    firstName: 'E2E',
+    lastName: 'Customer',
+    role: 'customer',
+    pointsBalance: 0,
+    createdAt: now,
+    updatedAt: now,
+  } as never;
+}
+
+/**
+ * Find an available menu item, or create a minimal one if none exists.
+ * Returns the menu item document.
+ */
+export async function findOrCreateMenuItem(
+  db: import('mongodb').Db,
+  opts: { trackInventory?: boolean } = {}
+): Promise<import('mongodb').WithId<import('mongodb').Document>> {
+  const filter: Record<string, unknown> = { isAvailable: true };
+  if (opts.trackInventory) filter.trackInventory = true;
+  const existing = await db.collection('menuitems').findOne(filter);
+  if (existing) return existing;
+  const now = new Date();
+  const result = await db.collection('menuitems').insertOne({
+    name: `E2E Test Item ${Date.now()}`,
+    description: 'E2E test item',
+    price: 5000,
+    category: 'food',
+    subcategory: 'starters',
+    isAvailable: true,
+    trackInventory: opts.trackInventory ?? false,
+    prepTime: 10,
+    servingSize: 'full',
+    createdAt: now,
+    updatedAt: now,
+  });
+  return {
+    _id: result.insertedId,
+    name: `E2E Test Item ${Date.now()}`,
+    description: 'E2E test item',
+    price: 5000,
+    category: 'food',
+    subcategory: 'starters',
+    isAvailable: true,
+    trackInventory: opts.trackInventory ?? false,
+    prepTime: 10,
+    servingSize: 'full',
+    createdAt: now,
+    updatedAt: now,
+  } as never;
+}

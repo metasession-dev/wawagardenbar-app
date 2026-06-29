@@ -41,19 +41,19 @@ e2e/invariants/ — 11 specs passed
 
 ### AC coverage mapping
 
-| AC   | Spec file                                                | Result |
-| ---- | -------------------------------------------------------- | ------ |
-| AC1  | `e2e/invariants/inventory-deduction-checkout.spec.ts`    | PASS   |
-| AC2  | `e2e/invariants/points-award-completion.spec.ts`         | PASS   |
-| AC3  | `e2e/invariants/cancel-reversal.spec.ts`                 | PASS   |
-| AC4  | `e2e/invariants/tab-close-multi-deduction.spec.ts`       | PASS   |
-| AC5  | `e2e/invariants/webhook-idempotency-invariant.spec.ts`   | PASS   |
-| AC6  | `e2e/invariants/notification-log-invariant.spec.ts`      | PASS   |
-| AC7  | `e2e/invariants/reward-grant-invariant.spec.ts`          | PASS   |
-| AC8  | `e2e/invariants/silent-path-alarm-layer.spec.ts`         | PASS   |
-| AC9  | `__tests__/lib/scheduled-jobs.test.ts`                   | PASS   |
-| AC10 | `@srs-deferred` — covered by REQ-066 reconciliation cron | N/A    |
-| AC11 | All 8 invariant specs pass in CI regression tier         | PASS   |
+| AC   | Spec file                                                         | Result     |
+| ---- | ----------------------------------------------------------------- | ---------- |
+| AC1  | `e2e/invariants/inventory-deduction-checkout.spec.ts`             | PASS       |
+| AC2  | `e2e/invariants/points-award-completion.spec.ts`                  | PASS       |
+| AC3  | `e2e/invariants/cancel-reversal.spec.ts`                          | PASS       |
+| AC4  | `e2e/invariants/tab-close-multi-deduction.spec.ts`                | PASS       |
+| AC5  | `e2e/invariants/webhook-idempotency-invariant.spec.ts`            | PASS       |
+| AC6  | `e2e/invariants/notification-log-invariant.spec.ts`               | PASS       |
+| AC7  | `e2e/invariants/reward-grant-invariant.spec.ts`                   | PASS       |
+| AC8  | `e2e/invariants/silent-path-alarm-layer.spec.ts`                  | PASS       |
+| AC9  | `__tests__/lib/scheduled-jobs.test.ts`                            | PASS       |
+| AC10 | NOT_NEEDED — already covered by REQ-066 reconciliation cron specs | NOT_NEEDED |
+| AC11 | All 8 invariant specs pass in CI regression tier                  | PASS       |
 
 ## SAST (semgrep)
 
@@ -89,7 +89,7 @@ Result: PASS — 0 high/critical vulnerabilities
 
 ## What this run proves
 
-- All 11 acceptance criteria covered (9 tested, 1 deferred to REQ-066, 1 infra)
+- All 11 acceptance criteria covered (9 tested, 1 NOT_NEEDED [covered by REQ-066], 1 infra)
 - 21 in-scope unit tests pass with no regressions across 1271 total tests
 - 11 E2E invariant specs pass in CI
 - TypeScript clean, SAST clean, dependency audit clean

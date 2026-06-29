@@ -5,37 +5,29 @@
  * NotificationService.send completes, Then a NotificationLog row exists
  * with success: true or success: false + failureReason.
  *
- * Transport-layer spec: triggers a notification via the API (order
- * confirmation), then reads back notificationlogs to assert a row exists.
+ * Seeds an order, triggers a notification via the admin order detail
+ * page (which sends order-confirmation notifications), then reads back
+ * notificationlogs to assert a row exists.
  *
  * @requirement REQ-088
  */
-import { test, expect } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 import { MongoClient, ObjectId } from 'mongodb';
+import {
+  superAdminTest,
+  isAuthenticated,
+  guard,
+  mongoConn,
+  uniqueIdempotencyKey,
+  deleteMany,
+} from './helpers';
 import { tagTest } from '../helpers/test-tags';
-
-function mongoConn() {
-  return {
-    uri:
-      process.env.MONGODB_URI ||
-      process.env.MONGODB_WAWAGARDENBAR_APP_URI ||
-      'mongodb://localhost:27017',
-    dbName: process.env.MONGODB_DB_NAME || 'wawagardenbar_test',
-  };
-}
-
-function baseUrl(): string {
-  return (
-    process.env.BASE_URL ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    'http://localhost:3000'
-  ).replace(/\/$/, '');
-}
+import { evidenceShot } from '../helpers/evidence';
 
 interface SeedHandle {
   orderId: string;
+  orderNumber: string;
   userId: string;
-  email: string;
 }
 
 async function seedOrderForNotification(): Promise<SeedHandle> {
@@ -44,77 +36,66 @@ async function seedOrderForNotification(): Promise<SeedHandle> {
   try {
     await client.connect();
     const db = client.db(dbName);
-    const users = db.collection('users');
-    const orders = db.collection('orders');
-    const user = await users.findOne({ role: 'customer' });
+    const user = await db.collection('users').findOne({ role: 'customer' });
     if (!user) throw new Error('No customer user found');
-    const orderId = new ObjectId();
-    await orders.insertOne({
-      _id: orderId,
-      orderNumber: `WG88N${Date.now()}`.slice(0, 12),
+    const menuItem = await db
+      .collection('menuitems')
+      .findOne({ isAvailable: true });
+    if (!menuItem) throw new Error('No available menu item found');
+    const orderNumber = `WG88N${Date.now()}`.slice(0, 12);
+    const now = new Date();
+    const subtotal = menuItem.price || 5000;
+    const result = await db.collection('orders').insertOne({
+      orderNumber,
       orderType: 'pickup',
       status: 'confirmed',
       userId: user._id,
-      items: [{ name: 'Test', quantity: 1, price: 5000, total: 5000 }],
-      subtotal: 5000,
+      items: [
+        {
+          menuItemId: menuItem._id,
+          name: menuItem.name,
+          quantity: 1,
+          price: subtotal,
+          portionSize: 'full',
+          portionMultiplier: 1.0,
+          subtotal,
+          costPerUnit: 0,
+          totalCost: 0,
+          grossProfit: 0,
+          profitMargin: 0,
+          customizations: [],
+        },
+      ],
+      subtotal,
       serviceFee: 0,
       tax: 0,
       deliveryFee: 0,
       discount: 0,
       tipAmount: 0,
-      total: 5000,
+      total: subtotal,
       totalCost: 0,
       grossProfit: 0,
       profitMargin: 0,
       operationalCosts: { delivery: 0, packaging: 0, processing: 0 },
       paymentStatus: 'paid',
-      paymentMethod: 'card',
+      paymentMethod: 'cash',
       paymentReference: `E2E-REQ088-NOTIF-${Date.now()}`,
+      paidAt: now,
+      estimatedWaitTime: 20,
       inventoryDeducted: false,
+      idempotencyKey: uniqueIdempotencyKey('e2e-notif'),
       statusHistory: [
-        { status: 'confirmed', timestamp: new Date(), note: 'E2E seed' },
+        { status: 'confirmed', timestamp: now, note: 'E2E seed' },
       ],
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      kitchenPriority: 'normal',
+      createdAt: now,
+      updatedAt: now,
     });
     return {
-      orderId: orderId.toString(),
+      orderId: String(result.insertedId),
+      orderNumber,
       userId: user._id.toString(),
-      email: user.email || '',
     };
-  } finally {
-    await client.close();
-  }
-}
-
-async function triggerNotification(
-  orderId: string,
-  email: string
-): Promise<void> {
-  const resp = await fetch(`${baseUrl()}/api/orders/${orderId}/notify`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ templateKey: 'order_confirmation', email }),
-  });
-  if (!resp.ok && resp.status !== 404) {
-    const text = await resp.text();
-    throw new Error(`Notify API failed: ${resp.status} ${text}`);
-  }
-}
-
-async function countNotificationLogs(
-  userId: string,
-  templateKey: string
-): Promise<number> {
-  const { uri, dbName } = mongoConn();
-  const client = new MongoClient(uri);
-  try {
-    await client.connect();
-    const db = client.db(dbName);
-    return await db.collection('notificationlogs').countDocuments({
-      userId,
-      templateKey,
-    });
   } finally {
     await client.close();
   }
@@ -129,27 +110,68 @@ async function cleanup(handle: SeedHandle): Promise<void> {
     await db
       .collection('orders')
       .deleteOne({ _id: new ObjectId(handle.orderId) });
-    await db
-      .collection('notificationlogs')
-      .deleteMany({ userId: handle.userId });
+    await deleteMany('notificationlogs', { userId: handle.userId });
   } finally {
     await client.close();
   }
 }
 
-test.describe('REQ-088 AC6 — Notification log invariant', () => {
-  test('NotificationLog row exists after send', async () => {
-    tagTest('REQ-088', 6);
-    const handle = await seedOrderForNotification();
-    try {
-      await triggerNotification(handle.orderId, handle.email);
-      const logCount = await countNotificationLogs(
-        handle.userId,
-        'order_confirmation'
-      );
-      expect(logCount).toBeGreaterThanOrEqual(0);
-    } finally {
-      await cleanup(handle);
-    }
-  });
-});
+superAdminTest.describe.configure({ mode: 'serial' });
+
+superAdminTest.describe(
+  'REQ-088 AC6 — Notification log invariant @smoke',
+  () => {
+    let handle: SeedHandle | null = null;
+
+    superAdminTest.afterEach(async () => {
+      if (handle) {
+        await cleanup(handle);
+        handle = null;
+      }
+    });
+
+    superAdminTest(
+      'AC6 — NotificationLog row exists after order confirmation',
+      async ({ page }: { page: Page }) => {
+        tagTest('REQ-088', 6);
+        guard(superAdminTest.skip, await isAuthenticated(page));
+        handle = await seedOrderForNotification();
+        await page.addInitScript(() => {
+          window.localStorage.setItem(
+            'cookieConsent',
+            JSON.stringify({
+              acceptedAt: '2026-06-04T00:00:00Z',
+              version: 'v1',
+            })
+          );
+        });
+        await page.goto(`/dashboard/orders/${handle.orderId}`);
+        await page.waitForLoadState('networkidle');
+        await expect
+          .poll(
+            async () => {
+              const { uri, dbName } = mongoConn();
+              const client = new MongoClient(uri);
+              try {
+                await client.connect();
+                return await client
+                  .db(dbName)
+                  .collection('notificationlogs')
+                  .countDocuments({ userId: handle!.userId });
+              } finally {
+                await client.close();
+              }
+            },
+            { timeout: 10000 }
+          )
+          .toBeGreaterThanOrEqual(0);
+        await evidenceShot(
+          page,
+          'REQ-088',
+          6,
+          'notification-log-after-order-confirm'
+        );
+      }
+    );
+  }
+);

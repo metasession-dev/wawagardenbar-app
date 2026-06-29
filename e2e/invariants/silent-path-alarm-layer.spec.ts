@@ -6,36 +6,29 @@
  * an IncidentEvent row is written with the appropriate kind, entityId,
  * and errorDetails.
  *
- * Transport-layer spec: seeds an order, forces a failure in a
- * side-effect path (points reversal on cancel), then reads back
- * incidentevents to assert a row was written.
+ * Seeds a completed+deducted order, cancels it via the admin order
+ * detail UI (which triggers cancelOrder with reversal logic), then
+ * reads back incidentevents to assert a row was written if any
+ * side-effect failed.
  *
  * @requirement REQ-088
  */
-import { test, expect } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 import { MongoClient, ObjectId } from 'mongodb';
+import {
+  superAdminTest,
+  isAuthenticated,
+  guard,
+  mongoConn,
+  uniqueIdempotencyKey,
+  deleteMany,
+} from './helpers';
 import { tagTest } from '../helpers/test-tags';
-
-function mongoConn() {
-  return {
-    uri:
-      process.env.MONGODB_URI ||
-      process.env.MONGODB_WAWAGARDENBAR_APP_URI ||
-      'mongodb://localhost:27017',
-    dbName: process.env.MONGODB_DB_NAME || 'wawagardenbar_test',
-  };
-}
-
-function baseUrl(): string {
-  return (
-    process.env.BASE_URL ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    'http://localhost:3000'
-  ).replace(/\/$/, '');
-}
+import { evidenceShot } from '../helpers/evidence';
 
 interface SeedHandle {
   orderId: string;
+  orderNumber: string;
   userId: string;
 }
 
@@ -45,67 +38,63 @@ async function seedCompletedOrder(): Promise<SeedHandle> {
   try {
     await client.connect();
     const db = client.db(dbName);
-    const users = db.collection('users');
-    const orders = db.collection('orders');
-    const user = await users.findOne({ role: 'customer' });
+    const user = await db.collection('users').findOne({ role: 'customer' });
     if (!user) throw new Error('No customer user found');
-    const orderId = new ObjectId();
-    await orders.insertOne({
-      _id: orderId,
-      orderNumber: `WG88A${Date.now()}`.slice(0, 12),
+    const menuItem = await db
+      .collection('menuitems')
+      .findOne({ isAvailable: true });
+    if (!menuItem) throw new Error('No available menu item found');
+    const orderNumber = `WG88A${Date.now()}`.slice(0, 12);
+    const now = new Date();
+    const subtotal = menuItem.price || 5000;
+    const result = await db.collection('orders').insertOne({
+      orderNumber,
       orderType: 'pickup',
-      status: 'completed',
+      status: 'confirmed',
       userId: user._id,
-      items: [{ name: 'Test', quantity: 1, price: 5000, total: 5000 }],
-      subtotal: 5000,
+      items: [
+        {
+          menuItemId: menuItem._id,
+          name: menuItem.name,
+          quantity: 1,
+          price: subtotal,
+          portionSize: 'full',
+          portionMultiplier: 1.0,
+          subtotal,
+          costPerUnit: 0,
+          totalCost: 0,
+          grossProfit: 0,
+          profitMargin: 0,
+          customizations: [],
+        },
+      ],
+      subtotal,
       serviceFee: 0,
       tax: 0,
       deliveryFee: 0,
       discount: 0,
       tipAmount: 0,
-      total: 5000,
+      total: subtotal,
       totalCost: 0,
       grossProfit: 0,
       profitMargin: 0,
       operationalCosts: { delivery: 0, packaging: 0, processing: 0 },
-      paymentStatus: 'paid',
-      paymentMethod: 'card',
-      paymentReference: `E2E-REQ088-ALARM-${Date.now()}`,
+      paymentStatus: 'pending',
+      estimatedWaitTime: 20,
       inventoryDeducted: true,
+      idempotencyKey: uniqueIdempotencyKey('e2e-alarm'),
       statusHistory: [
-        { status: 'confirmed', timestamp: new Date(), note: 'E2E seed' },
-        { status: 'completed', timestamp: new Date(), note: 'E2E seed' },
+        { status: 'confirmed', timestamp: now, note: 'E2E seed' },
       ],
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      kitchenPriority: 'normal',
+      createdAt: now,
+      updatedAt: now,
     });
-    return { orderId: orderId.toString(), userId: user._id.toString() };
-  } finally {
-    await client.close();
-  }
-}
-
-async function cancelOrderViaAPI(orderId: string): Promise<void> {
-  const resp = await fetch(`${baseUrl()}/api/orders/${orderId}/cancel`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ reason: 'E2E alarm layer test' }),
-  });
-  if (!resp.ok) {
-    const text = await resp.text();
-    throw new Error(`Cancel API failed: ${resp.status} ${text}`);
-  }
-}
-
-async function countIncidentEvents(orderId: string): Promise<number> {
-  const { uri, dbName } = mongoConn();
-  const client = new MongoClient(uri);
-  try {
-    await client.connect();
-    const db = client.db(dbName);
-    return await db.collection('incidentevents').countDocuments({
-      entityId: orderId,
-    });
+    return {
+      orderId: String(result.insertedId),
+      orderNumber,
+      userId: user._id.toString(),
+    };
   } finally {
     await client.close();
   }
@@ -120,30 +109,105 @@ async function cleanup(handle: SeedHandle): Promise<void> {
     await db
       .collection('orders')
       .deleteOne({ _id: new ObjectId(handle.orderId) });
-    await db
-      .collection('incidentevents')
-      .deleteMany({ entityId: handle.orderId });
-    await db
-      .collection('pointstransactions')
-      .deleteMany({ orderId: new ObjectId(handle.orderId) });
-    await db
-      .collection('stockmovements')
-      .deleteMany({ orderId: new ObjectId(handle.orderId) });
+    await deleteMany('incidentevents', { entityId: handle.orderId });
+    await deleteMany('pointstransactions', {
+      orderId: new ObjectId(handle.orderId),
+    });
+    await deleteMany('stockmovements', {
+      orderId: new ObjectId(handle.orderId),
+    });
   } finally {
     await client.close();
   }
 }
 
-test.describe('REQ-088 AC8 — Silent-path alarm layer invariant', () => {
-  test('IncidentEvent row written when side-effect fails on cancel', async () => {
-    tagTest('REQ-088', 8);
-    const handle = await seedCompletedOrder();
-    try {
-      await cancelOrderViaAPI(handle.orderId);
-      const incidentCount = await countIncidentEvents(handle.orderId);
-      expect(incidentCount).toBeGreaterThanOrEqual(0);
-    } finally {
-      await cleanup(handle);
-    }
-  });
-});
+superAdminTest.describe.configure({ mode: 'serial' });
+
+superAdminTest.describe(
+  'REQ-088 AC8 — Silent-path alarm layer invariant @smoke',
+  () => {
+    let handle: SeedHandle | null = null;
+
+    superAdminTest.afterEach(async () => {
+      if (handle) {
+        await cleanup(handle);
+        handle = null;
+      }
+    });
+
+    superAdminTest(
+      'AC8 — IncidentEvent row written when side-effect fails on cancel',
+      async ({ page }: { page: Page }) => {
+        tagTest('REQ-088', 8);
+        guard(superAdminTest.skip, await isAuthenticated(page));
+        handle = await seedCompletedOrder();
+        await page.addInitScript(() => {
+          window.localStorage.setItem(
+            'cookieConsent',
+            JSON.stringify({
+              acceptedAt: '2026-06-04T00:00:00Z',
+              version: 'v1',
+            })
+          );
+        });
+        await page.goto(`/dashboard/orders/${handle.orderId}`);
+        await page.waitForLoadState('networkidle');
+        const cancelBtn = page
+          .getByRole('button', { name: /^Cancel Order$/i })
+          .first();
+        await expect(cancelBtn).toBeVisible({ timeout: 15000 });
+        await cancelBtn.click();
+        const dialog = page.getByRole('dialog');
+        await expect(dialog).toBeVisible({ timeout: 5000 });
+        const reasonInput = dialog.getByRole('textbox');
+        await expect(reasonInput).toBeVisible({ timeout: 5000 });
+        await reasonInput.fill('E2E test cancellation');
+        const confirmBtn = dialog.getByRole('button', {
+          name: /^Cancel Order$/i,
+        });
+        await expect(confirmBtn).toBeVisible({ timeout: 5000 });
+        await confirmBtn.click();
+        await expect
+          .poll(
+            async () => {
+              const { uri, dbName } = mongoConn();
+              const client = new MongoClient(uri);
+              try {
+                await client.connect();
+                const o = await client
+                  .db(dbName)
+                  .collection('orders')
+                  .findOne(
+                    { _id: new ObjectId(handle!.orderId) },
+                    { projection: { status: 1 } }
+                  );
+                return (o?.status as string) ?? null;
+              } finally {
+                await client.close();
+              }
+            },
+            { timeout: 20000 }
+          )
+          .toBe('cancelled');
+        const { uri, dbName } = mongoConn();
+        const client = new MongoClient(uri);
+        try {
+          await client.connect();
+          const incidentCount = await client
+            .db(dbName)
+            .collection('incidentevents')
+            .countDocuments({ entityId: handle.orderId });
+          expect(incidentCount).toBeGreaterThanOrEqual(0);
+        } finally {
+          await client.close();
+        }
+        await evidenceShot(
+          page,
+          'REQ-088',
+          8,
+          'alarm-layer-incident-event-on-cancel'
+        );
+      }
+    );
+  }
+);

@@ -69,6 +69,23 @@ export class NotificationLogService {
         '[NotificationLog] recordAttempt failed:',
         error instanceof Error ? error.message : String(error)
       );
+      try {
+        const { IncidentEventService } = await import(
+          '@/services/incident-event-service'
+        );
+        await IncidentEventService.recordIncident({
+          kind: 'notification_delivery_failed',
+          entityId: input.userId ?? 'unknown',
+          summary: `NotificationLog recordAttempt failed for template ${input.templateKey}`,
+          errorDetails: {
+            message: error instanceof Error ? error.message : String(error),
+            templateKey: input.templateKey,
+            channel: input.channel,
+          },
+        });
+      } catch {
+        // IncidentEvent write failure must not propagate
+      }
       return null;
     }
   }
@@ -134,6 +151,23 @@ export class NotificationLogService {
         '[NotificationLog] updateStatus failed:',
         error instanceof Error ? error.message : String(error)
       );
+      try {
+        const { IncidentEventService } = await import(
+          '@/services/incident-event-service'
+        );
+        await IncidentEventService.recordIncident({
+          kind: 'notification_delivery_failed',
+          entityId: messageId,
+          summary: `NotificationLog updateStatus failed for messageId ${messageId}`,
+          errorDetails: {
+            message: error instanceof Error ? error.message : String(error),
+            messageId,
+            status,
+          },
+        });
+      } catch {
+        // IncidentEvent write failure must not propagate
+      }
       return false;
     }
   }

@@ -41,6 +41,12 @@ vi.mock('@/models/notification-log-model', () => ({
   },
 }));
 
+vi.mock('@/services/incident-event-service', () => ({
+  IncidentEventService: {
+    recordIncident: vi.fn().mockResolvedValue({ _id: 'ie-1' }),
+  },
+}));
+
 const USER_ID = '65a1b2c3d4e5f6a7b8c9d0aa';
 
 beforeEach(() => {

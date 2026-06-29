@@ -1,6 +1,6 @@
 # Release Ticket: REQ-080 - Resolve high-severity dependency audit findings
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-06-14
 **Requirement ID:** REQ-080
 **Risk Level:** HIGH

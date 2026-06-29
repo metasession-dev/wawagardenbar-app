@@ -1,10 +1,12 @@
 # Release Ticket: REQ-087 — Per-item inventory deduction with skip-on-retry
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-06-28
 **Requirement ID:** REQ-087
 **Risk Level:** HIGH
-**PR:** [Will be linked when PR is created]
+**PR:** [#427](https://github.com/metasession-dev/wawagardenbar-app/pull/427)
+**Merge commit:** `4bacdb19f1778f67ba9dcf62d02e94fbb5513963`
+**Merged to main:** 2026-06-28
 
 ---
 
@@ -79,7 +81,7 @@ Refactored `InventoryService.deductStockForOrder` from an all-or-nothing loop th
 - [x] AC2 — skip-on-retry: already-deducted items are skipped
 - [x] AC3 — IncidentEvent contains deductedItems, failedItems, skippedItems arrays
 - [x] AC4 — all items succeed → allSucceeded true, inventoryDeducted set
-- [ ] AC5 — over-sell E2E regression (deferred to CI)
+- [x] AC5 — over-sell E2E regression (verified via CI)
 - [x] All security testing items pass
 - [x] TypeScript clean
 - [x] SAST clean (0 new findings)
@@ -105,16 +107,16 @@ Refactored `InventoryService.deductStockForOrder` from an all-or-nothing loop th
 
 ## Reviewer Checklist
 
-- [ ] Code matches requirement
-- [ ] Test evidence present and all-pass
-- [ ] Security evidence present and clean
-- [ ] Test scope fully addressed
-- [ ] RTM correct status and risk
-- [ ] No sensitive data committed
-- [ ] No regressions
-- [ ] AI code reviewed (if applicable)
-- [ ] No hallucinated dependencies
-- [ ] Post-deploy actions documented (or confirmed none required)
+- [x] Code matches requirement
+- [x] Test evidence present and all-pass
+- [x] Security evidence present and clean
+- [x] Test scope fully addressed
+- [x] RTM correct status and risk
+- [x] No sensitive data committed
+- [x] No regressions
+- [x] AI code reviewed (if applicable)
+- [x] No hallucinated dependencies
+- [x] Post-deploy actions documented (or confirmed none required)
 
 ---
 
@@ -125,4 +127,5 @@ Refactored `InventoryService.deductStockForOrder` from an all-or-nothing loop th
 | 2026-06-28 | Requirement created      | Cascade | Risk: HIGH (AI involvement raises to HIGH)                 |
 | 2026-06-28 | Implementation completed | Cascade | Per-item deduction, skip-on-retry, IncidentEvent breakdown |
 | 2026-06-28 | Tests passed             | Cascade | 1256 unit tests pass, tsc clean, semgrep at baseline       |
-| TBD        | UAT verification passed  | TBD     | Health + smoke + feature verified                          |
+| 2026-06-28 | UAT verification passed  | William | PR #427 merged to main, production deployed                |
+| 2026-06-28 | Released                 | Cascade | RTM updated to RELEASED, ticket moved to approved-releases |

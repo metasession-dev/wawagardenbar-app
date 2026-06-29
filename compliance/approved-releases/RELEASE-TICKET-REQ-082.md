@@ -1,10 +1,10 @@
 # Release Ticket: REQ-082 — Progressive Category Display
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-06-19
 **Requirement ID:** REQ-082
 **Risk Level:** MEDIUM
-**PR:** [Will be linked when PR is created]
+**PR:** [#403](https://github.com/metasession-dev/wawagardenbar-app/pull/403)
 
 ---
 

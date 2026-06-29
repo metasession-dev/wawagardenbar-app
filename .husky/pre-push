@@ -1,7 +1,8 @@
 #!/bin/sh
-# Husky pre-push hook — fast gates + E2E evidence + skill-invocation sentinel + compliance validator.
+# Husky pre-push hook — SDLC guard + fast gates + E2E evidence + skill-invocation sentinel + compliance validator.
 #
-# Runs four checks before allowing a push:
+# Runs five checks before allowing a push:
+# 0. SDLC guard — branch-name check for manual execution detection (#231)
 # 1. TypeScript check (fast gate)
 # 2. E2E evidence check — if UI-facing files changed, verify Playwright ran
 # 3. Skill-invocation sentinel — if feat/fix/refactor/perf commits present,
@@ -14,6 +15,13 @@
 # Install: cp this file to .husky/pre-push && chmod +x .husky/pre-push
 
 set -eu
+
+# ── 0. SDLC guard (devaudit-installer#231) ──────────────────────────
+# Fast-fail: if on a tracked branch (feat/fix/refactor/perf) and the
+# sentinel is missing, bail before running expensive test suites.
+if [ -f scripts/sdlc-guard.sh ]; then
+  bash scripts/sdlc-guard.sh
+fi
 
 # ── 1. TypeScript check ──────────────────────────────────────────────
 echo "Pre-push: running TypeScript check..."
@@ -30,6 +38,8 @@ echo "Pre-push: TypeScript check passed."
 # Only fires if UI-facing files are in the push. Checks for either
 # playwright-report/ directory or .e2e-gate-passed sentinel (written by
 # e2e-test-engineer after a successful run).
+# Also checks .e2e-evidence-wired sentinel if e2e spec files changed
+# (written by e2e-test-engineer Phase 5½ after validating tagTest/evidenceShot).
 INTEGRATION_BRANCH=$(jq -r '.integration_branch // "develop"' sdlc-config.json 2>/dev/null || echo "develop")
 
 # Read stdin to get the pushed refs (husky pre-push protocol)
@@ -69,6 +79,23 @@ while read -r local_ref local_sha remote_ref remote_sha; do
       exit 1
     fi
     echo "Pre-push: E2E evidence check passed."
+  fi
+
+  # Check for E2E spec file changes — require .e2e-evidence-wired sentinel
+  SPEC_FILES=$(git diff --name-only "$RANGE" -- 'e2e/**/*.spec.ts' 2>/dev/null || true)
+
+  if [ -n "$SPEC_FILES" ]; then
+    if [ ! -f .e2e-evidence-wired ]; then
+      echo ""
+      echo "ERROR: Evidence wiring validation (Phase 5½) was not run."
+      echo "       E2E spec files changed in this push:"
+      echo "$SPEC_FILES" | sed 's/^/         /'
+      echo ""
+      echo "       Invoke e2e-test-engineer to validate tagTest() and evidenceShot() calls."
+      echo "       Bypass with --no-verify (last resort, not a habit)."
+      exit 1
+    fi
+    echo "Pre-push: E2E evidence wiring check passed."
   fi
 done
 

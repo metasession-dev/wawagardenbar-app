@@ -50,6 +50,12 @@ vi.mock('@/services/inventory-service', () => ({
   default: { restoreStockForOrder: vi.fn().mockResolvedValue(undefined) },
 }));
 
+vi.mock('@/services/incident-event-service', () => ({
+  IncidentEventService: {
+    recordIncident: vi.fn().mockResolvedValue({ _id: 'ie-1' }),
+  },
+}));
+
 import { OrderService } from '@/services/order-service';
 
 beforeEach(() => {

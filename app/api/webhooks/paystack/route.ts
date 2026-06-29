@@ -148,6 +148,23 @@ export async function POST(request: NextRequest) {
               order._id,
               error
             );
+            try {
+              const { IncidentEventService } = await import(
+                '@/services/incident-event-service'
+              );
+              await IncidentEventService.recordIncident({
+                kind: 'reward_grant_failed',
+                entityId: String(order._id),
+                summary: `Reward calculation failed for order ${order._id}`,
+                errorDetails: {
+                  message:
+                    error instanceof Error ? error.message : String(error),
+                  userId: String(order.userId ?? ''),
+                },
+              });
+            } catch {
+              // IncidentEvent write failure must not abort the webhook
+            }
           }
         }
       } else {
@@ -193,6 +210,23 @@ export async function POST(request: NextRequest) {
             }
           } catch (error) {
             console.error('Error calculating reward for tab:', tab._id, error);
+            try {
+              const { IncidentEventService } = await import(
+                '@/services/incident-event-service'
+              );
+              await IncidentEventService.recordIncident({
+                kind: 'reward_grant_failed',
+                entityId: String(tab._id),
+                summary: `Reward calculation failed for tab ${tab._id}`,
+                errorDetails: {
+                  message:
+                    error instanceof Error ? error.message : String(error),
+                  userId: String(tab.userId ?? ''),
+                },
+              });
+            } catch {
+              // IncidentEvent write failure must not abort the webhook
+            }
           }
         }
       } else {

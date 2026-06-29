@@ -68,6 +68,30 @@ export default async function IncidentsPage({
         >
           Stale paid orders
         </Link>
+        <Link
+          href="/dashboard/incidents?kind=points_award_failed"
+          className="rounded-md border px-3 py-1 hover:bg-muted/50"
+        >
+          Points award failed
+        </Link>
+        <Link
+          href="/dashboard/incidents?kind=notification_delivery_failed"
+          className="rounded-md border px-3 py-1 hover:bg-muted/50"
+        >
+          Notification delivery failed
+        </Link>
+        <Link
+          href="/dashboard/incidents?kind=reward_grant_failed"
+          className="rounded-md border px-3 py-1 hover:bg-muted/50"
+        >
+          Reward grant failed
+        </Link>
+        <Link
+          href="/dashboard/incidents?kind=webhook_replay_mismatch"
+          className="rounded-md border px-3 py-1 hover:bg-muted/50"
+        >
+          Webhook replay mismatch
+        </Link>
       </div>
 
       <Card>

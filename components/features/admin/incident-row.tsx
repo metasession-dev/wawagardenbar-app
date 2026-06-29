@@ -38,6 +38,10 @@ import { IncidentDetailsPanel } from '@/components/features/admin/incident-detai
 const KIND_LABELS: Record<IncidentEventKind, string> = {
   inventory_deduction_failed: 'Inventory deduction failed',
   stale_paid_order: 'Stale paid order',
+  points_award_failed: 'Points award failed',
+  notification_delivery_failed: 'Notification delivery failed',
+  reward_grant_failed: 'Reward grant failed',
+  webhook_replay_mismatch: 'Webhook replay mismatch',
 };
 
 const KIND_VARIANTS: Record<
@@ -46,6 +50,10 @@ const KIND_VARIANTS: Record<
 > = {
   inventory_deduction_failed: 'destructive',
   stale_paid_order: 'secondary',
+  points_award_failed: 'destructive',
+  notification_delivery_failed: 'secondary',
+  reward_grant_failed: 'destructive',
+  webhook_replay_mismatch: 'destructive',
 };
 
 function timeSince(when: Date | string): string {

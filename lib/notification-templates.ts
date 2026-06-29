@@ -41,6 +41,7 @@ export const TEMPLATE_CATEGORIES: Record<string, NotificationCategory> = {
   payment_confirmation: 'transactional',
   bank_transfer_details: 'transactional',
   support_reply: 'transactional',
+  incident_summary: 'transactional',
   welcome_new_user: 'transactional',
   welcome_back: 'transactional',
   account_recovery: 'transactional',

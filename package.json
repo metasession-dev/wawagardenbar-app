@@ -32,7 +32,8 @@
     "test:db:clean": "tsx tests/setup/db-cleanup.ts",
     "check:xlsx": "tsx scripts/check-xlsx-module.ts",
     "prepare": "husky",
-    "test": "vitest run"
+    "test": "vitest run",
+    "postinstall": "playwright install chromium"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

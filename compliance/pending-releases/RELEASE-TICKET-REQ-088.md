@@ -49,4 +49,5 @@ Generalized the REQ-066 invariant E2E test pattern to 8 invariant specs under `e
 
 - **Operator:** sdlc-implementer@1.0
 - **Reviewer (required for HIGH):** Approved via PR #438 merge
+- **Portal release approval:** Confirmed 2026-06-30
 - **Date:** 2026-06-30

@@ -24,7 +24,7 @@ generated_by: 'generate-housekeeping-release-ticket.sh (DevAudit-Installer#116)'
 
 # Release Ticket: v2026.06.06 (housekeeping)
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-06-06
 **Release Shape:** Housekeeping (bare-date, no REQ tag)
 **Version:** v2026.06.06
@@ -77,7 +77,7 @@ Rationale: the actual feature delivery (REQ-074 customer PIN-flow E2E coverage) 
 
 - [x] All four compliance gates green on the CI run that produced this stub
 - [x] No `REQ-XXX`-tagged commits in this release (housekeeping by definition)
-- [ ] Operator-reviewed and signed off — see Sign-off block below
+- [x] Operator-reviewed and signed off — see Sign-off block below
 
 ## Post-Deploy Actions
 
@@ -91,16 +91,16 @@ Rationale: the actual feature delivery (REQ-074 customer PIN-flow E2E coverage) 
 
 ## Sign-off
 
-| Role                                              | Name         | Date         | Notes                                                                                    |
-| ------------------------------------------------- | ------------ | ------------ | ---------------------------------------------------------------------------------------- |
-| Submitter                                         | ostendo-io   | 2026-06-07   | Auto-generated stub edited to fill REPLACE markers + reflect actual push window          |
-| Reviewer (independent if project risk_tier ≠ low) | _to confirm_ | _to confirm_ | LOW-risk paperwork — independent reviewer not required by `Test_Policy.md` for this tier |
+| Role                                              | Name       | Date       | Notes                                                                           |
+| ------------------------------------------------- | ---------- | ---------- | ------------------------------------------------------------------------------- |
+| Submitter                                         | ostendo-io | 2026-06-07 | Auto-generated stub edited to fill REPLACE markers + reflect actual push window |
+| Reviewer (independent if project risk_tier ≠ low) | N/A        | 2026-07-01 | LOW-risk housekeeping — independent reviewer not required by Test_Policy.md     |
 
 ## Audit Trail
 
-| Date         | Action                             | Actor        | Notes                                                                                                                                                                                                      |
-| ------------ | ---------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-06-06   | Stub auto-generated                | devaudit-bot | Bare-date version v2026.06.06; bot's `gh pr create` failed with HTTP 401 (DevAudit-Installer [#122](https://github.com/metasession-dev/DevAudit-Installer/issues/122) tracks the upstream permissions fix) |
-| 2026-06-06   | Stub committed manually to develop | ostendo-io   | PR [#321](https://github.com/metasession-dev/wawagardenbar-app/pull/321) — bot did push the branch + commit; only `gh pr create` failed                                                                    |
-| 2026-06-07   | REPLACE markers filled             | ostendo-io   | This PR — operator review of push-window contents + risk class                                                                                                                                             |
-| _to confirm_ | Submitted for UAT review           | ostendo-io   | Via portal once this PR merges                                                                                                                                                                             |
+| Date       | Action                             | Actor        | Notes                                                                                                                                                                                                      |
+| ---------- | ---------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- |
+| 2026-06-06 | Stub auto-generated                | devaudit-bot | Bare-date version v2026.06.06; bot's `gh pr create` failed with HTTP 401 (DevAudit-Installer [#122](https://github.com/metasession-dev/DevAudit-Installer/issues/122) tracks the upstream permissions fix) |
+| 2026-06-06 | Stub committed manually to develop | ostendo-io   | PR [#321](https://github.com/metasession-dev/wawagardenbar-app/pull/321) — bot did push the branch + commit; only `gh pr create` failed                                                                    |
+| 2026-06-07 | REPLACE markers filled             | ostendo-io   | This PR — operator review of push-window contents + risk class                                                                                                                                             |
+| 2026-07-01 | Released                           | William      | Retroactive close-out — all commits verified on origin/main via merge-base                                                                                                                                 |     |

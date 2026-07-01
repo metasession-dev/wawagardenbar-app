@@ -73,6 +73,13 @@ N/A — no AI behaviour introduced or changed.
 - **Incidents page:** PASS — `/dashboard/incidents` returns 307 (redirect to login for unauthenticated — expected RBAC behaviour)
 - **Smoke test:** PASS — application responsive, no deploy errors
 
+## Production verification (post-merge)
+
+- **PR #438:** Merged to main 2026-06-29T22:59:14Z
+- **Production URL:** https://wawagardenbar-app-production-45c8.up.railway.app
+- **Health check:** PASS — `GET /api/health` returns 200 (2026-06-30)
+- **Status:** RELEASED
+
 ## Rollback plan
 
 git revert — all changes are code-level (no migrations, no schema changes to existing collections). New IncidentEvent kinds are additive enum values.

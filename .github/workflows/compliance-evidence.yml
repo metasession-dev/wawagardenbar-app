@@ -63,8 +63,8 @@ jobs:
     # needs; preferring a (potentially stale) PAT was the cause of the
     # 2026-06-07 401 chain on this issue.
     permissions:
-      contents: write # push the auto-PR branch
-      pull-requests: write # gh pr create
+      contents: write       # push the auto-PR branch
+      pull-requests: write  # gh pr create
     env:
       DEVAUDIT_BASE_URL_VAR: ${{ vars.DEVAUDIT_BASE_URL }}
       DEVAUDIT_API_KEY: ${{ secrets.DEVAUDIT_API_KEY }}

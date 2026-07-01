@@ -1,9 +1,7 @@
 # 🛑 SDLC STEP GATE: AUTOMATED ENFORCEMENT
-
 Direct manual tracking or step-by-step text execution of this stage is restricted to prevent SDLC policy bypass.
 
 ## How to Proceed:
-
 You must run our automated orchestration engine to execute this milestone phase. Open your terminal window and run:
 
 ```bash

@@ -1,0 +1,6 @@
+# DevAudit SDLC templates are managed by `devaudit update` — do not reformat
+SDLC/**
+.claude/skills/**
+.devin/workflows/**
+.github/workflows/compliance-evidence.yml
+INSTRUCTIONS.md

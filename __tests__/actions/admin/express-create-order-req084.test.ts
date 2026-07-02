@@ -81,7 +81,9 @@ vi.mock('@/models/tab-model', () => ({
 
 vi.mock('@/models/inventory-model', () => ({
   default: {
-    find: vi.fn().mockResolvedValue([]),
+    find: vi.fn().mockReturnValue({
+      lean: vi.fn().mockResolvedValue([]),
+    }),
   },
 }));
 

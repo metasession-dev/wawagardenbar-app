@@ -1,15 +1,17 @@
 'use client';
 
+/**
+ * @requirement REQ-089 — Price override removed from customer cart. Override is now staff-only
+ * via admin order management surfaces (Express Create Order, Edit Order Dialog).
+ */
+
 import { useState } from 'react';
 import Image from 'next/image';
 import { useCartStore, CartItem as CartItemType } from '@/stores/cart-store';
-import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { PriceOverrideDialog } from '@/components/features/admin/price-override-dialog';
-import { Minus, Plus, Trash2, MessageSquare, DollarSign } from 'lucide-react';
+import { Minus, Plus, Trash2, MessageSquare } from 'lucide-react';
 import {
   Collapsible,
   CollapsibleContent,
@@ -23,27 +25,13 @@ interface CartItemProps {
 }
 
 export function CartItem({ item }: CartItemProps) {
-  const {
-    updateQuantity,
-    removeItem,
-    updateInstructions,
-    overrideItemPrice,
-    resetItemPrice,
-  } = useCartStore();
-  const { user } = useAuth();
+  const { updateQuantity, removeItem, updateInstructions } = useCartStore();
   const [isInstructionsOpen, setIsInstructionsOpen] = useState(
     !!item.specialInstructions
   );
   const [instructions, setInstructions] = useState(
     item.specialInstructions || ''
   );
-  const [overrideDialogOpen, setOverrideDialogOpen] = useState(false);
-
-  const isAdmin =
-    user?.role === 'csr' ||
-    user?.role === 'admin' ||
-    user?.role === 'super-admin';
-  const canOverridePrice = isAdmin && item.allowManualPriceOverride;
 
   function handleQuantityChange(delta: number) {
     const newQuantity = item.quantity + delta;
@@ -55,14 +43,6 @@ export function CartItem({ item }: CartItemProps) {
   function handleInstructionsChange(value: string) {
     setInstructions(value);
     updateInstructions(item.cartItemId, value);
-  }
-
-  function handlePriceOverride(newPrice: number, reason?: string) {
-    overrideItemPrice(item.cartItemId, newPrice, reason);
-  }
-
-  function handleResetPrice() {
-    resetItemPrice(item.cartItemId);
   }
 
   function formatPrice(price: number): string {
@@ -136,46 +116,10 @@ export function CartItem({ item }: CartItemProps) {
               <span className="text-sm text-muted-foreground">
                 {formatPrice(perPortionPrice)} each
               </span>
-              {item.priceOverridden && item.originalPrice && (
-                <span className="text-xs text-orange-600 line-through">
-                  {formatPrice(item.originalPrice)} original
-                </span>
-              )}
             </div>
           </div>
-
-          {/* Price Override Badge */}
-          {item.priceOverridden && (
-            <Badge
-              variant="outline"
-              className="text-xs border-orange-600 text-orange-600"
-            >
-              <DollarSign className="h-3 w-3 mr-1" />
-              Price Overridden
-            </Badge>
-          )}
         </div>
       </div>
-
-      {/* Price Override Button (Admin Only) */}
-      {canOverridePrice && (
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setOverrideDialogOpen(true)}
-            className="flex-1"
-          >
-            <DollarSign className="h-4 w-4 mr-1" />
-            {item.priceOverridden ? 'Edit Price' : 'Override Price'}
-          </Button>
-          {item.priceOverridden && (
-            <Button variant="ghost" size="sm" onClick={handleResetPrice}>
-              Reset
-            </Button>
-          )}
-        </div>
-      )}
 
       {/* Quantity Controls */}
       <div className="flex items-center justify-between">
@@ -240,18 +184,6 @@ export function CartItem({ item }: CartItemProps) {
           </p>
         </CollapsibleContent>
       </Collapsible>
-
-      {/* Price Override Dialog */}
-      {canOverridePrice && (
-        <PriceOverrideDialog
-          open={overrideDialogOpen}
-          onOpenChange={setOverrideDialogOpen}
-          itemName={item.name}
-          originalPrice={item.originalPrice || item.price}
-          currentPrice={item.price}
-          onConfirm={handlePriceOverride}
-        />
-      )}
     </div>
   );
 }

@@ -6,10 +6,10 @@ description: Implement changes on develop, run scoped local gates, and let CI/UA
 
 If you are an AI agent reading this file, you are strictly prohibited from manually executing this workflow step-by-step unless explicitly authorized by the operator. Route immediately to your platform's valid orchestration path:
 
-- **CLAUDE CODE:** Halt manual tracking immediately. Invoke the orchestrator skill via: `Skill(name: "sdlc-implementer", …)`
-- **OTHER AGENTS (Cursor, Windsurf, Gemini, etc.):** Halt manual execution and output this exact message to the user:
+- **CLAUDE CODE:** Halt manual tracking immediately. Invoke the orchestrator skill via: `Skill(name: "sdlc-implementer", …)` 
+- **OTHER AGENTS (Cursor, Windsurf, Gemini, etc.):** Halt manual execution and output this exact message to the user: 
   "I am pausing to request authorization for the SDLC workflow on this issue. Please confirm if I should proceed."
-
+  
   CRITICAL WORKFLOW REQUIRED AFTER AUTHORIZATION: Once the operator grants permission to proceed, you MUST immediately execute 'node SDLC/bin/devaudit-sdlc.js --phase=2' to generate the required commit sentinel file in the root directory BEFORE making any file modifications or code changes. Failure to create this file will result in your local git commits being automatically blocked by our pre-commit hooks.
 
 ---
@@ -46,7 +46,6 @@ grep 'REQ-XXX' compliance/RTM.md
 **If any file does not exist:** STOP. Run `1-plan-requirement.md` first. Do NOT proceed to implementation without a committed test scope and test plan.
 
 For MEDIUM/HIGH risk, also verify:
-
 ```bash
 # Implementation plan must exist (created during planning stage)
 ls compliance/evidence/REQ-XXX/implementation-plan.md
@@ -68,19 +67,16 @@ If not: `git checkout develop && git pull origin develop`
 Write or update unit tests **before** implementing the code. You know the expected interfaces and behaviour from the implementation plan and test plan.
 
 **2a. Review the test plan:**
-
 ```bash
 cat compliance/evidence/REQ-XXX/test-plan.md
 ```
 
 **2b. Write unit tests** listed in the "Tests to Add" section:
-
 - New business logic → unit tests for services, utilities, validators
 - New API endpoints → auth enforcement tests, response format tests
 - Tests should initially **fail** (the implementation doesn't exist yet)
 
 **2c. Update existing unit tests** listed in the "Tests to Update" section:
-
 - API response shape changed? → Update assertions
 - Business logic changed? → Update unit test expectations
 
@@ -89,7 +85,6 @@ cat compliance/evidence/REQ-XXX/test-plan.md
 ### WAIT CHECKPOINT: Unit Test Coverage
 
 Verify the unit tests cover the test plan:
-
 ```bash
 cat compliance/evidence/REQ-XXX/test-plan.md
 # Check: have all unit test items in "Tests to Add" been implemented?
@@ -129,7 +124,6 @@ Per Test Strategy: regeneration triggers full retest.
 ### WAIT CHECKPOINT: Unit Tests Green
 
 All unit tests must pass before proceeding:
-
 ```bash
 npm test
 ```
@@ -144,22 +138,19 @@ Write or update E2E tests **after** implementation. E2E tests need working UI/AP
 
 > **Run authenticated flows in CI.** Tests that need a logged-in session (admin forms, role-gated flows) belong in their own Playwright project that depends on `auth-setup`. Register that project name in `sdlc-config.json` `e2e_projects` and set `e2e_seed_command` / `e2e_env` so CI seeds fixtures and runs it as a **report-only** gate (continue-on-error — it surfaces failures as evidence without blocking the merge until proven stable). Prove each UI-driven AC with an `evidenceShot(page, 'REQ-XXX', acN, 'slug')` so the PNG lands in `compliance/evidence/REQ-XXX/screenshots/`. This is what lets Stage 3 Step 10 reduce manual UAT to a light smoke instead of a full re-click.
 
-> **Transport-layer specs have no page** (devaudit#127). Specs that exercise the system at the transport boundary — Node `fetch` against webhooks, `MongoClient` queries, `socket.io-client` assertions — cannot call `evidenceShot`. Their evidence form is the per-spec row in `test-execution-summary.md` describing the asserted behaviour in operator terms. The portal's release-detail "screenshots" panel will show zero entries for purely-transport REQs; that's correct. Reviewers cross-reference `test-execution-summary.md` instead. See `e2e-test-engineer/SKILL.md` § _Specs with no page object_.
+> **Transport-layer specs have no page** (devaudit#127). Specs that exercise the system at the transport boundary — Node `fetch` against webhooks, `MongoClient` queries, `socket.io-client` assertions — cannot call `evidenceShot`. Their evidence form is the per-spec row in `test-execution-summary.md` describing the asserted behaviour in operator terms. The portal's release-detail "screenshots" panel will show zero entries for purely-transport REQs; that's correct. Reviewers cross-reference `test-execution-summary.md` instead. See `e2e-test-engineer/SKILL.md` § *Specs with no page object*.
 
 **4a. Review the test plan for E2E items:**
-
 ```bash
 cat compliance/evidence/REQ-XXX/test-plan.md
 ```
 
 **4b. Add new E2E tests** listed in the "Tests to Add" section:
-
 - New pages → route protection tests (unauthenticated redirect)
 - New user flows → Playwright tests for critical paths
 - UI components changed? → Update selectors and expected content
 
 **4c. Update existing E2E tests** listed in the "Tests to Update" section:
-
 - New routes added? → Add them to route protection test arrays
 - UI flow changed? → Update selectors and assertions
 
@@ -175,7 +166,6 @@ Run the E2E checks required by the approved test plan. Before running the full l
 - Playwright browsers and project dependencies are installed
 
 If those prerequisites are confirmed, run:
-
 ```bash
 npx playwright test
 ```
@@ -228,20 +218,17 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`, `compliance`, `securi
 ### Step 7: Run Applicable Local Gates (Mandatory)
 
 #### Gate 1: TypeScript
-
 ```bash
 npx tsc --noEmit
 ```
 
 #### Gate 2: Security (SAST + Dependencies)
-
 ```bash
 semgrep scan --config auto [SOURCE_DIR]/ --severity ERROR --severity WARNING
 npm audit --audit-level=high
 ```
 
 If new dependencies added:
-
 ```bash
 git diff origin/main -- package.json package-lock.json | grep '^\+'
 npm audit
@@ -249,9 +236,7 @@ npm audit
 ```
 
 #### Gate 3: E2E Tests
-
 Run the E2E scope from the approved test plan. Use full local Playwright only after confirming local services, secrets, seeded data, auth fixtures, and browser dependencies are ready:
-
 ```bash
 npx playwright test
 ```
@@ -260,18 +245,17 @@ For LOW-risk docs/tooling/script-only changes or environments without the requir
 
 #### Exit Criteria
 
-| Gate                         | Threshold                                                              |
-| ---------------------------- | ---------------------------------------------------------------------- |
-| TypeScript                   | 0 errors                                                               |
-| SAST (high/critical)         | 0 findings                                                             |
-| Dependencies (high/critical) | 0 vulnerabilities                                                      |
-| E2E tests                    | Scoped local E2E checks pass; full CI/UAT E2E passes before PR/release |
-| Severity-1 defects           | 0 open                                                                 |
+| Gate | Threshold |
+|---|---|
+| TypeScript | 0 errors |
+| SAST (high/critical) | 0 findings |
+| Dependencies (high/critical) | 0 vulnerabilities |
+| E2E tests | Scoped local E2E checks pass; full CI/UAT E2E passes before PR/release |
+| Severity-1 defects | 0 open |
 
 For Medium/High risk, also verify access control and audit log tests pass (see Test Plan and test-scope.md).
 
 **If SAST finds issues:**
-
 ```bash
 echo "SAST finding: [rule-id] in [file] — [fixed/false-positive: reason]" >> compliance/evidence/REQ-XXX/sast-review.md
 ```
@@ -283,7 +267,6 @@ git push origin develop
 ```
 
 If rejected:
-
 ```bash
 git pull --rebase origin develop
 # Re-run applicable local gates after rebase

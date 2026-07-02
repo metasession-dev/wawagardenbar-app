@@ -96,12 +96,12 @@ When the user asks for a change that goes beyond the current REQ's acceptance cr
 
 4. **Wait for the user to confirm one of:**
    - **(a) File a separate issue** (new REQ) — ship the current REQ as-is. The agent continues with the original scope.
-   - **(b) Amend REQ-XXX's scope** — explicitly expand `test-scope.md` / `test-plan.md` / `implementation-plan.md`, update the plan, invalidate existing evidence, and re-walk Stage 3. Re-extract both `test-scope.md` and `test-plan.md` from the updated plan (Phase 1 step 5b drift management). This option carries a warning: _"Amending scope after evidence is compiled (Stage 3+) invalidates the existing test-execution-summary, screenshots, and UAT verification. All Stage 3 evidence must be re-compiled."_
+   - **(b) Amend REQ-XXX's scope** — explicitly expand `test-scope.md` / `test-plan.md` / `implementation-plan.md`, update the plan, invalidate existing evidence, and re-walk Stage 3. Re-extract both `test-scope.md` and `test-plan.md` from the updated plan (Phase 1 step 5b drift management). This option carries a warning: *"Amending scope after evidence is compiled (Stage 3+) invalidates the existing test-execution-summary, screenshots, and UAT verification. All Stage 3 evidence must be re-compiled."*
    - **(c) Abandon the request** — do nothing, continue with the original scope.
 
 **Do not implement the out-of-scope change before the user picks (a), (b), or (c).** The inertia trap is real: the agent is mid-flow, the codebase is open, and the request sounds reasonable. The gate exists to interrupt that inertia — STOP, surface the scope gap, and let the user decide.
 
-This gate is distinct from Phase 2 step 4's "any deviation from the plan must be noted" rule: that covers implementation _approach_ deviations (how to build something the plan says to build), not _scope_ expansions (building something the plan doesn't say to build at all).
+This gate is distinct from Phase 2 step 4's "any deviation from the plan must be noted" rule: that covers implementation *approach* deviations (how to build something the plan says to build), not *scope* expansions (building something the plan doesn't say to build at all).
 
 ## Requirements gap flow (devaudit-installer#212)
 
@@ -133,10 +133,9 @@ The `sdlc-implementer` presents the operator with three options:
 
 **(a) Accept the gap** — proceed as-is. Mark the AC with `@requirements-gap-accepted: <reason>` in the plan. Document in a `## Requirements gap accepted` section: the gap, the reason for acceptance, and the operator's name + date. Appropriate for LOW-risk or when the gap is cosmetic. Continue from the current phase.
 
-**(b) Amend the ACs** — update the plan's AC table, re-invoke `requirements-aligner` to propose new/updated SRS stubs, operator edits SRS stubs into canonical prose, update the RTM, invalidate affected evidence, re-walk affected phases. This carries the same evidence-invalidation warning as the scope-expansion halt gate option (b): _"Amending ACs after evidence is compiled (Phase 3+) invalidates the existing test-execution-summary, screenshots, and UAT verification. All affected Stage 3 evidence must be re-compiled."_
+**(b) Amend the ACs** — update the plan's AC table, re-invoke `requirements-aligner` to propose new/updated SRS stubs, operator edits SRS stubs into canonical prose, update the RTM, invalidate affected evidence, re-walk affected phases. This carries the same evidence-invalidation warning as the scope-expansion halt gate option (b): *"Amending ACs after evidence is compiled (Phase 3+) invalidates the existing test-execution-summary, screenshots, and UAT verification. All affected Stage 3 evidence must be re-compiled."*
 
 Amendment steps:
-
 1. Update `compliance/plans/REQ-XXX/implementation-plan.md` AC table
 2. Re-invoke `requirements-aligner` → propose new/updated SRS stubs
 3. Operator edits SRS stubs into canonical Given/When/Then prose in `docs/SRS.md`
@@ -341,7 +340,6 @@ Reached from Phase 0 for non-tracked change-types. The skill drives this end-to-
    - **Post-merge-only CI (older generated workflows — `push: branches: [<integration>]` with no `pull_request:` trigger)** — say so explicitly in the LAST/NEXT sticky: _"no PR-time checks will fire; review + merge is the gate; CI runs post-merge on `$INTEGRATION_BRANCH`."_ Don't poll the PR for checks that won't arrive. The post-merge run (CI Pipeline + Compliance Evidence Upload on the integration branch) is the actual gate; address it via fix-forward if it fails.
 
    Either way, never bypass a gate (no `--no-verify`, no `--admin` merge of a red required check); the only difference is **where** you wait for the gate to fire — before merge vs. after merge.
-
 8. **Guide review → merge.** A human still reviews the PR (separation of duties). There is **no** portal release approval, no UAT four-eyes, no Production gate, and no close-out. Merge once CI is green and the reviewer approves.
 9. **Done.** A housekeeping push produces at most a bare-date release (`vYYYY.MM.DD`) with no approval gate; a doc-only push attaches its docs to the existing `REQ-XXX` release. No further action required — report completion and stop.
 
@@ -369,26 +367,23 @@ Reached only on the **tracked** route from Phase 0 (the issue is already fetched
 
 5b. **Extract `test-scope.md` and `test-plan.md` from the implementation plan (devaudit-installer#226).** After step 5, extract two artefacts from the plan into `compliance/evidence/REQ-XXX/` so CI's `validate-compliance-artifacts.sh` finds them in the expected location:
 
-- **`compliance/evidence/REQ-XXX/test-scope.md`** — the AC table with SRS-IDs, risk class, and verification method per AC. Extracted from the plan's "Acceptance criteria" table.
-- **`compliance/evidence/REQ-XXX/test-plan.md`** — the test file listing with AC coverage mapping: which test file covers which AC, test type (unit/integration/e2e), and whether each AC has at least one test. Extracted from the plan's "Test scope" section.
+   - **`compliance/evidence/REQ-XXX/test-scope.md`** — the AC table with SRS-IDs, risk class, and verification method per AC. Extracted from the plan's "Acceptance criteria" table.
+   - **`compliance/evidence/REQ-XXX/test-plan.md`** — the test file listing with AC coverage mapping: which test file covers which AC, test type (unit/integration/e2e), and whether each AC has at least one test. Extracted from the plan's "Test scope" section.
 
-These files are the CI validator's expected artefacts. Without them, `validate-compliance-artifacts.sh` fails and the pre-push hook blocks the push. The plan directory (`compliance/plans/REQ-XXX/`) retains the full plan; these are extracted subsets for CI validation.
+   These files are the CI validator's expected artefacts. Without them, `validate-compliance-artifacts.sh` fails and the pre-push hook blocks the push. The plan directory (`compliance/plans/REQ-XXX/`) retains the full plan; these are extracted subsets for CI validation.
 
-**Drift management (devaudit-installer#226).** If the plan's AC table changes after step 5b (requirements gap flow option (b), scope-expansion halt gate option (b), or plan deviation), re-extract both `test-scope.md` and `test-plan.md` from the updated plan. The extracted files must always match the plan's current AC table. Phase 2 step 5b checks plan ↔ test-scope AC consistency before running E2E.
+   **Drift management (devaudit-installer#226).** If the plan's AC table changes after step 5b (requirements gap flow option (b), scope-expansion halt gate option (b), or plan deviation), re-extract both `test-scope.md` and `test-plan.md` from the updated plan. The extracted files must always match the plan's current AC table. Phase 2 step 5b checks plan ↔ test-scope AC consistency before running E2E.
 
 6. **Invoke `requirements-aligner` to populate the SRS-ID column on the AC table.** The plan's "Acceptance criteria" table carries an SRS-ID column per AC; `requirements-aligner` fuzzy-matches each AC against `docs/SRS.md` and proposes new `REQ-AREA-NNN` stubs, flags stale items, or annotates `@srs-deferred`. Don't author the SRS-ID column inline — call via the standard Claude Code Skill mechanism (`Skill(name: "requirements-aligner", …)`). Block plan APPROVAL until every AC has a resolved SRS-ID per the skill's Phase 1 contract (configurable via `sdlc-config.json:requirements_aligner.block_on_stage_1`; ramp-up mode default-on for legacy projects).
 
    **SRS stub editing (devaudit-installer#212 Gap 5).** After `requirements-aligner` returns, the plan's SRS items proposed/touched section may contain N new stubs and M stale items. The operator must edit `docs/SRS.md` to flesh out the stubs into canonical Given/When/Then prose and update stale items. Do not proceed to Phase 2 until the SRS is updated. The skill enforces this by checking that no stub placeholders remain in `docs/SRS.md` for the proposed SRS-IDs before auto-continuing. A stub placeholder is any SRS entry containing `<TODO>` or the `@srs-stub` marker.
-
 7. **Invoke `adr-author` to decide ADR-worthiness + draft the ADR if needed.** The plan's "Architecture decisions" section is no longer authored inline as bullets — `adr-author` applies its decision tree (new third-party dependency / new database/cache/queue / new external service / pattern change spanning >3 files / HIGH-CRITICAL risk class / file-path signals from `sdlc-config.json:adr_author.file_paths_signal_architecture`), allocates the next `ADR-NNN`, drafts a Context/Decision/Consequences/Alternatives/Status stub at `docs/ADR/ADR-NNN-<slug>.md`, and injects either _"Produced ADR-NNN: <title>"_ or _"No ADR needed — <rationale>"_ into the plan's section. Call via the standard Claude Code Skill mechanism (`Skill(name: "adr-author", …)`). Configurable via `sdlc-config.json:adr_author.block_on_stage_1`; advisory by default in v1.
 8. **Invoke `risk-register-keeper` for MEDIUM/HIGH risk classifications.** The plan's "Threat model" / Risks section is no longer authored as orphan bullets — when risk class is MEDIUM or HIGH (LOW skipped by default per `sdlc-config.json:risk_register_keeper.stage_1_min_risk_class`), `risk-register-keeper` reads the plan + diff, identifies discrete risks the change introduces, allocates `RISK-NNN` per project, drafts canonical rows in `compliance/risk-register.md`, and injects the RISK-NNN reference list into the plan's "Risk register entries" sub-section. The skill also enforces the `solo_with_gap` control-gap entry exists for projects in that approval mode. Call via the standard Claude Code Skill mechanism (`Skill(name: "risk-register-keeper", …)`). Configurable via `sdlc-config.json:risk_register_keeper.block_on_stage_1`; advisory by default in v1.
 
 **Sub-skill failure behavior (devaudit-installer#211 Gap 15).** If a sub-skill fails during steps 6–8, behavior is defined per-skill:
-
 - **`requirements-aligner` fails** (e.g. no `docs/SRS.md`): If `block_on_stage_1` is true, halt — "requirements-aligner could not find SRS.md. Operator action — create `docs/SRS.md` or disable `requirements_aligner.block_on_stage_1` in `sdlc-config.json`." If false, warn and continue with `@srs-deferred` on all ACs.
 - **`adr-author` fails**: Warn and continue — ADR is advisory by default. Mark the plan's "Architecture decisions" section as "ADR assessment skipped — <error>".
 - **`risk-register-keeper` fails**: If `block_on_stage_1` is true, halt. If false, warn and continue — mark the plan's "Risk register entries" section as "Risk assessment skipped — <error>".
-
 9. **Update `compliance/RTM.md`** with the new entry: REQ-XXX, title, risk class, linked issue, linked test cases (placeholder), and a provenance marker `sdlc-implementer@<version>` (devaudit-installer#226). The provenance column is the last column in the RTM row — `validate-commits.sh` in CI checks for its presence when `feat`/`fix`/`refactor`/`perf` commits cite a REQ-XXX. Without the stamp, CI fails with "no sdlc-implementer provenance in RTM.md." If the RTM table doesn't have a provenance column, add one with header `Provenance`.
 10. **Post plan summary as an issue comment.** Format: TL;DR; Risk class + signals; Acceptance criteria (with SRS-IDs); Architectural decisions (ADR-NNN reference or no-ADR rationale); Risk register entries (RISK-NNN list); Technical approach (one paragraph); Dependencies; Test scope.
 11. **Checkpoint** — pause for human approval **iff** risk class is HIGH or CRITICAL. LOW and MEDIUM pass through to Phase 2 automatically. The checkpoint can be forced on for all classes via the `--require-plan-approval` flag (or `DEVAUDIT_REQUIRE_PLAN_APPROVAL=1` env var) for orgs that want it always-on.
@@ -406,60 +401,56 @@ These files are the CI validator's expected artefacts. Without them, `validate-c
 
    a. Output the single literal line, verbatim: `Delegating e2e test work to e2e-test-engineer.`
    b. Immediately invoke `Skill(name: "e2e-test-engineer", args: "<the change summary + plan pointer>")`. The change summary is one sentence; the plan pointer is `compliance/plans/REQ-XXX/implementation-plan.md`.
-   c. **Do not author or edit any `e2e/**/\*.spec.ts` file in this skill's own tool calls.\*\* The e2e-test-engineer skill owns spec authoring end-to-end — including the "this AC needs no e2e" decision. If you feel the urge to write a spec inline, that's the inertia trap — STOP and re-invoke the skill.
+   c. **Do not author or edit any `e2e/**/*.spec.ts` file in this skill's own tool calls.** The e2e-test-engineer skill owns spec authoring end-to-end — including the "this AC needs no e2e" decision. If you feel the urge to write a spec inline, that's the inertia trap — STOP and re-invoke the skill.
 
    When in doubt about whether work qualifies: visual-regression tests, screenshot diffs, browser-driven flows, any file ending in `.spec.ts` under `e2e/`, and any `playwright.config.ts`/`evidence/`/`baselines/` directory all qualify. Unit/integration tests under `tests/unit/`, `tests/integration/`, or stack-equivalent paths stay with this orchestrator.
-
 4. **Implement against the plan.** Reference `compliance/plans/REQ-XXX/implementation-plan.md` as you go. Any deviation from the plan must be classified:
    - **Implementation deviation** (approach changed, ACs still correct) — note in a `## Plan deviation` section of the plan. Continue.
    - **Requirements deviation** (an AC is wrong, incomplete, or missing) — trigger the [requirements gap flow](#requirements-gap-flow-devaudit-installer212). Do NOT just note it as a plan deviation. The AC table must be updated, `requirements-aligner` must be re-invoked to re-check SRS alignment, and the RTM must be updated.
-
+   
    The classification question: "Did the implementation deviate from the plan's approach (how to build it), or did the plan's requirements deviate from reality (what to build)?" If the former, note and continue. If the latter, trigger the requirements gap flow.
 
 4b. **Reconcile test-plan.md file paths with actual files (devaudit-installer#241).** After writing/updating tests (both unit and E2E), diff the actual test file paths against `compliance/evidence/REQ-XXX/test-plan.md`. The test plan was authored during Stage 1 with predicted file paths — during implementation, tests are often added to existing files instead of creating new ones. This is a natural drift, but it must be reconciled before committing so `validate-compliance-artifacts.sh` doesn't fail at PR time.
 
-For each file path referenced in `test-plan.md`:
+   For each file path referenced in `test-plan.md`:
+   - If the file exists on disk → OK, no action needed.
+   - If the file does not exist → check whether a test covering the same AC was added to a different file. If so, update `test-plan.md` to reference the actual file path.
+   - If the file does not exist and no equivalent test was found → **HALT**: "test-plan.md references <file> but no test file exists and no equivalent test covering the same AC was found. Either create the test file, update test-plan.md to point to the actual test file, or remove the entry if the AC is no longer relevant."
 
-- If the file exists on disk → OK, no action needed.
-- If the file does not exist → check whether a test covering the same AC was added to a different file. If so, update `test-plan.md` to reference the actual file path.
-- If the file does not exist and no equivalent test was found → **HALT**: "test-plan.md references <file> but no test file exists and no equivalent test covering the same AC was found. Either create the test file, update test-plan.md to point to the actual test file, or remove the entry if the AC is no longer relevant."
+   Commit the updated `test-plan.md` alongside the test code. This is a file-path reconciliation — it does not change the AC table (that's the step 5b plan ↔ test-scope AC consistency check, which is separate and checks AC drift, not file-path drift).
+5. **Run gates locally, cheap-first.** The gates are not equivalent-cost — `npm run lint` is seconds, `npx playwright test` is 30–60 minutes. Iterate on the fast gates; spend the e2e cost once.
 
-Commit the updated `test-plan.md` alongside the test code. This is a file-path reconciliation — it does not change the AC table (that's the step 5b plan ↔ test-scope AC consistency check, which is separate and checks AC drift, not file-path drift). 5. **Run gates locally, cheap-first.** The gates are not equivalent-cost — `npm run lint` is seconds, `npx playwright test` is 30–60 minutes. Iterate on the fast gates; spend the e2e cost once.
+   **Fast gates** (run on every change, ideally pre-commit):
+   - `npm run lint` (or stack-adapter equivalent)
+   - `npx tsc --noEmit` (or stack-adapter equivalent)
+   - `npx vitest run` (unit/integration)
+   - `semgrep scan --config auto`
+   - `npm audit --audit-level=high` (or stack-adapter equivalent)
 
-**Fast gates** (run on every change, ideally pre-commit):
-
-- `npm run lint` (or stack-adapter equivalent)
-- `npx tsc --noEmit` (or stack-adapter equivalent)
-- `npx vitest run` (unit/integration)
-- `semgrep scan --config auto`
-- `npm audit --audit-level=high` (or stack-adapter equivalent)
-
-**E2E gate** — run _once_, after the fast gates are clean:
-
-- `npx playwright test` (delegated to `e2e-test-engineer`, which has its own focused-iteration discipline for within-e2e fix-and-verify loops)
+   **E2E gate** — run _once_, after the fast gates are clean:
+   - `npx playwright test` (delegated to `e2e-test-engineer`, which has its own focused-iteration discipline for within-e2e fix-and-verify loops)
 
 5b. **E2E gate verification — mandatory before commit (devaudit-installer#226).** After running gates in step 5, verify the E2E gate actually ran before proceeding to step 7 (commit). This is the skill-level enforcement that backs the pre-push hook.
 
-Check whether the change touches UI-facing files:
+   Check whether the change touches UI-facing files:
+   ```bash
+   git diff --name-only "$INTEGRATION_BRANCH"...HEAD -- 'app/**/*.tsx' 'src/**/*.tsx' 'pages/**/*.tsx' 'app/**/*.jsx' 'src/**/*.jsx' 'pages/**/*.jsx'
+   ```
 
-```bash
-git diff --name-only "$INTEGRATION_BRANCH"...HEAD -- 'app/**/*.tsx' 'src/**/*.tsx' 'pages/**/*.tsx' 'app/**/*.jsx' 'src/**/*.jsx' 'pages/**/*.jsx'
-```
+   - **If UI-facing files are present:** check for `.e2e-gate-passed` sentinel file (written by `e2e-test-engineer` after a successful run) or `playwright-report/` directory with recent content. If neither exists, **HALT**: "E2E gate was not run. The change touches UI-facing files. Run `npx playwright test` (or invoke `e2e-test-engineer`) before committing. Do not defer to CI — install Playwright browsers with `npx playwright install` if needed. The pre-push hook will also block this push."
 
-- **If UI-facing files are present:** check for `.e2e-gate-passed` sentinel file (written by `e2e-test-engineer` after a successful run) or `playwright-report/` directory with recent content. If neither exists, **HALT**: "E2E gate was not run. The change touches UI-facing files. Run `npx playwright test` (or invoke `e2e-test-engineer`) before committing. Do not defer to CI — install Playwright browsers with `npx playwright install` if needed. The pre-push hook will also block this push."
+     **Also check for `.e2e-evidence-wired` sentinel (devaudit-installer#226).** If `e2e/**/*.spec.ts` files were authored or modified, verify the `.e2e-evidence-wired` sentinel exists (written by `e2e-test-engineer` Phase 5½ after validating `tagTest()` and `evidenceShot()` calls). If missing, **HALT**: "Evidence wiring validation (Phase 5½) was not run. The change includes E2E spec files but no evidence wiring sentinel. Invoke `e2e-test-engineer` to validate `tagTest()` and `evidenceShot()` calls before committing. The pre-push hook will also block this push."
+   - **If no UI-facing files (API-only, config, docs):** skip the check. Note the exemption in the commit body: "E2E gate skipped — no UI-facing files in this change."
+   - **If `e2e-test-engineer` was invoked and determined e2e is not needed** (e.g. schema-only change): the skill writes `.e2e-gate-passed` with a `NOT_NEEDED` reason. The sentinel check passes. Note the exemption in the commit body: "E2E gate not needed — e2e-test-engineer assessed no UI surface (turn N)."
 
-  **Also check for `.e2e-evidence-wired` sentinel (devaudit-installer#226).** If `e2e/**/*.spec.ts` files were authored or modified, verify the `.e2e-evidence-wired` sentinel exists (written by `e2e-test-engineer` Phase 5½ after validating `tagTest()` and `evidenceShot()` calls). If missing, **HALT**: "Evidence wiring validation (Phase 5½) was not run. The change includes E2E spec files but no evidence wiring sentinel. Invoke `e2e-test-engineer` to validate `tagTest()` and `evidenceShot()` calls before committing. The pre-push hook will also block this push."
-
-- **If no UI-facing files (API-only, config, docs):** skip the check. Note the exemption in the commit body: "E2E gate skipped — no UI-facing files in this change."
-- **If `e2e-test-engineer` was invoked and determined e2e is not needed** (e.g. schema-only change): the skill writes `.e2e-gate-passed` with a `NOT_NEEDED` reason. The sentinel check passes. Note the exemption in the commit body: "E2E gate not needed — e2e-test-engineer assessed no UI surface (turn N)."
-
-**Plan ↔ test-scope AC consistency check (devaudit-installer#226 drift management).** Before running E2E, verify the AC table in `compliance/plans/REQ-XXX/implementation-plan.md` matches `compliance/evidence/REQ-XXX/test-scope.md`. Compare the AC IDs in both files — if they diverge (new AC added to plan but not re-extracted, or AC removed from plan but still in test-scope), **HALT**: "test-scope.md is out of sync with implementation-plan.md. AC IDs differ: <diff>. Re-extract test-scope.md and test-plan.md from the updated plan (Phase 1 step 5b) before running E2E."
+   **Plan ↔ test-scope AC consistency check (devaudit-installer#226 drift management).** Before running E2E, verify the AC table in `compliance/plans/REQ-XXX/implementation-plan.md` matches `compliance/evidence/REQ-XXX/test-scope.md`. Compare the AC IDs in both files — if they diverge (new AC added to plan but not re-extracted, or AC removed from plan but still in test-scope), **HALT**: "test-scope.md is out of sync with implementation-plan.md. AC IDs differ: <diff>. Re-extract test-scope.md and test-plan.md from the updated plan (Phase 1 step 5b) before running E2E."
 
 6. **On gate failure**, iterate up to N=3 attempts. Each iteration: read the failure output, propose a fix, apply, re-run. On exhausted attempts, halt with the full failure output and explicit resume instructions: "Gate <name> failed after N=3 attempts. Last failure: <output>. Operator action — fix the failure, commit to the feature branch, push, then ping `resume REQ-XXX`. The skill will re-run the gate from where it left off." Update the sticky with the same. Never use `--no-verify`, `eslint-disable`, `@ts-expect-error`, `xfail`, or any other bypass.
 7. **Commit** using Conventional Commits with `Ref: REQ-XXX` trailer and `Co-Authored-By: Claude` trailer. One commit per logical step; never amend a commit that's already been pushed.
 8. **Land the work on `$INTEGRATION_BRANCH`.** Push the feature branch, then open a PR `feat/REQ-XXX-<slug> → $INTEGRATION_BRANCH` and merge it once CI is green. This is the **integration hop** — there is no UAT four-eyes gate here (that's the release PR in Phase 4); for MEDIUM+ risk get a peer review on this PR per the project's norms. The push to `$INTEGRATION_BRANCH` is what triggers `ci.yml` to register the release and upload gate evidence. **Merge conflict resolution:** if the PR has merge conflicts (another feature branch merged first), pull the latest `$INTEGRATION_BRANCH` into the feature branch (`git merge "$INTEGRATION_BRANCH" --no-edit`), resolve conflicts (preferring the feature branch's changes for files this REQ touches), push, wait for CI. If conflicts are in files this REQ doesn't touch, halt — "Merge conflict in <files> from another feature. Operator action — review the conflict, these files are outside REQ-XXX's scope."
 
 9. **E2E delegation self-audit — mandatory before Phase 3 (devaudit#132).** Run `git diff "$INTEGRATION_BRANCH"...HEAD --name-only` and walk the file list. For **every** entry matching `e2e/**/*.spec.ts`, state out loud one of:
+
    - _"Authored via `e2e-test-engineer` skill invocation on turn N."_ — with the turn pointer the operator can verify from the chat transcript.
    - _"Pre-existing file; only mechanical edits (path renames, import fixes, lint-only) applied directly. No scenario / assertion / selector changes."_ — applies only to non-substantive sweeps where the e2e-test-engineer skill would have nothing to contribute.
 
@@ -473,7 +464,7 @@ git diff --name-only "$INTEGRATION_BRANCH"...HEAD -- 'app/**/*.tsx' 'src/**/*.ts
 
     > `Phase 2 complete — auto-continuing to Phase 3 (compile evidence).`
 
-    Then proceed to Phase 3 step 1 in the same turn. The integration-PR merge _feels_ terminal — that is the inertia trap. The next required operator handoff is Phase 4 step 5 (release PR opened, awaiting portal UAT approval), not the develop merge. The only thing that interrupts this auto-continue is the scope-expansion halt gate (#171) firing on a new user request.
+    Then proceed to Phase 3 step 1 in the same turn. The integration-PR merge *feels* terminal — that is the inertia trap. The next required operator handoff is Phase 4 step 5 (release PR opened, awaiting portal UAT approval), not the develop merge. The only thing that interrupts this auto-continue is the scope-expansion halt gate (#171) firing on a new user request.
 
     **CI failure on `$INTEGRATION_BRANCH` post-merge.** If CI on `$INTEGRATION_BRANCH` fails after the integration PR merges:
     - Read the failure output, attempt fix-forward (commit fix to `$INTEGRATION_BRANCH` directly, push, wait for CI) up to N=3 attempts.
@@ -486,21 +477,21 @@ git diff --name-only "$INTEGRATION_BRANCH"...HEAD -- 'app/**/*.tsx' 'src/**/*.ts
 1. **Invoke `requirements-aligner` to drop the per-REQ SRS-alignment artefact.** The skill's Phase 2 produces `compliance/evidence/REQ-XXX/srs-alignment.md` — the per-REQ trace from each AC to its SRS item, with an operator sign-off block. The artefact uploads with `evidence_type=srs_alignment` (visible in Documents tab + audit-pack export; v1 orphan-by-design per META-COMPLY framework-registry-auditor). Call via the standard Skill mechanism; don't inline the alignment logic. **Gap status return (devaudit-installer#212 Gap 3):** `requirements-aligner` returns a gap status to `sdlc-implementer`:
    - `CLEAN` — all ACs trace to SRS items, no drift. Continue to step 2.
    - `GAPS_FOUND` — one or more ACs don't trace, or drift is unresolved. Return the gap details.
-
+   
    When `sdlc-implementer` receives `GAPS_FOUND`:
    - If `block_on_stage_3: true` (configurable via `sdlc-config.json:requirements_aligner.block_on_stage_3`) — halt with the [requirements gap flow](#requirements-gap-flow-devaudit-installer212). The operator must resolve the gaps (edit SRS stubs, update ACs, or accept with `@requirements-gap-accepted`) before evidence upload proceeds. The block verifies artefact content (no unresolved gaps without `@srs-deferred`), not just artefact existence.
    - If `block_on_stage_3: false` — warn: "SRS alignment gaps found: <details>. Evidence will upload with gaps recorded. Consider resolving before UAT review." Continue to step 2.
-
 2. **Invoke `adr-author` to drop the per-REQ architecture-decision artefact.** The skill's Phase 2 produces `compliance/evidence/REQ-XXX/architecture-decision.md` — either _"Produced ADR-NNN: <title>"_ with the file pointer, or _"No ADR needed — <rationale>"_. Operator sign-off block at the bottom. The artefact uploads with `evidence_type=architecture_decision`; clause attribution per the META-COMPLY framework-registry-auditor review. Call via the standard Skill mechanism.
 3. **Invoke `risk-register-keeper` to drop the per-REQ risk-assessment artefact.** The skill's Phase 3 produces `compliance/evidence/REQ-XXX/risk-assessment.md` — a summary table of RISK-NNN entries this REQ opened / mitigated / accepted, framework cross-references, and an operator sign-off block. The artefact uploads with `evidence_type=risk_assessment`; clause attribution per the META-COMPLY framework-registry-auditor review. Call via the standard Skill mechanism.
 4. **Re-run the full test pack** with artefact capture. **Classify test failures (devaudit-installer#212 Gap 7):**
    - **Implementation bug** — test is correct, implementation is wrong. Fix the implementation. (Current behaviour.)
    - **Test bug** — test is wrong, implementation is correct. Fix the test. (Already handled by `e2e-test-engineer` Phase 6 triage.)
    - **Requirements gap** — the test is correct, the implementation is correct, but the AC the test derives from is wrong or incomplete. The test reveals behaviour the AC didn't anticipate. Trigger the [requirements gap flow](#requirements-gap-flow-devaudit-installer212) instead of fixing code or test.
-
+   
    The classification question: "Is the test testing the right thing? Is the implementation doing the right thing? If both are 'right' but they disagree, the AC they both derive from is wrong."
 
-   **On test failure — delegate incident filing to `e2e-test-engineer` (devaudit-installer#210 §6a).** When the test pack re-run fails, do NOT file incidents inline. Instead, invoke `Skill(name: "e2e-test-engineer", args: "Phase 6 triage — test pack re-run failed for REQ-XXX. Triage failures and file application defects with the `incident`label +`### Framework attribution` section per the standard convention.")`. `e2e-test-engineer` returns with a summary of filed incidents. This ensures all incidents follow the correct filing convention (label + attribution) so `incident-export.yml` fires on close → `incident_report` evidence lands on the portal → `ISO29119.3.5.4` flips to COVERED.
+   **On test failure — delegate incident filing to `e2e-test-engineer` (devaudit-installer#210 §6a).** When the test pack re-run fails, do NOT file incidents inline. Instead, invoke `Skill(name: "e2e-test-engineer", args: "Phase 6 triage — test pack re-run failed for REQ-XXX. Triage failures and file application defects with the `incident` label + `### Framework attribution` section per the standard convention.")`. `e2e-test-engineer` returns with a summary of filed incidents. This ensures all incidents follow the correct filing convention (label + attribution) so `incident-export.yml` fires on close → `incident_report` evidence lands on the portal → `ISO29119.3.5.4` flips to COVERED.
+
    - `npm run test:e2e -- --reporter=html` (produces `playwright-report/`)
    - `npx vitest run --coverage` (produces `coverage/`)
 
@@ -513,11 +504,11 @@ git diff --name-only "$INTEGRATION_BRANCH"...HEAD -- 'app/**/*.tsx' 'src/**/*.ts
 
 5b. **Validate test-execution-summary.md gate states (devaudit-installer#240).** Before uploading evidence, verify that `compliance/evidence/REQ-XXX/test-execution-summary.md` does not contain invalid gate states. Run:
 
-```bash
-bash scripts/validate-test-summary.sh origin/main
-```
+   ```bash
+   bash scripts/validate-test-summary.sh origin/main
+   ```
 
-If the validator fails, fix the summary before proceeding. E2E gate results must be one of: `PASS`, `FAIL`, `NOT_NEEDED` (with reason), or `SKIPPED` (with operator-approved rationale). The word "deferred" must never appear in `test-execution-summary.md` — not as a gate state, not in prose, not in final assessment. "Deferred to CI" and "Playwright browsers not installed locally" are environment issues, not gate states. The CI validator (`validate-test-summary.sh`) will reject any summary containing "deferred" or "browsers not installed" on PRs to main.
+   If the validator fails, fix the summary before proceeding. E2E gate results must be one of: `PASS`, `FAIL`, `NOT_NEEDED` (with reason), or `SKIPPED` (with operator-approved rationale). The word "deferred" must never appear in `test-execution-summary.md` — not as a gate state, not in prose, not in final assessment. "Deferred to CI" and "Playwright browsers not installed locally" are environment issues, not gate states. The CI validator (`validate-test-summary.sh`) will reject any summary containing "deferred" or "browsers not installed" on PRs to main.
 
 6. **Organise artefacts** under `compliance/evidence/REQ-XXX/` with date-prefixed naming:
 
@@ -540,11 +531,11 @@ If the validator fails, fix the summary before proceeding. E2E gate results must
 
 6b. **Copy `implementation-plan.md` from `compliance/plans/` to `compliance/evidence/` (devaudit-installer#226).** The CI validator (`validate-compliance-artifacts.sh`) expects `implementation-plan.md` in `compliance/evidence/REQ-XXX/`, not in `compliance/plans/REQ-XXX/`. Copy (not move) the file so the plan directory retains the original:
 
-```bash
-cp compliance/plans/REQ-XXX/implementation-plan.md compliance/evidence/REQ-XXX/implementation-plan.md
-```
+   ```bash
+   cp compliance/plans/REQ-XXX/implementation-plan.md compliance/evidence/REQ-XXX/implementation-plan.md
+   ```
 
-This ensures the pre-push hook's compliance validator check passes. The plan directory retains the original for in-flight reference; the evidence directory has the copy for CI validation and audit.
+   This ensures the pre-push hook's compliance validator check passes. The plan directory retains the original for in-flight reference; the evidence directory has the copy for CI validation and audit.
 
 6. **Upload each artefact to the portal** — retry each upload up to 3 times with backoff (5s, 15s, 45s). If an upload still fails after 3 retries, mark it in the RTM as `UPLOAD_FAILED` and surface a warning. Do not mark the RTM as verified for failed uploads. On `resume REQ-XXX`, re-attempt failed uploads before proceeding to Phase 4.
    ```bash
@@ -590,7 +581,6 @@ This ensures the pre-push hook's compliance validator check passes. The plan dir
 4. **Record the decision in the release ticket.** The release ticket's `## Verification` section must mention the cancelled gate by run-ID and the fallback that justifies bypassing it. Auditors look here first.
 
 **When the cancel-and-admin-merge conditions are NOT met.** If only one or two of the three conditions hold, the skill cannot bypass the gate. Escalation path:
-
 - Update the sticky: "Phase 4 BLOCKED — gate <name> failing for unrelated reasons. Cancel-and-admin-merge conditions not met (<which condition failed>). Operator action — resolve the gate, re-classify it as unrelated with evidence, or accept the risk and admin-merge manually."
 - If the operator chooses to admin-merge manually (outside the skill), on `resume REQ-XXX` the skill should detect the PR is merged and proceed to Phase 5.
 - Timeout escalation: if the gate hasn't resolved in 24 hours (configurable via `sdlc-config.json:phase4.gate_timeout_hours`), escalate the sticky to "Phase 4 BLOCKED 24h — gate <name> still failing. Escalation required."
@@ -628,15 +618,14 @@ Invoked separately by the user after UAT activity on the portal. Trigger: "resum
        5. **Push the close-out commit** to `$INTEGRATION_BRANCH`.
 
        These steps are mandatory — the native agent must not treat "PR merged" or "release marked Released" as completion without performing the close-out. Without moving the release ticket to `approved-releases/`, CI continues uploading evidence for the REQ on every subsequent release, polluting the portal's audit trail.
-
      - **Update SDLC status sticky** to the terminal state: `bash scripts/update-sdlc-status.sh "$ISSUE_NUM" "Phase 5 complete — release marked Released; production smoke evidence uploaded; close-out committed (RTM → APPROVED - DEPLOYED, ticket → approved-releases/)" "Done — close issue + retire feature branch (sdlc-implementer halts)"`.
      - Close the issue.
-     - If production smoke fails: do NOT mark as Released. **Delegate incident filing to `governance-doc-author` (devaudit-installer#210 §6c)** — invoke `Skill(name: "governance-doc-author", args: "Production smoke failure for REQ-XXX. File an incident issue with the `incident`label +`### Framework attribution`section (ISO29119.3.5.4 + SOC2.CC7.2), severity`blocker`. Include the production URL, git SHA, testCycleId (CI run ID), and smoke results in the issue body.")`. Page the on-call per the project's incident playbook, follow the rollback plan from the implementation plan. If the rollback also fails: update the sticky to "Phase 5 CRITICAL — production smoke failed AND rollback failed. Production is in a broken state. Operator action — page on-call immediately, engage hosting platform support, declare incident per the project's incident playbook. This is beyond the skill's scope." Do NOT attempt further automated remediation. **Update the sticky** to reflect the incident state: `… "Phase 5 BLOCKED — production smoke failed; INCIDENT issue #N filed" "Operator action — read INCIDENT #N + execute rollback per plan"`.
+     - If production smoke fails: do NOT mark as Released. **Delegate incident filing to `governance-doc-author` (devaudit-installer#210 §6c)** — invoke `Skill(name: "governance-doc-author", args: "Production smoke failure for REQ-XXX. File an incident issue with the `incident` label + `### Framework attribution` section (ISO29119.3.5.4 + SOC2.CC7.2), severity `blocker`. Include the production URL, git SHA, testCycleId (CI run ID), and smoke results in the issue body.")`. Page the on-call per the project's incident playbook, follow the rollback plan from the implementation plan. If the rollback also fails: update the sticky to "Phase 5 CRITICAL — production smoke failed AND rollback failed. Production is in a broken state. Operator action — page on-call immediately, engage hosting platform support, declare incident per the project's incident playbook. This is beyond the skill's scope." Do NOT attempt further automated remediation. **Update the sticky** to reflect the incident state: `… "Phase 5 BLOCKED — production smoke failed; INCIDENT issue #N filed" "Operator action — read INCIDENT #N + execute rollback per plan"`.
 
    - **Changes requested** → run change-request loop:
      - Fetch change-request comments from the PR (`gh pr view <M> --comments`) and from the portal release page.
      - **Classify the change request (devaudit-installer#210 §6b, devaudit-installer#212 Gap 6):** Assess whether the change request is a **defect** (the implementation doesn't match the AC — the reviewer found a bug), a **requirements gap** (the reviewer identified behaviour that should have been an AC but wasn't — the plan was incomplete, not the implementation), or a **scope change** (the reviewer wants new behaviour this REQ genuinely shouldn't deliver).
-       - **If it's a defect:** Delegate to `e2e-test-engineer` to file the incident with the `incident` label + `### Framework attribution` section before fixing. Invoke `Skill(name: "e2e-test-engineer", args: "Phase 6 triage — UAT reviewer found defect in REQ-XXX. Change-request comment: <summary>. Triage and file application defects with the `incident`label +`### Framework attribution` section per the standard convention.")`. `e2e-test-engineer` returns with a summary of filed incidents. Then fix the defect in the same Phase 2 re-run. This ensures UAT-discovered defects produce `incident_report` evidence, closing `ISO29119.3.5.4` for the defect — not just silently fixing it.
+       - **If it's a defect:** Delegate to `e2e-test-engineer` to file the incident with the `incident` label + `### Framework attribution` section before fixing. Invoke `Skill(name: "e2e-test-engineer", args: "Phase 6 triage — UAT reviewer found defect in REQ-XXX. Change-request comment: <summary>. Triage and file application defects with the `incident` label + `### Framework attribution` section per the standard convention.")`. `e2e-test-engineer` returns with a summary of filed incidents. Then fix the defect in the same Phase 2 re-run. This ensures UAT-discovered defects produce `incident_report` evidence, closing `ISO29119.3.5.4` for the defect — not just silently fixing it.
        - **If it's a requirements gap:** Trigger the [requirements gap flow](#requirements-gap-flow-devaudit-installer212) with the reviewer's feedback as the gap report. The operator decides: accept the gap (ship without the edge case), amend the ACs (add the edge case as a new AC, update plan + SRS, re-walk Phase 2-3), or file a follow-up REQ. If "amend" is chosen, the change-request iteration includes the new AC in the delta-plan section, `requirements-aligner` is re-invoked for the new AC, and the SRS is updated. Do NOT file an incident — the plan was incomplete, not the implementation buggy. Do NOT use the scope-expansion halt gate — this is a plan quality issue, not a scope creep request.
        - **If it's a scope change:** Use the existing scope-expansion halt gate (REQ-SKILL-IMPLEMENTER-019) — file a separate issue or amend the REQ scope. Do NOT file an incident — the AC itself needs amendment, not a defect fix.
      - Add a new `## Change-request iteration N` section to `compliance/plans/REQ-XXX/implementation-plan.md` describing what changed and why.
@@ -698,7 +687,6 @@ The native agent must NOT continue to the next phase (Phase 3 → Phase 4, Phase
 When a commit is authored as part of REQ-XXX's SDLC flow, the commit subject must cite `[REQ-XXX]` — the **active REQ** driving the current SDLC flow — regardless of which other REQs the content touches. Other REQs may appear in the body for traceability, but never in the subject.
 
 **Correct:**
-
 ```
 docs: [REQ-085] add SRS stubs for REQ-083/084/085 — order status revert, checkout separation, tab payment
 
@@ -706,7 +694,6 @@ Ref: REQ-083, REQ-084
 ```
 
 **Incorrect:**
-
 ```
 docs: [REQ-083/084] update SRS with order status revert fix and checkout separation
 ```

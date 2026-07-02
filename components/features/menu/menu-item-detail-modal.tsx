@@ -1,5 +1,10 @@
 'use client';
 
+/**
+ * @requirement REQ-089 — allowManualPriceOverride removed from addItem call.
+ * Price override is now staff-only via admin order management surfaces.
+ */
+
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { MenuItemWithStock } from '@/services/category-service';
@@ -155,7 +160,6 @@ export function MenuItemDetailModal({
         category: item.category,
         specialInstructions: specialInstructions || undefined,
         preparationTime: item.preparationTime,
-        allowManualPriceOverride: item.allowManualPriceOverride,
         customizations:
           selectedCustomizations.length > 0
             ? selectedCustomizations

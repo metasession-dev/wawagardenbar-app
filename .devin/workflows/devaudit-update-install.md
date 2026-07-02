@@ -54,7 +54,6 @@ If `MODE: update` — skip to step 3.
 This onboards the project into the DevAudit SDLC framework. It creates `sdlc-config.json`, syncs all templates, sets up git hooks, CI workflows, and registers the project with the DevAudit portal.
 
 You will need:
-
 - Your DevAudit portal token (set as `DEVAUDIT_USER_TOKEN` env var or pass via `--token`)
 - Your project slug (the name registered on the DevAudit portal)
 - Your stack (e.g. `node`, `python`) and host (e.g. `railway`, `vercel`)
@@ -128,7 +127,6 @@ git diff --stat
 ```
 
 Key files to expect:
-
 - `SDLC/` — stage docs, blueprints, binary, config templates
 - `.husky/` — pre-commit, pre-push, commit-msg hooks
 - `.github/workflows/ci.yml` — CI pipeline with quality gates
@@ -146,7 +144,6 @@ Invoke the sdlc-implementer skill and tell it:
 > **Housekeeping change.** The working tree has uncommitted changes from `devaudit install` (or `devaudit update`). Commit type is `chore:`, no `REQ-XXX`. Use the SDLC lightweight path: invoke the SDLC engine for the sentinel, run local gates, create a `chore/sync-devaudit-sdlc-{version}` branch, commit, push, open a PR targeting `develop`, monitor CI, and guide merge. After merge, CI will auto-generate housekeeping release stubs (release ticket + security summary) — remind the operator to review and sign off on those.
 
 The skill will:
-
 1. Invoke `node SDLC/bin/devaudit-sdlc.js --phase=issue --view` to write the `.sdlc-implementer-invoked` sentinel
 2. Run local gates (lint, tsc, test)
 3. Create a `chore/` branch, commit, and push

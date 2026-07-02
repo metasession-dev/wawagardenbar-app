@@ -3,6 +3,7 @@
  * @requirement REQ-081 - Main-category to sub-category cascade for express item selection
  * @requirement REQ-082 - Progressive category display with grouped items
  * @requirement REQ-084 - Extended with order type selector (dine-in, pickup, delivery, pay-now)
+ * @requirement REQ-089 - Portion size selection, manual price override, special instructions, stock validation
  */
 'use client';
 
@@ -21,7 +22,11 @@ import {
   expressListOpenTabsAction,
 } from '@/app/actions/admin/express-actions';
 import { CustomizationPickerDialog } from '@/components/features/menu/customization-picker-dialog';
+import { PriceOverrideDialog } from '@/components/features/admin/price-override-dialog';
+import { PortionPickerDialog } from '@/components/features/admin/portion-picker-dialog';
 import { TipInputRow } from '@/components/features/orders/tip-input-row';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import {
   CategoryCascadeFilter,
   type CategoryCascadeMainCategory,
@@ -45,6 +50,8 @@ import {
   Utensils,
   Bike,
   Clock,
+  DollarSign,
+  MessageSquare,
 } from 'lucide-react';
 
 interface MenuItem {
@@ -65,6 +72,7 @@ interface MenuItem {
     quarterPortionEnabled?: boolean;
     quarterPortionSurcharge?: number;
   };
+  allowManualPriceOverride?: boolean;
   customizations?: ICustomization[];
 }
 
@@ -75,7 +83,13 @@ interface CartItem {
   price: number;
   quantity: number;
   portionSize: 'full' | 'half' | 'quarter';
+  portionMultiplier: number;
   customizations?: SelectedCustomization[];
+  specialInstructions?: string;
+  priceOverridden?: boolean;
+  originalPrice?: number;
+  priceOverrideReason?: string;
+  allowManualPriceOverride?: boolean;
 }
 
 interface OpenTab {
@@ -211,16 +225,59 @@ function ExpressCreateOrderContent() {
       .join(',');
   }
 
+  // REQ-089: portion selector state for the item currently being added
+  const [portionPickerItem, setPortionPickerItem] = useState<MenuItem | null>(
+    null
+  );
+  // REQ-089: price override dialog state
+  const [overrideCartLineId, setOverrideCartLineId] = useState<string | null>(
+    null
+  );
+
+  function computePortionMultiplier(
+    portionSize: 'full' | 'half' | 'quarter'
+  ): number {
+    if (portionSize === 'half') return 0.5;
+    if (portionSize === 'quarter') return 0.25;
+    return 1.0;
+  }
+
+  function computeAdjustedPrice(
+    item: MenuItem,
+    portionSize: 'full' | 'half' | 'quarter'
+  ): number {
+    if (portionSize === 'half' && item.portionOptions?.halfPortionEnabled) {
+      return item.price + (item.portionOptions.halfPortionSurcharge ?? 0);
+    }
+    if (
+      portionSize === 'quarter' &&
+      item.portionOptions?.quarterPortionEnabled
+    ) {
+      return item.price + (item.portionOptions.quarterPortionSurcharge ?? 0);
+    }
+    return item.price;
+  }
+
+  function hasPortionOptions(item: MenuItem): boolean {
+    return !!(
+      item.portionOptions?.halfPortionEnabled ||
+      item.portionOptions?.quarterPortionEnabled
+    );
+  }
+
   function addCartLine(
     item: MenuItem,
-    customizations?: SelectedCustomization[]
+    customizations?: SelectedCustomization[],
+    portionSize: 'full' | 'half' | 'quarter' = 'full'
   ) {
     const key = customizationsKey(customizations);
+    const multiplier = computePortionMultiplier(portionSize);
+    const adjustedPrice = computeAdjustedPrice(item, portionSize);
     setCart((prev) => {
       const existing = prev.find(
         (c) =>
           c.menuItemId === item._id &&
-          c.portionSize === 'full' &&
+          c.portionSize === portionSize &&
           customizationsKey(c.customizations) === key
       );
       if (existing) {
@@ -238,16 +295,22 @@ function ExpressCreateOrderContent() {
             .slice(2, 6)}`,
           menuItemId: item._id,
           name: item.name,
-          price: item.price,
+          price: adjustedPrice,
           quantity: 1,
-          portionSize: 'full' as const,
+          portionSize,
+          portionMultiplier: multiplier,
           customizations,
+          allowManualPriceOverride: item.allowManualPriceOverride,
         },
       ];
     });
   }
 
   function addToCart(item: MenuItem) {
+    if (hasPortionOptions(item)) {
+      setPortionPickerItem(item);
+      return;
+    }
     if (item.customizations && item.customizations.length > 0) {
       // REQ-031: open picker dialog before adding so the staff selects (group, option) pairs
       setPickerItem(item);
@@ -272,14 +335,74 @@ function ExpressCreateOrderContent() {
     setCart((prev) => prev.filter((c) => c.cartLineId !== cartLineId));
   }
 
-  // REQ-031: per-line total includes Σ option.price; portionMultiplier is 1 in
-  // express today (no portion picker).
+  // REQ-089: per-line special instructions update
+  function updateLineInstructions(cartLineId: string, instructions: string) {
+    setCart((prev) =>
+      prev.map((c) =>
+        c.cartLineId === cartLineId
+          ? { ...c, specialInstructions: instructions || undefined }
+          : c
+      )
+    );
+  }
+
+  // REQ-089: price override for a cart line
+  function handlePriceOverride(
+    cartLineId: string,
+    newPrice: number,
+    reason?: string
+  ) {
+    setCart((prev) =>
+      prev.map((c) => {
+        if (c.cartLineId !== cartLineId) return c;
+        if (!c.originalPrice) {
+          return {
+            ...c,
+            originalPrice: c.price,
+            price: newPrice,
+            priceOverridden: true,
+            priceOverrideReason: reason,
+          };
+        }
+        return {
+          ...c,
+          price: newPrice,
+          priceOverridden: true,
+          priceOverrideReason: reason,
+        };
+      })
+    );
+  }
+
+  // REQ-089: reset price override for a cart line
+  function handleResetPrice(cartLineId: string) {
+    setCart((prev) =>
+      prev.map((c) => {
+        if (c.cartLineId !== cartLineId) return c;
+        if (!c.originalPrice) return c;
+        return {
+          ...c,
+          price: c.originalPrice,
+          originalPrice: undefined,
+          priceOverridden: false,
+          priceOverrideReason: undefined,
+        };
+      })
+    );
+  }
+
+  // REQ-089: per-line total includes portion multiplier and price override.
+  // Surcharges scale with portionMultiplier (same as customer flow).
   const cartTotal = cart.reduce((sum, item) => {
     const surcharge = (item.customizations ?? []).reduce(
       (s, c) => s + (typeof c.price === 'number' ? c.price : 0),
       0
     );
-    return sum + (item.price + surcharge) * item.quantity;
+    const basePrice = item.price;
+    return (
+      sum +
+      (basePrice + surcharge * (item.portionMultiplier ?? 1)) * item.quantity
+    );
   }, 0);
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -357,6 +480,10 @@ function ExpressCreateOrderContent() {
         quantity: c.quantity,
         portionSize: c.portionSize,
         customizations: c.customizations,
+        specialInstructions: c.specialInstructions,
+        priceOverridden: c.priceOverridden || false,
+        originalPrice: c.originalPrice,
+        priceOverrideReason: c.priceOverrideReason,
       })),
       orderType,
       tabId: orderType === 'dine-in' ? selectedTabId : undefined,
@@ -640,55 +767,138 @@ function ExpressCreateOrderContent() {
                   (s, c) => s + (typeof c.price === 'number' ? c.price : 0),
                   0
                 );
-                const lineTotal = (item.price + surcharge) * item.quantity;
+                const lineTotal =
+                  (item.price + surcharge * (item.portionMultiplier ?? 1)) *
+                  item.quantity;
+                const portionLabel =
+                  item.portionSize === 'half'
+                    ? '1/2'
+                    : item.portionSize === 'quarter'
+                      ? '1/4'
+                      : null;
+                const canOverride = item.allowManualPriceOverride;
                 return (
                   <div
                     key={item.cartLineId}
-                    className="flex items-start justify-between"
+                    className="space-y-2 rounded-lg border p-3"
                   >
-                    <div className="flex items-start gap-3">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => removeFromCart(item.cartLineId)}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2">
-                          <span>{item.name}</span>
-                          <span className="text-muted-foreground">
-                            x{item.quantity}
-                          </span>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => updateQuantity(item.cartLineId, -1)}
-                          >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => updateQuantity(item.cartLineId, 1)}
-                          >
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        {item.customizations &&
-                          item.customizations.length > 0 && (
-                            <p className="text-xs text-muted-foreground">
-                              {summariseSelected(item.customizations)}
-                            </p>
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-3">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => removeFromCart(item.cartLineId)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-2">
+                            <span>{item.name}</span>
+                            {portionLabel && (
+                              <Badge variant="secondary" className="text-xs">
+                                {portionLabel}
+                              </Badge>
+                            )}
+                            <span className="text-muted-foreground">
+                              x{item.quantity}
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() =>
+                                updateQuantity(item.cartLineId, -1)
+                              }
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => updateQuantity(item.cartLineId, 1)}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          {item.customizations &&
+                            item.customizations.length > 0 && (
+                              <p className="text-xs text-muted-foreground">
+                                {summariseSelected(item.customizations)}
+                              </p>
+                            )}
+                          {item.priceOverridden && (
+                            <div className="flex items-center gap-2">
+                              <Badge
+                                variant="outline"
+                                className="text-xs border-orange-600 text-orange-600"
+                              >
+                                <DollarSign className="h-3 w-3 mr-1" />
+                                Price Overridden
+                              </Badge>
+                              {item.originalPrice && (
+                                <span className="text-xs text-muted-foreground line-through">
+                                  ₦{item.originalPrice.toLocaleString()}
+                                </span>
+                              )}
+                            </div>
                           )}
+                        </div>
                       </div>
+                      <span className="font-medium">
+                        ₦{lineTotal.toLocaleString()}
+                      </span>
                     </div>
-                    <span className="font-medium">
-                      ₦{lineTotal.toLocaleString()}
-                    </span>
+                    {/* REQ-089: Price override + special instructions */}
+                    <div className="flex flex-col gap-2 pl-9">
+                      {canOverride && (
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              setOverrideCartLineId(item.cartLineId)
+                            }
+                            className="flex-1"
+                          >
+                            <DollarSign className="h-4 w-4 mr-1" />
+                            {item.priceOverridden
+                              ? 'Edit Price'
+                              : 'Override Price'}
+                          </Button>
+                          {item.priceOverridden && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleResetPrice(item.cartLineId)}
+                            >
+                              Reset
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                      <details className="group">
+                        <summary className="cursor-pointer text-xs text-muted-foreground flex items-center gap-1">
+                          <MessageSquare className="h-3 w-3" />
+                          {item.specialInstructions ? 'Edit' : 'Add'} Special
+                          Instructions
+                        </summary>
+                        <Textarea
+                          placeholder="Dietary requirements or special requests..."
+                          value={item.specialInstructions || ''}
+                          onChange={(e) =>
+                            updateLineInstructions(
+                              item.cartLineId,
+                              e.target.value
+                            )
+                          }
+                          rows={2}
+                          maxLength={200}
+                          className="mt-1 text-sm"
+                        />
+                      </details>
+                    </div>
                   </div>
                 );
               })}
@@ -980,6 +1190,45 @@ function ExpressCreateOrderContent() {
             setPickerItem(null);
           }}
           confirmLabel="Add to Order"
+        />
+      )}
+
+      {/* REQ-089: portion size picker dialog */}
+      {portionPickerItem && (
+        <PortionPickerDialog
+          open={!!portionPickerItem}
+          onOpenChange={(open) => !open && setPortionPickerItem(null)}
+          itemName={portionPickerItem.name}
+          basePrice={portionPickerItem.price}
+          portionOptions={portionPickerItem.portionOptions}
+          onConfirm={(portionSize) => {
+            addCartLine(portionPickerItem, undefined, portionSize);
+            setPortionPickerItem(null);
+          }}
+        />
+      )}
+
+      {/* REQ-089: price override dialog */}
+      {overrideCartLineId && (
+        <PriceOverrideDialog
+          open={!!overrideCartLineId}
+          onOpenChange={(open) => !open && setOverrideCartLineId(null)}
+          itemName={
+            cart.find((c) => c.cartLineId === overrideCartLineId)?.name || ''
+          }
+          originalPrice={
+            cart.find((c) => c.cartLineId === overrideCartLineId)
+              ?.originalPrice ||
+            cart.find((c) => c.cartLineId === overrideCartLineId)?.price ||
+            0
+          }
+          currentPrice={
+            cart.find((c) => c.cartLineId === overrideCartLineId)?.price || 0
+          }
+          onConfirm={(newPrice, reason) => {
+            handlePriceOverride(overrideCartLineId, newPrice, reason);
+            setOverrideCartLineId(null);
+          }}
         />
       )}
     </div>

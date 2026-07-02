@@ -609,6 +609,20 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 - **Given** an admin opens `/dashboard/orders`, **When** the page renders, **Then** a section titled "Admin Order Management" is visible containing cards for Create a new Tab, Create a new Order, Close a Tab, and Inventory Summary.
 - **Given** an admin opens `/dashboard/orders`, **When** the "Quick Actions" section renders, **Then** it contains only Open a Order, Open a New Tab, and Add to Existing Tab.
 
+#### REQ-ORDMGT-011 — Price override removed from customer cart · **Must** · regression
+
+**Source:** `components/features/cart/cart-item.tsx`; cross-ref REQ-089.
+**Behaviour:** The customer-facing cart no longer renders a price override button, `PriceOverrideDialog`, or forwards `allowManualPriceOverride` from the menu item to the cart line. Price override is staff-only, accessible via admin order management surfaces (Express Create Order and Edit Order Dialog).
+
+- **Given** any user (including admin) viewing the customer cart, **When** a cart line is displayed, **Then** no "Override Price" button, no price override dialog, and no `allowManualPriceOverride` flag is present on the cart line.
+
+#### REQ-ORDMGT-012 — Special instructions in Express Create Order · **Should** · regression
+
+**Source:** `app/dashboard/orders/express/create-order/page.tsx`; cross-ref REQ-089.
+**Behaviour:** Staff using Express Create Order can add per-line special instructions (free text, max 200 chars) to each cart line. The instructions are persisted to the order item's `specialInstructions` field on order creation.
+
+- **Given** staff are creating an order in Express Create Order, **When** they view a cart line, **Then** a special instructions textarea is available per line and the text is persisted to the order item's `specialInstructions` field on submission.
+
 ---
 
 ## Feature Area 11 — Tab Management (TABMGT)

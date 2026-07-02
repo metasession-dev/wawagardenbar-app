@@ -18,14 +18,14 @@
 
 ## Gate results
 
-| Gate                                              | Result | Notes                                                  |
-| ------------------------------------------------- | ------ | ------------------------------------------------------ |
-| TypeScript (`tsc --noEmit`)                       | PASS   | 0 errors                                               |
-| Lint (`eslint`)                                   | PASS   | 0 errors                                               |
-| Unit tests (`vitest run`)                         | PASS   | 1276 passed, 4 skipped                                 |
-| SAST (`semgrep scan --config auto`)               | PASS   | 0 new findings above baseline                          |
-| Dependency audit (`npm audit --audit-level=high`) | PASS   | 0 high/critical vulnerabilities                        |
-| E2E (`playwright test` — focused REQ-089)         | PASS   | 4 passed, 14 skipped (auth/fixture guards), 0 failures |
+| Gate                                              | Result | Notes                           |
+| ------------------------------------------------- | ------ | ------------------------------- |
+| TypeScript (`tsc --noEmit`)                       | PASS   | 0 errors                        |
+| Lint (`eslint`)                                   | PASS   | 0 errors                        |
+| Unit tests (`vitest run`)                         | PASS   | 1276 passed, 4 skipped          |
+| SAST (`semgrep scan --config auto`)               | PASS   | 0 new findings above baseline   |
+| Dependency audit (`npm audit --audit-level=high`) | PASS   | 0 high/critical vulnerabilities |
+| E2E (`playwright test` — REQ-089 focused)         | PASS   | 18 passed, 0 failures           |
 
 ## AC coverage
 
@@ -35,7 +35,7 @@
 | AC2 | order-edit-actions.test.ts               | edit-order-portion-instructions.spec.ts      | PASS   |
 | AC3 | order-line-totals.price-override.test.ts | express-order-portion-price-override.spec.ts | PASS   |
 | AC4 | order-line-totals.price-override.test.ts | edit-order-portion-instructions.spec.ts      | PASS   |
-| AC5 | cart-item-no-price-override.test.tsx     | cart-no-price-override.spec.ts               | PASS   |
+| AC5 | cart-item-no-price-override.test.ts      | cart-no-price-override.spec.ts               | PASS   |
 | AC6 | express-create-order-req084.test.ts      | express-order-portion-price-override.spec.ts | PASS   |
 | AC7 | order-edit-actions.test.ts               | edit-order-portion-instructions.spec.ts      | PASS   |
 | AC8 | order-line-totals.price-override.test.ts | —                                            | PASS   |

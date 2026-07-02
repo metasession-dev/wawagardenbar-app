@@ -239,3 +239,28 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 **Review due:** 2027-06-28 (annual review — verify no direct MongoDB queries assume field presence)
 
 **Cross-links:** [REQ-087 implementation plan](evidence/REQ-087/implementation-plan.md); [#411](https://github.com/metasession-dev/wawagardenbar-app/issues/411); SRS REQ-INV-012.
+
+---
+
+### R-011 — Price override bypass via customer flow after removal from cart UI (REQ-089)
+
+**Status:** MITIGATED
+**Opened:** 2026-07-02 (REQ-089)
+**Owner:** WGB maintainer
+
+**The gap:** Price override is being removed from the customer-facing cart UI. The cart store methods (`overrideItemPrice`/`resetItemPrice`) remain for admin surfaces. A determined user could potentially call these methods via browser dev tools, bypassing the UI removal.
+
+**Mitigations applied in this REQ:**
+
+1. Customer-facing `cart-item.tsx` no longer renders the override button or `PriceOverrideDialog` — no UI path to trigger the methods.
+2. `menu-item-detail-modal.tsx` no longer forwards `allowManualPriceOverride` to cart lines — the flag is not present in customer cart data.
+3. Server-side `reconcileAndValidateOrderLines` recomputes prices from the menu — client-supplied prices are ignored unless an explicit admin override path is used in the server action.
+4. `expressCreateOrderAction` and `updateOrderItemsAction` require admin session — price override fields are only accepted when the session role is admin/super-admin.
+
+**Residual likelihood × impact:** low × high (UI removal + server-side validation makes bypass unlikely; if bypassed, financial impact is high)
+
+**Framework cross-references:** ISO27001.A.8.25 (secure SDLC — price override removal from customer surface); SOC2.CC3.2 (risk identification); SOC2.CC7.1 (system monitoring — server-side price recompute is the monitoring control)
+
+**Review due:** 2027-07-02 (annual review — verify no new customer components call override methods)
+
+**Cross-links:** [REQ-089 implementation plan](plans/REQ-089/implementation-plan.md); [#452](https://github.com/metasession-dev/wawagardenbar-app/issues/452); SRS REQ-ORDMGT-011.

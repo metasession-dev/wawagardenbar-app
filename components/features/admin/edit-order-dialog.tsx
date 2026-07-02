@@ -1,5 +1,9 @@
 'use client';
 
+/**
+ * @requirement REQ-089 - Portion size selector, price override, and special instructions for admin order editing
+ */
+
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -17,7 +21,15 @@ import {
   updateOrderItemsAction,
   getAvailableMenuItemsAction,
 } from '@/app/actions/admin/order-edit-actions';
-import { Loader2, Plus, Trash2, Minus, ShoppingCart } from 'lucide-react';
+import {
+  Loader2,
+  Plus,
+  Trash2,
+  Minus,
+  ShoppingCart,
+  DollarSign,
+  MessageSquare,
+} from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
@@ -29,6 +41,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { CustomizationPickerDialog } from '@/components/features/menu/customization-picker-dialog';
+import { PriceOverrideDialog } from '@/components/features/admin/price-override-dialog';
+import { PortionPickerDialog } from '@/components/features/admin/portion-picker-dialog';
+import { Textarea } from '@/components/ui/textarea';
 import {
   summariseSelected,
   type SelectedCustomization,
@@ -61,6 +76,13 @@ interface MenuItem {
   category: string;
   subcategory?: string;
   customizations?: ICustomization[];
+  portionOptions?: {
+    halfPortionEnabled?: boolean;
+    halfPortionSurcharge?: number;
+    quarterPortionEnabled?: boolean;
+    quarterPortionSurcharge?: number;
+  };
+  allowManualPriceOverride?: boolean;
 }
 
 interface OrderItem {
@@ -75,6 +97,10 @@ interface OrderItem {
     price: number;
   }>;
   specialInstructions?: string;
+  priceOverridden?: boolean;
+  originalPrice?: number;
+  priceOverrideReason?: string;
+  allowManualPriceOverride?: boolean;
 }
 
 export function EditOrderDialog({
@@ -87,9 +113,12 @@ export function EditOrderDialog({
   const [availableMenuItems, setAvailableMenuItems] = useState<MenuItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingMenu, setIsFetchingMenu] = useState(false);
-  // REQ-031: when a selected menu item has customization groups, open the
-  // sub-dialog picker before pushing the line.
   const [pickerMenuItem, setPickerMenuItem] = useState<MenuItem | null>(null);
+  const [portionPickerMenuItem, setPortionPickerMenuItem] =
+    useState<MenuItem | null>(null);
+  const [overrideItemIndex, setOverrideItemIndex] = useState<number | null>(
+    null
+  );
   const { toast } = useToast();
   const router = useRouter();
 
@@ -105,6 +134,9 @@ export function EditOrderDialog({
           portionSize: item.portionSize || 'full',
           customizations: item.customizations || [],
           specialInstructions: item.specialInstructions || '',
+          priceOverridden: (item as any).priceOverridden || false,
+          originalPrice: (item as any).originalPrice,
+          priceOverrideReason: (item as any).priceOverrideReason,
         }))
       );
       fetchMenuItems();
@@ -175,24 +207,90 @@ export function EditOrderDialog({
         name: menuItem.name,
         price: menuItem.price,
         quantity: 1,
+        portionSize: 'full',
         customizations: customizations ?? [],
         specialInstructions: '',
+        allowManualPriceOverride: menuItem.allowManualPriceOverride,
       },
     ]);
+  }
+
+  function hasPortionOptions(menuItem: MenuItem): boolean {
+    return !!(
+      menuItem.portionOptions?.halfPortionEnabled ||
+      menuItem.portionOptions?.quarterPortionEnabled
+    );
   }
 
   function handleAddItem(menuItemId: string) {
     const menuItem = availableMenuItems.find((mi) => mi._id === menuItemId);
     if (!menuItem) return;
 
-    // REQ-031: if the menu item has customization groups, open the picker
-    // sub-dialog and let the staff pick before pushing the line.
+    if (hasPortionOptions(menuItem)) {
+      setPortionPickerMenuItem(menuItem);
+      return;
+    }
+
     if (menuItem.customizations && menuItem.customizations.length > 0) {
       setPickerMenuItem(menuItem);
       return;
     }
 
     pushItem(menuItem);
+  }
+
+  function handlePortionChange(
+    index: number,
+    portionSize: 'full' | 'half' | 'quarter'
+  ) {
+    const newItems = [...items];
+    const menuItem = availableMenuItems.find(
+      (mi) => mi._id === newItems[index].menuItemId
+    );
+    if (!menuItem) return;
+    const surcharge =
+      portionSize === 'half'
+        ? (menuItem.portionOptions?.halfPortionSurcharge ?? 0)
+        : portionSize === 'quarter'
+          ? (menuItem.portionOptions?.quarterPortionSurcharge ?? 0)
+          : 0;
+    newItems[index].portionSize = portionSize;
+    if (!newItems[index].priceOverridden) {
+      newItems[index].price = menuItem.price + surcharge;
+    }
+    setItems(newItems);
+  }
+
+  function handlePriceOverride(
+    index: number,
+    newPrice: number,
+    reason?: string
+  ) {
+    const newItems = [...items];
+    if (!newItems[index].originalPrice) {
+      newItems[index].originalPrice = newItems[index].price;
+    }
+    newItems[index].price = newPrice;
+    newItems[index].priceOverridden = true;
+    newItems[index].priceOverrideReason = reason;
+    setItems(newItems);
+  }
+
+  function handleResetPrice(index: number) {
+    const newItems = [...items];
+    if (newItems[index].originalPrice) {
+      newItems[index].price = newItems[index].originalPrice;
+      newItems[index].originalPrice = undefined;
+      newItems[index].priceOverridden = false;
+      newItems[index].priceOverrideReason = undefined;
+    }
+    setItems(newItems);
+  }
+
+  function handleInstructionsChange(index: number, instructions: string) {
+    const newItems = [...items];
+    newItems[index].specialInstructions = instructions;
+    setItems(newItems);
   }
 
   async function handleSave() {
@@ -215,6 +313,9 @@ export function EditOrderDialog({
           portionSize: item.portionSize,
           customizations: item.customizations,
           specialInstructions: item.specialInstructions,
+          priceOverridden: item.priceOverridden || false,
+          originalPrice: item.priceOverridden ? item.price : undefined,
+          priceOverrideReason: item.priceOverrideReason,
         })),
       });
 
@@ -294,104 +395,199 @@ export function EditOrderDialog({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {items.map((item, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-3 p-3 border rounded-md"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium">{item.name}</p>
-                          {item.portionSize === 'half' && (
-                            <Badge variant="secondary" className="text-xs">
-                              Half
-                            </Badge>
-                          )}
-                          {item.portionSize === 'quarter' && (
-                            <Badge variant="secondary" className="text-xs">
-                              Quarter
-                            </Badge>
-                          )}
-                        </div>
-                        {item.customizations &&
-                          item.customizations.length > 0 && (
-                            <p className="text-xs text-muted-foreground">
-                              {summariseSelected(item.customizations)}
-                            </p>
-                          )}
-                        <p className="text-sm text-muted-foreground">
-                          ₦
-                          {(
-                            item.price +
-                            (item.customizations ?? []).reduce(
-                              (s, c) =>
-                                s + (typeof c.price === 'number' ? c.price : 0),
-                              0
-                            )
-                          ).toLocaleString()}{' '}
-                          each
-                        </p>
-                      </div>
-
-                      {/* Quantity Controls */}
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          onClick={() =>
-                            handleQuantityChange(index, item.quantity - 1)
-                          }
-                          disabled={item.quantity <= 1}
-                        >
-                          <Minus className="h-4 w-4" />
-                        </Button>
-                        <Input
-                          type="number"
-                          value={item.quantity}
-                          onChange={(e) =>
-                            handleQuantityChange(
-                              index,
-                              parseInt(e.target.value) || 1
-                            )
-                          }
-                          className="w-16 text-center"
-                          min={1}
-                        />
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          onClick={() =>
-                            handleQuantityChange(index, item.quantity + 1)
-                          }
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
-
-                      {/* Item Total — REQ-031: surcharge-aware */}
-                      <div className="w-24 text-right font-medium">
-                        ₦
-                        {(
-                          (item.price +
-                            (item.customizations ?? []).reduce(
-                              (s, c) =>
-                                s + (typeof c.price === 'number' ? c.price : 0),
-                              0
-                            )) *
-                          item.quantity
-                        ).toLocaleString()}
-                      </div>
-
-                      {/* Remove Button */}
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => handleRemoveItem(index)}
+                  {items.map((item, index) => {
+                    const menuItem = availableMenuItems.find(
+                      (mi) => mi._id === item.menuItemId
+                    );
+                    const canOverride = item.allowManualPriceOverride;
+                    const hasPortions = menuItem
+                      ? hasPortionOptions(menuItem)
+                      : false;
+                    return (
+                      <div
+                        key={index}
+                        className="space-y-2 p-3 border rounded-md"
                       >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  ))}
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">{item.name}</p>
+                              {item.portionSize === 'half' && (
+                                <Badge variant="secondary" className="text-xs">
+                                  Half
+                                </Badge>
+                              )}
+                              {item.portionSize === 'quarter' && (
+                                <Badge variant="secondary" className="text-xs">
+                                  Quarter
+                                </Badge>
+                              )}
+                              {item.priceOverridden && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs border-orange-600 text-orange-600"
+                                >
+                                  <DollarSign className="h-3 w-3 mr-1" />
+                                  Override
+                                </Badge>
+                              )}
+                            </div>
+                            {item.customizations &&
+                              item.customizations.length > 0 && (
+                                <p className="text-xs text-muted-foreground">
+                                  {summariseSelected(item.customizations)}
+                                </p>
+                              )}
+                            <p className="text-sm text-muted-foreground">
+                              ₦
+                              {(
+                                item.price +
+                                (item.customizations ?? []).reduce(
+                                  (s, c) =>
+                                    s +
+                                    (typeof c.price === 'number' ? c.price : 0),
+                                  0
+                                )
+                              ).toLocaleString()}{' '}
+                              each
+                            </p>
+                          </div>
+
+                          {/* Quantity Controls */}
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              onClick={() =>
+                                handleQuantityChange(index, item.quantity - 1)
+                              }
+                              disabled={item.quantity <= 1}
+                            >
+                              <Minus className="h-4 w-4" />
+                            </Button>
+                            <Input
+                              type="number"
+                              value={item.quantity}
+                              onChange={(e) =>
+                                handleQuantityChange(
+                                  index,
+                                  parseInt(e.target.value) || 1
+                                )
+                              }
+                              className="w-16 text-center"
+                              min={1}
+                            />
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              onClick={() =>
+                                handleQuantityChange(index, item.quantity + 1)
+                              }
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+
+                          {/* Item Total */}
+                          <div className="w-24 text-right font-medium">
+                            ₦
+                            {(
+                              (item.price +
+                                (item.customizations ?? []).reduce(
+                                  (s, c) =>
+                                    s +
+                                    (typeof c.price === 'number' ? c.price : 0),
+                                  0
+                                )) *
+                              item.quantity
+                            ).toLocaleString()}
+                          </div>
+
+                          {/* Remove Button */}
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleRemoveItem(index)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+
+                        {/* REQ-089: Portion selector, price override, special instructions */}
+                        <div className="flex flex-wrap items-center gap-2 pl-1">
+                          {hasPortions && (
+                            <Select
+                              value={item.portionSize || 'full'}
+                              onValueChange={(value) =>
+                                handlePortionChange(
+                                  index,
+                                  value as 'full' | 'half' | 'quarter'
+                                )
+                              }
+                            >
+                              <SelectTrigger className="h-8 w-32">
+                                <SelectValue placeholder="Portion" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="full">Full</SelectItem>
+                                {menuItem?.portionOptions
+                                  ?.halfPortionEnabled && (
+                                  <SelectItem value="half">
+                                    Half (1/2)
+                                  </SelectItem>
+                                )}
+                                {menuItem?.portionOptions
+                                  ?.quarterPortionEnabled && (
+                                  <SelectItem value="quarter">
+                                    Quarter (1/4)
+                                  </SelectItem>
+                                )}
+                              </SelectContent>
+                            </Select>
+                          )}
+                          {canOverride && (
+                            <div className="flex gap-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setOverrideItemIndex(index)}
+                              >
+                                <DollarSign className="h-4 w-4 mr-1" />
+                                {item.priceOverridden
+                                  ? 'Edit Price'
+                                  : 'Override Price'}
+                              </Button>
+                              {item.priceOverridden && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleResetPrice(index)}
+                                >
+                                  Reset
+                                </Button>
+                              )}
+                            </div>
+                          )}
+                          <details className="ml-auto">
+                            <summary className="cursor-pointer text-xs text-muted-foreground flex items-center gap-1">
+                              <MessageSquare className="h-3 w-3" />
+                              {item.specialInstructions ? 'Edit' : 'Add'} Notes
+                            </summary>
+                            <Textarea
+                              placeholder="Special instructions..."
+                              value={item.specialInstructions || ''}
+                              onChange={(e) =>
+                                handleInstructionsChange(index, e.target.value)
+                              }
+                              rows={2}
+                              maxLength={200}
+                              className="mt-1 text-sm"
+                            />
+                          </details>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </ScrollArea>
@@ -449,6 +645,41 @@ export function EditOrderDialog({
             setPickerMenuItem(null);
           }}
           confirmLabel="Add to Order"
+        />
+      )}
+
+      {/* REQ-089: portion picker dialog for new items with portion options */}
+      {portionPickerMenuItem && (
+        <PortionPickerDialog
+          open={!!portionPickerMenuItem}
+          onOpenChange={(open) => !open && setPortionPickerMenuItem(null)}
+          itemName={portionPickerMenuItem.name}
+          basePrice={portionPickerMenuItem.price}
+          portionOptions={portionPickerMenuItem.portionOptions}
+          onConfirm={(portionSize) => {
+            pushItem(portionPickerMenuItem);
+            const lastIndex = items.length;
+            handlePortionChange(lastIndex, portionSize);
+            setPortionPickerMenuItem(null);
+          }}
+        />
+      )}
+
+      {/* REQ-089: price override dialog */}
+      {overrideItemIndex !== null && items[overrideItemIndex] && (
+        <PriceOverrideDialog
+          open={overrideItemIndex !== null}
+          onOpenChange={(open) => !open && setOverrideItemIndex(null)}
+          itemName={items[overrideItemIndex].name}
+          originalPrice={
+            items[overrideItemIndex].originalPrice ||
+            items[overrideItemIndex].price
+          }
+          currentPrice={items[overrideItemIndex].price}
+          onConfirm={(newPrice, reason) => {
+            handlePriceOverride(overrideItemIndex, newPrice, reason);
+            setOverrideItemIndex(null);
+          }}
         />
       )}
     </Dialog>

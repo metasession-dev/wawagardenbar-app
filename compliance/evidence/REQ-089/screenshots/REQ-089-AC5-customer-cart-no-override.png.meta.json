@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-089",
+  "ac": 5,
+  "slug": "customer-cart-no-override",
+  "specFile": "e2e/customer/cart-no-price-override.spec.ts",
+  "capturedAt": "2026-07-02T06:05:10.414Z"
+}

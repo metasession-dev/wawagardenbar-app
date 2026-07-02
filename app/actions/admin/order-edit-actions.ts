@@ -1,5 +1,9 @@
 'use server';
 
+/**
+ * @requirement REQ-089 - Price override, portion options, and special instructions for admin order editing
+ */
+
 import { revalidatePath } from 'next/cache';
 import { SettingsService } from '@/services';
 import { connectDB } from '@/lib/mongodb';
@@ -23,6 +27,9 @@ interface UpdateOrderItemsInput {
       price: number;
     }>;
     specialInstructions?: string;
+    priceOverridden?: boolean;
+    originalPrice?: number;
+    priceOverrideReason?: string;
   }>;
 }
 
@@ -97,6 +104,7 @@ export async function updateOrderItemsAction(input: UpdateOrderItemsInput) {
           name: m.name,
           price: m.price,
           customizations: m.customizations,
+          allowManualPriceOverride: m.allowManualPriceOverride ?? false,
         },
       ])
     );
@@ -107,6 +115,7 @@ export async function updateOrderItemsAction(input: UpdateOrderItemsInput) {
         quantity: item.quantity,
         portionMultiplier: portionMultiplierFor(item.portionSize),
         customizations: item.customizations,
+        priceOverride: item.priceOverridden ? item.originalPrice : undefined,
       })),
     });
     if (!reconciled.valid) {
@@ -130,8 +139,11 @@ export async function updateOrderItemsAction(input: UpdateOrderItemsInput) {
           sum + (typeof custom.price === 'number' ? custom.price : 0),
         0
       );
-      const adjustedBase = Math.round(menuItem.price * multiplier);
-      // REQ-031: surcharge scales with portion (D6, AC13)
+      // REQ-089: use overridden price when admin supplies one.
+      const effectiveBase = inputItem.priceOverridden
+        ? (inputItem.originalPrice ?? menuItem.price)
+        : menuItem.price;
+      const adjustedBase = Math.round(effectiveBase * multiplier);
       const itemSubtotal = Math.round(
         (adjustedBase + surchargeTotal * multiplier) * inputItem.quantity
       );
@@ -161,7 +173,11 @@ export async function updateOrderItemsAction(input: UpdateOrderItemsInput) {
                 itemSubtotal) *
               100
             : 0,
-        priceOverridden: false,
+        priceOverridden: inputItem.priceOverridden || false,
+        originalPrice: inputItem.priceOverridden
+          ? Math.round(menuItem.price * multiplier)
+          : undefined,
+        priceOverrideReason: inputItem.priceOverrideReason,
       };
     });
 
@@ -223,7 +239,9 @@ export async function getAvailableMenuItemsAction() {
       // REQ-031: include `customizations` so the Edit Order dialog can render
       // the picker for items with customization groups. The previous `.select`
       // referenced a non-existent `customizationOptions` field.
-      .select('name price category subcategory image customizations')
+      .select(
+        'name price category subcategory image customizations portionOptions allowManualPriceOverride'
+      )
       .sort({ category: 1, name: 1 })
       .lean();
 

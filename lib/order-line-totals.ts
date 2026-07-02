@@ -1,5 +1,6 @@
 /**
  * @requirement REQ-031 - End-to-end multi-inventory deduction for menu items with customization options
+ * @requirement REQ-089 - Price override support for admin order management
  *
  * Server-side reconciler. Single source of truth for the three order-creating
  * actions:
@@ -18,6 +19,9 @@
  *      order document (do NOT trust client-supplied subtotal).
  *   4. If the caller supplies clientTotal, reject when it differs by more
  *      than 1-naira rounding tolerance (AC15).
+ *   5. REQ-089: When a line carries an admin price override, use the overridden
+ *      price instead of the menu price. The override is only accepted from
+ *      admin-authenticated callers.
  */
 
 import {
@@ -33,6 +37,8 @@ export type SubmittedLine = {
   quantity: number;
   portionMultiplier: number;
   customizations?: SelectedCustomization[];
+  /** REQ-089: admin price override — when present, use this price instead of menu price. */
+  priceOverride?: number;
 };
 
 export type MenuItemForReconcile = {
@@ -44,6 +50,8 @@ export type MenuItemForReconcile = {
     required?: boolean;
     options?: Array<{ name: string; price?: number; available?: boolean }>;
   }>;
+  /** REQ-089: whether the menu item allows manual price override. */
+  allowManualPriceOverride?: boolean;
 };
 
 export type ReconcileResult =
@@ -80,8 +88,14 @@ export function reconcileAndValidateOrderLines({
       };
     }
 
+    // REQ-089: use overridden price when admin supplies one and the menu item allows it.
+    const effectivePrice =
+      line.priceOverride !== undefined && menuItem.allowManualPriceOverride
+        ? line.priceOverride
+        : menuItem.price;
+
     const lineTotal = computeLineTotal({
-      basePrice: menuItem.price,
+      basePrice: effectivePrice,
       customizations,
       quantity: line.quantity,
       portionMultiplier: line.portionMultiplier,

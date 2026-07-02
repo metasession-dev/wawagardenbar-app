@@ -3,6 +3,7 @@
 /**
  * @requirement REQ-009 - Express Actions: accelerated admin tab, order, and close flows
  * @requirement REQ-081 - Main-category to sub-category cascade for express item selection
+ * @requirement REQ-089 - Price override, stock validation, special instructions for admin order management
  */
 
 import { cookies } from 'next/headers';
@@ -260,6 +261,9 @@ export async function expressCreateOrderAction(params: {
     portionSize?: 'full' | 'half' | 'quarter';
     specialInstructions?: string;
     customizations?: SelectedCustomization[];
+    priceOverridden?: boolean;
+    originalPrice?: number;
+    priceOverrideReason?: string;
   }>;
   orderType?: 'dine-in' | 'pickup' | 'delivery' | 'pay-now';
   tabId?: string;
@@ -312,6 +316,7 @@ export async function expressCreateOrderAction(params: {
           name: m.name,
           price: m.price,
           customizations: m.customizations,
+          allowManualPriceOverride: m.allowManualPriceOverride ?? false,
         },
       ])
     );
@@ -326,12 +331,40 @@ export async function expressCreateOrderAction(params: {
         quantity: item.quantity,
         portionMultiplier: portionMultiplierFor(item.portionSize),
         customizations: item.customizations,
+        priceOverride: item.priceOverridden ? item.price : undefined,
       })),
     });
     if (!reconciled.valid) {
       return { success: false, error: reconciled.error };
     }
     const subtotal = reconciled.recomputedSubtotal;
+
+    // REQ-089: stock validation — reject if any item's requested quantity
+    // (adjusted by portion multiplier) exceeds available currentStock.
+    const stockItemIds = menuItemIds;
+    const stockInventories = await InventoryModel.find(
+      { menuItemId: { $in: stockItemIds } },
+      'menuItemId currentStock minimumStock'
+    ).lean();
+    const stockMap = new Map(
+      stockInventories.map((inv: any) => [
+        String(inv.menuItemId),
+        inv.currentStock ?? 0,
+      ])
+    );
+    for (const item of params.items) {
+      const stock = stockMap.get(item.menuItemId);
+      if (stock !== undefined) {
+        const multiplier = portionMultiplierFor(item.portionSize);
+        const effectiveQty = item.quantity * multiplier;
+        if (effectiveQty > stock) {
+          return {
+            success: false,
+            error: `Insufficient stock for ${item.name}: requested ${effectiveQty} units, only ${stock} available.`,
+          };
+        }
+      }
+    }
 
     const orderType =
       params.orderType ??
@@ -344,9 +377,9 @@ export async function expressCreateOrderAction(params: {
         (s, c) => s + (typeof c.price === 'number' ? c.price : 0),
         0
       );
-      // Persist the portion-adjusted base on the line (matches existing
-      // payment-actions semantics) and the surcharge-aware subtotal.
-      const adjustedBase = Math.round(basePrice * multiplier);
+      // REQ-089: when price is overridden, use the overridden price as the base.
+      const effectiveBase = item.priceOverridden ? item.price : basePrice;
+      const adjustedBase = Math.round(effectiveBase * multiplier);
       const itemSubtotal = Math.round(
         (adjustedBase + surcharge * multiplier) * item.quantity
       );
@@ -364,6 +397,11 @@ export async function expressCreateOrderAction(params: {
         totalCost: 0,
         grossProfit: 0,
         profitMargin: 0,
+        priceOverridden: item.priceOverridden || false,
+        originalPrice: item.priceOverridden
+          ? Math.round(basePrice * multiplier)
+          : undefined,
+        priceOverrideReason: item.priceOverrideReason,
       };
     });
 

@@ -37,14 +37,14 @@ test.describe('REQ-089: Customer cart — no price override UI', () => {
         await page.waitForTimeout(500);
       }
 
-      const cartBtn = page
-        .locator('[class*="cart"], button')
-        .filter({ hasText: /cart/i })
-        .first();
-      if (await cartBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await cartBtn.click();
-        await page.waitForTimeout(500);
-      }
+      // Close the menu item detail modal before navigating to cart
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(300);
+
+      // Navigate directly to cart page
+      await page.goto(`${BASE_URL}/cart`);
+      await page.waitForLoadState('networkidle');
+      await page.waitForTimeout(500);
 
       const overrideBtn = page.getByRole('button', {
         name: /override.*price/i,

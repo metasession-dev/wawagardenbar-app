@@ -115,7 +115,7 @@ async function seedOverSellOrder(): Promise<SeedHandle> {
     );
 
     const requested = OVERSELL_LIMIT + 1;
-    const orderNumber = `WGE2X${Date.now()}`.slice(0, 12);
+    const orderNumber = `WGE2X${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const subtotal = menuItem.price * requested;
     const now = new Date();
     const seedResult = await db.collection('orders').insertOne({

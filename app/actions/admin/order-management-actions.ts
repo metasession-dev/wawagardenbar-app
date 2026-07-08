@@ -157,11 +157,11 @@ export async function getOrdersAction(
       pickupTime: order.pickupDetails?.preferredPickupTime?.toISOString(),
       deliveryAddress: order.deliveryDetails?.address,
       specialInstructions: order.specialInstructions,
-      createdAt: order.createdAt.toISOString(),
-      updatedAt: order.updatedAt.toISOString(),
+      createdAt: order.createdAt?.toISOString() ?? '',
+      updatedAt: order.updatedAt?.toISOString() ?? order.createdAt?.toISOString() ?? '',
       statusHistory: order.statusHistory?.map((h: any) => ({
         status: h.status,
-        timestamp: h.timestamp.toISOString(),
+        timestamp: h.timestamp?.toISOString() ?? '',
         note: h.note,
       })),
       estimatedCompletionTime: order.estimatedCompletionTime?.toISOString(),
@@ -299,7 +299,7 @@ export async function updateOrderStatusAction(
 
     await connectDB();
 
-    const order = await OrderModel.findById(orderId);
+    let order = await OrderModel.findById(orderId);
 
     if (!order) {
       return { success: false, error: 'Order not found' };
@@ -363,12 +363,11 @@ export async function updateOrderStatusAction(
         deductionWarning = completeResult.deductionError;
       }
       // Re-load the order so the auto-cash-payment block below sees the
-      // updated `inventoryDeducted` flag.
+      // updated `inventoryDeducted` flag and avoids a stale version-key
+      // DocumentNotFoundError when we save again.
       const refreshed = await OrderModel.findById(orderId);
       if (refreshed) {
-        order.inventoryDeducted = refreshed.inventoryDeducted;
-        order.inventoryDeductedAt = refreshed.inventoryDeductedAt;
-        order.inventoryDeductedBy = refreshed.inventoryDeductedBy;
+        order = refreshed;
       }
     }
 

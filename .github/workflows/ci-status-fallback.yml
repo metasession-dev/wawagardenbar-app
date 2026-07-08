@@ -45,6 +45,9 @@ jobs:
   quality-gates:
     name: Quality Gates
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      statuses: write
     steps:
       - name: Acknowledge docs/compliance-only commit
         run: |

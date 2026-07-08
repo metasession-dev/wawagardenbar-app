@@ -143,7 +143,7 @@ async function seedOrderWithForcedEmptyLocation(): Promise<SeedHandle> {
       );
     }
 
-    const orderNumber = `WGE2S${Date.now()}`.slice(0, 12);
+    const orderNumber = `WGE2S${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const subtotal = menuItem.price;
     const now = new Date();
     const seedResult = await db.collection('orders').insertOne({

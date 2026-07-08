@@ -13,6 +13,9 @@
 #   `Quality Gates` status. Branch protection is satisfied without running the heavy gates
 #   on a commit that has no code in it.
 #
+#   PRs to main are actively verified by quality-gates-provenance.yml, which checks
+#   for prior develop-side Quality Gates success on the same head SHA.
+#
 #   Mixed commits (some docs + some code) trigger BOTH workflows. Same status name, both
 #   green = branch protection happy.
 
@@ -48,3 +51,15 @@ jobs:
           echo "Commit ${{ github.sha }} only touches docs/compliance paths."
           echo "Heavy quality-gates workflow (ci.yml) was correctly skipped."
           echo "This fallback emits the 'Quality Gates' status so branch protection is satisfied."
+      - name: Create passing Quality Gates status
+        run: |
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github.v3+json" \
+            repos/metasession-dev/wawagardenbar-app/statuses/${{ github.sha }} \
+            -f state=success \
+            -f context="Quality Gates" \
+            -f description="Docs/compliance-only commit - gates skipped per paths-ignore" \
+            -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

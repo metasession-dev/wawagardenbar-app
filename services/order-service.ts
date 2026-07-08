@@ -1002,9 +1002,12 @@ export class OrderService {
 
     try {
       const { AuditLogService } = await import('./audit-log-service');
+      const UserModel = (await import('@/models/user-model')).default;
+      const actor = await UserModel.findById(opts.actorUserId);
+
       await AuditLogService.createLog({
         userId: opts.actorUserId,
-        userEmail: '',
+        userEmail: actor?.email || `${opts.actorRole}@system.local`,
         userRole: opts.actorRole,
         action: 'order.update',
         resource: 'order',

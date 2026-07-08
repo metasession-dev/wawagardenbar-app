@@ -4,7 +4,7 @@
 **Issue:** [#452](https://github.com/metasession-dev/wawagardenbar-app/issues/452)
 **Risk class:** MEDIUM
 **Integration PR:** [#454](https://github.com/metasession-dev/wawagardenbar-app/pull/454) (merged to develop)
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 
 ## Summary
 

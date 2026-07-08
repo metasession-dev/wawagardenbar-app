@@ -235,7 +235,11 @@ export default async function OrdersPage() {
           {/* Open a New Tab */}
           <CreateTabDialog
             trigger={
-              <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full border-l-4 border-l-indigo-500 w-full text-left">
+              <Card
+                role="button"
+                tabIndex={0}
+                className="hover:bg-accent/50 transition-colors cursor-pointer h-full border-l-4 border-l-indigo-500 w-full text-left"
+              >
                 <CardHeader>
                   <CardTitle className="flex items-center text-lg">
                     <PlusCircle className="h-5 w-5 mr-2 text-indigo-500" />

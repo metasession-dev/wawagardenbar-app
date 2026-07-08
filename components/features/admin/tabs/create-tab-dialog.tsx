@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import React, { useState, useTransition, cloneElement, isValidElement } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,7 +15,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   Form,
@@ -81,17 +80,40 @@ export function CreateTabDialog({ trigger }: { trigger?: React.ReactNode }) {
     });
   }
 
+  const defaultTrigger = (
+    <Button type="button">
+      <Plus className="mr-2 h-4 w-4" />
+      Create Tab / Open Order
+    </Button>
+  );
+  const triggerElement = trigger ?? defaultTrigger;
+
+  function openDialog() {
+    setOpen(true);
+  }
+
+  const interactiveTrigger = isValidElement(triggerElement)
+    ? cloneElement(triggerElement as React.ReactElement, {
+        onClick: (e: React.MouseEvent) => {
+          e.stopPropagation();
+          openDialog();
+        },
+        role: 'button',
+        tabIndex: 0,
+        onKeyDown: (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openDialog();
+          }
+        },
+      })
+    : triggerElement;
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger || (
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Create Tab / Open Order
-          </Button>
-        )}
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+    <>
+      {interactiveTrigger}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Create New Tab</DialogTitle>
           <DialogDescription>
@@ -131,5 +153,6 @@ export function CreateTabDialog({ trigger }: { trigger?: React.ReactNode }) {
         </Form>
       </DialogContent>
     </Dialog>
+    </>
   );
 }

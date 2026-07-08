@@ -21,6 +21,11 @@
 #                               release-ticket H1). Forwarded as
 #                               `releaseTitle`; the portal no-clobbers
 #                               existing non-null values.
+#   --release-summary <text>    Reviewer-facing short description of what
+#                               the release covers. Forwarded as
+#                               `releaseSummary`; the portal no-clobbers
+#                               existing non-null values.
+#                               DevAudit-Installer#285.
 #   --change-type <type>        Conventional-commit prefix (feat / fix /
 #                               refactor / perf / chore / docs / ci /
 #                               build / test / compliance / revert) for
@@ -48,6 +53,14 @@
 #   DEVAUDIT_API_KEY   project-scoped API key (uploader role); format `mc_…`.
 #                         Issue from: Project Settings → API Keys in
 #                         META-COMPLY's web UI.
+#
+# Large-file uploads (>=25MB):
+#   Files above 25MB use a presigned R2 upload flow (3-step: request URL →
+#   PUT to R2 → notify portal) instead of multipart POST. This requires
+#   the Portal to be configured with R2 evidence storage
+#   (R2_EVIDENCE_BUCKET and related env vars). If R2 is not configured,
+#   the Portal returns a clear error which is surfaced to the operator.
+#   #298 — the Portal response body is included in the error output.
 #
 # Examples:
 #   ./scripts/upload-evidence.sh meta-ats REQ-001 screenshot \
@@ -80,6 +93,7 @@ CREATE_RELEASE_IF_MISSING=false
 ENVIRONMENT=""
 EVIDENCE_CATEGORY=""
 RELEASE_TITLE=""
+RELEASE_SUMMARY=""
 CHANGE_TYPE=""
 GATE_STATUS=""
 SDLC_STAGE=""
@@ -103,6 +117,7 @@ while [ "$#" -gt 0 ]; do
     # the portal's findOrCreateRelease no-clobber backfill. Both optional;
     # unknown change-type values are dropped server-side, not 400'd.
     --release-title) RELEASE_TITLE="$2"; shift 2 ;;
+    --release-summary) RELEASE_SUMMARY="$2"; shift 2 ;;
     --change-type) CHANGE_TYPE="$2"; shift 2 ;;
     # passed/failed/skipped — surfaces failed gates on the portal so
     # ran-and-failed != never-ran. Unknown values dropped server-side.
@@ -320,6 +335,8 @@ upload_presigned() {
         \"releaseBranch\": \"${BRANCH}\",
         \"environment\": \"${ENVIRONMENT}\",
         \"evidenceCategory\": \"${EVIDENCE_CATEGORY}\",
+        \"releaseTitle\": \"${RELEASE_TITLE}\",
+        \"releaseSummary\": \"${RELEASE_SUMMARY}\",
         \"sdlcStage\": \"${SDLC_STAGE}\",
         \"testCycleId\": \"${TEST_CYCLE}\"
       }") || curl_exit=$?
@@ -336,9 +353,9 @@ upload_presigned() {
       echo -n "(portal did not return presigned URL, falling back to multipart) "
       return 255
     fi
-    rm -f "$resp_body"
     if [ "$curl_exit" -ne 0 ] || [ "$http_code" = "429" ] || { [ "$http_code" -ge 500 ] && [ "$http_code" -lt 600 ]; }; then
       if [ "$attempt" -lt "$PRESIGNED_MAX_ATTEMPTS" ]; then
+        rm -f "$resp_body"
         echo -n "(step 1: HTTP ${http_code}, retry in ${backoff}s) "
         sleep "$backoff"
         attempt=$((attempt + 1))
@@ -346,8 +363,20 @@ upload_presigned() {
         continue
       fi
     fi
-    # Non-retriable error (4xx other than 429).
-    echo -n "(step 1 failed: HTTP ${http_code}) "
+    # Non-retriable error (4xx other than 429) or exhausted retries.
+    # #298 — Surface the Portal response body so operators see WHY it
+    # failed (e.g. "Presigned uploads require R2 storage configuration")
+    # instead of just "HTTP 501". Include up to 500 chars of the body.
+    local err_excerpt=""
+    if [ -s "$resp_body" ]; then
+      err_excerpt=$(head -c 500 "$resp_body")
+    fi
+    rm -f "$resp_body"
+    echo -n "(step 1 failed: HTTP ${http_code}"
+    if [ -n "$err_excerpt" ]; then
+      echo -n " — ${err_excerpt}"
+    fi
+    echo ") "
     return 1
   done
 
@@ -469,6 +498,7 @@ for FILE in "${FILES[@]}"; do
   [ -n "$ENVIRONMENT" ] && CURL_ARGS+=(-F "environment=${ENVIRONMENT}")
   [ -n "$EVIDENCE_CATEGORY" ] && CURL_ARGS+=(-F "evidenceCategory=${EVIDENCE_CATEGORY}")
   [ -n "$RELEASE_TITLE" ] && CURL_ARGS+=(-F "releaseTitle=${RELEASE_TITLE}")
+  [ -n "$RELEASE_SUMMARY" ] && CURL_ARGS+=(-F "releaseSummary=${RELEASE_SUMMARY}")
   [ -n "$CHANGE_TYPE" ] && CURL_ARGS+=(-F "changeType=${CHANGE_TYPE}")
   [ -n "$GATE_STATUS" ] && CURL_ARGS+=(-F "gateStatus=${GATE_STATUS}")
   [ -n "$SDLC_STAGE" ] && CURL_ARGS+=(-F "sdlcStage=${SDLC_STAGE}")

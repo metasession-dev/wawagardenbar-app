@@ -76,7 +76,15 @@ N/A — this REQ does not introduce or change AI behaviour.
 - **E2E coverage:** Critical-tier suite (`npx playwright test --project=critical`) must pass locally before push.
 - **Manual smoke after deploy:** Open `/dashboard/orders` as admin and verify no console hydration errors.
 
-## 9. Sign-off
+## 9. Plan deviation / actual implementation
+
+During local verification the critical-tier run surfaced two additional root causes that were not in the original plan but are required for a green CI result. All three fixes are still defensive or presentation-layer only and do not expand the REQ's risk surface.
+
+1. **`app/actions/admin/order-management-actions.ts`** — after `OrderService.completeOrder` saves the order, the in-memory `order` document becomes stale and a subsequent `order.save()` throws a `DocumentNotFoundError` due to the version-key mismatch. Fixed by reloading the order from the database before the final save.
+2. **`services/order-service.ts`** — `completeOrder` hardcoded `userEmail: ''` when writing the audit log, which fails `AuditLog` schema validation. Fixed by looking up the actor's email (with a deterministic fallback for system-initiated calls).
+3. **`e2e/critical/admin-order-inventory-delta.{over-sell,sale-point}.spec.ts`** — the seeded `orderNumber` collided when the critical and regression projects ran concurrently because it relied solely on `Date.now()`. Fixed by appending a random base-36 suffix to the generated order number.
+
+## 10. Sign-off
 
 - **Plan reviewer (eng):** REPLACE
 - **Plan reviewer (security / DPO):** N/A

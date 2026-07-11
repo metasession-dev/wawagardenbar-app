@@ -7,7 +7,7 @@ version: TBD
 
 # Release Ticket — REQ-090
 
-**Status:** PENDING SIGN-OFF
+**Status:** RELEASED
 **Requirement:** REQ-090 — E2E regression blocker fixes
 **Release Shape:** Fix
 **Date:** 2026-07-08

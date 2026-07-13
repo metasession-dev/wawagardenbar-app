@@ -8,7 +8,7 @@
 ## Gate results
 
 | Gate | Result | Notes |
-|------|--------|-------|
+| ---- | ------ | ----- |
 | `npx tsc --noEmit` | PASS | 0 errors |
 | `npm run lint` | PASS | 0 errors (963 pre-existing warnings) |
 | `npm audit --audit-level=high` | PASS | No new findings; test-only change, no deps added |
@@ -24,7 +24,7 @@ No new SAST findings — only `e2e/` file changed; SAST scopes to `app/ lib/ ser
 
 ## UAT verification
 
-**UAT environment:** https://wawagardenbar-app-uat.up.railway.app
+**UAT environment:** <https://wawagardenbar-app-uat.up.railway.app>
 
 PR #487 is against `develop` — UAT auto-deploy will occur on merge to `develop`.
 

@@ -86,18 +86,19 @@ superAdminTest.describe('REQ-082: progressive category display', () => {
       expect(firstItemName).not.toBe('');
 
       await page.getByTestId('category-cascade-search').fill(firstItemName);
-      await page.waitForTimeout(400);
+      await expect(page.locator('[aria-disabled]').first()).toBeVisible();
       await expectVisibleRowsToMatch(
         page.locator('[aria-disabled]'),
         firstItemName
       );
 
+      await expect(page.locator('[aria-disabled="false"]').first()).toBeVisible();
       await page.locator('[aria-disabled="false"]').first().click();
       const firstCheckoutCount = await checkoutCount(page);
       expect(firstCheckoutCount).toBeGreaterThan(0);
 
       await page.getByTestId('category-cascade-search').fill('');
-      await page.waitForTimeout(400);
+      await expect(page.locator('[aria-disabled]').first()).toBeVisible();
 
       const secondMain = await findMainCategoryWithContent(
         page,
@@ -112,6 +113,7 @@ superAdminTest.describe('REQ-082: progressive category display', () => {
         return;
       }
 
+      await expect(page.locator('[aria-disabled="false"]').first()).toBeVisible();
       await page.locator('[aria-disabled="false"]').first().click();
       const secondCheckoutCount = await checkoutCount(page);
       expect(secondCheckoutCount).toBeGreaterThan(firstCheckoutCount);

@@ -109,9 +109,11 @@ async function seedMenuItem(): Promise<string> {
     const itemId = new ObjectId();
     await db.collection('menuitems').insertOne({
       _id: itemId,
+      kind: 'menu-item',
       name: 'E2E Test Item',
       description: 'Test item for E2E',
       price: 500,
+      mainCategory: 'food',
       category: 'food',
       subcategory: 'starters',
       isAvailable: true,

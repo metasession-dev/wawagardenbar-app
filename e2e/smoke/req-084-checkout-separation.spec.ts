@@ -1,6 +1,8 @@
 /**
  * @requirement REQ-084 — Separate customer and admin checkout paths;
  * extend Express Create Order to support pickup/delivery.
+ * @requirement REQ-091 — Stabilize AC12 against nondeterministic menu seed
+ * data by using a freshly seeded in-stock menu item.
  *
  * Covers E2E-testable acceptance criteria:
  *   AC1  — "Continuing as Guest" banner visible for unauthenticated users
@@ -250,45 +252,54 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
   }) => {
     tagTest('REQ-084', 12);
 
-    // Start as a completely anonymous user — no cart injection, no auth.
-    await page.goto('/menu');
-    await page.waitForLoadState('networkidle');
+    // Seed a deterministic in-stock item so the test does not depend on
+    // whatever happens to be first in the database (which may be out of stock
+    // and therefore will not open the detail modal).
+    const itemId = await seedMenuItem();
 
-    // Wait for menu items to render.
-    const menuCard = page.locator('[data-testid^="menu-item-"]').first();
-    await expect(menuCard).toBeVisible({ timeout: 15000 });
+    try {
+      // Start as a completely anonymous user — no cart injection, no auth.
+      await page.goto('/menu');
+      await page.waitForLoadState('networkidle');
 
-    // Click the first menu item to open the detail modal.
-    await menuCard.click();
-    await page.waitForTimeout(500);
+      // Wait for the seeded menu item card to render.
+      const menuCard = page.locator(`[data-testid="menu-item-${itemId}"]`);
+      await expect(menuCard).toBeVisible({ timeout: 15000 });
 
-    // Click "Add to Cart" inside the modal (scoped to dialog to avoid
-    // matching the card's "Add to Cart" button which only opens the modal).
-    const addToCartBtn = page
-      .getByRole('dialog')
-      .getByRole('button', { name: /add to cart/i });
-    await expect(addToCartBtn).toBeVisible({ timeout: 5000 });
-    await addToCartBtn.click();
+      // Click the seeded menu item to open the detail modal.
+      await menuCard.click();
+      await page.waitForTimeout(500);
 
-    // Wait for the cart badge to show 1 item (proves add-to-cart worked).
-    await expect(page.locator('[data-testid="cart-button"]')).toContainText(
-      '1',
-      { timeout: 10000 }
-    );
+      // Click "Add to Cart" inside the modal (scoped to dialog to avoid
+      // matching the card's "Add to Cart" button which only opens the modal).
+      const addToCartBtn = page
+        .getByRole('dialog')
+        .getByRole('button', { name: /add to cart/i });
+      await expect(addToCartBtn).toBeVisible({ timeout: 5000 });
+      await addToCartBtn.click();
 
-    // Navigate to checkout — should NOT redirect to /login.
-    await page.goto('/checkout');
-    await page.waitForLoadState('networkidle');
+      // Wait for the cart badge to show 1 item (proves add-to-cart worked).
+      await expect(page.locator('[data-testid="cart-button"]')).toContainText(
+        '1',
+        { timeout: 10000 }
+      );
 
-    // Verify we're on /checkout, not redirected to /login or /menu.
-    expect(page.url()).not.toContain('/login');
-    expect(page.url()).not.toContain('/menu');
+      // Navigate to checkout — should NOT redirect to /login.
+      await page.goto('/checkout');
+      await page.waitForLoadState('networkidle');
 
-    // Verify the "Continue as Guest" banner is visible.
-    await expect(page.getByText(/continuing as guest/i)).toBeVisible({
-      timeout: 15000,
-    });
-    await evidenceShot(page, 'REQ-084', 12, 'anonymous-menu-to-checkout');
+      // Verify we're on /checkout, not redirected to /login or /menu.
+      expect(page.url()).not.toContain('/login');
+      expect(page.url()).not.toContain('/menu');
+
+      // Verify the "Continue as Guest" banner is visible.
+      await expect(page.getByText(/continuing as guest/i)).toBeVisible({
+        timeout: 15000,
+      });
+      await evidenceShot(page, 'REQ-084', 12, 'anonymous-menu-to-checkout');
+    } finally {
+      await cleanupMenuItem(itemId);
+    }
   });
 
   test('AC2: Guest checkout submission creates an order without auth', async ({

@@ -463,6 +463,24 @@ jobs:
             if [ -n "$CT" ]; then printf -- '--change-type %q ' "$CT"; fi
           }
 
+          # Upload housekeeping security summaries (compliance/security-summary-<version>.md).
+          # These are created by the housekeeping stub generator but are NOT inside
+          # compliance/pending-releases/ or compliance/evidence/REQ-*/, so the per-REQ
+          # loop never picks them up. DevAudit-Installer#361.
+          shopt -s nullglob
+          for SECSUM in compliance/security-summary-*.md; do
+            [ -f "$SECSUM" ] || continue
+            # Extract version from filename: security-summary-v2026.07.14.md → v2026.07.14
+            SECSUM_VER=$(basename "$SECSUM" .md | sed 's/^security-summary-//')
+            echo "Uploading housekeeping security summary: $(basename "$SECSUM") -> release ${SECSUM_VER}"
+            bash scripts/upload-evidence.sh \
+              wgb _compliance-docs security_summary "$SECSUM" \
+              --category security ${FLAGS} --release "${SECSUM_VER}" \
+              "${DERIVED_META[@]}" \
+              || echo "Warning: Failed to upload $(basename "$SECSUM")"
+          done
+          shopt -u nullglob
+
           # Upload release tickets (pending only)
           if [ -d "compliance/pending-releases" ]; then
             for TICKET in compliance/pending-releases/*.md; do

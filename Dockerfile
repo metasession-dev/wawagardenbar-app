@@ -5,8 +5,9 @@ WORKDIR /app
 # Install dependencies for native modules
 RUN apk add --no-cache libc6-compat
 
-# Copy package files
+# Copy package files and vendored tarballs needed by file: dependencies
 COPY package.json package-lock.json* ./
+COPY vendor ./vendor
 
 # Install ALL dependencies (needed for build)
 RUN npm ci
@@ -35,8 +36,9 @@ WORKDIR /app
 # Install dependencies for native modules
 RUN apk add --no-cache libc6-compat
 
-# Copy package files
+# Copy package files and vendored tarballs needed by file: dependencies
 COPY package.json package-lock.json* ./
+COPY vendor ./vendor
 
 # Install ONLY production dependencies
 RUN npm ci --omit=dev --ignore-scripts
@@ -96,4 +98,3 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 # Start application with dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["node_modules/.bin/tsx", "server.ts"]
-

@@ -17,11 +17,23 @@ async function expectVisibleRowsToMatch(
   rowLocator: Locator,
   expectedText: string
 ) {
-  const rows = await rowLocator.allTextContents();
-  expect(rows.length).toBeGreaterThan(0);
-  for (const row of rows) {
-    expect(row.toLowerCase()).toContain(expectedText.toLowerCase());
-  }
+  await expect
+    .poll(
+      async () => {
+        const rows = (await rowLocator.allTextContents()).map((row) =>
+          row.toLowerCase()
+        );
+        return (
+          rows.length > 0 &&
+          rows.every((row) => row.includes(expectedText.toLowerCase()))
+        );
+      },
+      {
+        message: `Expected all visible rows to contain "${expectedText}"`,
+        timeout: 10_000,
+      }
+    )
+    .toBe(true);
 }
 
 async function findMainCategoryWithContent(

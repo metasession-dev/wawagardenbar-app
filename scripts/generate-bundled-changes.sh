@@ -300,7 +300,7 @@ MANIFEST_BASE="$(
     --arg repository "$REPOSITORY_SLUG" \
     --arg generatedAt "$GENERATED_AT" \
     '{
-      schemaVersion: 2,
+      schemaVersion: 1,
       approvalRelease: { version: $version },
       coreRelease: { version: $version },
       members: ($members | fromjson),

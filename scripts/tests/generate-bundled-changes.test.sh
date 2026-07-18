@@ -30,7 +30,7 @@ git -C "$WORKDIR" commit --allow-empty -qm 'docs: [REQ-198] tracked documentatio
 git -C "$WORKDIR" commit --allow-empty -qm 'test: generic housekeeping verification'
 
 (cd "$WORKDIR" && bash scripts/generate-bundled-changes.sh "$BASE" REQ-200 --json-out manifest.json >/dev/null)
-jq -e '[.members[].version] == ["v2026.07.14"]' "$WORKDIR/manifest.json" >/dev/null
+jq -e '.schemaVersion == 1 and [.members[].version] == ["v2026.07.14"]' "$WORKDIR/manifest.json" >/dev/null
 jq -e '[.nonReleaseWorkItems[].title] == ["test: generic housekeeping verification"]' "$WORKDIR/manifest.json" >/dev/null
 
 echo 'generate-bundled-changes regression test passed'

@@ -1,5 +1,6 @@
 import { connectDB } from '@/lib/mongodb';
 import Order from '@/models/order-model';
+import { watCalendarDayRange } from '@/lib/business-date';
 
 export interface ProfitabilitySummary {
   totalRevenue: number;
@@ -74,8 +75,10 @@ export class ProfitabilityAnalyticsService {
     await connectDB();
 
     // Build query
+    const { start } = watCalendarDayRange(startDate);
+    const { end } = watCalendarDayRange(endDate);
     const query: any = {
-      createdAt: { $gte: startDate, $lte: endDate },
+      businessDate: { $gte: start, $lte: end },
       paymentStatus: 'paid',
     };
 
@@ -85,21 +88,31 @@ export class ProfitabilityAnalyticsService {
 
     // Fetch orders
     const orders = await Order.find(query).lean();
+    const filteredOrders = filters?.category
+      ? orders
+          .map((order: any) => ({
+            ...order,
+            items: (order.items ?? []).filter(
+              (item: any) => item.categoryAtSale === filters.category
+            ),
+          }))
+          .filter((order: any) => order.items.length > 0)
+      : orders;
 
     // Calculate summary
-    const summary = this.calculateSummary(orders);
+    const summary = this.calculateSummary(filteredOrders);
 
     // Calculate by category (would need menu item population)
-    const byCategory = await this.calculateByCategory(orders);
+    const byCategory = await this.calculateByCategory(filteredOrders);
 
     // Calculate by item
-    const byItem = await this.calculateByItem(orders);
+    const byItem = await this.calculateByItem(filteredOrders);
 
     // Calculate by order type
-    const byOrderType = this.calculateByOrderType(orders);
+    const byOrderType = this.calculateByOrderType(filteredOrders);
 
     // Calculate daily trends
-    const daily = this.calculateDailyTrends(orders, startDate, endDate);
+    const daily = this.calculateDailyTrends(filteredOrders, startDate, endDate);
 
     return {
       period: { start: startDate, end: endDate },
@@ -115,8 +128,14 @@ export class ProfitabilityAnalyticsService {
    * Calculate overall summary metrics
    */
   private static calculateSummary(orders: any[]): ProfitabilitySummary {
-    const totalRevenue = orders.reduce((sum, order) => sum + (order.total || 0), 0);
-    const totalCosts = orders.reduce((sum, order) => sum + (order.totalCost || 0), 0);
+    const totalRevenue = orders.reduce(
+      (sum, order) => sum + (order.total || 0),
+      0
+    );
+    const totalCosts = orders.reduce(
+      (sum, order) => sum + (order.totalCost || 0),
+      0
+    );
     const totalOperationalCosts = orders.reduce(
       (sum, order) =>
         sum +
@@ -127,8 +146,10 @@ export class ProfitabilityAnalyticsService {
     );
 
     const grossProfit = totalRevenue - totalCosts - totalOperationalCosts;
-    const profitMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
-    const averageOrderProfit = orders.length > 0 ? grossProfit / orders.length : 0;
+    const profitMargin =
+      totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
+    const averageOrderProfit =
+      orders.length > 0 ? grossProfit / orders.length : 0;
 
     return {
       totalRevenue,
@@ -143,7 +164,9 @@ export class ProfitabilityAnalyticsService {
   /**
    * Calculate profitability by menu item
    */
-  private static async calculateByItem(orders: any[]): Promise<ItemProfitability[]> {
+  private static async calculateByItem(
+    orders: any[]
+  ): Promise<ItemProfitability[]> {
     const itemMap = new Map<string, ItemProfitability>();
 
     orders.forEach((order) => {
@@ -165,7 +188,9 @@ export class ProfitabilityAnalyticsService {
             totalCost: item.totalCost || 0,
             grossProfit: item.grossProfit || 0,
             profitMargin:
-              item.subtotal > 0 ? ((item.grossProfit || 0) / item.subtotal) * 100 : 0,
+              item.subtotal > 0
+                ? ((item.grossProfit || 0) / item.subtotal) * 100
+                : 0,
           });
         }
       });
@@ -175,7 +200,9 @@ export class ProfitabilityAnalyticsService {
     const items = Array.from(itemMap.values());
     items.forEach((item) => {
       item.profitMargin =
-        item.totalRevenue > 0 ? (item.grossProfit / item.totalRevenue) * 100 : 0;
+        item.totalRevenue > 0
+          ? (item.grossProfit / item.totalRevenue) * 100
+          : 0;
     });
 
     // Sort by gross profit descending
@@ -185,11 +212,43 @@ export class ProfitabilityAnalyticsService {
   /**
    * Calculate profitability by category
    */
-  private static async calculateByCategory(_orders: any[]): Promise<CategoryProfitability[]> {
-    // This would require populating menu items to get categories
-    // For now, return empty array
-    // TODO: Implement category aggregation with menu item population
-    return [];
+  private static async calculateByCategory(
+    orders: any[]
+  ): Promise<CategoryProfitability[]> {
+    const categoryMap = new Map<string, CategoryProfitability>();
+    for (const order of orders) {
+      for (const item of order.items ?? []) {
+        const category = item.categoryAtSale ?? 'Legacy category unavailable';
+        const existing = categoryMap.get(category);
+        const revenue = item.subtotal ?? 0;
+        const cost = item.totalCost ?? 0;
+        const grossProfit = item.grossProfit ?? revenue - cost;
+        if (existing) {
+          existing.orderCount += 1;
+          existing.totalRevenue += revenue;
+          existing.totalCost += cost;
+          existing.grossProfit += grossProfit;
+        } else {
+          categoryMap.set(category, {
+            category,
+            orderCount: 1,
+            totalRevenue: revenue,
+            totalCost: cost,
+            grossProfit,
+            profitMargin: 0,
+          });
+        }
+      }
+    }
+    return Array.from(categoryMap.values())
+      .map((category) => ({
+        ...category,
+        profitMargin:
+          category.totalRevenue > 0
+            ? (category.grossProfit / category.totalRevenue) * 100
+            : 0,
+      }))
+      .sort((a, b) => b.grossProfit - a.grossProfit);
   }
 
   /**
@@ -232,8 +291,11 @@ export class ProfitabilityAnalyticsService {
     const types = Array.from(typeMap.values());
     types.forEach((type) => {
       type.profitMargin =
-        type.totalRevenue > 0 ? (type.grossProfit / type.totalRevenue) * 100 : 0;
-      type.averageOrderValue = type.orderCount > 0 ? type.totalRevenue / type.orderCount : 0;
+        type.totalRevenue > 0
+          ? (type.grossProfit / type.totalRevenue) * 100
+          : 0;
+      type.averageOrderValue =
+        type.orderCount > 0 ? type.totalRevenue / type.orderCount : 0;
     });
 
     return types;

@@ -113,3 +113,17 @@ export function businessDayRange(
   const end = new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
   return { start, end };
 }
+
+/**
+ * REQ-094 — Normalise a user-selected WAT calendar date to its persisted
+ * UTC range. Unlike `businessDayRange`, this does not apply the operational
+ * cutoff; it is for date-only records such as inventory snapshots and report
+ * range selectors.
+ */
+export function watCalendarDayRange(date: Date): { start: Date; end: Date } {
+  const watDate = new Date(date.getTime() + WAT_OFFSET_MS);
+  watDate.setUTCHours(0, 0, 0, 0);
+  const start = new Date(watDate.getTime() - WAT_OFFSET_MS);
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
+  return { start, end };
+}

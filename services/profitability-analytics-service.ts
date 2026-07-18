@@ -90,12 +90,28 @@ export class ProfitabilityAnalyticsService {
     const orders = await Order.find(query).lean();
     const filteredOrders = filters?.category
       ? orders
-          .map((order: any) => ({
-            ...order,
-            items: (order.items ?? []).filter(
+          .map((order: any) => {
+            const items = (order.items ?? []).filter(
               (item: any) => item.categoryAtSale === filters.category
-            ),
-          }))
+            );
+            // Order-level overhead cannot be truthfully assigned to one
+            // category in a multi-category order. Category reports therefore
+            // use immutable line revenue/COGS only, rather than retaining the
+            // full order total after its lines were narrowed.
+            return {
+              ...order,
+              items,
+              total: items.reduce(
+                (sum: number, item: any) => sum + (item.subtotal ?? 0),
+                0
+              ),
+              totalCost: items.reduce(
+                (sum: number, item: any) => sum + (item.totalCost ?? 0),
+                0
+              ),
+              operationalCosts: { delivery: 0, packaging: 0, processing: 0 },
+            };
+          })
           .filter((order: any) => order.items.length > 0)
       : orders;
 

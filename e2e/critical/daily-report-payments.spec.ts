@@ -105,9 +105,10 @@ test.describe
     await page.goto('/dashboard/orders');
     await page.waitForLoadState('networkidle');
 
-    // The "Open a New Tab" card triggers the CreateTabDialog
-    await page.locator('text=Open a New Tab').click();
-    const createDialog = page.getByRole('dialog');
+    // Scope both controls by their accessible names. The broad text locator
+    // could resolve before the intended card/dialog was ready.
+    await page.getByRole('button', { name: /Open a New Tab/ }).click();
+    const createDialog = page.getByRole('dialog', { name: 'Create New Tab' });
     await expect(createDialog).toBeVisible();
     await createDialog.getByLabel('Table Number').fill(TEST_TABLE);
     await createDialog.getByRole('button', { name: 'Create Tab' }).click();
@@ -338,8 +339,8 @@ test.describe
     await page.goto('/dashboard/orders');
     await page.waitForLoadState('networkidle');
 
-    await page.locator('text=Open a New Tab').click();
-    const createDialog = page.getByRole('dialog');
+    await page.getByRole('button', { name: /Open a New Tab/ }).click();
+    const createDialog = page.getByRole('dialog', { name: 'Create New Tab' });
     await expect(createDialog).toBeVisible();
     await createDialog.getByLabel('Table Number').fill(TEST_TABLE_OPEN);
     await createDialog.getByRole('button', { name: 'Create Tab' }).click();

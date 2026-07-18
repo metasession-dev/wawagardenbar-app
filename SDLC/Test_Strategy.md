@@ -43,16 +43,16 @@ End-to-end validation of complete user workflows from UI to database. Primary re
 Full E2E regression on every PR is expensive — a 30+ minute wait per release-PR blocks velocity for diminishing marginal safety once smoke covers the headline flows. The framework's gating model maps the existing MoSCoW prioritisation onto three tiers, each gated at a different point in the workflow:
 
 | Tier | Location | When it runs | Wall-clock target | Audit role |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | **smoke** | `e2e/smoke/*.spec.ts` | every push to `$INTEGRATION_BRANCH` (via `ci.yml`) | ~3–5 min | fast feedback on every change |
-| **critical** | `e2e/smoke/` + `e2e/critical/*.spec.ts` | PR-to-`$RELEASE_BRANCH` (via `e2e-regression.yml`) | ~10–15 min | release-readiness Must gate |
-| **regression** | all `e2e/**/*.spec.ts` | nightly + push-to-`$RELEASE_BRANCH` + `workflow_dispatch` | ~35 min (or your project's full pack) | full audit trail + drift catch |
+| **critical** | `e2e/smoke/` + `e2e/critical/*.spec.ts` | PR-to-`$RELEASE_BRANCH` when the consumer enables `e2e-regression.yml` | ~10–15 min | release-readiness Must gate |
+| **regression** | all `e2e/**/*.spec.ts` | `workflow_dispatch` and any consumer-configured post-merge or scheduled run | ~35 min (or your project's full pack) | full audit trail + drift catch |
 
 The mapping to MoSCoW: **Must-priority SRS items live in `e2e/smoke/` (fast feedback) and `e2e/critical/` (release gate); Should/Could items live in `e2e/` and are covered by the regression tier.** The classifier is the developer authoring the spec — see `skills/e2e-test-engineer/SKILL.md` Phase 3 for the decision tree.
 
-**Cost philosophy.** Smoke protects every push from breaking the headline flow. Critical protects every release from a Must-tier regression. Full regression protects the audit trail + catches drift overnight. We accept that a Should/Could-tier regression *can* slip past the PR gate; we catch it on the next post-merge run + auto-file a hotfix issue. The framework prefers this over a 35-min wait on every release because operator velocity matters and the safety net stays intact.
+**Cost philosophy.** Smoke protects every push from breaking the headline flow. Critical protects every release from a Must-tier regression. Full regression protects the audit trail and catches drift when the consumer elects to run it. We accept that a Should/Could-tier regression can sit outside the PR gate; the consumer chooses whether its safety net is post-merge, scheduled, or manual dispatch. The framework does not impose a daily/nightly run.
 
-**Post-merge safety net.** Every push to `$RELEASE_BRANCH` re-runs the full regression. On failure, `e2e-regression.yml` auto-files a `bug, priority:high` issue tagging the merge commit + the failing specs. The operator triages within working hours — hotfix forward, revert the commit, or accept-with-rationale if the failure is environmental. No automated revert (false positives + flakes + UAT-data drift are real classes; an operator triages each individually).
+**Post-merge safety net.** When a consumer enables a post-merge regression run, `e2e-regression.yml` may file a `bug, priority:high` issue tagging the merge commit and failing specs. The operator triages within working hours — hotfix forward, revert the commit, or accept-with-rationale if the failure is environmental. No automated revert: flakes and UAT-data drift require human judgment.
 
 **Reference workflow.** A copy-pasteable `e2e-regression.yml` shape lives at `skills/e2e-test-engineer/references/e2e-regression-3-tier.yml`. Adoption is opt-in per consumer (the framework doesn't currently sync this workflow; consumers own their own `e2e-regression.yml`).
 
@@ -105,7 +105,7 @@ Specific tools implementing these gates are defined in the Test Architecture.
 Defined in the Periodic Security Review Schedule:
 
 | Activity | Frequency |
-|---|---|
+| --- | --- |
 | Full codebase SAST review | Quarterly |
 | Dependency deep audit | Quarterly |
 | Access control review | Quarterly |
@@ -117,7 +117,7 @@ Defined in the Periodic Security Review Schedule:
 ### Remediation SLAs
 
 | Severity | Per-Commit Gate | Periodic Finding |
-|---|---|---|
+| --- | --- | --- |
 | Critical | Block merge, fix immediately | 7 days |
 | High | Block merge, fix immediately | 30 days |
 | Medium | Document and plan remediation | 90 days |
@@ -134,7 +134,7 @@ This section implements the AI governance commitments from the Test Policy with 
 AI involvement is a factor in risk classification:
 
 | Code Category | Base Risk | AI Adjustment |
-|---|---|---|
+| --- | --- | --- |
 | Internal tools, no regulated data | Low | Remains Low |
 | User-facing features, API changes, PII handling | Medium | Remains Medium |
 | Auth, payments, RBAC, crypto, data validation | High | Remains High |
@@ -145,7 +145,7 @@ AI involvement is a factor in risk classification:
 **Review scope by risk level:**
 
 | Risk Level | Reviewer | Focus |
-|---|---|---|
+| --- | --- | --- |
 | Low | Any team member with domain knowledge | Functional correctness, obvious security issues |
 | Medium | Developer experienced in affected area | Above + security implications, dependency validation |
 | High | Senior developer + security-aware review | Above + independent verification, threat modeling |
@@ -174,7 +174,7 @@ Incremental AI-assisted edits follow standard testing gates.
 ### AI Documentation Requirements
 
 | Risk Level | Commit Tag | Evidence | Prompts |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Low | `Co-Authored-By` tag | Not required | Not required |
 | Medium | `Co-Authored-By` tag | Summary of generation | Summary of prompts |
 | High | `Co-Authored-By` tag | Detailed AI record | Detailed prompts and outputs |
@@ -196,7 +196,7 @@ Risk level is determined at planning time for each requirement:
 ### Testing Depth by Risk Level
 
 | Activity | Low | Medium | High |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Unit tests | Required | Required | Required |
 | Integration tests | As applicable | Required | Required |
 | E2E tests | Critical paths | Full coverage | Full coverage |
@@ -312,7 +312,7 @@ Tracked requirements include: `Ref: REQ-XXX`
 ### Required Artifact Types
 
 | Category | Artifacts |
-|---|---|
+| --- | --- |
 | Planning | Test Policy, Test Strategy, Project Test Plans |
 | Specification | BDD feature files, test case specifications, security scenarios |
 | Execution | Test logs, CI/CD logs, SAST/SCA reports, AI use records, defect reports |
@@ -323,7 +323,7 @@ Tracked requirements include: `Ref: REQ-XXX`
 ## Agile Artifact Mapping
 
 | ISO Artifact | Metasession Implementation |
-|---|---|
+| --- | --- |
 | Test Policy | This document hierarchy (Policy + Strategy + Architecture) |
 | Requirements Specification | Product backlog with acceptance criteria |
 | Test Plan | Project-specific Test Plan + sprint planning |
@@ -363,7 +363,7 @@ Sprint retrospectives, quarterly metric reviews, and incident lessons learned fe
 ## Document Control
 
 | Version | Date | Author | Changes |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | 1.0 | January 2026 | QA Team | Initial creation |
 | 2.0 | March 2026 | QA Team | Added AI methodology, security methodology, V&V |
 | 3.0 | March 2026 | QA Team | Clean boundary split — moved specific tools, code patterns, CI config to Test Architecture. Strategy now owns methodology only. |

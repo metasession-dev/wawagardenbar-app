@@ -6,8 +6,9 @@
 # Single consolidated job — on a self-hosted runner, parallel jobs run
 # sequentially anyway. One checkout + one cached npm ci = fast.
 #
-# PRs to develop run Quality Gates before integration. PRs to main are verified
-# by quality-gates-provenance.yml (same-SHA provenance check, not heavy CI rerun).
+# PRs to develop run Quality Gates before integration. PRs to
+# main are handled by quality-gates-provenance.yml: provenance-only
+# for release PRs, full CI rerouted for hotfix/* PRs.
 # Compliance validation runs separately on PRs (compliance-validation.yml).
 
 name: CI Pipeline
@@ -40,6 +41,8 @@ jobs:
   # ──────────────────────────────────────────────
   quality-gates:
     name: Quality Gates
+    needs: [register-release]
+    if: ${{ always() && (github.event_name != 'pull_request' || !startsWith(github.head_ref, 'chore/close-out-')) && (github.event_name == 'pull_request' || needs.register-release.result == 'success') }}
     runs-on: ubuntu-latest
 
     services:
@@ -53,6 +56,8 @@ jobs:
       NEXT_PUBLIC_API_URL: http://localhost:3000/api
       NEXT_PUBLIC_APP_URL: http://localhost:3000
       SESSION_PASSWORD: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2
+      DEVAUDIT_BASE_URL_VAR: ${{ vars.DEVAUDIT_BASE_URL }}
+      DEVAUDIT_API_KEY: ${{ secrets.DEVAUDIT_API_KEY }}
 
     steps:
       - uses: actions/checkout@v6
@@ -62,6 +67,29 @@ jobs:
           # base — Playwright's evidenceShot helper reads that env var to
           # tag each captured screenshot as feature vs regression.
           fetch-depth: 0
+
+      - name: Start authoritative quality-gate cycle
+        if: github.event_name != 'pull_request' && github.ref_name == 'develop' && needs.register-release.outputs.version != 'skip'
+        run: |
+          BASE=""
+          if [ -f sdlc-config.json ]; then
+            BASE=$(jq -r '.devaudit.base_url // empty' sdlc-config.json 2>/dev/null || true)
+          fi
+          [ -n "$BASE" ] || BASE="$DEVAUDIT_BASE_URL_VAR"
+          [ -n "$BASE" ] || { echo "::warning::No DevAudit URL; cycle lifecycle disabled"; exit 0; }
+          echo "DEVAUDIT_BASE_URL=${BASE%/}" >> "$GITHUB_ENV"
+          chmod +x scripts/report-test-cycle.sh scripts/report-release-check.sh 2>/dev/null || true
+          bash scripts/report-test-cycle.sh start \
+            --project-slug wgb \
+            --release "${{ needs.register-release.outputs.version }}" \
+            --sdlc-stage 2 --environment ci --cycle-kind quality_gate \
+            --provider github_actions --external-run-id "${{ github.run_id }}" \
+            --external-run-attempt "${{ github.run_attempt }}" \
+            --external-job-id "quality-gates" \
+            --idempotency-key "github:${{ github.repository }}:quality-gates.quality_gate:${{ github.run_id }}:${{ github.run_attempt }}:2:${{ needs.register-release.outputs.version }}" \
+            --commit-sha "${{ github.sha }}" --branch "${{ github.ref_name }}" \
+            --workflow-name "Quality Gates" \
+            --workflow-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
       # ── Cached installs (skip if already present on self-hosted runner) ──
 
@@ -310,7 +338,7 @@ jobs:
     # PRs to develop should report Quality Gates without mutating DevAudit
     # releases or evidence. Release registration remains a develop-push /
     # manual-dispatch side effect.
-    if: ${{ github.event_name != 'pull_request' }}
+    if: ${{ github.event_name != 'pull_request' && github.ref_name == 'develop' }}
     outputs:
       version: ${{ steps.version.outputs.version }}
     env:
@@ -367,20 +395,38 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "Release version: ${VERSION}"
 
-      - name: Check release exists (no creation — deferred to upload-evidence)
+      - name: Ensure release exists for gate-cycle lineage
         if: env.DEVAUDIT_BASE_URL != '' && steps.version.outputs.version != 'skip'
         run: |
-          # Release creation is deferred to the upload-evidence job (which
-          # runs after gates pass) so the portal never shows a release from
-          # a push where gates weren't verified (devaudit-installer#226).
-          # This step only checks whether the release already exists (e.g.
-          # created earlier by sdlc-implementer Phase 1 step 3).
+          # First-class cycle APIs need an exact release row before the
+          # stage-2 cycle can start. This keeps failed gate runs visible even
+          # when later evidence generation fails.
           chmod +x scripts/upload-evidence.sh 2>/dev/null || true
           bash scripts/upload-evidence.sh \
             wgb _compliance-docs release_registration README.md \
-            --release ${{ steps.version.outputs.version }} \
+            --release ${{ steps.version.outputs.version }} --create-release-if-missing \
             --environment uat --category planning \
             --git-sha ${{ github.sha }} --branch ${{ github.ref_name }} || true
+
+      - name: Upload standalone housekeeping declaration
+        if: env.DEVAUDIT_BASE_URL != '' && steps.version.outputs.version != 'skip'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if ! [[ "$VERSION" =~ ^v[0-9]{4}\.[0-9]{2}\.[0-9]{2}(\.[0-9]+)?$ ]]; then
+            exit 0
+          fi
+          DECLARATION="compliance/standalone-housekeeping/STANDALONE-HOUSEKEEPING-${VERSION}.json"
+          if [ ! -f "$DECLARATION" ]; then
+            echo "${VERSION} is integration housekeeping; no standalone declaration uploaded."
+            exit 0
+          fi
+          chmod +x scripts/standalone-housekeeping-release.sh scripts/upload-evidence.sh 2>/dev/null || true
+          bash scripts/standalone-housekeeping-release.sh validate "$VERSION" "$DECLARATION"
+          bash scripts/upload-evidence.sh \
+            wgb "$VERSION" release_ticket "$DECLARATION" \
+            --release "$VERSION" --create-release-if-missing \
+            --environment uat --category release_artifact --sdlc-stage 2 \
+            --git-sha ${{ github.sha }} --branch ${{ github.ref_name }}
 
       - name: Generate and upload bundled changes (REQ releases only)
         if: env.DEVAUDIT_BASE_URL != '' && steps.version.outputs.version != 'skip'
@@ -410,8 +456,19 @@ jobs:
           fi
           echo "Scanning bundled changes since ${SINCE_REF} for ${VERSION}"
           BUNDLED_FILE="compliance/pending-releases/BUNDLED-CHANGES-${VERSION}.md"
+          BUNDLED_MANIFEST="compliance/pending-releases/BUNDLED-CHANGES-${VERSION}.json"
           mkdir -p compliance/pending-releases
-          bash scripts/generate-bundled-changes.sh "$SINCE_REF" "$VERSION" > "$BUNDLED_FILE"
+          chmod +x scripts/submit-bundle-manifest.sh 2>/dev/null || true
+          bash scripts/generate-bundled-changes.sh \
+            "$SINCE_REF" "$VERSION" --json-out "$BUNDLED_MANIFEST" > "$BUNDLED_FILE"
+          MEMBER_COUNT=$(jq -r '(.members // []) | length' "$BUNDLED_MANIFEST" 2>/dev/null || echo 0)
+          WORK_ITEM_COUNT=$(jq -r '(.nonReleaseWorkItems // []) | length' "$BUNDLED_MANIFEST" 2>/dev/null || echo 0)
+          if [ "$MEMBER_COUNT" = "0" ] && [ "$WORK_ITEM_COUNT" = "0" ]; then
+            echo "No bundled predecessor releases or non-release work detected for ${VERSION}."
+            rm -f "$BUNDLED_FILE" "$BUNDLED_MANIFEST"
+            exit 0
+          fi
+          bash scripts/submit-bundle-manifest.sh wgb "$VERSION" "$BUNDLED_MANIFEST"
           # Upload as bundled_changes evidence against the REQ release.
           bash scripts/upload-evidence.sh \
             wgb _compliance-docs bundled_changes "$BUNDLED_FILE" \
@@ -479,7 +536,7 @@ jobs:
     # evidence — `status=failed` is itself the audit trail. `!cancelled()`
     # still guards against partial state on operator-cancel.
     # DevAudit-Installer#96.
-    if: ${{ always() && !cancelled() && needs.register-release.result == 'success' }}
+    if: ${{ always() && github.ref_name == 'develop' && needs.register-release.result == 'success' }}
     env:
       DEVAUDIT_BASE_URL_VAR: ${{ vars.DEVAUDIT_BASE_URL }}
       DEVAUDIT_API_KEY: ${{ secrets.DEVAUDIT_API_KEY }}
@@ -516,17 +573,30 @@ jobs:
       - name: Generate and upload gate evidence
         if: env.DEVAUDIT_BASE_URL != ''
         run: |
-          chmod +x scripts/upload-evidence.sh 2>/dev/null || true
-          # --create-release-if-missing is intentionally here (post-gate) rather
-          # than in register-release. This ensures the portal release record only
-          # appears after gates have run — even if gates failed, the release
-          # record is created here so failure evidence attaches to it.
-          # (devaudit-installer#226)
+          chmod +x scripts/upload-evidence.sh scripts/report-test-cycle.sh 2>/dev/null || true
           FLAGS="--git-sha ${{ github.sha }} --ci-run-id ${{ github.run_id }} --branch ${{ github.ref_name }}"
           FLAGS="${FLAGS} --release ${{ needs.register-release.outputs.version }} --create-release-if-missing"
           FLAGS="${FLAGS} --environment uat"
           FLAGS="${FLAGS} --sdlc-stage 2"
-          FLAGS="${FLAGS} --test-cycle ${{ github.run_id }}"
+          PRIMARY_LINEAGE_FLAGS=(--test-cycle "${{ github.run_id }}")
+          CYCLE_OUT="$(mktemp)"
+          bash scripts/report-test-cycle.sh start \
+            --project-slug wgb \
+            --release "${{ needs.register-release.outputs.version }}" \
+            --sdlc-stage 2 --environment ci --cycle-kind quality_gate \
+            --provider github_actions --external-run-id "${{ github.run_id }}" \
+            --external-run-attempt "${{ github.run_attempt }}" \
+            --external-job-id "quality-gates" \
+            --idempotency-key "github:${{ github.repository }}:quality-gates.quality_gate:${{ github.run_id }}:${{ github.run_attempt }}:2:${{ needs.register-release.outputs.version }}" \
+            --commit-sha "${{ github.sha }}" --branch "${{ github.ref_name }}" \
+            --workflow-name "Quality Gates" \
+            --workflow-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --output-file "$CYCLE_OUT"
+          . "$CYCLE_OUT"
+          rm -f "$CYCLE_OUT"
+          if [ "${cycle_supported:-false}" = "true" ] && [ -n "${cycle_record_id:-}" ]; then
+            PRIMARY_LINEAGE_FLAGS+=(--evidence-scope cycle --test-cycle-record-id "${cycle_record_id}")
+          fi
 
           # Track failures across all uploads so we can fail the job at the
           # end with the full picture. Previously each upload used
@@ -566,7 +636,7 @@ jobs:
             STATUS_BUILD=$(gate_status "$(jq -r '.build // "skipped"' ci-evidence/gate-outcomes.json)")
             upload gate-outcomes.json \
               wgb _compliance-docs gate_outcome ci-evidence/gate-outcomes.json \
-              --category ci_pipeline ${FLAGS}
+              --category ci_pipeline ${FLAGS} "${PRIMARY_LINEAGE_FLAGS[@]}"
           fi
 
           # Re-generate gate evidence as fallback if artifact download failed
@@ -591,7 +661,7 @@ jobs:
           if [ -f ci-evidence/sast-results.json ]; then
             upload sast-results.json \
               wgb _compliance-docs sast_report ci-evidence/sast-results.json \
-              --category security_scan --gate-status "$STATUS_SAST" ${FLAGS}
+              --category security_scan --gate-status "$STATUS_SAST" ${FLAGS} "${PRIMARY_LINEAGE_FLAGS[@]}"
           fi
 
           # Upload dependency audit — precise evidence_type=dependency_audit
@@ -599,14 +669,14 @@ jobs:
           if [ -f ci-evidence/dependency-audit.json ]; then
             upload dependency-audit.json \
               wgb _compliance-docs dependency_audit ci-evidence/dependency-audit.json \
-              --category security_scan --gate-status "$STATUS_DEPAUDIT" ${FLAGS}
+              --category security_scan --gate-status "$STATUS_DEPAUDIT" ${FLAGS} "${PRIMARY_LINEAGE_FLAGS[@]}"
           fi
 
           # Upload E2E test results (e2e_result category)
           if [ -f ci-evidence/e2e-results.json ]; then
             upload e2e-results.json \
               wgb _compliance-docs e2e_result ci-evidence/e2e-results.json \
-              --category e2e_result ${FLAGS}
+              --category e2e_result ${FLAGS} "${PRIMARY_LINEAGE_FLAGS[@]}"
           fi
 
           # Upload Playwright HTML report (e2e_report — run context, NOT
@@ -618,7 +688,7 @@ jobs:
             if [ -f ci-evidence/playwright-report.zip ]; then
               upload playwright-report.zip \
                 wgb _compliance-docs e2e_report ci-evidence/playwright-report.zip \
-                --category e2e_report ${FLAGS}
+                --category e2e_report ${FLAGS} "${PRIMARY_LINEAGE_FLAGS[@]}"
             fi
           fi
 
@@ -629,7 +699,7 @@ jobs:
           if [ -f ci-evidence/coverage/coverage-summary.json ]; then
             upload coverage-summary.json \
               wgb _compliance-docs coverage_report ci-evidence/coverage/coverage-summary.json \
-              --category coverage_report ${FLAGS}
+              --category coverage_report ${FLAGS} "${PRIMARY_LINEAGE_FLAGS[@]}"
           fi
 
           # Upload project-level Test Summary Report as a baseline
@@ -643,7 +713,9 @@ jobs:
           if [ -f "compliance/test-summary-report.md" ]; then
             upload test-summary-report.md \
               wgb _compliance-docs compliance_document compliance/test-summary-report.md \
-              --category planning ${FLAGS}
+              --category planning --git-sha ${{ github.sha }} --ci-run-id ${{ github.run_id }} --branch ${{ github.ref_name }} \
+              --release ${{ needs.register-release.outputs.version }} --create-release-if-missing \
+              --environment uat --sdlc-stage 2
           fi
 
           # devaudit-installer#200 Fix 4 — Per-REQ gate evidence fan-out.
@@ -921,6 +993,45 @@ jobs:
             echo "::error::${UPLOAD_FAILURES} evidence upload(s) failed — release is missing gate evidence and cannot pass UAT review"
             exit 1
           fi
+
+      - name: Complete primary quality-gate cycle
+        if: always() && env.DEVAUDIT_BASE_URL != ''
+        run: |
+          case "${{ needs.quality-gates.result }}" in
+            success)   OUTCOME=passed ;;
+            cancelled) OUTCOME=cancelled ;;
+            *)         OUTCOME=failed ;;
+          esac
+          chmod +x scripts/report-test-cycle.sh scripts/report-release-check.sh 2>/dev/null || true
+          bash scripts/report-test-cycle.sh complete \
+            --project-slug wgb \
+            --release "${{ needs.register-release.outputs.version }}" \
+            --sdlc-stage 2 \
+            --environment ci \
+            --cycle-kind quality_gate \
+            --provider github_actions \
+            --external-run-id "${{ github.run_id }}" \
+            --external-run-attempt "${{ github.run_attempt }}" \
+            --external-job-id "quality-gates" \
+            --idempotency-key "github:${{ github.repository }}:quality-gates.quality_gate:${{ github.run_id }}:${{ github.run_attempt }}:2:${{ needs.register-release.outputs.version }}" \
+            --commit-sha "${{ github.sha }}" \
+            --branch "${{ github.ref_name }}" \
+            --workflow-name "Quality Gates" \
+            --workflow-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --outcome "$OUTCOME"
+          case "$OUTCOME" in
+            passed) CHECK_STATUS=successful ;;
+            *) CHECK_STATUS="$OUTCOME" ;;
+          esac
+          bash scripts/report-release-check.sh \
+            --project-slug wgb \
+            --release "${{ needs.register-release.outputs.version }}" \
+            --check-key "quality-gates:${{ github.run_id }}:${{ github.run_attempt }}" \
+            --label "Quality Gates" --provider github_actions --status "$CHECK_STATUS" \
+            --external-run-id "${{ github.run_id }}" \
+            --external-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --commit-sha "${{ github.sha }}" --branch "${{ github.ref_name }}" \
+            --details-json '{"executionSource":"needs.quality-gates.result","evidenceUploadJob":"${{ job.status }}"}'
 
       - name: Summary
         run: echo "Evidence uploaded for ${{ needs.register-release.outputs.version }} (UAT)"

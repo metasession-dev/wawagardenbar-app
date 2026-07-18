@@ -342,9 +342,11 @@ export class ProfitabilityAnalyticsService {
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
-    // Aggregate orders by date
+    // Aggregate by the same persisted business-date contract used by the
+    // report query. `createdAt` is an event timestamp, not financial-day
+    // attribution, and would relabel pre-cutoff sales in the trend chart.
     orders.forEach((order) => {
-      const dateKey = new Date(order.createdAt).toISOString().split('T')[0];
+      const dateKey = new Date(order.businessDate).toISOString().split('T')[0];
       const daily = dailyMap.get(dateKey);
 
       if (daily) {

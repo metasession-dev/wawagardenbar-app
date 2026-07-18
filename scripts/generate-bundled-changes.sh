@@ -251,7 +251,21 @@ for version in "${EXPLICIT_PREDECESSORS[@]}"; do
 done
 
 COMMITS="$(git log "$SINCE_REF"..HEAD --format='%h%x09%s' 2>/dev/null || true)"
-BUNDLED="$(printf '%s\n' "$COMMITS" | grep -E "$HOUSEKEEPING_TYPES" || true)"
+# Conventional-commit type is not release ownership. A `test:` or `docs:`
+# commit can still belong to a tracked REQ (including the Ref trailer form),
+# and must never be recast as generic housekeeping in a later bundle.
+BUNDLED=""
+while IFS=$'\t' read -r sha subject; do
+  [ -n "$sha" ] || continue
+  if ! printf '%s\t%s\n' "$sha" "$subject" | grep -Eq "$HOUSEKEEPING_TYPES"; then
+    continue
+  fi
+  if git log -1 --format='%s%n%b' "$sha" | grep -Eq '\[REQ-[0-9]+\]|Ref:[[:space:]]*REQ-[0-9]+'; then
+    continue
+  fi
+  BUNDLED+="${sha}"$'\t'"${subject}"$'\n'
+done <<<"$COMMITS"
+BUNDLED="${BUNDLED%$'\n'}"
 NON_RELEASE_ITEMS='[]'
 NON_RELEASE_LINES=()
 if [ -n "$BUNDLED" ]; then

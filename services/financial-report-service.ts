@@ -1020,9 +1020,9 @@ export class FinancialReportService {
       mainCategories.find((m) => m.slug === mainCategorySlug)?.label ??
       mainCategorySlug;
 
-    // Aggregate by menuItemId — match the same `itemMap` pattern used by
-    // generateDailySummary. Filtering by mainCategory happens AFTER the
-    // lookup because the order-embedded item doesn't carry that field.
+    // Aggregate by menuItemId — prefer the immutable sale-time taxonomy.
+    // Older rows pre-date REQ-094 and use current menu metadata only as an
+    // explicit legacy fallback; they must not be presented as historical fact.
     const itemMap = new Map<
       string,
       {
@@ -1048,17 +1048,23 @@ export class FinancialReportService {
             orderTouchedMain = true;
           }
         } else {
-          const menuItem = await MenuItemModel.findById(item.menuItemId).lean();
-          if (!menuItem) continue;
+          const menuItem =
+            item.mainCategoryAtSale && item.categoryAtSale
+              ? null
+              : await MenuItemModel.findById(item.menuItemId).lean();
+          const category = item.categoryAtSale ?? menuItem?.category;
+          const mainCategory =
+            item.mainCategoryAtSale ?? menuItem?.mainCategory;
+          if (!category || !mainCategory) continue;
           itemMap.set(itemId, {
             name: item.name,
-            category: menuItem.category,
-            mainCategory: menuItem.mainCategory,
+            category,
+            mainCategory,
             quantity: item.quantity,
             price: item.price,
-            costPerUnit: item.costPerUnit || menuItem.costPerUnit || 0,
+            costPerUnit: item.costPerUnit || menuItem?.costPerUnit || 0,
           });
-          if (menuItem.mainCategory === mainCategorySlug) {
+          if (mainCategory === mainCategorySlug) {
             orderTouchedMain = true;
           }
         }

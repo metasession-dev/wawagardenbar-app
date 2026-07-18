@@ -41,7 +41,9 @@ export function ProfitabilityDashboardClient() {
         setError(result.error || 'Failed to load profitability report');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      setError(
+        err instanceof Error ? err.message : 'An unexpected error occurred'
+      );
     } finally {
       setIsLoading(false);
     }
@@ -81,6 +83,25 @@ export function ProfitabilityDashboardClient() {
         onFilterChange={handleFilterChange}
         isLoading={isLoading}
       />
+
+      {!isLoading &&
+        report &&
+        report.attribution.legacyFallbackLineCount > 0 && (
+          <p className="text-sm text-muted-foreground">
+            {report.attribution.legacyFallbackLineCount} legacy order line
+            {report.attribution.legacyFallbackLineCount === 1 ? '' : 's'} use
+            current menu metadata because sale-time category evidence was
+            unavailable.
+          </p>
+        )}
+
+      {!isLoading && report && report.attribution.unavailableLineCount > 0 && (
+        <p className="text-sm text-destructive">
+          {report.attribution.unavailableLineCount} order line
+          {report.attribution.unavailableLineCount === 1 ? '' : 's'} could not
+          be attributed to a category.
+        </p>
+      )}
 
       {/* Overview Cards */}
       <ProfitabilityOverviewCards report={report} isLoading={isLoading} />

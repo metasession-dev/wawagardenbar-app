@@ -837,6 +837,7 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 **Source:** `app/actions/inventory/snapshot-actions.ts:52` (admin/super-admin); cross-ref REQ-018
 
 - **Given** the snapshot form, **When** staff submit counts, **Then** a snapshot with status `pending` is created.
+- **Given** staff select a snapshot date in WAT, **When** they submit or re-submit the snapshot, **Then** the persisted date and duplicate check use the shared WAT business-date contract rather than the server timezone.
 
 #### REQ-INV-004 — Snapshot approve/reject · **Should** · regression
 
@@ -1003,12 +1004,15 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 **Source:** cross-ref REQ-025 (`e2e/business-day-cutoff.spec.ts`)
 
 - **Given** an order created before the configured cutoff, **When** the daily report groups orders, **Then** it is attributed to the prior business day.
+- **Given** paid orders spanning a configured WAT cutoff, **When** an admin selects the same range in Daily, profitability, and per-main-category reports, **Then** each report uses the same business-day attribution.
 
 #### REQ-REPORT-003 — Profitability report · **Could** · extended
 
 **Source:** `app/actions/admin/profitability-analytics-actions.ts:15`
 
 - **Given** orders with cost data, **When** an admin runs the profitability report for a range, **Then** per-item/category revenue−COGS−overhead breakdown renders.
+- **Given** an order item captured at sale time, **When** its menu item is later moved to a different category, **Then** profitability and per-main-category reports retain the sale-time category attribution; legacy rows without that snapshot are visibly identified as fallback data rather than presented as historical fact.
+- **Given** an admin selects a category and business-date range, **When** the profitability report renders, **Then** the summary, item, category, order-type, and daily figures are consistently scoped and the category breakdown is populated.
 
 #### REQ-REPORT-004 — Export · **Could** · extended
 

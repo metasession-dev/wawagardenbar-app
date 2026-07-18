@@ -5,6 +5,7 @@ import { IOrder, OrderType, OrderStatus } from '@/interfaces';
 import { PriceHistoryService } from './price-history-service';
 import { deriveBusinessDate } from '@/lib/business-date';
 import { SystemSettingsService } from './system-settings-service';
+import MenuItemModel from '@/models/menu-item-model';
 
 /**
  * Service for order CRUD operations
@@ -81,12 +82,23 @@ export class OrderService {
         const profitMargin =
           item.subtotal > 0 ? (grossProfit / item.subtotal) * 100 : 0;
 
+        const menuItem = await MenuItemModel.findById(item.menuItemId)
+          .select('mainCategory category')
+          .lean();
+
         return {
           ...item,
           costPerUnit,
           totalCost,
           grossProfit,
           profitMargin,
+          ...(menuItem
+            ? {
+                mainCategoryAtSale: menuItem.mainCategory,
+                categoryAtSale: menuItem.category,
+                categoryAtSaleSource: 'sale_time' as const,
+              }
+            : {}),
         };
       })
     );

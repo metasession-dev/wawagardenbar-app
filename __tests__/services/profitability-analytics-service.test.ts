@@ -80,4 +80,61 @@ describe('REQ-094: ProfitabilityAnalyticsService', () => {
     expect(report.byItem).toHaveLength(1);
     expect(report.byItem[0].menuItemId).toBe('beer');
   });
+
+  it('keeps WAT business-date trend labels aligned with the selected calendar day', async () => {
+    findMock.mockResolvedValue([
+      {
+        businessDate: new Date('2026-07-17T23:00:00.000Z'),
+        orderType: 'dine-in',
+        total: 300,
+        totalCost: 100,
+        items: [item('beer', 'beer-local', 300, 100)],
+      },
+    ]);
+
+    const report =
+      await ProfitabilityAnalyticsService.generateProfitabilityReport(
+        new Date('2026-07-18T00:00:00.000Z'),
+        new Date('2026-07-18T00:00:00.000Z')
+      );
+
+    expect(report.trends.daily).toEqual([
+      expect.objectContaining({ date: '2026-07-18', revenue: 300 }),
+    ]);
+  });
+
+  it('reports legacy fallback attribution separately for reviewer disclosure', async () => {
+    findMock.mockResolvedValue([
+      {
+        businessDate: new Date('2026-07-17T23:00:00.000Z'),
+        orderType: 'dine-in',
+        total: 300,
+        totalCost: 100,
+        items: [
+          {
+            ...item('legacy', 'beer-local', 200, 50),
+            mainCategoryAtSale: 'drinks',
+            categoryAtSaleSource: 'legacy_current_menu_fallback',
+          },
+          {
+            ...item('sale-time', 'rice-dishes', 100, 50),
+            mainCategoryAtSale: 'food',
+            categoryAtSaleSource: 'sale_time',
+          },
+        ],
+      },
+    ]);
+
+    const report =
+      await ProfitabilityAnalyticsService.generateProfitabilityReport(
+        new Date('2026-07-18T00:00:00.000Z'),
+        new Date('2026-07-18T00:00:00.000Z')
+      );
+
+    expect(report.attribution).toEqual({
+      legacyFallbackLineCount: 1,
+      saleTimeLineCount: 1,
+      unavailableLineCount: 0,
+    });
+  });
 });

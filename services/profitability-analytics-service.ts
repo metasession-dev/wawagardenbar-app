@@ -1,6 +1,6 @@
 import { connectDB } from '@/lib/mongodb';
 import Order from '@/models/order-model';
-import { watCalendarDayRange } from '@/lib/business-date';
+import { watCalendarDateKey, watCalendarDayRange } from '@/lib/business-date';
 
 export interface ProfitabilitySummary {
   totalRevenue: number;
@@ -57,6 +57,11 @@ export interface ProfitabilityReport {
   byOrderType: OrderTypeProfitability[];
   trends: {
     daily: DailyProfitability[];
+  };
+  attribution: {
+    saleTimeLineCount: number;
+    legacyFallbackLineCount: number;
+    unavailableLineCount: number;
   };
 }
 
@@ -129,6 +134,7 @@ export class ProfitabilityAnalyticsService {
 
     // Calculate daily trends
     const daily = this.calculateDailyTrends(filteredOrders, startDate, endDate);
+    const attribution = this.calculateAttributionSummary(filteredOrders);
 
     return {
       period: { start: startDate, end: endDate },
@@ -137,6 +143,7 @@ export class ProfitabilityAnalyticsService {
       byItem,
       byOrderType,
       trends: { daily },
+      attribution,
     };
   }
 
@@ -330,7 +337,7 @@ export class ProfitabilityAnalyticsService {
     // Initialize all dates in range
     const currentDate = new Date(startDate);
     while (currentDate <= endDate) {
-      const dateKey = currentDate.toISOString().split('T')[0];
+      const dateKey = watCalendarDateKey(currentDate);
       dailyMap.set(dateKey, {
         date: dateKey,
         revenue: 0,
@@ -346,7 +353,7 @@ export class ProfitabilityAnalyticsService {
     // report query. `createdAt` is an event timestamp, not financial-day
     // attribution, and would relabel pre-cutoff sales in the trend chart.
     orders.forEach((order) => {
-      const dateKey = new Date(order.businessDate).toISOString().split('T')[0];
+      const dateKey = watCalendarDateKey(new Date(order.businessDate));
       const daily = dailyMap.get(dateKey);
 
       if (daily) {
@@ -372,6 +379,29 @@ export class ProfitabilityAnalyticsService {
     });
 
     return trends.sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  /** REQ-094 - expose the provenance quality of line attribution to reviewers. */
+  private static calculateAttributionSummary(orders: any[]) {
+    return orders.reduce(
+      (summary, order) => {
+        for (const item of order.items ?? []) {
+          if (item.categoryAtSaleSource === 'legacy_current_menu_fallback') {
+            summary.legacyFallbackLineCount += 1;
+          } else if (item.categoryAtSale && item.mainCategoryAtSale) {
+            summary.saleTimeLineCount += 1;
+          } else {
+            summary.unavailableLineCount += 1;
+          }
+        }
+        return summary;
+      },
+      {
+        saleTimeLineCount: 0,
+        legacyFallbackLineCount: 0,
+        unavailableLineCount: 0,
+      }
+    );
   }
 
   /**

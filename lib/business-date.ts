@@ -127,3 +127,9 @@ export function watCalendarDayRange(date: Date): { start: Date; end: Date } {
   const end = new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
   return { start, end };
 }
+
+/** REQ-094 - Stable YYYY-MM-DD key for a WAT calendar date. */
+export function watCalendarDateKey(date: Date): string {
+  const watDate = new Date(date.getTime() + WAT_OFFSET_MS);
+  return watDate.toISOString().slice(0, 10);
+}

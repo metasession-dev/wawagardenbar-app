@@ -12,6 +12,7 @@
 import { connectDB } from '@/lib/mongodb';
 import OrderModel from '@/models/order-model';
 import MenuItemModel from '@/models/menu-item-model';
+import { legacyCategoryAttribution } from '@/lib/order-category-attribution';
 
 const apply = process.argv.includes('--apply');
 const dryRun = process.argv.includes('--dry-run') || !apply;
@@ -39,7 +40,8 @@ async function main() {
       const menuItem = await MenuItemModel.findById(item.menuItemId)
         .select('mainCategory category')
         .lean();
-      if (!menuItem) {
+      const attribution = legacyCategoryAttribution(item, menuItem);
+      if (!attribution) {
         skipped += 1;
         nextItems.push(item);
         continue;
@@ -47,9 +49,7 @@ async function main() {
       changed = true;
       nextItems.push({
         ...item,
-        mainCategoryAtSale: menuItem.mainCategory,
-        categoryAtSale: menuItem.category,
-        categoryAtSaleSource: 'legacy_current_menu_fallback' as const,
+        ...attribution,
       });
     }
     if (changed) {

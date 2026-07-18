@@ -1,6 +1,6 @@
 # ADR-001: Preserve report attribution at sale time
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-07-18
 **Deciders:** WGB maintainer and independent REQ-094 plan reviewer
 **Related:** REQ-094, #439, #514
@@ -36,4 +36,4 @@ Historical data without a sale-time category cannot be recovered with certainty.
 
 ## Approval
 
-This ADR becomes **Accepted** only with the independent HIGH-risk plan approval for REQ-094. It must be updated with reviewer and date at that checkpoint.
+The operator approved the HIGH-risk REQ-094 implementation plan on 2026-07-18. Production migration application remains a separate, independently reviewed release gate.

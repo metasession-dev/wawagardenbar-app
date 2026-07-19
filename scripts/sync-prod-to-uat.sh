@@ -43,6 +43,19 @@ log()  { echo -e "${GREEN}[✓]${NC} $1"; }
 warn() { echo -e "${YELLOW}[!]${NC} $1"; }
 err()  { echo -e "${RED}[✗]${NC} $1"; exit 1; }
 
+# Railway proxy URIs may deliberately omit a database path. Only treat text
+# after the authority's slash as a database name; never mistake credentials or
+# host:port for one.
+database_name_from_uri() {
+  local uri="$1"
+  local without_query="${uri%%\?*}"
+  local authority_and_path="${without_query#*://}"
+  if [[ "$authority_and_path" != */* ]]; then
+    return 0
+  fi
+  printf '%s' "${authority_and_path#*/}"
+}
+
 # ── Load .env.local if present ───────────────────────────────────
 ENV_FILE="$(cd "$(dirname "$0")/.." && pwd)/.env.local"
 if [ -f "$ENV_FILE" ]; then
@@ -87,7 +100,7 @@ if echo "$PROD_URI" | grep -q "railway.internal"; then
 fi
 
 # Extract DB name from URI path, env var, or default
-PROD_DB=$(echo "$PROD_URI" | sed -n 's|.*/\([^?]*\).*|\1|p')
+PROD_DB="$(database_name_from_uri "$PROD_URI")"
 PROD_DB=${PROD_DB:-${MONGODB_PROD_DB_NAME:-wawagardenbar}}
 
 log "Production DB: $PROD_DB"
@@ -98,6 +111,8 @@ log "Dumping production database to $BACKUP_DIR ..."
 
 mongodump \
   --uri="$PROD_URI" \
+  --authenticationMechanism=SCRAM-SHA-256 \
+  --authenticationDatabase=admin \
   --db="$PROD_DB" \
   --out="$BACKUP_DIR" \
   --gzip
@@ -128,7 +143,7 @@ if echo "$UAT_URI" | grep -q "railway.internal"; then
 fi
 
 # Extract DB name from URI path, env var, or default
-UAT_DB=$(echo "$UAT_URI" | sed -n 's|.*/\([^?]*\).*|\1|p')
+UAT_DB="$(database_name_from_uri "$UAT_URI")"
 UAT_DB=${UAT_DB:-${MONGODB_UAT_DB_NAME:-wawagardenbar_uat}}
 
 log "UAT DB: $UAT_DB"
@@ -155,6 +170,8 @@ log "Restoring to UAT database..."
 
 mongorestore \
   --uri="$UAT_URI" \
+  --authenticationMechanism=SCRAM-SHA-256 \
+  --authenticationDatabase=admin \
   --db="$UAT_DB" \
   --drop \
   --gzip \

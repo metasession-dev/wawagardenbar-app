@@ -250,7 +250,17 @@ for version in "${EXPLICIT_PREDECESSORS[@]}"; do
   PREDECESSOR_LINES+=("- \`${version}\` (${role}/${relationship}) — ${title:-Untitled release ticket}")
 done
 
-COMMITS="$(git log "$SINCE_REF"..HEAD --format='%h%x09%s' 2>/dev/null || true)"
+# A tagged REQ must never absorb arbitrary history just because this repository
+# has no recent git tag. Start the non-release scan at the first commit that
+# belongs to this REQ, then retain only genuinely REQ-free intervening work.
+SCAN_FROM="$SINCE_REF"
+if [[ "$VERSION" =~ ^REQ-[0-9]+$ ]]; then
+  FIRST_REQ_SHA="$(git log --reverse --format='%H' --grep="\\[${VERSION}\\]\\|Ref: ${VERSION}" 2>/dev/null | head -1 || true)"
+  if [ -n "$FIRST_REQ_SHA" ] && git rev-parse --verify "${FIRST_REQ_SHA}^" >/dev/null 2>&1; then
+    SCAN_FROM="${FIRST_REQ_SHA}^"
+  fi
+fi
+COMMITS="$(git log "$SCAN_FROM"..HEAD --format='%h%x09%s' 2>/dev/null || true)"
 # Conventional-commit type is not release ownership. A `test:` or `docs:`
 # commit can still belong to a tracked REQ (including the Ref trailer form),
 # and must never be recast as generic housekeeping in a later bundle.
@@ -338,7 +348,7 @@ echo "- **Why bundled here:** Explicit predecessor release tickets and non-relea
 echo "- **Evidence impact:** Evidence ownership remains on the source releases; the bundle manifest provides lineage and inherited visibility only."
 echo "- **Reviewer impact:** Approval scope includes the core tracked release plus the explicit predecessor releases and non-release work listed below."
 echo "- **Security / risk impact:** No additional security/risk impact identified automatically; reviewer must confirm in the canonical release artifacts."
-echo "- **Reference:** commit range \`${SINCE_REF}..HEAD\`"
+echo "- **Reference:** commit range \`${SCAN_FROM}..HEAD\`"
 echo ""
 
 echo "### Explicit Constituent Releases"

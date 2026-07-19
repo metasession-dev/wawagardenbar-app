@@ -20,11 +20,11 @@ REQ-094 makes financial report attribution consistent with the WAT business-date
 ## Bundled Changes
 
 - **Core tracked release:** REQ-094 reporting attribution and reconciliation correctness.
-- **Absorbed predecessor releases:** v2026.07.14.
+- **Absorbed predecessor releases:** None. `v2026.07.14` was already superseded by released REQ-093 and remains distinct historical lineage.
 - **Absorbed non-release work:** None.
-- **Why bundled here:** The pending bare-date housekeeping row is historical integration evidence and is carried into this tracked approval envelope rather than presented as an abandoned standalone release.
-- **Evidence impact:** REQ-094 retains its own implementation, test, and security evidence; eligible v2026.07.14 lineage and cycles are retained as distinct inherited housekeeping context.
-- **Reviewer impact:** Approval covers REQ-094 plus the explicitly named predecessor context. It does not relabel the predecessor work as REQ-094 implementation.
+- **Why bundled here:** No predecessor release is bundled. The repository's stale v2026.07.14 pending ticket is reconciled to its existing REQ-093 supersession separately.
+- **Evidence impact:** REQ-094 retains only its own implementation, test, and security evidence. REQ-093 retains v2026.07.14 lineage and cycles.
+- **Reviewer impact:** Approval covers REQ-094 only; it does not relabel or reassign prior released work.
 - **Security / risk impact:** No additional application-security impact beyond the REQ-094 HIGH-risk reporting and migration controls.
 
 ## Security and migration posture

@@ -9,6 +9,8 @@ generated_by: "generate-housekeeping-release-ticket.sh (DevAudit-Installer#116)"
 
 # Release Ticket: v2026.07.14 (housekeeping)
 
+> **Superseded:** This release was absorbed by [REQ-093](../approved-releases/RELEASE-TICKET-REQ-093.md) and is marked `superseded` in DevAudit. It is retained here as historical lineage, not as a pending approval item.
+
 **Status:** TESTED - PENDING SIGN-OFF
 **Date:** 2026-07-14
 **Release Shape:** Housekeeping (bare-date, no REQ tag)

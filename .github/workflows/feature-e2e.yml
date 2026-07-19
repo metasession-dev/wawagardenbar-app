@@ -221,14 +221,31 @@ jobs:
             exit 0
           fi
           export DEVAUDIT_BASE_URL="${BASE%/}"
+          LINEAGE_FLAGS=(--test-cycle "${{ github.run_id }}")
+          if [ "${{ steps.cycle.outputs.cycle_supported }}" = "true" ] && [ -n "${{ steps.cycle.outputs.cycle_record_id }}" ]; then
+            LINEAGE_FLAGS+=(--evidence-scope cycle --test-cycle-record-id "${{ steps.cycle.outputs.cycle_record_id }}")
+          fi
+
+          # The portal parses REQ/AC annotations from the JSON reporter
+          # output, not from the HTML report ZIP. This is the canonical
+          # machine-readable proof for the targeted feature E2E cycle.
+          if [ ! -f e2e-results.json ]; then
+            echo "::error::Feature E2E produced no e2e-results.json for ${REQ_ID}."
+            exit 1
+          fi
+          bash scripts/upload-evidence.sh \
+            wgb "$REQ_ID" e2e_result e2e-results.json \
+            --category e2e_result --release "$REQ_ID" --create-release-if-missing \
+            --environment uat --sdlc-stage 2 \
+            --git-sha "${{ github.event.pull_request.head.sha }}" \
+            --ci-run-id "${{ github.run_id }}" --branch "${{ github.head_ref }}" \
+            "${LINEAGE_FLAGS[@]}" \
+            --meta-key "origin=feature"
+
           if [ -d playwright-report ]; then
             zip -qr playwright-report.zip playwright-report/ 2>/dev/null || true
           fi
           if [ -f playwright-report.zip ]; then
-            LINEAGE_FLAGS=(--test-cycle "${{ github.run_id }}")
-            if [ "${{ steps.cycle.outputs.cycle_supported }}" = "true" ] && [ -n "${{ steps.cycle.outputs.cycle_record_id }}" ]; then
-              LINEAGE_FLAGS+=(--evidence-scope cycle --test-cycle-record-id "${{ steps.cycle.outputs.cycle_record_id }}")
-            fi
             bash scripts/upload-evidence.sh \
               wgb "$REQ_ID" feature_e2e_report playwright-report.zip \
               --category e2e_report --release "$REQ_ID" --create-release-if-missing \
@@ -251,10 +268,6 @@ jobs:
             exit 1
           fi
 
-          LINEAGE_FLAGS=(--test-cycle "${{ github.run_id }}")
-          if [ "${{ steps.cycle.outputs.cycle_supported }}" = "true" ] && [ -n "${{ steps.cycle.outputs.cycle_record_id }}" ]; then
-            LINEAGE_FLAGS+=(--evidence-scope cycle --test-cycle-record-id "${{ steps.cycle.outputs.cycle_record_id }}")
-          fi
           for PNG in "${SHOTS[@]}"; do
             ORIGIN_FLAGS=(--meta-key "origin=feature")
             if [ -f "${PNG}.meta.json" ]; then

@@ -83,22 +83,12 @@ export function exportReportAsPDF(
   doc.text('Revenue Breakdown', 14, yPos);
   yPos += 10;
 
-  const revenueData = [
-    ...report.revenue.food.items.map((item) => [
-      item.name,
-      'Food',
-      item.quantity.toString(),
-      formatCurrency(item.price),
-      formatCurrency(item.total),
-    ]),
-    ...report.revenue.drink.items.map((item) => [
-      item.name,
-      'Drink',
-      item.quantity.toString(),
-      formatCurrency(item.price),
-      formatCurrency(item.total),
-    ]),
-  ];
+  const revenueData = report.categories.flatMap((category) =>
+    category.revenue.items.map((item) => [
+      item.name, category.label, item.quantity.toString(),
+      formatCurrency(item.price), formatCurrency(item.total),
+    ])
+  );
 
   if (revenueData.length > 0) {
     autoTable(doc, {
@@ -124,22 +114,12 @@ export function exportReportAsPDF(
   doc.text('Cost of Goods Sold', 14, yPos);
   yPos += 10;
 
-  const costData = [
-    ...report.costs.food.items.map((item) => [
-      item.name,
-      'Food',
-      item.quantity.toString(),
-      formatCurrency(item.costPerUnit),
-      formatCurrency(item.total),
-    ]),
-    ...report.costs.drink.items.map((item) => [
-      item.name,
-      'Drink',
-      item.quantity.toString(),
-      formatCurrency(item.costPerUnit),
-      formatCurrency(item.total),
-    ]),
-  ];
+  const costData = report.categories.flatMap((category) =>
+    category.costs.items.map((item) => [
+      item.name, category.label, item.quantity.toString(),
+      formatCurrency(item.costPerUnit), formatCurrency(item.total),
+    ])
+  );
 
   if (costData.length > 0) {
     autoTable(doc, {
@@ -292,18 +272,12 @@ export function exportReportAsExcel(
     [],
     ['Category Breakdown'],
     ['Category', 'Revenue', 'Cost', 'Gross Profit'],
-    [
-      'Food',
-      report.revenue.food.totalRevenue,
-      report.costs.food.totalCost,
-      report.grossProfit.food,
-    ],
-    [
-      'Drink',
-      report.revenue.drink.totalRevenue,
-      report.costs.drink.totalCost,
-      report.grossProfit.drink,
-    ],
+    ...report.categories.map((category) => [
+      category.label,
+      category.revenue.totalRevenue,
+      category.costs.totalCost,
+      category.grossProfit,
+    ]),
   ];
 
   const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
@@ -313,20 +287,9 @@ export function exportReportAsExcel(
   const revenueData = [
     ['Revenue Breakdown'],
     ['Item', 'Category', 'Quantity', 'Price', 'Total'],
-    ...report.revenue.food.items.map((item) => [
-      item.name,
-      'Food',
-      item.quantity,
-      item.price,
-      item.total,
-    ]),
-    ...report.revenue.drink.items.map((item) => [
-      item.name,
-      'Drink',
-      item.quantity,
-      item.price,
-      item.total,
-    ]),
+    ...report.categories.flatMap((category) => category.revenue.items.map((item) => [
+      item.name, category.label, item.quantity, item.price, item.total,
+    ])),
     [],
     ['Total Revenue', '', '', '', report.revenue.totalRevenue],
   ];
@@ -338,20 +301,9 @@ export function exportReportAsExcel(
   const costsData = [
     ['Cost of Goods Sold'],
     ['Item', 'Category', 'Quantity', 'Cost/Unit', 'Total Cost'],
-    ...report.costs.food.items.map((item) => [
-      item.name,
-      'Food',
-      item.quantity,
-      item.costPerUnit,
-      item.total,
-    ]),
-    ...report.costs.drink.items.map((item) => [
-      item.name,
-      'Drink',
-      item.quantity,
-      item.costPerUnit,
-      item.total,
-    ]),
+    ...report.categories.flatMap((category) => category.costs.items.map((item) => [
+      item.name, category.label, item.quantity, item.costPerUnit, item.total,
+    ])),
     [],
     ['Total COGS', '', '', '', report.costs.totalDirectCosts],
   ];
@@ -458,32 +410,18 @@ export function exportReportAsCSV(
   // Revenue
   csvRows.push('Revenue Breakdown');
   csvRows.push('Item,Category,Quantity,Price,Total');
-  report.revenue.food.items.forEach((item) => {
-    csvRows.push(
-      `"${item.name}",Food,${item.quantity},${item.price},${item.total}`
-    );
-  });
-  report.revenue.drink.items.forEach((item) => {
-    csvRows.push(
-      `"${item.name}",Drink,${item.quantity},${item.price},${item.total}`
-    );
-  });
+  report.categories.forEach((category) => category.revenue.items.forEach((item) => {
+    csvRows.push(`"${item.name}","${category.label}",${item.quantity},${item.price},${item.total}`);
+  }));
   csvRows.push(`Total Revenue,,,${report.revenue.totalRevenue}`);
   csvRows.push('');
 
   // Costs
   csvRows.push('Cost of Goods Sold');
   csvRows.push('Item,Category,Quantity,Cost/Unit,Total Cost');
-  report.costs.food.items.forEach((item) => {
-    csvRows.push(
-      `"${item.name}",Food,${item.quantity},${item.costPerUnit},${item.total}`
-    );
-  });
-  report.costs.drink.items.forEach((item) => {
-    csvRows.push(
-      `"${item.name}",Drink,${item.quantity},${item.costPerUnit},${item.total}`
-    );
-  });
+  report.categories.forEach((category) => category.costs.items.forEach((item) => {
+    csvRows.push(`"${item.name}","${category.label}",${item.quantity},${item.costPerUnit},${item.total}`);
+  }));
   csvRows.push(`Total COGS,,,,${report.costs.totalDirectCosts}`);
   csvRows.push('');
 

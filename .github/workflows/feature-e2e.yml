@@ -240,6 +240,37 @@ jobs:
               || echo "::warning::feature E2E report upload failed"
           fi
 
+          # A Playwright report proves execution, but it is not behavioural
+          # evidence a UAT reviewer can inspect inline. Upload every explicit
+          # evidenceShot capture as first-class image evidence for this REQ.
+          # Do not allow a successful feature E2E cycle to silently omit it.
+          shopt -s nullglob
+          SHOTS=("compliance/evidence/${REQ_ID}/screenshots/"*.png)
+          if [ "${#SHOTS[@]}" -eq 0 ]; then
+            echo "::error::No evidenceShot screenshots were captured for ${REQ_ID}."
+            exit 1
+          fi
+
+          LINEAGE_FLAGS=(--test-cycle "${{ github.run_id }}")
+          if [ "${{ steps.cycle.outputs.cycle_supported }}" = "true" ] && [ -n "${{ steps.cycle.outputs.cycle_record_id }}" ]; then
+            LINEAGE_FLAGS+=(--evidence-scope cycle --test-cycle-record-id "${{ steps.cycle.outputs.cycle_record_id }}")
+          fi
+          for PNG in "${SHOTS[@]}"; do
+            ORIGIN_FLAGS=(--meta-key "origin=feature")
+            if [ -f "${PNG}.meta.json" ]; then
+              ORIGIN=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('origin','feature'))" "${PNG}.meta.json")
+              ORIGIN_FLAGS=(--meta-key "origin=${ORIGIN}")
+            fi
+            bash scripts/upload-evidence.sh \
+              wgb "$REQ_ID" screenshot "$PNG" \
+              --category screenshot --release "$REQ_ID" --create-release-if-missing \
+              --environment uat --sdlc-stage 2 \
+              --git-sha "${{ github.event.pull_request.head.sha }}" \
+              --ci-run-id "${{ github.run_id }}" --branch "${{ github.head_ref }}" \
+              "${LINEAGE_FLAGS[@]}" "${ORIGIN_FLAGS[@]}"
+          done
+          shopt -u nullglob
+
       - name: Complete feature E2E cycle
         if: always()
         run: |

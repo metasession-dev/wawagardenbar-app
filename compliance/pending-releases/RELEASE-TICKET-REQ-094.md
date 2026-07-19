@@ -13,6 +13,7 @@ REQ-094 makes financial report attribution consistent with the WAT business-date
 
 - Immutable `mainCategoryAtSale` / `categoryAtSale` order-item fields.
 - Main-category and profitability report preference for sale-time taxonomy.
+- Daily/range report sections, charts, and exports map every configured Main Category rather than collapsing non-legacy categories into Other.
 - WAT-normalised profitability and inventory-snapshot date handling.
 - Dry-run-first, idempotent legacy provenance migration.
 - Targeted unit/integration and tagged authenticated E2E coverage.
@@ -34,6 +35,6 @@ No dependency or secret changes. The production migration is additive, must be d
 ## Reviewer checklist
 
 - [ ] Review report-attribution and legacy-fallback wording.
-- [ ] Confirm CI evidence is green and AC3 screenshot is available in DevAudit.
+- [ ] Confirm CI evidence is green and the feature E2E workflow uploaded the AC3 PNG screenshot plus sidecar provenance to DevAudit.
 - [ ] Review dry-run migration counts before any production apply.
 - [ ] Complete independent HIGH-risk UAT approval.

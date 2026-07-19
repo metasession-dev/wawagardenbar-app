@@ -998,6 +998,7 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 **Source:** `app/actions/reports/report-actions.ts:11` (admin+ :19); cross-ref REQ-013 (payment accuracy), REQ-014 (reconciliation)
 
 - **Given** a day's orders, **When** an admin generates the daily report, **Then** totals, a payment-method breakdown, discrepancies and a reconciliation summary render and reconcile to the orders.
+- **Given** the Main Categories registry contains ordered categories, **When** an admin generates a Daily or date-range financial report, **Then** revenue, COGS, gross-profit, charts, and exports show each configured category distinctly in registry order; a historical order whose sale-time slug is no longer configured is explicitly labelled as unmapped rather than merged into another category.
 
 #### REQ-REPORT-002 — Business-day cutoff · **Should** · regression
 
@@ -1018,7 +1019,7 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 
 **Source:** `report-actions.ts`
 
-- **Given** a generated report, **When** the admin exports PDF/Excel, **Then** a file downloads.
+- **Given** a generated report, **When** the admin exports PDF/Excel/CSV, **Then** a file downloads with the same dynamic category labels and figures as the on-screen report.
 
 #### REQ-REPORT-005 — Revenue consistency · **Should** · regression
 

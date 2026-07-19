@@ -1,7 +1,7 @@
 # Test Execution Summary — REQ-094
 
-**Date:** 2026-07-18
-**Git SHA:** `9b06428` (implementation evidence cycle)
+**Date:** 2026-07-19
+**Git SHA:** Pending dynamic shared-report and screenshot-evidence workflow cycle
 
 ## Test design
 
@@ -9,8 +9,8 @@
 
 **Layers covered:**
 
-- Unit/integration: PASS — WAT range, business-date profitability query, category-scoped totals, and main-category report fallback tests.
-- Authenticated E2E: PASS in CI — `e2e/reports/profitability-attribution.spec.ts` is tagged `REQ-094 AC3` and captures the named category filter.
+- Unit/integration: PASS locally — dynamic registry ordering, non-legacy categories, sale-time category preference, and explicit unmapped historical rows.
+- Authenticated E2E: Pending rerun after the workflow fix. `e2e/reports/profitability-attribution.spec.ts` is tagged `REQ-094 AC3` and captures the named category filter; the feature workflow now uploads its PNG and metadata as first-class portal evidence.
 - Manual UAT smoke: Pending after `develop` deploy; HIGH-risk UAT gate is required.
 
 **Exemptions:** No visual-regression baseline is needed; the changed review surface is proven by an AC3 evidence screenshot rather than a pixel-baseline comparison.
@@ -21,10 +21,10 @@
 
 | Gate                     | Result | Details                                                                                                  |
 | ------------------------ | ------ | -------------------------------------------------------------------------------------------------------- |
-| TypeScript               | PASS   | Local `npx tsc --noEmit` passed.                                                                         |
-| Focused unit/integration | PASS   | 34 tests across business-date, profitability attribution, and main-category report suites.               |
+| TypeScript               | PASS   | Local `npx tsc --noEmit` passed after the dynamic shared-report change.                                  |
+| Focused unit/integration | PASS   | 6 tests across dynamic registry, legacy/unmapped, and order-type report suites.                           |
 | Quality Gates            | PASS   | [Run 29645454045](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/29645454045), 6m43s. |
-| REQ-scoped E2E           | PASS   | [Run 29645454047](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/29645454047), 1m37s. |
+| REQ-scoped E2E           | Pending | Rerun is required after merge so named PNG screenshots and sidecar provenance populate DevAudit.          |
 | Build                    | PASS   | Included in Quality Gates run 29645454045.                                                               |
 
 ## Test cycles
@@ -54,4 +54,4 @@
 
 ## Final assessment
 
-Phase 2 implementation evidence is green. The production data migration is deliberately not applied during CI or UAT; it remains a documented post-deploy, independently reviewed operation.
+The shared Daily/range report is now registry-derived and uses sale-time category identity. UAT submission remains blocked until the post-merge REQ-scoped E2E rerun uploads its screenshots to DevAudit. The production data migration is deliberately not applied during CI or UAT; it remains a documented post-deploy, independently reviewed operation.

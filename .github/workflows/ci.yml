@@ -719,17 +719,15 @@ jobs:
               --environment uat --sdlc-stage 2
           fi
 
-          # Per-REQ gate evidence fan-out.
-          # The gate evidence above was uploaded to the single commit-derived
-          # release (FLAGS carries --release <derived>). When multiple REQs
-          # have pending release tickets, only that one REQ gets gate evidence
-          # on the portal — other in-scope REQs show "no gate evidence" and
-          # "no tests tagged with this REQ" even though the gates ran and
-          # passed. Gate outcomes can be attached to every active REQ, but an
-          # E2E JSON result is REQ-scoped proof only when it actually contains
-          # an executed test tagged for that REQ. A smoke run must never
-          # overwrite or obscure a prior targeted feature execution merely
-          # because a pending ticket exists (WGB #530).
+          # Per-REQ E2E evidence fan-out.
+          # Gate outcomes remain attached only to the commit-derived release.
+          # A generic develop Quality Gates run is integration evidence, not
+          # proof for every pending REQ. Fanning it out creates legacy
+          # test-cycle rows whose authoritative cycle can belong to a different
+          # release, blocking UAT approval with a lineage conflict (WGB #542).
+          #
+          # E2E JSON can be attached to an additional REQ only when it contains
+          # an executed test explicitly tagged for that REQ.
           COMMIT_REQ="${{ needs.register-release.outputs.version }}"
           FANOUT_REQS=()
           if [ -d compliance/pending-releases ]; then
@@ -755,11 +753,6 @@ jobs:
               FANOUT_FLAGS="${FANOUT_FLAGS} --release ${REQ_ID} --create-release-if-missing"
               FANOUT_FLAGS="${FANOUT_FLAGS} --environment uat --sdlc-stage 2"
               FANOUT_FLAGS="${FANOUT_FLAGS} --test-cycle ${{ github.run_id }}"
-              if [ -f ci-evidence/gate-outcomes.json ]; then
-                upload "gate-outcomes.json -> ${REQ_ID}" \
-                  wgb "${REQ_ID}" gate_outcome ci-evidence/gate-outcomes.json \
-                  --category ci_pipeline ${FANOUT_FLAGS}
-              fi
               if [ -f ci-evidence/e2e-results.json ] && python3 scripts/has-req-tagged-e2e-result.py "$REQ_ID" ci-evidence/e2e-results.json; then
                 upload "e2e-results.json -> ${REQ_ID}" \
                   wgb "${REQ_ID}" e2e_result ci-evidence/e2e-results.json \

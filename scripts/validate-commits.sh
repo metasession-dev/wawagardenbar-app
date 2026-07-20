@@ -5,7 +5,7 @@
 #   ./scripts/validate-commits.sh [base-branch]
 #
 # Checks all commits in the PR for:
-# - Conventional Commits format (type: description or type(scope): description)
+# - Conventional Commits format (type: description or [REQ-NNN] type: description)
 # - Co-Authored-By tag on commits touching code files (warning)
 # - Ref: REQ-XXX on commits related to tracked requirements (warning)
 #
@@ -21,11 +21,13 @@ echo "=== Commit Convention Validation ==="
 echo "Comparing: $BASE_BRANCH...HEAD"
 echo ""
 
-# Conventional Commit regex: type(optional-scope): description
+# Conventional Commit regex: optional REQ prefix + type(optional-scope): description.
+# Both `[REQ-094] fix: subject` and `fix: [REQ-094] subject` are accepted so
+# established, already-merged release history remains valid.
 # Scope accepts anything except `)` so multi-scope subjects like
 # `feat(auth,profile):` and `fix(rewards/expiry):` validate. The closing-paren
 # guard prevents pathological inputs. DevAudit-Installer#93.
-CC_REGEX='^(feat|fix|docs|test|refactor|chore|compliance|security|perf|ci|build|revert)(\([^)]+\))?!?: .+'
+CC_REGEX='^(\[REQ-[0-9]+\] )?(feat|fix|docs|test|refactor|chore|compliance|security|perf|ci|build|revert)(\([^)]+\))?!?: .+'
 
 COMMITS=$(git log "$BASE_BRANCH"..HEAD --format='%H' || true)
 
@@ -78,7 +80,7 @@ while IFS= read -r sha; do
   # are exempt. Mirrors the commitlint rule; this is the PR-CI half that
   # `--no-verify` can't skip. Work starts from a requirement (which starts
   # from an issue) — use the sdlc-implementer skill to assign one.
-  TYPE=$(echo "$SUBJECT" | grep -oE '^[a-z]+' || true)
+  TYPE=$(echo "$SUBJECT" | sed -E 's/^\[REQ-[0-9]+\] //' | grep -oE '^[a-z]+' || true)
   case "$TYPE" in
     feat|fix|refactor|perf)
       if ! echo "$SUBJECT" | grep -qP '\[REQ-\d{3,}\]' \

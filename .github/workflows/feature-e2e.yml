@@ -102,6 +102,10 @@ jobs:
           npx tsx scripts/seed-food-menu.ts
           npx tsx scripts/seed-drinks-menu.ts
           npx tsx scripts/seed-inventory.ts
+          # The REQ-094 profitability assertion needs representative paid
+          # orders, not just menu/inventory reference data. Keep the feature
+          # E2E fixture set aligned with the smoke quality gate.
+          npx tsx scripts/seed-e2e-fixtures.ts
 
       - name: Kill stale dev server
         run: lsof -ti:3000 | xargs kill -9 2>/dev/null || true

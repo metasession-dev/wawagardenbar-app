@@ -29,7 +29,7 @@ test('REQ-094 profitability reviewer can select a named category filter', async 
   await expect(
     page.getByRole('heading', { name: 'Profitability Report' })
   ).toBeVisible();
-  const category = page.getByLabel('Category');
+  const category = page.getByRole('combobox', { name: 'Category' });
   await category.click();
   await page.getByRole('option', { name: 'Local Beer' }).click();
   await expect(category).toContainText('Local Beer');
@@ -37,7 +37,7 @@ test('REQ-094 profitability reviewer can select a named category filter', async 
   await expect(page.getByText('Total Revenue', { exact: true })).toBeVisible();
   await expect(page.getByText('Revenue vs Cost vs Profit', { exact: true })).toBeVisible();
   await expect(page.getByText('Profitability by Order Type', { exact: true })).toBeVisible();
-  const categoryBreakdown = page.getByLabel('Profitability by category');
+  const categoryBreakdown = page.getByLabel('Profitability category breakdown');
   await expect(categoryBreakdown).toBeVisible();
   await expect(categoryBreakdown).not.toContainText('No category data available');
   await expect(categoryBreakdown).toContainText('beer-local');

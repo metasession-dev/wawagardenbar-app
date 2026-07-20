@@ -192,7 +192,7 @@ export function ProfitabilityCharts({
         </CardContent>
       </Card>
 
-      <Card aria-label="Profitability by category">
+      <Card aria-label="Profitability category breakdown">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5" />

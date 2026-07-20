@@ -6,8 +6,10 @@
 # Single consolidated job — on a self-hosted runner, parallel jobs run
 # sequentially anyway. One checkout + one cached npm ci = fast.
 #
-# PRs to develop run Quality Gates before integration. PRs to main are verified
-# by quality-gates-provenance.yml (same-SHA provenance check, not heavy CI rerun).
+# PRs to develop run Quality Gates before integration. Normal PRs to main are
+# verified by quality-gates-provenance.yml (same-SHA provenance check, not heavy
+# CI rerun). A hotfix/* PR to main is the exception: it receives fresh Quality
+# Gates on its own head SHA because it must not first travel through develop.
 # Compliance validation runs separately on PRs (compliance-validation.yml).
 
 name: CI Pipeline
@@ -15,7 +17,7 @@ name: CI Pipeline
 on:
   workflow_dispatch:
   pull_request:
-    branches: [develop]
+    branches: [develop, main]
   push:
     branches: [develop]
     paths-ignore:
@@ -40,8 +42,11 @@ jobs:
   # ──────────────────────────────────────────────
   quality-gates:
     name: Quality Gates
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.base_ref == 'develop' ||
+      startsWith(github.head_ref, 'hotfix/')
     runs-on: ubuntu-latest
-
     services:
       mongodb:
         image: mongo:7

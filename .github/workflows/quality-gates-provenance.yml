@@ -9,7 +9,7 @@
 #   Quality Gates result. When that happens, neither existing workflow fires on
 #   the PR to main, so the release PR sits with missing/ambiguous protection.
 #
-#   This workflow fires on PRs to main, queries the GitHub API for prior
+#   This workflow fires on normal PRs to main, queries the GitHub API for prior
 #   successful `Quality Gates` check runs on the PR head SHA, and fails closed
 #   if none are found. It does NOT rerun heavy CI — it is a same-SHA provenance
 #   check only.
@@ -27,6 +27,10 @@ on:
 jobs:
   quality-gates:
     name: Quality Gates
+    # A hotfix is verified by the full CI Pipeline on its own head SHA. It
+    # cannot have prior develop-side provenance without violating the hotfix
+    # route; see DevAudit-Installer#431.
+    if: ${{ !startsWith(github.head_ref, 'hotfix/') }}
     runs-on: ubuntu-latest
     steps:
       - name: Verify prior Quality Gates success on head SHA

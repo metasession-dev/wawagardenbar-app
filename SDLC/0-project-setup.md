@@ -22,11 +22,11 @@ This guide configures a new project so that the five pipeline workflows can run 
 
 ## Fast path (recommended): `devaudit install`
 
-The DevAudit CLI (`@metasession.co/devaudit-cli`) automates almost all of this guide. It writes `sdlc-config.json`, creates the DevAudit project, issues an API key, sets the GitHub secrets and variables, installs the hook framework, configures branch protection, and syncs the framework templates (CI workflows, hooks, scripts) — in roughly 30 seconds.
+The DevAudit CLI (`@metasession.co/devaudit-cli`) automates almost all of this guide. It writes `sdlc-config.json`, creates the DevAudit project, issues an API key, sets the GitHub secrets and variables, installs the hook framework, configures branch protection, and syncs the framework templates (CI workflows, hooks, scripts). The command starts in seconds; the full operator onboarding flow usually takes about 5-10 minutes.
 
 ```bash
 npm install -g @metasession.co/devaudit-cli   # requires Node >= 22
-devaudit auth login                            # paste your PAT (issued at https://devaudit.metasession.co/settings/tokens)
+devaudit auth login                            # paste your PAT (issued at https://devaudit.ai/settings/tokens)
 devaudit install ../path/to/this-project
 ```
 
@@ -108,12 +108,12 @@ cat > compliance/RTM.md << 'EOF'
 ## Part A: Baseline Requirements
 
 | ID | Requirement | Source | Status |
-|---|---|---|---|
+| --- | --- | --- | --- |
 
 ## Part B: Change Request Traceability
 
-| REQ-ID | Issue | Risk | Evidence | Status | Approver | Date |
-|---|---|---|---|---|---|---|
+| REQ-ID | Issue | Risk | Evidence | Status | PR | Reviewer | AI-tool |
+| -------- | ------- | ------ | ---------- | -------- | ----- | ---------- | --------- |
 EOF
 
 # Commit
@@ -121,6 +121,12 @@ git add compliance/
 git commit -m "compliance: initialize compliance directory structure"
 git push origin develop
 ```
+
+If any RTM or release-evidence table cell needs literal pipe characters, escape
+them as `\|` rather than writing bare `|`. Typical cases are regexes
+(`stop\|unsubscribe\|opt-out`) and enum examples
+(`open\|in_progress\|closed`). Bare pipes inside a markdown table cell are read
+as extra columns and trigger false-positive MD056/MD060 lint errors.
 
 ---
 
@@ -131,7 +137,7 @@ This is the **independent verification gate**. Tests run locally during developm
 ### What CI Must Run
 
 | Pipeline | Trigger | Jobs | Purpose |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | CI | Push to `develop` | TypeScript + SAST + dependency audit + E2E + build | Quality gates + independent verification |
 | Deploy | Merge to `main` | Auto-deploy to hosting platform | Production release |
 
@@ -389,7 +395,7 @@ If any step fails, fix the configuration before starting real work.
 ## Setup Checklist
 
 | Step | Status |
-|---|---|
+| --- | --- |
 | Repository created | [ ] |
 | `develop` branch created | [ ] |
 | Production environment configured (auto-deploy from `main`) | [ ] |

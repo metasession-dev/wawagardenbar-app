@@ -6,6 +6,7 @@ import OrderModel from '@/models/order-model';
 import StockMovementModel from '@/models/stock-movement-model';
 import { AuditLogService } from '@/services/audit-log-service';
 import { computeMissingCost } from '@/lib/snapshot-missing-cost';
+import { watCalendarDayRange } from '@/lib/business-date';
 import type {
   IInventorySnapshot,
   IInventorySnapshotItem,
@@ -27,10 +28,7 @@ export class InventorySnapshotService {
 
     const menuItems = await MenuItemModel.find(query).sort({ name: 1 }).lean();
 
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
+    const { start: startOfDay, end: endOfDay } = watCalendarDayRange(date);
 
     const salesData = await OrderModel.aggregate([
       {
@@ -217,8 +215,9 @@ export class InventorySnapshotService {
     // REQ-075 — Free-form main-category slug (was `'food' | 'drinks'`).
     mainCategory: string
   ): Promise<IInventorySnapshot> {
-    const snapshotDate = new Date(data.snapshotDate);
-    snapshotDate.setHours(0, 0, 0, 0);
+    const { start: snapshotDate } = watCalendarDayRange(
+      new Date(data.snapshotDate)
+    );
 
     const existingSnapshot = await InventorySnapshotModel.findOne({
       snapshotDate,

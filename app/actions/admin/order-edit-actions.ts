@@ -173,6 +173,11 @@ export async function updateOrderItemsAction(input: UpdateOrderItemsInput) {
                 itemSubtotal) *
               100
             : 0,
+        // REQ-094: edits are a new sale-line representation. Preserve the
+        // category dimensions at the point this representation is saved.
+        mainCategoryAtSale: menuItem.mainCategory,
+        categoryAtSale: menuItem.category,
+        categoryAtSaleSource: 'sale_time' as const,
         priceOverridden: inputItem.priceOverridden || false,
         originalPrice: inputItem.priceOverridden
           ? Math.round(menuItem.price * multiplier)

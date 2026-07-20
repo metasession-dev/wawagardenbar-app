@@ -10,7 +10,7 @@
 #   - smoke      — runs on develop push via ci.yml (no change here, ~3-5 min)
 #   - critical   — Playwright project selecting e2e/smoke/ + e2e/critical/
 #                  (this workflow on PR-to-main, ~10-15 min target)
-#   - regression — all e2e/**/*.spec.ts (this workflow nightly + push-to-main +
+#   - regression — all e2e/**/*.spec.ts (this workflow on push-to-main +
 #                  dispatch, ~35 min with auto-issue on post-merge failure)
 #
 # The PR-to-main path runs the critical tier so velocity isn't blocked on
@@ -33,14 +33,12 @@ on:
         type: string
         default: ''
   # PR-to-main runs the critical tier (smoke + e2e/critical/), targeting
-  # ~10-15 min wall-clock per the 3-tier model. Push-to-main + schedule
-  # run the full regression project for the post-merge safety net.
+  # ~10-15 min wall-clock per the 3-tier model. Push-to-main runs the
+  # full regression project for the post-merge safety net.
   pull_request:
     branches: [main]
   push:
     branches: [main]
-  schedule:
-    - cron: '0 2 * * *' # nightly 02:00 UTC
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

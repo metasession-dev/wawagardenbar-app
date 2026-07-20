@@ -35,7 +35,7 @@ export function ProfitabilityCharts({
     return null;
   }
 
-  const { trends, byOrderType } = report;
+  const { trends, byCategory, byOrderType } = report;
 
   // Calculate max values for scaling
   const maxRevenue = Math.max(...trends.daily.map((d) => d.revenue));
@@ -130,7 +130,7 @@ export function ProfitabilityCharts({
       </Card>
 
       {/* Order Type Profitability */}
-      <Card>
+      <Card aria-label="Profitability by order type">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5" />
@@ -189,6 +189,40 @@ export function ProfitabilityCharts({
               })
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      <Card aria-label="Profitability by category">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Profitability by Category
+          </CardTitle>
+          <CardDescription>
+            Category attribution for the selected report filters
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {byCategory.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">
+              No category data available for the selected period
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {byCategory.map((entry) => (
+                <div key={entry.category} className="flex items-center justify-between border-b pb-2 last:border-0">
+                  <div>
+                    <p className="font-medium">{entry.category}</p>
+                    <p className="text-xs text-muted-foreground">{entry.orderCount} orders</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium">₦{entry.totalRevenue.toLocaleString()}</p>
+                    <p className="text-xs text-green-600">{entry.profitMargin.toFixed(1)}% margin</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

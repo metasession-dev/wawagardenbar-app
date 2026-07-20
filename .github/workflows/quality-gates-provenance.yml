@@ -10,11 +10,10 @@
 #   Quality Gates result. When that happens, neither existing workflow fires on
 #   the PR to main, so the release PR sits with missing/ambiguous protection.
 #
-#   This workflow fires on PRs to main and chooses between two modes:
-#   - release PR (`develop -> main`): same-SHA provenance
-#     check only
-#   - hotfix PR (`hotfix/* -> main`): dispatch the real ci.yml gates on
-#     the hotfix branch and proxy that result back onto the PR
+#   This workflow verifies same-SHA provenance for normal release PRs.
+#   Hotfix PRs are deliberately excluded: ci.yml runs their full Quality Gates
+#   directly on the hotfix SHA, because requiring prior develop provenance
+#   would invalidate the hotfix route.
 #
 #   The job name is exactly `Quality Gates` to satisfy existing branch-protection
 #   rules without introducing a new required-check name.
@@ -48,78 +47,12 @@ jobs:
 
   quality-gates:
     name: Quality Gates
+    # Hotfix branches run ci.yml directly on their own SHA. They cannot have
+    # develop-side provenance without violating the approved hotfix route.
+    if: ${{ !startsWith(github.head_ref, 'hotfix/') && !startsWith(github.head_ref, 'fix/hotfix-') }}
     runs-on: ubuntu-latest
     steps:
-      - name: Classify PR path
-        id: classify
-        env:
-          HEAD_REF: ${{ github.event.pull_request.head.ref }}
-          BASE_REF: ${{ github.event.pull_request.base.ref }}
-        run: |
-          case "$HEAD_REF" in
-            hotfix/*|fix/hotfix-*)
-              echo "kind=hotfix" >> "$GITHUB_OUTPUT"
-              ;;
-            *)
-              echo "kind=release" >> "$GITHUB_OUTPUT"
-              ;;
-          esac
-          echo "base_ref=${BASE_REF}" >> "$GITHUB_OUTPUT"
-          echo "head_ref=${HEAD_REF}" >> "$GITHUB_OUTPUT"
-
-      - name: Dispatch ci.yml Quality Gates for hotfix PR
-        if: steps.classify.outputs.kind == 'hotfix'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          HEAD_REF: ${{ steps.classify.outputs.head_ref }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: |
-          BEFORE_JSON=$(gh run list \
-            --workflow "CI Pipeline" \
-            --branch "$HEAD_REF" \
-            --event workflow_dispatch \
-            --limit 50 \
-            --json databaseId,headSha)
-
-          gh workflow run ci.yml --ref "$HEAD_REF"
-
-          RUN_ID=""
-          for ATTEMPT in $(seq 1 20); do
-            AFTER_JSON=$(gh run list \
-              --workflow "CI Pipeline" \
-              --branch "$HEAD_REF" \
-              --event workflow_dispatch \
-              --limit 50 \
-              --json databaseId,headSha)
-            RUN_ID=$(BEFORE_JSON="$BEFORE_JSON" AFTER_JSON="$AFTER_JSON" HEAD_SHA="$HEAD_SHA" python3 - <<'PY'
-            import json
-            import os
-
-            before = {str(item["databaseId"]) for item in json.loads(os.environ["BEFORE_JSON"])}
-            head_sha = os.environ["HEAD_SHA"]
-            for item in json.loads(os.environ["AFTER_JSON"]):
-                if item.get("headSha") == head_sha and str(item["databaseId"]) not in before:
-                    print(item["databaseId"])
-                    break
-            PY
-            )
-            if [ -n "$RUN_ID" ]; then
-              break
-            fi
-            echo "Waiting for dispatched ci.yml run to appear for ${HEAD_REF}..."
-            sleep 10
-          done
-
-          if [ -z "$RUN_ID" ]; then
-            echo "::error::Unable to locate the dispatched ci.yml run for hotfix branch ${HEAD_REF}."
-            exit 1
-          fi
-
-          echo "Watching dispatched ci.yml run ${RUN_ID} for hotfix branch ${HEAD_REF}..."
-          gh run watch "$RUN_ID" --exit-status
-
       - name: Verify prior Quality Gates success on head SHA
-        if: steps.classify.outputs.kind != 'hotfix'
         env:
           GH_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}

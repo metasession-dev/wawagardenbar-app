@@ -42,7 +42,7 @@ jobs:
   quality-gates:
     name: Quality Gates
     needs: [register-release]
-    if: ${{ always() && (github.event_name != 'pull_request' || !startsWith(github.head_ref, 'chore/close-out-')) && (github.event_name == 'pull_request' || needs.register-release.result == 'success') }}
+    if: ${{ always() && (github.event_name != 'pull_request' || github.base_ref == 'develop' || startsWith(github.head_ref, 'hotfix/')) && !startsWith(github.head_ref, 'chore/close-out-') && (github.event_name == 'pull_request' || needs.register-release.result == 'success') }}
     runs-on: ubuntu-latest
 
     services:

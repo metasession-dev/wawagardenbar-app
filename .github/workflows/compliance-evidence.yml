@@ -664,7 +664,12 @@ jobs:
   # against each in-scope REQ.
   upload-e2e-regression-evidence:
     name: Upload E2E Regression Evidence
-    if: github.event_name == 'workflow_run'
+    # Only accepted release-path executions can create portal evidence.
+    # Defence in depth: a future cron must not pollute a historical release
+    # record even if somebody re-adds schedule to E2E Regression.
+    if: >-
+      github.event_name == 'workflow_run' &&
+      contains(fromJSON('["pull_request", "push", "workflow_dispatch"]'), github.event.workflow_run.event)
     runs-on: ubuntu-latest
     # actions: read is required so `actions/download-artifact@v8` with
     # `run-id` can read another workflow's artifacts. Without it the
@@ -743,7 +748,8 @@ jobs:
 
           # Tier metadata for the portal (the operator filters/groups by
           # this on the release detail). pull_request → critical;
-          # push to main → regression; otherwise dispatch/schedule.
+          # push to main → regression; workflow_dispatch is explicitly
+          # operator-invoked. Scheduled origins are rejected at job level.
           PRIOR_EVENT="${{ github.event.workflow_run.event }}"
           PRIOR_BRANCH="${{ github.event.workflow_run.head_branch }}"
           case "$PRIOR_EVENT" in

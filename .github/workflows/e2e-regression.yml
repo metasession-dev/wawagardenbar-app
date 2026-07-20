@@ -11,7 +11,7 @@
 #   - critical   — Playwright project selecting e2e/smoke/ + e2e/critical/
 #                  (this workflow on PR-to-main, ~10-15 min target)
 #   - regression — all e2e/**/*.spec.ts (this workflow on push-to-main +
-#                  dispatch, ~35 min with auto-issue on post-merge failure)
+#                  manual dispatch, ~35 min with auto-issue on post-merge failure)
 #
 # The PR-to-main path runs the critical tier so velocity isn't blocked on
 # the full regression suite. The post-merge path runs full regression
@@ -34,7 +34,8 @@ on:
         default: ''
   # PR-to-main runs the critical tier (smoke + e2e/critical/), targeting
   # ~10-15 min wall-clock per the 3-tier model. Push-to-main runs the
-  # full regression project for the post-merge safety net.
+  # full regression project for the post-merge safety net; manual dispatch
+  # supports intentional operator-triggered full or scoped regression runs.
   pull_request:
     branches: [main]
   push:
@@ -120,8 +121,8 @@ jobs:
         run: npx wait-on http://localhost:3000 --timeout 120000
 
       # Decide which Playwright project to run based on the trigger.
-      # PR-to-main runs `critical` (~10-15 min); push-to-main + schedule
-      # run `regression` (~35 min full pack); workflow_dispatch runs
+      # PR-to-main runs `critical` (~10-15 min); push-to-main runs
+      # `regression` (~35 min full pack); workflow_dispatch runs
       # regression with optional spec filter for scoped iteration.
       #
       # Fallback: if the `critical` project isn't defined in
@@ -144,7 +145,7 @@ jobs:
               fi
               echo "specs=" >> "$GITHUB_OUTPUT"
               ;;
-            push|schedule)
+            push)
               echo "project=regression" >> "$GITHUB_OUTPUT"
               echo "specs=" >> "$GITHUB_OUTPUT"
               echo "Running full regression project"

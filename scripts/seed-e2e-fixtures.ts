@@ -6,6 +6,7 @@ import InventoryModel from '@/models/inventory-model';
 import { ExpenseModel } from '@/models/expense-model';
 import { InventorySnapshotModel } from '@/models/inventory-snapshot-model';
 import SystemSettingsModel from '@/models/system-settings-model';
+import OrderModel from '@/models/order-model';
 
 dotenv.config({ path: '.env.local' });
 
@@ -116,6 +117,59 @@ async function seedE2eFixtures() {
       createdBy: superAdmin._id,
     });
     console.log('✓ Seeded 1 expense (operating / Utilities / ₦1,000)');
+
+    // ── Profitability report ─────────────────────────────────────────────
+    // REQ-094 AC3 must prove the category filter scopes an actual report,
+    // rather than only proving that its select control accepts a value.
+    // Keep one paid, sale-time-attributed Local Beer order in today's report
+    // range. It is replaced by its stable order number on every seed run.
+    const localBeer = await MenuItemModel.findOne({ category: 'beer-local' });
+    if (!localBeer) {
+      throw new Error(
+        'No Local Beer menu item found. Run seed-drinks-menu.ts first.'
+      );
+    }
+    const reportOrderNumber = 'E2E-PRF-094';
+    const price = localBeer.price ?? 1500;
+    const cost = localBeer.costPerUnit ?? 0;
+    await OrderModel.deleteOne({ orderNumber: reportOrderNumber });
+    await OrderModel.create({
+      orderNumber: reportOrderNumber,
+      orderType: 'pickup',
+      status: 'completed',
+      paymentStatus: 'paid',
+      paymentMethod: 'cash',
+      paidAt: new Date(),
+      businessDate: new Date(),
+      createdByRole: 'admin',
+      estimatedWaitTime: 0,
+      items: [
+        {
+          menuItemId: localBeer._id,
+          name: localBeer.name,
+          price,
+          quantity: 1,
+          portionSize: 'full',
+          subtotal: price,
+          costPerUnit: cost,
+          totalCost: cost,
+          grossProfit: price - cost,
+          profitMargin: price > 0 ? ((price - cost) / price) * 100 : 0,
+          mainCategoryAtSale: localBeer.mainCategory,
+          categoryAtSale: 'beer-local',
+          categoryAtSaleSource: 'sale_time',
+        },
+      ],
+      subtotal: price,
+      total: price,
+      totalCost: cost,
+      grossProfit: price - cost,
+      profitMargin: price > 0 ? ((price - cost) / price) * 100 : 0,
+      operationalCosts: { delivery: 0, packaging: 0, processing: 0 },
+    });
+    console.log(
+      '✓ Seeded 1 paid Local Beer order for REQ-094 profitability evidence'
+    );
 
     // ── trackByLocation inventory ──────────────────────────────────────────
     // REQ-066 AC8 + AC9 specs (sale-point + over-sell) look up an

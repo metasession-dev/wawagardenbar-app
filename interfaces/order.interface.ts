@@ -37,6 +37,12 @@ export interface IOrderItem {
   totalCost: number;
   grossProfit: number;
   profitMargin: number;
+  /** REQ-094: immutable taxonomy captured when this line is sold. */
+  mainCategoryAtSale?: string;
+  /** REQ-094: immutable taxonomy captured when this line is sold. */
+  categoryAtSale?: string;
+  /** Distinguishes sale-time evidence from a legacy current-menu fallback. */
+  categoryAtSaleSource?: 'sale_time' | 'legacy_current_menu_fallback';
   originalPrice?: number;
   priceOverridden: boolean;
   priceOverrideReason?: string;

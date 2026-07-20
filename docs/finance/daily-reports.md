@@ -14,44 +14,27 @@ The primary financial report that consolidates all daily financial activities in
 #### Report Sections
 
 ##### A. Revenue Breakdown
-**Food Category:**
-- List of food items sold (e.g., "3 Pepper Soup, 2 Awesome Meals")
-- Quantity sold per item
-- Selling price per item
-- **Total Food Revenue** (sum of all food sales)
-
-**Drink Category:**
-- List of drinks sold
-- Quantity sold per item
-- Selling price per item
-- **Total Drink Revenue** (sum of all drink sales)
+**Main Categories:**
+- One revenue section per configured Main Category, in the order defined in Dashboard Settings (for example Kitchen, Drinks, Grill, Pepper Soup, Entertainment)
+- List of items sold, quantity, selling price, and total for each category
+- Categories are resolved from the immutable sale-time category on an order item; a removed historical category is shown as **Unmapped historical data**, never silently reassigned
 
 **Total Revenue:**
-- Combined revenue from food and drinks
+- Combined revenue from every configured Main Category and any explicitly labelled unmapped historical rows
 - Also referred to as "Turnover"
 
 ##### B. Cost of Goods Sold (COGS) / Direct Costs
-**Food Costs:**
-- Cost price per food item (from inventory)
-- Total cost for food items sold
-- **Total Food Cost**
-
-**Drink Costs:**
-- Cost price per drink item (from inventory)
-- Total cost for drinks sold
-- **Total Drink Cost**
+**Main Category Costs:**
+- Cost price per item and total COGS for each configured Main Category
+- Historical rows retain their sale-time category or are visibly marked as unmapped
 
 **Total Direct Costs:**
-- Combined cost of food and drinks sold
+- Combined cost of every displayed Main Category
 
 ##### C. Gross Profit
-**Food Gross Profit:**
-- Formula: `Food Revenue - Food Cost`
-- Shows profitability of food category
-
-**Drink Gross Profit:**
-- Formula: `Drink Revenue - Drink Cost`
-- Shows profitability of drink category
+**Main Category Gross Profit:**
+- Formula for every category: `Category Revenue - Category Cost`
+- Shows profitability for every configured Main Category, rather than only food and drinks
 
 **Total Gross Profit:**
 - Formula: `Total Revenue - Total Direct Costs`
@@ -126,7 +109,7 @@ Net Profit = (Total Revenue - Total Direct Costs) - Operating Expenses
 #### 1. Order/Sales Data
 - Link to existing `Order` model
 - Filter by date range (start of day to end of day)
-- Separate food items from drink items (via `MenuItem.category`)
+- Group items by the order item's `mainCategoryAtSale`; only legacy rows without a sale-time category fall back to current menu metadata and must be marked as such
 - Calculate revenue: `sum(item.price * item.quantity)`
 
 #### 2. Inventory/Cost Data

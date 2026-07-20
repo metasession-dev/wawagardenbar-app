@@ -307,7 +307,7 @@ _Test fix surfaced by suite drift_
 > - **Requirement:** none
 > - **Risk:** LOW
 > - **Path:** Lightweight (gates → PR review → merge)
-> - **Gates/evidence:** quality-gates smoke (default CI Gate 4); no full regression on PR (run via `workflow_dispatch` while iterating, full regression on next nightly)
+> - **Gates/evidence:** quality-gates smoke (default CI Gate 4); no full regression on PR (use `workflow_dispatch` while iterating; any post-merge or scheduled regression is consumer-configured)
 > - **Your approvals:** PR review only
 > - **Skipped:** RTM, evidence pack, UAT four-eyes, Production approval
 
@@ -341,8 +341,9 @@ Reached from Phase 0 for non-tracked change-types. The skill drives this end-to-
    - **Post-merge-only CI (older generated workflows — `push: branches: [<integration>]` with no `pull_request:` trigger)** — say so explicitly in the LAST/NEXT sticky: _"no PR-time checks will fire; review + merge is the gate; CI runs post-merge on `$INTEGRATION_BRANCH`."_ Don't poll the PR for checks that won't arrive. The post-merge run (CI Pipeline + Compliance Evidence Upload on the integration branch) is the actual gate; address it via fix-forward if it fails.
 
    Either way, never bypass a gate (no `--no-verify`, no `--admin` merge of a red required check); the only difference is **where** you wait for the gate to fire — before merge vs. after merge.
-8. **Guide review → merge.** A human still reviews the PR (separation of duties). There is **no** portal release approval, no UAT four-eyes, no Production gate, and no close-out. Merge once CI is green and the reviewer approves.
-9. **Done.** A housekeeping push produces at most a bare-date release (`vYYYY.MM.DD`) with no approval gate; a doc-only push attaches its docs to the existing `REQ-XXX` release. No further action required — report completion and stop.
+8. **Guide review -> merge.** A human still reviews the PR. Merge only after all required checks are terminal green on the current PR head SHA; queued, running, stale, cancelled, unexpectedly skipped, or failed checks are not green. There is no portal release approval, UAT four-eyes, Production gate, or standalone close-out on the normal lightweight path.
+9. **Record the correct release meaning.** A housekeeping push produces at most a bare-date release (`vYYYY.MM.DD`) that is integration/history, not an active approval by default. It waits on `$INTEGRATION_BRANCH` until the next tracked release absorbs it through the required bundled-changes markdown/JSON manifest and portal lineage. A doc-only push attaches documents to the existing `REQ-XXX` release.
+10. **Standalone exception.** Only when housekeeping cannot reasonably wait for the next tracked release may the skill prepare a standalone promotion. It must state `Standalone housekeeping promotion` and why in the release PR, add `compliance/standalone-housekeeping/STANDALONE-HOUSEKEEPING-vYYYY.MM.DD.json` with `schemaVersion: 1`, the exact derived bare-date version, `releaseMode: standalone_housekeeping`, and a specific reason. It must obtain terminal-green CI and PR review. The installed release-scope check validates the declaration before merge; post-deploy uploads it as release-ticket evidence and changes the portal row to standalone housekeeping. Use portal approval only if project policy explicitly opts in. If the installed workflow cannot implement that policy, halt and keep the change on the normal integration path.
 
 ### Phase 1 — Plan (SDLC stage 1)
 
@@ -385,7 +386,7 @@ Reached only on the **tracked** route from Phase 0 (the issue is already fetched
 - **`requirements-aligner` fails** (e.g. no `docs/SRS.md`): If `block_on_stage_1` is true, halt — "requirements-aligner could not find SRS.md. Operator action — create `docs/SRS.md` or disable `requirements_aligner.block_on_stage_1` in `sdlc-config.json`." If false, warn and continue with `@srs-deferred` on all ACs.
 - **`adr-author` fails**: Warn and continue — ADR is advisory by default. Mark the plan's "Architecture decisions" section as "ADR assessment skipped — <error>".
 - **`risk-register-keeper` fails**: If `block_on_stage_1` is true, halt. If false, warn and continue — mark the plan's "Risk register entries" section as "Risk assessment skipped — <error>".
-9. **Update `compliance/RTM.md`** with the new entry: REQ-XXX, title, risk class, linked issue, linked test cases (placeholder), and a provenance marker `sdlc-implementer@<version>` (devaudit-installer#226). The provenance column is the last column in the RTM row — `validate-commits.sh` in CI checks for its presence when `feat`/`fix`/`refactor`/`perf` commits cite a REQ-XXX. Without the stamp, CI fails with "no sdlc-implementer provenance in RTM.md." If the RTM table doesn't have a provenance column, add one with header `Provenance`.
+9. **Update `compliance/RTM.md`** with the new entry: REQ-XXX, title, risk class, linked issue, linked test cases (placeholder), and a provenance marker `sdlc-implementer@<version>` (devaudit-installer#226). The provenance column is the last column in the RTM row — `validate-commits.sh` in CI checks for its presence when `feat`/`fix`/`refactor`/`perf` commits cite a REQ-XXX. Without the stamp, CI fails with "no sdlc-implementer provenance in RTM.md." If the RTM table doesn't have a provenance column, add one with header `Provenance`. If any RTM cell text needs literal pipe characters (regexes, enum examples, status notes), escape them as `\|` rather than writing bare `|`, otherwise markdownlint will misparse the row as extra columns.
 10. **Post plan summary as an issue comment.** Format: TL;DR; Risk class + signals; Acceptance criteria (with SRS-IDs); Architectural decisions (ADR-NNN reference or no-ADR rationale); Risk register entries (RISK-NNN list); Technical approach (one paragraph); Dependencies; Test scope.
 11. **Checkpoint** — pause for human approval **iff** risk class is HIGH or CRITICAL. LOW and MEDIUM pass through to Phase 2 automatically. The checkpoint can be forced on for all classes via the `--require-plan-approval` flag (or `DEVAUDIT_REQUIRE_PLAN_APPROVAL=1` env var) for orgs that want it always-on.
 12. **Update SDLC status sticky** before exiting Phase 1: `bash scripts/update-sdlc-status.sh "$ISSUE_NUM" "Phase 1 complete — plan written to compliance/plans/REQ-XXX/implementation-plan.md (risk class <CLASS>)" "Phase 2 — sdlc-implementer auto-continuing"` (or "Operator action — review plan + ping resume" if the HIGH/CRITICAL checkpoint paused).
@@ -511,6 +512,59 @@ Reached only on the **tracked** route from Phase 0 (the issue is already fetched
 
    If the validator fails, fix the summary before proceeding. E2E gate results must be one of: `PASS`, `FAIL`, `NOT_NEEDED` (with reason), or `SKIPPED` (with operator-approved rationale). The word "deferred" must never appear in `test-execution-summary.md` — not as a gate state, not in prose, not in final assessment. "Deferred to CI" and "Playwright browsers not installed locally" are environment issues, not gate states. The CI validator (`validate-test-summary.sh`) will reject any summary containing "deferred" or "browsers not installed" on PRs to main.
 
+5bb. **Render the Test Cycles table from the portal's cycle read model when available (devaudit-installer#394).** Do not hand-build cycle rows from uploaded artefacts if the portal exposes first-class cycle records. Query the release-journey / cycle API, save the JSON, and render the markdown table with:
+
+   ```bash
+   bash scripts/render-test-cycles.sh /tmp/release-journey.json
+   ```
+
+   First-class rows must preserve:
+   - source release
+   - SDLC stage
+   - cycle ordinal within that source release + stage
+   - cycle kind / outcome
+   - workflow or run link
+   - related evidence
+   - incident or remediation reference
+
+   If the portal does not yet expose first-class cycles, the same helper emits the legacy `testCycleId` grouping fallback and labels it as such. Keep the fallback note in the final `test-execution-summary.md`; it is part of the audit trail during rollout.
+
+5c. **Run the Phase 3 completion guard before any PR/release-review step (devaudit-installer#341).** The tracked-release evidence pack is incomplete until the required Git artefacts exist. Before proceeding past Phase 3, verify:
+
+   - `compliance/evidence/REQ-XXX/test-scope.md`
+   - `compliance/evidence/REQ-XXX/test-plan.md`
+   - `compliance/evidence/REQ-XXX/test-execution-summary.md`
+   - `compliance/evidence/REQ-XXX/security-summary.md`
+   - `compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md`
+   - `compliance/evidence/REQ-XXX/implementation-plan.md` when the REQ risk class requires it
+   - any already-mandatory AI artefacts required by the risk/usage rules
+   - if `compliance/pending-releases/BUNDLED-CHANGES-REQ-XXX.md` exists, regenerate the paired JSON manifest too and keep both aligned with the current approval scope
+   - if `compliance/pending-releases/BUNDLED-CHANGES-REQ-XXX.md` exists, the canonical artefacts must carry the bundle narrative too:
+     - release ticket includes `## Bundled Changes` or `## Absorbed Predecessor Releases`
+     - `test-execution-summary.md` includes `## Bundled Release Context`
+     - `security-summary.md` includes `## Bundled Release Context`
+     - `ai-use-note.md` includes `## Bundled Release Context` when AI use is documented
+
+   Run:
+
+   ```bash
+   MISSING=0
+   for f in \
+     compliance/evidence/REQ-XXX/test-scope.md \
+     compliance/evidence/REQ-XXX/test-plan.md \
+     compliance/evidence/REQ-XXX/test-execution-summary.md \
+     compliance/evidence/REQ-XXX/security-summary.md \
+     compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md
+   do
+     [ -f "$f" ] || { echo "MISSING: $f"; MISSING=1; }
+   done
+   [ "$MISSING" -eq 0 ] || exit 1
+   ```
+
+   If any required artefact is missing, halt with an explicit error and do **not** continue to Phase 4:
+
+   > "Phase 3 incomplete — `test-execution-summary.md` is missing. This file satisfies the portal's Test Reports gate (`evidence_type=test_report`). Create it before opening the release PR."
+
 6. **Organise artefacts** under `compliance/evidence/REQ-XXX/` with date-prefixed naming:
 
    ```
@@ -601,7 +655,7 @@ Reached only on the **tracked** route from Phase 0 (the issue is already fetched
      --base-url <devaudit-base-url>
    ```
 
-   The watcher persists retry state in `.sdlc-pr-watch.json`, polls `gh pr view` + `gh pr checks`, re-runs likely flaky workflows automatically, and re-runs the Release Approval Gate when the portal is already approved but GitHub has not converged yet. Use `--once` when you only need a single classification pass.
+   The watcher persists retry state in `.sdlc-pr-watch.json`, polls `gh pr view` + `gh pr checks`, re-runs likely flaky workflows automatically, and re-runs the Release Approval Gate when the portal is already approved but GitHub has not converged yet. For a release PR (`$INTEGRATION_BRANCH -> $RELEASE_BRANCH`), it must not call the PR green until the full required release check set has reached terminal success: `Quality Gates`, `Release Scope Integrity`, `Compliance Validation`, `DevAudit Release Approval`, and `E2E Regression Suite`. Use `--once` when you only need a single classification pass.
 
 6. **Hard stop only after blocker classification.** Phase 4 ends here. Do not proceed to merge; the human's next action is reviewing on the portal or clearing the categorized blocker above.
 7. **Update SDLC status sticky** before halting: `bash scripts/update-sdlc-status.sh "$ISSUE_NUM" "Phase 4 — truthful release PR #<N> prepared against $RELEASE_BRANCH; blockers classified" "Operator action — review PR #<N> + approve UAT release on the portal; sdlc-implementer halts until you ping resume REQ-XXX"`. This is a critical handoff — the sticky must reflect that the agent has stopped + the operator is on the hook.
@@ -609,8 +663,8 @@ Reached only on the **tracked** route from Phase 0 (the issue is already fetched
 **When an external gate hangs or fails for unrelated reasons.** A required gate may fail for reasons outside the change's scope — flaky infra, an unrelated regression test that hangs at hour-plus runtime with no log activity, a known-failing suite. When this happens:
 
 1. **Verify it's actually unrelated.** Read the failure (or the lack of one). If it's the change's fault, fix it; this section does not apply.
-2. **Document the rationale on the PR.** A sticky comment naming: which gate, what the failure was, why it's unrelated to the change, what the safety net is (nightly run on `$INTEGRATION_BRANCH`, post-deploy verification, etc.).
-3. **Cancel-and-admin-merge is allowed** when **all three** hold: (a) ≥3 other required gates are green, (b) the change has no scope-overlap with the failing gate (e.g. service-layer fix vs hung UI e2e, or an `E2E: N/A by scope` test-plan), and (c) a fallback verification exists (nightly e2e on `$INTEGRATION_BRANCH`, post-deploy smoke, etc.). If any of the three fail, hold the merge and surface the blocker to the operator.
+2. **Document the rationale on the PR.** A sticky comment naming: which gate, what the failure was, why it's unrelated to the change, and what concrete fallback verification is available (for example, a consumer-configured regression run or post-deploy verification).
+3. **Cancel-and-admin-merge is allowed** when **all three** hold: (a) ≥3 other required gates are green, (b) the change has no scope-overlap with the failing gate (e.g. service-layer fix vs hung UI e2e, or an `E2E: N/A by scope` test-plan), and (c) a concrete fallback verification exists (a consumer-configured regression run, manual dispatch, or post-deploy smoke). If any of the three fail, hold the merge and surface the blocker to the operator.
 4. **Record the decision in the release ticket.** The release ticket's `## Verification` section must mention the cancelled gate by run-ID and the fallback that justifies bypassing it. Auditors look here first.
 
 **When the cancel-and-admin-merge conditions are NOT met.** If only one or two of the three conditions hold, the skill cannot bypass the gate. Escalation path:
@@ -620,7 +674,7 @@ Reached only on the **tracked** route from Phase 0 (the issue is already fetched
 
 **Release Approval Gate retry (devaudit-installer#211 Gap 17).** If the Release Approval Gate check fails on the PR and the portal approval was already given (API sync delay, stale cache), retry logic: re-run the Release Approval Gate workflow up to 3 times with 30-second intervals (`gh workflow run check-release-approval.yml` or trigger via `workflow_dispatch`). If it still fails after 3 retries: halt — "Release Approval Gate still failing after 3 retries. Portal may show approval but the gate can't verify it. Operator action — check the portal release status manually, verify the API key is valid, and re-run the workflow from GitHub Actions if needed."
 
-**Auto-refresh on UAT approval (devaudit#562, devaudit-installer#283).** When the portal's UAT approval is granted, the portal automatically sends a `repository_dispatch('release-approved')` event to the consuming project's repo. This triggers `check-release-approval.yml` to re-run without manual intervention. The retry logic above is still needed for edge cases (API sync delays, network issues), but the common path is now fully automated. If the auto-refresh doesn't fire (e.g. portal GitHub trigger misconfigured), the manual retry sequence above remains the fallback.
+**Auto-refresh on UAT approval (devaudit#562, devaudit-installer#283, #351).** When the portal's UAT approval is granted, the portal automatically sends a `repository_dispatch('release-approved')` event to the consuming project's repo. This triggers `check-release-approval.yml` to re-run without manual intervention and create a fresh passing `DevAudit Release Approval` check run on the approved PR head SHA. The retry logic above is still needed for edge cases (API sync delays, network issues), but the common path is now fully automated. If the auto-refresh doesn't fire (e.g. portal GitHub trigger misconfigured), the manual retry sequence above remains the fallback.
 
 ### Phase 5 — Finalise or change-request loop (SDLC stage 5)
 
@@ -640,21 +694,17 @@ Invoked separately by the user after UAT activity on the portal. Trigger: "resum
      - `gh pr merge <M> --merge` (merge commit; `--squash` and `--rebase` are blocked by branch protection on SDLC repos and would break the audit trail).
      - **Before watching `post-deploy-prod.yml`**, verify the workflow exists and has triggered: `gh run list --workflow post-deploy-prod.yml --limit 1 --json status,conclusion`. If no run appears within 5 minutes of the merge, halt — "post-deploy-prod.yml did not trigger after merge. Check workflow configuration, secrets, and deployment platform. Operator action — run `gh workflow run post-deploy-prod.yml` manually, then ping `resume REQ-XXX`."
      - Watch `post-deploy-prod.yml` via `gh run watch` — block until the workflow reaches a terminal state. Wrap in a timeout (30 minutes default, configurable via `sdlc-config.json:post_deploy.timeout_minutes`). If the timeout fires: halt — "post-deploy-prod.yml has not reached a terminal state in N minutes. The deployment may be stuck. Operator action — check hosting platform logs, decide whether to wait or rollback, then ping `resume REQ-XXX`."
+     - Treat `post-deploy-prod.yml` success as necessary but not sufficient. The workflow must also confirm the hosting platform's GitHub deployment status for the merged SHA reached terminal `success`. If the host deployment is still `queued` / `in_progress`, remain blocked. If it reaches `failure`, halt — "The host deployment for <sha> failed after merge. Do not approve Production or mark Released. Operator action — inspect hosting logs / rollback / resume once the production state is understood."
      - Verify production smoke evidence uploaded (`--environment production`) at `https://devaudit.metasession.co/projects/<slug>/releases/<version>`.
      - **Read `production_review.terminal_status` from `sdlc-config.json`** (default: `prod_review`). Branch:
        - If `released` (Option B): PATCH directly to `released` — `PATCH /releases/<version>` with `{"status": "released"}`.
        - If `prod_review` (Option A, default): after `post-deploy-prod.yml` completes, the release is at `prod_review`. Update the sticky to "Phase 5 — production deployed; awaiting prod approval on portal" and halt. The operator clicks "Approve Production" (`prod_review` → `prod_approved`) then "Mark as Released" (`prod_approved` → `released`) in the portal. On next `resume REQ-XXX`, the skill reads the portal state — if `released`, finalise (close issue, update sticky to terminal). If `prod_approved`, prompt the operator to click "Mark as Released". If still `prod_review`, report "awaiting production approval" and stop.
      - Comment on the issue: "Released. Production smoke evidence: <link>." (only after release status is `released`)
-     - **Phase 5 close-out — mandatory post-merge compliance steps (devaudit-installer#226).** After the release is marked `released` on the portal, perform the close-out:
-       1. **Update RTM status** — change the REQ-XXX row from `TESTED - PENDING SIGN-OFF` to `APPROVED - DEPLOYED` in `compliance/RTM.md`.
-       2. **Move release ticket** — move `compliance/pending-releases/RELEASE-TICKET-REQ-XXX.md` to `compliance/approved-releases/`. This prevents CI's `upload-evidence` job from treating the REQ as in-scope for subsequent releases.
-       3. **Verify portal approval** — confirm the DevAudit portal release record is in `released` status.
-       4. **Commit the close-out** — `git add compliance/RTM.md compliance/pending-releases/ compliance/approved-releases/ && git commit -m "compliance: [REQ-XXX] close out release — RTM updated to APPROVED - DEPLOYED, ticket moved to approved-releases/"`.
-       5. **Push the close-out commit** to `$INTEGRATION_BRANCH`.
+     - **Phase 5 close-out — mandatory automated reconciliation.** After the portal release is `released`, wait for the portal's `repository_dispatch('release-closed')` event to open `chore/close-out-REQ-XXX` against `$INTEGRATION_BRANCH`. Verify the PR updates the RTM, moves the ticket to `approved-releases/`, and moves manifest-listed predecessors to `superseded-releases/`. Review and merge the close-out PR only after its required checks are terminal green on its current head SHA. If no PR appears, manually dispatch the Release Close-out workflow. Use `scripts/close-out-release.sh` locally only for documented recovery/catch-up; never make a normal direct close-out commit to a protected branch.
 
-       These steps are mandatory — the native agent must not treat "PR merged" or "release marked Released" as completion without performing the close-out. Without moving the release ticket to `approved-releases/`, CI continues uploading evidence for the REQ on every subsequent release, polluting the portal's audit trail.
-     - **Update SDLC status sticky** to the terminal state: `bash scripts/update-sdlc-status.sh "$ISSUE_NUM" "Phase 5 complete — release marked Released; production smoke evidence uploaded; close-out committed (RTM → APPROVED - DEPLOYED, ticket → approved-releases/)" "Done — close issue + retire feature branch (sdlc-implementer halts)"`.
-     - Close the issue.
+       These steps are mandatory — "PR merged" or "release marked Released" is not complete until the automated close-out PR has merged or a documented fallback reconciliation is complete. Without it, CI can keep uploading evidence against a completed REQ and pollute the audit trail.
+     - **Update SDLC status sticky** to the terminal state: `bash scripts/update-sdlc-status.sh "$ISSUE_NUM" "Phase 5 complete — release marked Released; production smoke evidence uploaded; automated close-out reconciled RTM and release ticket" "Done — close issue + retire feature branch (sdlc-implementer halts)"`.
+     - Close the issue only after close-out reconciliation completes.
      - If production smoke fails: do NOT mark as Released. **Delegate incident filing to `governance-doc-author` (devaudit-installer#210 §6c)** — invoke `Skill(name: "governance-doc-author", args: "Production smoke failure for REQ-XXX. File an incident issue with the `incident` label + `### Framework attribution` section (ISO29119.3.5.4 + SOC2.CC7.2), severity `blocker`. Include the production URL, git SHA, testCycleId (CI run ID), and smoke results in the issue body.")`. Page the on-call per the project's incident playbook, follow the rollback plan from the implementation plan. If the rollback also fails: update the sticky to "Phase 5 CRITICAL — production smoke failed AND rollback failed. Production is in a broken state. Operator action — page on-call immediately, engage hosting platform support, declare incident per the project's incident playbook. This is beyond the skill's scope." Do NOT attempt further automated remediation. **Update the sticky** to reflect the incident state: `… "Phase 5 BLOCKED — production smoke failed; INCIDENT issue #N filed" "Operator action — read INCIDENT #N + execute rollback per plan"`.
 
    - **Changes requested** → run change-request loop:
@@ -715,7 +765,7 @@ The skill re-reads state from the filesystem and continues from where it left of
 
 The native agent must NOT continue to the next phase (Phase 3 → Phase 4, Phase 2 → Phase 3) without re-invoking the skill. The only exception is the skill's own auto-continue steps (Phase 2 step 11) where the skill explicitly says it will continue to the next phase in the same turn.
 
-**PR merged to main ≠ done.** After the release PR is merged to `main`, the native agent must re-invoke the skill for Phase 5 close-out (see Phase 5 step 0 below). The merge is not the end of the workflow — post-merge compliance steps are mandatory.
+**PR merged to main is not done.** After the release PR is merged, Phase 5 waits for deploy/host verification, portal `released`, and the automated close-out PR back to the integration branch. The merge is not the end of the workflow.
 
 ### Commit-history hygiene recovery (devaudit-installer#315)
 

@@ -52,6 +52,14 @@ const orderItemSchema = new Schema<IOrderItem>(
     totalCost: { type: Number, required: true, min: 0, default: 0 },
     grossProfit: { type: Number, required: true, default: 0 },
     profitMargin: { type: Number, required: true, default: 0 },
+    // REQ-094: report taxonomy is captured on the order line so a later
+    // menu-item reclassification cannot rewrite financial history.
+    mainCategoryAtSale: { type: String },
+    categoryAtSale: { type: String },
+    categoryAtSaleSource: {
+      type: String,
+      enum: ['sale_time', 'legacy_current_menu_fallback'],
+    },
     originalPrice: { type: Number, required: false },
     priceOverridden: { type: Boolean, default: false },
     priceOverrideReason: { type: String, required: false },

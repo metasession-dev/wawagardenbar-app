@@ -34,44 +34,37 @@ function endOfDayWAT(date: Date): Date {
   return new Date(watDate.getTime() - WAT_OFFSET_MS);
 }
 
+export interface ReportRevenueItem {
+  name: string;
+  quantity: number;
+  price: number;
+  total: number;
+}
+
+export interface ReportCostItem {
+  name: string;
+  quantity: number;
+  costPerUnit: number;
+  total: number;
+}
+
+/**
+ * A configured main category as it existed when the report was generated.
+ * The dynamic registry is authoritative; `unmapped` only represents legacy
+ * rows whose stored sale-time slug is no longer configured.
+ */
+export interface ReportCategoryBreakdown {
+  slug: string;
+  label: string;
+  unmapped?: boolean;
+  revenue: { items: ReportRevenueItem[]; totalRevenue: number };
+  costs: { items: ReportCostItem[]; totalCost: number };
+  grossProfit: number;
+}
+
 export interface DailySummaryReport {
   date: Date;
   revenue: {
-    food: {
-      items: Array<{
-        name: string;
-        quantity: number;
-        price: number;
-        total: number;
-      }>;
-      totalRevenue: number;
-    };
-    drink: {
-      items: Array<{
-        name: string;
-        quantity: number;
-        price: number;
-        total: number;
-      }>;
-      totalRevenue: number;
-    };
-    /**
-     * REQ-075 — `other` bucket aggregates revenue from items whose
-     * `mainCategory` is neither the legacy `food` nor `drinks` slug.
-     * Populated when an admin adds a new main category via the
-     * Main Categories settings UI. A `console.warn` fires when a row
-     * lands here so the operator can spot un-bucketed categories in
-     * logs even when the report UI doesn't surface the `other` total.
-     */
-    other: {
-      items: Array<{
-        name: string;
-        quantity: number;
-        price: number;
-        total: number;
-      }>;
-      totalRevenue: number;
-    };
     /**
      * Order-type breakdown — revenue and order count per OrderType. Source
      * is `Order.orderType` on each order in the period; bucketed by sum
@@ -85,46 +78,13 @@ export interface DailySummaryReport {
     totalRevenue: number;
   };
   costs: {
-    food: {
-      items: Array<{
-        name: string;
-        quantity: number;
-        costPerUnit: number;
-        total: number;
-      }>;
-      totalCost: number;
-    };
-    drink: {
-      items: Array<{
-        name: string;
-        quantity: number;
-        costPerUnit: number;
-        total: number;
-      }>;
-      totalCost: number;
-    };
-    /**
-     * REQ-075 — see `revenue.other` above. Mirror bucket for direct
-     * costs from menu items whose `mainCategory` is outside the legacy
-     * food/drinks pair.
-     */
-    other: {
-      items: Array<{
-        name: string;
-        quantity: number;
-        costPerUnit: number;
-        total: number;
-      }>;
-      totalCost: number;
-    };
     totalDirectCosts: number;
   };
   grossProfit: {
-    food: number;
-    drink: number;
-    other: number;
     total: number;
   };
+  /** REQ-094 — ordered snapshot of the dynamic Main Categories registry. */
+  categories: ReportCategoryBreakdown[];
   operatingExpenses: {
     directCosts: Array<{
       category: string;
@@ -213,6 +173,73 @@ export interface MainCategoryReport {
 }
 
 export class FinancialReportService {
+  private static async createCategoryBreakdowns(): Promise<ReportCategoryBreakdown[]> {
+    // Older unit-test doubles and pre-REQ-075 consumers only provide the
+    // business-day setting. Keep the original two-category fallback for that
+    // compatibility boundary; production always resolves the registry.
+    const mainCategories = (await SystemSettingsService.getMainCategories?.()) ?? [
+      { slug: 'food', label: 'Food', order: 0, isEnabled: true },
+      { slug: 'drinks', label: 'Drinks', order: 1, isEnabled: true },
+    ];
+    return mainCategories.map((category) => ({
+      slug: category.slug,
+      label: category.label,
+      revenue: { items: [], totalRevenue: 0 },
+      costs: { items: [], totalCost: 0 },
+      grossProfit: 0,
+    }));
+  }
+
+  private static addCategoryItem(
+    report: DailySummaryReport,
+    mainCategory: string | undefined,
+    revenueItem: ReportRevenueItem,
+    costItem: ReportCostItem
+  ) {
+    const slug = mainCategory || 'unknown';
+    let category = report.categories.find((entry) => entry.slug === slug);
+
+    // Historical orders can reference a category deleted from the registry.
+    // Keep them explicit rather than silently folding their money into a
+    // currently configured category.
+    if (!category) {
+      category = {
+        slug,
+        label: `Unmapped historical data (${slug})`,
+        unmapped: true,
+        revenue: { items: [], totalRevenue: 0 },
+        costs: { items: [], totalCost: 0 },
+        grossProfit: 0,
+      };
+      report.categories.push(category);
+    }
+
+    category.revenue.items.push(revenueItem);
+    category.revenue.totalRevenue += revenueItem.total;
+    category.costs.items.push(costItem);
+    category.costs.totalCost += costItem.total;
+  }
+
+  private static calculateCategoryTotals(report: DailySummaryReport) {
+    for (const category of report.categories) {
+      category.grossProfit =
+        category.revenue.totalRevenue - category.costs.totalCost;
+    }
+    const itemRevenue = report.categories.reduce(
+      (total, category) => total + category.revenue.totalRevenue,
+      0
+    );
+    report.revenue.totalRevenue = report.paymentBreakdown.total || itemRevenue;
+    report.costs.totalDirectCosts = report.categories.reduce(
+      (total, category) => total + category.costs.totalCost,
+      0
+    );
+    report.grossProfit.total = report.categories.reduce(
+      (total, category) => total + category.grossProfit,
+      0
+    );
+  }
+
   /**
    * @requirement REQ-013 - Aggregate partial payments from tabs into payment breakdown
    * @requirement REQ-035 - also accumulate per-row tip amounts into tipsBreakdown
@@ -319,14 +346,14 @@ export class FinancialReportService {
       ],
     }).lean();
 
+    // Snapshot the configured registry so every report surface uses the same
+    // ordered categories for this request.
+    const categories = await FinancialReportService.createCategoryBreakdowns();
+
     // Initialize report structure
     const report: DailySummaryReport = {
       date,
       revenue: {
-        food: { items: [], totalRevenue: 0 },
-        drink: { items: [], totalRevenue: 0 },
-        // REQ-075 — extra bucket for non-food/non-drinks main categories.
-        other: { items: [], totalRevenue: 0 },
         byOrderType: {
           'dine-in': { revenue: 0, orderCount: 0 },
           delivery: { revenue: 0, orderCount: 0 },
@@ -336,18 +363,12 @@ export class FinancialReportService {
         totalRevenue: 0,
       },
       costs: {
-        food: { items: [], totalCost: 0 },
-        drink: { items: [], totalCost: 0 },
-        // REQ-075 — mirrors `revenue.other` for cost-side aggregation.
-        other: { items: [], totalCost: 0 },
         totalDirectCosts: 0,
       },
       grossProfit: {
-        food: 0,
-        drink: 0,
-        other: 0,
         total: 0,
       },
+      categories,
       operatingExpenses: {
         directCosts: [],
         operatingCosts: [],
@@ -514,18 +535,22 @@ export class FinancialReportService {
           const existing = itemMap.get(itemId)!;
           existing.quantity += item.quantity;
         } else {
-          // Fetch menu item to get category
+          // Prefer the immutable sale-time taxonomy. Current menu metadata is
+          // only a legacy fallback for orders created before REQ-094.
           const menuItem = await MenuItemModel.findById(item.menuItemId).lean();
 
-          if (!menuItem) continue;
+          const mainCategoryAtSale =
+            (item as { mainCategoryAtSale?: string }).mainCategoryAtSale ??
+            menuItem?.mainCategory;
+          if (!mainCategoryAtSale) continue;
 
           itemMap.set(itemId, {
             name: item.name,
-            category: menuItem.category,
-            mainCategory: menuItem.mainCategory,
+            category: menuItem?.category ?? '',
+            mainCategory: mainCategoryAtSale,
             quantity: item.quantity,
             price: item.price,
-            costPerUnit: item.costPerUnit || menuItem.costPerUnit || 0,
+            costPerUnit: item.costPerUnit || menuItem?.costPerUnit || 0,
           });
         }
       }
@@ -550,59 +575,18 @@ export class FinancialReportService {
         total: costTotal,
       };
 
-      // REQ-075 — Categorise by main-category slug. The report keeps
-      // explicit `food` + `drink` buckets for back-compat with downstream
-      // dashboards; every other registered main category aggregates into
-      // `other` with a console.warn so the operator can spot unbucketed
-      // categories in logs and decide whether to extend the report.
-      switch (item.mainCategory) {
-        case 'food':
-          report.revenue.food.items.push(revenueItem);
-          report.revenue.food.totalRevenue += total;
-          report.costs.food.items.push(costItem);
-          report.costs.food.totalCost += costTotal;
-          break;
-        case 'drinks':
-          report.revenue.drink.items.push(revenueItem);
-          report.revenue.drink.totalRevenue += total;
-          report.costs.drink.items.push(costItem);
-          report.costs.drink.totalCost += costTotal;
-          break;
-        default:
-          console.warn(
-            `[financial-report-service] REQ-075 — Aggregating mainCategory "${item.mainCategory}" into "other" bucket for item "${item.name}". Extend the report or rename the main category if this should be a first-class bucket.`
-          );
-          report.revenue.other.items.push(revenueItem);
-          report.revenue.other.totalRevenue += total;
-          report.costs.other.items.push(costItem);
-          report.costs.other.totalCost += costTotal;
-      }
+      FinancialReportService.addCategoryItem(
+        report,
+        item.mainCategory,
+        revenueItem,
+        costItem
+      );
     }
 
     // Calculate totals
     // totalRevenue = money actually received (payment breakdown total)
     // food/drink totals remain item-based for the detailed breakdown
-    const itemRevenue =
-      report.revenue.food.totalRevenue +
-      report.revenue.drink.totalRevenue +
-      report.revenue.other.totalRevenue;
-    report.revenue.totalRevenue = report.paymentBreakdown.total || itemRevenue;
-    report.costs.totalDirectCosts =
-      report.costs.food.totalCost +
-      report.costs.drink.totalCost +
-      report.costs.other.totalCost;
-
-    // Calculate gross profit (based on item revenue vs COGS)
-    report.grossProfit.food =
-      report.revenue.food.totalRevenue - report.costs.food.totalCost;
-    report.grossProfit.drink =
-      report.revenue.drink.totalRevenue - report.costs.drink.totalCost;
-    report.grossProfit.other =
-      report.revenue.other.totalRevenue - report.costs.other.totalCost;
-    report.grossProfit.total =
-      report.grossProfit.food +
-      report.grossProfit.drink +
-      report.grossProfit.other;
+    FinancialReportService.calculateCategoryTotals(report);
 
     // Fetch expenses for the date
     const expenses = await ExpenseModel.find({
@@ -640,6 +624,10 @@ export class FinancialReportService {
       report.operatingExpenses.totalOperatingExpenses;
 
     // Calculate metrics (margins based on item revenue, not payment total)
+    const itemRevenue = report.categories.reduce(
+      (total, category) => total + category.revenue.totalRevenue,
+      0
+    );
     if (itemRevenue > 0) {
       report.metrics.grossProfitMargin =
         (report.grossProfit.total / itemRevenue) * 100;
@@ -675,13 +663,12 @@ export class FinancialReportService {
       ],
     }).lean();
 
+    const categories = await FinancialReportService.createCategoryBreakdowns();
+
     // Similar logic to generateDailySummary but for date range
     const report: DailySummaryReport = {
       date: startDate,
       revenue: {
-        food: { items: [], totalRevenue: 0 },
-        drink: { items: [], totalRevenue: 0 },
-        other: { items: [], totalRevenue: 0 },
         byOrderType: {
           'dine-in': { revenue: 0, orderCount: 0 },
           delivery: { revenue: 0, orderCount: 0 },
@@ -691,17 +678,12 @@ export class FinancialReportService {
         totalRevenue: 0,
       },
       costs: {
-        food: { items: [], totalCost: 0 },
-        drink: { items: [], totalCost: 0 },
-        other: { items: [], totalCost: 0 },
         totalDirectCosts: 0,
       },
       grossProfit: {
-        food: 0,
-        drink: 0,
-        other: 0,
         total: 0,
       },
+      categories,
       operatingExpenses: {
         directCosts: [],
         operatingCosts: [],
@@ -843,18 +825,21 @@ export class FinancialReportService {
           const existing = itemMap.get(itemId)!;
           existing.quantity += item.quantity;
         } else {
-          // Fetch menu item to get category
+          // Prefer the immutable sale-time taxonomy; see daily report.
           const menuItem = await MenuItemModel.findById(item.menuItemId).lean();
 
-          if (!menuItem) continue;
+          const mainCategoryAtSale =
+            (item as { mainCategoryAtSale?: string }).mainCategoryAtSale ??
+            menuItem?.mainCategory;
+          if (!mainCategoryAtSale) continue;
 
           itemMap.set(itemId, {
             name: item.name,
-            category: menuItem.category,
-            mainCategory: menuItem.mainCategory,
+            category: menuItem?.category ?? '',
+            mainCategory: mainCategoryAtSale,
             quantity: item.quantity,
             price: item.price,
-            costPerUnit: item.costPerUnit || menuItem.costPerUnit || 0,
+            costPerUnit: item.costPerUnit || menuItem?.costPerUnit || 0,
           });
         }
       }
@@ -879,52 +864,15 @@ export class FinancialReportService {
         total: costTotal,
       };
 
-      // REQ-075 — see the matching switch in `generateDailySummary`.
-      switch (item.mainCategory) {
-        case 'food':
-          report.revenue.food.items.push(revenueItem);
-          report.revenue.food.totalRevenue += total;
-          report.costs.food.items.push(costItem);
-          report.costs.food.totalCost += costTotal;
-          break;
-        case 'drinks':
-          report.revenue.drink.items.push(revenueItem);
-          report.revenue.drink.totalRevenue += total;
-          report.costs.drink.items.push(costItem);
-          report.costs.drink.totalCost += costTotal;
-          break;
-        default:
-          console.warn(
-            `[financial-report-service] REQ-075 — Aggregating mainCategory "${item.mainCategory}" into "other" bucket (range report) for item "${item.name}".`
-          );
-          report.revenue.other.items.push(revenueItem);
-          report.revenue.other.totalRevenue += total;
-          report.costs.other.items.push(costItem);
-          report.costs.other.totalCost += costTotal;
-      }
+      FinancialReportService.addCategoryItem(
+        report,
+        item.mainCategory,
+        revenueItem,
+        costItem
+      );
     }
 
-    const rangeItemRevenue =
-      report.revenue.food.totalRevenue +
-      report.revenue.drink.totalRevenue +
-      report.revenue.other.totalRevenue;
-    report.revenue.totalRevenue =
-      report.paymentBreakdown.total || rangeItemRevenue;
-    report.costs.totalDirectCosts =
-      report.costs.food.totalCost +
-      report.costs.drink.totalCost +
-      report.costs.other.totalCost;
-
-    report.grossProfit.food =
-      report.revenue.food.totalRevenue - report.costs.food.totalCost;
-    report.grossProfit.drink =
-      report.revenue.drink.totalRevenue - report.costs.drink.totalCost;
-    report.grossProfit.other =
-      report.revenue.other.totalRevenue - report.costs.other.totalCost;
-    report.grossProfit.total =
-      report.grossProfit.food +
-      report.grossProfit.drink +
-      report.grossProfit.other;
+    FinancialReportService.calculateCategoryTotals(report);
 
     // Fetch expenses
     const expenses = await ExpenseModel.find({
@@ -955,6 +903,10 @@ export class FinancialReportService {
       report.grossProfit.total -
       report.operatingExpenses.totalOperatingExpenses;
 
+    const rangeItemRevenue = report.categories.reduce(
+      (total, category) => total + category.revenue.totalRevenue,
+      0
+    );
     if (rangeItemRevenue > 0) {
       report.metrics.grossProfitMargin =
         (report.grossProfit.total / rangeItemRevenue) * 100;
@@ -1020,9 +972,9 @@ export class FinancialReportService {
       mainCategories.find((m) => m.slug === mainCategorySlug)?.label ??
       mainCategorySlug;
 
-    // Aggregate by menuItemId — match the same `itemMap` pattern used by
-    // generateDailySummary. Filtering by mainCategory happens AFTER the
-    // lookup because the order-embedded item doesn't carry that field.
+    // Aggregate by menuItemId — prefer the immutable sale-time taxonomy.
+    // Older rows pre-date REQ-094 and use current menu metadata only as an
+    // explicit legacy fallback; they must not be presented as historical fact.
     const itemMap = new Map<
       string,
       {
@@ -1048,17 +1000,23 @@ export class FinancialReportService {
             orderTouchedMain = true;
           }
         } else {
-          const menuItem = await MenuItemModel.findById(item.menuItemId).lean();
-          if (!menuItem) continue;
+          const menuItem =
+            item.mainCategoryAtSale && item.categoryAtSale
+              ? null
+              : await MenuItemModel.findById(item.menuItemId).lean();
+          const category = item.categoryAtSale ?? menuItem?.category;
+          const mainCategory =
+            item.mainCategoryAtSale ?? menuItem?.mainCategory;
+          if (!category || !mainCategory) continue;
           itemMap.set(itemId, {
             name: item.name,
-            category: menuItem.category,
-            mainCategory: menuItem.mainCategory,
+            category,
+            mainCategory,
             quantity: item.quantity,
             price: item.price,
-            costPerUnit: item.costPerUnit || menuItem.costPerUnit || 0,
+            costPerUnit: item.costPerUnit || menuItem?.costPerUnit || 0,
           });
-          if (menuItem.mainCategory === mainCategorySlug) {
+          if (mainCategory === mainCategorySlug) {
             orderTouchedMain = true;
           }
         }

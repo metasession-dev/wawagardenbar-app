@@ -264,3 +264,28 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 **Review due:** 2027-07-02 (annual review — verify no new customer components call override methods)
 
 **Cross-links:** [REQ-089 implementation plan](plans/REQ-089/implementation-plan.md); [#452](https://github.com/metasession-dev/wawagardenbar-app/issues/452); SRS REQ-ORDMGT-011.
+
+---
+
+### R-012 — Financial-history attribution and migration integrity (REQ-094)
+
+**Status:** OPEN
+**Opened:** 2026-07-18
+**Owner:** WGB maintainer
+**Review due:** Before REQ-094 plan approval and again at production review.
+
+**The risk:** Profitability and category reports currently derive some historical category information from the current menu item and use inconsistent date conventions. A menu reclassification or server-timezone difference can therefore alter the apparent history of financial activity. A migration that writes current category data without provenance would make that misstatement harder to detect.
+
+**Required controls before implementation proceeds:**
+
+1. Persist immutable main-category and category snapshots for new order items at sale time.
+2. Use one WAT business-date contract across profitability, Daily, per-main-category, and snapshot flows.
+3. Make the legacy fallback visible to reviewers; it must not be described as sale-time history.
+4. Make the migration dry-runnable, idempotent, counted, and non-destructive, with an explicit rollback/read-path strategy.
+5. Prove the contract with boundary, reclassification, category-filter, migration, and authorisation tests.
+
+**Residual risk:** Pending plan approval and evidence from the controls above. No migration may run against production before independent review.
+
+**Framework cross-references:** ISO 27001 A.8.25; SOC 2 CC3.2; SOC 2 CC8.1; ISO 29119 §3.4.
+
+**Cross-links:** [REQ-094 implementation plan](plans/REQ-094/implementation-plan.md); [#439](https://github.com/metasession-dev/wawagardenbar-app/issues/439); [#514](https://github.com/metasession-dev/wawagardenbar-app/issues/514); SRS REQ-REPORT-002, REQ-REPORT-003, REQ-INV-003, REQ-INV-007.

@@ -191,7 +191,7 @@ describe('REQ-025: shouldShowPreviousDayCheckbox', () => {
 // query range. Tested against the real exported implementation rather than
 // the inlined deriveBusinessDate above.
 
-import { businessDayRange } from '@/lib/business-date';
+import { businessDayRange, watCalendarDayRange } from '@/lib/business-date';
 
 describe('REQ-051: businessDayRange', () => {
   const CUTOFF = '15:00';
@@ -272,5 +272,15 @@ describe('REQ-051: businessDayRange', () => {
     const r1 = businessDayRange(before, CUTOFF);
     const r2 = businessDayRange(after, CUTOFF);
     expect(r1.end.getTime() + 1).toBe(r2.start.getTime());
+  });
+});
+
+describe('REQ-094: watCalendarDayRange', () => {
+  it('normalises a date-only WAT selection independently of the server timezone', () => {
+    const { start, end } = watCalendarDayRange(
+      new Date('2026-07-18T00:00:00.000Z')
+    );
+    expect(start.toISOString()).toBe('2026-07-17T23:00:00.000Z');
+    expect(end.toISOString()).toBe('2026-07-18T22:59:59.999Z');
   });
 });

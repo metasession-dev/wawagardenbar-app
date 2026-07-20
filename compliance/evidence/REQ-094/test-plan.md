@@ -1,0 +1,11 @@
+# Test Plan — REQ-094
+
+| AC  | Planned test target                                                                                              | Test type            | Expected evidence                                                     |
+| --- | ---------------------------------------------------------------------------------------------------------------- | -------------------- | --------------------------------------------------------------------- |
+| AC1 | `__tests__/lib/business-date.test.ts` and `__tests__/services/profitability-analytics-service.test.ts`           | Unit/integration     | Test execution summary and reconciliation output                      |
+| AC2 | Shared Daily/range report registry mapping, order-item snapshot write path, and reclassified-menu-item fixtures | Unit/integration     | Test execution summary                                                |
+| AC3 | `__tests__/services/profitability-analytics-service.test.ts` and `e2e/reports/profitability-attribution.spec.ts` | Unit/integration/E2E | Test execution summary and named E2E screenshots                      |
+| AC4 | Inventory snapshot submission, lookup, and date-range fixtures                                                   | Unit/integration     | Test execution summary                                                |
+| AC5 | Versioned migration dry-run/apply/re-run and legacy report labelling                                             | Unit/integration/E2E | Migration report, test execution summary, reviewer-visible screenshot |
+
+E2E scenarios and evidence calls will be designed by the `e2e-test-engineer` after the HIGH-risk plan checkpoint is approved. No test is considered portal evidence until a REQ-094-scoped CI run uploads the named PNG screenshots and their sidecar provenance with the stage/cycle metadata.

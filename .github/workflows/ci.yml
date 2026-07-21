@@ -44,6 +44,10 @@ jobs:
     needs: [register-release]
     if: ${{ always() && (github.event_name != 'pull_request' || github.base_ref == 'develop' || startsWith(github.head_ref, 'hotfix/')) && !startsWith(github.head_ref, 'chore/close-out-') && (github.event_name == 'pull_request' || needs.register-release.result == 'success') }}
     runs-on: ubuntu-latest
+    # Leave time after a bounded browser run for cleanup, artefact upload, and
+    # terminal gate reporting. An unbounded Playwright process can otherwise
+    # leave a required PR check running indefinitely.
+    timeout-minutes: 40
 
     services:
       mongodb:
@@ -223,7 +227,11 @@ jobs:
           MONNIFY_SECRET_KEY: ${{ secrets.MONNIFY_SECRET_KEY }}
           PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
           ENABLE_E2E_PIN_INTERCEPT: true
-        run: npm run dev &
+        run: |
+          rm -f e2e-dev-server.pid e2e-dev-server.log
+          nohup npm run dev > e2e-dev-server.log 2>&1 &
+          echo "$!" > e2e-dev-server.pid
+          echo "Started E2E dev server PID $(cat e2e-dev-server.pid)"
 
       - name: Wait for dev server
         run: npx wait-on http://localhost:3000 --timeout 120000
@@ -255,6 +263,8 @@ jobs:
           fi
 
       - name: E2E Tests
+        id: e2e
+        continue-on-error: true
         env:
           # PLAYWRIGHT_JSON_OUTPUT_NAME makes the json reporter write straight
           # to the file. Capturing stdout (`> e2e-results.json`) instead mixed
@@ -275,7 +285,41 @@ jobs:
           MONNIFY_SECRET_KEY: ${{ secrets.MONNIFY_SECRET_KEY }}
           PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
           ENABLE_E2E_PIN_INTERCEPT: true
-        run: npx playwright test --project=smoke --reporter=json,html
+        run: |
+          set +e
+          timeout 15m npx playwright test --project=smoke --reporter=json,html
+          EXIT_CODE=$?
+          set -e
+
+          case "$EXIT_CODE" in
+            0) OUTCOME=completed ;;
+            124) OUTCOME=timed_out ;;
+            130|137|143) OUTCOME=cancelled ;;
+            *) OUTCOME=failed ;;
+          esac
+
+          jq -n \
+            --arg outcome "$OUTCOME" \
+            --argjson exitCode "$EXIT_CODE" \
+            --arg workflowRun "${{ github.run_id }}" \
+            --arg commitSha "${{ github.sha }}" \
+            '{schemaVersion:1, execution:"quality_gates_smoke", outcome:$outcome, exitCode:$exitCode, workflowRun:$workflowRun, commitSha:$commitSha}' \
+            > e2e-execution-metadata.json
+          echo "outcome=$OUTCOME" >> "$GITHUB_OUTPUT"
+          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+          cat e2e-execution-metadata.json
+
+      - name: Stop E2E dev server
+        if: always()
+        run: |
+          if [ -f e2e-dev-server.pid ]; then
+            PID=$(cat e2e-dev-server.pid)
+            if kill -0 "$PID" 2>/dev/null; then
+              kill "$PID" 2>/dev/null || true
+              wait "$PID" 2>/dev/null || true
+            fi
+          fi
+          lsof -ti:3000 | xargs kill -9 2>/dev/null || true
       # ── Gate 5: Build ──
 
       - name: Build Check
@@ -306,6 +350,7 @@ jobs:
             "typescript": "${{ steps.typescript.outcome }}",
             "sast": "${{ steps.sast.outcome }}",
             "dependency_audit": "${{ steps.dep-audit.outcome }}",
+            "e2e": "${{ steps.e2e.outputs.outcome || 'skipped' }}",
             "build": "${{ steps.build.outcome }}"
           }
           EOF
@@ -322,6 +367,8 @@ jobs:
             sast-results.json
             dependency-audit.json
             e2e-results.json
+            e2e-execution-metadata.json
+            e2e-dev-server.log
             e2e-auth-results.json
             playwright-report/
             coverage/coverage-summary.json
@@ -329,6 +376,25 @@ jobs:
             compliance/evidence/*/screenshots/*.png
             compliance/evidence/*/screenshots/*.png.meta.json
           retention-days: 90
+
+      - name: Fail Quality Gates when a gate did not pass
+        if: always()
+        env:
+          TYPESCRIPT: ${{ steps.typescript.outcome }}
+          SAST: ${{ steps.sast.outcome }}
+          DEPENDENCY_AUDIT: ${{ steps.dep-audit.outcome }}
+          E2E: ${{ steps.e2e.outputs.outcome || 'skipped' }}
+          BUILD: ${{ steps.build.outcome }}
+        run: |
+          FAILED=0
+          for GATE in TYPESCRIPT SAST DEPENDENCY_AUDIT E2E BUILD; do
+            VALUE="${!GATE}"
+            if [ "$VALUE" != "success" ] && [ "$VALUE" != "completed" ]; then
+              echo "::error::${GATE} gate did not pass (outcome=${VALUE})."
+              FAILED=1
+            fi
+          done
+          exit "$FAILED"
 
   # ──────────────────────────────────────────────
   # Register release early (parallel with gates) so UAT gate can find it

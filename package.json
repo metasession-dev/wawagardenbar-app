@@ -120,6 +120,13 @@
   },
   "overrides": {
     "form-data": ">=4.0.4",
-    "ws": ">=8.20.2"
+    "ws": ">=8.20.2",
+    "minimatch@3.1.5": {
+      "brace-expansion": "1.1.16"
+    },
+    "minimatch@9.0.9": {
+      "brace-expansion": "2.1.2"
+    },
+    "js-yaml": "4.3.0"
   }
 }

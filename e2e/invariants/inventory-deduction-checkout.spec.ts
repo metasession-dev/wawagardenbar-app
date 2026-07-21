@@ -26,7 +26,6 @@ import {
   clickAndAwaitStatus,
   uniqueIdempotencyKey,
   deleteMany,
-  updateOne,
   findOrCreateMenuItem,
 } from './helpers';
 import { tagTest } from '../helpers/test-tags';
@@ -35,6 +34,7 @@ import { evidenceShot } from '../helpers/evidence';
 interface SeedHandle {
   orderId: string;
   orderNumber: string;
+  menuItemId: string;
   inventoryId: string;
   baselineStock: number;
   trackByLocation: boolean;
@@ -48,22 +48,36 @@ async function seedOrder(): Promise<SeedHandle> {
     await client.connect();
     const db = client.db(dbName);
     const menuItem = await findOrCreateMenuItem(db, { trackInventory: true });
-    const inventory = await db
+    const sourceInventory = await db
       .collection('inventories')
       .findOne({ menuItemId: menuItem._id });
-    if (!inventory) throw new Error('No inventory row found for menu item');
+    if (!sourceInventory) throw new Error('No inventory row found for menu item');
     const quantity = 1;
     const orderNumber = `WG88I${Date.now()}`.slice(0, 12);
-    const subtotal = menuItem.price;
     const now = new Date();
+    const { _id: _sourceMenuItemId, ...menuItemSeed } = menuItem;
+    const isolatedMenuItem = await db.collection('menuitems').insertOne({
+      ...menuItemSeed,
+      name: `E2E inventory invariant ${orderNumber}`,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const { _id: _sourceInventoryId, ...inventorySeed } = sourceInventory;
+    const isolatedInventory = await db.collection('inventories').insertOne({
+      ...inventorySeed,
+      menuItemId: isolatedMenuItem.insertedId,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const subtotal = menuItem.price;
     const result = await db.collection('orders').insertOne({
       orderNumber,
       orderType: 'pickup',
       status: 'confirmed',
       items: [
         {
-          menuItemId: menuItem._id,
-          name: menuItem.name,
+          menuItemId: isolatedMenuItem.insertedId,
+          name: `E2E inventory invariant ${orderNumber}`,
           price: menuItem.price,
           quantity,
           portionSize: 'full',
@@ -104,10 +118,11 @@ async function seedOrder(): Promise<SeedHandle> {
     return {
       orderId: String(result.insertedId),
       orderNumber,
-      inventoryId: String(inventory._id),
-      baselineStock: computeStockFromInventory(inventory as never),
+      menuItemId: String(isolatedMenuItem.insertedId),
+      inventoryId: String(isolatedInventory.insertedId),
+      baselineStock: computeStockFromInventory(sourceInventory as never),
       trackByLocation: Boolean(
-        (inventory as { trackByLocation?: boolean }).trackByLocation
+        (sourceInventory as { trackByLocation?: boolean }).trackByLocation
       ),
       quantity,
     };
@@ -122,31 +137,14 @@ async function cleanup(handle: SeedHandle): Promise<void> {
   try {
     await client.connect();
     const db = client.db(dbName);
-    const movs = await db
-      .collection('stockmovements')
-      .find({ orderId: new ObjectId(handle.orderId) })
-      .toArray();
-    const totalDeducted = movs.reduce(
-      (s, m) =>
-        s + Math.abs((m as unknown as { quantity: number }).quantity || 0),
-      0
-    );
     await db
       .collection('orders')
       .deleteOne({ _id: new ObjectId(handle.orderId) });
     await deleteMany('stockmovements', {
       orderId: new ObjectId(handle.orderId),
     });
-    if (totalDeducted > 0) {
-      const update = handle.trackByLocation
-        ? { $inc: { 'locations.0.currentStock': totalDeducted } }
-        : { $inc: { currentStock: totalDeducted } };
-      await updateOne(
-        'inventories',
-        { _id: new ObjectId(handle.inventoryId) },
-        update
-      );
-    }
+    await deleteMany('inventories', { _id: new ObjectId(handle.inventoryId) });
+    await deleteMany('menuitems', { _id: new ObjectId(handle.menuItemId) });
   } finally {
     await client.close();
   }

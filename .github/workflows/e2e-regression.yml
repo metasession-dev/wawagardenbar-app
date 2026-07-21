@@ -53,6 +53,9 @@ jobs:
   e2e-regression:
     name: E2E Regression Suite
     runs-on: ubuntu-latest
+    # Keep the job budget above the Playwright budget so timeout metadata and
+    # partial evidence can be retained before GitHub terminates the runner.
+    timeout-minutes: 55
 
     services:
       mongodb:
@@ -115,7 +118,11 @@ jobs:
           npx tsx scripts/seed-e2e-fixtures.ts
 
       - name: Start dev server
-        run: npm run dev &
+        run: |
+          set -euo pipefail
+          npm run dev > e2e-server.log 2>&1 &
+          echo "$!" > .e2e-server.pid
+          echo "Started E2E server pid $(cat .e2e-server.pid)"
 
       - name: Wait for dev server
         run: npx wait-on http://localhost:3000 --timeout 120000
@@ -159,21 +166,62 @@ jobs:
               ;;
           esac
 
+      - name: Record E2E execution context
+        run: |
+          set -euo pipefail
+          SERVER_PID="$(cat .e2e-server.pid 2>/dev/null || true)"
+          jq -n \
+            --arg targetUrl "http://localhost:3000" \
+            --arg project "${{ steps.select.outputs.project }}" \
+            --arg specs "${{ steps.select.outputs.specs }}" \
+            --arg serverStart "npm run dev (pid ${SERVER_PID:-unknown})" \
+            --arg serverStop "kill ${SERVER_PID:-unknown}" \
+            --arg startedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --argjson timeoutMinutes 40 \
+            '{target_url: $targetUrl, project: $project, selected_specs: $specs, test_server_start: $serverStart, test_server_stop: $serverStop, timeout_minutes: $timeoutMinutes, started_at: $startedAt, outcome: "running"}' \
+            > e2e-regression-metadata.json
+
       - name: E2E Regression Tests
         env:
           PLAYWRIGHT_HTML_REPORTER_OPEN: never
           PLAYWRIGHT_JSON_OUTPUT_NAME: e2e-regression-results.json
         run: |
-          set -euo pipefail
+          set -uo pipefail
           PROJECT="${{ steps.select.outputs.project }}"
           SPECS="${{ steps.select.outputs.specs }}"
           if [ -n "$SPECS" ]; then
             echo "::notice::Running scoped regression — project=$PROJECT specs=$SPECS"
             # shellcheck disable=SC2086
-            npx playwright test --project="$PROJECT" --reporter=json,html $SPECS
+            timeout --signal=TERM --kill-after=60s 40m npx playwright test --project="$PROJECT" --reporter=json,html $SPECS
           else
             echo "::notice::Running project=$PROJECT"
-            npx playwright test --project="$PROJECT" --reporter=json,html
+            timeout --signal=TERM --kill-after=60s 40m npx playwright test --project="$PROJECT" --reporter=json,html
+          fi
+          STATUS=$?
+          if [ "$STATUS" -eq 124 ]; then
+            OUTCOME="timed_out"
+            echo "::error::E2E regression exceeded its 40-minute execution budget. Partial evidence will be uploaded."
+          elif [ "$STATUS" -eq 0 ]; then
+            OUTCOME="passed"
+          else
+            OUTCOME="failed"
+          fi
+          jq --arg outcome "$OUTCOME" --arg completedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --argjson exitCode "$STATUS" \
+            '. + {outcome: $outcome, completed_at: $completedAt, exit_code: $exitCode}' \
+            e2e-regression-metadata.json > e2e-regression-metadata.tmp
+          mv e2e-regression-metadata.tmp e2e-regression-metadata.json
+          exit "$STATUS"
+
+      - name: Stop dev server
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ -f .e2e-server.pid ]; then
+            PID="$(cat .e2e-server.pid)"
+            if kill -0 "$PID" 2>/dev/null; then
+              kill "$PID"
+              wait "$PID" 2>/dev/null || true
+            fi
           fi
 
       - uses: actions/upload-artifact@v4
@@ -183,6 +231,7 @@ jobs:
           name: e2e-regression-report
           path: |
             e2e-regression-results.json
+            e2e-regression-metadata.json
             playwright-report/
             # Playwright writes per-test traces, videos, screenshots and
             # error-context.md to test-results/<spec>-<title>[-retry<N>]/
@@ -193,6 +242,8 @@ jobs:
             # step. Storage cost is a duplicate of the data already in
             # playwright-report/data/, accepted for the debuggability win.
             test-results/
+            e2e-server.log
+          if-no-files-found: warn
           retention-days: 30
 
       # ─────────────────────────────────────────────────────────────────

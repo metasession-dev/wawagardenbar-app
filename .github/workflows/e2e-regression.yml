@@ -10,12 +10,12 @@
 #   - smoke      — runs on develop push via ci.yml (no change here, ~3-5 min)
 #   - critical   — Playwright project selecting e2e/smoke/ + e2e/critical/
 #                  (this workflow on PR-to-main, ~10-15 min target)
-#   - regression — all e2e/**/*.spec.ts (this workflow on push-to-main +
-#                  manual dispatch, ~35 min with auto-issue on post-merge failure)
+#   - regression — all e2e/**/*.spec.ts after a successful production
+#                  deployment status, or manual dispatch
 #
 # The PR-to-main path runs the critical tier so velocity isn't blocked on
-# the full regression suite. The post-merge path runs full regression
-# against main + auto-files a `bug, priority:high` issue on failure — the
+# the full regression suite. The post-deployment path runs full regression
+# against the deployed main SHA + auto-files a `bug, priority:high` issue on failure — the
 # safety net that catches anything the critical tier let through.
 #
 # Mirrors ci.yml's Mongo service + seed step so the authenticated suite has
@@ -33,13 +33,13 @@ on:
         type: string
         default: ''
   # PR-to-main runs the critical tier (smoke + e2e/critical/), targeting
-  # ~10-15 min wall-clock per the 3-tier model. Push-to-main runs the
-  # full regression project for the post-merge safety net; manual dispatch
+  # ~10-15 min wall-clock per the 3-tier model. Successful production
+  # deployment runs the full regression safety net; manual dispatch
   # supports intentional operator-triggered full or scoped regression runs.
   pull_request:
     branches: [main]
-  push:
-    branches: [main]
+  deployment_status:
+    types: [created]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -52,6 +52,10 @@ permissions:
 jobs:
   e2e-regression:
     name: E2E Regression Suite
+    if: >-
+      github.event_name != 'deployment_status' ||
+      (github.event.deployment_status.state == 'success' &&
+       (github.event.deployment.environment == 'production' || github.event.deployment.environment == 'prod'))
     runs-on: ubuntu-latest
     # Keep the job budget above the Playwright budget so timeout metadata and
     # partial evidence can be retained before GitHub terminates the runner.
@@ -96,6 +100,7 @@ jobs:
           # which specs were added in this PR/push so evidence shots tag
           # them as `origin: 'feature'` vs accumulating `regression`).
           fetch-depth: 0
+          ref: ${{ github.event.deployment.sha || github.sha }}
 
       - uses: actions/setup-node@v4
         with:
@@ -152,7 +157,7 @@ jobs:
               fi
               echo "specs=" >> "$GITHUB_OUTPUT"
               ;;
-            push)
+            deployment_status)
               echo "project=regression" >> "$GITHUB_OUTPUT"
               echo "specs=" >> "$GITHUB_OUTPUT"
               echo "Running full regression project"
@@ -247,7 +252,7 @@ jobs:
           retention-days: 30
 
       # ─────────────────────────────────────────────────────────────────
-      # Post-merge auto-issue on regression failure (push:branches:[main])
+      # Post-deployment auto-issue on regression failure.
       #
       # The 3-tier model's safety net: catches regressions that slipped
       # past the critical-tier PR gate. Opens a `bug, priority:high`
@@ -260,7 +265,7 @@ jobs:
       # revert, or accept-with-recorded-rationale).
       # ─────────────────────────────────────────────────────────────────
       - name: Open hotfix issue on post-merge regression
-        if: failure() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: failure() && github.event_name == 'deployment_status' && github.event.deployment_status.state == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

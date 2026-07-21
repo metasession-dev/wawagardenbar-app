@@ -51,7 +51,15 @@ fi
 if [ ! -x scripts/derive-release-version.sh ]; then
   chmod +x scripts/derive-release-version.sh 2>/dev/null || true
 fi
-CURRENT_RELEASE=$(bash scripts/derive-release-version.sh)
+# An ordinary CI run must not inherit a pending ticket merely because one
+# happens to exist. A reviewed develop -> main promotion is different: it is
+# the explicit selection point for the single pending tracked release.
+if [ "$HEAD_REF" = "develop" ]; then
+  CURRENT_RELEASE=$(DEVAUDIT_ALLOW_PENDING_TICKET_FALLBACK=1 \
+    bash scripts/derive-release-version.sh)
+else
+  CURRENT_RELEASE=$(bash scripts/derive-release-version.sh)
+fi
 if [ -z "$CURRENT_RELEASE" ]; then
   echo "::error::Could not derive the effective release scope from the current branch head."
   exit 1

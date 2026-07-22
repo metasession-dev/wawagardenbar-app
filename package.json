@@ -127,6 +127,8 @@
     "minimatch@9.0.9": {
       "brace-expansion": "2.1.2"
     },
-    "js-yaml": "4.3.0"
+    "js-yaml": "4.3.0",
+    "fast-uri": "^4.1.1",
+    "sharp": "^0.35.3"
   }
 }

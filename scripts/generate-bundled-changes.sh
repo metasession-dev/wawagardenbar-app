@@ -250,9 +250,9 @@ for version in "${EXPLICIT_PREDECESSORS[@]}"; do
   PREDECESSOR_LINES+=("- \`${version}\` (${role}/${relationship}) — ${title:-Untitled release ticket}")
 done
 
-# A tagged REQ must never absorb arbitrary history just because this repository
-# has no recent git tag. Start the non-release scan at the first commit that
-# belongs to this REQ, then retain only genuinely REQ-free intervening work.
+# A tracked release only absorbs genuinely REQ-free housekeeping performed
+# during its own implementation window. Do not recast earlier history, or a
+# conventional commit explicitly owned by any REQ, as generic bundle work.
 SCAN_FROM="$SINCE_REF"
 if [[ "$VERSION" =~ ^REQ-[0-9]+$ ]]; then
   FIRST_REQ_SHA="$(git log --reverse --format='%H' --grep="\\[${VERSION}\\]\\|Ref: ${VERSION}" 2>/dev/null | head -1 || true)"
@@ -261,9 +261,6 @@ if [[ "$VERSION" =~ ^REQ-[0-9]+$ ]]; then
   fi
 fi
 COMMITS="$(git log "$SCAN_FROM"..HEAD --format='%h%x09%s' 2>/dev/null || true)"
-# Conventional-commit type is not release ownership. A `test:` or `docs:`
-# commit can still belong to a tracked REQ (including the Ref trailer form),
-# and must never be recast as generic housekeeping in a later bundle.
 BUNDLED=""
 while IFS=$'\t' read -r sha subject; do
   [ -n "$sha" ] || continue
@@ -310,7 +307,7 @@ MANIFEST_BASE="$(
     --arg repository "$REPOSITORY_SLUG" \
     --arg generatedAt "$GENERATED_AT" \
     '{
-      schemaVersion: 1,
+      schemaVersion: 2,
       approvalRelease: { version: $version },
       coreRelease: { version: $version },
       members: ($members | fromjson),

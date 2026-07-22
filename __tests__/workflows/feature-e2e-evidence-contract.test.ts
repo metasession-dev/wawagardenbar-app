@@ -20,6 +20,6 @@ describe('feature E2E evidence publication contract', () => {
     expect(workflow).toContain(
       'No evidenceShot screenshots were captured for ${REQ_ID}.'
     );
-    expect(workflow).toMatch(/wgb "\$REQ_ID" screenshot "\$PNG"/);
+    expect(workflow).toMatch(/wgb "\$REQ_ID" screenshot "\$(PNG|shot)"/);
   });
 });

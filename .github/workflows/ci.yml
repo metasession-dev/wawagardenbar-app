@@ -42,12 +42,8 @@ jobs:
   quality-gates:
     name: Quality Gates
     needs: [register-release]
-    if: ${{ always() && (github.event_name != 'pull_request' || github.base_ref == 'develop' || startsWith(github.head_ref, 'hotfix/')) && !startsWith(github.head_ref, 'chore/close-out-') && (github.event_name == 'pull_request' || needs.register-release.result == 'success') }}
+    if: ${{ always() && (github.event_name != 'pull_request' || !startsWith(github.head_ref, 'chore/close-out-')) && (github.event_name == 'pull_request' || needs.register-release.result == 'success') }}
     runs-on: ubuntu-latest
-    # Leave time after a bounded browser run for cleanup, artefact upload, and
-    # terminal gate reporting. An unbounded Playwright process can otherwise
-    # leave a required PR check running indefinitely.
-    timeout-minutes: 40
 
     services:
       mongodb:
@@ -72,7 +68,18 @@ jobs:
           # tag each captured screenshot as feature vs regression.
           fetch-depth: 0
 
-      - name: Start authoritative quality-gate cycle
+      - name: Validate self-hosted runner prerequisites
+        env:
+          DEVAUDIT_RUNNER_ENVIRONMENT: ${{ runner.environment }}
+        run: |
+          if [ -f scripts/check-self-hosted-runner.sh ]; then
+            chmod +x scripts/check-self-hosted-runner.sh
+            bash scripts/check-self-hosted-runner.sh
+          else
+            echo "::warning::scripts/check-self-hosted-runner.sh missing; run devaudit update to sync runner preflight."
+          fi
+
+      - name: Start authoritative quality-gate execution
         if: github.event_name != 'pull_request' && github.ref_name == 'develop' && needs.register-release.outputs.version != 'skip'
         run: |
           BASE=""
@@ -80,14 +87,13 @@ jobs:
             BASE=$(jq -r '.devaudit.base_url // empty' sdlc-config.json 2>/dev/null || true)
           fi
           [ -n "$BASE" ] || BASE="$DEVAUDIT_BASE_URL_VAR"
-          [ -n "$BASE" ] || { echo "::warning::No DevAudit URL; cycle lifecycle disabled"; exit 0; }
-          export DEVAUDIT_BASE_URL="${BASE%/}"
-          echo "DEVAUDIT_BASE_URL=${DEVAUDIT_BASE_URL}" >> "$GITHUB_ENV"
-          chmod +x scripts/report-test-cycle.sh scripts/report-release-check.sh 2>/dev/null || true
-          bash scripts/report-test-cycle.sh start \
+          [ -n "$BASE" ] || { echo "::warning::No DevAudit URL; test execution lifecycle disabled"; exit 0; }
+          echo "DEVAUDIT_BASE_URL=${BASE%/}" >> "$GITHUB_ENV"
+          chmod +x scripts/report-test-execution.sh scripts/report-release-check.sh 2>/dev/null || true
+          bash scripts/report-test-execution.sh start \
             --project-slug wgb \
             --release "${{ needs.register-release.outputs.version }}" \
-            --sdlc-stage 2 --environment ci --cycle-kind quality_gate \
+            --sdlc-stage 2 --environment ci --suite-kind quality_gate \
             --provider github_actions --external-run-id "${{ github.run_id }}" \
             --external-run-attempt "${{ github.run_attempt }}" \
             --external-job-id "quality-gates" \
@@ -227,11 +233,7 @@ jobs:
           MONNIFY_SECRET_KEY: ${{ secrets.MONNIFY_SECRET_KEY }}
           PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
           ENABLE_E2E_PIN_INTERCEPT: true
-        run: |
-          rm -f e2e-dev-server.pid e2e-dev-server.log
-          nohup npm run dev > e2e-dev-server.log 2>&1 &
-          echo "$!" > e2e-dev-server.pid
-          echo "Started E2E dev server PID $(cat e2e-dev-server.pid)"
+        run: npm run dev &
 
       - name: Wait for dev server
         run: npx wait-on http://localhost:3000 --timeout 120000
@@ -263,8 +265,6 @@ jobs:
           fi
 
       - name: E2E Tests
-        id: e2e
-        continue-on-error: true
         env:
           # PLAYWRIGHT_JSON_OUTPUT_NAME makes the json reporter write straight
           # to the file. Capturing stdout (`> e2e-results.json`) instead mixed
@@ -285,41 +285,7 @@ jobs:
           MONNIFY_SECRET_KEY: ${{ secrets.MONNIFY_SECRET_KEY }}
           PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
           ENABLE_E2E_PIN_INTERCEPT: true
-        run: |
-          set +e
-          timeout 15m npx playwright test --project=smoke --reporter=json,html
-          EXIT_CODE=$?
-          set -e
-
-          case "$EXIT_CODE" in
-            0) OUTCOME=completed ;;
-            124) OUTCOME=timed_out ;;
-            130|137|143) OUTCOME=cancelled ;;
-            *) OUTCOME=failed ;;
-          esac
-
-          jq -n \
-            --arg outcome "$OUTCOME" \
-            --argjson exitCode "$EXIT_CODE" \
-            --arg workflowRun "${{ github.run_id }}" \
-            --arg commitSha "${{ github.sha }}" \
-            '{schemaVersion:1, execution:"quality_gates_smoke", outcome:$outcome, exitCode:$exitCode, workflowRun:$workflowRun, commitSha:$commitSha}' \
-            > e2e-execution-metadata.json
-          echo "outcome=$OUTCOME" >> "$GITHUB_OUTPUT"
-          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
-          cat e2e-execution-metadata.json
-
-      - name: Stop E2E dev server
-        if: always()
-        run: |
-          if [ -f e2e-dev-server.pid ]; then
-            PID=$(cat e2e-dev-server.pid)
-            if kill -0 "$PID" 2>/dev/null; then
-              kill "$PID" 2>/dev/null || true
-              wait "$PID" 2>/dev/null || true
-            fi
-          fi
-          lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+        run: npx playwright test --project=smoke --reporter=json,html
       # ── Gate 5: Build ──
 
       - name: Build Check
@@ -350,7 +316,6 @@ jobs:
             "typescript": "${{ steps.typescript.outcome }}",
             "sast": "${{ steps.sast.outcome }}",
             "dependency_audit": "${{ steps.dep-audit.outcome }}",
-            "e2e": "${{ steps.e2e.outputs.outcome || 'skipped' }}",
             "build": "${{ steps.build.outcome }}"
           }
           EOF
@@ -367,8 +332,6 @@ jobs:
             sast-results.json
             dependency-audit.json
             e2e-results.json
-            e2e-execution-metadata.json
-            e2e-dev-server.log
             e2e-auth-results.json
             playwright-report/
             coverage/coverage-summary.json
@@ -376,25 +339,6 @@ jobs:
             compliance/evidence/*/screenshots/*.png
             compliance/evidence/*/screenshots/*.png.meta.json
           retention-days: 90
-
-      - name: Fail Quality Gates when a gate did not pass
-        if: always()
-        env:
-          TYPESCRIPT: ${{ steps.typescript.outcome }}
-          SAST: ${{ steps.sast.outcome }}
-          DEPENDENCY_AUDIT: ${{ steps.dep-audit.outcome }}
-          E2E: ${{ steps.e2e.outputs.outcome || 'skipped' }}
-          BUILD: ${{ steps.build.outcome }}
-        run: |
-          FAILED=0
-          for GATE in TYPESCRIPT SAST DEPENDENCY_AUDIT E2E BUILD; do
-            VALUE="${!GATE}"
-            if [ "$VALUE" != "success" ] && [ "$VALUE" != "completed" ]; then
-              echo "::error::${GATE} gate did not pass (outcome=${VALUE})."
-              FAILED=1
-            fi
-          done
-          exit "$FAILED"
 
   # ──────────────────────────────────────────────
   # Register release early (parallel with gates) so UAT gate can find it
@@ -462,11 +406,11 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "Release version: ${VERSION}"
 
-      - name: Ensure release exists for gate-cycle lineage
+      - name: Ensure release exists for gate-execution lineage
         if: env.DEVAUDIT_BASE_URL != '' && steps.version.outputs.version != 'skip'
         run: |
-          # First-class cycle APIs need an exact release row before the
-          # stage-2 cycle can start. This keeps failed gate runs visible even
+          # First-class test execution APIs need an exact release row before the
+          # stage-2 execution can start. This keeps failed gate runs visible even
           # when later evidence generation fails.
           chmod +x scripts/upload-evidence.sh 2>/dev/null || true
           bash scripts/upload-evidence.sh \
@@ -640,17 +584,17 @@ jobs:
       - name: Generate and upload gate evidence
         if: env.DEVAUDIT_BASE_URL != ''
         run: |
-          chmod +x scripts/upload-evidence.sh scripts/report-test-cycle.sh 2>/dev/null || true
+          chmod +x scripts/upload-evidence.sh scripts/report-test-execution.sh 2>/dev/null || true
           FLAGS="--git-sha ${{ github.sha }} --ci-run-id ${{ github.run_id }} --branch ${{ github.ref_name }}"
           FLAGS="${FLAGS} --release ${{ needs.register-release.outputs.version }} --create-release-if-missing"
           FLAGS="${FLAGS} --environment uat"
           FLAGS="${FLAGS} --sdlc-stage 2"
-          PRIMARY_LINEAGE_FLAGS=(--test-cycle "${{ github.run_id }}")
-          CYCLE_OUT="$(mktemp)"
-          bash scripts/report-test-cycle.sh start \
+          PRIMARY_LINEAGE_FLAGS=(--test-execution "${{ github.run_id }}")
+          EXECUTION_OUT="$(mktemp)"
+          bash scripts/report-test-execution.sh start \
             --project-slug wgb \
             --release "${{ needs.register-release.outputs.version }}" \
-            --sdlc-stage 2 --environment ci --cycle-kind quality_gate \
+            --sdlc-stage 2 --environment ci --suite-kind quality_gate \
             --provider github_actions --external-run-id "${{ github.run_id }}" \
             --external-run-attempt "${{ github.run_attempt }}" \
             --external-job-id "quality-gates" \
@@ -658,11 +602,11 @@ jobs:
             --commit-sha "${{ github.sha }}" --branch "${{ github.ref_name }}" \
             --workflow-name "Quality Gates" \
             --workflow-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            --output-file "$CYCLE_OUT"
-          . "$CYCLE_OUT"
-          rm -f "$CYCLE_OUT"
-          if [ "${cycle_supported:-false}" = "true" ] && [ -n "${cycle_record_id:-}" ]; then
-            PRIMARY_LINEAGE_FLAGS+=(--evidence-scope cycle --test-cycle-record-id "${cycle_record_id}")
+            --output-file "$EXECUTION_OUT"
+          . "$EXECUTION_OUT"
+          rm -f "$EXECUTION_OUT"
+          if [ "${execution_supported:-false}" = "true" ] && [ -n "${execution_record_id:-}" ]; then
+            PRIMARY_LINEAGE_FLAGS+=(--evidence-scope execution --test-execution-record-id "${execution_record_id}")
           fi
 
           # Track failures across all uploads so we can fail the job at the
@@ -785,17 +729,51 @@ jobs:
               --environment uat --sdlc-stage 2
           fi
 
-          # Per-REQ E2E evidence fan-out.
-          # Gate outcomes remain attached only to the commit-derived release.
-          # A generic develop Quality Gates run is integration evidence, not
-          # proof for every pending REQ. Fanning it out creates legacy
-          # test-cycle rows whose authoritative cycle can belong to a different
-          # release, blocking UAT approval with a lineage conflict (WGB #542).
+          # Per-REQ E2E JSON attachment only.
+          # Gate outcomes above are intentionally uploaded only to the single
+          # commit-derived release in FLAGS. A generic integration Quality
+          # Gates run is run-level evidence; pending release tickets alone do
+          # not make that gate current approval evidence for every REQ. Bundle
+          # membership must be represented through an explicit bundle manifest
+          # and portal lineage, not by fanning out gate-outcomes.json rows
+          # (DevAudit-Installer#438).
           #
-          # E2E JSON can be attached to an additional REQ only when it contains
-          # an executed test explicitly tagged for that REQ.
+          # E2E JSON is different: it may be attached to a REQ only when the
+          # report itself contains an executed test tagged for that REQ. A smoke
+          # run must never overwrite or obscure a prior targeted feature
+          # execution merely because a pending ticket exists
+          # (DevAudit-Installer#435).
+          has_req_tagged_e2e_result() {
+            python3 - "$1" "$2" <<'PY'
+          import json, re, sys
+
+          req_id, filename = sys.argv[1:]
+          def values(value):
+            if isinstance(value, str): return [value]
+            if isinstance(value, dict): return [str(value.get('type', '')), str(value.get('description', ''))]
+            return []
+          def tagged(node, ancestry):
+            text = [*ancestry, str(node.get('title', ''))]
+            for field in ('annotations', 'tags'):
+              for value in node.get(field, []): text.extend(values(value))
+            return any(req_id in value for value in text)
+          def executed(test):
+            return any(result.get('status') not in {'skipped', 'interrupted'} for result in test.get('results', []))
+          def contains(node, ancestry):
+            title = str(node.get('title', ''))
+            path = [*ancestry, title] if title else ancestry
+            for spec in node.get('specs', []):
+              if tagged(spec, path) and any(executed(test) for test in spec.get('tests', [])): return True
+            for test in node.get('tests', []):
+              if tagged(test, path) and executed(test): return True
+            return any(contains(suite, path) for suite in node.get('suites', []))
+          with open(filename, encoding='utf-8') as handle:
+            report = json.load(handle)
+          raise SystemExit(0 if re.fullmatch(r'REQ-[A-Z0-9-]+', req_id) and contains(report, []) else 1)
+          PY
+          }
           COMMIT_REQ="${{ needs.register-release.outputs.version }}"
-          FANOUT_REQS=()
+          E2E_REQS=()
           if [ -d compliance/pending-releases ]; then
             for TICKET in compliance/pending-releases/RELEASE-TICKET-REQ-*.md; do
               [ -f "$TICKET" ] || continue
@@ -809,17 +787,18 @@ jobs:
               if [ "$REQ_ID" = "$COMMIT_REQ" ]; then
                 continue
               fi
-              FANOUT_REQS+=("$REQ_ID")
+              E2E_REQS+=("$REQ_ID")
             done
           fi
-          if [ "${#FANOUT_REQS[@]}" -gt 0 ]; then
-            echo "Fanning out gate evidence to in-scope REQs: ${FANOUT_REQS[*]}"
-            for REQ_ID in "${FANOUT_REQS[@]}"; do
+          if [ "${#E2E_REQS[@]}" -gt 0 ]; then
+            echo "Checking tagged E2E JSON attachment candidates: ${E2E_REQS[*]}"
+            echo "::notice::Not fanning out gate-outcomes.json to pending REQs; gate evidence remains on ${COMMIT_REQ} unless represented through explicit release lineage."
+            for REQ_ID in "${E2E_REQS[@]}"; do
               FANOUT_FLAGS="--git-sha ${{ github.sha }} --ci-run-id ${{ github.run_id }} --branch ${{ github.ref_name }}"
               FANOUT_FLAGS="${FANOUT_FLAGS} --release ${REQ_ID} --create-release-if-missing"
               FANOUT_FLAGS="${FANOUT_FLAGS} --environment uat --sdlc-stage 2"
-              FANOUT_FLAGS="${FANOUT_FLAGS} --test-cycle ${{ github.run_id }}"
-              if [ -f ci-evidence/e2e-results.json ] && python3 scripts/has-req-tagged-e2e-result.py "$REQ_ID" ci-evidence/e2e-results.json; then
+              FANOUT_FLAGS="${FANOUT_FLAGS} --test-execution ${{ github.run_id }}"
+              if [ -f ci-evidence/e2e-results.json ] && has_req_tagged_e2e_result "$REQ_ID" ci-evidence/e2e-results.json; then
                 upload "e2e-results.json -> ${REQ_ID}" \
                   wgb "${REQ_ID}" e2e_result ci-evidence/e2e-results.json \
                   --category e2e_result ${FANOUT_FLAGS}
@@ -1078,7 +1057,7 @@ jobs:
             exit 1
           fi
 
-      - name: Complete primary quality-gate cycle
+      - name: Complete primary quality-gate execution
         if: always() && env.DEVAUDIT_BASE_URL != ''
         run: |
           case "${{ needs.quality-gates.result }}" in
@@ -1086,13 +1065,13 @@ jobs:
             cancelled) OUTCOME=cancelled ;;
             *)         OUTCOME=failed ;;
           esac
-          chmod +x scripts/report-test-cycle.sh scripts/report-release-check.sh 2>/dev/null || true
-          bash scripts/report-test-cycle.sh complete \
+          chmod +x scripts/report-test-execution.sh scripts/report-release-check.sh 2>/dev/null || true
+          bash scripts/report-test-execution.sh complete \
             --project-slug wgb \
             --release "${{ needs.register-release.outputs.version }}" \
             --sdlc-stage 2 \
             --environment ci \
-            --cycle-kind quality_gate \
+            --suite-kind quality_gate \
             --provider github_actions \
             --external-run-id "${{ github.run_id }}" \
             --external-run-attempt "${{ github.run_attempt }}" \

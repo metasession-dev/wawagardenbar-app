@@ -1,8 +1,6 @@
 # Release Approval Gate — blocks PR merge until release is approved in DevAudit.
 #
-# Four-eyes release-approval gate for tracked releases. Independent hotfix PRs
-# are intentionally excluded: they carry no tracked REQ release and must not
-# be forced to create or approve a phantom bare-date release. When UAT-environment
+# Four-eyes release-approval gate (always required). When UAT-environment
 # verification is configured for the project (sdlc-config.json `uat.enabled`),
 # the human approver factors that into their review, but the gate itself is
 # about the approval click — not the UAT-env exercise. Renamed from
@@ -36,13 +34,6 @@ permissions:
 jobs:
   check-approval:
     name: DevAudit Release Approval
-    # A hotfix goes directly to main under the documented exception path. It
-    # remains subject to its full CI gates, but is not a tracked-release
-    # promotion and therefore has no DevAudit approval record to resolve.
-    if: >-
-      github.event_name != 'pull_request' ||
-      (!startsWith(github.event.pull_request.head.ref, 'hotfix/') &&
-       !startsWith(github.event.pull_request.head.ref, 'fix/hotfix-'))
     runs-on: ubuntu-latest
     env:
       DEVAUDIT_BASE_URL_VAR: ${{ vars.DEVAUDIT_BASE_URL }}

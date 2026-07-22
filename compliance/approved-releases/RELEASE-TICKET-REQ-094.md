@@ -1,6 +1,6 @@
 # Release Ticket — REQ-094: Reporting Attribution and Reconciliation Correctness
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-07-18
 **Risk:** HIGH
 **Implementation PR:** #517

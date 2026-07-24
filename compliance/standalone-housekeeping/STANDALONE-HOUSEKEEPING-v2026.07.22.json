@@ -1,6 +1,0 @@
-{
-  "schemaVersion": 1,
-  "version": "v2026.07.22",
-  "releaseMode": "standalone_housekeeping",
-  "reason": "Promote the DevAudit v0.3.20 evidence-upload workflow corrections now so future production deployments can upload deployment-origin E2E evidence correctly instead of waiting for the next tracked requirement release."
-}

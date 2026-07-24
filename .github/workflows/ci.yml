@@ -424,8 +424,10 @@ jobs:
           fi
           chmod +x scripts/standalone-housekeeping-release.sh scripts/upload-evidence.sh 2>/dev/null || true
           bash scripts/standalone-housekeeping-release.sh validate "$VERSION" "$DECLARATION"
+          # Bare-date versions identify releases, not requirements. The portal
+          # stores release-scoped evidence through its synthetic common scope.
           bash scripts/upload-evidence.sh \
-            wgb "$VERSION" release_ticket "$DECLARATION" \
+            wgb "_compliance-docs" release_ticket "$DECLARATION" \
             --release "$VERSION" --create-release-if-missing \
             --environment uat --category release_artifact --sdlc-stage 2 \
             --git-sha ${{ github.sha }} --branch ${{ github.ref_name }}

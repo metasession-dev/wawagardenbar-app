@@ -1,8 +1,5 @@
-name: Reconcile Verified Railway Deployment
+name: Reconcile Verified Host Deployment
 
-# Manual recovery only. This workflow never deploys an application and will
-# refuse to mark a GitHub deployment successful unless Railway provenance and
-# the production health probe agree with the requested main SHA.
 on:
   workflow_dispatch:
     inputs:
@@ -10,7 +7,7 @@ on:
         description: 'REQ-XXX release receiving recovery evidence'
         required: true
       expected_sha:
-        description: 'Exact main SHA verified at Railway'
+        description: 'Exact main SHA verified at the provider'
         required: true
       github_deployment_id:
         description: 'Existing GitHub deployment ID to reconcile'
@@ -37,17 +34,11 @@ jobs:
       deployments: write
     env:
       DEVAUDIT_API_KEY: ${{ secrets.DEVAUDIT_API_KEY }}
+      DEVAUDIT_BASE_URL: ${{ vars.DEVAUDIT_BASE_URL }}
     steps:
       - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.expected_sha }}
-
-      - name: Resolve DevAudit base URL
-        run: |
-          BASE=$(jq -r '.devaudit.base_url // empty' sdlc-config.json)
-          [ -n "$BASE" ] || { echo '::error::sdlc-config.json devaudit.base_url is required.'; exit 1; }
-          echo "DEVAUDIT_BASE_URL=${BASE%/}" >> "$GITHUB_ENV"
-
       - name: Verify provider deployment before reconciliation
         env:
           GH_TOKEN: ${{ github.token }}
@@ -60,7 +51,6 @@ jobs:
             --railway-deployment-id="${{ inputs.railway_deployment_id }}" \
             --railway-project="${{ inputs.railway_project }}" --railway-service="${{ inputs.railway_service }}" \
             --health-url="${{ inputs.health_url }}"
-
       - name: Upload manual reconciliation evidence
         run: |
           bash scripts/upload-evidence.sh wgb "${{ inputs.release }}" test_report deployment-reconciliation.json \

@@ -44,6 +44,13 @@ vi.mock('@/services/audit-log-service', () => ({
   },
 }));
 
+const mockUserFindById = vi.fn();
+vi.mock('@/models/user-model', () => ({
+  default: {
+    findById: (...a: unknown[]) => mockUserFindById(...a),
+  },
+}));
+
 function mockOrder(
   overrides: Record<string, unknown> = {}
 ): Record<string, unknown> {
@@ -70,6 +77,9 @@ beforeEach(() => {
   mockDeductStock.mockReset();
   mockRecordIncident.mockReset().mockResolvedValue({});
   mockCreateAuditLog.mockReset().mockResolvedValue(undefined);
+  mockUserFindById.mockReset().mockResolvedValue({
+    email: 'staff@example.test',
+  });
   mockFindById.mockReset();
 });
 

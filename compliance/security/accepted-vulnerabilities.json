@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "exceptions": [
+    {
+      "advisoryId": "GHSA-6g55-p6wh-862q",
+      "package": "postcss",
+      "vulnerableRange": "<=8.5.11",
+      "vulnerableVersion": "8.4.31",
+      "dependencyPath": "node_modules/next/node_modules/postcss",
+      "introducedBy": "next@16.2.11",
+      "approvedAt": "2026-07-24",
+      "expiresAt": "2026-08-24",
+      "approvedBy": "william@ostendo.io",
+      "reason": "next@16.2.11 is the latest available compatible release and exact-pins postcss@8.4.31. npm cannot safely replace that nested exact dependency.",
+      "remediationIssue": "https://github.com/metasession-dev/wawagardenbar-app/issues/575",
+      "compensatingControls": "Automated npm audit remains enabled; remove this exception immediately when a compatible Next release updates the nested dependency."
+    }
+  ]
+}

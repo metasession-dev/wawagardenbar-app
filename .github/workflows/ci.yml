@@ -226,7 +226,9 @@ jobs:
         run: npm run dev &
 
       - name: Wait for dev server
-        run: npx wait-on http://localhost:3000 --timeout 120000
+        # The inner wait-on timeout is not a reliable process boundary on
+        # hosted runners. Keep a hard outer deadline below the job timeout.
+        run: timeout --signal=TERM --kill-after=15s 150s npx wait-on http://localhost:3000 --timeout 120000
 
       # Compute the set of e2e spec files added on this branch (relative
       # to the merge base). The evidenceShot helper in the consumer's
@@ -424,8 +426,10 @@ jobs:
           fi
           chmod +x scripts/standalone-housekeeping-release.sh scripts/upload-evidence.sh 2>/dev/null || true
           bash scripts/standalone-housekeeping-release.sh validate "$VERSION" "$DECLARATION"
+          # Bare-date versions identify releases, not requirements. The portal
+          # stores release-scoped evidence through its synthetic common scope.
           bash scripts/upload-evidence.sh \
-            wgb "$VERSION" release_ticket "$DECLARATION" \
+            wgb "_compliance-docs" release_ticket "$DECLARATION" \
             --release "$VERSION" --create-release-if-missing \
             --environment uat --category release_artifact --sdlc-stage 2 \
             --git-sha ${{ github.sha }} --branch ${{ github.ref_name }}

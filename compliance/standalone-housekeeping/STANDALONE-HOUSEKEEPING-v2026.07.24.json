@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "version": "v2026.07.24",
+  "releaseMode": "standalone_housekeeping",
+  "reason": "Promote the reviewed DevAudit v0.3.20 through v0.3.25 framework updates, governed dependency-risk evaluator, evidence-upload corrections, and REQ-094 close-out recovery path now. These release-control and audit-evidence repairs must reach production before the next tracked requirement release."
+}

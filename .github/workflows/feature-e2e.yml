@@ -123,7 +123,9 @@ jobs:
         run: npm run dev &
 
       - name: Wait for dev server
-        run: npx wait-on http://localhost:3000 --timeout 120000
+        # Keep an outer deadline so a hung readiness child cannot hold the
+        # feature-E2E check until the job-level timeout.
+        run: timeout --signal=TERM --kill-after=15s 150s npx wait-on http://localhost:3000 --timeout 120000
 
       # Compute the set of e2e spec files added on this branch (relative
       # to the merge base). The evidenceShot helper reads E2E_NEW_SPECS

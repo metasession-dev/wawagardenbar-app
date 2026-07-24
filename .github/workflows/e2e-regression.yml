@@ -132,7 +132,10 @@ jobs:
           echo "Started E2E server pid $(cat .e2e-server.pid)"
 
       - name: Wait for dev server
-        run: npx wait-on http://localhost:3000 --timeout 120000
+        # `wait-on` owns its internal readiness budget, but a process-level
+        # deadline is needed so a hung child cannot leave the required check
+        # in progress until the job-level 55-minute timeout.
+        run: timeout --signal=TERM --kill-after=15s 150s npx wait-on http://localhost:3000 --timeout 120000
 
       # Decide which Playwright project to run based on the trigger.
       # PR-to-main runs `critical` (~10-15 min); push-to-main runs

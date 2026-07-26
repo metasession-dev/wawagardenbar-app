@@ -1006,6 +1006,7 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 
 - **Given** an order created before the configured cutoff, **When** the daily report groups orders, **Then** it is attributed to the prior business day.
 - **Given** paid orders spanning a configured WAT cutoff, **When** an admin selects the same range in Daily, profitability, and per-main-category reports, **Then** each report uses the same business-day attribution.
+- **Given** an admin selects Today, Yesterday, Last 7 Days, or a custom date range in the Daily Report, **When** the report is generated before or after the configured cutoff, **Then** the selected labels resolve to inclusive business-date labels consistently, with Today and Yesterday adjacent, Last 7 Days containing exactly seven labels, and custom-range totals matching the equivalent single-business-date reports.
 
 #### REQ-REPORT-003 — Profitability report · **Could** · extended
 

@@ -84,6 +84,7 @@ export default defineConfig({
       testMatch: [
         /e2e\/smoke\/.*\.spec\.ts$/,
         /e2e\/critical\/.*\.spec\.ts$/,
+        /e2e\/invariants\/inventory-deduction-checkout\.spec\.ts$/,
         /requirements-verification\.spec\.ts$/,
       ],
       retries: 0,

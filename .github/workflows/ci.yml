@@ -15,6 +15,10 @@ name: CI Pipeline
 
 on:
   workflow_dispatch:
+    inputs:
+      runner_label:
+        description: 'Optional one-run runner label override. Blank uses repository CI_RUNNER_LABEL.'
+        required: false
   pull_request:
     branches: [develop]
   push:
@@ -226,8 +230,8 @@ jobs:
         run: npm run dev &
 
       - name: Wait for dev server
-        # The inner wait-on timeout is not a reliable process boundary on
-        # hosted runners. Keep a hard outer deadline below the job timeout.
+        # The inner wait-on timeout is diagnostic; the outer deadline keeps a
+        # hung child from consuming the entire quality-gates job budget.
         run: timeout --signal=TERM --kill-after=15s 150s npx wait-on http://localhost:3000 --timeout 120000
 
       # Compute the set of e2e spec files added on this branch (relative
@@ -426,10 +430,10 @@ jobs:
           fi
           chmod +x scripts/standalone-housekeeping-release.sh scripts/upload-evidence.sh 2>/dev/null || true
           bash scripts/standalone-housekeeping-release.sh validate "$VERSION" "$DECLARATION"
-          # Bare-date versions identify releases, not requirements. The portal
-          # stores release-scoped evidence through its synthetic common scope.
+          # A bare-date version identifies the release, not a requirement. Use
+          # the portal's common evidence scope while preserving release ownership.
           bash scripts/upload-evidence.sh \
-            wgb "_compliance-docs" release_ticket "$DECLARATION" \
+            wgb _compliance-docs release_ticket "$DECLARATION" \
             --release "$VERSION" --create-release-if-missing \
             --environment uat --category release_artifact --sdlc-stage 2 \
             --git-sha ${{ github.sha }} --branch ${{ github.ref_name }}

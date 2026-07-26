@@ -21,13 +21,12 @@ import {
   guard,
   mongoConn,
   readInventoryStock,
-  computeStockFromInventory,
   setupKitchenDisplay,
   clickAndAwaitStatus,
   uniqueIdempotencyKey,
   deleteMany,
   findOrCreateMenuItem,
-} from './helpers';
+} from '../invariants/helpers';
 import { tagTest } from '../helpers/test-tags';
 import { evidenceShot } from '../helpers/evidence';
 
@@ -37,7 +36,6 @@ interface SeedHandle {
   menuItemId: string;
   inventoryId: string;
   baselineStock: number;
-  trackByLocation: boolean;
   quantity: number;
 }
 
@@ -51,8 +49,10 @@ async function seedOrder(): Promise<SeedHandle> {
     const sourceInventory = await db
       .collection('inventories')
       .findOne({ menuItemId: menuItem._id });
-    if (!sourceInventory) throw new Error('No inventory row found for menu item');
+    if (!sourceInventory)
+      throw new Error('No inventory row found for menu item');
     const quantity = 1;
+    const baselineStock = 5;
     const orderNumber = `WG88I${Date.now()}`.slice(0, 12);
     const now = new Date();
     const { _id: _sourceMenuItemId, ...menuItemSeed } = menuItem;
@@ -66,6 +66,14 @@ async function seedOrder(): Promise<SeedHandle> {
     const isolatedInventory = await db.collection('inventories').insertOne({
       ...inventorySeed,
       menuItemId: isolatedMenuItem.insertedId,
+      // This invariant verifies the general deduction chokepoint. Location
+      // routing has separate critical coverage and must not make this fixture
+      // depend on whichever source inventory happens to be selected.
+      trackByLocation: false,
+      locations: [],
+      currentStock: baselineStock,
+      status: 'in-stock',
+      totalSales: 0,
       createdAt: now,
       updatedAt: now,
     });
@@ -120,10 +128,7 @@ async function seedOrder(): Promise<SeedHandle> {
       orderNumber,
       menuItemId: String(isolatedMenuItem.insertedId),
       inventoryId: String(isolatedInventory.insertedId),
-      baselineStock: computeStockFromInventory(sourceInventory as never),
-      trackByLocation: Boolean(
-        (sourceInventory as { trackByLocation?: boolean }).trackByLocation
-      ),
+      baselineStock,
       quantity,
     };
   } finally {
@@ -170,6 +175,7 @@ superAdminTest.describe(
         tagTest('REQ-088', 1);
         guard(superAdminTest.skip, await isAuthenticated(page));
         handle = await seedOrder();
+        expect(handle.baselineStock).toBeGreaterThanOrEqual(handle.quantity);
         await setupKitchenDisplay(page);
         await clickAndAwaitStatus(
           page,

@@ -6,12 +6,18 @@ import { sessionOptions, SessionData } from '@/lib/session';
 import { FinancialReportService } from '@/services/financial-report-service';
 import { SystemSettingsService } from '@/services/system-settings-service';
 import { getAllowedMainCategoriesForReports } from '@/lib/permissions';
+import {
+  addBusinessDateLabels,
+  businessDateAtCutoff,
+  businessDateLabelForInstant,
+} from '@/lib/business-date';
 import type { MainCategoryReport } from '@/services/financial-report-service';
 
 /**
- * Generate daily summary report
+ * @requirement REQ-095 - Resolve report selections as business-date labels.
+ * Generate daily summary report.
  */
-export async function generateDailyReportAction(date: Date) {
+export async function generateDailyReportAction(date: Date | string) {
   try {
     const session = await getIronSession<SessionData>(
       await cookies(),
@@ -27,7 +33,14 @@ export async function generateDailyReportAction(date: Date) {
       return { success: false, error: 'Insufficient permissions' };
     }
 
-    const report = await FinancialReportService.generateDailySummary(date);
+    const cutoff = await SystemSettingsService.getBusinessDayCutoff();
+    const label =
+      typeof date === 'string'
+        ? date
+        : businessDateLabelForInstant(date, cutoff);
+    const report = await FinancialReportService.generateDailySummary(
+      businessDateAtCutoff(label, cutoff)
+    );
 
     return {
       success: true,
@@ -47,8 +60,9 @@ export async function generateDailyReportAction(date: Date) {
  * Generate date range report
  */
 export async function generateDateRangeReportAction(
-  startDate: Date,
-  endDate: Date
+  startDate: Date | string,
+  endDate: Date | string,
+  preset?: 'last-7-days'
 ) {
   try {
     const session = await getIronSession<SessionData>(
@@ -65,9 +79,23 @@ export async function generateDateRangeReportAction(
       return { success: false, error: 'Insufficient permissions' };
     }
 
+    const cutoff = await SystemSettingsService.getBusinessDayCutoff();
+    const currentLabel = businessDateLabelForInstant(new Date(), cutoff);
+    const startLabel =
+      preset === 'last-7-days'
+        ? addBusinessDateLabels(currentLabel, -6)
+        : typeof startDate === 'string'
+          ? startDate
+          : startDate.toISOString().slice(0, 10);
+    const endLabel =
+      preset === 'last-7-days'
+        ? currentLabel
+        : typeof endDate === 'string'
+          ? endDate
+          : endDate.toISOString().slice(0, 10);
     const report = await FinancialReportService.generateDateRangeReport(
-      startDate,
-      endDate
+      new Date(`${startLabel}T00:00:00.000Z`),
+      new Date(`${endLabel}T00:00:00.000Z`)
     );
 
     return {

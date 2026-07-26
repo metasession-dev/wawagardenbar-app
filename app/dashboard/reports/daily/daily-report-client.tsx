@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { subDays } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import {
   Calendar,
   Download,
@@ -44,6 +44,8 @@ interface DateRange {
 }
 
 export function DailyReportClient() {
+  // REQ-095: date picker values are serialized as WAT business-date labels;
+  // the server resolves the configured cutoff and persisted UTC boundaries.
   const [dateRange, setDateRange] = useState<DateRange>({
     from: new Date(),
     to: new Date(),
@@ -52,11 +54,12 @@ export function DailyReportClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reportType, setReportType] = useState<'single' | 'range'>('single');
+  const [rangePreset, setRangePreset] = useState<'last-7-days' | undefined>();
 
   // Load report on mount and when date changes
   useEffect(() => {
     loadReport();
-  }, [dateRange, reportType]);
+  }, [dateRange, reportType, rangePreset]);
 
   const loadReport = async () => {
     setLoading(true);
@@ -66,11 +69,14 @@ export function DailyReportClient() {
       let result;
 
       if (reportType === 'single') {
-        result = await generateDailyReportAction(dateRange.from);
+        result = await generateDailyReportAction(
+          format(dateRange.from, 'yyyy-MM-dd')
+        );
       } else {
         result = await generateDateRangeReportAction(
-          dateRange.from,
-          dateRange.to
+          format(dateRange.from, 'yyyy-MM-dd'),
+          format(dateRange.to, 'yyyy-MM-dd'),
+          rangePreset
         );
       }
 
@@ -93,6 +99,7 @@ export function DailyReportClient() {
     const date = days === 0 ? new Date() : subDays(new Date(), days);
     setDateRange({ from: date, to: date });
     setReportType('single');
+    setRangePreset(undefined);
   };
 
   const handleExport = async (format: 'pdf' | 'excel' | 'csv') => {
@@ -159,10 +166,11 @@ export function DailyReportClient() {
             size="sm"
             onClick={() => {
               setDateRange({
-                from: subDays(new Date(), 7),
+                from: subDays(new Date(), 6),
                 to: new Date(),
               });
               setReportType('range');
+              setRangePreset('last-7-days');
             }}
           >
             Last 7 Days
@@ -194,6 +202,7 @@ export function DailyReportClient() {
               onChange={(range) => {
                 if (range && range.from && range.to) {
                   setDateRange({ from: range.from, to: range.to });
+                  setRangePreset(undefined);
                 }
               }}
             />

@@ -191,7 +191,14 @@ describe('REQ-025: shouldShowPreviousDayCheckbox', () => {
 // query range. Tested against the real exported implementation rather than
 // the inlined deriveBusinessDate above.
 
-import { businessDayRange, watCalendarDayRange } from '@/lib/business-date';
+import {
+  addBusinessDateLabels,
+  businessDateAtCutoff,
+  businessDateLabelForInstant,
+  businessDateQueryRange,
+  businessDayRange,
+  watCalendarDayRange,
+} from '@/lib/business-date';
 
 describe('REQ-051: businessDayRange', () => {
   const CUTOFF = '15:00';
@@ -282,5 +289,64 @@ describe('REQ-094: watCalendarDayRange', () => {
     );
     expect(start.toISOString()).toBe('2026-07-17T23:00:00.000Z');
     expect(end.toISOString()).toBe('2026-07-18T22:59:59.999Z');
+  });
+});
+
+describe('REQ-095: selected business-date ranges', () => {
+  const CUTOFF = '15:00';
+
+  it('keeps Today and Yesterday adjacent before the cutoff', () => {
+    const beforeCutoff = watTime(2026, 4, 12, 7, 0);
+    const today = businessDateLabelForInstant(beforeCutoff, CUTOFF);
+    const yesterday = addBusinessDateLabels(today, -1);
+
+    expect(today).toBe('2026-04-11');
+    expect(yesterday).toBe('2026-04-10');
+  });
+
+  it('keeps Today and Yesterday adjacent after the cutoff', () => {
+    const afterCutoff = watTime(2026, 4, 12, 16, 0);
+    const today = businessDateLabelForInstant(afterCutoff, CUTOFF);
+    const yesterday = addBusinessDateLabels(today, -1);
+
+    expect(today).toBe('2026-04-12');
+    expect(yesterday).toBe('2026-04-11');
+  });
+
+  it('resolves exactly seven business-date labels', () => {
+    const current = '2026-04-12';
+    const first = addBusinessDateLabels(current, -6);
+    const labels = Array.from({ length: 7 }, (_, index) =>
+      addBusinessDateLabels(first, index)
+    );
+
+    expect(labels).toEqual([
+      '2026-04-06',
+      '2026-04-07',
+      '2026-04-08',
+      '2026-04-09',
+      '2026-04-10',
+      '2026-04-11',
+      '2026-04-12',
+    ]);
+  });
+
+  it('uses cutoff-to-cutoff fallback bounds for legacy records', () => {
+    const range = businessDateQueryRange('2026-04-11', '2026-04-12', CUTOFF);
+
+    expect(range.businessDateStart.toISOString()).toBe(
+      '2026-04-10T23:00:00.000Z'
+    );
+    expect(range.businessDateEnd.toISOString()).toBe(
+      '2026-04-12T22:59:59.999Z'
+    );
+    expect(range.legacyStart.toISOString()).toBe('2026-04-11T14:00:00.000Z');
+    expect(range.legacyEnd.toISOString()).toBe('2026-04-13T13:59:59.999Z');
+  });
+
+  it('maps a selected label to the exact cutoff instant', () => {
+    expect(businessDateAtCutoff('2026-04-12', CUTOFF).toISOString()).toBe(
+      '2026-04-12T14:00:00.000Z'
+    );
   });
 });

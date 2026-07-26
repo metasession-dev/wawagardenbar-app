@@ -29,6 +29,9 @@ on:
       release:
         description: 'Optional REQ-XXX / version to promote (blank = all in-scope from pending release tickets).'
         required: false
+      runner_label:
+        description: 'Optional one-run runner label override. Blank uses repository CI_RUNNER_LABEL.'
+        required: false
   deployment_status:
     types: [created]
 
@@ -59,7 +62,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 0   # full history so merged commits' REQ tags are readable
+          fetch-depth: 0 # full history so merged commits' REQ tags are readable
 
       - name: Resolve DevAudit base URL and post-deploy terminal status
         run: |

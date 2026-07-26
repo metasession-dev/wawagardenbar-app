@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "version": "v2026.07.26",
+  "releaseMode": "standalone_housekeeping",
+  "reason": "Promote the reviewed DevAudit v0.3.29 standalone-routing, evidence, close-out, and dependency-risk contract updates together with the WGB dependency remediation. These release-control and security-evidence repairs must reach production before the next tracked requirement release."
+}

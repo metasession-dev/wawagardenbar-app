@@ -18,6 +18,39 @@ function formatCurrency(amount: number): string {
 }
 
 /**
+ * @requirement REQ-095 - Period label for the report header/title. Range
+ * reports show the full start-end span rather than just the start date —
+ * `generateDateRangeReport` populates `endDate` alongside `date` (=start)
+ * specifically so exports don't silently drop the end of the range.
+ */
+function formatReportPeriod(
+  report: DailySummaryReport,
+  reportType: 'single' | 'range'
+): string {
+  if (reportType === 'single') {
+    return format(new Date(report.date), 'MMMM dd, yyyy');
+  }
+  const start = format(new Date(report.date), 'MMM dd, yyyy');
+  const end = report.endDate
+    ? format(new Date(report.endDate), 'MMM dd, yyyy')
+    : start;
+  return `Report Period: ${start} - ${end}`;
+}
+
+/** @requirement REQ-095 - Filename date segment, same start/end awareness. */
+function reportFileDateSegment(
+  report: DailySummaryReport,
+  reportType: 'single' | 'range'
+): string {
+  const start = format(new Date(report.date), 'yyyy-MM-dd');
+  if (reportType === 'single') return start;
+  const end = report.endDate
+    ? format(new Date(report.endDate), 'yyyy-MM-dd')
+    : start;
+  return start === end ? start : `${start}_to_${end}`;
+}
+
+/**
  * Export report as PDF
  */
 export function exportReportAsPDF(
@@ -38,10 +71,7 @@ export function exportReportAsPDF(
   // Date
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  const dateText =
-    reportType === 'single'
-      ? format(new Date(report.date), 'MMMM dd, yyyy')
-      : `Report Period: ${format(new Date(report.date), 'MMM dd, yyyy')}`;
+  const dateText = formatReportPeriod(report, reportType);
   doc.text(dateText, pageWidth / 2, 32, { align: 'center' });
 
   let yPos = 45;
@@ -85,8 +115,11 @@ export function exportReportAsPDF(
 
   const revenueData = report.categories.flatMap((category) =>
     category.revenue.items.map((item) => [
-      item.name, category.label, item.quantity.toString(),
-      formatCurrency(item.price), formatCurrency(item.total),
+      item.name,
+      category.label,
+      item.quantity.toString(),
+      formatCurrency(item.price),
+      formatCurrency(item.total),
     ])
   );
 
@@ -116,8 +149,11 @@ export function exportReportAsPDF(
 
   const costData = report.categories.flatMap((category) =>
     category.costs.items.map((item) => [
-      item.name, category.label, item.quantity.toString(),
-      formatCurrency(item.costPerUnit), formatCurrency(item.total),
+      item.name,
+      category.label,
+      item.quantity.toString(),
+      formatCurrency(item.costPerUnit),
+      formatCurrency(item.total),
     ])
   );
 
@@ -237,7 +273,7 @@ export function exportReportAsPDF(
   }
 
   // Save the PDF
-  const fileName = `daily-report-${format(new Date(report.date), 'yyyy-MM-dd')}.pdf`;
+  const fileName = `daily-report-${reportFileDateSegment(report, reportType)}.pdf`;
   doc.save(fileName);
 }
 
@@ -253,11 +289,7 @@ export function exportReportAsExcel(
   // Summary Sheet
   const summaryData = [
     ['Wawa Garden Bar - Daily Financial Report'],
-    [
-      reportType === 'single'
-        ? format(new Date(report.date), 'MMMM dd, yyyy')
-        : `Report Period: ${format(new Date(report.date), 'MMM dd, yyyy')}`,
-    ],
+    [formatReportPeriod(report, reportType)],
     [],
     ['Financial Summary'],
     ['Metric', 'Value'],
@@ -287,9 +319,15 @@ export function exportReportAsExcel(
   const revenueData = [
     ['Revenue Breakdown'],
     ['Item', 'Category', 'Quantity', 'Price', 'Total'],
-    ...report.categories.flatMap((category) => category.revenue.items.map((item) => [
-      item.name, category.label, item.quantity, item.price, item.total,
-    ])),
+    ...report.categories.flatMap((category) =>
+      category.revenue.items.map((item) => [
+        item.name,
+        category.label,
+        item.quantity,
+        item.price,
+        item.total,
+      ])
+    ),
     [],
     ['Total Revenue', '', '', '', report.revenue.totalRevenue],
   ];
@@ -301,9 +339,15 @@ export function exportReportAsExcel(
   const costsData = [
     ['Cost of Goods Sold'],
     ['Item', 'Category', 'Quantity', 'Cost/Unit', 'Total Cost'],
-    ...report.categories.flatMap((category) => category.costs.items.map((item) => [
-      item.name, category.label, item.quantity, item.costPerUnit, item.total,
-    ])),
+    ...report.categories.flatMap((category) =>
+      category.costs.items.map((item) => [
+        item.name,
+        category.label,
+        item.quantity,
+        item.costPerUnit,
+        item.total,
+      ])
+    ),
     [],
     ['Total COGS', '', '', '', report.costs.totalDirectCosts],
   ];
@@ -366,7 +410,7 @@ export function exportReportAsExcel(
   }
 
   // Save the Excel file
-  const fileName = `daily-report-${format(new Date(report.date), 'yyyy-MM-dd')}.xlsx`;
+  const fileName = `daily-report-${reportFileDateSegment(report, reportType)}.xlsx`;
   XLSX.writeFile(workbook, fileName);
 }
 
@@ -381,11 +425,7 @@ export function exportReportAsCSV(
 
   // Header
   csvRows.push('Wawa Garden Bar - Daily Financial Report');
-  csvRows.push(
-    reportType === 'single'
-      ? format(new Date(report.date), 'MMMM dd, yyyy')
-      : `Report Period: ${format(new Date(report.date), 'MMM dd, yyyy')}`
-  );
+  csvRows.push(formatReportPeriod(report, reportType));
   csvRows.push('');
 
   // Summary
@@ -410,18 +450,26 @@ export function exportReportAsCSV(
   // Revenue
   csvRows.push('Revenue Breakdown');
   csvRows.push('Item,Category,Quantity,Price,Total');
-  report.categories.forEach((category) => category.revenue.items.forEach((item) => {
-    csvRows.push(`"${item.name}","${category.label}",${item.quantity},${item.price},${item.total}`);
-  }));
+  report.categories.forEach((category) =>
+    category.revenue.items.forEach((item) => {
+      csvRows.push(
+        `"${item.name}","${category.label}",${item.quantity},${item.price},${item.total}`
+      );
+    })
+  );
   csvRows.push(`Total Revenue,,,${report.revenue.totalRevenue}`);
   csvRows.push('');
 
   // Costs
   csvRows.push('Cost of Goods Sold');
   csvRows.push('Item,Category,Quantity,Cost/Unit,Total Cost');
-  report.categories.forEach((category) => category.costs.items.forEach((item) => {
-    csvRows.push(`"${item.name}","${category.label}",${item.quantity},${item.costPerUnit},${item.total}`);
-  }));
+  report.categories.forEach((category) =>
+    category.costs.items.forEach((item) => {
+      csvRows.push(
+        `"${item.name}","${category.label}",${item.quantity},${item.costPerUnit},${item.total}`
+      );
+    })
+  );
   csvRows.push(`Total COGS,,,,${report.costs.totalDirectCosts}`);
   csvRows.push('');
 
@@ -473,7 +521,7 @@ export function exportReportAsCSV(
   link.setAttribute('href', url);
   link.setAttribute(
     'download',
-    `daily-report-${format(new Date(report.date), 'yyyy-MM-dd')}.csv`
+    `daily-report-${reportFileDateSegment(report, reportType)}.csv`
   );
   link.style.visibility = 'hidden';
 

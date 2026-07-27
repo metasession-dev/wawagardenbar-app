@@ -16,8 +16,26 @@ import type { MainCategoryReport } from '@/services/financial-report-service';
 /**
  * @requirement REQ-095 - Resolve report selections as business-date labels.
  * Generate daily summary report.
+ *
+ * `date` as a string is a literal, explicit business-date label (the
+ * user picked an exact calendar day via the date picker) — used as-is,
+ * no cutoff resolution.
+ *
+ * `date` as a Date is a wall-clock instant to resolve through the
+ * configured cutoff — used by the Today/Yesterday quick buttons.
+ * `labelOffsetDays` shifts the *resolved label*, not the input instant:
+ * Yesterday must be "today's operational business date, minus one
+ * label", not "yesterday's wall-clock instant, independently resolved
+ * through the cutoff" — the latter is the original REQ-095 bug (a date
+ * already shifted back by the cutoff gets shifted again), and
+ * independently resolving two raw instants can also produce a Today
+ * that doesn't match the business date orders paid "right now" are
+ * actually attributed to when the current time is before the cutoff.
  */
-export async function generateDailyReportAction(date: Date | string) {
+export async function generateDailyReportAction(
+  date: Date | string,
+  labelOffsetDays = 0
+) {
   try {
     const session = await getIronSession<SessionData>(
       await cookies(),
@@ -34,10 +52,16 @@ export async function generateDailyReportAction(date: Date | string) {
     }
 
     const cutoff = await SystemSettingsService.getBusinessDayCutoff();
-    const label =
-      typeof date === 'string'
-        ? date
-        : businessDateLabelForInstant(date, cutoff);
+    let label: string;
+    if (typeof date === 'string') {
+      label = date;
+    } else {
+      const resolved = businessDateLabelForInstant(date, cutoff);
+      label =
+        labelOffsetDays === 0
+          ? resolved
+          : addBusinessDateLabels(resolved, labelOffsetDays);
+    }
     const report = await FinancialReportService.generateDailySummary(
       businessDateAtCutoff(label, cutoff)
     );
@@ -45,6 +69,7 @@ export async function generateDailyReportAction(date: Date | string) {
     return {
       success: true,
       report: JSON.parse(JSON.stringify(report)),
+      resolvedLabel: label,
     };
   } catch (error) {
     console.error('Error generating daily report:', error);
@@ -101,6 +126,12 @@ export async function generateDateRangeReportAction(
     return {
       success: true,
       report: JSON.parse(JSON.stringify(report)),
+      // REQ-095 - The `last-7-days` preset resolves its own range
+      // server-side and ignores the caller's startDate/endDate; return
+      // what was actually queried so the picker display can't show a
+      // different span than the data underneath it.
+      resolvedStartLabel: startLabel,
+      resolvedEndLabel: endLabel,
     };
   } catch (error) {
     console.error('Error generating date range report:', error);

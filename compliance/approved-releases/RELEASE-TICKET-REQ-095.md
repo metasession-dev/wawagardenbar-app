@@ -1,6 +1,6 @@
 # Release Ticket: REQ-095 — Cutoff-aware Daily Summary date ranges
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-07-26
 **Requirement ID:** REQ-095
 **Risk Level:** HIGH

@@ -9,12 +9,12 @@
 
 - `__tests__/lib/business-date.test.ts` — selected business-date labels, adjacent labels, inclusive N-day windows, and cutoff boundaries.
 - `__tests__/services/financial-report-service.business-day.test.ts` — range-service query bounds and legacy fallback.
-- `e2e/critical/daily-report-date-ranges.spec.ts` — admin-visible Today, Yesterday, Last 7 Days, and custom-range behavior against seeded cutoff-spanning data.
+- `e2e/critical/daily-report-business-date-selection.spec.ts` — admin-visible Today, Yesterday, Last 7 Days, and custom-range behavior against seeded cutoff-spanning data, plus a dedicated regression case proving Today matches the operational business date (not just button adjacency).
+- `__tests__/services/order-service.generateOrderNumber.test.ts` — atomic-counter and collision-retry unit coverage for the order-number generator fix (scope addition, see below).
 
 ## Tests to update
 
-- Existing Daily Report E2E coverage, if present, to assert the displayed period label and not only page load.
-- Export tests to assert the resolved period metadata.
+- `lib/report-export.ts` callers — `formatReportPeriod`/`reportFileDateSegment` now use `report.endDate` for range reports instead of dropping it; covered by the E2E export-period test rather than a new unit test (the period-formatting logic is presentation glue, not business logic).
 
 ## Tests to remove
 
@@ -22,14 +22,16 @@
 
 ## Functional mapping
 
-| Acceptance criterion                                 | Test                                                                                |
-| ---------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| Today/Yesterday are adjacent before and after cutoff | `business-date.test.ts`; `daily-report-date-ranges.spec.ts`                         |
-| Last 7 Days is exactly seven business dates          | `business-date.test.ts`; `daily-report-date-ranges.spec.ts`                         |
-| Custom ranges are inclusive                          | `financial-report-service.business-day.test.ts`; `daily-report-date-ranges.spec.ts` |
-| Cutoff-spanning records are attributed correctly     | `financial-report-service.business-day.test.ts`; seeded E2E fixture                 |
-| Legacy records remain included                       | `financial-report-service.business-day.test.ts`                                     |
-| Export period matches on-screen report               | export unit test and targeted E2E verification                                      |
+| Acceptance criterion                                                   | Test                                                                                                  |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Today/Yesterday are adjacent before and after cutoff                   | `business-date.test.ts`; `daily-report-business-date-selection.spec.ts` (AC1, AC2)                    |
+| Today matches the operational business date, not the raw calendar date | `daily-report-business-date-selection.spec.ts` (AC6) — regression found during this pass              |
+| Last 7 Days is exactly seven business dates, display matches query     | `business-date.test.ts`; `daily-report-business-date-selection.spec.ts` (AC3, AC7)                    |
+| Custom ranges are inclusive                                            | `financial-report-service.business-day.test.ts`; `daily-report-business-date-selection.spec.ts` (AC4) |
+| Cutoff-spanning records are attributed correctly                       | `financial-report-service.business-day.test.ts`; seeded E2E fixture (AC4)                             |
+| Legacy records remain included                                         | `financial-report-service.business-day.test.ts` (Vitest-only)                                         |
+| Export period matches on-screen report                                 | `daily-report-business-date-selection.spec.ts` (AC5) — caught the export dropping the end date        |
+| Order numbers stay unique under concurrent creation                    | `order-service.generateOrderNumber.test.ts`                                                           |
 
 ## Non-functional testing
 

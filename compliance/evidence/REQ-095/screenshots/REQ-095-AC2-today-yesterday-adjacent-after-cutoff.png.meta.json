@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-095",
+  "ac": 2,
+  "slug": "today-yesterday-adjacent-after-cutoff",
+  "specFile": "e2e/critical/daily-report-business-date-selection.spec.ts",
+  "capturedAt": "2026-07-27T07:49:14.124Z"
+}

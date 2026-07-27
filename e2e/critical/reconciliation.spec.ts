@@ -79,18 +79,25 @@ test.describe('REQ-014: Tabs Page — Reconciliation', () => {
     // Get initial state
     const initialState = await checkbox.getAttribute('data-state');
 
-    // Click to toggle
+    // Click to toggle. The state change persists via a server action —
+    // a fixed wait races that round-trip under any timing jitter.
+    // `expect(...).not.toHaveAttribute` auto-retries until it's true or
+    // the assertion times out, so it's correct regardless of how long
+    // the persist actually takes.
     await checkbox.click();
-    await page.waitForTimeout(500);
-
-    // State should have changed
+    await expect(checkbox).not.toHaveAttribute(
+      'data-state',
+      initialState ?? '',
+      { timeout: 10000 }
+    );
     const newState = await checkbox.getAttribute('data-state');
     expect(newState).not.toBe(initialState);
 
     // Toggle back to restore original state
     await checkbox.click();
-    await page.waitForTimeout(500);
-
+    await expect(checkbox).toHaveAttribute('data-state', initialState ?? '', {
+      timeout: 10000,
+    });
     const restoredState = await checkbox.getAttribute('data-state');
     expect(restoredState).toBe(initialState);
   });

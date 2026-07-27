@@ -69,6 +69,16 @@ export interface ReportCategoryBreakdown {
 
 export interface DailySummaryReport {
   date: Date;
+  /**
+   * @requirement REQ-095 - Populated only by `generateDateRangeReport`
+   * (undefined for single-day reports, where `date` is the whole period).
+   * `date` continues to carry the range's start for backward
+   * compatibility with existing single-date callers; `endDate` is the
+   * range's end, so period labels (exports, UI) can show the full span
+   * instead of silently dropping it.
+   */
+  startDate?: Date;
+  endDate?: Date;
   revenue: {
     /**
      * Order-type breakdown — revenue and order count per OrderType. Source
@@ -696,6 +706,8 @@ export class FinancialReportService {
     // Similar logic to generateDailySummary but for date range
     const report: DailySummaryReport = {
       date: startDate,
+      startDate,
+      endDate,
       revenue: {
         byOrderType: {
           'dine-in': { revenue: 0, orderCount: 0 },

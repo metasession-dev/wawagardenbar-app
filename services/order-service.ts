@@ -1,6 +1,7 @@
 import { Types } from 'mongoose';
 import { connectDB } from '@/lib/mongodb';
 import Order from '@/models/order-model';
+import OrderNumberCounterModel from '@/models/order-number-counter-model';
 import { IOrder, OrderType, OrderStatus } from '@/interfaces';
 import { PriceHistoryService } from './price-history-service';
 import { deriveBusinessDate } from '@/lib/business-date';
@@ -12,23 +13,46 @@ import MenuItemModel from '@/models/menu-item-model';
  */
 export class OrderService {
   /**
-   * Generate unique order number
+   * Generate unique order number.
+   *
+   * The previous implementation derived the sequence from
+   * `Order.countDocuments()` for the day: two concurrent calls can both
+   * read the same count before either has inserted, producing the same
+   * orderNumber and a unique-index collision on the second insert. Worse,
+   * once that collision happens the count is unaffected (the failed
+   * insert never landed), so every subsequent call for the rest of the
+   * day recomputes the exact same already-taken number — order creation
+   * stays broken until the calendar date rolls over.
+   *
+   * `findOneAndUpdate`'s `$inc` is atomic at the database level, so
+   * concurrent callers always get distinct sequence values. The
+   * existence-check retry loop below is a second, independent layer that
+   * self-heals past any number the counter doesn't know about yet (e.g.
+   * a date that already had orders created under the old count-based
+   * scheme before this counter document existed for it).
    */
   private static async generateOrderNumber(): Promise<string> {
     const date = new Date();
     const year = date.getFullYear().toString().slice(-2);
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
+    const dateKey = `${year}${month}${day}`;
 
-    const count = await Order.countDocuments({
-      createdAt: {
-        $gte: new Date(date.getFullYear(), date.getMonth(), date.getDate()),
-        $lt: new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1),
-      },
-    });
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const counter = await OrderNumberCounterModel.findOneAndUpdate(
+        { _id: dateKey },
+        { $inc: { seq: 1 } },
+        { upsert: true, new: true }
+      );
+      const orderNumber = `WG${dateKey}${String(counter.seq).padStart(4, '0')}`;
+      if (!(await Order.exists({ orderNumber }))) {
+        return orderNumber;
+      }
+    }
 
-    const sequence = String(count + 1).padStart(4, '0');
-    return `WG${year}${month}${day}${sequence}`;
+    throw new Error(
+      `Failed to generate a unique order number for ${dateKey} after 5 attempts`
+    );
   }
 
   /**

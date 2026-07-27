@@ -90,8 +90,13 @@ async function seedInventory() {
         costPerUnit,
         autoReorderEnabled: true,
         reorderQuantity: maximumStock - minimumStock,
-        supplier: item.mainCategory === 'food' ? 'Local Food Supplier' : 'Beverage Distributors Ltd',
-        lastRestocked: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000), // Random date within last week
+        supplier:
+          item.mainCategory === 'food'
+            ? 'Local Food Supplier'
+            : 'Beverage Distributors Ltd',
+        lastRestocked: new Date(
+          Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000
+        ), // Random date within last week
       };
     });
 
@@ -99,12 +104,41 @@ async function seedInventory() {
     const createdInventory = await InventoryModel.insertMany(inventoryData);
     console.log(`✅ Created ${createdInventory.length} inventory records`);
 
+    // REQ-066 — seed one item with per-location stock tracking. The
+    // admin-order-inventory-delta.{over-sell,sale-point}.spec.ts specs
+    // don't create their own trackByLocation candidate; they look up an
+    // existing one, mutate its locations/defaultSalesLocation for the
+    // duration of the test, and restore it in cleanup. Location codes
+    // match SystemSettingsService.getInventoryLocations()'s defaults.
+    const locationCandidate = createdInventory[0];
+    if (locationCandidate) {
+      const locations = [
+        { location: 'store', currentStock: 10 },
+        { location: 'chiller-1', currentStock: 10 },
+      ];
+      await InventoryModel.updateOne(
+        { _id: locationCandidate._id },
+        {
+          $set: {
+            trackByLocation: true,
+            locations,
+            defaultSalesLocation: 'chiller-1',
+            currentStock: locations.reduce((sum, l) => sum + l.currentStock, 0),
+          },
+        }
+      );
+      console.log(
+        `📍 Seeded per-location tracking on inventory ${locationCandidate._id} (store: 10, chiller-1: 10)`
+      );
+    }
+
     // Show summary
     const stats = {
       total: createdInventory.length,
       inStock: createdInventory.filter((i) => i.status === 'in-stock').length,
       lowStock: createdInventory.filter((i) => i.status === 'low-stock').length,
-      outOfStock: createdInventory.filter((i) => i.status === 'out-of-stock').length,
+      outOfStock: createdInventory.filter((i) => i.status === 'out-of-stock')
+        .length,
     };
 
     console.log('\n📊 Inventory Summary:');

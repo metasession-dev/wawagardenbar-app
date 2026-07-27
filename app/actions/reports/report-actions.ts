@@ -6,49 +6,35 @@ import { sessionOptions, SessionData } from '@/lib/session';
 import { FinancialReportService } from '@/services/financial-report-service';
 import { SystemSettingsService } from '@/services/system-settings-service';
 import { getAllowedMainCategoriesForReports } from '@/lib/permissions';
+import {
+  addBusinessDateLabels,
+  businessDateAtCutoff,
+  businessDateLabelForInstant,
+} from '@/lib/business-date';
 import type { MainCategoryReport } from '@/services/financial-report-service';
 
 /**
- * Generate daily summary report
+ * @requirement REQ-095 - Resolve report selections as business-date labels.
+ * Generate daily summary report.
+ *
+ * `date` as a string is a literal, explicit business-date label (the
+ * user picked an exact calendar day via the date picker) — used as-is,
+ * no cutoff resolution.
+ *
+ * `date` as a Date is a wall-clock instant to resolve through the
+ * configured cutoff — used by the Today/Yesterday quick buttons.
+ * `labelOffsetDays` shifts the *resolved label*, not the input instant:
+ * Yesterday must be "today's operational business date, minus one
+ * label", not "yesterday's wall-clock instant, independently resolved
+ * through the cutoff" — the latter is the original REQ-095 bug (a date
+ * already shifted back by the cutoff gets shifted again), and
+ * independently resolving two raw instants can also produce a Today
+ * that doesn't match the business date orders paid "right now" are
+ * actually attributed to when the current time is before the cutoff.
  */
-export async function generateDailyReportAction(date: Date) {
-  try {
-    const session = await getIronSession<SessionData>(
-      await cookies(),
-      sessionOptions
-    );
-
-    if (!session.isLoggedIn || !session.userId) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
-    // Only super-admin and admin can view reports
-    if (session.role !== 'super-admin' && session.role !== 'admin') {
-      return { success: false, error: 'Insufficient permissions' };
-    }
-
-    const report = await FinancialReportService.generateDailySummary(date);
-
-    return {
-      success: true,
-      report: JSON.parse(JSON.stringify(report)),
-    };
-  } catch (error) {
-    console.error('Error generating daily report:', error);
-    return {
-      success: false,
-      error:
-        error instanceof Error ? error.message : 'Failed to generate report',
-    };
-  }
-}
-
-/**
- * Generate date range report
- */
-export async function generateDateRangeReportAction(
-  startDate: Date,
-  endDate: Date
+export async function generateDailyReportAction(
+  date: Date | string,
+  labelOffsetDays = 0
 ) {
   try {
     const session = await getIronSession<SessionData>(
@@ -65,14 +51,87 @@ export async function generateDateRangeReportAction(
       return { success: false, error: 'Insufficient permissions' };
     }
 
-    const report = await FinancialReportService.generateDateRangeReport(
-      startDate,
-      endDate
+    const cutoff = await SystemSettingsService.getBusinessDayCutoff();
+    let label: string;
+    if (typeof date === 'string') {
+      label = date;
+    } else {
+      const resolved = businessDateLabelForInstant(date, cutoff);
+      label =
+        labelOffsetDays === 0
+          ? resolved
+          : addBusinessDateLabels(resolved, labelOffsetDays);
+    }
+    const report = await FinancialReportService.generateDailySummary(
+      businessDateAtCutoff(label, cutoff)
     );
 
     return {
       success: true,
       report: JSON.parse(JSON.stringify(report)),
+      resolvedLabel: label,
+    };
+  } catch (error) {
+    console.error('Error generating daily report:', error);
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : 'Failed to generate report',
+    };
+  }
+}
+
+/**
+ * Generate date range report
+ */
+export async function generateDateRangeReportAction(
+  startDate: Date | string,
+  endDate: Date | string,
+  preset?: 'last-7-days'
+) {
+  try {
+    const session = await getIronSession<SessionData>(
+      await cookies(),
+      sessionOptions
+    );
+
+    if (!session.isLoggedIn || !session.userId) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    // Only super-admin and admin can view reports
+    if (session.role !== 'super-admin' && session.role !== 'admin') {
+      return { success: false, error: 'Insufficient permissions' };
+    }
+
+    const cutoff = await SystemSettingsService.getBusinessDayCutoff();
+    const currentLabel = businessDateLabelForInstant(new Date(), cutoff);
+    const startLabel =
+      preset === 'last-7-days'
+        ? addBusinessDateLabels(currentLabel, -6)
+        : typeof startDate === 'string'
+          ? startDate
+          : startDate.toISOString().slice(0, 10);
+    const endLabel =
+      preset === 'last-7-days'
+        ? currentLabel
+        : typeof endDate === 'string'
+          ? endDate
+          : endDate.toISOString().slice(0, 10);
+    const report = await FinancialReportService.generateDateRangeReport(
+      new Date(`${startLabel}T00:00:00.000Z`),
+      new Date(`${endLabel}T00:00:00.000Z`)
+    );
+
+    return {
+      success: true,
+      report: JSON.parse(JSON.stringify(report)),
+      // REQ-095 - The `last-7-days` preset resolves its own range
+      // server-side and ignores the caller's startDate/endDate; return
+      // what was actually queried so the picker display can't show a
+      // different span than the data underneath it.
+      resolvedStartLabel: startLabel,
+      resolvedEndLabel: endLabel,
     };
   } catch (error) {
     console.error('Error generating date range report:', error);

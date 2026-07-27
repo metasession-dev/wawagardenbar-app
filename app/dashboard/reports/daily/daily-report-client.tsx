@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { subDays } from 'date-fns';
+import { format } from 'date-fns';
 import {
   Calendar,
   Download,
@@ -43,6 +43,15 @@ interface DateRange {
   to: Date;
 }
 
+interface ReportActionResult {
+  success: boolean;
+  report?: DailySummaryReport;
+  error?: string;
+  resolvedLabel?: string;
+  resolvedStartLabel?: string;
+  resolvedEndLabel?: string;
+}
+
 export function DailyReportClient() {
   const [dateRange, setDateRange] = useState<DateRange>({
     from: new Date(),
@@ -53,46 +62,131 @@ export function DailyReportClient() {
   const [error, setError] = useState<string | null>(null);
   const [reportType, setReportType] = useState<'single' | 'range'>('single');
 
-  // Load report on mount and when date changes
+  /**
+   * REQ-095 - Resolve Today once on mount rather than fetching the raw
+   * `new Date()` initial state's literal calendar date, which isn't
+   * cutoff-aware (see handleQuickDate below).
+   *
+   * Deliberately no effect watches [dateRange, reportType]
+   * to auto-fetch on change — every interaction below fetches directly
+   * from its own handler instead. An earlier version used such an
+   * effect (with ref guards to skip the fetches quick-actions trigger
+   * indirectly via their own state updates); React Strict Mode's
+   * dev-only double-invocation of effects broke the guard on the
+   * effect's *second* invocation, letting a stale fetch through that
+   * raced with and sometimes overwrote the correct one. Since CI runs
+   * `npm run dev` (Strict Mode is on), this wasn't just a local dev
+   * quirk. Explicit calls have no such race.
+   */
   useEffect(() => {
-    loadReport();
-  }, [dateRange, reportType]);
+    handleQuickDate(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const loadReport = async () => {
+  const runFetch = async (
+    fetcher: () => Promise<ReportActionResult>
+  ): Promise<ReportActionResult | null> => {
     setLoading(true);
     setError(null);
-
     try {
-      let result;
-
-      if (reportType === 'single') {
-        result = await generateDailyReportAction(dateRange.from);
-      } else {
-        result = await generateDateRangeReportAction(
-          dateRange.from,
-          dateRange.to
-        );
-      }
-
+      const result = await fetcher();
       if (result.success && result.report) {
         setReport(result.report);
       } else {
         setError(result.error || 'Failed to load report');
       }
+      return result;
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'An unexpected error occurred';
       setError(message);
       console.error('Report error:', err);
+      return null;
     } finally {
       setLoading(false);
     }
   };
 
-  const handleQuickDate = (days: number) => {
-    const date = days === 0 ? new Date() : subDays(new Date(), days);
-    setDateRange({ from: date, to: date });
+  const loadExplicitRange = async (
+    range: DateRange,
+    type: 'single' | 'range'
+  ) => {
+    if (type === 'single') {
+      await runFetch(() =>
+        generateDailyReportAction(format(range.from, 'yyyy-MM-dd'))
+      );
+    } else {
+      await runFetch(() =>
+        generateDateRangeReportAction(
+          format(range.from, 'yyyy-MM-dd'),
+          format(range.to, 'yyyy-MM-dd')
+        )
+      );
+    }
+  };
+
+  /** Re-fetch whatever is currently selected — the manual "Generate Report" button. */
+  const loadReport = async () => {
+    await loadExplicitRange(dateRange, reportType);
+  };
+
+  /**
+   * @requirement REQ-095 - Today/Yesterday resolve as adjacent operational
+   * business-date labels from a single server-side "now" read
+   * (generateDailyReportAction's labelOffsetDays), not two independently
+   * cutoff-resolved wall-clock instants. Resolving them separately was
+   * the original bug (double-shifting could make them non-adjacent) and,
+   * even once adjacent, could still show a "Today" that doesn't match
+   * the business date orders paid moments ago actually got attributed
+   * to, whenever the real time is before the configured cutoff.
+   */
+  const handleQuickDate = async (days: number) => {
     setReportType('single');
+    const result = await runFetch(() =>
+      generateDailyReportAction(new Date(), days === 0 ? 0 : -days)
+    );
+    if (result?.success && result.resolvedLabel) {
+      const resolved = new Date(`${result.resolvedLabel}T12:00:00`);
+      setDateRange({ from: resolved, to: resolved });
+    }
+  };
+
+  /**
+   * @requirement REQ-095 - Last 7 Days is resolved server-side from the
+   * operational "now" (see generateDateRangeReportAction's preset
+   * branch) and ignores the dates sent here; sync the picker to what
+   * was actually queried afterwards so it can never show a different
+   * span than the data underneath it.
+   */
+  const handleLastSevenDays = async () => {
+    setReportType('range');
+    const result = await runFetch(() =>
+      generateDateRangeReportAction(
+        format(dateRange.from, 'yyyy-MM-dd'),
+        format(dateRange.to, 'yyyy-MM-dd'),
+        'last-7-days'
+      )
+    );
+    if (
+      result?.success &&
+      result.resolvedStartLabel &&
+      result.resolvedEndLabel
+    ) {
+      setDateRange({
+        from: new Date(`${result.resolvedStartLabel}T12:00:00`),
+        to: new Date(`${result.resolvedEndLabel}T12:00:00`),
+      });
+    }
+  };
+
+  const handleTabChange = (value: 'single' | 'range') => {
+    setReportType(value);
+    loadExplicitRange(dateRange, value);
+  };
+
+  const handleManualRangeChange = (range: DateRange) => {
+    setDateRange(range);
+    loadExplicitRange(range, reportType);
   };
 
   const handleExport = async (format: 'pdf' | 'excel' | 'csv') => {
@@ -154,17 +248,7 @@ export function DailyReportClient() {
           >
             Yesterday
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setDateRange({
-                from: subDays(new Date(), 7),
-                to: new Date(),
-              });
-              setReportType('range');
-            }}
-          >
+          <Button variant="outline" size="sm" onClick={handleLastSevenDays}>
             Last 7 Days
           </Button>
         </div>
@@ -181,7 +265,7 @@ export function DailyReportClient() {
 
             <Tabs
               value={reportType}
-              onValueChange={(v) => setReportType(v as 'single' | 'range')}
+              onValueChange={(v) => handleTabChange(v as 'single' | 'range')}
             >
               <TabsList>
                 <TabsTrigger value="single">Single Day</TabsTrigger>
@@ -193,7 +277,7 @@ export function DailyReportClient() {
               value={dateRange}
               onChange={(range) => {
                 if (range && range.from && range.to) {
-                  setDateRange({ from: range.from, to: range.to });
+                  handleManualRangeChange({ from: range.from, to: range.to });
                 }
               }}
             />

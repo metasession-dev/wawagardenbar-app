@@ -2,6 +2,7 @@
  * @requirement REQ-013 - Include partial payments in daily report aggregation
  * @requirement REQ-017 - Total Revenue reflects money received (paymentBreakdown.total)
  * @requirement REQ-025 - Query by businessDate instead of paidAt for correct day attribution
+ * @requirement REQ-095 - Apply business-date labels consistently to report ranges
  */
 import { connectDB } from '@/lib/mongodb';
 import OrderModel from '@/models/order-model';
@@ -9,7 +10,11 @@ import TabModel from '@/models/tab-model';
 import { ExpenseModel } from '@/models/expense-model';
 import MenuItemModel from '@/models/menu-item-model';
 import type { OrderType } from '@/interfaces/order.interface';
-import { businessDayRange } from '@/lib/business-date';
+import {
+  businessDateLabelForInstant,
+  businessDateQueryRange,
+  watCalendarDateKey,
+} from '@/lib/business-date';
 import { SystemSettingsService } from '@/services/system-settings-service';
 
 /**
@@ -64,6 +69,16 @@ export interface ReportCategoryBreakdown {
 
 export interface DailySummaryReport {
   date: Date;
+  /**
+   * @requirement REQ-095 - Populated only by `generateDateRangeReport`
+   * (undefined for single-day reports, where `date` is the whole period).
+   * `date` continues to carry the range's start for backward
+   * compatibility with existing single-date callers; `endDate` is the
+   * range's end, so period labels (exports, UI) can show the full span
+   * instead of silently dropping it.
+   */
+  startDate?: Date;
+  endDate?: Date;
   revenue: {
     /**
      * Order-type breakdown — revenue and order count per OrderType. Source
@@ -173,14 +188,17 @@ export interface MainCategoryReport {
 }
 
 export class FinancialReportService {
-  private static async createCategoryBreakdowns(): Promise<ReportCategoryBreakdown[]> {
+  private static async createCategoryBreakdowns(): Promise<
+    ReportCategoryBreakdown[]
+  > {
     // Older unit-test doubles and pre-REQ-075 consumers only provide the
     // business-day setting. Keep the original two-category fallback for that
     // compatibility boundary; production always resolves the registry.
-    const mainCategories = (await SystemSettingsService.getMainCategories?.()) ?? [
-      { slug: 'food', label: 'Food', order: 0, isEnabled: true },
-      { slug: 'drinks', label: 'Drinks', order: 1, isEnabled: true },
-    ];
+    const mainCategories =
+      (await SystemSettingsService.getMainCategories?.()) ?? [
+        { slug: 'food', label: 'Food', order: 0, isEnabled: true },
+        { slug: 'drinks', label: 'Drinks', order: 1, isEnabled: true },
+      ];
     return mainCategories.map((category) => ({
       slug: category.slug,
       label: category.label,
@@ -254,7 +272,9 @@ export class FinancialReportService {
     startDate: Date,
     endDate: Date,
     paymentBreakdown: Record<string, number>,
-    tipsBreakdown?: Record<string, number>
+    tipsBreakdown?: Record<string, number>,
+    legacyStartDate: Date = startDate,
+    legacyEndDate: Date = endDate
   ): Promise<{
     tabPartialTotals: Map<string, number>;
     totalPartialPayments: number;
@@ -271,9 +291,12 @@ export class FinancialReportService {
         { businessDate: { $gte: startDate, $lte: endDate } },
         {
           businessDate: { $exists: false },
-          paidAt: { $gte: startDate, $lte: endDate },
+          paidAt: { $gte: legacyStartDate, $lte: legacyEndDate },
         },
-        { businessDate: null, paidAt: { $gte: startDate, $lte: endDate } },
+        {
+          businessDate: null,
+          paidAt: { $gte: legacyStartDate, $lte: legacyEndDate },
+        },
       ],
     }).lean();
 
@@ -330,7 +353,13 @@ export class FinancialReportService {
     // to the previous business day (which runs from yesterday-cutoff to
     // today-cutoff). See compliance/plans/REQ-051/implementation-plan.md.
     const cutoff = await SystemSettingsService.getBusinessDayCutoff();
-    const { start: startDate, end: endDate } = businessDayRange(date, cutoff);
+    const label = businessDateLabelForInstant(date, cutoff);
+    const {
+      businessDateStart: startDate,
+      businessDateEnd: endDate,
+      legacyStart,
+      legacyEnd,
+    } = businessDateQueryRange(label, label, cutoff);
 
     // Fetch all paid orders attributed to this business date.
     // Fall back to paidAt for records that pre-date the businessDate backfill.
@@ -340,9 +369,9 @@ export class FinancialReportService {
         { businessDate: { $gte: startDate, $lte: endDate } },
         {
           businessDate: { $exists: false },
-          paidAt: { $gte: startDate, $lte: endDate },
+          paidAt: { $gte: legacyStart, $lte: legacyEnd },
         },
-        { businessDate: null, paidAt: { $gte: startDate, $lte: endDate } },
+        { businessDate: null, paidAt: { $gte: legacyStart, $lte: legacyEnd } },
       ],
     }).lean();
 
@@ -413,7 +442,9 @@ export class FinancialReportService {
       startDate,
       endDate,
       report.paymentBreakdown as Record<string, number>,
-      report.tipsBreakdown as Record<string, number>
+      report.tipsBreakdown as Record<string, number>,
+      legacyStart,
+      legacyEnd
     );
     // Note: aggregatePartialPayments now uses Tab.businessDate for attribution
 
@@ -646,8 +677,15 @@ export class FinancialReportService {
   ): Promise<DailySummaryReport> {
     await connectDB();
 
-    const start = startOfDayWAT(startDate);
-    const end = endOfDayWAT(endDate);
+    const cutoff = await SystemSettingsService.getBusinessDayCutoff();
+    const startLabel = watCalendarDateKey(startDate);
+    const endLabel = watCalendarDateKey(endDate);
+    const {
+      businessDateStart: start,
+      businessDateEnd: end,
+      legacyStart,
+      legacyEnd,
+    } = businessDateQueryRange(startLabel, endLabel, cutoff);
 
     // Fetch all paid orders attributed to this business date range.
     // Fall back to paidAt for records that pre-date the businessDate backfill.
@@ -657,9 +695,9 @@ export class FinancialReportService {
         { businessDate: { $gte: start, $lte: end } },
         {
           businessDate: { $exists: false },
-          paidAt: { $gte: start, $lte: end },
+          paidAt: { $gte: legacyStart, $lte: legacyEnd },
         },
-        { businessDate: null, paidAt: { $gte: start, $lte: end } },
+        { businessDate: null, paidAt: { $gte: legacyStart, $lte: legacyEnd } },
       ],
     }).lean();
 
@@ -668,6 +706,8 @@ export class FinancialReportService {
     // Similar logic to generateDailySummary but for date range
     const report: DailySummaryReport = {
       date: startDate,
+      startDate,
+      endDate,
       revenue: {
         byOrderType: {
           'dine-in': { revenue: 0, orderCount: 0 },
@@ -725,7 +765,9 @@ export class FinancialReportService {
       start,
       end,
       report.paymentBreakdown as Record<string, number>,
-      report.tipsBreakdown as Record<string, number>
+      report.tipsBreakdown as Record<string, number>,
+      legacyStart,
+      legacyEnd
     );
 
     const rangeTabIdsWithPartials = new Set<string>();

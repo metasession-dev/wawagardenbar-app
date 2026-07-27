@@ -48,17 +48,14 @@ function parseNGN(text: string): number {
  * Extract payment amounts from the daily report.
  * Each metric card has: CardTitle (.font-medium) + amount (.text-2xl.font-bold).
  */
-async function getReportAmounts(page: Page): Promise<{
+type ReportAmounts = {
   totalRevenue: number;
   cash: number;
   card: number;
   transfer: number;
-}> {
-  await page
-    .getByText('Generating report...')
-    .waitFor({ state: 'hidden', timeout: 15000 })
-    .catch(() => {});
+};
 
+async function readReportAmountsOnce(page: Page): Promise<ReportAmounts> {
   return page.evaluate(() => {
     const result = { totalRevenue: 0, cash: 0, card: 0, transfer: 0 };
 
@@ -84,6 +81,33 @@ async function getReportAmounts(page: Page): Promise<{
 
     return result;
   });
+}
+
+/**
+ * "Generating report..." becoming hidden only proves the network request
+ * finished, not that React's state update from it has committed to the
+ * DOM (that can trail by a render tick) — a single read right after can
+ * be stale under load. Poll until two consecutive reads agree.
+ */
+async function getReportAmounts(page: Page): Promise<ReportAmounts> {
+  await page
+    .getByText('Generating report...')
+    .waitFor({ state: 'hidden', timeout: 15000 })
+    .catch(() => {});
+
+  let previous: ReportAmounts | null = null;
+  let current = await readReportAmountsOnce(page);
+  for (
+    let attempt = 0;
+    attempt < 10 &&
+    (!previous || JSON.stringify(previous) !== JSON.stringify(current));
+    attempt++
+  ) {
+    previous = current;
+    await page.waitForTimeout(100);
+    current = await readReportAmountsOnce(page);
+  }
+  return current;
 }
 
 /** Navigate to the daily report page and force-refresh for today. */

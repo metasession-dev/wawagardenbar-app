@@ -188,4 +188,35 @@ describe('REQ-051: generateDailySummary uses business-day range', () => {
     // previous business day.
     expect(start.toISOString()).toBe(watMidnightUTC(2026, 5, 29).toISOString());
   });
+
+  it('REQ-095: date ranges use inclusive business labels and cutoff fallback bounds', async () => {
+    await FinancialReportService.generateDateRangeReport(
+      new Date('2026-05-29T00:00:00.000Z'),
+      new Date('2026-05-30T00:00:00.000Z')
+    );
+
+    const filter = orderFindMock.mock.calls[0][0] as {
+      $or: Array<{
+        businessDate?: { $gte: Date; $lte: Date };
+        paidAt?: { $gte: Date; $lte: Date };
+      }>;
+    };
+    const businessBranch = filter.$or.find(
+      (branch) => branch.businessDate?.$gte
+    );
+    const legacyBranch = filter.$or.find((branch) => branch.paidAt?.$gte);
+
+    expect(businessBranch?.businessDate?.$gte.toISOString()).toBe(
+      '2026-05-28T23:00:00.000Z'
+    );
+    expect(businessBranch?.businessDate?.$lte.toISOString()).toBe(
+      '2026-05-30T22:59:59.999Z'
+    );
+    expect(legacyBranch?.paidAt?.$gte.toISOString()).toBe(
+      '2026-05-29T14:00:00.000Z'
+    );
+    expect(legacyBranch?.paidAt?.$lte.toISOString()).toBe(
+      '2026-05-31T13:59:59.999Z'
+    );
+  });
 });

@@ -133,3 +133,88 @@ export function watCalendarDateKey(date: Date): string {
   const watDate = new Date(date.getTime() + WAT_OFFSET_MS);
   return watDate.toISOString().slice(0, 10);
 }
+
+/** Validate and parse a WAT business-date label without host-timezone drift. */
+function parseBusinessDateLabel(label: string): Date {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(label);
+  if (!match) throw new Error(`Invalid business date label: ${label}`);
+
+  const date = new Date(
+    Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 12)
+  );
+  if (watCalendarDateKey(date) !== label) {
+    throw new Error(`Invalid business date label: ${label}`);
+  }
+  return date;
+}
+
+/** Return the persisted UTC midnight value for a WAT business-date label. */
+export function businessDateValueForLabel(label: string): Date {
+  const watDate = parseBusinessDateLabel(label);
+  watDate.setUTCHours(0, 0, 0, 0);
+  return new Date(watDate.getTime() - WAT_OFFSET_MS);
+}
+
+/** Return the operational business-date label containing an instant. */
+export function businessDateLabelForInstant(
+  instant: Date,
+  cutoffTime: string
+): string {
+  return watCalendarDateKey(deriveBusinessDate(instant, cutoffTime));
+}
+
+/** Return a business-date label offset by a number of calendar days. */
+export function addBusinessDateLabels(label: string, days: number): string {
+  const date = parseBusinessDateLabel(label);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+/** Return the UTC instant at which a labelled business day begins. */
+function businessDayCutoffInstant(label: string, cutoffTime: string): Date {
+  const date = parseBusinessDateLabel(label);
+  const [hourText, minuteText] = cutoffTime.split(':');
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  if (!Number.isInteger(hour) || !Number.isInteger(minute)) {
+    return businessDayCutoffInstant(label, '15:00');
+  }
+
+  date.setUTCHours(hour, minute, 0, 0);
+  return new Date(date.getTime() - WAT_OFFSET_MS);
+}
+
+/** Return a representative instant at the configured cutoff for a label. */
+export function businessDateAtCutoff(label: string, cutoffTime: string): Date {
+  return businessDayCutoffInstant(label, cutoffTime);
+}
+
+export interface BusinessDateQueryRange {
+  /** Bounds for persisted businessDate values. */
+  businessDateStart: Date;
+  businessDateEnd: Date;
+  /** Actual cutoff-to-cutoff bounds for legacy paidAt fallback records. */
+  legacyStart: Date;
+  legacyEnd: Date;
+}
+
+/** Resolve inclusive business-date labels into modern and legacy query bounds. */
+export function businessDateQueryRange(
+  startLabel: string,
+  endLabel: string,
+  cutoffTime: string
+): BusinessDateQueryRange {
+  const start = businessDateValueForLabel(startLabel);
+  const end = businessDateValueForLabel(endLabel);
+  if (start > end) throw new Error('Business date range must not be reversed');
+
+  const nextDay = addBusinessDateLabels(endLabel, 1);
+  return {
+    businessDateStart: start,
+    businessDateEnd: new Date(end.getTime() + 24 * 60 * 60 * 1000 - 1),
+    legacyStart: businessDayCutoffInstant(startLabel, cutoffTime),
+    legacyEnd: new Date(
+      businessDayCutoffInstant(nextDay, cutoffTime).getTime() - 1
+    ),
+  };
+}

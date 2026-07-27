@@ -54,8 +54,7 @@ async function isAdminAuthenticated(page: Page): Promise<boolean> {
   }
 }
 
-/** Extract total revenue from a daily report page that is already loaded. */
-async function extractReportTotalRevenue(page: Page): Promise<number> {
+async function readReportTotalRevenueOnce(page: Page): Promise<number> {
   return page.evaluate(() => {
     const amountEls = document.querySelectorAll(
       '.text-2xl.font-bold, [class*="text-2xl"][class*="font-bold"]'
@@ -73,6 +72,25 @@ async function extractReportTotalRevenue(page: Page): Promise<number> {
     }
     return 0;
   });
+}
+
+/**
+ * Extract total revenue from a daily report page that is already loaded.
+ * Callers wait for "Generating report..." to hide before calling this,
+ * but that only proves the network request finished, not that React's
+ * resulting state update has committed to the DOM (which can trail by a
+ * render tick, more so under parallel load). Poll until two consecutive
+ * reads agree rather than trusting a single point-in-time read.
+ */
+async function extractReportTotalRevenue(page: Page): Promise<number> {
+  let previous: number | null = null;
+  let current = await readReportTotalRevenueOnce(page);
+  for (let attempt = 0; attempt < 10 && current !== previous; attempt++) {
+    previous = current;
+    await page.waitForTimeout(100);
+    current = await readReportTotalRevenueOnce(page);
+  }
+  return current;
 }
 
 // ---------------------------------------------------------------------------

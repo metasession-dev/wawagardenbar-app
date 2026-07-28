@@ -165,6 +165,12 @@ export interface IOrder {
   inventoryDeductedAt?: Date;
   inventoryDeductedBy?: Types.ObjectId;
   inventoryDeductionDetails?: IInventoryDeductionDetail[];
+  // REQ-096 — soft-delete: the document is never removed. `deleteOrder()`
+  // sets these fields; every active-order query filters `isDeleted: { $ne: true }`,
+  // which matches missing/undefined/false alike (no migration needed).
+  isDeleted?: boolean;
+  deletedAt?: Date;
+  deletedBy?: Types.ObjectId;
   estimatedCompletionTime?: Date;
   preparationStartedAt?: Date;
   kitchenPriority?: 'normal' | 'urgent';

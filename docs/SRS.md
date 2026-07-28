@@ -125,10 +125,12 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-ORDMGT-008   | Express order item selection uses progressive category display with grouped items      | Should   | regression | `app/dashboard/orders/express/create-order/page.tsx`; `app/actions/admin/express-actions.ts`; REQ-082            |
 | REQ-ORDMGT-009   | Express create order: order type selector + customer info for pickup/delivery          | Must     | regression | `app/dashboard/orders/express/create-order/page.tsx`; `app/actions/admin/express-actions.ts`; REQ-084            |
 | REQ-ORDMGT-010   | Admin Order Management section on orders dashboard                                     | Should   | smoke      | `app/dashboard/orders/page.tsx`; REQ-086                                                                         |
+| REQ-ORDMGT-013   | Delete order (soft-delete; super-admin override for live orders)                       | Could    | extended   | `order-service.ts` `deleteOrder()`; REQ-096                                                                      |
+| REQ-ORDMGT-014   | Delete order: independent inventory/payment revert choices                             | Could    | extended   | `order-service.ts` `deleteOrder()`; REQ-096                                                                      |
 | REQ-TABMGT-001   | Tab list with status filter + stats                                                    | Should   | regression | `app/dashboard/orders/tabs/page.tsx`                                                                             |
 | REQ-TABMGT-002   | Tab detail with partial payments                                                       | Should   | regression | `tabs/[tabId]/page.tsx:82`; REQ-012/035/036                                                                      |
 | REQ-TABMGT-003   | Admin pay tab with method + independent tip                                            | Should   | regression | `admin-pay-tab-dialog`; REQ-036                                                                                  |
-| REQ-TABMGT-004   | Delete tab (guard closed/paid)                                                         | Could    | extended   | `delete-tab-dialog`                                                                                              |
+| REQ-TABMGT-004   | Delete tab (guard closed/paid; super-admin override with inventory/payment revert)     | Could    | extended   | `delete-tab-dialog`; REQ-096                                                                                     |
 | REQ-TABMGT-005   | Admin tab checkout: manual payment (no Monnify redirect)                               | Must     | regression | `components/features/admin/admin-tab-checkout-form.tsx`; REQ-084                                                 |
 | REQ-TABMGT-006   | Tab payment preserves order fulfillment status                                         | Must     | regression | `services/tab-service.ts`; REQ-085                                                                               |
 | REQ-KITCHEN-001  | Kitchen display shows active orders real-time                                          | Should   | regression | `app/dashboard/kitchen-display/page.tsx`                                                                         |
@@ -623,6 +625,23 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 
 - **Given** staff are creating an order in Express Create Order, **When** they view a cart line, **Then** a special instructions textarea is available per line and the text is persisted to the order item's `specialInstructions` field on submission.
 
+#### REQ-ORDMGT-013 — Delete order · **Could** · extended
+
+**Source:** `services/order-service.ts` `deleteOrder()`, `order-management-actions.ts` `deleteOrderAction`, `delete-order-dialog`; cross-ref REQ-096.
+**Behaviour:** An order can be soft-deleted (`isDeleted`/`deletedAt`/`deletedBy` set; the document is never removed) and disappears from active list/kitchen surfaces. Any admin can delete an order that is already `cancelled` and not `paymentStatus: 'paid'` with no override. Deleting a live order (not cancelled, or paid) requires a super-admin override.
+
+- **Given** an order with `status: 'cancelled'` and `paymentStatus` not `'paid'`, **When** an admin deletes it, **Then** it is soft-deleted (hidden from active views) with an `order.delete` audit entry, no override required.
+- **Given** an order that is not cancelled or has `paymentStatus: 'paid'`, **When** a non-super-admin attempts to delete it, **Then** the action is blocked; **When** a super-admin attempts it, **Then** an override warning is shown before deletion proceeds.
+
+#### REQ-ORDMGT-014 — Delete order: inventory/payment revert choices · **Could** · extended
+
+**Source:** `services/order-service.ts` `deleteOrder()`, `delete-order-dialog`; cross-ref REQ-096.
+**Behaviour:** When a super-admin uses the override path to delete a live order, two independent choices are offered: restock inventory, and reverse the payment (mark `refunded`). Either, both, or neither may be selected.
+
+- **Given** a super-admin deleting an order with inventory deducted, **When** they choose to restock inventory, **Then** stock is restored via the same mechanism as order cancellation and the order's status becomes `cancelled` if it wasn't already.
+- **Given** a super-admin deleting an order with `paymentStatus: 'paid'`, **When** they choose to reverse the payment, **Then** `paymentStatus` becomes `'refunded'` and the order is excluded from subsequent financial reports for its business date.
+- **Given** a super-admin deleting an order and choosing neither option, **When** they confirm, **Then** the order is hidden from active views but its `status`/`paymentStatus` are left unchanged.
+
 ---
 
 ## Feature Area 11 — Tab Management (TABMGT)
@@ -649,9 +668,13 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 
 #### REQ-TABMGT-004 — Delete tab · **Could** · extended
 
-**Source:** `delete-tab-dialog`
+**Source:** `delete-tab-dialog`; `services/tab-service.ts` `deleteTab()`; cross-ref REQ-096.
+**Behaviour:** By default, a tab can be deleted only when it is not closed+paid and all linked orders are already cancelled. A super-admin can override both guards. When overriding, two independent choices are offered: restock inventory for each non-cancelled linked order (cancelling those orders), and reverse payment (mark each affected order's `paymentStatus` `'refunded'`). If the tab has one or more `partialPayments` entries, the reverse-payment choice is refused (server-side, not just UI-disabled) since split/partial payments require manual reconciliation.
 
-- **Given** an open tab, **When** the admin deletes it, **Then** it is removed/closed with an audit entry; deleting a closed/paid tab is blocked.
+- **Given** an open, unpaid tab with no non-cancelled orders, **When** the admin deletes it, **Then** it is removed with an audit entry; deleting a closed/paid tab, or a tab with non-cancelled orders, is blocked without override.
+- **Given** a super-admin overriding the guards, **When** they choose to restock inventory, **Then** each non-cancelled linked order is cancelled and its stock restored where deducted.
+- **Given** a super-admin overriding the guards on a tab with paid orders and no `partialPayments`, **When** they choose to reverse payment, **Then** each affected order's `paymentStatus` becomes `'refunded'`.
+- **Given** a tab with one or more `partialPayments` entries, **When** a super-admin attempts the reverse-payment choice, **Then** it is refused and an explanatory note directs them to reconcile the partial payments manually.
 
 #### REQ-TABMGT-005 — Admin tab checkout: manual payment · **Must** · regression
 

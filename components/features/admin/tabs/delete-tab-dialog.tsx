@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { deleteTabAction } from '@/app/actions/tabs/tab-actions';
@@ -28,16 +28,22 @@ interface DeleteTabDialogProps {
   paymentStatus: 'pending' | 'paid' | 'failed';
   orderCount: number;
   nonCancelledOrderCount: number;
+  /** REQ-096 — whether any linked order is currently paid. */
+  hasPaidOrders?: boolean;
+  /**
+   * REQ-096 — whether the tab has recorded partial/split payments.
+   * When true, the "Reverse payment" choice is disabled — that ledger
+   * has no reversal concept and must be reconciled manually.
+   */
+  hasPartialPayments?: boolean;
   /**
    * When true, the dialog renders a super-admin override flow: the
    * closed+paid and non-cancelled-order guards are bypassed and the
-   * user picks between restocking inventory (Revert items) or leaving
-   * orders as-is. The action layer re-enforces the role gate.
+   * user picks independently whether to restock inventory and/or
+   * reverse payment. The action layer re-enforces the role gate.
    */
   isSuperAdmin?: boolean;
 }
-
-type RevertChoice = 'revert' | 'keep';
 
 export function DeleteTabDialog({
   tabId,
@@ -46,11 +52,16 @@ export function DeleteTabDialog({
   paymentStatus,
   orderCount,
   nonCancelledOrderCount,
+  hasPaidOrders = false,
+  hasPartialPayments = false,
   isSuperAdmin = false,
 }: DeleteTabDialogProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [open, setOpen] = useState(false);
-  const [revertChoice, setRevertChoice] = useState<RevertChoice>('revert');
+  const [revertItems, setRevertItems] = useState(true);
+  const [revertPayment, setRevertPayment] = useState(
+    hasPaidOrders && !hasPartialPayments
+  );
   const router = useRouter();
 
   const closedPaid = status === 'closed' && paymentStatus === 'paid';
@@ -74,7 +85,8 @@ export function DeleteTabDialog({
         overrideRequired
           ? {
               superAdminOverride: true,
-              revertItems: revertChoice === 'revert',
+              revertItems,
+              revertPayment: revertPayment && !hasPartialPayments,
             }
           : undefined
       );
@@ -113,7 +125,8 @@ export function DeleteTabDialog({
     );
   }
 
-  const showRevertChoice = isSuperAdmin && hasNonCancelledOrders;
+  const showRevertChoices =
+    isSuperAdmin && (hasNonCancelledOrders || hasPaidOrders);
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -173,58 +186,74 @@ export function DeleteTabDialog({
           </Alert>
         )}
 
-        {showRevertChoice && (
-          <RadioGroup
-            value={revertChoice}
-            onValueChange={(v) => setRevertChoice(v as RevertChoice)}
-            className="gap-2"
-          >
-            <Label
-              htmlFor="revert-items"
-              className={`flex items-start gap-3 rounded-md border p-3 cursor-pointer transition-colors font-normal ${
-                revertChoice === 'revert'
-                  ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                  : 'border-border hover:bg-muted/50'
-              }`}
-            >
-              <RadioGroupItem
-                value="revert"
-                id="revert-items"
-                className="mt-0.5"
-              />
-              <span className="flex-1">
-                <span className="flex items-center gap-2">
-                  <span className="font-semibold">Revert items</span>
-                  <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">
-                    Recommended
+        {showRevertChoices && (
+          <div className="space-y-2">
+            {hasNonCancelledOrders && (
+              <Label
+                htmlFor="revert-items"
+                className={`flex items-start gap-3 rounded-md border p-3 cursor-pointer transition-colors font-normal ${
+                  revertItems
+                    ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                    : 'border-border hover:bg-muted/50'
+                }`}
+              >
+                <Checkbox
+                  id="revert-items"
+                  checked={revertItems}
+                  onCheckedChange={(checked) =>
+                    setRevertItems(checked === true)
+                  }
+                  className="mt-0.5"
+                />
+                <span className="flex-1">
+                  <span className="flex items-center gap-2">
+                    <span className="font-semibold">Restock inventory</span>
+                    <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">
+                      Recommended
+                    </span>
+                  </span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    Restock inventory for each order on this tab and cancel
+                    those orders. Use this for accidental opens, voided sales,
+                    or any delete where the items did not actually leave the
+                    bar.
                   </span>
                 </span>
-                <span className="mt-0.5 block text-xs text-muted-foreground">
-                  Restock inventory for each order on this tab and cancel those
-                  orders. Use this for accidental opens, voided sales, or any
-                  delete where the items did not actually leave the bar.
+              </Label>
+            )}
+            {hasPaidOrders && (
+              <Label
+                htmlFor="revert-payment"
+                className={`flex items-start gap-3 rounded-md border p-3 font-normal ${
+                  hasPartialPayments
+                    ? 'cursor-not-allowed border-border opacity-60'
+                    : 'cursor-pointer transition-colors'
+                } ${
+                  revertPayment && !hasPartialPayments
+                    ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                    : 'border-border hover:bg-muted/50'
+                }`}
+              >
+                <Checkbox
+                  id="revert-payment"
+                  checked={revertPayment && !hasPartialPayments}
+                  onCheckedChange={(checked) =>
+                    setRevertPayment(checked === true)
+                  }
+                  disabled={hasPartialPayments}
+                  className="mt-0.5"
+                />
+                <span className="flex-1">
+                  <span className="font-semibold">Reverse payment</span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    {hasPartialPayments
+                      ? 'Disabled — this tab has partial/split payments, which must be reconciled manually. The tab can still be deleted.'
+                      : "Mark this tab's paid orders refunded so reports exclude them. The actual refund is processed manually — this only corrects reporting."}
+                  </span>
                 </span>
-              </span>
-            </Label>
-            <Label
-              htmlFor="keep-items"
-              className={`flex items-start gap-3 rounded-md border p-3 cursor-pointer transition-colors font-normal ${
-                revertChoice === 'keep'
-                  ? 'border-destructive bg-destructive/5 ring-1 ring-destructive'
-                  : 'border-border hover:bg-muted/50'
-              }`}
-            >
-              <RadioGroupItem value="keep" id="keep-items" className="mt-0.5" />
-              <span className="flex-1">
-                <span className="font-semibold">Leave as-is</span>
-                <span className="mt-0.5 block text-xs text-muted-foreground">
-                  Orders keep their current status and inventory stays
-                  decremented. Only pick this if the items were actually
-                  served/consumed and you just want to delete the tab record.
-                </span>
-              </span>
-            </Label>
-          </RadioGroup>
+              </Label>
+            )}
+          </div>
         )}
 
         <AlertDialogFooter>

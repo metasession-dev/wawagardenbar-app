@@ -259,6 +259,10 @@ const orderSchema = new Schema<IOrder>(
       type: [inventoryDeductionDetailSchema],
       default: [],
     },
+    // REQ-096 — soft-delete (ADR-002): additive fields, no migration.
+    isDeleted: { type: Boolean, default: false },
+    deletedAt: { type: Date },
+    deletedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     estimatedCompletionTime: { type: Date },
     preparationStartedAt: { type: Date },
     kitchenPriority: {

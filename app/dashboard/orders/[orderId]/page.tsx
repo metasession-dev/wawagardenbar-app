@@ -1,7 +1,10 @@
 import { Suspense } from 'react';
+import { cookies } from 'next/headers';
+import { getIronSession } from 'iron-session';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { OrderService } from '@/services';
+import { sessionOptions, SessionData } from '@/lib/session';
 import { OrderDetailsHeader } from '@/components/features/admin/order-details-header';
 import { OrderCustomerInfo } from '@/components/features/admin/order-customer-info';
 import { OrderItemsTable } from '@/components/features/admin/order-items-table';
@@ -11,7 +14,8 @@ import { OrderActionsSidebar } from '@/components/features/admin/order-actions-s
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowLeft } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ArrowLeft, AlertTriangle } from 'lucide-react';
 
 interface OrderDetailsPageProps {
   params: Promise<{
@@ -23,7 +27,9 @@ interface OrderDetailsPageProps {
  * Order details page
  * Displays comprehensive order information with real-time updates
  */
-export default async function OrderDetailsPage({ params }: OrderDetailsPageProps) {
+export default async function OrderDetailsPage({
+  params,
+}: OrderDetailsPageProps) {
   const { orderId } = await params;
 
   // Fetch order data
@@ -33,10 +39,18 @@ export default async function OrderDetailsPage({ params }: OrderDetailsPageProps
     notFound();
   }
 
+  // REQ-096 — gates the delete-order override flow.
+  const cookieStore = await cookies();
+  const session = await getIronSession<SessionData>(
+    cookieStore,
+    sessionOptions
+  );
+  const isSuperAdmin = session.role === 'super-admin';
+
   // Serialize order for client components with proper customer data
   const populatedUser = orderData.userId as any;
   const serializedOrder = JSON.parse(JSON.stringify(orderData));
-  
+
   // Add customer object with user profile data or guest data
   const order = {
     ...serializedOrder,
@@ -58,6 +72,20 @@ export default async function OrderDetailsPage({ params }: OrderDetailsPageProps
           </Button>
         </Link>
       </div>
+
+      {/* Deleted banner — REQ-096 */}
+      {order.isDeleted && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            This order was deleted
+            {order.deletedAt &&
+              ` on ${new Date(order.deletedAt).toLocaleString()}`}
+            . It is hidden from active order views but retained for audit
+            purposes.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Order Header */}
       <Suspense fallback={<Skeleton className="h-32 w-full" />}>
@@ -100,7 +128,7 @@ export default async function OrderDetailsPage({ params }: OrderDetailsPageProps
         <div className="space-y-6">
           {/* Actions Sidebar */}
           <Suspense fallback={<Skeleton className="h-64 w-full" />}>
-            <OrderActionsSidebar order={order} />
+            <OrderActionsSidebar order={order} isSuperAdmin={isSuperAdmin} />
           </Suspense>
 
           {/* Payment Information */}

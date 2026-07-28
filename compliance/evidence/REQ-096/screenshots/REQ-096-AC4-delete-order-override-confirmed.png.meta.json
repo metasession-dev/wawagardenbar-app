@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-096",
+  "ac": 4,
+  "slug": "delete-order-override-confirmed",
+  "specFile": "e2e/critical/delete-order.spec.ts",
+  "capturedAt": "2026-07-28T07:03:03.697Z"
+}

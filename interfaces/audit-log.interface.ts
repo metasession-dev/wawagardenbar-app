@@ -15,6 +15,7 @@ export type AuditAction =
   | 'inventory.update'
   | 'order.update'
   | 'order.cancel'
+  | 'order.delete'
   | 'order.manual_payment'
   | 'order.price_override'
   | 'reward.create'

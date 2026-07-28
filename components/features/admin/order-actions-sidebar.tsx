@@ -12,6 +12,7 @@ import { AddOrderNoteDialog } from './add-order-note-dialog';
 import { CancelOrderDialog } from './cancel-order-dialog';
 import { AdminPayOrderDialog } from './orders/admin-pay-order-dialog';
 import { EditOrderDialog } from './edit-order-dialog';
+import { DeleteOrderDialog } from './delete-order-dialog';
 import {
   Settings,
   Loader2,
@@ -35,6 +36,8 @@ import {
 
 interface OrderActionsSidebarProps {
   order: any;
+  /** REQ-096 — gates the delete-order override flow. */
+  isSuperAdmin?: boolean;
 }
 
 /**
@@ -43,6 +46,7 @@ interface OrderActionsSidebarProps {
  */
 export function OrderActionsSidebar({
   order: initialOrder,
+  isSuperAdmin = false,
 }: OrderActionsSidebarProps) {
   const [order, setOrder] = useState(initialOrder);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -338,6 +342,18 @@ export function OrderActionsSidebar({
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
+          </div>
+
+          {/* Delete Order — REQ-096 */}
+          <div className="pt-3 border-t">
+            <DeleteOrderDialog
+              orderId={order._id}
+              orderNumber={order.orderNumber}
+              status={order.status}
+              paymentStatus={order.paymentStatus}
+              inventoryDeducted={order.inventoryDeducted === true}
+              isSuperAdmin={isSuperAdmin}
+            />
           </div>
         </CardContent>
       </Card>

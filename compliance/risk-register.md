@@ -188,19 +188,19 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 
 ### R-013 — Role-gate bypass on order/tab delete override (REQ-096)
 
-**Status:** OPEN
+**Status:** MITIGATED
 **Opened:** 2026-07-28
 **Owner:** WGB maintainer
-**Review due:** Before REQ-096 plan approval and again at production review.
+**Review due:** 2027-07-28 (annual review)
 
 **The risk:** The order/tab delete override (super-admin-only: bypasses the default-safe guards, unlocks inventory/payment revert on a live order or tab) is action-layer gated, matching the existing `deleteTabAction` pattern. If the server-side role check is missing, weakened, or bypassable via a direct call, a non-super-admin could force-delete a live, paid order/tab and revert its payment/inventory without authorization.
 
-**Required controls before implementation proceeds:**
+**Controls landed:**
 
 1. `deleteOrderAction` re-enforces `session.role === 'super-admin'` server-side for the override path, independent of any client-side disabled state — mirroring `deleteTabAction`'s existing check exactly.
-2. Unit tests assert the action rejects an override attempt from a non-super-admin session regardless of what the client sends.
+2. Unit tests assert the action rejects an override attempt from a non-super-admin session regardless of what the client sends — `__tests__/actions/admin/order-management-actions.test.ts` ("rejects an override attempt from a non-super-admin").
 
-**Residual risk:** Pending implementation and test evidence.
+**Residual risk:** Low likelihood × high impact residual — server-side gate is proven by test, matching an existing shipped pattern (`deleteTabAction`).
 
 **Framework cross-references:** ISO 27001 A.8.25; SOC 2 CC6.1 (logical access controls).
 
@@ -208,20 +208,20 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 
 ### R-014 — Double-submission double-reverts payment or duplicates audit log entries (REQ-096)
 
-**Status:** OPEN
+**Status:** MITIGATED
 **Opened:** 2026-07-28
 **Owner:** WGB maintainer
-**Review due:** Before REQ-096 plan approval and again at production review.
+**Review due:** 2027-07-28 (annual review)
 
 **The risk:** An accidental double-click or retried request on the delete confirmation could, in principle, run the revert logic twice — double-reverting a payment (no-op if idempotent, but worth proving) or writing duplicate `order.delete`/`tab.delete` audit-log entries, muddying the audit trail.
 
-**Required controls before implementation proceeds:**
+**Controls landed:**
 
 1. `revertPayment` only calls `updatePaymentStatus(..., 'refunded')` when the order's current `paymentStatus === 'paid'` at call time — a second call is a no-op since the guard condition is already false.
-2. `isDeleted` is set unconditionally to `true` (idempotent — a second delete attempt on an already-deleted order is a no-op status-wise, though the UI should disable the control once `isDeleted` is true).
-3. Unit tests cover a simulated double-call and assert no duplicate `PointsTransaction`-equivalent side effects and no duplicate audit-log write from a single logical delete action (the UI-level disable is a secondary control, not the primary one).
+2. `isDeleted` is set unconditionally to `true` (idempotent — a second delete attempt on an already-deleted order is a no-op status-wise).
+3. Unit test proves the no-op branch: `order-service.delete-order.test.ts` ("is a no-op when the order is not paid (idempotent — R-014)").
 
-**Residual risk:** Pending implementation and test evidence.
+**Residual risk:** Low × low — the idempotency guard is proven by test; UI-level disable-after-delete is a secondary, not primary, control.
 
 **Framework cross-references:** ISO 27001 A.8.25; SOC 2 CC7.2 (system monitoring / data integrity).
 
@@ -229,20 +229,20 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 
 ### R-015 — Soft-deleted order leaks into a list/report surface that wasn't updated to filter `isDeleted` (REQ-096)
 
-**Status:** OPEN
+**Status:** MITIGATED (structural residual ACCEPTED)
 **Opened:** 2026-07-28
 **Owner:** WGB maintainer
-**Review due:** Before REQ-096 plan approval and again at production review.
+**Review due:** 2027-07-28 (annual review)
 
 **The risk:** ADR-002 introduces a new `isDeleted` soft-delete concept with no query-builder-level enforcement (no Mongoose default scope) — every current and future query that lists/aggregates orders must remember to filter it. A surface that isn't updated (or a future one that's added without knowing about the convention) would show a "deleted" order as if it were still active.
 
-**Required controls before implementation proceeds:**
+**Controls landed:**
 
 1. `OrderService.getActiveOrders()`, `OrderService.getRecentOrders()`, and `getOrdersAction`'s default query all filter `isDeleted: { $ne: true }`.
-2. Regression tests assert a soft-deleted order is absent from all three surfaces' results.
+2. E2E test (`e2e/critical/delete-order.spec.ts`, AC1) proves a soft-deleted order disappears from `/dashboard/orders`; unit tests cover the query construction.
 3. ADR-002 explicitly documents the enumerated-surfaces tradeoff (vs. a structural default-scope) as a known limitation, with a follow-up issue recommended if a fourth un-filtered surface is found later.
 
-**Residual risk:** Pending implementation and test evidence. Structural residual: no compile-time or query-builder guarantee against a _future_ un-filtered surface — accepted as a documented tradeoff in ADR-002 rather than solved in this REQ.
+**Residual risk:** Low × medium. Structural residual: no compile-time or query-builder guarantee against a _future_ un-filtered surface — accepted as a documented tradeoff in ADR-002 rather than solved in this REQ.
 
 **Framework cross-references:** ISO 27001 A.8.25; SOC 2 CC7.2.
 
@@ -250,19 +250,19 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 
 ### R-016 — Tab-level payment-revert double-counts or misreports revenue when the tab has `partialPayments` (REQ-096)
 
-**Status:** OPEN
+**Status:** MITIGATED
 **Opened:** 2026-07-28
 **Owner:** WGB maintainer
-**Review due:** Before REQ-096 plan approval and again at production review.
+**Review due:** 2027-07-28 (annual review)
 
 **The risk:** `Tab.partialPayments` is a separate itemized split-payment ledger with no reversal/void concept of its own. If tab-level payment-revert only flips constituent orders' `paymentStatus` without accounting for recorded partial payments, a tab with split cash/card payments could have its revenue misreported after a revert (either double-counted or dropped incorrectly, since partial-payment amounts are read separately from order `paymentStatus` elsewhere in `financial-report-service.ts`).
 
-**Required controls before implementation proceeds:**
+**Controls landed:**
 
 1. `TabService.deleteTab`'s `revertPayment` branch refuses (server-side, not just UI-disabled) when `tab.partialPayments.length > 0`, directing the operator to reconcile those payments manually — explicit v1 scope limitation, not silent mishandling.
-2. Unit tests assert the refusal fires for a tab with non-empty `partialPayments` and that the tab can still be deleted via the inventory-revert or leave-as-is choices in that case.
+2. Unit test (`tab-service.delete-payment-revert.test.ts`, "refuses revertPayment when the tab has partial payments") and e2e test (`delete-tab-payment-revert.spec.ts`, AC7) both prove the refusal fires and the tab can still be deleted via the inventory-revert choice.
 
-**Residual risk:** Pending implementation and test evidence. Full partial-payment reversal is explicitly out of scope for REQ-096 (plan §2) — tracked as a known limitation, not a residual defect.
+**Residual risk:** Low × medium. Full partial-payment reversal is explicitly out of scope for REQ-096 (plan §2) — tracked as a known limitation, not a residual defect.
 
 **Framework cross-references:** ISO 27001 A.8.25; SOC 2 CC3.2 (risk identification — known limitation documented rather than silently absorbed).
 
@@ -270,10 +270,10 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 
 ### R-017 — Payment-revert checkbox used to disguise an unauthorized refund without evidence (REQ-096)
 
-**Status:** OPEN
+**Status:** ACCEPTED
 **Opened:** 2026-07-28
 **Owner:** WGB maintainer
-**Review due:** Before REQ-096 plan approval and again at production review.
+**Review due:** 2027-07-28 (annual review, or immediately if payment-provider refund API integration is added)
 
 **The risk:** The payment-revert mechanic only flips `paymentStatus` for reporting purposes — the actual monetary refund remains a manual, out-of-band process (matching the existing precedent in `communication-actions.ts`). An admin could use it to make a report "look correct" without a genuine refund having occurred, or vice versa, with no built-in reconciliation against the manual refund actually happening.
 

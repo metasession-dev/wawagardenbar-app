@@ -546,6 +546,126 @@ export class OrderService {
   }
 
   /**
+   * Soft-delete an order (ADR-002 — the document is never removed from
+   * MongoDB; only `isDeleted`/`deletedAt`/`deletedBy` are set).
+   *
+   * Default path: allowed only when the order is already `cancelled` and
+   * `paymentStatus` is not `'paid'` — nothing live to revert. Writes an
+   * `order.delete` audit log.
+   *
+   * Super-admin path (`opts.superAdminOverride === true`): bypasses the
+   * guard above. `opts.revertInventory === true` restores stock (if it
+   * was deducted) and force-cancels the order if it wasn't already
+   * cancelled. `opts.revertPayment === true` flips `paymentStatus` to
+   * `'refunded'` (if currently `'paid'`) via `updatePaymentStatus`, so
+   * `financial-report-service.ts` correctly excludes it. Either, both,
+   * or neither may be chosen — independent of each other. The role gate
+   * for the override lives in the calling action (`deleteOrderAction`).
+   */
+  static async deleteOrder(
+    orderId: string,
+    deletedBy: string,
+    opts?: {
+      superAdminOverride?: boolean;
+      revertInventory?: boolean;
+      revertPayment?: boolean;
+      deletedByEmail?: string;
+    }
+  ): Promise<void> {
+    await connectDB();
+
+    const superAdminOverride = opts?.superAdminOverride === true;
+    const revertInventory = opts?.revertInventory === true;
+    const revertPayment = opts?.revertPayment === true;
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      throw new Error('Order not found');
+    }
+
+    const isLive =
+      order.status !== 'cancelled' || order.paymentStatus === 'paid';
+    if (!superAdminOverride && isLive) {
+      throw new Error(
+        'Cannot delete a live order. Only a cancelled, unpaid order can be deleted without super-admin override.'
+      );
+    }
+
+    const AuditLogService = (await import('./audit-log-service'))
+      .AuditLogService;
+
+    let inventoryReverted = false;
+    if (superAdminOverride && revertInventory) {
+      const wasDeducted = order.inventoryDeducted === true;
+      if (wasDeducted) {
+        const InventoryService = (await import('./inventory-service')).default;
+        await InventoryService.restoreStockForOrder(orderId);
+        inventoryReverted = true;
+      }
+      if (order.status !== 'cancelled') {
+        // Targeted update (not `order.save()`) — mirrors
+        // `TabService.deleteTab`'s revert path: avoids re-validating the
+        // whole document (which can surprise-fail on legacy data) for a
+        // status-only change.
+        await Order.updateOne(
+          { _id: orderId },
+          {
+            $set: { status: 'cancelled' },
+            $push: {
+              statusHistory: {
+                status: 'cancelled',
+                timestamp: new Date(),
+                note: 'Order deleted by super-admin (restock inventory)',
+              },
+            },
+          }
+        );
+        order.status = 'cancelled';
+      }
+    }
+
+    let paymentReverted = false;
+    if (superAdminOverride && revertPayment && order.paymentStatus === 'paid') {
+      await OrderService.updatePaymentStatus(orderId, {
+        paymentStatus: 'refunded',
+      });
+      paymentReverted = true;
+    }
+
+    await Order.updateOne(
+      { _id: orderId },
+      {
+        $set: {
+          isDeleted: true,
+          deletedAt: new Date(),
+          deletedBy,
+        },
+      }
+    );
+
+    await AuditLogService.createLog({
+      userId: deletedBy,
+      userEmail: opts?.deletedByEmail || 'unknown',
+      userRole: superAdminOverride ? 'super-admin' : 'admin',
+      action: 'order.delete',
+      resource: 'order',
+      resourceId: orderId,
+      details: {
+        orderNumber: order.orderNumber,
+        ...(superAdminOverride
+          ? {
+              superAdminOverride: true,
+              revertInventory,
+              revertPayment,
+              inventoryReverted,
+              paymentReverted,
+            }
+          : {}),
+      },
+    });
+  }
+
+  /**
    * Add rating and review to completed order
    */
   static async addReview(
@@ -586,6 +706,8 @@ export class OrderService {
 
     const query: Record<string, unknown> = {
       status: { $in: ['confirmed', 'preparing', 'ready', 'out-for-delivery'] },
+      // REQ-096 — exclude soft-deleted orders (ADR-002).
+      isDeleted: { $ne: true },
     };
 
     if (orderType) {
@@ -603,7 +725,8 @@ export class OrderService {
   static async getRecentOrders(limit: number = 10): Promise<IOrder[]> {
     await connectDB();
 
-    const orders = await Order.find()
+    // REQ-096 — exclude soft-deleted orders (ADR-002).
+    const orders = await Order.find({ isDeleted: { $ne: true } })
       .sort({ createdAt: -1 })
       .limit(limit)
       .lean();

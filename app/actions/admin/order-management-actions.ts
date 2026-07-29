@@ -70,7 +70,8 @@ export async function getOrdersAction(
     await connectDB();
 
     // Build query
-    const query: any = {};
+    // REQ-096 — exclude soft-deleted orders by default (ADR-002).
+    const query: any = { isDeleted: { $ne: true } };
 
     if (filters.status) {
       // Handle comma-separated statuses
@@ -158,7 +159,8 @@ export async function getOrdersAction(
       deliveryAddress: order.deliveryDetails?.address,
       specialInstructions: order.specialInstructions,
       createdAt: order.createdAt?.toISOString() ?? '',
-      updatedAt: order.updatedAt?.toISOString() ?? order.createdAt?.toISOString() ?? '',
+      updatedAt:
+        order.updatedAt?.toISOString() ?? order.createdAt?.toISOString() ?? '',
       statusHistory: order.statusHistory?.map((h: any) => ({
         status: h.status,
         timestamp: h.timestamp?.toISOString() ?? '',
@@ -659,6 +661,69 @@ export async function cancelOrderAction(
     return {
       success: false,
       error: 'Failed to cancel order',
+    };
+  }
+}
+
+/**
+ * Delete (soft-delete) an order — REQ-096.
+ *
+ * Default path: any admin/super-admin can delete an order that is
+ * already cancelled and not paid. Overriding the guard (deleting a live
+ * order, and/or choosing to revert inventory/payment) requires
+ * `super-admin`, re-enforced here regardless of what the client sends.
+ */
+export async function deleteOrderAction(
+  orderId: string,
+  opts?: {
+    superAdminOverride?: boolean;
+    revertInventory?: boolean;
+    revertPayment?: boolean;
+  }
+): Promise<ActionResult> {
+  try {
+    const cookieStore = await cookies();
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
+
+    if (!session.isLoggedIn || !session.userId) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    if (opts?.superAdminOverride && session.role !== 'super-admin') {
+      return {
+        success: false,
+        error: 'Only super-admin can override order-delete guards',
+      };
+    }
+
+    if (session.role !== 'admin' && session.role !== 'super-admin') {
+      return {
+        success: false,
+        error: 'Insufficient permissions',
+      };
+    }
+
+    await OrderService.deleteOrder(orderId, session.userId, {
+      ...opts,
+      deletedByEmail: session.email || undefined,
+    });
+
+    revalidatePath('/dashboard/orders');
+    revalidatePath(`/dashboard/orders/${orderId}`);
+    revalidatePath('/dashboard/kitchen-display');
+
+    return {
+      success: true,
+      message: 'Order deleted successfully',
+    };
+  } catch (error) {
+    console.error('Error deleting order:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to delete order',
     };
   }
 }

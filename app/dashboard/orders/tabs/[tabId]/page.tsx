@@ -34,6 +34,7 @@ interface SerializedOrder {
   _id: string;
   orderNumber: string;
   status: string;
+  paymentStatus: string;
   items: SerializedOrderItem[];
   specialInstructions?: string;
   total: number;
@@ -100,6 +101,7 @@ async function getTabDetails(tabId: string) {
       _id: order._id,
       orderNumber: order.orderNumber,
       status: order.status,
+      paymentStatus: order.paymentStatus,
       items: order.items.map(
         (item: any): SerializedOrderItem => ({
           name: item.name,
@@ -132,6 +134,10 @@ export default async function DashboardTabDetailsPage({
   const nonCancelledOrderCount = orders.filter(
     (order) => order.status !== 'cancelled'
   ).length;
+  // REQ-096 — whether payment-revert has anything to do, and whether
+  // it's blocked by partial/split payments.
+  const hasPaidOrders = orders.some((order) => order.paymentStatus === 'paid');
+  const hasPartialPayments = (tab.partialPayments?.length ?? 0) > 0;
 
   // Calculate outstanding balance after partial payments
   const totalPartialPayments = (tab.partialPayments || []).reduce(
@@ -184,6 +190,8 @@ export default async function DashboardTabDetailsPage({
               paymentStatus={tab.paymentStatus}
               orderCount={orders.length}
               nonCancelledOrderCount={nonCancelledOrderCount}
+              hasPaidOrders={hasPaidOrders}
+              hasPartialPayments={hasPartialPayments}
               isSuperAdmin={isSuperAdmin}
             />
           </div>

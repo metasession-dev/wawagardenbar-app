@@ -642,11 +642,17 @@ export async function createAdminTabAction(params: {
  * Super-admin override (`opts.superAdminOverride === true`): bypasses
  * both guards. Requires `session.role === 'super-admin'` here — admin
  * cannot override. `opts.revertItems === true` restocks inventory and
- * cancels each linked non-cancelled order.
+ * cancels each linked non-cancelled order. `opts.revertPayment === true`
+ * (REQ-096) reverses payment on each linked paid order — refused inside
+ * `TabService.deleteTab` when the tab has `partialPayments`.
  */
 export async function deleteTabAction(
   tabId: string,
-  opts?: { superAdminOverride?: boolean; revertItems?: boolean }
+  opts?: {
+    superAdminOverride?: boolean;
+    revertItems?: boolean;
+    revertPayment?: boolean;
+  }
 ): Promise<ActionResult> {
   try {
     const cookieStore = await cookies();

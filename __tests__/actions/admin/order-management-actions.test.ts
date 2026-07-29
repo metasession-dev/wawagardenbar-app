@@ -38,9 +38,13 @@ vi.mock('@/services/audit-log-service', () => ({
   AuditLogService: {},
 }));
 
+const mockDeleteOrder = vi.fn();
+
 vi.mock('@/services', () => ({
   TabService: {},
-  OrderService: {},
+  OrderService: {
+    deleteOrder: (...a: unknown[]) => mockDeleteOrder(...a),
+  },
 }));
 
 vi.mock('@/services/inventory-service', () => ({
@@ -61,7 +65,7 @@ vi.mock('@/services/system-settings-service', () => ({
   SystemSettingsService: {},
 }));
 
-const { getOrdersAction } = await import(
+const { getOrdersAction, deleteOrderAction } = await import(
   '@/app/actions/admin/order-management-actions'
 );
 
@@ -101,7 +105,8 @@ describe('REQ-090: getOrdersAction serialization hardening', () => {
     const result = await getOrdersAction({}, 1, 50);
 
     expect(result.success).toBe(true);
-    expect(mockFind).toHaveBeenCalledWith({});
+    // REQ-096 — soft-deleted orders excluded by default (ADR-002).
+    expect(mockFind).toHaveBeenCalledWith({ isDeleted: { $ne: true } });
     expect(sort).toHaveBeenCalledWith({ createdAt: -1 });
     expect(skip).toHaveBeenCalledWith(0);
     expect(limit).toHaveBeenCalledWith(50);
@@ -118,5 +123,94 @@ describe('REQ-090: getOrdersAction serialization hardening', () => {
         },
       ],
     });
+  });
+});
+
+describe('REQ-096: deleteOrderAction role gate — AC2', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockCookies.mockResolvedValue({});
+    mockDeleteOrder.mockResolvedValue(undefined);
+  });
+
+  it('rejects when not logged in', async () => {
+    mockGetIronSession.mockResolvedValue({ isLoggedIn: false });
+
+    const result = await deleteOrderAction('order-1');
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/unauthorized/i);
+    expect(mockDeleteOrder).not.toHaveBeenCalled();
+  });
+
+  it('rejects an override attempt from a non-super-admin, regardless of client input', async () => {
+    mockGetIronSession.mockResolvedValue({
+      isLoggedIn: true,
+      userId: 'admin-1',
+      role: 'admin',
+    });
+
+    const result = await deleteOrderAction('order-1', {
+      superAdminOverride: true,
+      revertInventory: true,
+      revertPayment: true,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/only super-admin/i);
+    expect(mockDeleteOrder).not.toHaveBeenCalled();
+  });
+
+  it('allows a plain admin to delete without override', async () => {
+    mockGetIronSession.mockResolvedValue({
+      isLoggedIn: true,
+      userId: 'admin-1',
+      role: 'admin',
+      email: 'admin@wgb.test',
+    });
+
+    const result = await deleteOrderAction('order-1');
+
+    expect(result.success).toBe(true);
+    expect(mockDeleteOrder).toHaveBeenCalledWith('order-1', 'admin-1', {
+      deletedByEmail: 'admin@wgb.test',
+    });
+  });
+
+  it('allows a super-admin override with revert choices', async () => {
+    mockGetIronSession.mockResolvedValue({
+      isLoggedIn: true,
+      userId: 'super-1',
+      role: 'super-admin',
+      email: 'super@wgb.test',
+    });
+
+    const result = await deleteOrderAction('order-1', {
+      superAdminOverride: true,
+      revertInventory: true,
+      revertPayment: false,
+    });
+
+    expect(result.success).toBe(true);
+    expect(mockDeleteOrder).toHaveBeenCalledWith('order-1', 'super-1', {
+      superAdminOverride: true,
+      revertInventory: true,
+      revertPayment: false,
+      deletedByEmail: 'super@wgb.test',
+    });
+  });
+
+  it('surfaces the service error message on failure', async () => {
+    mockGetIronSession.mockResolvedValue({
+      isLoggedIn: true,
+      userId: 'admin-1',
+      role: 'admin',
+    });
+    mockDeleteOrder.mockRejectedValue(new Error('Cannot delete a live order.'));
+
+    const result = await deleteOrderAction('order-1');
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('Cannot delete a live order.');
   });
 });

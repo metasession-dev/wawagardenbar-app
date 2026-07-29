@@ -902,18 +902,33 @@ export class TabService {
    * guards. If `opts.revertItems === true`, each non-cancelled linked
    * order is set to `cancelled` and — if inventory was deducted — its
    * stock is restored via `InventoryService.restoreStockForOrder`. Each
-   * such order gets its own `order.cancel` audit log. The role gate for
-   * the override lives in the calling action (`deleteTabAction`).
+   * such order gets its own `order.cancel` audit log.
+   *
+   * `opts.revertPayment === true` (REQ-096) additionally flips
+   * `paymentStatus` to `'refunded'` on every linked order currently
+   * `paymentStatus: 'paid'` (independent of `revertItems` — payment and
+   * fulfillment are orthogonal), so `financial-report-service.ts`
+   * correctly excludes those orders. Refused (throws) when the tab has
+   * one or more `partialPayments` entries — that itemized split-payment
+   * ledger has no reversal concept and must be reconciled manually
+   * (ADR-002 / R-016); the tab can still be deleted via `revertItems` or
+   * leave-as-is in that case. The role gate for the override lives in
+   * the calling action (`deleteTabAction`).
    */
   static async deleteTab(
     tabId: string,
     deletedBy: string,
-    opts?: { superAdminOverride?: boolean; revertItems?: boolean }
+    opts?: {
+      superAdminOverride?: boolean;
+      revertItems?: boolean;
+      revertPayment?: boolean;
+    }
   ): Promise<void> {
     await connectDB();
 
     const superAdminOverride = opts?.superAdminOverride === true;
     const revertItems = opts?.revertItems === true;
+    const revertPayment = opts?.revertPayment === true;
 
     const tab = await TabModel.findById(tabId);
     if (!tab) {
@@ -927,6 +942,12 @@ export class TabService {
     ) {
       throw new Error(
         'Cannot delete a closed/paid tab. Only open or unpaid tabs can be deleted.'
+      );
+    }
+
+    if (revertPayment && (tab.partialPayments?.length ?? 0) > 0) {
+      throw new Error(
+        'Cannot reverse payment on a tab with partial/split payments. Reconcile the partial payments manually, or delete without the payment-revert choice.'
       );
     }
 
@@ -992,6 +1013,21 @@ export class TabService {
       }
     }
 
+    const paidOrderIds: string[] = [];
+    if (superAdminOverride && revertPayment) {
+      const { OrderService } = await import('./order-service');
+      const paidOrders = orders.filter(
+        (order) => order.paymentStatus === 'paid'
+      );
+      for (const order of paidOrders) {
+        const orderId = order._id.toString();
+        await OrderService.updatePaymentStatus(orderId, {
+          paymentStatus: 'refunded',
+        });
+        paidOrderIds.push(orderId);
+      }
+    }
+
     await AuditLogService.createLog({
       userId: deletedBy,
       userEmail: tab.customerEmail || 'unknown',
@@ -1008,8 +1044,10 @@ export class TabService {
           ? {
               superAdminOverride: true,
               revertItems,
+              revertPayment,
               ordersAffected: revertedOrderIds,
               inventoryRestored: inventoryRestoredCount,
+              paymentRevertedOrders: paidOrderIds,
             }
           : {}),
       },

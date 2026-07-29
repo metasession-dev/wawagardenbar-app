@@ -27,6 +27,7 @@ const auditLogSchema = new Schema<IAuditLog>(
         'inventory.snapshot_rejected',
         'order.update',
         'order.cancel',
+        'order.delete',
         'order.manual_payment',
         'reward.create',
         'reward.update',

@@ -1,6 +1,7 @@
 /**
  * @requirement REQ-031 - End-to-end multi-inventory deduction for menu items with customization options
  * @requirement REQ-089 - Price override support for admin order management
+ * @requirement REQ-097 - Fix half/quarter portion pricing (flat portion-option surcharge)
  *
  * Server-side reconciler. Single source of truth for the three order-creating
  * actions:
@@ -52,6 +53,13 @@ export type MenuItemForReconcile = {
   }>;
   /** REQ-089: whether the menu item allows manual price override. */
   allowManualPriceOverride?: boolean;
+  /** REQ-097: portion-size options — resolves the flat surcharge for the selected portion size. */
+  portionOptions?: {
+    halfPortionEnabled?: boolean;
+    halfPortionSurcharge?: number;
+    quarterPortionEnabled?: boolean;
+    quarterPortionSurcharge?: number;
+  };
 };
 
 export type ReconcileResult =
@@ -94,11 +102,21 @@ export function reconcileAndValidateOrderLines({
         ? line.priceOverride
         : menuItem.price;
 
+    // REQ-097: resolve the flat portion-option surcharge from the menu item
+    // for the selected portion size — never from the client request.
+    const portionSurcharge =
+      line.portionMultiplier === 0.5
+        ? (menuItem.portionOptions?.halfPortionSurcharge ?? 0)
+        : line.portionMultiplier === 0.25
+          ? (menuItem.portionOptions?.quarterPortionSurcharge ?? 0)
+          : 0;
+
     const lineTotal = computeLineTotal({
       basePrice: effectivePrice,
       customizations,
       quantity: line.quantity,
       portionMultiplier: line.portionMultiplier,
+      portionSurcharge,
     });
     subtotal += lineTotal;
   }

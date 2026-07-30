@@ -317,6 +317,7 @@ export async function expressCreateOrderAction(params: {
           price: m.price,
           customizations: m.customizations,
           allowManualPriceOverride: m.allowManualPriceOverride ?? false,
+          portionOptions: m.portionOptions,
         },
       ])
     );
@@ -379,7 +380,16 @@ export async function expressCreateOrderAction(params: {
       );
       // REQ-089: when price is overridden, use the overridden price as the base.
       const effectiveBase = item.priceOverridden ? item.price : basePrice;
-      const adjustedBase = Math.round(effectiveBase * multiplier);
+      // REQ-097: flat portion-option surcharge — added after the multiplier
+      // (not itself fractioned), still applies on top of a price override.
+      const portionSurcharge =
+        item.portionSize === 'half'
+          ? (menuItem?.portionOptions?.halfPortionSurcharge ?? 0)
+          : item.portionSize === 'quarter'
+            ? (menuItem?.portionOptions?.quarterPortionSurcharge ?? 0)
+            : 0;
+      const adjustedBase =
+        Math.round(effectiveBase * multiplier) + portionSurcharge;
       const itemSubtotal = Math.round(
         (adjustedBase + surcharge * multiplier) * item.quantity
       );

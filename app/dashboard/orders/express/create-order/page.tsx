@@ -246,14 +246,22 @@ function ExpressCreateOrderContent() {
     item: MenuItem,
     portionSize: 'full' | 'half' | 'quarter'
   ): number {
+    // REQ-097: apply the percentage discount before adding the flat
+    // surcharge — matching the menu editor's own preview calculation.
     if (portionSize === 'half' && item.portionOptions?.halfPortionEnabled) {
-      return item.price + (item.portionOptions.halfPortionSurcharge ?? 0);
+      return (
+        Math.round(item.price * 0.5) +
+        (item.portionOptions.halfPortionSurcharge ?? 0)
+      );
     }
     if (
       portionSize === 'quarter' &&
       item.portionOptions?.quarterPortionEnabled
     ) {
-      return item.price + (item.portionOptions.quarterPortionSurcharge ?? 0);
+      return (
+        Math.round(item.price * 0.25) +
+        (item.portionOptions.quarterPortionSurcharge ?? 0)
+      );
     }
     return item.price;
   }

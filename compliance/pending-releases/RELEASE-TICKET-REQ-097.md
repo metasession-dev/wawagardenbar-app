@@ -37,6 +37,7 @@ Prompt and review record: `compliance/evidence/REQ-097/ai-use-note.md`.
 - E2E: 2/2 targeted, run locally against a real dev server + MongoDB. Full `regression` pack run once (547 tests): 13 pre-existing failures confirmed unrelated via `git stash` baseline re-run and zero file-reference overlap.
 - TypeScript/ESLint: 0 errors.
 - Full detail: `compliance/evidence/REQ-097/test-execution-summary.md`.
+- **Release PR #623 E2E Regression Suite** (run 30537370010): 1 failure — `e2e/critical/express-order-report.spec.ts` "daily report reflects POS payment" (`cardDelta` received `0`, expected `>= 1500`). Investigated and confirmed pre-existing/unrelated: zero file overlap with this REQ's changes, passed in the local full-regression run before the PR opened, matches a flake class already documented in `e2e/helpers/db-assertions.ts` (daily-report aggregate-delta assertions), and reproduced as a clean pass on isolated re-run via `workflow_dispatch` (run 30538142167). No code change made. Documented on PR #623.
 
 ## Sign-off (dual-actor)
 

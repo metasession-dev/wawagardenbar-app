@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-097",
+  "ac": 2,
+  "slug": "portion-picker-quarter-price",
+  "specFile": "e2e/critical/express-order-portion-pricing-req097.spec.ts",
+  "capturedAt": "2026-07-30T10:20:30.154Z"
+}

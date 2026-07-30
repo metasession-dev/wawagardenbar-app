@@ -69,3 +69,33 @@ export async function revealFirstExpressMenuCard(page: Page): Promise<Locator> {
     'No available express menu items found via search or category filtering'
   );
 }
+
+/**
+ * @requirement REQ-097 - deterministic card lookup for price-correctness tests
+ *
+ * Reveal a specific express menu item by exact name via the cross-category
+ * search (AC11), rather than "whichever card happens to render first".
+ * Needed by tests that mutate a specific item's fields (e.g. portionOptions)
+ * and must exercise that exact item, not an arbitrary one.
+ *
+ * @param page - Playwright page already navigated to the express create-order page
+ * @param name - the menu item's exact `name` field
+ * @returns Locator for that item's menu card
+ * @throws If the named item is not found via search within the timeout
+ */
+export async function revealExpressMenuCardByName(
+  page: Page,
+  name: string
+): Promise<Locator> {
+  const searchInput = page.getByTestId('category-cascade-search');
+  await searchInput.fill(name);
+  await page.waitForTimeout(400);
+
+  const menuCard = page
+    .locator(MENU_CARD_SELECTOR)
+    .filter({ hasText: name })
+    .first();
+
+  await expect(menuCard).toBeVisible({ timeout: 5000 });
+  return menuCard;
+}

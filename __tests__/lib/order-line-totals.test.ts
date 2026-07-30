@@ -135,6 +135,92 @@ describe('REQ-031: reconcileAndValidateOrderLines — happy paths', () => {
   });
 });
 
+describe('REQ-097: reconcileAndValidateOrderLines — flat portion-option surcharge', () => {
+  const CATFISH_PEPPERSOUP: MenuItemForReconcile = {
+    _id: 'menu_catfish',
+    name: 'Catfish Peppersoup',
+    price: 12000,
+    portionOptions: {
+      halfPortionEnabled: true,
+      halfPortionSurcharge: 1000,
+      quarterPortionEnabled: true,
+      quarterPortionSurcharge: 500,
+    },
+  };
+
+  it('half portion: recomputed subtotal includes the flat surcharge (#613 repro)', () => {
+    const lines: SubmittedLine[] = [
+      { menuItemId: 'menu_catfish', quantity: 1, portionMultiplier: 0.5 },
+    ];
+    const result = reconcileAndValidateOrderLines({
+      menuItems: menuMap(CATFISH_PEPPERSOUP),
+      lines,
+    });
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      // round(12000 * 0.5) + 1000 = 7000 — matches the menu editor's own preview.
+      expect(result.recomputedSubtotal).toBe(7000);
+    }
+  });
+
+  it('quarter portion: recomputed subtotal includes the flat surcharge (#613 repro)', () => {
+    const lines: SubmittedLine[] = [
+      { menuItemId: 'menu_catfish', quantity: 1, portionMultiplier: 0.25 },
+    ];
+    const result = reconcileAndValidateOrderLines({
+      menuItems: menuMap(CATFISH_PEPPERSOUP),
+      lines,
+    });
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.recomputedSubtotal).toBe(3500);
+    }
+  });
+
+  it('full portion is unaffected by portionOptions being present', () => {
+    const lines: SubmittedLine[] = [
+      { menuItemId: 'menu_catfish', quantity: 1, portionMultiplier: 1 },
+    ];
+    const result = reconcileAndValidateOrderLines({
+      menuItems: menuMap(CATFISH_PEPPERSOUP),
+      lines,
+    });
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.recomputedSubtotal).toBe(12000);
+    }
+  });
+
+  it('menu item with no portionOptions configured defaults surcharge to 0 (legacy-safe)', () => {
+    const lines: SubmittedLine[] = [
+      { menuItemId: 'menu_poundo', quantity: 1, portionMultiplier: 0.5 },
+    ];
+    const result = reconcileAndValidateOrderLines({
+      menuItems: menuMap(POUNDO),
+      lines,
+    });
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.recomputedSubtotal).toBe(1000); // 2000 * 0.5, no surcharge
+    }
+  });
+
+  it('a clientTotal computed with the correct (surcharge-inclusive) number now passes the tamper-check', () => {
+    // Before REQ-097, a correctly-computing client (e.g. the menu editor's own
+    // formula) would have been rejected here because the server recomputed
+    // without the surcharge (6000 vs the client's correct 7000).
+    const lines: SubmittedLine[] = [
+      { menuItemId: 'menu_catfish', quantity: 1, portionMultiplier: 0.5 },
+    ];
+    const result = reconcileAndValidateOrderLines({
+      menuItems: menuMap(CATFISH_PEPPERSOUP),
+      lines,
+      clientTotal: 7000,
+    });
+    expect(result.valid).toBe(true);
+  });
+});
+
 describe('REQ-031: reconcileAndValidateOrderLines — rejects bad customizations (AC7)', () => {
   it('rejects when (group, option) pair is unknown', () => {
     const lines: SubmittedLine[] = [

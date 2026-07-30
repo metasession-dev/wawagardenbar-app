@@ -3,6 +3,8 @@
 /**
  * @requirement REQ-089 — Portion size picker dialog for admin order management.
  * Lets staff select Full/Half/Quarter portion when adding items to an order.
+ * @requirement REQ-097 — price preview must apply the percentage discount
+ * before adding the flat surcharge, matching the menu editor's own preview.
  */
 
 import {
@@ -41,9 +43,11 @@ export function PortionPickerDialog({
 }: PortionPickerDialogProps) {
   const halfEnabled = portionOptions?.halfPortionEnabled ?? false;
   const quarterEnabled = portionOptions?.quarterPortionEnabled ?? false;
-  const halfPrice = basePrice + (portionOptions?.halfPortionSurcharge ?? 0);
+  const halfPrice =
+    Math.round(basePrice * 0.5) + (portionOptions?.halfPortionSurcharge ?? 0);
   const quarterPrice =
-    basePrice + (portionOptions?.quarterPortionSurcharge ?? 0);
+    Math.round(basePrice * 0.25) +
+    (portionOptions?.quarterPortionSurcharge ?? 0);
 
   function formatPrice(price: number): string {
     return new Intl.NumberFormat('en-NG', {

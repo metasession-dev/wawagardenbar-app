@@ -288,6 +288,31 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 
 ---
 
+### R-018 — Silent under-charging on admin-created portioned orders (REQ-097)
+
+**Status:** MITIGATED
+**Opened:** 2026-07-30
+**Owner:** WGB maintainer
+**Review due:** 2027-07-30 (annual review)
+
+**The risk:** The portion surcharge configured on a menu item (`halfPortionSurcharge`/`quarterPortionSurcharge`) was never persisted to any order created via Admin Express Create Order, Admin Order Edit, or the public checkout API — `MenuItemForReconcile` and `computeLineTotal` had no path for it. Real revenue was silently lost on every such order, with no error, no log entry, and no discrepancy visible anywhere except a manual reconciliation against the menu editor's own displayed price. Compounding this, the picker's own preview showed an inflated (wrong-in-the-other-direction) price, so staff had no reliable number to sanity-check against at the point of sale.
+
+**Controls landed:**
+
+1. `MenuItemForReconcile` (`lib/order-line-totals.ts`) extended to carry `portionOptions`; the shared reconciler resolves the flat portion surcharge for the selected size from the menu item, never from the client request.
+2. `computeLineTotal` (`lib/cart-line-math.ts`) gains an optional flat `portionSurcharge` term, added after the percentage fraction is applied to base price and scaled by quantity, but not itself fractioned — matching the already-correct reference implementations in `menu-item-edit-form.tsx` and `menu-item-detail-modal.tsx`.
+3. All three consumers of the reconciler (`express-actions.ts`, `order-edit-actions.ts`, `app/api/public/orders/route.ts`) updated in lock-step so the fix can't drift back out of sync across the duplicated per-line persistence math.
+4. Portion-picker preview (`portion-picker-dialog.tsx`, `create-order/page.tsx`) corrected to the same formula, so the number staff see at pick time matches what's actually charged.
+5. Unit tests cover a non-zero portion surcharge in `cart-line-math.test.ts` and `order-line-totals.test.ts`, plus an admin-flow test asserting the persisted price.
+
+**Residual risk:** Low × low — the surcharge is resolved server-side from the menu record keyed by `menuItemId`, never from client input, so there's no new client-tamper surface; the fix is a straightforward additive term verified by unit tests across all four affected files.
+
+**Framework cross-references:** ISO 27001 A.8.25 (secure SDLC — arithmetic correctness in a financial calculation path); SOC 2 CC7.2 (system monitoring / data integrity — the tamper-check tolerance in `reconcileAndValidateOrderLines` is the compensating control that a future regression would trip against, once REQ-097's test cases are in place).
+
+**Cross-links:** [REQ-097 implementation plan](plans/REQ-097/implementation-plan.md); [#613](https://github.com/metasession-dev/wawagardenbar-app/issues/613); SRS REQ-ORDMGT-015, REQ-ORDMGT-016.
+
+---
+
 ## Closed
 
 ### R-002 — `xlsx` (SheetJS) high advisory — CLOSED (REQ-041, 2026-05-24)

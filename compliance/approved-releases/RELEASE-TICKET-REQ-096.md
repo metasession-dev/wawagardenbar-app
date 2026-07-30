@@ -1,6 +1,6 @@
 # Release Ticket: REQ-096 — Payment-revert option for order/tab deletion
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-07-28
 **Requirement ID:** REQ-096
 **Risk Level:** HIGH

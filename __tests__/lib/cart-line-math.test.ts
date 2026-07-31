@@ -179,3 +179,68 @@ describe('REQ-031: computeLineTotal — rounding behaviour', () => {
     ).toBe(250);
   });
 });
+
+describe('REQ-097: computeLineTotal — flat portion-option surcharge', () => {
+  it('applies the percentage multiplier before adding the flat surcharge (half portion)', () => {
+    // Catfish Peppersoup repro from #613: base 12,000, half surcharge 1,000.
+    // Correct: round(12000 * 0.5) + 1000 = 7000 (NOT 12000 + 1000 = 13000).
+    expect(
+      computeLineTotal({
+        basePrice: 12000,
+        quantity: 1,
+        portionMultiplier: 0.5,
+        portionSurcharge: 1000,
+      })
+    ).toBe(7000);
+  });
+
+  it('applies the percentage multiplier before adding the flat surcharge (quarter portion)', () => {
+    // Correct: round(12000 * 0.25) + 500 = 3500 (NOT 12000 + 500 = 12500).
+    expect(
+      computeLineTotal({
+        basePrice: 12000,
+        quantity: 1,
+        portionMultiplier: 0.25,
+        portionSurcharge: 500,
+      })
+    ).toBe(3500);
+  });
+
+  it('scales the portion surcharge by quantity but not by the portion fraction', () => {
+    // 2 half-portions: (12000*0.5 + 1000) * 2 = 14000, not (12000*0.5*2) + 1000 = 13000.
+    expect(
+      computeLineTotal({
+        basePrice: 12000,
+        quantity: 2,
+        portionMultiplier: 0.5,
+        portionSurcharge: 1000,
+      })
+    ).toBe(14000);
+  });
+
+  it('adds the portion surcharge on top of customization surcharges, which still scale with the fraction', () => {
+    const customizations: SelectedCustomization[] = [
+      { name: 'Extras', option: 'Plantain', price: 300 },
+    ];
+    // (12000 + 300) * 0.5 + 1000 = 7150
+    expect(
+      computeLineTotal({
+        basePrice: 12000,
+        customizations,
+        quantity: 1,
+        portionMultiplier: 0.5,
+        portionSurcharge: 1000,
+      })
+    ).toBe(7150);
+  });
+
+  it('defaults portionSurcharge to 0 (backward-compatible with callers that omit it)', () => {
+    expect(
+      computeLineTotal({
+        basePrice: 12000,
+        quantity: 1,
+        portionMultiplier: 0.5,
+      })
+    ).toBe(6000);
+  });
+});

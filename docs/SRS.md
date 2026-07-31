@@ -642,6 +642,24 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 - **Given** a super-admin deleting an order with `paymentStatus: 'paid'`, **When** they choose to reverse the payment, **Then** `paymentStatus` becomes `'refunded'` and the order is excluded from subsequent financial reports for its business date.
 - **Given** a super-admin deleting an order and choosing neither option, **When** they confirm, **Then** the order is hidden from active views but its `status`/`paymentStatus` are left unchanged.
 
+#### REQ-ORDMGT-015 — Portion picker preview price matches menu-editor calculation · **Must** · regression
+
+**Source:** `components/features/admin/portion-picker-dialog.tsx`, `app/dashboard/orders/express/create-order/page.tsx` (`computeAdjustedPrice`); cross-ref REQ-097.
+**Behaviour:** For a menu item with Half Portion (50%) and/or Quarter Portion (25%) enabled, the Express Create Order "Select Portion Size" dialog computes each portion's displayed price as `round(basePrice × fraction) + configuredSurcharge` — the same formula the menu-item editor itself uses to preview the portion price. The percentage discount is applied before the flat surcharge is added; a smaller portion is never shown as more expensive than the full portion unless the configured surcharge alone exceeds the discount.
+
+- **Given** a menu item with Half Portion surcharge ₦1,000 and full price ₦12,000, **When** a staff member opens the portion picker, **Then** the Half Portion price shown is ₦7,000 (`12,000 × 0.5 + 1,000`), matching the menu editor's own displayed "Half Portion Price".
+- **Given** the same item, **When** the staff member views the Quarter Portion price, **Then** it is ₦3,500 (`12,000 × 0.25 + 500`), matching the editor.
+
+#### REQ-ORDMGT-016 — Persisted order price includes the configured portion surcharge · **Must** · regression
+
+**Source:** `lib/order-line-totals.ts` (`MenuItemForReconcile`, `reconcileAndValidateOrderLines`), `lib/cart-line-math.ts` (`computeLineTotal`), `app/actions/admin/express-actions.ts`, `app/actions/admin/order-edit-actions.ts`, `app/api/public/orders/route.ts`; cross-ref REQ-097.
+**Behaviour:** Every order-creating/editing path that shares the `reconcileAndValidateOrderLines` reconciler (Admin Express Create Order, Admin Order Edit, and the public checkout API) persists a line price/subtotal that includes the menu item's configured `halfPortionSurcharge`/`quarterPortionSurcharge` for the selected portion size, added as a flat amount after the percentage fraction is applied to the base price (the surcharge itself does not scale with the portion fraction — it is the flat fee for choosing the smaller portion). This holds even when the line also carries an admin manual price override: the override replaces the item's base price; the portion surcharge is still added on top.
+
+- **Given** a Half Portion item with a ₦1,000 surcharge, **When** a staff member completes an Express Create Order with that line, **Then** the persisted line price is `round(basePrice × 0.5) + 1,000`, not `basePrice × 0.5` alone.
+- **Given** the same item, **When** a staff member edits an existing order to add that line via Admin Order Edit, **Then** the persisted price is computed identically.
+- **Given** the same item ordered via the public checkout API, **When** the order is submitted, **Then** the server-recomputed subtotal used for the tamper-check, and the persisted line, both include the surcharge.
+- **Given** a Half Portion item with both a configured surcharge and an admin manual price override on the same line, **When** the order is created, **Then** the surcharge is added on top of the overridden base price.
+
 ---
 
 ## Feature Area 11 — Tab Management (TABMGT)

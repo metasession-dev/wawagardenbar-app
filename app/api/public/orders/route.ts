@@ -369,6 +369,7 @@ export async function POST(request: NextRequest): Promise<Response> {
             name: m.name,
             price: m.price,
             customizations: m.customizations,
+            portionOptions: m.portionOptions,
           },
         ])
       );
@@ -396,7 +397,16 @@ export async function POST(request: NextRequest): Promise<Response> {
           (s, c) => s + (typeof c.price === 'number' ? c.price : 0),
           0
         );
-        const adjustedBase = Math.round(basePrice * multiplier);
+        // REQ-097: flat portion-option surcharge — added after the
+        // multiplier, not itself fractioned.
+        const portionSurcharge =
+          item.portionSize === 'half'
+            ? (menuItem?.portionOptions?.halfPortionSurcharge ?? 0)
+            : item.portionSize === 'quarter'
+              ? (menuItem?.portionOptions?.quarterPortionSurcharge ?? 0)
+              : 0;
+        const adjustedBase =
+          Math.round(basePrice * multiplier) + portionSurcharge;
         const itemSubtotal = Math.round(
           (adjustedBase + surcharge * multiplier) * item.quantity
         );

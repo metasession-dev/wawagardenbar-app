@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-097",
+  "ac": 3,
+  "slug": "checkout-before-submit",
+  "specFile": "e2e/critical/express-order-portion-pricing-req097.spec.ts",
+  "capturedAt": "2026-07-30T10:20:33.622Z"
+}

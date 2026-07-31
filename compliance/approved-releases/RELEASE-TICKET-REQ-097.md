@@ -1,6 +1,6 @@
 # Release Ticket: REQ-097 — Fix half/quarter portion pricing in Admin order management
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-07-30
 **Requirement ID:** REQ-097
 **Risk Level:** HIGH

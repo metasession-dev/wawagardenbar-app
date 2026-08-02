@@ -43,6 +43,33 @@ log()  { echo -e "${GREEN}[✓]${NC} $1"; }
 warn() { echo -e "${YELLOW}[!]${NC} $1"; }
 err()  { echo -e "${RED}[✗]${NC} $1"; exit 1; }
 
+# Return a database name only when the URI has an explicit path after its
+# authority. A URI without `/database` must use the configured/default name;
+# `${URI##*/}` would incorrectly return the credentials and host.
+database_from_uri() {
+  local uri_without_query="${1%%\?*}"
+  if [[ "$uri_without_query" =~ ^mongodb(\+srv)?://[^/]+/([^/]+)$ ]]; then
+    printf '%s\n' "${BASH_REMATCH[2]}"
+  fi
+}
+
+# Railway's public Mongo URL often contains only credentials and host. Complete
+# it after the intended database is known so MongoDB authenticates against
+# admin and never silently targets the default database.
+connection_uri_for_database() {
+  local uri="$1" database="$2"
+  local uri_without_query="${uri%%\?*}"
+  local query=""
+  if [[ "$uri" == *\?* ]]; then query="${uri#*\?}"; fi
+  if [ -z "$(database_from_uri "$uri")" ]; then
+    uri_without_query="${uri_without_query%/}/${database}"
+  fi
+  if [[ "$query" != *"authSource="* ]]; then
+    query="${query:+${query}&}authSource=admin"
+  fi
+  printf '%s?%s\n' "$uri_without_query" "$query"
+}
+
 # ── Load .env.local if present ───────────────────────────────────
 ENV_FILE="$(cd "$(dirname "$0")/.." && pwd)/.env.local"
 if [ -f "$ENV_FILE" ]; then
@@ -87,17 +114,18 @@ if echo "$PROD_URI" | grep -q "railway.internal"; then
 fi
 
 # Extract DB name from URI path, env var, or default
-PROD_DB=$(echo "$PROD_URI" | sed -n 's|.*/\([^?]*\).*|\1|p')
+PROD_DB="$(database_from_uri "$PROD_URI")"
 PROD_DB=${PROD_DB:-${MONGODB_PROD_DB_NAME:-wawagardenbar}}
 
 log "Production DB: $PROD_DB"
+PROD_CONNECT_URI="$(connection_uri_for_database "$PROD_URI" "$PROD_DB")"
 
 # ── Step 2: Dump production database ─────────────────────────────
 mkdir -p "$BACKUP_DIR"
 log "Dumping production database to $BACKUP_DIR ..."
 
 mongodump \
-  --uri="$PROD_URI" \
+  --uri="$PROD_CONNECT_URI" \
   --db="$PROD_DB" \
   --out="$BACKUP_DIR" \
   --gzip
@@ -128,10 +156,11 @@ if echo "$UAT_URI" | grep -q "railway.internal"; then
 fi
 
 # Extract DB name from URI path, env var, or default
-UAT_DB=$(echo "$UAT_URI" | sed -n 's|.*/\([^?]*\).*|\1|p')
+UAT_DB="$(database_from_uri "$UAT_URI")"
 UAT_DB=${UAT_DB:-${MONGODB_UAT_DB_NAME:-wawagardenbar_uat}}
 
 log "UAT DB: $UAT_DB"
+UAT_CONNECT_URI="$(connection_uri_for_database "$UAT_URI" "$UAT_DB")"
 
 # ── Step 4: Confirm before overwriting UAT ───────────────────────
 echo ""
@@ -154,7 +183,7 @@ fi
 log "Restoring to UAT database..."
 
 mongorestore \
-  --uri="$UAT_URI" \
+  --uri="$UAT_CONNECT_URI" \
   --db="$UAT_DB" \
   --drop \
   --gzip \
@@ -165,7 +194,7 @@ mongorestore \
 # ── Step 6: Verify ───────────────────────────────────────────────
 log "Verifying restore..."
 
-mongosh "$UAT_URI" --quiet --eval "
+mongosh "$UAT_CONNECT_URI" --quiet --eval "
   const db_name = '$UAT_DB';
   const db = db.getSiblingDB(db_name);
   const collections = db.getCollectionNames();

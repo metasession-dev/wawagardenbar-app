@@ -4,7 +4,7 @@
     {
       "advisoryId": "GHSA-mh99-v99m-4gvg",
       "package": "brace-expansion",
-      "vulnerableRange": "<=5.0.7",
+      "vulnerableRange": "<1.1.17",
       "vulnerableVersion": "1.1.16",
       "dependencyPath": "node_modules/@eslint/eslintrc/node_modules/brace-expansion",
       "introducedBy": "@eslint/eslintrc@2.1.4",
@@ -18,7 +18,7 @@
     {
       "advisoryId": "GHSA-mh99-v99m-4gvg",
       "package": "brace-expansion",
-      "vulnerableRange": "<=5.0.7",
+      "vulnerableRange": "<1.1.17",
       "vulnerableVersion": "1.1.16",
       "dependencyPath": "node_modules/@humanwhocodes/config-array/node_modules/brace-expansion",
       "introducedBy": "@humanwhocodes/config-array@0.13.0",
@@ -32,7 +32,7 @@
     {
       "advisoryId": "GHSA-mh99-v99m-4gvg",
       "package": "brace-expansion",
-      "vulnerableRange": "<=5.0.7",
+      "vulnerableRange": "<1.1.17",
       "vulnerableVersion": "1.1.16",
       "dependencyPath": "node_modules/eslint-plugin-import/node_modules/brace-expansion",
       "introducedBy": "eslint-plugin-import@2.32.0",
@@ -46,7 +46,7 @@
     {
       "advisoryId": "GHSA-mh99-v99m-4gvg",
       "package": "brace-expansion",
-      "vulnerableRange": "<=5.0.7",
+      "vulnerableRange": "<1.1.17",
       "vulnerableVersion": "1.1.16",
       "dependencyPath": "node_modules/eslint-plugin-jsx-a11y/node_modules/brace-expansion",
       "introducedBy": "eslint-plugin-jsx-a11y@6.10.2",
@@ -60,7 +60,7 @@
     {
       "advisoryId": "GHSA-mh99-v99m-4gvg",
       "package": "brace-expansion",
-      "vulnerableRange": "<=5.0.7",
+      "vulnerableRange": "<1.1.17",
       "vulnerableVersion": "1.1.16",
       "dependencyPath": "node_modules/eslint-plugin-react/node_modules/brace-expansion",
       "introducedBy": "eslint-plugin-react@7.37.5",
@@ -74,7 +74,7 @@
     {
       "advisoryId": "GHSA-mh99-v99m-4gvg",
       "package": "brace-expansion",
-      "vulnerableRange": "<=5.0.7",
+      "vulnerableRange": "<1.1.17",
       "vulnerableVersion": "1.1.16",
       "dependencyPath": "node_modules/eslint/node_modules/brace-expansion",
       "introducedBy": "eslint@8.57.1",
@@ -88,7 +88,7 @@
     {
       "advisoryId": "GHSA-mh99-v99m-4gvg",
       "package": "brace-expansion",
-      "vulnerableRange": "<=5.0.7",
+      "vulnerableRange": "<1.1.17",
       "vulnerableVersion": "1.1.16",
       "dependencyPath": "node_modules/glob/node_modules/brace-expansion",
       "introducedBy": "glob@7.2.3",
@@ -102,7 +102,7 @@
     {
       "advisoryId": "GHSA-mh99-v99m-4gvg",
       "package": "brace-expansion",
-      "vulnerableRange": "<=5.0.7",
+      "vulnerableRange": "<1.1.17",
       "vulnerableVersion": "2.1.2",
       "dependencyPath": "node_modules/minimatch/node_modules/brace-expansion",
       "introducedBy": "minimatch@9.0.9",

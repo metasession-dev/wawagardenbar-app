@@ -29,11 +29,11 @@
 
 ## Test executions
 
-| Source  | SDLC stage       | Execution | Kind                         | Outcome                       | Workflow / run                                                           | Related evidence                                                                               | Date       |
-| ------- | ---------------- | --------- | ---------------------------- | ----------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- | ---------- |
-| REQ-097 | 2 implement/test | #1        | unit                         | passed                        | Local Vitest — not yet a CI run                                          | 25 new tests across 3 files, full suite 1,340 passed                                           | 2026-07-30 |
-| REQ-097 | 2 implement/test | #2        | e2e (local)                  | passed                        | Local Playwright, `regression` project — not yet a CI run                | 2/2, `express-order-portion-pricing-req097.spec.ts`, AC1/AC2/AC3                               | 2026-07-30 |
-| REQ-097 | 2 implement/test | #3        | e2e (local, full regression) | passed (with unrelated noise) | Local Playwright, `regression` project, `--workers=1` — not yet a CI run | 519 passed / 13 failed (all pre-existing, verified unrelated via baseline re-run) / 15 skipped | 2026-07-30 |
+| Source  | SDLC stage       | Execution | Kind                         | Outcome                       | Workflow / run                                                    | Related evidence                                                                               | Date       |
+| ------- | ---------------- | --------- | ---------------------------- | ----------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ---------- |
+| REQ-097 | 2 implement/test | #1        | unit                         | passed                        | Local Vitest, then CI Quality Gates on release PR #623            | 25 new tests across 3 files, full suite 1,340 passed                                           | 2026-07-30 |
+| REQ-097 | 2 implement/test | #2        | e2e (local)                  | passed                        | Local Playwright, `regression` project; CI E2E on release PR #623 | 2/2, `express-order-portion-pricing-req097.spec.ts`, AC1/AC2/AC3                               | 2026-07-30 |
+| REQ-097 | 2 implement/test | #3        | e2e (local, full regression) | passed (with unrelated noise) | Local Playwright, `regression` project, `--workers=1`             | 519 passed / 13 failed (all pre-existing, verified unrelated via baseline re-run) / 15 skipped | 2026-07-30 |
 
 ## Test plan coverage
 
@@ -50,8 +50,8 @@
 
 - Markdown evidence: `compliance/evidence/REQ-097/`
 - Screenshots: `compliance/evidence/REQ-097/screenshots/` (3 PNGs — AC1, AC2, AC3)
-- CI run: not yet available — this evidence pack is being compiled ahead of the integration PR being opened
+- CI run: release PR #623 (`develop` → `main`), production smoke run 30537370010 — see `compliance/approved-releases/RELEASE-TICKET-REQ-097.md`
 
 ## Final assessment
 
-Code and automated verification are complete and locally verified, including a full-regression run cross-checked against the unmodified baseline to positively confirm the 13 observed failures are pre-existing and unrelated to this REQ. Production promotion remains blocked on the same items every tracked REQ needs: CI Quality Gates on the integration PR, and the dual-actor UAT reviewer recording the feature-specific UAT execution.
+Code and automated verification are complete and locally verified, including a full-regression run cross-checked against the unmodified baseline to positively confirm the 13 observed failures are pre-existing and unrelated to this REQ. REQ-097 has since completed CI Quality Gates and UAT review and was released — see the close-out record at `compliance/approved-releases/RELEASE-TICKET-REQ-097.md`.

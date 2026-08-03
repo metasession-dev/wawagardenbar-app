@@ -31,10 +31,10 @@
 
 ## Test executions
 
-| Source  | SDLC stage       | Execution | Kind        | Outcome | Workflow / run                                            | Related evidence                                                       | Date       |
-| ------- | ---------------- | --------- | ----------- | ------- | --------------------------------------------------------- | ---------------------------------------------------------------------- | ---------- |
-| REQ-098 | 2 implement/test | #1        | unit        | passed  | Local Vitest — not yet a CI run                           | 35 new tests across 6 files, full suite 1,375 passed                   | 2026-08-03 |
-| REQ-098 | 2 implement/test | #2        | e2e (local) | passed  | Local Playwright, `regression` project — not yet a CI run | 2/2, `write-off-tab.spec.ts` AC4, `dormant-tab-visibility.spec.ts` AC5 | 2026-08-03 |
+| Source  | SDLC stage       | Execution | Kind        | Outcome | Workflow / run                                                                                                                                                        | Related evidence                                                       | Date       |
+| ------- | ---------------- | --------- | ----------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ---------- |
+| REQ-098 | 2 implement/test | #1        | unit        | passed  | Local Vitest, then CI Pipeline on `develop` — [run 30853310138](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/30853310138)                        | 35 new tests across 6 files, full suite 1,375 passed                   | 2026-08-03 |
+| REQ-098 | 2 implement/test | #2        | e2e (local) | passed  | Local Playwright, `regression` project; CI in-scope E2E on PR #636 — [run 30852776780](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/30852776780) | 2/2, `write-off-tab.spec.ts` AC4, `dormant-tab-visibility.spec.ts` AC5 | 2026-08-03 |
 
 ## Test plan coverage
 
@@ -60,8 +60,8 @@ No in-scope AC's coverage depends on the skipped sweep — AC1–AC7 each have t
 
 - Markdown evidence: `compliance/evidence/REQ-098/`
 - Screenshots: `compliance/evidence/REQ-098/screenshots/` (2 canonical PNGs — AC4, AC5; feature-tier stage screenshots auto-suppressed on this local run since `E2E_NEW_SPECS` is CI-only)
-- CI run: not yet available — this evidence pack is being compiled ahead of the integration PR being opened
+- CI run: [Register Release + Quality Gates on `develop`, run 30853310138](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/30853310138); [in-scope E2E on integration PR #636, run 30852776780](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/30852776780)
 
 ## Final assessment
 
-Code and automated verification are complete and locally verified for all 7 ACs. The adjacent-area e2e regression sweep did not complete locally due to unrelated environment instability (documented above); CI's release-PR run provides the authoritative full-suite check. Production promotion remains blocked on the same items every tracked REQ needs: CI Quality Gates on the integration PR, and the dual-actor UAT reviewer recording the feature-specific UAT execution. The AC7 remediation script itself has not been run against production — that is a separate, explicit operator action after this release ships.
+Code and automated verification are complete for all 7 ACs, confirmed both locally and by CI Quality Gates + in-scope E2E on the integration PR (#636, merged to `develop`). The adjacent-area e2e regression sweep did not complete locally due to unrelated environment instability (documented above; accepted skip). This release PR (#637, `develop` → `main`) now awaits the dual-actor UAT reviewer's portal review and approval before Production promotion. The AC7 remediation script itself has not been run against production — that is a separate, explicit operator action after this release ships.

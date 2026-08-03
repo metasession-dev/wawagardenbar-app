@@ -784,6 +784,63 @@ export class SystemSettingsService {
   }
 
   /**
+   * @requirement REQ-098 - Get the dormant-open-tab visibility threshold
+   * (hours). Mirrors `getBusinessDayCutoff`'s key/value/changeHistory
+   * pattern. Defaults to 24h when unset.
+   */
+  static async getDormantTabThresholdHours(): Promise<number> {
+    await connectDB();
+
+    const setting = await SystemSettingsModel.findOne({
+      key: 'dormant-tab-threshold-hours',
+    });
+
+    return typeof setting?.value === 'number' ? setting.value : 24;
+  }
+
+  /**
+   * @requirement REQ-098 - Update the dormant-open-tab visibility threshold
+   */
+  static async updateDormantTabThresholdHours(
+    thresholdHours: number,
+    adminUserId: string
+  ): Promise<boolean> {
+    await connectDB();
+
+    if (
+      typeof thresholdHours !== 'number' ||
+      !Number.isFinite(thresholdHours) ||
+      thresholdHours <= 0
+    ) {
+      throw new Error(
+        'Invalid dormant tab threshold — must be a positive number of hours'
+      );
+    }
+
+    await SystemSettingsModel.findOneAndUpdate(
+      { key: 'dormant-tab-threshold-hours' },
+      {
+        $set: {
+          value: thresholdHours,
+          updatedBy: new Types.ObjectId(adminUserId),
+          updatedAt: new Date(),
+        },
+        $push: {
+          changeHistory: {
+            value: thresholdHours,
+            changedBy: new Types.ObjectId(adminUserId),
+            changedAt: new Date(),
+            reason: 'Dormant tab threshold updated',
+          },
+        },
+      },
+      { upsert: true, new: true }
+    );
+
+    return true;
+  }
+
+  /**
    * @requirement REQ-033 - App-wide Unit-of-Measurement registry
    *
    * Returns the persisted UoM registry. Falls back to the default seed

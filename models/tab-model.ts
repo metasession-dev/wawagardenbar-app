@@ -125,7 +125,7 @@ const tabSchema = new Schema<ITab>(
     ],
     paymentStatus: {
       type: String,
-      enum: ['pending', 'paid', 'failed'],
+      enum: ['pending', 'paid', 'failed', 'written-off'],
       default: 'pending',
     },
     paymentReference: {
@@ -157,6 +157,15 @@ const tabSchema = new Schema<ITab>(
     reconciledBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',
+    },
+    // REQ-098 / ADR-003 — nested subdocument (not a flat triplet) so the
+    // four write-off facts always travel and are read together. Set only
+    // by TabService.writeOffTab().
+    writeOff: {
+      amount: { type: Number },
+      reason: { type: String },
+      writtenOffBy: { type: Schema.Types.ObjectId, ref: 'User' },
+      writtenOffAt: { type: Date },
     },
   },
   {

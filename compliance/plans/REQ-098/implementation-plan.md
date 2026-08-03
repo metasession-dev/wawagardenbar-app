@@ -147,6 +147,14 @@ _N/A beyond the above — no new lawful basis, retention, or cross-border-transf
 - **Plan reviewer (security / DPO):** N/A — no personal-data or AI-in-scope sections triggered
 - **Plan approved by operator:** REPLACE — name + date (HIGH risk — this plan pauses here per Phase 1 step 11 for your explicit approval before implementation begins)
 
+## Plan deviation
+
+Implementation-approach notes (ACs unchanged; these are "how", not "what"):
+
+1. **AC6 scoped to the two overall revenue-reconciliation reports, not `generateMainCategoryReport`.** The plan's scope section named "all three report-generation sites" generically; on implementation, `generateMainCategoryReport` (REQ-076/REQ-MENUMGT-006) is a category-scoped item/cost breakdown, not an overall-revenue reconciliation report — AC6's "daily or period financial report" maps to `generateDailySummary`/`generateDateRangeReport` (both share the `DailySummaryReport` interface and both back the same Daily Report page). Restricting the new `writtenOff` section to these two keeps the section meaningful (a per-category report has no "total revenue" figure to reconcile against).
+2. **Extended to the PDF/Excel/CSV export paths (`lib/report-export.ts`), not originally named in the plan's scope list.** AC6 requires the write-off exclusion be "visible and explained on the report itself, never silently invisible" — an exported report that silently drops the section it shows on-screen would reintroduce exactly the invisibility problem AC6 exists to fix. Added a always-rendered (even at zero) "Written Off (Bad Debt)" table/sheet to all three export formats, mirroring the existing `tipsBreakdown` export pattern.
+3. **`writeOffTab` also stamps `businessDate` on the tab and its orders** (derived via the existing `deriveBusinessDate` helper, same as `markTabPaid`/`completeTabPaymentManually`) — not explicitly listed in the original plan, but required for AC6's business-date-range queries to find newly-written-off orders at all (a dormant/never-paid order has no `businessDate` until some financial event stamps one).
+
 ## Upload path
 
 This file lives at `compliance/plans/REQ-098/implementation-plan.md` and is uploaded automatically on the next push to `develop` via `compliance-evidence.yml`.

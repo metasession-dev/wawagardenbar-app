@@ -250,7 +250,31 @@ export function exportReportAsPDF(
       headStyles: { fillColor: [217, 119, 6] },
       styles: { fontSize: 9 },
     });
+    yPos = (doc as any).lastAutoTable.finalY + 15;
   }
+
+  // REQ-098 AC6 — Written off (bad debt). Always rendered, even at zero,
+  // so a write-off-driven revenue reduction (or its absence) is never
+  // silently missing from the exported report.
+  if (yPos > 250) {
+    doc.addPage();
+    yPos = 20;
+  }
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Written Off (Bad Debt)', 14, yPos);
+  yPos += 10;
+
+  const writtenOffCount = report.writtenOff?.count ?? 0;
+  const writtenOffTotal = report.writtenOff?.totalAmount ?? 0;
+  autoTable(doc, {
+    startY: yPos,
+    head: [['Orders written off', 'Total amount']],
+    body: [[String(writtenOffCount), formatCurrency(writtenOffTotal)]],
+    theme: 'grid',
+    headStyles: { fillColor: [107, 114, 128] },
+    styles: { fontSize: 9 },
+  });
 
   // Footer
   const pageCount = doc.getNumberOfPages();
@@ -409,6 +433,17 @@ export function exportReportAsExcel(
     XLSX.utils.book_append_sheet(workbook, tipsSheet, 'Tips');
   }
 
+  // REQ-098 AC6 — Written Off (Bad Debt) sheet. Always created, even at
+  // zero, so a write-off-driven revenue reduction (or its absence) is
+  // never silently missing from the exported report.
+  const writtenOffData: Array<Array<string | number>> = [
+    ['Written Off (Bad Debt)'],
+    ['Orders written off', 'Total amount'],
+    [report.writtenOff?.count ?? 0, report.writtenOff?.totalAmount ?? 0],
+  ];
+  const writtenOffSheet = XLSX.utils.aoa_to_sheet(writtenOffData);
+  XLSX.utils.book_append_sheet(workbook, writtenOffSheet, 'Written Off');
+
   // Save the Excel file
   const fileName = `daily-report-${reportFileDateSegment(report, reportType)}.xlsx`;
   XLSX.writeFile(workbook, fileName);
@@ -511,6 +546,16 @@ export function exportReportAsCSV(
     pushIfPositive('Unspecified', report.tipsBreakdown.unspecified);
     csvRows.push(`Total Tips,${report.tipsBreakdown.total},100.0%`);
   }
+
+  // REQ-098 AC6 — Written off (bad debt). Always rendered, even at zero,
+  // so a write-off-driven revenue reduction (or its absence) is never
+  // silently missing from the exported report.
+  csvRows.push('');
+  csvRows.push('Written Off (Bad Debt)');
+  csvRows.push('Orders written off,Total amount');
+  csvRows.push(
+    `${report.writtenOff?.count ?? 0},${report.writtenOff?.totalAmount ?? 0}`
+  );
 
   // Create and download CSV
   const csvContent = csvRows.join('\n');

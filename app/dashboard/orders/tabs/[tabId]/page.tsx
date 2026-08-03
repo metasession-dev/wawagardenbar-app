@@ -14,6 +14,7 @@ import { ArrowLeft, Receipt, Plus, SplitSquareHorizontal } from 'lucide-react';
 import Link from 'next/link';
 import { DashboardTabActions } from '@/components/features/admin/tabs/dashboard-tab-actions';
 import { DeleteTabDialog } from '@/components/features/admin/tabs/delete-tab-dialog';
+import { WriteOffTabDialog } from '@/components/features/admin/tabs/write-off-tab-dialog';
 import { EditTabNameDialog } from '@/components/features/admin/tabs/edit-tab-name-dialog';
 
 interface DashboardTabDetailsPageProps {
@@ -183,6 +184,11 @@ export default async function DashboardTabDetailsPage({
             >
               {tab.status}
             </Badge>
+            <WriteOffTabDialog
+              tabId={tab._id}
+              tabNumber={tab.tabNumber}
+              paymentStatus={tab.paymentStatus}
+            />
             <DeleteTabDialog
               tabId={tab._id}
               tabNumber={tab.tabNumber}

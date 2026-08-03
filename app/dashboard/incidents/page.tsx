@@ -92,6 +92,12 @@ export default async function IncidentsPage({
         >
           Webhook replay mismatch
         </Link>
+        <Link
+          href="/dashboard/incidents?kind=dormant_open_tab"
+          className="rounded-md border px-3 py-1 hover:bg-muted/50"
+        >
+          Dormant open tabs
+        </Link>
       </div>
 
       <Card>

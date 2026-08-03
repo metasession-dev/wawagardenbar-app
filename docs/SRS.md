@@ -133,6 +133,8 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-TABMGT-004   | Delete tab (guard closed/paid; super-admin override with inventory/payment revert)     | Could    | extended   | `delete-tab-dialog`; REQ-096                                                                                     |
 | REQ-TABMGT-005   | Admin tab checkout: manual payment (no Monnify redirect)                               | Must     | regression | `components/features/admin/admin-tab-checkout-form.tsx`; REQ-084                                                 |
 | REQ-TABMGT-006   | Tab payment preserves order fulfillment status                                         | Must     | regression | `services/tab-service.ts`; REQ-085                                                                               |
+| REQ-TABMGT-007   | Dormant tab write-off (bad-debt accounting)                                            | Should   | regression | `services/tab-service.ts` `writeOffTab()`; REQ-098                                                               |
+| REQ-TABMGT-008   | Dormant open-tab visibility (list flag)                                                | Could    | extended   | `app/dashboard/orders/tabs/page.tsx`; REQ-098                                                                    |
 | REQ-KITCHEN-001  | Kitchen display shows active orders real-time                                          | Should   | regression | `app/dashboard/kitchen-display/page.tsx`                                                                         |
 | REQ-KITCHEN-002  | `kitchenManagement` gates kitchen routes                                               | Must     | regression | `app/dashboard/kitchen/layout.tsx`; REQ-034                                                                      |
 | REQ-KITCHEN-003  | Recipe CRUD + validation                                                               | Should   | regression | `services/recipe-service.ts:41`; REQ-034                                                                         |
@@ -168,6 +170,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-INV-016      | Stale-paid-order incident: status-history trail                                        | Could    | regression | `components/features/admin/incident-details-panel.tsx`; REQ-077                                                  |
 | REQ-INV-017      | Incidents URL state: filter + expanded-row hash                                        | Could    | regression | `components/features/admin/incident-row.tsx`; REQ-077                                                            |
 | REQ-INV-018      | Sellable inventory list uses progressive category display with grouped items           | Should   | regression | `components/features/admin/inventory-items-client.tsx`; REQ-082                                                  |
+| REQ-INV-019      | Dormant-open-tab incident scan                                                         | Should   | regression | `services/tab-service.ts` `scanDormantOpenTabs()`; `lib/scheduled-jobs.ts`; REQ-098, REQ-INV-010/011             |
 | REQ-FIN-001      | Create + list expenses by date/filters                                                 | Should   | regression | `app/actions/finance/expense-actions.ts:17,52`                                                                   |
 | REQ-FIN-002      | Bank statement (XLSX) import + dedupe                                                  | Should   | regression | `app/actions/expenses/csv-import-actions.ts:31`                                                                  |
 | REQ-FIN-003      | Pending expense group submit/edit/approve                                              | Should   | regression | `pending-expense-actions.ts:49`; REQ-026/032                                                                     |
@@ -178,6 +181,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-REPORT-003   | Profitability report by item/category                                                  | Could    | extended   | `profitability-analytics-actions.ts:15`                                                                          |
 | REQ-REPORT-004   | PDF/Excel export                                                                       | Could    | extended   | `report-actions.ts`                                                                                              |
 | REQ-REPORT-005   | Dashboard ↔ daily report revenue consistency                                          | Should   | regression | `dashboard-revenue.spec.ts`                                                                                      |
+| REQ-REPORT-006   | Written-off (bad debt) report section                                                  | Should   | regression | `services/financial-report-service.ts`; REQ-098                                                                  |
 | REQ-REWMGT-001   | Reward rule CRUD (+ probability, campaign)                                             | Should   | regression | `app/actions/admin/reward-rules-actions.ts:95`                                                                   |
 | REQ-REWMGT-002   | Social (Instagram) rule config                                                         | Could    | extended   | `reward-rules-actions.ts:42`; REQ-046                                                                            |
 | REQ-REWMGT-003   | Issued rewards: filter, manual issue/expire, export                                    | Could    | extended   | `issued-rewards-actions.ts`                                                                                      |
@@ -710,6 +714,23 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 - **Given** a dine-in tab with orders in various statuses (pending, preparing, ready, completed), **When** an admin closes the tab with manual payment, **Then** all orders retain their original `status` — none are reset to `confirmed`.
 - **Given** a dine-in tab with orders in various statuses, **When** the tab is paid via Monnify gateway webhook, **Then** all orders retain their original `status` — none are reset to `confirmed`.
 
+#### REQ-TABMGT-007 — Dormant tab write-off · **Should** · regression
+
+**Source:** `services/tab-service.ts` `writeOffTab()`; `app/actions/tabs/tab-actions.ts` `writeOffTabAction()`; `write-off-tab-dialog.tsx`; cross-ref REQ-098, REQ-096 (deleteTab precedent).
+**Behaviour:** A manager (admin/super-admin) can reclassify a dormant or otherwise uncollectible tab as written-off bad debt, distinct from both the existing pay-tab and delete-tab paths. Unlike `deleteTab`, write-off does not refuse tabs with `partialPayments` — that split/partial-payment shape is exactly the case this exists to handle. Write-off requires a reason, sets `Tab.paymentStatus`/every linked `Order.paymentStatus` to `'written-off'`, closes the tab, stamps a `writeOff` record (amount, reason, actor, timestamp) on both, and writes an audit-log entry. It refuses if the tab is already written-off. `deleteTab`, `completeTabPaymentManually`, and `closeTab` are unmodified by this requirement.
+
+- **Given** an open or closed tab that is not already written-off (including one with `partialPayments`), **When** a manager/super-admin writes it off with a reason, **Then** the tab and every linked order become `paymentStatus: 'written-off'`, the tab closes, a `writeOff` record is stamped on both, and an audit-log entry (`tab.write_off`) is written.
+- **Given** a tab already `'written-off'`, **When** write-off is attempted again, **Then** it is refused server-side.
+- **Given** a staff member who is not admin/super-admin, **When** they attempt the write-off action (directly or via UI), **Then** it is refused server-side with "Insufficient permissions" — the same gate as `deleteTabAction`.
+- **Given** a manager/super-admin on a tab's detail page, **When** they open the write-off dialog, **Then** a reason is required before submitting; the existing Delete action remains unmodified and available side by side.
+
+#### REQ-TABMGT-008 — Dormant open-tab visibility · **Could** · extended
+
+**Source:** `app/dashboard/orders/tabs/page.tsx`; cross-ref REQ-098, REQ-INV-019.
+**Behaviour:** The tabs list page flags any open tab that has been open longer than a configurable dormancy threshold (default 24h, stored via `SystemSettingsModel` following the `business-day-cutoff` key/value/changeHistory pattern). This is a visibility aid only — it never auto-executes a write-off.
+
+- **Given** an open tab whose `openedAt` is older than the configured dormant threshold, **When** a manager/super-admin views `/dashboard/orders/tabs`, **Then** the tab is visibly flagged (and filterable) as dormant.
+
 ---
 
 ## Feature Area 12 — Kitchen (KITCHEN)
@@ -992,6 +1013,14 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 - **Given** any category selection state, **When** the admin types into search, **Then** only matching rows are shown (search filters items, not categories), scoped to the selected category or all rows if no category is selected.
 - **Given** the selected main changes, **When** the prior selected sub-category does not belong to the new main, **Then** the stale sub-category filter is cleared without changing inventory records.
 
+#### REQ-INV-019 — Dormant-open-tab incident scan · **Should** · regression
+
+**Source:** `services/tab-service.ts` `scanDormantOpenTabs()`; `models/incident-event-model.ts` (`dormant_open_tab` kind); `lib/scheduled-jobs.ts`; cross-ref REQ-098, REQ-INV-010 (IncidentEvent model), REQ-INV-011 (reconciliation cron pattern).
+**Behaviour:** A scheduled scan (mirroring `scanStalePaidOrders`) finds open tabs older than the configured dormant threshold and records a `dormant_open_tab` IncidentEvent for each, deduped per 24h window via the existing `IncidentEventService.dedupRecent` mechanism, so a manager is actively prompted on `/dashboard/incidents` to decide (write off, contact the customer, or keep open) rather than the tab aging silently.
+
+- **Given** an open tab older than the configured dormant threshold with no matching incident recorded in the last 24h, **When** the scheduled scan runs, **Then** a `dormant_open_tab` IncidentEvent is recorded and appears on `/dashboard/incidents`.
+- **Given** a dormant tab that already has a `dormant_open_tab` incident recorded within the last 24h, **When** the scan runs again, **Then** no duplicate incident is recorded.
+
 ---
 
 ## Feature Area 16 — Financial Management (FIN)
@@ -1068,6 +1097,14 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 **Source:** `e2e/dashboard-revenue.spec.ts`
 
 - **Given** the same date, **When** comparing the dashboard overview revenue with the daily report, **Then** the figures agree.
+
+#### REQ-REPORT-006 — Written-off (bad debt) report section · **Should** · regression
+
+**Source:** `services/financial-report-service.ts`; cross-ref REQ-098.
+**Behaviour:** Written-off orders (`paymentStatus: 'written-off'`) are already excluded from `totalRevenue`/`orderCount` with no query change, since the existing revenue queries filter strictly on `paymentStatus: 'paid'`. This requirement adds an explicit "Written off (bad debt)" section to the daily/period report output — count and total amount, sourced from written-off orders within the reported business-date range — so a write-off-driven revenue reduction is visible and explained on the report itself rather than a silent, unexplained drop.
+
+- **Given** a report range containing one or more written-off orders, **When** an admin generates the daily or period report, **Then** a "Written off (bad debt)" section shows the count and total amount of those orders, and they remain excluded from `totalRevenue`/`orderCount`.
+- **Given** a report range containing no written-off orders, **When** an admin generates the report, **Then** the "Written off (bad debt)" section shows zero/count, not omitted entirely — so its absence is never ambiguous with "not implemented."
 
 ---
 

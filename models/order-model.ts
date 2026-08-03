@@ -219,7 +219,14 @@ const orderSchema = new Schema<IOrder>(
     },
     paymentStatus: {
       type: String,
-      enum: ['pending', 'paid', 'failed', 'cancelled', 'refunded'],
+      enum: [
+        'pending',
+        'paid',
+        'failed',
+        'cancelled',
+        'refunded',
+        'written-off',
+      ],
       default: 'pending',
     },
     paidAt: { type: Date },
@@ -289,6 +296,14 @@ const orderSchema = new Schema<IOrder>(
     reconciledBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',
+    },
+    // REQ-098 / ADR-003 — mirrors Tab's writeOff subdocument; set only by
+    // TabService.writeOffTab() when the linked tab is written off.
+    writeOff: {
+      amount: { type: Number },
+      reason: { type: String },
+      writtenOffBy: { type: Schema.Types.ObjectId, ref: 'User' },
+      writtenOffAt: { type: Date },
     },
   },
   {

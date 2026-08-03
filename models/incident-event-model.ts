@@ -39,7 +39,8 @@ export type IncidentEventKind =
   | 'points_award_failed'
   | 'notification_delivery_failed'
   | 'reward_grant_failed'
-  | 'webhook_replay_mismatch';
+  | 'webhook_replay_mismatch'
+  | 'dormant_open_tab';
 
 export interface IIncidentEvent extends Document {
   kind: IncidentEventKind;
@@ -61,6 +62,7 @@ const incidentEventSchema = new Schema<IIncidentEvent>(
         'notification_delivery_failed',
         'reward_grant_failed',
         'webhook_replay_mismatch',
+        'dormant_open_tab',
       ],
       required: true,
     },

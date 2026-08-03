@@ -25,6 +25,7 @@ export type AuditAction =
   | 'tab.manual_payment'
   | 'tab.partial_payment'
   | 'tab.delete'
+  | 'tab.write_off'
   | 'admin.create'
   | 'admin.login'
   | 'admin.logout'

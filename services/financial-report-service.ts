@@ -147,6 +147,18 @@ export interface DailySummaryReport {
     netProfitMargin: number;
     orderCount: number;
   };
+  /**
+   * @requirement REQ-098 AC6 — "Written off (bad debt)" section. Sourced
+   * from `Order.paymentStatus: 'written-off'` within the reported
+   * business-date range. These orders are already excluded from
+   * `revenue.totalRevenue`/`metrics.orderCount` (both queries above filter
+   * strictly on `paymentStatus: 'paid'`) — this section exists so that
+   * exclusion is visible and explained on the report, not a silent drop.
+   */
+  writtenOff: {
+    count: number;
+    totalAmount: number;
+  };
 }
 
 /**
@@ -188,6 +200,41 @@ export interface MainCategoryReport {
 }
 
 export class FinancialReportService {
+  /**
+   * @requirement REQ-098 AC6 — "Written off (bad debt)" section source.
+   * Mirrors the same businessDate/legacy-paidAt `$or` shape as the
+   * `paymentStatus: 'paid'` revenue queries, but for `'written-off'`
+   * orders. Sums each order's own `total` (NOT `order.writeOff.amount` —
+   * that field mirrors the tab-level aggregate write-off amount onto
+   * every linked order for per-order audit display, so summing it across
+   * sibling orders on the same tab would double-count).
+   */
+  private static async computeWrittenOffSummary(
+    startDate: Date,
+    endDate: Date,
+    legacyStart: Date,
+    legacyEnd: Date
+  ): Promise<{ count: number; totalAmount: number }> {
+    const writtenOffOrders = await OrderModel.find({
+      paymentStatus: 'written-off',
+      $or: [
+        { businessDate: { $gte: startDate, $lte: endDate } },
+        {
+          businessDate: { $exists: false },
+          paidAt: { $gte: legacyStart, $lte: legacyEnd },
+        },
+        { businessDate: null, paidAt: { $gte: legacyStart, $lte: legacyEnd } },
+      ],
+    }).lean<Array<{ total: number }>>();
+
+    const totalAmount = writtenOffOrders.reduce(
+      (sum, order) => sum + (order.total ?? 0),
+      0
+    );
+
+    return { count: writtenOffOrders.length, totalAmount };
+  }
+
   private static async createCategoryBreakdowns(): Promise<
     ReportCategoryBreakdown[]
   > {
@@ -379,9 +426,18 @@ export class FinancialReportService {
     // ordered categories for this request.
     const categories = await FinancialReportService.createCategoryBreakdowns();
 
+    // REQ-098 AC6 — written-off (bad debt) section for this business date.
+    const writtenOff = await FinancialReportService.computeWrittenOffSummary(
+      startDate,
+      endDate,
+      legacyStart,
+      legacyEnd
+    );
+
     // Initialize report structure
     const report: DailySummaryReport = {
       date,
+      writtenOff,
       revenue: {
         byOrderType: {
           'dine-in': { revenue: 0, orderCount: 0 },
@@ -703,11 +759,20 @@ export class FinancialReportService {
 
     const categories = await FinancialReportService.createCategoryBreakdowns();
 
+    // REQ-098 AC6 — written-off (bad debt) section for this date range.
+    const writtenOff = await FinancialReportService.computeWrittenOffSummary(
+      start,
+      end,
+      legacyStart,
+      legacyEnd
+    );
+
     // Similar logic to generateDailySummary but for date range
     const report: DailySummaryReport = {
       date: startDate,
       startDate,
       endDate,
+      writtenOff,
       revenue: {
         byOrderType: {
           'dine-in': { revenue: 0, orderCount: 0 },

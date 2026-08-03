@@ -25,7 +25,7 @@ interface DeleteTabDialogProps {
   tabId: string;
   tabNumber: string;
   status: 'open' | 'settling' | 'closed';
-  paymentStatus: 'pending' | 'paid' | 'failed';
+  paymentStatus: 'pending' | 'paid' | 'failed' | 'written-off';
   orderCount: number;
   nonCancelledOrderCount: number;
   /** REQ-096 — whether any linked order is currently paid. */

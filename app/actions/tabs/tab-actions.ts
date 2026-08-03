@@ -701,6 +701,67 @@ export async function deleteTabAction(
 }
 
 /**
+ * Write off a dormant/uncollectible tab as bad debt (REQ-098).
+ *
+ * Additive alongside `deleteTabAction` — admin/super-admin only, same RBAC
+ * gate. Unlike delete, write-off accepts tabs with `partialPayments`; it
+ * only refuses a tab already `'written-off'` (enforced in
+ * `TabService.writeOffTab`).
+ */
+export async function writeOffTabAction(
+  tabId: string,
+  opts: { reason: string }
+): Promise<ActionResult> {
+  try {
+    const cookieStore = await cookies();
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
+
+    if (!session.isLoggedIn || !session.userId) {
+      return {
+        success: false,
+        error: 'Unauthorized',
+      };
+    }
+
+    if (session.role !== 'admin' && session.role !== 'super-admin') {
+      return {
+        success: false,
+        error: 'Insufficient permissions',
+      };
+    }
+
+    if (!opts.reason?.trim()) {
+      return {
+        success: false,
+        error: 'A reason is required to write off a tab',
+      };
+    }
+
+    await TabService.writeOffTab(tabId, {
+      reason: opts.reason,
+      writtenOffBy: session.userId,
+    });
+
+    revalidatePath('/dashboard/orders/tabs');
+    revalidatePath(`/dashboard/orders/tabs/${tabId}`);
+
+    return {
+      success: true,
+      message: 'Tab written off successfully',
+    };
+  } catch (error) {
+    console.error('Error writing off tab:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to write off tab',
+    };
+  }
+}
+
+/**
  * Update tab custom name
  */
 export async function updateTabNameAction(

@@ -20,6 +20,8 @@ import { RewardsService } from '@/services/rewards-service';
 import { InstagramService } from '@/services/instagram-service';
 import InventoryService from '@/services/inventory-service';
 import { OrderService } from '@/services/order-service';
+import { TabService } from '@/services/tab-service';
+import { SystemSettingsService } from '@/services/system-settings-service';
 import { IncidentEventService } from '@/services/incident-event-service';
 import { NotificationService } from '@/services/notification-service';
 import UserModel from '@/models/user-model';
@@ -79,9 +81,11 @@ export async function runInstagramRewardsJob(): Promise<void> {
 
 /**
  * REQ-066 — Reconciliation + stale-paid-order visibility scan.
+ * REQ-098 — Dormant-open-tab visibility scan (third pass).
  *
- * Two passes per tick, BOTH read-only with respect to Order.status (the
- * operator's rule: only kitchen-display staff may complete an order).
+ * Three passes per tick, all read-only with respect to Order.status /
+ * Tab state (the operator's rule: only kitchen-display staff may complete
+ * an order; write-off is a human-approved action, never automatic).
  *
  *   1. `reconcileMissedDeductions` — retry deduction for orders the
  *      kitchen-completion chokepoint marked completed but for which the
@@ -89,6 +93,10 @@ export async function runInstagramRewardsJob(): Promise<void> {
  *   2. `scanStalePaidOrders` — find paid orders sitting outside
  *      completed/cancelled longer than the configured threshold; log
  *      `stale_paid_order` IncidentEvents (deduped per 24h window).
+ *   3. `scanDormantOpenTabs` — find open tabs older than the configured
+ *      (SystemSettings-backed, default 24h) threshold; log
+ *      `dormant_open_tab` IncidentEvents (deduped per 24h window) so a
+ *      manager decides write-off / contact-customer / keep-open.
  */
 export async function runInventoryReconciliationJob(): Promise<void> {
   try {
@@ -113,6 +121,19 @@ export async function runInventoryReconciliationJob(): Promise<void> {
     }
   } catch (error) {
     console.error('[scheduled-jobs] stale-paid-order scan failed:', error);
+  }
+
+  try {
+    const thresholdHours =
+      await SystemSettingsService.getDormantTabThresholdHours();
+    const scan = await TabService.scanDormantOpenTabs({ thresholdHours });
+    if (scan.flagged > 0) {
+      console.warn(
+        `[scheduled-jobs] dormant-open-tab scan: scanned=${scan.scanned} flagged=${scan.flagged} skippedAsDup=${scan.skippedAsDup} threshold=${thresholdHours}h`
+      );
+    }
+  } catch (error) {
+    console.error('[scheduled-jobs] dormant-open-tab scan failed:', error);
   }
 }
 

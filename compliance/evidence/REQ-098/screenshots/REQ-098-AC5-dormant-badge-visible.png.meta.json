@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-098",
+  "ac": 5,
+  "slug": "dormant-badge-visible",
+  "specFile": "e2e/orders/dormant-tab-visibility.spec.ts",
+  "capturedAt": "2026-08-03T20:48:56.582Z"
+}

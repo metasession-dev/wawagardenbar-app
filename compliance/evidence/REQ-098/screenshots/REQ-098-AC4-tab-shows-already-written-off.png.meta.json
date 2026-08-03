@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-098",
+  "ac": 4,
+  "slug": "tab-shows-already-written-off",
+  "specFile": "e2e/critical/write-off-tab.spec.ts",
+  "capturedAt": "2026-08-03T20:48:59.851Z"
+}

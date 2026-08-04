@@ -65,3 +65,7 @@ No in-scope AC's coverage depends on the skipped sweep — AC1–AC7 each have t
 ## Final assessment
 
 Code and automated verification are complete for all 7 ACs, confirmed both locally and by CI Quality Gates + in-scope E2E on the integration PR (#636, merged to `develop`). The adjacent-area e2e regression sweep did not complete locally due to unrelated environment instability (documented above; accepted skip). This release PR (#637, `develop` → `main`) now awaits the dual-actor UAT reviewer's portal review and approval before Production promotion. The AC7 remediation script itself has not been run against production — that is a separate, explicit operator action after this release ships.
+
+## Addendum — bundled-changes scan scope correction
+
+`wawagardenbar-app#639` (merged 2026-08-04) fixed the release CI's bundled-changes scan window, which previously fell back to a fixed `HEAD~50` commit lookback (this repo has never tagged a release) instead of scanning since the actual last release to `main`. That over-scoped window caused this release's "bundled non-release work items" evidence to re-absorb commits already shipped in prior, already-approved releases. This commit is a trivial REQ-098-scoped push whose sole purpose is to re-derive `VERSION=REQ-098` on the next CI run, regenerating the bundled-changes manifest with the corrected `merge-base(main, HEAD)` scan window before UAT submission.

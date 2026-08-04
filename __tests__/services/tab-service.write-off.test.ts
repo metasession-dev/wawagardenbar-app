@@ -7,6 +7,11 @@
  * call shape. Mirrors the mocking style of
  * `__tests__/services/tab-service.business-date.test.ts` /
  * `__tests__/services/tab-service.delete-payment-revert.test.ts`.
+ *
+ * (2026-08-04: no behavior change — retriggers a REQ-098-scoped CI push
+ * so the release's bundled-changes evidence regenerates under #639's
+ * corrected scan window; ci.yml's paths-ignore excludes compliance/**
+ * doc-only pushes from firing the job that does that.)
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 

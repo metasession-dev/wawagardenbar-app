@@ -66,6 +66,8 @@ interface DashboardTabsListClientProps {
     totalOrders: number;
   };
   staffPotBalance: number;
+  /** REQ-098 AC5 — hours an open tab can sit before it's flagged dormant. */
+  dormantThresholdHours: number;
 }
 
 /**
@@ -81,6 +83,7 @@ export function DashboardTabsListClient({
   pageSize,
   stats,
   staffPotBalance,
+  dormantThresholdHours,
 }: DashboardTabsListClientProps) {
   const { toast } = useToast();
   const [tabs, setTabs] = useState<Tab[]>(initialTabs);
@@ -89,6 +92,15 @@ export function DashboardTabsListClient({
   const [isLoading, setIsLoading] = useState(false);
   const [selectedTab, setSelectedTab] = useState<Tab | null>(null);
   const [showPayDialog, setShowPayDialog] = useState(false);
+  const [dormantOnly, setDormantOnly] = useState(false);
+
+  // REQ-098 AC5 — a visibility aid only; never auto-executes a write-off.
+  const isDormant = (tab: Tab) =>
+    tab.status === 'open' &&
+    Date.now() - new Date(tab.openedAt).getTime() >
+      dormantThresholdHours * 60 * 60 * 1000;
+
+  const visibleTabs = dormantOnly ? tabs.filter(isDormant) : tabs;
   const [currentFilters, setCurrentFilters] = useState<{
     statuses: string[];
     dateRange?: DateRange;
@@ -253,6 +265,18 @@ export function DashboardTabsListClient({
       {/* Filter Section */}
       <DashboardTabsFilter onFilterChange={handleFilterChange} />
 
+      {/* REQ-098 AC5 — dormant-tab visibility filter (client-side, over the
+          currently loaded page). A visibility aid only; never auto-executes
+          a write-off. */}
+      <label className="flex w-fit items-center gap-2 text-sm cursor-pointer">
+        <Checkbox
+          checked={dormantOnly}
+          onCheckedChange={(checked) => setDormantOnly(checked === true)}
+          aria-label="Show dormant tabs only"
+        />
+        <span>Show dormant only (open &gt; {dormantThresholdHours}h)</span>
+      </label>
+
       {/* Loading State */}
       {isLoading && (
         <div className="flex items-center justify-center py-8">
@@ -261,14 +285,15 @@ export function DashboardTabsListClient({
       )}
 
       {/* Tabs List */}
-      {!isLoading && tabs.length === 0 ? (
+      {!isLoading && visibleTabs.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Receipt className="h-16 w-16 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No Tabs Found</h3>
             <p className="text-sm text-muted-foreground text-center">
-              No tabs match your current filters. Try adjusting your search
-              criteria.
+              {dormantOnly
+                ? 'No dormant tabs on this page.'
+                : 'No tabs match your current filters. Try adjusting your search criteria.'}
             </p>
           </CardContent>
         </Card>
@@ -279,7 +304,7 @@ export function DashboardTabsListClient({
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {tabs.map((tab) => (
+              {visibleTabs.map((tab) => (
                 <div
                   key={tab._id}
                   className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
@@ -291,6 +316,11 @@ export function DashboardTabsListClient({
                       <h3 className="font-semibold">Table {tab.tableNumber}</h3>
                       <Badge variant="outline">Tab #{tab.tabNumber}</Badge>
                       {getStatusBadge(tab.status)}
+                      {isDormant(tab) && (
+                        <Badge variant="secondary" data-testid="dormant-badge">
+                          Dormant
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span>{tab.orders.length} order(s)</span>

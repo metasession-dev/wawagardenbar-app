@@ -27,6 +27,18 @@ export interface IPartialPayment {
   tipPaymentMethod?: 'cash' | 'transfer' | 'card';
 }
 
+/**
+ * @requirement REQ-098 - Write-off record stamped on a tab/order when
+ * reclassified as uncollectible bad debt (ADR-003: nested subdocument, not
+ * a flat triplet, so the four facts always travel/read together).
+ */
+export interface IWriteOff {
+  amount: number;
+  reason: string;
+  writtenOffBy: Types.ObjectId;
+  writtenOffAt: Date;
+}
+
 export interface ITab {
   _id: Types.ObjectId;
   tabNumber: string;
@@ -49,7 +61,7 @@ export interface ITab {
   discountTotal: number;
   tipAmount: number;
   total: number;
-  paymentStatus: 'pending' | 'paid' | 'failed';
+  paymentStatus: 'pending' | 'paid' | 'failed' | 'written-off';
   paymentReference?: string;
   transactionReference?: string;
   partialPayments: IPartialPayment[];
@@ -60,6 +72,8 @@ export interface ITab {
   reconciled?: boolean;
   reconciledAt?: Date;
   reconciledBy?: Types.ObjectId;
+  // REQ-098 — see IWriteOff; set only by TabService.writeOffTab().
+  writeOff?: IWriteOff;
   createdAt: Date;
   updatedAt: Date;
 }

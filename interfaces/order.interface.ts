@@ -145,7 +145,13 @@ export interface IOrder {
   paymentReference?: string;
   transactionReference?: string;
   paymentMethod?: PaymentMethod;
-  paymentStatus?: 'pending' | 'paid' | 'failed' | 'cancelled' | 'refunded';
+  paymentStatus?:
+    | 'pending'
+    | 'paid'
+    | 'failed'
+    | 'cancelled'
+    | 'refunded'
+    | 'written-off';
   paidAt?: Date;
   businessDate?: Date;
   deliveryDetails?: IDeliveryDetails;
@@ -184,6 +190,9 @@ export interface IOrder {
   reconciled?: boolean;
   reconciledAt?: Date;
   reconciledBy?: Types.ObjectId;
+  // REQ-098 — see ITab/IWriteOff (tab.interface.ts); set only by
+  // TabService.writeOffTab() when the linked tab is written off.
+  writeOff?: import('./tab.interface').IWriteOff;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -416,3 +416,97 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 **Framework cross-references:** ISO 27001 A.8.25; SOC 2 CC3.2; SOC 2 CC8.1; ISO 29119 §3.4.
 
 **Cross-links:** [REQ-094 implementation plan](plans/REQ-094/implementation-plan.md); [#439](https://github.com/metasession-dev/wawagardenbar-app/issues/439); [#514](https://github.com/metasession-dev/wawagardenbar-app/issues/514); SRS REQ-REPORT-002, REQ-REPORT-003, REQ-INV-003, REQ-INV-007.
+
+---
+
+### R-019 — Write-off action misused to hide unpaid revenue as bad debt (REQ-098)
+
+**Status:** MITIGATED
+**Opened:** 2026-08-03
+**Owner:** WGB maintainer
+**Review due:** 2027-08-03 (annual review)
+
+**The risk:** Unlike `deleteTab`, `writeOffTab` is deliberately designed to accept tabs with `partialPayments` — the exact shape of a legitimately dormant tab, but also the exact shape a dishonest staff member could exploit to reclassify real, collectible unpaid revenue as "written off" rather than chasing payment or escalating it, quietly reducing what the business appears to be owed.
+
+**Controls landed:**
+
+1. Server-side RBAC gate identical to `deleteTabAction` (admin/super-admin only) — never trust client-side UI gating alone. Proven by `__tests__/actions/tabs/tab-actions.write-off.test.ts`.
+2. `reason` is a required field at both the service-method signature and the UI dialog — no silent/blank write-off. Proven by `__tests__/services/tab-service.write-off.test.ts` ("requires a non-empty reason").
+3. Every write-off writes an audit-log entry (`tab.write_off`) recording the acting user, reason, and amount — the same append-only audit log already used for `tab.delete`/`order.cancel`. Proven by `__tests__/services/tab-service.write-off.test.ts` ("writes a tab.write_off audit log entry").
+4. The dormancy incident (R-021 below) surfaces long-open tabs to a manager proactively, rather than relying solely on staff self-reporting a write-off need — a structural check against a tab quietly aging past the point a manager would notice.
+
+**Residual risk:** Low × medium — server-side gate is proven by test, matching an existing shipped pattern (`deleteTabAction`). Does not add reconciliation against write-off volume/frequency by staff member — worth a follow-up issue if abuse patterns are ever suspected (out of scope for REQ-098, which is additive-only).
+
+**Framework cross-references:** ISO 27001 A.8.25; SOC 2 CC6.1 (logical access controls); SOC 2 CC5.1 (control activities).
+
+**Cross-links:** [REQ-098 implementation plan](plans/REQ-098/implementation-plan.md); [#626](https://github.com/metasession-dev/wawagardenbar-app/issues/626); SRS REQ-TABMGT-007.
+
+---
+
+### R-020 — One-time remediation script writes off tabs/orders outside the intended 2026-07-31 contamination event (REQ-098)
+
+**Status:** MITIGATED (script not yet run against production)
+**Opened:** 2026-08-03
+**Owner:** WGB maintainer
+**Review due:** Before the remediation script is run against production; not a recurring/annual review item since this is a one-time script.
+
+**The risk:** `scripts/write-off-dormant-tabs-2026-07-31.ts` is scoped narrowly to the specific 2026-07-31 bulk-manual-close contamination event, selecting on business-date window + a `createdAt`-before-`paidAt` gap threshold. An overly loose selection criterion, an off-by-one on the business-date window, or running the script twice against different environments could write off tabs/orders that were never part of the actual contamination — a direct, hard-to-reverse (without a backup) misstatement of production financial records.
+
+**Controls landed:**
+
+1. Selection criteria hard-coded to the exact business-date window (`businessDateQueryRange('2026-07-31','2026-07-31', cutoffTime)`) AND a `createdAt`-before-`paidAt` gap threshold of **30+ days** (operator-confirmed 2026-08-03) matching the known contamination profile — not a general-purpose/parameterized bulk tool.
+2. `mongodump` backup of the `tabs`/`orders` collections to a timestamped directory immediately before the confirmed-write step, mirroring `scripts/sync-prod-to-uat.sh`'s backup pattern — the data-level rollback path.
+3. Dry-run mode prints the exact candidate tab/order list + amounts before any write; the confirmed-write step requires an explicit typed `yes`, mirroring `sync-prod-to-uat.sh`'s confirmation pattern.
+4. The script is idempotent on rerun — a tab already `'written-off'` is skipped, not re-processed, so an accidental second invocation is a no-op rather than a double-write-off. Proven by `__tests__/scripts/write-off-dormant-tabs-2026-07-31.test.ts` ("is idempotent...").
+5. Dry-run test against a seeded fixture matching the 51-order profile (`__tests__/scripts/write-off-dormant-tabs-2026-07-31.test.ts`) proves the selection criteria — boundary-tested at exactly 30 days and 29 days 23 hours.
+
+**Residual risk:** Low × high — selection logic proven correct by test; the confirmed-write mode has not yet been run against production. No invocation of the confirmed-write mode may occur before the dry-run output has been reviewed by the operator against the known 51-tab list from the original incident.
+
+**Framework cross-references:** ISO 27001 A.8.25; SOC 2 CC7.2 (system monitoring / data integrity); SOC 2 CC8.1 (change management).
+
+**Cross-links:** [REQ-098 implementation plan](plans/REQ-098/implementation-plan.md); [#626](https://github.com/metasession-dev/wawagardenbar-app/issues/626); ADR-003.
+
+---
+
+### R-021 — Dormant-tab incident scan false positives / alert fatigue (REQ-098)
+
+**Status:** MITIGATED
+**Opened:** 2026-08-03
+**Owner:** WGB maintainer
+**Review due:** 2027-08-03 (annual review)
+
+**The risk:** A poorly-tuned dormancy threshold or missing dedup could flood `/dashboard/incidents` with `dormant_open_tab` rows, training managers to ignore the incidents surface generally (the same alert-fatigue failure mode the existing `stale_paid_order` kind already had to guard against).
+
+**Controls landed:**
+
+1. `scanDormantOpenTabs` dedups per 24h window via the existing `IncidentEventService.dedupRecent` mechanism — identical to `scanStalePaidOrders`'s already-shipped pattern. Proven by `__tests__/services/tab-service.dormant-scan.test.ts` ("dedups per 24h window").
+2. The dormancy threshold is configurable (default 24h) via `SystemSettingsModel`, not hard-coded, so an operator can tune it without a code change if the default proves too sensitive for this venue's actual table-turnover patterns.
+
+**Residual risk:** Low × low — this mirrors an already-shipped, already-tuned pattern (`stale_paid_order`/REQ-INV-011) rather than introducing a novel scanning mechanism.
+
+**Framework cross-references:** SOC 2 CC7.1 (system monitoring).
+
+**Cross-links:** [REQ-098 implementation plan](plans/REQ-098/implementation-plan.md); [#626](https://github.com/metasession-dev/wawagardenbar-app/issues/626); SRS REQ-INV-019.
+
+---
+
+### R-022 — Double write-off or missing refusal corrupts the write-off audit trail (REQ-098)
+
+**Status:** MITIGATED
+**Opened:** 2026-08-03
+**Owner:** WGB maintainer
+**Review due:** 2027-08-03 (annual review)
+
+**The risk:** If `writeOffTab` doesn't robustly refuse re-invocation on an already-`'written-off'` tab, a double-click, retried request, or the one-time remediation script's idempotent-rerun path could overwrite the original `writeOff` record (amount/reason/actor/timestamp) with a second one, destroying the original audit trail of who wrote the tab off and why.
+
+**Controls landed:**
+
+1. `writeOffTab` explicitly refuses (throws) when `tab.paymentStatus === 'written-off'` already, mirroring `completeTabPaymentManually`'s existing-`'paid'` refusal pattern.
+2. Unit test proves the refusal fires on a second invocation and the original `writeOff` subdocument is unmodified — `__tests__/services/tab-service.write-off.test.ts` ("refuses to write off a tab that is already written-off").
+3. The remediation script (R-020) treats "already written off" as a skip condition, not an error or a re-write, on rerun — proven by `__tests__/scripts/write-off-dormant-tabs-2026-07-31.test.ts`.
+
+**Residual risk:** Pending implementation and evidence from the controls above; structurally mirrors an already-shipped idempotency pattern (R-014).
+
+**Framework cross-references:** ISO 27001 A.8.25; SOC 2 CC7.2 (system monitoring / data integrity).
+
+**Cross-links:** [REQ-098 implementation plan](plans/REQ-098/implementation-plan.md); [#626](https://github.com/metasession-dev/wawagardenbar-app/issues/626); ADR-003.

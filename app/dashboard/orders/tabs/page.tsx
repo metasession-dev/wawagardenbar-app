@@ -7,6 +7,7 @@
  * computed server-side independent of the current page / filter.
  */
 import { TabService } from '@/services';
+import { SystemSettingsService } from '@/services/system-settings-service';
 import { getStaffPotDataAction } from '@/app/actions/admin/staff-pot-actions';
 import { DashboardTabsListClient } from '@/components/features/admin/tabs/dashboard-tabs-list-client';
 
@@ -62,11 +63,14 @@ async function getInitialPage() {
 }
 
 export default async function DashboardTabsPage() {
-  const [{ tabs, total }, stats, staffPotResult] = await Promise.all([
-    getInitialPage(),
-    TabService.getTabStats(),
-    getStaffPotDataAction().catch(() => ({ success: false as const })),
-  ]);
+  const [{ tabs, total }, stats, staffPotResult, dormantThresholdHours] =
+    await Promise.all([
+      getInitialPage(),
+      TabService.getTabStats(),
+      getStaffPotDataAction().catch(() => ({ success: false as const })),
+      // REQ-098 AC5 — dormant-tab visibility threshold (default 24h).
+      SystemSettingsService.getDormantTabThresholdHours(),
+    ]);
 
   const staffPotBalance =
     staffPotResult.success && staffPotResult.data
@@ -89,6 +93,7 @@ export default async function DashboardTabsPage() {
         pageSize={PAGE_SIZE}
         stats={stats}
         staffPotBalance={staffPotBalance}
+        dormantThresholdHours={dormantThresholdHours}
       />
     </div>
   );

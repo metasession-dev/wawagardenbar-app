@@ -1055,4 +1055,174 @@ export class TabService {
 
     await TabModel.findByIdAndDelete(tabId);
   }
+
+  /**
+   * Write off a dormant/uncollectible tab as bad debt (REQ-098).
+   *
+   * Additive alongside `deleteTab`/`completeTabPaymentManually`/`closeTab`
+   * — none of those paths are modified by this method, and it never calls
+   * them. Unlike `deleteTab`, this does NOT refuse tabs with
+   * `partialPayments` — that split-payment shape is exactly the case
+   * write-off exists to handle. It only refuses a tab that is already
+   * `'written-off'`, so the original audit trail (who/why/when) is never
+   * overwritten by a second call (R-022).
+   *
+   * Sets `Tab.paymentStatus` and every linked `Order.paymentStatus` to
+   * `'written-off'`, closes the tab, stamps the ADR-003 `writeOff`
+   * subdocument (`{amount, reason, writtenOffBy, writtenOffAt}`) on both,
+   * and writes a `tab.write_off` audit-log entry. The role gate lives in
+   * the calling action (`writeOffTabAction`), mirroring `deleteTab`.
+   */
+  static async writeOffTab(
+    tabId: string,
+    opts: { reason: string; writtenOffBy: string }
+  ): Promise<ITab> {
+    await connectDB();
+
+    const reason = opts.reason?.trim();
+    if (!reason) {
+      throw new Error('A reason is required to write off a tab.');
+    }
+
+    const tab = await TabModel.findById(tabId);
+    if (!tab) {
+      throw new Error('Tab not found');
+    }
+
+    if (tab.paymentStatus === 'written-off') {
+      throw new Error('This tab has already been written off.');
+    }
+
+    const orders = await OrderModel.find({ _id: { $in: tab.orders } });
+
+    const cutoff = await SystemSettingsService.getBusinessDayCutoff();
+    const writtenOffAt = new Date();
+    const businessDate = deriveBusinessDate(writtenOffAt, cutoff);
+    const writeOffRecord = {
+      amount: tab.total,
+      reason,
+      writtenOffBy: new Types.ObjectId(opts.writtenOffBy),
+      writtenOffAt,
+    };
+
+    tab.paymentStatus = 'written-off';
+    tab.status = 'closed';
+    tab.closedAt = writtenOffAt;
+    tab.businessDate = businessDate;
+    tab.writeOff = writeOffRecord;
+    await tab.save();
+
+    if (orders.length > 0) {
+      await OrderModel.updateMany(
+        { _id: { $in: tab.orders } },
+        {
+          $set: {
+            paymentStatus: 'written-off',
+            writeOff: writeOffRecord,
+            businessDate,
+          },
+        }
+      );
+    }
+
+    const AuditLogService = (await import('./audit-log-service'))
+      .AuditLogService;
+    await AuditLogService.createLog({
+      userId: opts.writtenOffBy,
+      userEmail: tab.customerEmail || 'unknown',
+      userRole: 'admin',
+      action: 'tab.write_off',
+      resource: 'tab',
+      resourceId: tabId,
+      details: {
+        tabNumber: tab.tabNumber,
+        tableNumber: tab.tableNumber,
+        orderCount: orders.length,
+        amount: writeOffRecord.amount,
+        reason,
+        writtenOffBy: opts.writtenOffBy,
+      },
+    });
+
+    return JSON.parse(JSON.stringify(tab.toObject()));
+  }
+
+  /**
+   * @requirement REQ-098 AC5 — Dormant-open-tab visibility scan
+   *
+   * Read-only scan (mirrors `OrderService.scanStalePaidOrders`). For every
+   * open tab older than the configured threshold, writes an `IncidentEvent`
+   * tagged `dormant_open_tab` so `/dashboard/incidents` surfaces it —
+   * prompting a manager to decide (write off / contact customer / keep
+   * open) rather than the tab aging silently. Never mutates the tab.
+   * Dedup is delegated to `IncidentEventService.dedupRecent` (24h window
+   * keyed on kind + entityId).
+   */
+  static async scanDormantOpenTabs(opts: {
+    thresholdHours: number;
+    limit?: number;
+  }): Promise<{ scanned: number; flagged: number; skippedAsDup: number }> {
+    await connectDB();
+    const { IncidentEventService } = await import('./incident-event-service');
+
+    const olderThan = new Date(
+      Date.now() - opts.thresholdHours * 60 * 60 * 1000
+    );
+
+    const tabs = await TabModel.find({
+      status: 'open',
+      openedAt: { $lt: olderThan },
+    })
+      .sort({ openedAt: 1 })
+      .limit(opts.limit ?? 100)
+      .lean<
+        Array<{
+          _id: { toString: () => string };
+          tabNumber: string;
+          tableNumber: string;
+          openedAt: Date;
+        }>
+      >();
+
+    let flagged = 0;
+    let skippedAsDup = 0;
+
+    for (const tab of tabs) {
+      const entityId = tab._id.toString();
+      const already = await IncidentEventService.dedupRecent({
+        kind: 'dormant_open_tab',
+        entityId,
+        withinHours: 24,
+      });
+      if (already) {
+        skippedAsDup += 1;
+        continue;
+      }
+      const ageHours = (
+        (Date.now() - new Date(tab.openedAt).getTime()) /
+        (60 * 60 * 1000)
+      ).toFixed(1);
+      try {
+        await IncidentEventService.recordIncident({
+          kind: 'dormant_open_tab',
+          entityId,
+          summary: `Tab ${tab.tabNumber} (table ${tab.tableNumber}) still open after ${ageHours}h`,
+          errorDetails: {
+            tabNumber: tab.tabNumber,
+            tableNumber: tab.tableNumber,
+            openedAt: tab.openedAt,
+            ageHours: Number(ageHours),
+          },
+        });
+        flagged += 1;
+      } catch (error) {
+        console.error(
+          '[TabService.scanDormantOpenTabs] IncidentEvent write failed:',
+          error
+        );
+      }
+    }
+
+    return { scanned: tabs.length, flagged, skippedAsDup };
+  }
 }

@@ -134,67 +134,80 @@ derive_commit_range() {
   printf '%s\t%s' "$from" "$to"
 }
 
-CURRENT_TICKET="$(find_release_ticket "$VERSION" 2>/dev/null || true)"
-if [ -z "$CURRENT_TICKET" ] && [ -d "compliance/pending-releases" ]; then
-  echo "Error: release ticket for ${VERSION} not found; cannot build explicit bundle manifest." >&2
-  exit 1
-fi
-
-mapfile -t CANDIDATE_RELEASES < <(
-  if [ -d "compliance/pending-releases" ]; then
-    for ticket in compliance/pending-releases/RELEASE-TICKET-*.md; do
-      [ -f "$ticket" ] || continue
-      version="${ticket##*/RELEASE-TICKET-}"
-      version="${version%.md}"
-      [ "$version" = "$VERSION" ] && continue
-      printf '%s\n' "$version"
-    done
-  fi
-)
-
-mapfile -t EXPLICIT_PREDECESSORS < <(
-  if [ -n "$CURRENT_TICKET" ]; then
-    extract_explicit_predecessors "$CURRENT_TICKET"
-  fi
-)
-
-declare -A EXPLICIT_SET=()
-for version in "${EXPLICIT_PREDECESSORS[@]}"; do
-  if [ "$version" = "$VERSION" ]; then
-    echo "Error: bundle manifest cannot self-supersede ${VERSION}." >&2
-    exit 1
-  fi
-  if [ -n "${EXPLICIT_SET[$version]:-}" ]; then
-    echo "Error: duplicate explicit predecessor '${version}'." >&2
-    exit 1
-  fi
-  EXPLICIT_SET["$version"]=1
-  if [ -z "$(find_release_ticket "$version" 2>/dev/null || true)" ]; then
-    echo "Error: explicit predecessor '${version}' has no release ticket on disk." >&2
-    exit 1
-  fi
-done
-
-if [ "${#CANDIDATE_RELEASES[@]}" -gt 0 ] && [ "${#EXPLICIT_PREDECESSORS[@]}" -eq 0 ]; then
-  echo "Error: ambiguous predecessor ownership for ${VERSION}. Pending release tickets exist but the release ticket does not explicitly list absorbed predecessor releases." >&2
-  printf 'Candidates: %s\n' "${CANDIDATE_RELEASES[*]}" >&2
-  exit 1
-fi
-
-UNACCOUNTED=()
-for version in "${CANDIDATE_RELEASES[@]}"; do
-  if [ -z "${EXPLICIT_SET[$version]:-}" ]; then
-    UNACCOUNTED+=("$version")
-  fi
-done
-if [ "${#UNACCOUNTED[@]}" -gt 0 ]; then
-  echo "Error: ambiguous predecessor ownership for ${VERSION}. The following pending releases are not explicitly listed in the release ticket bundle section:" >&2
-  printf '  - %s\n' "${UNACCOUNTED[@]}" >&2
-  exit 1
-fi
-
+CURRENT_TICKET=""
+EXPLICIT_PREDECESSORS=()
 MEMBERS='[]'
 PREDECESSOR_LINES=()
+
+# devaudit-installer#622 — a bare-date housekeeping version has no release
+# ticket by design (SDLC framework only writes RELEASE-TICKET-*.md for
+# REQ-tracked releases), so none of the explicit-predecessor-ownership
+# machinery below applies to it: there is no ticket to declare absorbed
+# predecessors in, and no ambiguity to resolve against other pending
+# tickets. Skip straight to describing the version's own commit range via
+# the non-release work-item scan further down — that part of the script
+# already works for any version string and needs no release ticket.
+if ! [[ "$VERSION" =~ $DATE_VERSION_RE ]]; then
+  CURRENT_TICKET="$(find_release_ticket "$VERSION" 2>/dev/null || true)"
+  if [ -z "$CURRENT_TICKET" ] && [ -d "compliance/pending-releases" ]; then
+    echo "Error: release ticket for ${VERSION} not found; cannot build explicit bundle manifest." >&2
+    exit 1
+  fi
+
+  mapfile -t CANDIDATE_RELEASES < <(
+    if [ -d "compliance/pending-releases" ]; then
+      for ticket in compliance/pending-releases/RELEASE-TICKET-*.md; do
+        [ -f "$ticket" ] || continue
+        version="${ticket##*/RELEASE-TICKET-}"
+        version="${version%.md}"
+        [ "$version" = "$VERSION" ] && continue
+        printf '%s\n' "$version"
+      done
+    fi
+  )
+
+  mapfile -t EXPLICIT_PREDECESSORS < <(
+    if [ -n "$CURRENT_TICKET" ]; then
+      extract_explicit_predecessors "$CURRENT_TICKET"
+    fi
+  )
+
+  declare -A EXPLICIT_SET=()
+  for version in "${EXPLICIT_PREDECESSORS[@]}"; do
+    if [ "$version" = "$VERSION" ]; then
+      echo "Error: bundle manifest cannot self-supersede ${VERSION}." >&2
+      exit 1
+    fi
+    if [ -n "${EXPLICIT_SET[$version]:-}" ]; then
+      echo "Error: duplicate explicit predecessor '${version}'." >&2
+      exit 1
+    fi
+    EXPLICIT_SET["$version"]=1
+    if [ -z "$(find_release_ticket "$version" 2>/dev/null || true)" ]; then
+      echo "Error: explicit predecessor '${version}' has no release ticket on disk." >&2
+      exit 1
+    fi
+  done
+
+  if [ "${#CANDIDATE_RELEASES[@]}" -gt 0 ] && [ "${#EXPLICIT_PREDECESSORS[@]}" -eq 0 ]; then
+    echo "Error: ambiguous predecessor ownership for ${VERSION}. Pending release tickets exist but the release ticket does not explicitly list absorbed predecessor releases." >&2
+    printf 'Candidates: %s\n' "${CANDIDATE_RELEASES[*]}" >&2
+    exit 1
+  fi
+
+  UNACCOUNTED=()
+  for version in "${CANDIDATE_RELEASES[@]}"; do
+    if [ -z "${EXPLICIT_SET[$version]:-}" ]; then
+      UNACCOUNTED+=("$version")
+    fi
+  done
+  if [ "${#UNACCOUNTED[@]}" -gt 0 ]; then
+    echo "Error: ambiguous predecessor ownership for ${VERSION}. The following pending releases are not explicitly listed in the release ticket bundle section:" >&2
+    printf '  - %s\n' "${UNACCOUNTED[@]}" >&2
+    exit 1
+  fi
+fi
+
 for version in "${EXPLICIT_PREDECESSORS[@]}"; do
   ticket="$(find_release_ticket "$version")"
   title="$(extract_ticket_title "$ticket")"
@@ -250,16 +263,18 @@ for version in "${EXPLICIT_PREDECESSORS[@]}"; do
   PREDECESSOR_LINES+=("- \`${version}\` (${role}/${relationship}) — ${title:-Untitled release ticket}")
 done
 
-# A tracked release only absorbs genuinely REQ-free housekeeping performed
-# during its own implementation window. Do not recast earlier history, or a
-# conventional commit explicitly owned by any REQ, as generic bundle work.
+# devaudit-installer#600 — scan the full SINCE_REF..HEAD window for
+# non-release housekeeping; do not re-narrow it to this REQ's own
+# implementation window. A predecessor housekeeping release (e.g. a
+# `devaudit update` sync) commonly lands on the integration branch shortly
+# *before* this REQ's own first commit — narrowing the scan floor to that
+# first commit's parent excluded exactly that predecessor from ever being
+# detected (confirmed live: a housekeeping commit one commit outside the
+# window was silently missed). The per-commit REQ-tag filter below already
+# excludes any commit explicitly owned by a REQ (this one or another), which
+# is what actually protects against recasting REQ-owned work as generic
+# bundle work — no additional window-narrowing is needed on top of it.
 SCAN_FROM="$SINCE_REF"
-if [[ "$VERSION" =~ ^REQ-[0-9]+$ ]]; then
-  FIRST_REQ_SHA="$(git log --reverse --format='%H' --grep="\\[${VERSION}\\]\\|Ref: ${VERSION}" 2>/dev/null | head -1 || true)"
-  if [ -n "$FIRST_REQ_SHA" ] && git rev-parse --verify "${FIRST_REQ_SHA}^" >/dev/null 2>&1; then
-    SCAN_FROM="${FIRST_REQ_SHA}^"
-  fi
-fi
 COMMITS="$(git log "$SCAN_FROM"..HEAD --format='%h%x09%s' 2>/dev/null || true)"
 BUNDLED=""
 while IFS=$'\t' read -r sha subject; do

@@ -32,6 +32,7 @@ import { ExpensesSection } from '@/components/features/reports/expenses-section'
 import { PriceOverridesSection } from '@/components/features/reports/price-overrides-section';
 import { ReportCharts } from '@/components/features/reports/report-charts';
 import { TipsSection } from '@/components/features/reports/tips-section';
+import { WrittenOffSection } from '@/components/features/reports/written-off-section';
 import {
   exportReportAsPDF,
   exportReportAsExcel,
@@ -560,6 +561,14 @@ export function DailyReportClient() {
               tip arrived on. Renders nothing on zero-tip days. */}
           <TipsSection
             breakdown={report.tipsBreakdown}
+            formatCurrency={formatCurrency}
+          />
+
+          {/* REQ-098 AC6 — Written off (bad debt). Always renders, even at
+              zero, so the section's presence is never ambiguous with
+              "not implemented". */}
+          <WrittenOffSection
+            writtenOff={report.writtenOff}
             formatCurrency={formatCurrency}
           />
 

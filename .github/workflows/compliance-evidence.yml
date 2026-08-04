@@ -852,7 +852,7 @@ jobs:
               - [ ] \`EUAIA.Art-9 / Art-14 / Art-15\` — AI failure: <REPLACE — yes/no, which article(s)>
 
               Once closed, the \`incident-export.yml\` workflow exports this issue's body to \`compliance/governance/incident-report-<N>.md\`.
-              EOF
+          EOF
               )
               # Strip the 14-space heredoc indentation so the issue body is clean.
               ISSUE_BODY=$(echo "$ISSUE_BODY" | sed 's/^              //')
@@ -885,7 +885,7 @@ jobs:
               **Git SHA:** ${GIT_SHA}
 
               This failure appears to be a ${CLASSIFICATION} (not an application defect). A human should confirm and fix the ${CLASSIFICATION}, not the application. Filed with the \`test-bug\` label — this does NOT produce \`incident_report\` evidence.
-              EOF
+          EOF
               )
               ISSUE_BODY=$(echo "$ISSUE_BODY" | sed 's/^              //')
 

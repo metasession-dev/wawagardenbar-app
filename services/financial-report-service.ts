@@ -154,10 +154,21 @@ export interface DailySummaryReport {
    * `revenue.totalRevenue`/`metrics.orderCount` (both queries above filter
    * strictly on `paymentStatus: 'paid'`) — this section exists so that
    * exclusion is visible and explained on the report, not a silent drop.
+   *
+   * @requirement wgb#644 — `totalCost` is the ingredient/COGS cost of
+   * these same orders' line items, computed with the same per-line-item
+   * cost basis paid orders use for `grossProfit` (`OrderService.completeOrder`
+   * deducts inventory at kitchen fulfillment regardless of payment
+   * outcome, so a written-off order's cost was already incurred — it
+   * just never appears in `grossProfit` because that's driven entirely
+   * by paid orders). Netted against `netProfit` as a real expense, since
+   * industry practice (comps/walkouts/bad debt) treats this as a
+   * controllable-loss cost, not an untracked one.
    */
   writtenOff: {
     count: number;
     totalAmount: number;
+    totalCost: number;
   };
 }
 
@@ -208,13 +219,21 @@ export class FinancialReportService {
    * that field mirrors the tab-level aggregate write-off amount onto
    * every linked order for per-order audit display, so summing it across
    * sibling orders on the same tab would double-count).
+   *
+   * @requirement wgb#644 — also sums `totalCost`, the ingredient cost of
+   * these orders' line items, using the same `costPerUnit || menuItem
+   * fallback || 0` basis the paid-order item loop uses for `grossProfit`
+   * (below). A written-off order's inventory was deducted in full at
+   * kitchen fulfillment regardless of payment outcome, so this cost was
+   * genuinely incurred — it just never appears in `grossProfit`, which is
+   * computed only from paid orders' items.
    */
   private static async computeWrittenOffSummary(
     startDate: Date,
     endDate: Date,
     legacyStart: Date,
     legacyEnd: Date
-  ): Promise<{ count: number; totalAmount: number }> {
+  ): Promise<{ count: number; totalAmount: number; totalCost: number }> {
     const writtenOffOrders = await OrderModel.find({
       paymentStatus: 'written-off',
       $or: [
@@ -225,14 +244,42 @@ export class FinancialReportService {
         },
         { businessDate: null, paidAt: { $gte: legacyStart, $lte: legacyEnd } },
       ],
-    }).lean<Array<{ total: number }>>();
+    }).lean<
+      Array<{
+        total: number;
+        items?: Array<{
+          menuItemId?: { toString(): string } | string;
+          quantity: number;
+          costPerUnit?: number;
+        }>;
+      }>
+    >();
 
     const totalAmount = writtenOffOrders.reduce(
       (sum, order) => sum + (order.total ?? 0),
       0
     );
 
-    return { count: writtenOffOrders.length, totalAmount };
+    const costPerUnitCache = new Map<string, number>();
+    let totalCost = 0;
+    for (const order of writtenOffOrders) {
+      for (const item of order.items ?? []) {
+        let costPerUnit = item.costPerUnit || 0;
+        if (!costPerUnit && item.menuItemId) {
+          const itemId = item.menuItemId.toString();
+          if (!costPerUnitCache.has(itemId)) {
+            const menuItem = await MenuItemModel.findById(itemId).lean<{
+              costPerUnit?: number;
+            } | null>();
+            costPerUnitCache.set(itemId, menuItem?.costPerUnit ?? 0);
+          }
+          costPerUnit = costPerUnitCache.get(itemId) ?? 0;
+        }
+        totalCost += costPerUnit * (item.quantity ?? 0);
+      }
+    }
+
+    return { count: writtenOffOrders.length, totalAmount, totalCost };
   }
 
   private static async createCategoryBreakdowns(): Promise<
@@ -704,11 +751,15 @@ export class FinancialReportService {
       report.operatingExpenses.totalOperatingExpenses;
 
     // Calculate net profit
-    // Net Profit = Gross Profit - Operating Expenses (Overhead)
-    // We exclude Direct Costs (Purchases) because COGS is already subtracted from Revenue to get Gross Profit
+    // Net Profit = Gross Profit - Operating Expenses (Overhead) - Written-off COGS
+    // We exclude Direct Costs (Purchases) because COGS is already subtracted from Revenue to get Gross Profit.
+    // Written-off COGS (wgb#644) is netted separately: it's inventory genuinely
+    // consumed with no offsetting revenue, so unlike Direct Costs it isn't already
+    // reflected anywhere in Gross Profit.
     report.netProfit =
       report.grossProfit.total -
-      report.operatingExpenses.totalOperatingExpenses;
+      report.operatingExpenses.totalOperatingExpenses -
+      report.writtenOff.totalCost;
 
     // Calculate metrics (margins based on item revenue, not payment total)
     const itemRevenue = report.categories.reduce(
@@ -1006,9 +1057,11 @@ export class FinancialReportService {
       report.operatingExpenses.totalDirectCosts +
       report.operatingExpenses.totalOperatingExpenses;
 
+    // Written-off COGS (wgb#644) netted the same way as generateDailySummary above.
     report.netProfit =
       report.grossProfit.total -
-      report.operatingExpenses.totalOperatingExpenses;
+      report.operatingExpenses.totalOperatingExpenses -
+      report.writtenOff.totalCost;
 
     const rangeItemRevenue = report.categories.reduce(
       (total, category) => total + category.revenue.totalRevenue,

@@ -267,10 +267,19 @@ export function exportReportAsPDF(
 
   const writtenOffCount = report.writtenOff?.count ?? 0;
   const writtenOffTotal = report.writtenOff?.totalAmount ?? 0;
+  // wgb#644 — ingredient/COGS cost of written-off orders' line items,
+  // netted against Net Profit; distinct from the bad-debt amount above.
+  const writtenOffCost = report.writtenOff?.totalCost ?? 0;
   autoTable(doc, {
     startY: yPos,
-    head: [['Orders written off', 'Total amount']],
-    body: [[String(writtenOffCount), formatCurrency(writtenOffTotal)]],
+    head: [['Orders written off', 'Total amount', 'Cost of goods']],
+    body: [
+      [
+        String(writtenOffCount),
+        formatCurrency(writtenOffTotal),
+        formatCurrency(writtenOffCost),
+      ],
+    ],
     theme: 'grid',
     headStyles: { fillColor: [107, 114, 128] },
     styles: { fontSize: 9 },
@@ -438,8 +447,12 @@ export function exportReportAsExcel(
   // never silently missing from the exported report.
   const writtenOffData: Array<Array<string | number>> = [
     ['Written Off (Bad Debt)'],
-    ['Orders written off', 'Total amount'],
-    [report.writtenOff?.count ?? 0, report.writtenOff?.totalAmount ?? 0],
+    ['Orders written off', 'Total amount', 'Cost of goods'],
+    [
+      report.writtenOff?.count ?? 0,
+      report.writtenOff?.totalAmount ?? 0,
+      report.writtenOff?.totalCost ?? 0,
+    ],
   ];
   const writtenOffSheet = XLSX.utils.aoa_to_sheet(writtenOffData);
   XLSX.utils.book_append_sheet(workbook, writtenOffSheet, 'Written Off');
@@ -552,9 +565,9 @@ export function exportReportAsCSV(
   // silently missing from the exported report.
   csvRows.push('');
   csvRows.push('Written Off (Bad Debt)');
-  csvRows.push('Orders written off,Total amount');
+  csvRows.push('Orders written off,Total amount,Cost of goods');
   csvRows.push(
-    `${report.writtenOff?.count ?? 0},${report.writtenOff?.totalAmount ?? 0}`
+    `${report.writtenOff?.count ?? 0},${report.writtenOff?.totalAmount ?? 0},${report.writtenOff?.totalCost ?? 0}`
   );
 
   // Create and download CSV

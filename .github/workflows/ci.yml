@@ -394,7 +394,7 @@ jobs:
           # compliance-evidence.yml call the same helper so a single
           # feature converges on one release record. See DevAudit #310.
           chmod +x scripts/derive-release-version.sh 2>/dev/null || true
-          VERSION=$(./scripts/derive-release-version.sh)
+          VERSION=$(DEVAUDIT_ALLOW_PENDING_TICKET_FALLBACK=1 ./scripts/derive-release-version.sh)
           if [ -z "$VERSION" ]; then
             echo "version=skip" >> "$GITHUB_OUTPUT"
             echo "Release registration skipped: close-out reconciliation detected."

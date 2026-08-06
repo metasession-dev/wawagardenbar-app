@@ -1,6 +1,6 @@
 # Release Ticket: REQ-098 — Dormant tab write-off — bad-debt accounting
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-08-03
 **Requirement ID:** REQ-098
 **Risk Level:** HIGH

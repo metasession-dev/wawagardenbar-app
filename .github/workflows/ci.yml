@@ -459,12 +459,12 @@ jobs:
           # is what actually describes "what's in this release").
           chmod +x scripts/generate-bundled-changes.sh 2>/dev/null || true
           chmod +x scripts/upload-evidence.sh 2>/dev/null || true
-          # Find the previous release tag to scan from. This repo has never
-          # tagged a release, so that lookup always comes back empty — fall
-          # back to the merge-base with main (the last point develop and
+          # Find the previous release tag to scan from. Many projects never
+          # tag a release, so that lookup can come back empty — fall back to
+          # the merge-base with main (the last point the release branch and
           # main actually shared, i.e. the real "since the last release"
-          # boundary) instead of a fixed commit count, which silently
-          # re-absorbed already-released commits into every release's
+          # boundary) instead of a fixed commit count, which would silently
+          # re-absorb already-released commits into every release's
           # bundled-changes list. HEAD~50 remains a last-ditch fallback only
           # if origin/main truly can't be resolved.
           SINCE_REF=$(git tag --sort=-creatordate | head -1 || true)

@@ -135,6 +135,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-TABMGT-006   | Tab payment preserves order fulfillment status                                         | Must     | regression | `services/tab-service.ts`; REQ-085                                                                               |
 | REQ-TABMGT-007   | Dormant tab write-off (bad-debt accounting)                                            | Should   | regression | `services/tab-service.ts` `writeOffTab()`; REQ-098                                                               |
 | REQ-TABMGT-008   | Dormant open-tab visibility (list flag)                                                | Could    | extended   | `app/dashboard/orders/tabs/page.tsx`; REQ-098                                                                    |
+| REQ-TABMGT-009   | Written-off tab list badge + filter (distinct from generic closed/paid)                | Should   | regression | `dashboard-tabs-list-client.tsx`, `dashboard-tabs-filter.tsx`; REQ-099                                           |
 | REQ-KITCHEN-001  | Kitchen display shows active orders real-time                                          | Should   | regression | `app/dashboard/kitchen-display/page.tsx`                                                                         |
 | REQ-KITCHEN-002  | `kitchenManagement` gates kitchen routes                                               | Must     | regression | `app/dashboard/kitchen/layout.tsx`; REQ-034                                                                      |
 | REQ-KITCHEN-003  | Recipe CRUD + validation                                                               | Should   | regression | `services/recipe-service.ts:41`; REQ-034                                                                         |
@@ -675,6 +676,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 **Source:** `app/dashboard/orders/tabs/page.tsx` (status filter, 25/page, stats, staff-pot)
 
 - **Given** seeded tabs, **When** the admin filters by status, **Then** matching tabs and totals (total/open/closed) render.
+- **Given** written-off tabs exist among the results, **When** the admin does not check the "Written off" filter (REQ-TABMGT-009), **Then** the status-checkbox filtering behaves exactly as before — written-off tabs are neither specially included nor excluded by the `status` checkboxes alone. (REQ-099)
 
 #### REQ-TABMGT-002 — Tab detail + partial payments · **Should** · regression
 
@@ -723,6 +725,13 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 - **Given** a tab already `'written-off'`, **When** write-off is attempted again, **Then** it is refused server-side.
 - **Given** a staff member who is not admin/super-admin, **When** they attempt the write-off action (directly or via UI), **Then** it is refused server-side with "Insufficient permissions" — the same gate as `deleteTabAction`.
 - **Given** a manager/super-admin on a tab's detail page, **When** they open the write-off dialog, **Then** a reason is required before submitting; the existing Delete action remains unmodified and available side by side.
+
+#### REQ-TABMGT-009 — Written-off tab list badge + filter · **Should** · regression
+
+**Source:** `dashboard-tabs-list-client.tsx` (badge + action button), `dashboard-tabs-filter.tsx` (filter checkbox); cross-ref REQ-098 (`paymentStatus: 'written-off'`), REQ-099
+
+- **Given** a tab with `paymentStatus === 'written-off'`, **When** the admin views the Tabs Management list, **Then** the tab shows a distinct "Written off" badge instead of the generic status badge, and no "Tab Paid" action button renders.
+- **Given** the Tabs Management filter panel, **When** the admin checks the "Written off" checkbox, **Then** the list shows only tabs with `paymentStatus === 'written-off'`, independent of which `status` checkboxes (Open/Settling/Closed) are checked.
 
 #### REQ-TABMGT-008 — Dormant open-tab visibility · **Could** · extended
 

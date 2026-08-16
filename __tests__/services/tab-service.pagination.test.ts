@@ -125,6 +125,62 @@ describe('TabService.listAllTabsWithFilters — pagination', () => {
       openedAt: { $gte: startDate },
     });
   });
+
+  // REQ-099 AC2 — "Written off" filter, independent of status checkboxes.
+  it('writtenOffOnly with no statuses filters strictly on paymentStatus', async () => {
+    resetChain([]);
+    countDocumentsSpy.mockResolvedValue(0);
+
+    await TabService.listAllTabsWithFilters({
+      writtenOffOnly: true,
+      skip: 0,
+      limit: 25,
+    });
+
+    expect(findSpy).toHaveBeenCalledWith({ paymentStatus: 'written-off' });
+    expect(countDocumentsSpy).toHaveBeenCalledWith({
+      paymentStatus: 'written-off',
+    });
+  });
+
+  // REQ-099 AC2 — checking "Written off" alongside status checkboxes is
+  // additive (OR), not exclusive — it doesn't require "Closed" to also be
+  // checked to surface written-off tabs.
+  it('writtenOffOnly with statuses selected ORs paymentStatus in, not ANDs it', async () => {
+    resetChain([]);
+    countDocumentsSpy.mockResolvedValue(0);
+
+    await TabService.listAllTabsWithFilters({
+      statuses: ['open'],
+      writtenOffOnly: true,
+      skip: 0,
+      limit: 25,
+    });
+
+    const expectedQuery = {
+      $or: [{ status: { $in: ['open'] } }, { paymentStatus: 'written-off' }],
+    };
+    expect(findSpy).toHaveBeenCalledWith(expectedQuery);
+    expect(countDocumentsSpy).toHaveBeenCalledWith(expectedQuery);
+  });
+
+  // REQ-099 AC3 — existing "Closed" filter behaviour is unchanged when the
+  // new "Written off" filter is not used (regression guard).
+  it('writtenOffOnly unset leaves the existing statuses-only query unchanged', async () => {
+    resetChain([]);
+    countDocumentsSpy.mockResolvedValue(0);
+
+    await TabService.listAllTabsWithFilters({
+      statuses: ['closed'],
+      skip: 0,
+      limit: 25,
+    });
+
+    expect(findSpy).toHaveBeenCalledWith({ status: { $in: ['closed'] } });
+    expect(countDocumentsSpy).toHaveBeenCalledWith({
+      status: { $in: ['closed'] },
+    });
+  });
 });
 
 describe('TabService.getTabStats', () => {

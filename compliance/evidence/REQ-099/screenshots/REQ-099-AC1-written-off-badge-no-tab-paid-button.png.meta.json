@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-099",
+  "ac": 1,
+  "slug": "written-off-badge-no-tab-paid-button",
+  "specFile": "e2e/orders/tabs-list-written-off-badge-filter.spec.ts",
+  "capturedAt": "2026-08-16T19:40:23.690Z"
+}

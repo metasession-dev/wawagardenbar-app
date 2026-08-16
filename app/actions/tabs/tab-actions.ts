@@ -322,6 +322,8 @@ export async function getDashboardFilteredTabsAction(filters: {
   startDate?: string;
   endDate?: string;
   reconciled?: 'all' | 'reconciled' | 'not-reconciled';
+  /** REQ-099 AC2 — isolate written-off tabs, independent of `statuses`. */
+  writtenOffOnly?: boolean;
   skip?: number;
   limit?: number;
 }): Promise<ActionResult<{ tabs: ITab[]; total: number }>> {
@@ -347,6 +349,7 @@ export async function getDashboardFilteredTabsAction(filters: {
       startDate: filters.startDate ? new Date(filters.startDate) : undefined,
       endDate: filters.endDate ? new Date(filters.endDate) : undefined,
       reconciled: filters.reconciled,
+      writtenOffOnly: filters.writtenOffOnly,
       skip: filters.skip,
       limit: filters.limit,
     });

@@ -121,7 +121,7 @@ jobs:
           # one release record regardless of whether the push touched
           # code or docs. See DevAudit #310.
           chmod +x scripts/derive-release-version.sh 2>/dev/null || true
-          VERSION=$(./scripts/derive-release-version.sh)
+          VERSION=$(DEVAUDIT_ALLOW_PENDING_TICKET_FALLBACK=1 ./scripts/derive-release-version.sh)
           if [ -z "$VERSION" ]; then
             echo "version=skip" >> "$GITHUB_OUTPUT"
             echo "Compliance evidence upload skipped: close-out reconciliation detected."
@@ -346,7 +346,7 @@ jobs:
         id: version
         run: |
           chmod +x scripts/derive-release-version.sh 2>/dev/null || true
-          VERSION=$(./scripts/derive-release-version.sh)
+          VERSION=$(DEVAUDIT_ALLOW_PENDING_TICKET_FALLBACK=1 ./scripts/derive-release-version.sh)
           if [ -z "$VERSION" ]; then
             echo "version=skip" >> "$GITHUB_OUTPUT"
             echo "E2E evidence upload skipped: close-out reconciliation detected."

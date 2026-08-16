@@ -42,20 +42,32 @@ import { useToast } from '@/hooks/use-toast';
 const STORAGE_KEY = 'wawagardenbar.tabs-filter';
 const DEFAULT_STATUSES = ['open'];
 const DEFAULT_RECONCILED: 'all' | 'reconciled' | 'not-reconciled' = 'all';
+// REQ-099 AC2 — "Written off" is a separate, additive filter dimension
+// (paymentStatus), independent of the status checkboxes.
+const DEFAULT_WRITTEN_OFF_ONLY = false;
 
 interface SavedFilter {
   statuses: string[];
   reconciled: 'all' | 'reconciled' | 'not-reconciled';
+  writtenOffOnly: boolean;
 }
 
 function readSavedFilter(): SavedFilter {
   if (typeof window === 'undefined') {
-    return { statuses: DEFAULT_STATUSES, reconciled: DEFAULT_RECONCILED };
+    return {
+      statuses: DEFAULT_STATUSES,
+      reconciled: DEFAULT_RECONCILED,
+      writtenOffOnly: DEFAULT_WRITTEN_OFF_ONLY,
+    };
   }
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      return { statuses: DEFAULT_STATUSES, reconciled: DEFAULT_RECONCILED };
+      return {
+        statuses: DEFAULT_STATUSES,
+        reconciled: DEFAULT_RECONCILED,
+        writtenOffOnly: DEFAULT_WRITTEN_OFF_ONLY,
+      };
     }
     const parsed = JSON.parse(raw) as Partial<SavedFilter>;
     return {
@@ -68,9 +80,17 @@ function readSavedFilter(): SavedFilter {
         parsed.reconciled === 'all'
           ? parsed.reconciled
           : DEFAULT_RECONCILED,
+      writtenOffOnly:
+        typeof parsed.writtenOffOnly === 'boolean'
+          ? parsed.writtenOffOnly
+          : DEFAULT_WRITTEN_OFF_ONLY,
     };
   } catch {
-    return { statuses: DEFAULT_STATUSES, reconciled: DEFAULT_RECONCILED };
+    return {
+      statuses: DEFAULT_STATUSES,
+      reconciled: DEFAULT_RECONCILED,
+      writtenOffOnly: DEFAULT_WRITTEN_OFF_ONLY,
+    };
   }
 }
 
@@ -79,6 +99,7 @@ interface DashboardTabsFilterProps {
     statuses: string[];
     dateRange?: DateRange;
     reconciled?: 'all' | 'reconciled' | 'not-reconciled';
+    writtenOffOnly?: boolean;
   }) => void;
 }
 
@@ -110,6 +131,9 @@ export function DashboardTabsFilter({
   const [reconciled, setReconciled] = useState<
     'all' | 'reconciled' | 'not-reconciled'
   >(initialFilter.reconciled);
+  const [writtenOffOnly, setWrittenOffOnly] = useState<boolean>(
+    initialFilter.writtenOffOnly
+  );
 
   // Track whether the saved filter has been emitted to the parent yet.
   // On first mount we tell the parent about the persisted filter so the
@@ -124,12 +148,14 @@ export function DashboardTabsFilter({
     const matchesDefault =
       initialFilter.statuses.length === 1 &&
       initialFilter.statuses[0] === 'open' &&
-      initialFilter.reconciled === 'all';
+      initialFilter.reconciled === 'all' &&
+      initialFilter.writtenOffOnly === false;
     if (!matchesDefault) {
       onFilterChange({
         statuses: initialFilter.statuses,
         dateRange: undefined,
         reconciled: initialFilter.reconciled,
+        writtenOffOnly: initialFilter.writtenOffOnly,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -141,7 +167,12 @@ export function DashboardTabsFilter({
       : selectedStatuses.filter((s) => s !== status);
 
     setSelectedStatuses(newStatuses);
-    onFilterChange({ statuses: newStatuses, dateRange, reconciled });
+    onFilterChange({
+      statuses: newStatuses,
+      dateRange,
+      reconciled,
+      writtenOffOnly,
+    });
   };
 
   const handleDateRangeChange = (range: DateRange | undefined) => {
@@ -150,6 +181,7 @@ export function DashboardTabsFilter({
       statuses: selectedStatuses,
       dateRange: range,
       reconciled,
+      writtenOffOnly,
     });
   };
 
@@ -161,6 +193,19 @@ export function DashboardTabsFilter({
       statuses: selectedStatuses,
       dateRange,
       reconciled: value,
+      writtenOffOnly,
+    });
+  };
+
+  // REQ-099 AC2 — "Written off" is independent of the status checkboxes;
+  // it does not require "Closed" to also be checked.
+  const handleWrittenOffOnlyChange = (checked: boolean) => {
+    setWrittenOffOnly(checked);
+    onFilterChange({
+      statuses: selectedStatuses,
+      dateRange,
+      reconciled,
+      writtenOffOnly: checked,
     });
   };
 
@@ -168,10 +213,12 @@ export function DashboardTabsFilter({
     setSelectedStatuses([]);
     setDateRange(undefined);
     setReconciled('all');
+    setWrittenOffOnly(false);
     onFilterChange({
       statuses: [],
       dateRange: undefined,
       reconciled: 'all',
+      writtenOffOnly: false,
     });
   };
 
@@ -187,6 +234,7 @@ export function DashboardTabsFilter({
       const payload: SavedFilter = {
         statuses: selectedStatuses,
         reconciled,
+        writtenOffOnly,
       };
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
       toast({
@@ -216,10 +264,12 @@ export function DashboardTabsFilter({
     setSelectedStatuses(DEFAULT_STATUSES);
     setDateRange(undefined);
     setReconciled(DEFAULT_RECONCILED);
+    setWrittenOffOnly(DEFAULT_WRITTEN_OFF_ONLY);
     onFilterChange({
       statuses: DEFAULT_STATUSES,
       dateRange: undefined,
       reconciled: DEFAULT_RECONCILED,
+      writtenOffOnly: DEFAULT_WRITTEN_OFF_ONLY,
     });
     toast({
       title: 'Default restored',
@@ -230,7 +280,8 @@ export function DashboardTabsFilter({
   const activeFilterCount =
     (selectedStatuses.length > 0 ? 1 : 0) +
     (dateRange?.from ? 1 : 0) +
-    (reconciled !== 'all' ? 1 : 0);
+    (reconciled !== 'all' ? 1 : 0) +
+    (writtenOffOnly ? 1 : 0);
 
   return (
     <Card>
@@ -301,6 +352,24 @@ export function DashboardTabsFilter({
                     </div>
                   ))}
                 </div>
+                {/* REQ-099 AC2 — independent of the status checkboxes above;
+                    isolates paymentStatus === 'written-off' tabs directly
+                    instead of requiring "Closed" + manual eyeballing. */}
+                <div className="flex items-center space-x-2 pt-1">
+                  <Checkbox
+                    id="status-written-off"
+                    checked={writtenOffOnly}
+                    onCheckedChange={(checked) =>
+                      handleWrittenOffOnlyChange(checked as boolean)
+                    }
+                  />
+                  <label
+                    htmlFor="status-written-off"
+                    className="text-sm font-medium leading-none cursor-pointer"
+                  >
+                    Written off
+                  </label>
+                </div>
               </div>
 
               {/* Date Range Filter */}
@@ -360,6 +429,11 @@ export function DashboardTabsFilter({
                     {reconciled === 'reconciled'
                       ? 'Reconciled'
                       : 'Not Reconciled'}
+                  </Badge>
+                )}
+                {writtenOffOnly && (
+                  <Badge variant="secondary" className="text-xs">
+                    Written off
                   </Badge>
                 )}
               </div>

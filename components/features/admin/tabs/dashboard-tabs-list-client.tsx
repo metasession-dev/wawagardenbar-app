@@ -19,6 +19,7 @@ import {
   Plus,
   ChevronLeft,
   ChevronRight,
+  FileX,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import Link from 'next/link';
@@ -105,12 +106,14 @@ export function DashboardTabsListClient({
     statuses: string[];
     dateRange?: DateRange;
     reconciled?: 'all' | 'reconciled' | 'not-reconciled';
+    writtenOffOnly?: boolean;
   }>({
     // Match the server's first-paint default so an immediate page change
     // (without a filter touch) still fires the right query.
     statuses: ['open'],
     dateRange: undefined,
     reconciled: undefined,
+    writtenOffOnly: false,
   });
 
   // Single fetcher used by both filter and page changes.
@@ -125,6 +128,7 @@ export function DashboardTabsListClient({
         startDate: filters.dateRange?.from?.toISOString(),
         endDate: filters.dateRange?.to?.toISOString(),
         reconciled: filters.reconciled,
+        writtenOffOnly: filters.writtenOffOnly,
         skip: (nextPage - 1) * pageSize,
         limit: pageSize,
       });
@@ -177,6 +181,7 @@ export function DashboardTabsListClient({
     statuses: string[];
     dateRange?: DateRange;
     reconciled?: 'all' | 'reconciled' | 'not-reconciled';
+    writtenOffOnly?: boolean;
   }) => {
     setCurrentFilters(filters);
     // Filter change resets pagination to page 1.
@@ -206,6 +211,19 @@ export function DashboardTabsListClient({
       </Badge>
     );
   };
+
+  // REQ-099 AC1 — written-off tabs get a distinct badge instead of the
+  // generic status badge, so they're not visually indistinguishable from
+  // a genuinely-paid closed tab.
+  const getTabBadge = (tab: Tab) =>
+    tab.paymentStatus === 'written-off' ? (
+      <Badge variant="destructive" data-testid="tab-writtenoff-badge">
+        <FileX className="mr-1 h-3 w-3" />
+        Written off
+      </Badge>
+    ) : (
+      getStatusBadge(tab.status)
+    );
 
   return (
     <div className="space-y-6" data-testid="tabs-dashboard">
@@ -315,7 +333,7 @@ export function DashboardTabsListClient({
                     <div className="flex items-center gap-3">
                       <h3 className="font-semibold">Table {tab.tableNumber}</h3>
                       <Badge variant="outline">Tab #{tab.tabNumber}</Badge>
-                      {getStatusBadge(tab.status)}
+                      {getTabBadge(tab)}
                       {isDormant(tab) && (
                         <Badge variant="secondary" data-testid="dormant-badge">
                           Dormant
@@ -361,7 +379,9 @@ export function DashboardTabsListClient({
                           Customer Wants to Pay
                         </Button>
                       </>
-                    ) : tab.status === 'closed' ||
+                    ) : tab.paymentStatus ===
+                      'written-off' ? // tab; it was never genuinely collected. // REQ-099 AC1 — no "Tab Paid" button for a written-off
+                    null : tab.status === 'closed' ||
                       tab.paymentStatus === 'paid' ? (
                       <Button
                         variant="secondary"

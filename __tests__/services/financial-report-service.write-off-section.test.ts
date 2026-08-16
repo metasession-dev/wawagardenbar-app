@@ -78,8 +78,8 @@ describe('REQ-098 AC6: financial-report-service writtenOff section', () => {
       (query: { paymentStatus?: string }) => {
         if (query.paymentStatus === 'written-off') {
           return Promise.resolve([
-            { _id: 'wo1', total: 4000 },
-            { _id: 'wo2', total: 8000 },
+            { _id: 'wo1', total: 4000, items: [] },
+            { _id: 'wo2', total: 8000, items: [] },
           ]);
         }
         return Promise.resolve([
@@ -98,7 +98,11 @@ describe('REQ-098 AC6: financial-report-service writtenOff section', () => {
       new Date('2026-07-31T12:00:00Z')
     );
 
-    expect(report.writtenOff).toEqual({ count: 2, totalAmount: 12000 });
+    expect(report.writtenOff).toEqual({
+      count: 2,
+      totalAmount: 12000,
+      totalCost: 0,
+    });
     // Revenue is unaffected — driven entirely by the 'paid' query, which
     // never includes the written-off rows.
     expect(report.revenue.totalRevenue).toBe(5000);
@@ -117,14 +121,18 @@ describe('REQ-098 AC6: financial-report-service writtenOff section', () => {
       new Date('2026-07-31T12:00:00Z')
     );
 
-    expect(report.writtenOff).toEqual({ count: 0, totalAmount: 0 });
+    expect(report.writtenOff).toEqual({
+      count: 0,
+      totalAmount: 0,
+      totalCost: 0,
+    });
   });
 
   it('generateDateRangeReport — sums written-off orders across the range', async () => {
     mockOrderFindByStatus.mockImplementation(
       (query: { paymentStatus?: string }) => {
         if (query.paymentStatus === 'written-off') {
-          return Promise.resolve([{ _id: 'wo1', total: 12000 }]);
+          return Promise.resolve([{ _id: 'wo1', total: 12000, items: [] }]);
         }
         return Promise.resolve([]);
       }
@@ -135,6 +143,92 @@ describe('REQ-098 AC6: financial-report-service writtenOff section', () => {
       new Date('2026-07-31T23:59:59Z')
     );
 
-    expect(report.writtenOff).toEqual({ count: 1, totalAmount: 12000 });
+    expect(report.writtenOff).toEqual({
+      count: 1,
+      totalAmount: 12000,
+      totalCost: 0,
+    });
+  });
+
+  // wgb#644 — written-off orders' ingredient cost was already deducted from
+  // inventory at kitchen fulfillment; it must be summed and surfaced, using
+  // the same costPerUnit-snapshot-or-menuItem-fallback basis paid orders use.
+  it('generateDailySummary — sums written-off order items using their own costPerUnit snapshot', async () => {
+    mockOrderFindByStatus.mockImplementation(
+      (query: { paymentStatus?: string }) => {
+        if (query.paymentStatus === 'written-off') {
+          return Promise.resolve([
+            {
+              _id: 'wo1',
+              total: 4000,
+              items: [
+                { menuItemId: 'item-1', quantity: 2, costPerUnit: 300 },
+                { menuItemId: 'item-2', quantity: 1, costPerUnit: 150 },
+              ],
+            },
+          ]);
+        }
+        return Promise.resolve([]);
+      }
+    );
+
+    const report = await FinancialReportService.generateDailySummary(
+      new Date('2026-07-31T12:00:00Z')
+    );
+
+    // (2 * 300) + (1 * 150) = 750
+    expect(report.writtenOff.totalCost).toBe(750);
+    expect(menuItemFindByIdMock).not.toHaveBeenCalled();
+  });
+
+  it('generateDailySummary — falls back to the current menu item cost when an order item has no costPerUnit snapshot', async () => {
+    mockOrderFindByStatus.mockImplementation(
+      (query: { paymentStatus?: string }) => {
+        if (query.paymentStatus === 'written-off') {
+          return Promise.resolve([
+            {
+              _id: 'wo1',
+              total: 4000,
+              items: [{ menuItemId: 'item-legacy', quantity: 3 }],
+            },
+          ]);
+        }
+        return Promise.resolve([]);
+      }
+    );
+    menuItemFindByIdMock.mockResolvedValue({ costPerUnit: 200 });
+
+    const report = await FinancialReportService.generateDailySummary(
+      new Date('2026-07-31T12:00:00Z')
+    );
+
+    expect(report.writtenOff.totalCost).toBe(600); // 3 * 200
+    expect(menuItemFindByIdMock).toHaveBeenCalledWith('item-legacy');
+  });
+
+  it('generateDailySummary — nets written-off COGS against netProfit', async () => {
+    mockOrderFindByStatus.mockImplementation(
+      (query: { paymentStatus?: string }) => {
+        if (query.paymentStatus === 'written-off') {
+          return Promise.resolve([
+            {
+              _id: 'wo1',
+              total: 4000,
+              items: [{ menuItemId: 'item-1', quantity: 1, costPerUnit: 500 }],
+            },
+          ]);
+        }
+        return Promise.resolve([]);
+      }
+    );
+
+    const report = await FinancialReportService.generateDailySummary(
+      new Date('2026-07-31T12:00:00Z')
+    );
+
+    expect(report.writtenOff.totalCost).toBe(500);
+    // grossProfit.total is 0 (no paid orders) and operatingExpenses are 0,
+    // so netProfit should be entirely the written-off cost, negated.
+    expect(report.netProfit).toBe(-500);
   });
 });

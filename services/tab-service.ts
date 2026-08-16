@@ -468,6 +468,8 @@ export class TabService {
     startDate?: Date;
     endDate?: Date;
     reconciled?: 'all' | 'reconciled' | 'not-reconciled';
+    /** REQ-099 AC2 — isolate written-off tabs, independent of `statuses`. */
+    writtenOffOnly?: boolean;
     skip?: number;
     limit?: number;
   }): Promise<{ tabs: ITab[]; total: number }> {
@@ -475,8 +477,20 @@ export class TabService {
 
     const query: any = {};
 
-    // Filter by status
-    if (filters.statuses && filters.statuses.length > 0) {
+    // Filter by status. `writtenOffOnly` is additive (OR), not exclusive —
+    // it surfaces written-off tabs regardless of which status checkboxes
+    // are checked (REQ-099 AC2), rather than requiring "Closed" to also
+    // be selected.
+    if (filters.writtenOffOnly) {
+      if (filters.statuses && filters.statuses.length > 0) {
+        query.$or = [
+          { status: { $in: filters.statuses } },
+          { paymentStatus: 'written-off' },
+        ];
+      } else {
+        query.paymentStatus = 'written-off';
+      }
+    } else if (filters.statuses && filters.statuses.length > 0) {
       query.status = { $in: filters.statuses };
     }
 

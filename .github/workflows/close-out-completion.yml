@@ -12,7 +12,7 @@ permissions:
 jobs:
   report-completion:
     if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'chore/close-out-')
-    runs-on: ubuntu-latest
+    runs-on: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'ubuntu-latest' || (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') }}
     env:
       DEVAUDIT_API_KEY: ${{ secrets.DEVAUDIT_API_KEY }}
       PROJECT_SLUG: wgb

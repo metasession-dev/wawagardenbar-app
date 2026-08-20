@@ -1,7 +1,7 @@
 name: SRS Bootstrap
 description: Author this project's first Software Requirements Specification (docs/SRS.md). One-time — use Requirement for everything after.
-title: '[SRS] Bootstrap the Software Requirements Specification'
-labels: ['srs-bootstrap', 'documentation']
+title: "[SRS] Bootstrap the Software Requirements Specification"
+labels: ["srs-bootstrap", "documentation"]
 body:
   - type: markdown
     attributes:

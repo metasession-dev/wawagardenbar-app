@@ -16,7 +16,7 @@ jobs:
   detect-req:
     name: Detect REQ from branch
     if: ${{ !startsWith(github.head_ref, 'chore/close-out-') }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'ubuntu-latest' || (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') }}
     outputs:
       req_id: ${{ steps.detect.outputs.req_id }}
       has_tests: ${{ steps.detect.outputs.has_tests }}
@@ -83,7 +83,7 @@ jobs:
     name: Run in-scope E2E
     needs: detect-req
     if: needs.detect-req.outputs.has_tests == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'ubuntu-latest' || (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') }}
 
     services:
       mongodb:

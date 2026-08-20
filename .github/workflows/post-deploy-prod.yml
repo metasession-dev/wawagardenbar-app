@@ -45,7 +45,7 @@ jobs:
         github.event.deployment.environment == 'prod' ||
         endsWith(github.event.deployment.environment, '/ production') ||
         endsWith(github.event.deployment.environment, '/production')))
-    runs-on: ubuntu-latest
+    runs-on: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'ubuntu-latest' || (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') }}
     permissions:
       contents: read
       deployments: read
@@ -62,7 +62,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 0 # full history so merged commits' REQ tags are readable
+          fetch-depth: 0   # full history so merged commits' REQ tags are readable
 
       - name: Resolve DevAudit base URL and post-deploy terminal status
         run: |

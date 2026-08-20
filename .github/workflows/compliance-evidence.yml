@@ -52,7 +52,7 @@ jobs:
     # sibling job below; running both on a workflow_run event would
     # double-upload every compliance doc.
     if: github.event_name != 'workflow_run'
-    runs-on: ubuntu-latest
+    runs-on: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'ubuntu-latest' || (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') }}
     # #409: this workflow only uploads evidence. Normal housekeeping is
     # integration history, so it must not create PRs, dispatch gates, or
     # receive write-scoped GitHub credentials.
@@ -286,7 +286,7 @@ jobs:
   upload-e2e-regression-evidence:
     name: Upload E2E Regression Evidence
     if: github.event_name == 'workflow_run'
-    runs-on: ubuntu-latest
+    runs-on: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'ubuntu-latest' || (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') }}
     # actions: read is required so `actions/download-artifact@v8` with
     # `run-id` can read another workflow's artifacts. Without it the
     # download step fails with a 404 even when the artifact exists.

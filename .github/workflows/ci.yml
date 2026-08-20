@@ -47,7 +47,7 @@ jobs:
     name: Quality Gates
     needs: [register-release]
     if: ${{ always() && (github.event_name != 'pull_request' || !startsWith(github.head_ref, 'chore/close-out-')) && (github.event_name == 'pull_request' || needs.register-release.result == 'success') }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'ubuntu-latest' || (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') }}
 
     services:
       mongodb:
@@ -342,7 +342,7 @@ jobs:
   # ──────────────────────────────────────────────
   register-release:
     name: Register Release
-    runs-on: ubuntu-latest
+    runs-on: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'ubuntu-latest' || (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') }}
     # PRs to develop should report Quality Gates without mutating DevAudit
     # releases or evidence. Release registration remains a develop-push /
     # manual-dispatch side effect.
@@ -562,7 +562,7 @@ jobs:
   # ──────────────────────────────────────────────
   upload-evidence:
     name: Upload Evidence
-    runs-on: ubuntu-latest
+    runs-on: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'ubuntu-latest' || (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') }}
     needs: [quality-gates, register-release]
     # `!cancelled()` preserves failed-gate evidence on eligible integration
     # pushes, while a pull request remains an intentionally inapplicable,

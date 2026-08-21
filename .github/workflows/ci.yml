@@ -142,7 +142,12 @@ jobs:
           echo "$VENV/bin" >> "$GITHUB_PATH"
 
       - name: Install Playwright (skip if already cached)
-        run: npx playwright install --with-deps chromium 2>/dev/null || npx playwright install chromium
+        # --with-deps needs root to apt-get system libs (libnss3 etc.) and
+        # always fails on this non-root self-hosted runner — those libs are
+        # already provisioned on the host (see runner setup docs), so a
+        # plain `install chromium` is correct here: it's version-aware and
+        # skips the browser download itself when already cached.
+        run: npx playwright install chromium
 
       # ── Gate 1: TypeScript ──
 

@@ -59,13 +59,32 @@ Status legend: `TODO` not started · `IN PROGRESS` · `DONE` · `BLOCKED` (needs
      [DevAudit-Installer#676](https://github.com/metasession-dev/DevAudit-Installer/issues/676)
      — see also `.devin/upstream-issues/DEVAUDIT-004-checkout-clean-false-self-hosted.md`.
 
-2. **[TODO] Playwright browser install runs unconditionally every run.**
-   `npx playwright install --with-deps chromium` (ci.yml, "Install Playwright"
-   step) doesn't check whether the browser binary is already cached in
-   `~/.cache/ms-playwright` the way the Semgrep step does for its venv. On a
-   persistent self-hosted box this mostly no-ops after the first run but still
-   pays checksum/network-check overhead every time. Fix: gate it behind an
-   existence check, same pattern as the Semgrep step.
+2. **[DONE — 2026-08-21] Playwright browser install always attempted
+   `--with-deps` first, which always failed on this runner.**
+   - **Finding (refined from the original review):** the browser-download
+     skip itself was never actually broken — `npx playwright install
+     chromium` is version-aware and correctly no-ops when the exact required
+     build is already cached, unlike the npm-cache case in #1. The real waste
+     was `--with-deps`, attempted first on every run: it needs root to
+     `apt-get install` system libs (`libnss3`, `libatk1.0`, `libgbm1`, etc.),
+     which always failed on this non-root self-hosted runner (confirmed in
+     CI logs: "Switching to root user to install dependencies... Failed to
+     install browsers"), costing ~2-4s and printing a scary error every
+     single run before falling back to the plain install that actually did
+     the work.
+   - **Fix applied:** dropped the `--with-deps` attempt entirely in `ci.yml`
+     and `feature-e2e.yml` (the two self-hosted-targeted workflows that
+     install Playwright — `e2e-regression.yml` runs on hardcoded
+     `ubuntu-latest` and doesn't need this). Verified the required system
+     libs are already present on `ostendo-server` (`dpkg -l` shows
+     `libnss3`/`libatk1.0`/`libgbm1` installed) and that E2E has been passing
+     throughout, so this changes nothing functionally — it only removes
+     wasted work and log noise.
+   - **Caveat:** if `ostendo-server` is ever rebuilt/reprovisioned, these
+     system-level Chromium deps will need installing manually (or via
+     `--with-deps` once, interactively, with a real sudo password) as part of
+     host setup — CI will no longer attempt it automatically. Worth adding to
+     the runner host setup runbook referenced in issue #666.
 
 3. **[BLOCKED — needs 2nd runner] Split independent gates into parallel jobs.**
    TypeScript check, SAST scan, and dependency audit don't depend on each

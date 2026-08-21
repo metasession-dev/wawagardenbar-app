@@ -155,3 +155,21 @@ interrupts an in-flight run — it just retries the next night. This bounds
 finding (1) to a ≤24h staleness window instead of indefinite persistence.
 Host-local infra, not a repo file — not part of PR #668, no upstream
 template implications, doesn't affect other devaudit-installer consumers.
+
+**[DONE — 2026-08-21] Incident: `.next` corruption actually happened, within
+hours.** Not a hypothetical — PR #670 (an unrelated doc-only change) failed
+Quality Gates' TypeScript Check with syntax errors in
+`.next/dev/types/validator.ts`, a Next.js-generated file neither PR touched.
+Root cause: a dev server killed mid-write by the transient "Wait for dev
+server" timeout hit during PR #669's first CI attempt left a torn/truncated
+file in `.next` (gitignored, so previously wiped every run by `clean: true`;
+now persists per finding (1)'s fix). Every subsequent PR's TypeScript Check
+read the same corrupted file regardless of what that PR actually changed.
+**Fix:** added an explicit `rm -rf .next` as the first step after checkout in
+`ci.yml` and `feature-e2e.yml`, before any gate runs. Unlike `node_modules`/
+Playwright/Semgrep, `.next` is live dev-server scratch state, not a
+stable install-once cache — regenerating it costs ~nothing in dev mode
+(lazy/incremental compilation), so there's no caching upside to weigh against
+the corruption risk; it should never have been allowed to persist in the
+first place. Also added to the nightly cache-wipe script as a backstop.
+Confirms the code review's finding (1) was not theoretical.

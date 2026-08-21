@@ -79,6 +79,18 @@ jobs:
           # skip-path actually skip. See DEVAUDIT-004.
           clean: false
 
+      - name: Remove stale .next build output
+        # clean: false above (DEVAUDIT-004) intentionally keeps node_modules
+        # and other gitignored state between runs — but .next is different:
+        # it's live scratch state a running dev server writes to, not a
+        # stable install-once cache, so a job whose dev server got killed
+        # mid-write (timeout, OOM, cancellation) can leave it torn/corrupted
+        # for every subsequent run's TypeScript Check and Build Check to trip
+        # over, on totally unrelated PRs. Regenerating it costs ~nothing in
+        # dev mode (lazy/incremental compilation), so there's no caching
+        # upside to keeping it — always start clean.
+        run: rm -rf .next
+
       - name: Validate self-hosted runner prerequisites
         env:
           DEVAUDIT_RUNNER_ENVIRONMENT: ${{ runner.environment }}

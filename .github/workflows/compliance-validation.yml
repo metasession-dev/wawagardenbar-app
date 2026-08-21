@@ -26,6 +26,8 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          # Shared self-hosted workspace — see DEVAUDIT-004.
+          clean: false
 
       - name: Validate compliance artifacts
         run: bash scripts/validate-compliance-artifacts.sh origin/main

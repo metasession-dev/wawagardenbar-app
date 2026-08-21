@@ -61,6 +61,8 @@ jobs:
           # the gate can resolve the release and post a status check.
           ref: ${{ github.event.pull_request.head.sha || 'develop' }}
           fetch-depth: 0
+          # Shared self-hosted workspace — see DEVAUDIT-004.
+          clean: false
 
       - name: Detect declared standalone housekeeping promotion
         id: standalone

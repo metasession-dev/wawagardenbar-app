@@ -111,6 +111,12 @@ jobs:
           # default clean:true wipes node_modules between jobs on the single
           # runner, defeating its npm-ci cache (DEVAUDIT-004).
           clean: false
+      - name: Remove stale .next build output
+        # .next is live dev-server scratch state, not a stable cache — a
+        # killed/timed-out dev server on any run (this job or ci.yml's) can
+        # leave it torn/corrupted for the next run to trip over. Cheap to
+        # regenerate, no reason to keep it. See ci.yml's matching step.
+        run: rm -rf .next
       - uses: actions/setup-node@v6
         with:
           node-version: 20

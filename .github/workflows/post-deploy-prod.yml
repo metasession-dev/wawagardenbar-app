@@ -63,6 +63,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0   # full history so merged commits' REQ tags are readable
+          clean: false     # shared self-hosted workspace — see DEVAUDIT-004
 
       - name: Resolve DevAudit base URL and post-deploy terminal status
         run: |

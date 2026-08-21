@@ -363,6 +363,9 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          # See clean: false note on the quality-gates checkout above — same
+          # shared self-hosted workspace, same reasoning (DEVAUDIT-004).
+          clean: false
 
       - name: Resolve DevAudit base URL
         run: |
@@ -581,6 +584,10 @@ jobs:
       DEVAUDIT_API_KEY: ${{ secrets.DEVAUDIT_API_KEY }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          # See clean: false note on the quality-gates checkout above — same
+          # shared self-hosted workspace, same reasoning (DEVAUDIT-004).
+          clean: false
 
       - name: Resolve DevAudit base URL
         run: |

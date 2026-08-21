@@ -32,19 +32,30 @@ Status legend: `TODO` not started · `IN PROGRESS` · `DONE` · `BLOCKED` (needs
      to `true`, which runs `git clean -ffdx` before checkout — this wipes all
      untracked/gitignored files in the workspace, including `node_modules`
      (gitignored — see `.gitignore:4`) and the `.lock-hash` marker inside it,
-     on *every single run*. The lockfile-hash check at `ci.yml` "Install
-     dependencies" step was therefore dead code: `node_modules` never survived
-     between runs, so `npm ci` paid its full ~47s cost unconditionally, even
-     on the persistent self-hosted box where the whole point of the check was
-     to skip that cost.
-   - **Fix applied:** set `clean: false` on the checkout step so `node_modules`
-     (and any other gitignored build cache) persists across runs on the
-     self-hosted runner. `npm ci` itself still does a correct clean install
-     whenever the lockfile hash *does* change, so this doesn't risk a stale
-     dependency tree — it only lets the skip-path actually skip.
-   - **Caveat:** `ci.yml` is devaudit-generated; this fix will be reverted by
-     the next `devaudit update` unless it lands in the upstream template. Filed
-     upstream as
+     on *every single run*.
+   - **Scope was bigger than one file.** A first patch limited to `ci.yml`'s
+     `quality-gates` checkout was verified *not* to fix it — a second
+     consecutive PR run still ran `npm ci` in full. Cause: all self-hosted
+     workflows for this repo share **one physical workspace directory** on
+     `ostendo-server` (fixed per repo, not per workflow), so
+     `feature-e2e.yml`'s `detect-req` job — which also runs on every PR, with
+     its own default-clean checkout — was wiping the shared directory between
+     `ci.yml` runs. Fixed all 12 self-hosted checkout call sites across 9
+     workflow files (`ci.yml` ×3, `feature-e2e.yml` ×2,
+     `check-release-approval.yml`, `close-out-completion.yml`,
+     `close-out-release.yml`, `compliance-evidence.yml` ×2,
+     `compliance-validation.yml`, `post-deploy-prod.yml`,
+     `reconcile-deployment.yml`). Verified via a same-lockfile second run:
+     `npm ci` now genuinely skips.
+   - **Fix applied:** set `clean: false` on every affected checkout step so
+     `node_modules` (and any other gitignored build cache) persists across
+     runs and across workflows on the self-hosted runner. `npm ci` itself
+     still does a correct clean install whenever the lockfile hash *does*
+     change, so this doesn't risk a stale dependency tree — it only lets the
+     skip-path actually skip.
+   - **Caveat:** every affected file is devaudit-generated; this fix will be
+     reverted by the next `devaudit update` unless it lands in the upstream
+     template. Filed upstream as
      [DevAudit-Installer#676](https://github.com/metasession-dev/DevAudit-Installer/issues/676)
      — see also `.devin/upstream-issues/DEVAUDIT-004-checkout-clean-false-self-hosted.md`.
 

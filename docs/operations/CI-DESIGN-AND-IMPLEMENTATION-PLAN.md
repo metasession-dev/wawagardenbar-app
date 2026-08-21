@@ -112,7 +112,27 @@ Every caching win above trades GitHub-hosted hermetic isolation for
 self-hosted persistent state. A corrupted cache (e.g. an `npm ci` interrupted
 mid-install, or a `node_modules` left in a partial state by a killed job) can
 silently poison subsequent runs in a way ephemeral GitHub-hosted runners never
-could. **Mitigation (not yet scheduled):** add a periodic (nightly or weekly)
-job that wipes `node_modules`, `~/.cache/ms-playwright`, and `~/.semgrep-venv`
-on `ostendo-server` and rebuilds from scratch, so cache corruption surfaces
-within a day instead of lingering indefinitely.
+could.
+
+The `code-review` skill run against PR #668 sharpened this into two concrete
+findings: (1) the lockfile-hash skip check only verifies
+`package-lock.json`'s hash, not `node_modules`' actual contents, so any run
+that plants an unexpected file into `node_modules` without changing the
+lockfile has that state silently reused forever; (2) `clean: false` is
+applied per-checkout with no code-level mutual exclusion between the
+different workflows now sharing the same physical workspace — safety
+depends on the unenforced invariant that exactly one runner process is ever
+registered for `CI_RUNNER_LABEL` (currently true — see #4 above, no second
+runner planned).
+
+**[DONE — 2026-08-21] Mitigation: periodic cache wipe.** Installed a systemd
+timer (`ostendo-ci-cache-wipe.timer`/`.service`) on `ostendo-server` that
+wipes `node_modules` under every repo in the runner's `_work` dir, the
+Playwright browser cache, and the Semgrep venv, **nightly at 03:00** (±10 min
+randomized delay). The script (`/opt/ostendo-workhorse-ci/scripts/cache-wipe.sh`)
+skips the wipe entirely if a CI job is currently executing (detected via the
+`Runner.Worker` child process GitHub Actions spawns per job), so it never
+interrupts an in-flight run — it just retries the next night. This bounds
+finding (1) to a ≤24h staleness window instead of indefinite persistence.
+Host-local infra, not a repo file — not part of PR #668, no upstream
+template implications, doesn't affect other devaudit-installer consumers.

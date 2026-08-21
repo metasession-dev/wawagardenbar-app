@@ -1,5 +1,13 @@
 # CI Design & Efficiency Implementation Plan
 
+## Status
+
+- **Issue [#666](https://github.com/metasession-dev/wawagardenbar-app/issues/666)** (self-hosted runner cutover) — **CLOSED**. Landed on `develop` via PR #667 (`575aa21`).
+- **PR [#668](https://github.com/metasession-dev/wawagardenbar-app/pull/668)** (recommendation #1 — npm-cache fix) — **MERGED** to `develop` at `0c88f00`.
+- **PR [#669](https://github.com/metasession-dev/wawagardenbar-app/pull/669)** (recommendation #2 — Playwright install cleanup) — **MERGED** to `develop` at `9ee4965`.
+
+Both code-side follow-ups from the review are closed out. Remaining items (#3, #4) are blocked/rejected with reasoning recorded below, not open work; #5 needed no action. This doc stays as the durable record — re-open a recommendation here (rather than starting a fresh review) if conditions change (e.g. a second runner becomes viable, or queueing becomes an observed bottleneck).
+
 ## Current design
 
 `ci.yml` runs as a single consolidated `quality-gates` job on the `CI_RUNNER_LABEL`
@@ -58,6 +66,7 @@ Status legend: `TODO` not started · `IN PROGRESS` · `DONE` · `BLOCKED` (needs
      template. Filed upstream as
      [DevAudit-Installer#676](https://github.com/metasession-dev/DevAudit-Installer/issues/676)
      — see also `.devin/upstream-issues/DEVAUDIT-004-checkout-clean-false-self-hosted.md`.
+   - **Closed via [PR #668](https://github.com/metasession-dev/wawagardenbar-app/pull/668)**, merged to `develop` at `0c88f00`.
 
 2. **[DONE — 2026-08-21] Playwright browser install always attempted
    `--with-deps` first, which always failed on this runner.**
@@ -85,6 +94,7 @@ Status legend: `TODO` not started · `IN PROGRESS` · `DONE` · `BLOCKED` (needs
      `--with-deps` once, interactively, with a real sudo password) as part of
      host setup — CI will no longer attempt it automatically. Worth adding to
      the runner host setup runbook referenced in issue #666.
+   - **Closed via [PR #669](https://github.com/metasession-dev/wawagardenbar-app/pull/669)**, merged to `develop` at `9ee4965`. (One transient "Wait for dev server" timeout hit during verification, unrelated to this change — confirmed by an immediate green retry — see PR discussion.)
 
 3. **[BLOCKED — needs 2nd runner] Split independent gates into parallel jobs.**
    TypeScript check, SAST scan, and dependency audit don't depend on each

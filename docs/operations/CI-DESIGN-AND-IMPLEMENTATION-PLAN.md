@@ -75,14 +75,32 @@ Status legend: `TODO` not started · `IN PROGRESS` · `DONE` · `BLOCKED` (needs
    behind the first) — only pays off once there's a second runner instance
    (see #4).
 
-4. **[BLOCKED — infra decision] Single self-hosted runner serializes different
-   PRs/pushes against each other**, not just steps within a job. The
-   `concurrency` group (`ci.yml:38-40`) only cancels in-progress runs on the
-   *same* ref — two different PRs still queue behind each other on the one
-   `ostendo-server` runner. Fix is infra provisioning, not code: register a
-   second runner instance on the same host if it has CPU/RAM headroom. This is
-   an operator capacity/cost call, not something to silently decide in CI
-   code.
+4. **[REJECTED — measured, not worth it] Single self-hosted runner serializes
+   different PRs/pushes against each other**, not just steps within a job.
+   The `concurrency` group (`ci.yml:38-40`) only cancels in-progress runs on
+   the *same* ref — two different PRs still queue behind each other on the
+   one `ostendo-server` runner. A second runner instance on the same host was
+   considered as the fix.
+   - **Measured before deciding** (2026-08-21): sampled RAM/swap/load on
+     `ostendo-server` throughout a live Quality Gates run. Memory peaked at
+     6.4GB of 15GB (≈9.5GB always available, swap flat at 1.83GB the whole
+     run — no new swapping). **CPU load average peaked at 9.72 on an 8-core
+     box** — a single job's own Playwright test parallelism already
+     oversubscribes the CPU by ~20% on its own.
+   - **Decision: do not add a second runner on this host.** CPU, not memory,
+     is the real constraint, and it's already saturated by one job alone. A
+     second concurrent runner would contend for the same 8 cores and likely
+     slow down *both* jobs rather than parallelizing cleanly — directly
+     against the goal of not slowing down delivery. Cross-PR queueing is
+     accepted as-is unless it becomes an actual bottleneck, at which point
+     the right fix is a genuinely separate second machine/VM (real added
+     capacity), not a second runner process sharing this box's cores — a
+     bigger infra/cost decision to make with real data at that time, not
+     speculatively now.
+   - **No template/installer changes proposed for this one** — it's a
+     wawagardenbar-app/ostendo-server-local infra question, not something
+     that should be imposed on other devaudit-installer consumers with their
+     own CI setups.
 
 5. **[DONE — no action needed] E2E already scoped to `smoke` on PRs.** Full
    `regression` tier correctly deferred to the separate nightly/PR→main

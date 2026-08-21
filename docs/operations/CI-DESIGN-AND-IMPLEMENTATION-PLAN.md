@@ -43,8 +43,10 @@ Status legend: `TODO` not started · `IN PROGRESS` · `DONE` · `BLOCKED` (needs
      whenever the lockfile hash *does* change, so this doesn't risk a stale
      dependency tree — it only lets the skip-path actually skip.
    - **Caveat:** `ci.yml` is devaudit-generated; this fix will be reverted by
-     the next `devaudit update` unless it lands in the upstream template. See
-     `.devin/upstream-issues/DEVAUDIT-004-checkout-clean-false-self-hosted.md`.
+     the next `devaudit update` unless it lands in the upstream template. Filed
+     upstream as
+     [DevAudit-Installer#676](https://github.com/metasession-dev/DevAudit-Installer/issues/676)
+     — see also `.devin/upstream-issues/DEVAUDIT-004-checkout-clean-false-self-hosted.md`.
 
 2. **[TODO] Playwright browser install runs unconditionally every run.**
    `npx playwright install --with-deps chromium` (ci.yml, "Install Playwright"

@@ -1,6 +1,6 @@
 # DEVAUDIT-004: `actions/checkout` default `clean: true` defeats self-hosted npm cache
 
-**Status:** Draft - Ready for upstream submission
+**Status:** Filed — [DevAudit-Installer#676](https://github.com/metasession-dev/DevAudit-Installer/issues/676)
 **Target Repository:** `metasession-dev/DevAudit-Installer`
 **Priority:** Medium
 **Related:** issue #666 (self-hosted runner cutover), `ci.yml`'s "Install dependencies (skip if lockfile unchanged)" step

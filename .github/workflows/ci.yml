@@ -49,6 +49,14 @@ jobs:
     if: ${{ always() && (github.event_name != 'pull_request' || !startsWith(github.head_ref, 'chore/close-out-')) && (github.event_name == 'pull_request' || needs.register-release.result == 'success') }}
     runs-on: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'ubuntu-latest' || (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') }}
 
+    # `working-directory` lets monorepo / subdir Node projects (e.g. META-AGENT
+    # with mission-control/package.json) run gates from the right place without
+    # prefixing every command. Defaults to '.' (repo root) when
+    # sdlc-config.json doesn't set working_directory.
+    defaults:
+      run:
+        working-directory: .
+
     services:
       mongodb:
         image: mongo:7
@@ -71,33 +79,17 @@ jobs:
           # base — Playwright's evidenceShot helper reads that env var to
           # tag each captured screenshot as feature vs regression.
           fetch-depth: 0
-          # actions/checkout defaults to clean: true (git clean -ffdx before
-          # checkout), which wipes node_modules (gitignored) every run and
-          # silently defeats the lockfile-hash npm-ci skip below on a
-          # persistent self-hosted runner. npm ci still does a correct clean
-          # install whenever the lockfile hash changes, so this only lets the
-          # skip-path actually skip. See DEVAUDIT-004.
-          clean: false
-
-      - name: Remove stale .next build output
-        # clean: false above (DEVAUDIT-004) intentionally keeps node_modules
-        # and other gitignored state between runs — but .next is different:
-        # it's live scratch state a running dev server writes to, not a
-        # stable install-once cache, so a job whose dev server got killed
-        # mid-write (timeout, OOM, cancellation) can leave it torn/corrupted
-        # for every subsequent run's TypeScript Check and Build Check to trip
-        # over, on totally unrelated PRs. Regenerating it costs ~nothing in
-        # dev mode (lazy/incremental compilation), so there's no caching
-        # upside to keeping it — always start clean.
-        run: rm -rf .next
 
       - name: Validate self-hosted runner prerequisites
         env:
           DEVAUDIT_RUNNER_ENVIRONMENT: ${{ runner.environment }}
+        # scripts/ syncs to the repo root (#689), not this job's
+        # working-directory (a target's own subdirectory) — reference it via
+        # $GITHUB_WORKSPACE so this resolves correctly either way.
         run: |
-          if [ -f scripts/check-self-hosted-runner.sh ]; then
-            chmod +x scripts/check-self-hosted-runner.sh
-            bash scripts/check-self-hosted-runner.sh
+          if [ -f "$GITHUB_WORKSPACE/scripts/check-self-hosted-runner.sh" ]; then
+            chmod +x "$GITHUB_WORKSPACE/scripts/check-self-hosted-runner.sh"
+            bash "$GITHUB_WORKSPACE/scripts/check-self-hosted-runner.sh"
           else
             echo "::warning::scripts/check-self-hosted-runner.sh missing; run devaudit update to sync runner preflight."
           fi
@@ -106,15 +98,17 @@ jobs:
         if: github.event_name != 'pull_request' && github.ref_name == 'develop' && needs.register-release.outputs.version != 'skip'
         run: |
           BASE=""
-          if [ -f sdlc-config.json ]; then
-            BASE=$(jq -r '.devaudit.base_url // empty' sdlc-config.json 2>/dev/null || true)
+          # sdlc-config.json lives at the repo root (#689 follow-up), not this
+          # job's working-directory (a target's own subdirectory).
+          if [ -f "$GITHUB_WORKSPACE/sdlc-config.json" ]; then
+            BASE=$(jq -r '.devaudit.base_url // empty' "$GITHUB_WORKSPACE/sdlc-config.json" 2>/dev/null || true)
           fi
           [ -n "$BASE" ] || BASE="$DEVAUDIT_BASE_URL_VAR"
           [ -n "$BASE" ] || { echo "::warning::No DevAudit URL; test execution lifecycle disabled"; exit 0; }
           export DEVAUDIT_BASE_URL="${BASE%/}"
           echo "DEVAUDIT_BASE_URL=${DEVAUDIT_BASE_URL}" >> "$GITHUB_ENV"
-          chmod +x scripts/report-test-execution.sh scripts/report-release-check.sh 2>/dev/null || true
-          bash scripts/report-test-execution.sh start \
+          chmod +x "$GITHUB_WORKSPACE/scripts/report-test-execution.sh" "$GITHUB_WORKSPACE/scripts/report-release-check.sh" 2>/dev/null || true
+          bash "$GITHUB_WORKSPACE/scripts/report-test-execution.sh" start \
             --project-slug wgb \
             --release "${{ needs.register-release.outputs.version }}" \
             --sdlc-stage 2 --environment ci --suite-kind quality_gate \
@@ -154,12 +148,7 @@ jobs:
           echo "$VENV/bin" >> "$GITHUB_PATH"
 
       - name: Install Playwright (skip if already cached)
-        # --with-deps needs root to apt-get system libs (libnss3 etc.) and
-        # always fails on this non-root self-hosted runner — those libs are
-        # already provisioned on the host (see runner setup docs), so a
-        # plain `install chromium` is correct here: it's version-aware and
-        # skips the browser download itself when already cached.
-        run: npx playwright install chromium
+        run: npx playwright install --with-deps chromium 2>/dev/null || npx playwright install chromium
 
       # ── Gate 1: TypeScript ──
 
@@ -204,8 +193,8 @@ jobs:
           # against the installed package-lock path and writes an auditable
           # decision record. It is intentionally fail-closed: malformed audit
           # output or a malformed/expired exception fails this gate.
-          chmod +x scripts/evaluate-npm-audit.sh 2>/dev/null || true
-          bash scripts/evaluate-npm-audit.sh
+          chmod +x "$GITHUB_WORKSPACE/scripts/evaluate-npm-audit.sh" 2>/dev/null || true
+          bash "$GITHUB_WORKSPACE/scripts/evaluate-npm-audit.sh"
 
       # ── Gate 4: E2E Tests (Playwright) ──
 
@@ -343,6 +332,10 @@ jobs:
 
       # ── Upload artifacts ──
 
+      # actions/upload-artifact@v7 doesn't honour the job's `working-directory`;
+      # paths are workspace-relative. Prefix with WORKING_DIR_PREFIX so artifacts
+      # uploaded from a subdir project (e.g. mission-control/) include the
+      # subdir in their stored path, matching where the gate steps wrote them.
       - uses: actions/upload-artifact@v7
         if: always()
         continue-on-error: true
@@ -380,9 +373,6 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          # See clean: false note on the quality-gates checkout above — same
-          # shared self-hosted workspace, same reasoning (DEVAUDIT-004).
-          clean: false
 
       - name: Resolve DevAudit base URL
         run: |
@@ -601,10 +591,6 @@ jobs:
       DEVAUDIT_API_KEY: ${{ secrets.DEVAUDIT_API_KEY }}
     steps:
       - uses: actions/checkout@v6
-        with:
-          # See clean: false note on the quality-gates checkout above — same
-          # shared self-hosted workspace, same reasoning (DEVAUDIT-004).
-          clean: false
 
       - name: Resolve DevAudit base URL
         run: |

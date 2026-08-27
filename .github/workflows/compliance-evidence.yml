@@ -69,8 +69,6 @@ jobs:
           # carries the REQ tag in a feature → develop PR flow, so without this
           # the change_type derivation is null nearly everywhere — #77).
           fetch-depth: 0
-          # Shared self-hosted workspace — see DEVAUDIT-004.
-          clean: false
 
       - name: Resolve DevAudit base URL
         id: resolve
@@ -308,8 +306,6 @@ jobs:
           # default branch currently points to.
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
-          # Shared self-hosted workspace — see DEVAUDIT-004.
-          clean: false
 
       - name: Resolve DevAudit base URL
         id: resolve

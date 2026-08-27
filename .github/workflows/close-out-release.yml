@@ -62,8 +62,6 @@ jobs:
           ref: develop
           fetch-depth: 0
           token: ${{ secrets.INSTALLER_DISPATCH_TOKEN || github.token }}
-          # Shared self-hosted workspace — see DEVAUDIT-004.
-          clean: false
 
       - name: Resolve inputs
         id: in

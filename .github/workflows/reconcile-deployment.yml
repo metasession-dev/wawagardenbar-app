@@ -42,8 +42,6 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.expected_sha }}
-          # Shared self-hosted workspace — see DEVAUDIT-004.
-          clean: false
       - name: Verify provider deployment before reconciliation
         env:
           GH_TOKEN: ${{ github.token }}

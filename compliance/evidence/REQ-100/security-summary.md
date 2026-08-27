@@ -1,6 +1,8 @@
 # Security Evidence Summary — REQ-100
 
-**Date:** 2026-08-27
+**Date:** 2026-08-27 (amended Iteration 1)
+
+**Iteration 1:** extends coverage to `generateDailySummary()` and `generateDateRangeReport()`, refactored to share the new `aggregateItemsIntoCategories()` helper. Same posture as the original iteration below — no RBAC, query-construction, or dependency surface changed by the refactor.
 
 | Control                                       | Result | Evidence                                                                                                                                                                                                                                                                            |
 | --------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -290,18 +290,27 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 
 ### R-023 — Same first-seen-price accumulation defect may exist in other financial report functions (REQ-100)
 
-**Status:** OPEN
+**Status:** MITIGATED (updated Iteration 1, 2026-08-27)
 **Opened:** 2026-08-27
 **Owner:** WGB maintainer
-**Review due:** Next `financial-report-service.ts` touch, or a dedicated audit issue — not blocking for REQ-100's own release.
+**Review due:** 2027-08-27 (annual review)
 
-**The risk:** `FinancialReportService.generateMainCategoryReport()` aggregated order line items into a `Map` keyed by `menuItemId`; on a repeat item it correctly accumulated `quantity` but froze `price`/`costPerUnit` at whichever order line was seen first, so an item sold at more than one price within a reporting window (half- vs full-portion pricing, or a mid-window menu price change) was under/over-counted as `(first-seen price) × (total summed quantity)` instead of the sum of each line's actual revenue/cost. REQ-100 fixes this in `generateMainCategoryReport()` only. Other per-item aggregation functions in the same file (e.g. `generateDailyReport`, `generateReportForDateRange`) were **not audited** for the same pattern as part of this REQ — if any share a similar single-frozen-price accumulation loop, they carry the identical defect, unverified.
+**The risk:** `FinancialReportService.generateMainCategoryReport()` aggregated order line items into a `Map` keyed by `menuItemId`; on a repeat item it correctly accumulated `quantity` but froze `price`/`costPerUnit` at whichever order line was seen first, so an item sold at more than one price within a reporting window (half- vs full-portion pricing, or a mid-window menu price change) was under/over-counted as `(first-seen price) × (total summed quantity)` instead of the sum of each line's actual revenue/cost. This entry was opened when REQ-100's original fix covered `generateMainCategoryReport()` only, flagging that other per-item aggregation functions in the same file were **not audited** for the same pattern.
 
-**Mitigations applied in this REQ:** None — explicitly out of scope; REQ-100's fix and test coverage are confined to `generateMainCategoryReport()`.
+**What was confirmed:** the operator found `/dashboard/reports/daily` (the Daily Financial Report — in fact the actual page the original bug report's screenshot came from) still exhibiting the exact symptom after the original fix deployed to UAT. Investigation confirmed `generateDailySummary()` carried an independent copy of the identical bug, and a third copy existed in `generateDateRangeReport()` (its own code comment read "same logic as daily report").
 
-**Residual risk:** Low × medium — unconfirmed elsewhere (not "confirmed and unfixed elsewhere"); the exposure is bounded to financial-report accuracy (no auth/RBAC/data-exposure surface), and this exact class of defect is now a known, named pattern to check for rather than an unknown unknown.
+**Controls landed:**
+
+1. Extracted the accumulation logic into one shared, tested private helper — `FinancialReportService.aggregateItemsIntoCategories()` — accumulating `revenue`/`cost` per order line (preferring each line's own `subtotal`) rather than deriving totals from a single stored price at the end.
+2. `generateDailySummary()` and `generateDateRangeReport()` both refactored to call the shared helper instead of each carrying their own copy of the buggy loop — structurally prevents a fourth independent copy of this defect.
+3. 2 new unit tests (one per function) in `__tests__/services/financial-report-service.dynamic-main-categories.test.ts`, reproducing the exact multi-price scenario; all 3 pre-existing tests in that file, and the full unit suite (1384 tests), continue to pass.
+4. Operator independently verified the corrected figures directly against live UAT data for the exact business date/category from the original bug report (₦32,000 total, ₦15,500 Beef line — matching expected).
+
+**Residual risk:** Low × low — the fix is verified by tests exercising the exact previously-buggy code path, and the shared-helper extraction removes the structural cause (independent copy-paste) that let the same defect recur twice.
 
 **Framework cross-references:** ISO 27001 A.8.25 (secure SDLC — arithmetic correctness in a financial calculation path, same clause R-018 closed under).
+
+**Cross-links:** [REQ-100 implementation plan](plans/REQ-100/implementation-plan.md); [#676](https://github.com/metasession-dev/wawagardenbar-app/issues/676); SRS REQ-MENUMGT-006, REQ-REPORT-001.
 
 **Cross-links:** [REQ-100 implementation plan](plans/REQ-100/implementation-plan.md); [#676](https://github.com/metasession-dev/wawagardenbar-app/issues/676); SRS REQ-MENUMGT-006.
 

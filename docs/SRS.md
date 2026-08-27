@@ -1079,6 +1079,7 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 
 - **Given** a day's orders, **When** an admin generates the daily report, **Then** totals, a payment-method breakdown, discrepancies and a reconciliation summary render and reconcile to the orders.
 - **Given** the Main Categories registry contains ordered categories, **When** an admin generates a Daily or date-range financial report, **Then** revenue, COGS, gross-profit, charts, and exports show each configured category distinctly in registry order; a historical order whose sale-time slug is no longer configured is explicitly labelled as unmapped rather than merged into another category.
+- **Given** the same menu item is sold at more than one price within the selected date/range (e.g. a half-portion line and a full-portion line, or a mid-range menu price change), **When** the Daily or date-range report renders that item's category breakdown, **Then** the item's "line total" and the category's total revenue equal the sum of each order line's own price × quantity — never a single price (whichever line was encountered first) multiplied by the combined quantity across all lines. The same per-line summation applies to the costs table's costPerUnit/line total (REQ-100).
 
 #### REQ-REPORT-002 — Business-day cutoff · **Should** · regression
 

@@ -1,0 +1,10 @@
+# Test plan — REQ-100
+
+Extracted from `compliance/plans/REQ-100/implementation-plan.md` §8.
+
+| AC       | Test file                                                           | Test type | Coverage                                                                                                                                                                                                                                                                                                             |
+| -------- | ------------------------------------------------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AC1, AC2 | `__tests__/services/financial-report-service.main-category.test.ts` | Unit      | New test: `REQ-100: sums actual per-line revenue when the same item sells at more than one price` — asserts `totalRevenue` sums each order line's actual revenue (18000) rather than first-seen-price × total-quantity (22500), and that cost aggregation over the same accumulation code path is unaffected (2000). |
+| AC3      | `__tests__/services/financial-report-service.main-category.test.ts` | Unit      | 8 pre-existing tests in the same file (filtering to main slug, itemCount summing, orderCount distinct-order counting, multi-main-order documented behaviour, empty-input safety, label resolution + fallback, gross-profit/margin math) all continue to pass unmodified against the new accumulation logic.          |
+
+**Browser-driven test gate:** NOT_NEEDED — no UI-facing files (`app/**/*.tsx`, `components/**/*.tsx`, etc.) are touched by this REQ; the fix is confined to `services/financial-report-service.ts`. The existing report page (`by-main-category-report-client.tsx`) renders the same `price`/`total`/`costPerUnit` field shape unchanged — only the underlying computation is corrected.

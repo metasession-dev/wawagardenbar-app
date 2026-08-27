@@ -288,6 +288,25 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 
 ---
 
+### R-023 — Same first-seen-price accumulation defect may exist in other financial report functions (REQ-100)
+
+**Status:** OPEN
+**Opened:** 2026-08-27
+**Owner:** WGB maintainer
+**Review due:** Next `financial-report-service.ts` touch, or a dedicated audit issue — not blocking for REQ-100's own release.
+
+**The risk:** `FinancialReportService.generateMainCategoryReport()` aggregated order line items into a `Map` keyed by `menuItemId`; on a repeat item it correctly accumulated `quantity` but froze `price`/`costPerUnit` at whichever order line was seen first, so an item sold at more than one price within a reporting window (half- vs full-portion pricing, or a mid-window menu price change) was under/over-counted as `(first-seen price) × (total summed quantity)` instead of the sum of each line's actual revenue/cost. REQ-100 fixes this in `generateMainCategoryReport()` only. Other per-item aggregation functions in the same file (e.g. `generateDailyReport`, `generateReportForDateRange`) were **not audited** for the same pattern as part of this REQ — if any share a similar single-frozen-price accumulation loop, they carry the identical defect, unverified.
+
+**Mitigations applied in this REQ:** None — explicitly out of scope; REQ-100's fix and test coverage are confined to `generateMainCategoryReport()`.
+
+**Residual risk:** Low × medium — unconfirmed elsewhere (not "confirmed and unfixed elsewhere"); the exposure is bounded to financial-report accuracy (no auth/RBAC/data-exposure surface), and this exact class of defect is now a known, named pattern to check for rather than an unknown unknown.
+
+**Framework cross-references:** ISO 27001 A.8.25 (secure SDLC — arithmetic correctness in a financial calculation path, same clause R-018 closed under).
+
+**Cross-links:** [REQ-100 implementation plan](plans/REQ-100/implementation-plan.md); [#676](https://github.com/metasession-dev/wawagardenbar-app/issues/676); SRS REQ-MENUMGT-006.
+
+---
+
 ### R-018 — Silent under-charging on admin-created portioned orders (REQ-097)
 
 **Status:** MITIGATED

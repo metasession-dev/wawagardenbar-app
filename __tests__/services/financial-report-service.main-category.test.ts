@@ -266,6 +266,34 @@ describe('REQ-076 — FinancialReportService.generateMainCategoryReport', () => 
     expect(report.revenue.totalRevenue).toBe(0);
   });
 
+  it('REQ-100: sums actual per-line revenue when the same item sells at more than one price', async () => {
+    mockOrderFind.mockResolvedValue([
+      // Full-portion Jollof in one order...
+      order('o1', [{ id: 'jollof', qty: 2, price: 4500 }]), // revenue 9000
+      // ...and a different (e.g. half-portion) price for the same item in another.
+      order('o2', [{ id: 'jollof', qty: 3, price: 3000 }]), // revenue 9000
+    ]);
+
+    const report = await FinancialReportService.generateMainCategoryReport(
+      new Date('2020-01-01'),
+      new Date('2020-01-01'),
+      'food'
+    );
+
+    // Correct: sum each line's own revenue (9000 + 9000 = 18000).
+    // The pre-fix bug multiplied the FIRST-SEEN price by the TOTAL summed
+    // quantity instead: 4500 × (2 + 3) = 22500 — wrong.
+    expect(report.revenue.totalRevenue).toBe(18000);
+    expect(report.revenue.items).toHaveLength(1);
+    expect(report.revenue.items[0].quantity).toBe(5);
+    expect(report.revenue.items[0].total).toBe(18000);
+
+    // Cost uses the same per-item costPerUnit regardless of sale price, so
+    // it isn't order-line-price-dependent — pins that the identical
+    // accumulation fix doesn't disturb cost math: 5 × 400 = 2000.
+    expect(report.costs.totalCost).toBe(2000);
+  });
+
   it('computes gross profit + margin correctly', async () => {
     mockOrderFind.mockResolvedValue([
       order('o1', [

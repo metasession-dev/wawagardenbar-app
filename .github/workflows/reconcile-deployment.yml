@@ -31,7 +31,7 @@ on:
 jobs:
   reconcile:
     name: Verify and reconcile deployment
-    runs-on: ubuntu-latest
+    runs-on: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'ubuntu-latest' || (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') }}
     permissions:
       contents: read
       deployments: write

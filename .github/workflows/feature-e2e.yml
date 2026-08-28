@@ -16,7 +16,7 @@ jobs:
   detect-req:
     name: Detect REQ from branch
     if: ${{ !startsWith(github.head_ref, 'chore/close-out-') }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'ubuntu-latest' || (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') }}
     outputs:
       req_id: ${{ steps.detect.outputs.req_id }}
       has_tests: ${{ steps.detect.outputs.has_tests }}
@@ -83,7 +83,15 @@ jobs:
     name: Run in-scope E2E
     needs: detect-req
     if: needs.detect-req.outputs.has_tests == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'ubuntu-latest' || (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') }}
+
+    # See ci.yml.template's quality-gates job for why this exists (#689
+    # polyglot-monorepo subdir targets, e.g. META-AGENT's mission-control/).
+    # scripts/ stays repo-root-relative below (via $GITHUB_WORKSPACE) since
+    # register-release-style tooling lives there regardless of target.
+    defaults:
+      run:
+        working-directory: .
 
     services:
       mongodb:
@@ -196,8 +204,10 @@ jobs:
           REQ_ID="${{ needs.detect-req.outputs.req_id }}"
           : > "$GITHUB_OUTPUT"
           CONFIG_URL=""
-          if [ -f sdlc-config.json ]; then
-            CONFIG_URL=$(jq -r '.devaudit.base_url // empty' sdlc-config.json 2>/dev/null || true)
+          # sdlc-config.json lives at the repo root (#689 follow-up), not this
+          # job's working-directory (a target's own subdirectory).
+          if [ -f "$GITHUB_WORKSPACE/sdlc-config.json" ]; then
+            CONFIG_URL=$(jq -r '.devaudit.base_url // empty' "$GITHUB_WORKSPACE/sdlc-config.json" 2>/dev/null || true)
           fi
           BASE="${CONFIG_URL:-$DEVAUDIT_BASE_URL_VAR}"
           if [ -z "$BASE" ] || [ -z "$DEVAUDIT_API_KEY" ]; then
@@ -206,14 +216,14 @@ jobs:
             exit 0
           fi
           export DEVAUDIT_BASE_URL="${BASE%/}"
-          chmod +x scripts/upload-evidence.sh scripts/report-test-execution.sh 2>/dev/null || true
-          bash scripts/upload-evidence.sh \
+          chmod +x $GITHUB_WORKSPACE/scripts/upload-evidence.sh $GITHUB_WORKSPACE/scripts/report-test-execution.sh 2>/dev/null || true
+          bash $GITHUB_WORKSPACE/scripts/upload-evidence.sh \
             wgb _compliance-docs release_registration README.md \
             --release "$REQ_ID" --create-release-if-missing \
             --environment uat --category planning \
             --git-sha "${{ github.event.pull_request.head.sha }}" \
             --branch "${{ github.head_ref }}" || true
-          bash scripts/report-test-execution.sh start \
+          bash $GITHUB_WORKSPACE/scripts/report-test-execution.sh start \
             --project-slug wgb \
             --release "$REQ_ID" \
             --sdlc-stage 2 \
@@ -253,8 +263,10 @@ jobs:
         run: |
           REQ_ID="${{ needs.detect-req.outputs.req_id }}"
           CONFIG_URL=""
-          if [ -f sdlc-config.json ]; then
-            CONFIG_URL=$(jq -r '.devaudit.base_url // empty' sdlc-config.json 2>/dev/null || true)
+          # sdlc-config.json lives at the repo root (#689 follow-up), not this
+          # job's working-directory (a target's own subdirectory).
+          if [ -f "$GITHUB_WORKSPACE/sdlc-config.json" ]; then
+            CONFIG_URL=$(jq -r '.devaudit.base_url // empty' "$GITHUB_WORKSPACE/sdlc-config.json" 2>/dev/null || true)
           fi
           BASE="${CONFIG_URL:-$DEVAUDIT_BASE_URL_VAR}"
           if [ -z "$BASE" ] || [ -z "$DEVAUDIT_API_KEY" ]; then
@@ -275,7 +287,7 @@ jobs:
             echo "::error::Feature E2E produced no e2e-results.json"
             exit 1
           fi
-          bash scripts/upload-evidence.sh \
+          bash $GITHUB_WORKSPACE/scripts/upload-evidence.sh \
             wgb "$REQ_ID" e2e_result e2e-results.json \
             --category e2e_result --release "$REQ_ID" --create-release-if-missing \
             --environment uat --sdlc-stage 2 \
@@ -294,7 +306,7 @@ jobs:
             exit 1
           fi
           for shot in "${SHOTS[@]}"; do
-            bash scripts/upload-evidence.sh \
+            bash $GITHUB_WORKSPACE/scripts/upload-evidence.sh \
               wgb "$REQ_ID" screenshot "$shot" \
               --category screenshot --release "$REQ_ID" --create-release-if-missing \
               --environment uat --sdlc-stage 2 \
@@ -306,7 +318,7 @@ jobs:
           done
 
           if [ -f playwright-report.zip ]; then
-            bash scripts/upload-evidence.sh \
+            bash $GITHUB_WORKSPACE/scripts/upload-evidence.sh \
               wgb "$REQ_ID" feature_e2e_report playwright-report.zip \
               --category e2e_report --release "$REQ_ID" --create-release-if-missing \
               --environment uat --sdlc-stage 2 \
@@ -328,8 +340,10 @@ jobs:
             exit 0
           fi
           CONFIG_URL=""
-          if [ -f sdlc-config.json ]; then
-            CONFIG_URL=$(jq -r '.devaudit.base_url // empty' sdlc-config.json 2>/dev/null || true)
+          # sdlc-config.json lives at the repo root (#689 follow-up), not this
+          # job's working-directory (a target's own subdirectory).
+          if [ -f "$GITHUB_WORKSPACE/sdlc-config.json" ]; then
+            CONFIG_URL=$(jq -r '.devaudit.base_url // empty' "$GITHUB_WORKSPACE/sdlc-config.json" 2>/dev/null || true)
           fi
           BASE="${CONFIG_URL:-$DEVAUDIT_BASE_URL_VAR}"
           if [ -z "$BASE" ] || [ -z "$DEVAUDIT_API_KEY" ]; then
@@ -341,8 +355,8 @@ jobs:
             *)         OUTCOME=failed ;;
           esac
           export DEVAUDIT_BASE_URL="${BASE%/}"
-          chmod +x scripts/report-test-execution.sh 2>/dev/null || true
-          bash scripts/report-test-execution.sh complete \
+          chmod +x $GITHUB_WORKSPACE/scripts/report-test-execution.sh 2>/dev/null || true
+          bash $GITHUB_WORKSPACE/scripts/report-test-execution.sh complete \
             --project-slug wgb \
             --release "${{ needs.detect-req.outputs.req_id }}" \
             --sdlc-stage 2 \

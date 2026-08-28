@@ -353,6 +353,105 @@ export class FinancialReportService {
   }
 
   /**
+   * Aggregates paid orders' line items into `report.categories`, keyed by
+   * each item's sale-time mainCategory. Shared by `generateDailySummary`
+   * and `generateDateRangeReport` — previously each carried its own copy
+   * of this exact loop (REQ-100 follow-up: both copies independently
+   * exhibited the same defect fixed in `generateMainCategoryReport`).
+   *
+   * Revenue/cost are accumulated per order line (preferring each line's
+   * own `subtotal`) directly into the map entry, rather than derived from
+   * a single stored price at the end — an item sold at more than one
+   * price within the window (half- vs full-portion pricing, or a
+   * mid-window menu price change) would otherwise be under/over-counted
+   * as `(first-seen price) × (total summed quantity)`.
+   */
+  private static async aggregateItemsIntoCategories(
+    report: DailySummaryReport,
+    orders: Array<{
+      items: Array<{
+        menuItemId: { toString(): string } | string;
+        name: string;
+        price: number;
+        quantity: number;
+        subtotal?: number;
+        costPerUnit?: number;
+        mainCategoryAtSale?: string;
+      }>;
+    }>
+  ): Promise<void> {
+    const itemMap = new Map<
+      string,
+      {
+        name: string;
+        mainCategory: string;
+        quantity: number;
+        revenue: number;
+        cost: number;
+        resolvedCostPerUnit: number;
+      }
+    >();
+
+    for (const order of orders) {
+      for (const item of order.items) {
+        const itemId = item.menuItemId.toString();
+        const existing = itemMap.get(itemId);
+
+        if (existing) {
+          const lineCostPerUnit =
+            item.costPerUnit || existing.resolvedCostPerUnit || 0;
+          const lineRevenue = item.subtotal ?? item.price * item.quantity;
+          const lineCost = lineCostPerUnit * item.quantity;
+          existing.quantity += item.quantity;
+          existing.revenue += lineRevenue;
+          existing.cost += lineCost;
+        } else {
+          // Prefer the immutable sale-time taxonomy. Current menu metadata
+          // is only a legacy fallback for orders created before REQ-094.
+          const menuItem = await MenuItemModel.findById(item.menuItemId).lean();
+          const mainCategoryAtSale =
+            item.mainCategoryAtSale ?? menuItem?.mainCategory;
+          if (!mainCategoryAtSale) continue;
+
+          const resolvedCostPerUnit =
+            item.costPerUnit || menuItem?.costPerUnit || 0;
+          const lineRevenue = item.subtotal ?? item.price * item.quantity;
+          const lineCost = resolvedCostPerUnit * item.quantity;
+          itemMap.set(itemId, {
+            name: item.name,
+            mainCategory: mainCategoryAtSale,
+            quantity: item.quantity,
+            revenue: lineRevenue,
+            cost: lineCost,
+            resolvedCostPerUnit,
+          });
+        }
+      }
+    }
+
+    for (const [, item] of itemMap) {
+      const revenueItem = {
+        name: item.name,
+        quantity: item.quantity,
+        price: item.quantity > 0 ? item.revenue / item.quantity : 0,
+        total: item.revenue,
+      };
+      const costItem = {
+        name: item.name,
+        quantity: item.quantity,
+        costPerUnit: item.quantity > 0 ? item.cost / item.quantity : 0,
+        total: item.cost,
+      };
+      FinancialReportService.addCategoryItem(
+        report,
+        item.mainCategory,
+        revenueItem,
+        costItem
+      );
+    }
+  }
+
+  /**
    * @requirement REQ-013 - Aggregate partial payments from tabs into payment breakdown
    * @requirement REQ-035 - also accumulate per-row tip amounts into tipsBreakdown
    *
@@ -648,74 +747,9 @@ export class FinancialReportService {
       }
     }
 
-    // Aggregate items by menu item
-    const itemMap = new Map<
-      string,
-      {
-        name: string;
-        category: string;
-        mainCategory: string;
-        quantity: number;
-        price: number;
-        costPerUnit: number;
-      }
-    >();
-
-    for (const order of orders) {
-      for (const item of order.items) {
-        const itemId = item.menuItemId.toString();
-
-        if (itemMap.has(itemId)) {
-          const existing = itemMap.get(itemId)!;
-          existing.quantity += item.quantity;
-        } else {
-          // Prefer the immutable sale-time taxonomy. Current menu metadata is
-          // only a legacy fallback for orders created before REQ-094.
-          const menuItem = await MenuItemModel.findById(item.menuItemId).lean();
-
-          const mainCategoryAtSale =
-            (item as { mainCategoryAtSale?: string }).mainCategoryAtSale ??
-            menuItem?.mainCategory;
-          if (!mainCategoryAtSale) continue;
-
-          itemMap.set(itemId, {
-            name: item.name,
-            category: menuItem?.category ?? '',
-            mainCategory: mainCategoryAtSale,
-            quantity: item.quantity,
-            price: item.price,
-            costPerUnit: item.costPerUnit || menuItem?.costPerUnit || 0,
-          });
-        }
-      }
-    }
-
-    // Process aggregated items
-    for (const [_, item] of itemMap) {
-      const total = item.price * item.quantity;
-      const costTotal = item.costPerUnit * item.quantity;
-
-      const revenueItem = {
-        name: item.name,
-        quantity: item.quantity,
-        price: item.price,
-        total,
-      };
-
-      const costItem = {
-        name: item.name,
-        quantity: item.quantity,
-        costPerUnit: item.costPerUnit,
-        total: costTotal,
-      };
-
-      FinancialReportService.addCategoryItem(
-        report,
-        item.mainCategory,
-        revenueItem,
-        costItem
-      );
-    }
+    // Aggregate items by menu item into report.categories (REQ-100 follow-up:
+    // shared with generateDateRangeReport — see aggregateItemsIntoCategories).
+    await FinancialReportService.aggregateItemsIntoCategories(report, orders);
 
     // Calculate totals
     // totalRevenue = money actually received (payment breakdown total)
@@ -962,73 +996,9 @@ export class FinancialReportService {
       }
     }
 
-    // Aggregate items
-    const itemMap = new Map<
-      string,
-      {
-        name: string;
-        category: string;
-        mainCategory: string;
-        quantity: number;
-        price: number;
-        costPerUnit: number;
-      }
-    >();
-
-    for (const order of orders) {
-      for (const item of order.items) {
-        const itemId = item.menuItemId.toString();
-
-        if (itemMap.has(itemId)) {
-          const existing = itemMap.get(itemId)!;
-          existing.quantity += item.quantity;
-        } else {
-          // Prefer the immutable sale-time taxonomy; see daily report.
-          const menuItem = await MenuItemModel.findById(item.menuItemId).lean();
-
-          const mainCategoryAtSale =
-            (item as { mainCategoryAtSale?: string }).mainCategoryAtSale ??
-            menuItem?.mainCategory;
-          if (!mainCategoryAtSale) continue;
-
-          itemMap.set(itemId, {
-            name: item.name,
-            category: menuItem?.category ?? '',
-            mainCategory: mainCategoryAtSale,
-            quantity: item.quantity,
-            price: item.price,
-            costPerUnit: item.costPerUnit || menuItem?.costPerUnit || 0,
-          });
-        }
-      }
-    }
-
-    // Process items (same logic as daily report)
-    for (const [_, item] of itemMap) {
-      const total = item.price * item.quantity;
-      const costTotal = item.costPerUnit * item.quantity;
-
-      const revenueItem = {
-        name: item.name,
-        quantity: item.quantity,
-        price: item.price,
-        total,
-      };
-
-      const costItem = {
-        name: item.name,
-        quantity: item.quantity,
-        costPerUnit: item.costPerUnit,
-        total: costTotal,
-      };
-
-      FinancialReportService.addCategoryItem(
-        report,
-        item.mainCategory,
-        revenueItem,
-        costItem
-      );
-    }
+    // Aggregate items into report.categories (REQ-100 follow-up: shared with
+    // generateDailySummary — see aggregateItemsIntoCategories).
+    await FinancialReportService.aggregateItemsIntoCategories(report, orders);
 
     FinancialReportService.calculateCategoryTotals(report);
 
@@ -1135,6 +1105,12 @@ export class FinancialReportService {
     // Aggregate by menuItemId — prefer the immutable sale-time taxonomy.
     // Older rows pre-date REQ-094 and use current menu metadata only as an
     // explicit legacy fallback; they must not be presented as historical fact.
+    //
+    // Revenue/cost are accumulated per line (REQ-100) rather than derived
+    // from a single stored price at the end — an item sold at more than one
+    // price within the window (half vs full portion, or a price change)
+    // would otherwise be under/over-counted by (first-seen price) × (total
+    // summed quantity).
     const itemMap = new Map<
       string,
       {
@@ -1142,8 +1118,9 @@ export class FinancialReportService {
         category: string;
         mainCategory: string;
         quantity: number;
-        price: number;
-        costPerUnit: number;
+        revenue: number;
+        cost: number;
+        resolvedCostPerUnit: number;
       }
     >();
     const ordersContainingMain = new Set<string>();
@@ -1152,10 +1129,16 @@ export class FinancialReportService {
       let orderTouchedMain = false;
       for (const item of order.items) {
         const itemId = item.menuItemId.toString();
+        const existing = itemMap.get(itemId);
 
-        if (itemMap.has(itemId)) {
-          const existing = itemMap.get(itemId)!;
+        if (existing) {
+          const lineCostPerUnit =
+            item.costPerUnit || existing.resolvedCostPerUnit || 0;
+          const lineRevenue = item.subtotal ?? item.price * item.quantity;
+          const lineCost = lineCostPerUnit * item.quantity;
           existing.quantity += item.quantity;
+          existing.revenue += lineRevenue;
+          existing.cost += lineCost;
           if (existing.mainCategory === mainCategorySlug) {
             orderTouchedMain = true;
           }
@@ -1168,13 +1151,18 @@ export class FinancialReportService {
           const mainCategory =
             item.mainCategoryAtSale ?? menuItem?.mainCategory;
           if (!category || !mainCategory) continue;
+          const resolvedCostPerUnit =
+            item.costPerUnit || menuItem?.costPerUnit || 0;
+          const lineRevenue = item.subtotal ?? item.price * item.quantity;
+          const lineCost = resolvedCostPerUnit * item.quantity;
           itemMap.set(itemId, {
             name: item.name,
             category,
             mainCategory,
             quantity: item.quantity,
-            price: item.price,
-            costPerUnit: item.costPerUnit || menuItem?.costPerUnit || 0,
+            revenue: lineRevenue,
+            cost: lineCost,
+            resolvedCostPerUnit,
           });
           if (mainCategory === mainCategorySlug) {
             orderTouchedMain = true;
@@ -1187,6 +1175,9 @@ export class FinancialReportService {
     }
 
     // Filter aggregated items to the selected main + build line totals.
+    // `price`/`costPerUnit` on the output are derived as the quantity-weighted
+    // average across the window — informational display only; `total` is the
+    // authoritative summed figure and is never recomputed from them.
     const revenueItems: MainCategoryReport['revenue']['items'] = [];
     const costItems: MainCategoryReport['costs']['items'] = [];
     let totalRevenue = 0;
@@ -1195,18 +1186,18 @@ export class FinancialReportService {
 
     for (const [, item] of itemMap) {
       if (item.mainCategory !== mainCategorySlug) continue;
-      const lineRevenue = item.price * item.quantity;
-      const lineCost = item.costPerUnit * item.quantity;
+      const lineRevenue = item.revenue;
+      const lineCost = item.cost;
       revenueItems.push({
         name: item.name,
         quantity: item.quantity,
-        price: item.price,
+        price: item.quantity > 0 ? lineRevenue / item.quantity : 0,
         total: lineRevenue,
       });
       costItems.push({
         name: item.name,
         quantity: item.quantity,
-        costPerUnit: item.costPerUnit,
+        costPerUnit: item.quantity > 0 ? lineCost / item.quantity : 0,
         total: lineCost,
       });
       totalRevenue += lineRevenue;

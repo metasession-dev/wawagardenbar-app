@@ -1,6 +1,6 @@
 # Release Ticket: REQ-099 — Tabs Management list distinguishes written-off tabs from paid ones
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-08-16
 **Requirement ID:** REQ-099
 **Risk Level:** MEDIUM

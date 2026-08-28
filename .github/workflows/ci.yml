@@ -47,7 +47,15 @@ jobs:
     name: Quality Gates
     needs: [register-release]
     if: ${{ always() && (github.event_name != 'pull_request' || !startsWith(github.head_ref, 'chore/close-out-')) && (github.event_name == 'pull_request' || needs.register-release.result == 'success') }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'ubuntu-latest' || (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') }}
+
+    # `working-directory` lets monorepo / subdir Node projects (e.g. META-AGENT
+    # with mission-control/package.json) run gates from the right place without
+    # prefixing every command. Defaults to '.' (repo root) when
+    # sdlc-config.json doesn't set working_directory.
+    defaults:
+      run:
+        working-directory: .
 
     services:
       mongodb:
@@ -75,10 +83,13 @@ jobs:
       - name: Validate self-hosted runner prerequisites
         env:
           DEVAUDIT_RUNNER_ENVIRONMENT: ${{ runner.environment }}
+        # scripts/ syncs to the repo root (#689), not this job's
+        # working-directory (a target's own subdirectory) — reference it via
+        # $GITHUB_WORKSPACE so this resolves correctly either way.
         run: |
-          if [ -f scripts/check-self-hosted-runner.sh ]; then
-            chmod +x scripts/check-self-hosted-runner.sh
-            bash scripts/check-self-hosted-runner.sh
+          if [ -f "$GITHUB_WORKSPACE/scripts/check-self-hosted-runner.sh" ]; then
+            chmod +x "$GITHUB_WORKSPACE/scripts/check-self-hosted-runner.sh"
+            bash "$GITHUB_WORKSPACE/scripts/check-self-hosted-runner.sh"
           else
             echo "::warning::scripts/check-self-hosted-runner.sh missing; run devaudit update to sync runner preflight."
           fi
@@ -87,15 +98,17 @@ jobs:
         if: github.event_name != 'pull_request' && github.ref_name == 'develop' && needs.register-release.outputs.version != 'skip'
         run: |
           BASE=""
-          if [ -f sdlc-config.json ]; then
-            BASE=$(jq -r '.devaudit.base_url // empty' sdlc-config.json 2>/dev/null || true)
+          # sdlc-config.json lives at the repo root (#689 follow-up), not this
+          # job's working-directory (a target's own subdirectory).
+          if [ -f "$GITHUB_WORKSPACE/sdlc-config.json" ]; then
+            BASE=$(jq -r '.devaudit.base_url // empty' "$GITHUB_WORKSPACE/sdlc-config.json" 2>/dev/null || true)
           fi
           [ -n "$BASE" ] || BASE="$DEVAUDIT_BASE_URL_VAR"
           [ -n "$BASE" ] || { echo "::warning::No DevAudit URL; test execution lifecycle disabled"; exit 0; }
           export DEVAUDIT_BASE_URL="${BASE%/}"
           echo "DEVAUDIT_BASE_URL=${DEVAUDIT_BASE_URL}" >> "$GITHUB_ENV"
-          chmod +x scripts/report-test-execution.sh scripts/report-release-check.sh 2>/dev/null || true
-          bash scripts/report-test-execution.sh start \
+          chmod +x "$GITHUB_WORKSPACE/scripts/report-test-execution.sh" "$GITHUB_WORKSPACE/scripts/report-release-check.sh" 2>/dev/null || true
+          bash "$GITHUB_WORKSPACE/scripts/report-test-execution.sh" start \
             --project-slug wgb \
             --release "${{ needs.register-release.outputs.version }}" \
             --sdlc-stage 2 --environment ci --suite-kind quality_gate \
@@ -180,8 +193,8 @@ jobs:
           # against the installed package-lock path and writes an auditable
           # decision record. It is intentionally fail-closed: malformed audit
           # output or a malformed/expired exception fails this gate.
-          chmod +x scripts/evaluate-npm-audit.sh 2>/dev/null || true
-          bash scripts/evaluate-npm-audit.sh
+          chmod +x "$GITHUB_WORKSPACE/scripts/evaluate-npm-audit.sh" 2>/dev/null || true
+          bash "$GITHUB_WORKSPACE/scripts/evaluate-npm-audit.sh"
 
       # ── Gate 4: E2E Tests (Playwright) ──
 
@@ -319,6 +332,10 @@ jobs:
 
       # ── Upload artifacts ──
 
+      # actions/upload-artifact@v7 doesn't honour the job's `working-directory`;
+      # paths are workspace-relative. Prefix with WORKING_DIR_PREFIX so artifacts
+      # uploaded from a subdir project (e.g. mission-control/) include the
+      # subdir in their stored path, matching where the gate steps wrote them.
       - uses: actions/upload-artifact@v7
         if: always()
         continue-on-error: true
@@ -342,7 +359,7 @@ jobs:
   # ──────────────────────────────────────────────
   register-release:
     name: Register Release
-    runs-on: ubuntu-latest
+    runs-on: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'ubuntu-latest' || (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') }}
     # PRs to develop should report Quality Gates without mutating DevAudit
     # releases or evidence. Release registration remains a develop-push /
     # manual-dispatch side effect.
@@ -562,7 +579,7 @@ jobs:
   # ──────────────────────────────────────────────
   upload-evidence:
     name: Upload Evidence
-    runs-on: ubuntu-latest
+    runs-on: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'ubuntu-latest' || (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') }}
     needs: [quality-gates, register-release]
     # `!cancelled()` preserves failed-gate evidence on eligible integration
     # pushes, while a pull request remains an intentionally inapplicable,

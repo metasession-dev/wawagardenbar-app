@@ -1,5 +1,5 @@
 {
-  "runner": "ubuntu-latest",
+  "runner": "self-hosted",
   "sast_baseline": 0,
   "accepted_dep_risks": "",
   "database_service": "mongodb",

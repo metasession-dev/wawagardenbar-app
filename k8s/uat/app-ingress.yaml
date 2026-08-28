@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: wawagardenbar-uat-app
+  namespace: apps
+  labels:
+    app.kubernetes.io/name: wawagardenbar-app
+    app.kubernetes.io/instance: uat
+    app.kubernetes.io/component: app
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: wawagardenbar-app-uat.ostendo.lan # CONFIRM hostname convention before first apply
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: wawagardenbar-uat-app
+                port:
+                  number: 80

@@ -1,21 +1,23 @@
 # Backup Strategy — Wawa Garden Bar
 
 **Document ID:** BK-WGBA-001
-**Version:** 1.0
-**Date:** 2026-03-29
+**Version:** 1.1
+**Date:** 2026-08-28
 **Classification:** Internal — Restricted
 
 ---
 
 ## What is Backed Up
 
-| Data                      | Method                      | Frequency       | Retention    | Location             |
-| ------------------------- | --------------------------- | --------------- | ------------ | -------------------- |
-| MongoDB (all collections) | Railway automatic snapshots | Daily           | 7 days       | Railway platform     |
-| MongoDB (manual export)   | `mongodump`                 | Weekly (manual) | 30 days      | Local secure storage |
-| Source code               | Git (GitHub)                | Every commit    | Permanent    | GitHub               |
-| Environment variables     | Railway platform            | On change       | Current only | Railway dashboard    |
-| Compliance evidence       | META-COMPLY (Supabase)      | On upload       | Permanent    | META-COMPLY portal   |
+| Data                      | Method                                                     | Frequency          | Retention    | Location                                        |
+| ------------------------- | ---------------------------------------------------------- | ------------------ | ------------ | ----------------------------------------------- |
+| MongoDB (all collections) | Railway automatic snapshots                                | Daily              | 7 days       | Railway platform                                |
+| MongoDB (manual export)   | `mongodump`                                                | Weekly (manual)    | 30 days      | Local secure storage                            |
+| Source code               | Git (GitHub)                                               | Every commit       | Permanent    | GitHub                                          |
+| Environment variables     | Railway platform                                           | On change          | Current only | Railway dashboard                               |
+| Compliance evidence       | META-COMPLY (Supabase)                                     | On upload          | Permanent    | META-COMPLY portal                              |
+| Local UAT MongoDB (k3s)   | `sync-prod-to-uat.sh`'s own timestamped `mongodump` output | Manual, on refresh | 30 days      | `backups/` on this repo's checkout (gitignored) |
+| Local UAT k3s manifests   | Git (GitHub) — `k8s/uat/`                                  | Every commit       | Permanent    | GitHub (this repo)                              |
 
 ## What is NOT Backed Up (and why)
 
@@ -145,6 +147,7 @@ Compliance documents (RTM, test scope, security summaries) are stored in git. Bi
 
 ## Document History
 
-| Version | Date       | Author                | Changes                 |
-| ------- | ---------- | --------------------- | ----------------------- |
-| 1.0     | 2026-03-29 | William + Claude Code | Initial backup strategy |
+| Version | Date       | Author                | Changes                                                |
+| ------- | ---------- | --------------------- | ------------------------------------------------------ |
+| 1.0     | 2026-03-29 | William + Claude Code | Initial backup strategy                                |
+| 1.1     | 2026-08-28 | William + Claude Code | Added local UAT (k3s) MongoDB and manifest backup rows |

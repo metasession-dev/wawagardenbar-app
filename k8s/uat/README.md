@@ -11,7 +11,7 @@ population/health check/recovery). This directory holds only the manifests.
 ## Why `apps` and not a dedicated namespace
 
 `ostendo-server`'s platform convention
-(`ostendo_workhorse_configuration/runbooks/k3s_bootstrap_commands.md`) is one
+(`ostendo-workhorse-platform/runbooks/k3s-bootstrap.md`) is one
 namespace per **workload group**, not per app — `apps` is that group for
 hosted application workloads. Resources here are named `wawagardenbar-uat-*`
 and labelled `app.kubernetes.io/name=wawagardenbar-app`,
@@ -24,14 +24,14 @@ Mongo is **not** deployed by this directory. `ostendo-server` runs one shared
 `mongo:7` instance per cluster for all locally-hosted projects (mirrors the
 existing Railway prod convention — see that repo's `DEPLOYMENT-ACTUAL.md`),
 defined in the platform config repo:
-`ostendo_workhorse_configuration/k3s/manifests/` (`shared-mongo-*.yaml`).
+`ostendo-workhorse-platform/k3s/manifests/` (`shared-mongo-*.yaml`).
 That must already be running before this app's Deployment will come up
 healthy — check with `kubectl get deploy shared-mongo -n apps`.
 
 This project gets its own database (`wawagardenbar_uat`) and its own scoped
 Mongo user (not the shared root credentials) on that instance. Provisioning
 that user is a one-time step against the shared instance — see
-`ostendo_workhorse_configuration/k3s/manifests/README.md` "Connecting a
+`ostendo-workhorse-platform/k3s/manifests/README.md` "Connecting a
 project" for the pattern; the resulting connection URI is stored in a
 dedicated secret (`wawagardenbar-uat-mongo-creds`), separate from the
 general app env secret below, so day-to-day env changes never touch DB

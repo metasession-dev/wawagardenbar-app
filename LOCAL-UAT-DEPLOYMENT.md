@@ -9,7 +9,7 @@ operational runbook.
 ## Why k3s and not Docker Compose
 
 `ostendo-server` has its own platform spec
-(`ostendo_workhorse_configuration/requirements.md`) requiring hosted app
+(`ostendo-workhorse-platform/docs/requirements.md`) requiring hosted app
 services to run as k3s workloads, not ad hoc Docker containers. This is the
 first real workload deployed to that cluster.
 
@@ -50,7 +50,7 @@ old `MONGODB_URI`/`SESSION_SECRET`/`EMAIL_*` names from the stale
 ## First-time setup
 
 1. Confirm `shared-mongo` is running in `apps`
-   (`ostendo_workhorse_configuration/k3s/manifests/`).
+   (`ostendo-workhorse-platform/k3s/manifests/`).
 2. Provision this project's scoped Mongo user and
    `wawagardenbar-uat-mongo-creds` secret (`k8s/uat/README.md`).
 3. Create `ghcr-pull-secret` (classic PAT, `read:packages` scope):

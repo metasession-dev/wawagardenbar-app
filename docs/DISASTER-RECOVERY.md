@@ -352,16 +352,16 @@
    ```
 
 2. **If the shared Mongo instance is affected**, see
-   `ostendo_workhorse_configuration/k3s/manifests/README.md` — it is
+   `ostendo-workhorse-platform/k3s/manifests/README.md` — it is
    cluster-shared infrastructure, not owned by this repo.
 
 3. **If the whole `ostendo-server` host was rebuilt from scratch**:
    - Reinstall k3s per
-     `ostendo_workhorse_configuration/runbooks/k3s_bootstrap_commands.md`
+     `ostendo-workhorse-platform/runbooks/k3s-bootstrap.md`
    - Confirm `/srv/ostendo` remounts and `local-path-config` (in
      `kube-system`) points at `/srv/ostendo/k3s/local-path`
    - Re-deploy `shared-mongo` from
-     `ostendo_workhorse_configuration/k3s/manifests/`
+     `ostendo-workhorse-platform/k3s/manifests/`
    - Restore `.env.uat.local` and the GHCR PAT from wherever they are kept
      off-box (see `LOCAL-UAT-DEPLOYMENT.md` — neither is backed up by this
      repo)

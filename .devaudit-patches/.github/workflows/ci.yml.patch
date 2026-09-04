@@ -1,5 +1,5 @@
 diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
-index 853d989..44ea2d6 100644
+index 853d989..148f6a3 100644
 --- a/.github/workflows/ci.yml
 +++ b/.github/workflows/ci.yml
 @@ -132,6 +132,17 @@ jobs:
@@ -20,18 +20,43 @@ index 853d989..44ea2d6 100644
        - name: Install dependencies (skip if lockfile unchanged)
          run: |
            LOCK_HASH=$(sha256sum package-lock.json | cut -d' ' -f1)
-@@ -193,8 +204,14 @@ jobs:
+@@ -193,8 +204,37 @@ jobs:
        - name: Dependency Audit
          id: dep-audit
          run: |
+-          # stderr → /dev/null so warnings can't corrupt the JSON (DevAudit #48)
+-          npm audit --json > dependency-audit.json 2>/dev/null || true
 +          echo "npm version for this step: $(npm --version)"
 +          echo "npm binary path: $(which npm)"
-           # stderr → /dev/null so warnings can't corrupt the JSON (DevAudit #48)
-           npm audit --json > dependency-audit.json 2>/dev/null || true
++          # npm's `/v1/security/audits/quick` endpoint (still called by npm
++          # CLI regardless of version — 10.8.2 and 10.9.9 both hit it) is
++          # mid-retirement and flapping: some individual calls return valid
++          # JSON in ~5s, others hang for minutes before erroring with a 400/503
++          # and an `npm-notice: This endpoint is being retired` header. A
++          # single failed attempt is not evidence of a real vulnerability
++          # regression, so retry a handful of times before treating it as a
++          # gate failure — a fresh attempt frequently lands on a healthy
++          # backend quickly even when the prior one didn't.
++          AUDIT_OK=false
++          for attempt in 1 2 3 4 5; do
++            echo "npm audit attempt $attempt/5..."
++            # stderr → /dev/null so warnings can't corrupt the JSON (DevAudit #48)
++            npm audit --json > dependency-audit.json 2>/dev/null || true
++            if node -e "const d=require('./dependency-audit.json'); process.exit(d && typeof d.vulnerabilities === 'object' ? 0 : 1)" 2>/dev/null; then
++              echo "npm audit attempt $attempt succeeded."
++              AUDIT_OK=true
++              break
++            fi
++            echo "npm audit attempt $attempt did not return a valid vulnerabilities object; retrying..."
++            sleep 5
++          done
 +          echo "--- dependency-audit.json (first 2000 chars) ---"
 +          head -c 2000 dependency-audit.json || true
 +          echo ""
 +          echo "--- end dependency-audit.json excerpt ---"
++          if [ "$AUDIT_OK" != "true" ]; then
++            echo "npm audit did not return a valid vulnerabilities object after 5 attempts."
++          fi
            # The helper evaluates each high/critical advisory independently
            # against the installed package-lock path and writes an auditable
            # decision record. It is intentionally fail-closed: malformed audit

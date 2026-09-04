@@ -74,5 +74,6 @@
     "api_key_secret": "DEVAUDIT_API_KEY"
   },
   "integration_branch": "develop",
-  "release_branch": "main"
+  "release_branch": "main",
+  "devaudit_synced_version": "1.2.5"
 }

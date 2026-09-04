@@ -294,6 +294,53 @@ describe('REQ-076 — FinancialReportService.generateMainCategoryReport', () => 
     expect(report.costs.totalCost).toBe(2000);
   });
 
+  it('REQ-101: splits full vs half portion sales of the same item into separate rows', async () => {
+    mockOrderFind.mockResolvedValue([
+      {
+        _id: 'o1',
+        items: [
+          {
+            menuItemId: { toString: () => 'jollof' },
+            name: MENU_ITEMS.jollof.name,
+            price: 4500,
+            quantity: 2,
+            portionSize: 'full',
+            costPerUnit: MENU_ITEMS.jollof.costPerUnit,
+          },
+        ],
+      },
+      {
+        _id: 'o2',
+        items: [
+          {
+            menuItemId: { toString: () => 'jollof' },
+            name: MENU_ITEMS.jollof.name,
+            price: 2250,
+            quantity: 1,
+            portionSize: 'half',
+            costPerUnit: MENU_ITEMS.jollof.costPerUnit,
+          },
+        ],
+      },
+    ]);
+
+    const report = await FinancialReportService.generateMainCategoryReport(
+      new Date('2020-01-01'),
+      new Date('2020-01-01'),
+      'food'
+    );
+
+    // Two distinct rows, not one blended ((9000+2250)/(2+1) = 3750) row.
+    expect(report.revenue.items).toHaveLength(2);
+    const full = report.revenue.items.find((i) => i.name === 'Jollof Rice');
+    const half = report.revenue.items.find(
+      (i) => i.name === 'Jollof Rice (Half)'
+    );
+    expect(full).toMatchObject({ quantity: 2, price: 4500, total: 9000 });
+    expect(half).toMatchObject({ quantity: 1, price: 2250, total: 2250 });
+    expect(report.revenue.totalRevenue).toBe(11250);
+  });
+
   it('computes gross profit + margin correctly', async () => {
     mockOrderFind.mockResolvedValue([
       order('o1', [

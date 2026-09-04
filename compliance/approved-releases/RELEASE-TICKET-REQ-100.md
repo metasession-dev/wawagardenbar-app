@@ -1,6 +1,6 @@
 # Release Ticket: REQ-100 — Kitchen Revenue report under-counts items sold at more than one price
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-08-27 (amended Iteration 1)
 **Requirement ID:** REQ-100
 **Risk Level:** MEDIUM

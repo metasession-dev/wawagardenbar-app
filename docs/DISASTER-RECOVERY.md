@@ -1,8 +1,8 @@
 # Disaster Recovery Plan — Wawa Garden Bar
 
 **Document ID:** DR-WGBA-001
-**Version:** 1.0
-**Date:** 2026-03-29
+**Version:** 1.1
+**Date:** 2026-08-28
 **Classification:** Internal — Restricted
 **Review Frequency:** Quarterly
 **Next Review:** 2026-06-29
@@ -11,14 +11,15 @@
 
 ## Recovery Targets
 
-| Scenario                     | RTO (Recovery Time) | RPO (Recovery Point)    |
-| ---------------------------- | ------------------- | ----------------------- |
-| Application down (Railway)   | 15 minutes          | 0 (stateless app)       |
-| Bad deploy / code regression | 30 minutes          | 0 (git history)         |
-| Database loss (MongoDB)      | 1 hour              | 24 hours (daily backup) |
-| Secret compromise            | 1 hour              | N/A                     |
-| Domain/DNS failure           | 4 hours             | N/A                     |
-| Data corruption              | 2 hours             | Varies                  |
+| Scenario                     | RTO (Recovery Time) | RPO (Recovery Point)                 |
+| ---------------------------- | ------------------- | ------------------------------------ |
+| Application down (Railway)   | 15 minutes          | 0 (stateless app)                    |
+| Bad deploy / code regression | 30 minutes          | 0 (git history)                      |
+| Database loss (MongoDB)      | 1 hour              | 24 hours (daily backup)              |
+| Secret compromise            | 1 hour              | N/A                                  |
+| Domain/DNS failure           | 4 hours             | N/A                                  |
+| Data corruption              | 2 hours             | Varies                               |
+| Local UAT (k3s) host failure | 1 hour              | Since last `sync-prod-to-uat.sh` run |
 
 ---
 
@@ -329,6 +330,59 @@
 
 ---
 
+## Scenario 7: Local UAT (k3s) Host Failure
+
+### Detection
+
+- Health check fails: `curl -H "Host: wawagardenbar-app-uat.ostendo.lan" http://192.168.1.179/api/health`
+- `kubectl get pods -n apps -l app.kubernetes.io/component=app` shows no
+  Ready pod
+- This is the parallel-trial local UAT on `ostendo-server`, separate from
+  Railway UAT — a failure here does not affect the Railway UAT gate the
+  SDLC actually relies on
+
+### Recovery Steps
+
+1. **If only the app pod/deployment is affected** (host and cluster still
+   healthy):
+
+   ```bash
+   kubectl rollout restart deployment/wawagardenbar-uat-app -n apps
+   kubectl rollout status deployment/wawagardenbar-uat-app -n apps
+   ```
+
+2. **If the shared Mongo instance is affected**, see
+   `ostendo-workhorse-platform/k3s/manifests/README.md` — it is
+   cluster-shared infrastructure, not owned by this repo.
+
+3. **If the whole `ostendo-server` host was rebuilt from scratch**:
+   - Reinstall k3s per
+     `ostendo-workhorse-platform/runbooks/k3s-bootstrap.md`
+   - Confirm `/srv/ostendo` remounts and `local-path-config` (in
+     `kube-system`) points at `/srv/ostendo/k3s/local-path`
+   - Re-deploy `shared-mongo` from
+     `ostendo-workhorse-platform/k3s/manifests/`
+   - Restore `.env.uat.local` and the GHCR PAT from wherever they are kept
+     off-box (see `LOCAL-UAT-DEPLOYMENT.md` — neither is backed up by this
+     repo)
+   - `./scripts/bootstrap-uat-k3s.sh` from this repo — recreates the
+     `wawagardenbar-uat-env` secret, re-provisions the scoped Mongo user if
+     needed, applies `k8s/uat/*.yaml`, waits for a healthy rollout
+   - Run `./scripts/sync-prod-to-uat.sh` (pointed at the local Mongo via
+     `kubectl port-forward`) to repopulate data
+
+4. **Verify recovery**
+   ```bash
+   curl -H "Host: wawagardenbar-app-uat.ostendo.lan" http://192.168.1.179/api/health
+   ```
+
+### See Also
+
+- `LOCAL-UAT-DEPLOYMENT.md` for the full architecture and first-time setup
+- `k8s/uat/README.md` for manifest-level detail
+
+---
+
 ## DR Drill Schedule
 
 | Quarter | Drill Scenario                           | Date | Status  |
@@ -337,6 +391,7 @@
 | Q3 2026 | Secret rotation (SESSION_PASSWORD)       | TBD  | Planned |
 | Q4 2026 | Full application recovery (Railway down) | TBD  | Planned |
 | Q1 2027 | Bad deploy rollback                      | TBD  | Planned |
+| Q1 2027 | Local UAT (k3s) full crash rebuild       | TBD  | Planned |
 
 ### Drill Procedure
 
@@ -362,6 +417,7 @@
 
 ## Document History
 
-| Version | Date       | Author                | Changes         |
-| ------- | ---------- | --------------------- | --------------- |
-| 1.0     | 2026-03-29 | William + Claude Code | Initial DR plan |
+| Version | Date       | Author                | Changes                                       |
+| ------- | ---------- | --------------------- | --------------------------------------------- |
+| 1.0     | 2026-03-29 | William + Claude Code | Initial DR plan                               |
+| 1.1     | 2026-08-28 | William + Claude Code | Added Scenario 7 (local UAT k3s host failure) |

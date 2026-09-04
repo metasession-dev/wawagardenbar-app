@@ -248,6 +248,116 @@ describe('REQ-094 dynamic shared report categories', () => {
     expect(kitchen?.revenue.items[0].quantity).toBe(5);
   });
 
+  it('REQ-101: splits full vs half portion sales of the same item into separate rows', async () => {
+    orderFindMock.mockResolvedValue([
+      {
+        _id: 'order-1',
+        total: 2000,
+        paymentMethod: 'cash',
+        items: [
+          {
+            menuItemId: 'kitchen-item',
+            name: 'Peppered Meat',
+            quantity: 2,
+            price: 1000,
+            portionSize: 'full',
+            costPerUnit: 400,
+          },
+        ],
+      },
+      {
+        _id: 'order-2',
+        total: 500,
+        paymentMethod: 'cash',
+        items: [
+          {
+            menuItemId: 'kitchen-item',
+            name: 'Peppered Meat',
+            quantity: 1,
+            price: 500,
+            portionSize: 'half',
+            costPerUnit: 400,
+          },
+        ],
+      },
+    ]);
+    menuItemFindByIdMock.mockResolvedValue({
+      category: 'menu',
+      mainCategory: 'kitchen',
+      costPerUnit: 400,
+    });
+
+    const report = await FinancialReportService.generateDailySummary(
+      new Date('2026-07-19')
+    );
+    const kitchen = report.categories.find(
+      (category) => category.slug === 'kitchen'
+    );
+
+    // Two distinct rows, not one blended ((2000+500)/(2+1) = 833.33) row.
+    expect(kitchen?.revenue.items).toHaveLength(2);
+    const full = kitchen?.revenue.items.find((i) => i.name === 'Peppered Meat');
+    const half = kitchen?.revenue.items.find(
+      (i) => i.name === 'Peppered Meat (Half)'
+    );
+    expect(full).toMatchObject({ quantity: 2, price: 1000, total: 2000 });
+    expect(half).toMatchObject({ quantity: 1, price: 500, total: 500 });
+    expect(kitchen?.revenue.totalRevenue).toBe(2500);
+  });
+
+  it('REQ-101: an item sold only at full portion is unaffected (regression pin, matches REQ-100 fixtures)', async () => {
+    orderFindMock.mockResolvedValue([
+      {
+        _id: 'order-1',
+        total: 2000,
+        paymentMethod: 'cash',
+        items: [
+          {
+            menuItemId: 'kitchen-item',
+            name: 'Beef',
+            quantity: 2,
+            price: 1000,
+            costPerUnit: 400,
+            // No portionSize field at all — legacy order shape, must default to 'full'.
+          },
+        ],
+      },
+      {
+        _id: 'order-2',
+        total: 1500,
+        paymentMethod: 'cash',
+        items: [
+          {
+            menuItemId: 'kitchen-item',
+            name: 'Beef',
+            quantity: 3,
+            price: 500,
+            portionSize: 'full',
+            costPerUnit: 400,
+          },
+        ],
+      },
+    ]);
+    menuItemFindByIdMock.mockResolvedValue({
+      category: 'menu',
+      mainCategory: 'kitchen',
+      costPerUnit: 400,
+    });
+
+    const report = await FinancialReportService.generateDailySummary(
+      new Date('2026-07-19')
+    );
+    const kitchen = report.categories.find(
+      (category) => category.slug === 'kitchen'
+    );
+
+    // Still one blended row — an undefined portionSize and an explicit
+    // 'full' portionSize must key identically.
+    expect(kitchen?.revenue.items).toHaveLength(1);
+    expect(kitchen?.revenue.items[0].quantity).toBe(5);
+    expect(kitchen?.revenue.items[0].total).toBe(3500);
+  });
+
   it('uses the sale-time category when current menu metadata has changed', async () => {
     orderFindMock.mockResolvedValue([
       {

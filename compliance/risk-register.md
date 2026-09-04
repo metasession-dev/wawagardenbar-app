@@ -290,7 +290,7 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 
 ### R-023 — Same first-seen-price accumulation defect may exist in other financial report functions (REQ-100)
 
-**Status:** MITIGATED (updated Iteration 1, 2026-08-27)
+**Status:** MITIGATED (updated Iteration 2, 2026-09-04)
 **Opened:** 2026-08-27
 **Owner:** WGB maintainer
 **Review due:** 2027-08-27 (annual review)
@@ -306,13 +306,20 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 3. 2 new unit tests (one per function) in `__tests__/services/financial-report-service.dynamic-main-categories.test.ts`, reproducing the exact multi-price scenario; all 3 pre-existing tests in that file, and the full unit suite (1384 tests), continue to pass.
 4. Operator independently verified the corrected figures directly against live UAT data for the exact business date/category from the original bug report (₦32,000 total, ₦15,500 Beef line — matching expected).
 
-**Residual risk:** Low × low — the fix is verified by tests exercising the exact previously-buggy code path, and the shared-helper extraction removes the structural cause (independent copy-paste) that let the same defect recur twice.
+**Iteration 2 (REQ-101, 2026-09-04, discovered via issue #689):** the Iteration 1 "Low × low" residual rating was premature — it verified that per-line _revenue summation_ was correct, but did not audit per-line _identity/grouping_. The shared `aggregateItemsIntoCategories()` helper (and the structurally-identical map in `generateMainCategoryReport()`) keyed its aggregation `Map` by `menuItemId` alone, so an item sold at full portion (₦1000) and half portion (₦500) — same `menuItemId`, different `portionSize` — was correctly summed but blended into a single displayed row, producing a quantity-weighted average price (₦940) that doesn't match any actual sale price. Verified against production-synced UAT data: "Peppered Meat" — 54 lines at ₦1000 (`portionSize: 'full'`), 16 lines at ₦500 (`portionSize: 'half'`), none price-overridden; `menuitempricehistories` confirms no price change in the window, ruling out the Iteration-1 defect class.
+
+**Controls landed (Iteration 2):**
+
+1. Both aggregation maps (`aggregateItemsIntoCategories()` and `generateMainCategoryReport()`) re-keyed by `${menuItemId}:${portionSize ?? 'full'}` instead of `menuItemId` alone.
+2. Resulting rows for a non-full portion get a display-name suffix (`(Half)` / `(Quarter)`) so the report reads as two distinct SKUs rather than one blended row.
+3. New unit tests pin both the fixed behaviour (mixed-portion split) and the REQ-100 regression case (same-portion, different price → still blended into one row, unaffected by this change).
+4. SRS REQ-REPORT-001 and REQ-MENUMGT-006 updated with an explicit per-`portionSize` row-splitting Given/When/Then (the prior wording only required correct _summation_, silent on row granularity — the actual gap).
+
+**Residual risk (revised):** Low × low retained — but the Iteration-1 rating is now understood to have covered only the summation half of the "multi-line-per-item" surface, not the grouping/identity half. No further known dimension (price override, mid-window price change, portion size) remains unaudited for this pair of aggregation functions as of Iteration 2.
 
 **Framework cross-references:** ISO 27001 A.8.25 (secure SDLC — arithmetic correctness in a financial calculation path, same clause R-018 closed under).
 
-**Cross-links:** [REQ-100 implementation plan](plans/REQ-100/implementation-plan.md); [#676](https://github.com/metasession-dev/wawagardenbar-app/issues/676); SRS REQ-MENUMGT-006, REQ-REPORT-001.
-
-**Cross-links:** [REQ-100 implementation plan](plans/REQ-100/implementation-plan.md); [#676](https://github.com/metasession-dev/wawagardenbar-app/issues/676); SRS REQ-MENUMGT-006.
+**Cross-links:** [REQ-100 implementation plan](plans/REQ-100/implementation-plan.md); [REQ-101 implementation plan](plans/REQ-101/implementation-plan.md); [#676](https://github.com/metasession-dev/wawagardenbar-app/issues/676); [#689](https://github.com/metasession-dev/wawagardenbar-app/issues/689); SRS REQ-MENUMGT-006, REQ-REPORT-001.
 
 ---
 

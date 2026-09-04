@@ -366,6 +366,27 @@ export class FinancialReportService {
    * mid-window menu price change) would otherwise be under/over-counted
    * as `(first-seen price) × (total summed quantity)`.
    */
+  /**
+   * A row key + display name for one order line's aggregation bucket.
+   * Portion size (full/half/quarter) is part of identity, not just price —
+   * two lines for the same `menuItemId` sold at different portion sizes are
+   * different SKUs and must never be summed into one row (REQ-101). An
+   * absent `portionSize` (legacy orders pre-dating the field) defaults to
+   * 'full' so it still keys identically with an explicit 'full' line.
+   */
+  private static portionAggregationIdentity(
+    menuItemId: string,
+    portionSize: string | undefined,
+    name: string
+  ): { key: string; name: string } {
+    const size = portionSize ?? 'full';
+    if (size === 'full') {
+      return { key: menuItemId, name };
+    }
+    const suffix = size === 'half' ? ' (Half)' : ' (Quarter)';
+    return { key: `${menuItemId}:${size}`, name: `${name}${suffix}` };
+  }
+
   private static async aggregateItemsIntoCategories(
     report: DailySummaryReport,
     orders: Array<{
@@ -377,6 +398,7 @@ export class FinancialReportService {
         subtotal?: number;
         costPerUnit?: number;
         mainCategoryAtSale?: string;
+        portionSize?: string;
       }>;
     }>
   ): Promise<void> {
@@ -394,7 +416,12 @@ export class FinancialReportService {
 
     for (const order of orders) {
       for (const item of order.items) {
-        const itemId = item.menuItemId.toString();
+        const { key: itemId, name: displayName } =
+          FinancialReportService.portionAggregationIdentity(
+            item.menuItemId.toString(),
+            item.portionSize,
+            item.name
+          );
         const existing = itemMap.get(itemId);
 
         if (existing) {
@@ -418,7 +445,7 @@ export class FinancialReportService {
           const lineRevenue = item.subtotal ?? item.price * item.quantity;
           const lineCost = resolvedCostPerUnit * item.quantity;
           itemMap.set(itemId, {
-            name: item.name,
+            name: displayName,
             mainCategory: mainCategoryAtSale,
             quantity: item.quantity,
             revenue: lineRevenue,
@@ -1128,7 +1155,12 @@ export class FinancialReportService {
     for (const order of orders) {
       let orderTouchedMain = false;
       for (const item of order.items) {
-        const itemId = item.menuItemId.toString();
+        const { key: itemId, name: displayName } =
+          FinancialReportService.portionAggregationIdentity(
+            item.menuItemId.toString(),
+            item.portionSize,
+            item.name
+          );
         const existing = itemMap.get(itemId);
 
         if (existing) {
@@ -1156,7 +1188,7 @@ export class FinancialReportService {
           const lineRevenue = item.subtotal ?? item.price * item.quantity;
           const lineCost = resolvedCostPerUnit * item.quantity;
           itemMap.set(itemId, {
-            name: item.name,
+            name: displayName,
             category,
             mainCategory,
             quantity: item.quantity,

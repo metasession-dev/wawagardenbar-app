@@ -204,8 +204,14 @@ jobs:
       - name: Dependency Audit
         id: dep-audit
         run: |
+          echo "npm version for this step: $(npm --version)"
+          echo "npm binary path: $(which npm)"
           # stderr → /dev/null so warnings can't corrupt the JSON (DevAudit #48)
           npm audit --json > dependency-audit.json 2>/dev/null || true
+          echo "--- dependency-audit.json (first 2000 chars) ---"
+          head -c 2000 dependency-audit.json || true
+          echo ""
+          echo "--- end dependency-audit.json excerpt ---"
           # The helper evaluates each high/critical advisory independently
           # against the installed package-lock path and writes an auditable
           # decision record. It is intentionally fail-closed: malformed audit

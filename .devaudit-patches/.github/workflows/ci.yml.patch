@@ -1,8 +1,26 @@
 diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
-index 975acc8..44ea2d6 100644
+index 853d989..44ea2d6 100644
 --- a/.github/workflows/ci.yml
 +++ b/.github/workflows/ci.yml
-@@ -204,8 +204,14 @@ jobs:
+@@ -132,6 +132,17 @@ jobs:
+         with:
+           node-version: 20
+ 
++      # Node 20's bundled npm (10.8.2) still calls the `/v1/security/audits/quick`
++      # audit endpoint, which npm has begun actively retiring — it now returns
++      # "400 Bad Request … Invalid package tree, run npm install to rebuild your
++      # package-lock.json" (plus an `npm-notice: This endpoint is being retired`
++      # response header) regardless of lockfile validity. npm 10.9.x+ calls the
++      # replacement `/v1/security/advisories/bulk` endpoint instead, which is
++      # unaffected. Pin npm explicitly rather than relying on Node 20's bundled
++      # version so the Dependency Audit gate doesn't fail on every run.
++      - name: Bump npm past the retired audit-endpoint boundary
++        run: npm install -g npm@^10.9.8
++
+       - name: Install dependencies (skip if lockfile unchanged)
+         run: |
+           LOCK_HASH=$(sha256sum package-lock.json | cut -d' ' -f1)
+@@ -193,8 +204,14 @@ jobs:
        - name: Dependency Audit
          id: dep-audit
          run: |

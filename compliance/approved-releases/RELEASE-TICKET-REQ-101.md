@@ -1,6 +1,6 @@
 # Release Ticket: REQ-101 — Reports Revenue tab blends portion-size sales into one misleading row
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-09-04
 **Requirement ID:** REQ-101
 **Risk Level:** MEDIUM

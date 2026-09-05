@@ -32,6 +32,8 @@ export async function GET() {
         dineInEnabled: settings.dineInEnabled,
         allowGuestCheckout: settings.allowGuestCheckout,
         businessHours: settings.businessHours,
+        showPriceWindow: settings.showPriceWindow,
+        happyHourWindow: settings.happyHourWindow,
         contactEmail: settings.contactEmail,
         contactPhone: settings.contactPhone,
         address: settings.address,
@@ -55,7 +57,10 @@ export async function PUT(request: NextRequest) {
   try {
     // Check authentication and authorization
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     if (!session.userId || session.role !== 'super-admin') {
       return NextResponse.json(
@@ -105,6 +110,8 @@ export async function PUT(request: NextRequest) {
         dineInEnabled: settings.dineInEnabled,
         allowGuestCheckout: settings.allowGuestCheckout,
         businessHours: settings.businessHours,
+        showPriceWindow: settings.showPriceWindow,
+        happyHourWindow: settings.happyHourWindow,
         contactEmail: settings.contactEmail,
         contactPhone: settings.contactPhone,
         address: settings.address,

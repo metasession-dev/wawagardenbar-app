@@ -50,6 +50,9 @@ const menuItemSchema = new Schema<IMenuItem>(
       required: true,
     },
     price: { type: Number, required: true, min: 0 },
+    // REQ-102 — see interfaces/menu-item.interface.ts for the precedence rule.
+    showPrice: { type: Number, required: true, min: 0 },
+    happyHourPrice: { type: Number, required: true, min: 0 },
     costPerUnit: { type: Number, required: true, min: 0, default: 0 },
     images: { type: [String], default: [] },
     customizations: { type: [customizationSchema], default: [] },

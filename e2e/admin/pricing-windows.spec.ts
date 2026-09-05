@@ -81,39 +81,57 @@ superAdminTest.describe('REQ-102: Pricing Windows — dedicated page', () => {
 
       const startInput = page.locator('input[name="happyHourWindow.start"]');
       const endInput = page.locator('input[name="happyHourWindow.end"]');
-      await startInput.fill('16:00');
-      await endInput.fill('18:00');
 
-      await page.getByRole('button', { name: 'Save Pricing Windows' }).click();
-      await expect(
-        page
-          .getByText('Pricing windows updated successfully', { exact: true })
-          .first()
-      ).toBeVisible({ timeout: 10000 });
-      await evidenceShot(page, 'REQ-102', 2, 'happy-hour-window-saved');
+      // input[type="time"] has a segmented native widget — .fill() can
+      // silently no-op under load, leaving the previous value in place.
+      // Retry the fill itself (not just the check) until it visibly
+      // sticks, rather than trusting a single .fill() call.
+      await expect(async () => {
+        await startInput.fill('16:00');
+        await expect(startInput).toHaveValue('16:00', { timeout: 1000 });
+      }).toPass({ timeout: 10000 });
+      await expect(async () => {
+        await endInput.fill('18:00');
+        await expect(endInput).toHaveValue('18:00', { timeout: 1000 });
+      }).toPass({ timeout: 10000 });
 
-      // Confirm persistence via the settings API directly (same module
-      // graph the PUT went through) rather than reloading the dashboard
-      // page — Next.js dev-mode can compile the Server Component page's
-      // module graph separately from the Route Handler's, so an SSR page
-      // re-read is not a reliable same-process cache-consistency check.
-      const after = await page.request.get('/api/settings');
-      const afterJson = await after.json();
-      expect(afterJson.data.happyHourWindow).toMatchObject({
-        enabled: true,
-        start: '16:00',
-        end: '18:00',
-      });
+      try {
+        await page
+          .getByRole('button', { name: 'Save Pricing Windows' })
+          .click();
+        await expect(
+          page
+            .getByText('Pricing windows updated successfully', {
+              exact: true,
+            })
+            .first()
+        ).toBeVisible({ timeout: 10000 });
+        await evidenceShot(page, 'REQ-102', 2, 'happy-hour-window-saved');
 
-      // Restore: disable the window (and its times) so the shared settings
-      // singleton isn't left with a live happy-hour window active for real
-      // customers.
-      const restorePut = await page.request.put('/api/settings', {
-        data: {
-          happyHourWindow: { enabled: false, start: '00:00', end: '00:00' },
-        },
-      });
-      expect(restorePut.ok()).toBe(true);
+        // Confirm persistence via the settings API directly (same module
+        // graph the PUT went through) rather than reloading the dashboard
+        // page — Next.js dev-mode can compile the Server Component page's
+        // module graph separately from the Route Handler's, so an SSR page
+        // re-read is not a reliable same-process cache-consistency check.
+        const after = await page.request.get('/api/settings');
+        const afterJson = await after.json();
+        expect(afterJson.data.happyHourWindow).toMatchObject({
+          enabled: true,
+          start: '16:00',
+          end: '18:00',
+        });
+      } finally {
+        // Restore: disable the window (and its times) so the shared settings
+        // singleton isn't left with a live happy-hour window active for real
+        // customers — even if an assertion above threw, so a failure here
+        // never corrupts state for later test runs.
+        const restorePut = await page.request.put('/api/settings', {
+          data: {
+            happyHourWindow: { enabled: false, start: '00:00', end: '00:00' },
+          },
+        });
+        expect(restorePut.ok()).toBe(true);
+      }
     }
   );
 

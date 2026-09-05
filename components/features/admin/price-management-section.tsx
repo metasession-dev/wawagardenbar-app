@@ -2,12 +2,19 @@
 
 import { useRef } from 'react';
 import { PriceUpdateForm } from './price-update-form';
-import { PriceHistoryViewer, PriceHistoryViewerRef } from './price-history-viewer';
+import {
+  PriceHistoryViewer,
+  PriceHistoryViewerRef,
+} from './price-history-viewer';
 
 interface PriceManagementSectionProps {
   menuItemId: string;
   currentPrice: number;
   currentCostPerUnit: number;
+  /** REQ-102 */
+  currentShowPrice: number;
+  /** REQ-102 */
+  currentHappyHourPrice: number;
   menuItemName: string;
 }
 
@@ -15,6 +22,8 @@ export function PriceManagementSection({
   menuItemId,
   currentPrice,
   currentCostPerUnit,
+  currentShowPrice,
+  currentHappyHourPrice,
   menuItemName,
 }: PriceManagementSectionProps) {
   const priceHistoryRef = useRef<PriceHistoryViewerRef>(null);
@@ -31,6 +40,8 @@ export function PriceManagementSection({
         menuItemId={menuItemId}
         currentPrice={currentPrice}
         currentCostPerUnit={currentCostPerUnit}
+        currentShowPrice={currentShowPrice}
+        currentHappyHourPrice={currentHappyHourPrice}
         menuItemName={menuItemName}
         onPriceUpdated={handlePriceUpdated}
       />

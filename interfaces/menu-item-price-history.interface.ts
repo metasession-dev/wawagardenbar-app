@@ -4,6 +4,9 @@ export interface IMenuItemPriceHistory {
   _id: Types.ObjectId;
   menuItemId: Types.ObjectId;
   price: number;
+  /** REQ-102 — full pricing snapshot now also carries show/happy-hour price. */
+  showPrice: number;
+  happyHourPrice: number;
   costPerUnit: number;
   effectiveFrom: Date;
   effectiveTo?: Date;

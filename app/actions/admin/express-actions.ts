@@ -315,6 +315,8 @@ export async function expressCreateOrderAction(params: {
           _id: m._id.toString(),
           name: m.name,
           price: m.price,
+          showPrice: m.showPrice,
+          happyHourPrice: m.happyHourPrice,
           customizations: m.customizations,
           allowManualPriceOverride: m.allowManualPriceOverride ?? false,
           portionOptions: m.portionOptions,
@@ -325,7 +327,7 @@ export async function expressCreateOrderAction(params: {
     const portionMultiplierFor = (size?: string) =>
       size === 'half' ? 0.5 : size === 'quarter' ? 0.25 : 1.0;
 
-    const reconciled = reconcileAndValidateOrderLines({
+    const reconciled = await reconcileAndValidateOrderLines({
       menuItems: menuMap,
       lines: params.items.map((item) => ({
         menuItemId: item.menuItemId,

@@ -75,6 +75,8 @@ export default async function SettingsPage() {
     pickupEnabled: plainSettings.pickupEnabled,
     dineInEnabled: plainSettings.dineInEnabled,
     businessHours: plainSettings.businessHours,
+    showPriceWindow: plainSettings.showPriceWindow,
+    happyHourWindow: plainSettings.happyHourWindow,
     contactEmail: plainSettings.contactEmail,
     contactPhone: plainSettings.contactPhone,
     address: plainSettings.address,

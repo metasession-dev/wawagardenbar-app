@@ -69,13 +69,20 @@ export class PriceHistoryService {
 
   /**
    * Update menu item price and create history record
+   *
+   * REQ-102: generalised to snapshot all three selling prices (default,
+   * show, happy-hour) plus cost in one history row, extending the
+   * existing single-row-per-change convention that previously only
+   * covered price/costPerUnit.
    */
   static async updatePrice(
     menuItemId: string,
     newPrice: number,
     newCostPerUnit: number,
     reason: PriceChangeReason,
-    changedBy: string
+    changedBy: string,
+    newShowPrice: number,
+    newHappyHourPrice: number
   ): Promise<void> {
     await connectDB();
 
@@ -96,6 +103,8 @@ export class PriceHistoryService {
     await MenuItemPriceHistory.create({
       menuItemId: new Types.ObjectId(menuItemId),
       price: newPrice,
+      showPrice: newShowPrice,
+      happyHourPrice: newHappyHourPrice,
       costPerUnit: newCostPerUnit,
       effectiveFrom: now,
       effectiveTo: null,
@@ -103,9 +112,11 @@ export class PriceHistoryService {
       changedBy: new Types.ObjectId(changedBy),
     });
 
-    // Update menu item with new price
+    // Update menu item with new prices
     await MenuItem.findByIdAndUpdate(menuItemId, {
       price: newPrice,
+      showPrice: newShowPrice,
+      happyHourPrice: newHappyHourPrice,
       costPerUnit: newCostPerUnit,
     });
 

@@ -2,7 +2,13 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,6 +28,10 @@ interface PriceUpdateFormProps {
   menuItemId: string;
   currentPrice: number;
   currentCostPerUnit: number;
+  /** REQ-102 */
+  currentShowPrice: number;
+  /** REQ-102 */
+  currentHappyHourPrice: number;
   menuItemName: string;
   onPriceUpdated?: () => void;
 }
@@ -40,6 +50,8 @@ export function PriceUpdateForm({
   menuItemId,
   currentPrice,
   currentCostPerUnit,
+  currentShowPrice,
+  currentHappyHourPrice,
   menuItemName,
   onPriceUpdated,
 }: PriceUpdateFormProps) {
@@ -51,18 +63,27 @@ export function PriceUpdateForm({
   const [formData, setFormData] = useState({
     price: currentPrice.toString(),
     costPerUnit: currentCostPerUnit.toString(),
+    showPrice: currentShowPrice.toString(),
+    happyHourPrice: currentHappyHourPrice.toString(),
     reason: '' as PriceChangeReason,
   });
 
   const newPrice = parseFloat(formData.price) || 0;
   const newCost = parseFloat(formData.costPerUnit) || 0;
+  const newShowPrice = parseFloat(formData.showPrice) || 0;
+  const newHappyHourPrice = parseFloat(formData.happyHourPrice) || 0;
   const newMargin = newPrice > 0 ? ((newPrice - newCost) / newPrice) * 100 : 0;
   const currentMargin =
-    currentPrice > 0 ? ((currentPrice - currentCostPerUnit) / currentPrice) * 100 : 0;
+    currentPrice > 0
+      ? ((currentPrice - currentCostPerUnit) / currentPrice) * 100
+      : 0;
 
   const priceChanged = newPrice !== currentPrice;
   const costChanged = newCost !== currentCostPerUnit;
-  const hasChanges = priceChanged || costChanged;
+  const showPriceChanged = newShowPrice !== currentShowPrice;
+  const happyHourPriceChanged = newHappyHourPrice !== currentHappyHourPrice;
+  const hasChanges =
+    priceChanged || costChanged || showPriceChanged || happyHourPriceChanged;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -89,6 +110,16 @@ export function PriceUpdateForm({
       return;
     }
 
+    if (newShowPrice <= 0) {
+      setError('Show price must be greater than 0');
+      return;
+    }
+
+    if (newHappyHourPrice <= 0) {
+      setError('Happy hour price must be greater than 0');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -96,6 +127,8 @@ export function PriceUpdateForm({
         menuItemId,
         price: newPrice,
         costPerUnit: newCost,
+        showPrice: newShowPrice,
+        happyHourPrice: newHappyHourPrice,
         reason: formData.reason,
       });
 
@@ -113,7 +146,9 @@ export function PriceUpdateForm({
         setError(result.error || 'Failed to update price');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      setError(
+        err instanceof Error ? err.message : 'An unexpected error occurred'
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -136,11 +171,15 @@ export function PriceUpdateForm({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
             <div>
               <p className="text-sm text-muted-foreground">Current Price</p>
-              <p className="text-2xl font-bold">₦{currentPrice.toLocaleString()}</p>
+              <p className="text-2xl font-bold">
+                ₦{currentPrice.toLocaleString()}
+              </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Current Cost</p>
-              <p className="text-2xl font-bold">₦{currentCostPerUnit.toLocaleString()}</p>
+              <p className="text-2xl font-bold">
+                ₦{currentCostPerUnit.toLocaleString()}
+              </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Current Margin</p>
@@ -157,7 +196,9 @@ export function PriceUpdateForm({
               step="0.01"
               min="0"
               value={formData.price}
-              onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, price: e.target.value })
+              }
               placeholder="Enter new price"
               required
             />
@@ -172,8 +213,44 @@ export function PriceUpdateForm({
               step="0.01"
               min="0"
               value={formData.costPerUnit}
-              onChange={(e) => setFormData({ ...formData, costPerUnit: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, costPerUnit: e.target.value })
+              }
               placeholder="Enter new cost per unit"
+              required
+            />
+          </div>
+
+          {/* New Show Price Input */}
+          <div className="space-y-2">
+            <Label htmlFor="showPrice">New Show Price (₦)</Label>
+            <Input
+              id="showPrice"
+              type="number"
+              step="0.01"
+              min="0"
+              value={formData.showPrice}
+              onChange={(e) =>
+                setFormData({ ...formData, showPrice: e.target.value })
+              }
+              placeholder="Enter new show price"
+              required
+            />
+          </div>
+
+          {/* New Happy Hour Price Input */}
+          <div className="space-y-2">
+            <Label htmlFor="happyHourPrice">New Happy Hour Price (₦)</Label>
+            <Input
+              id="happyHourPrice"
+              type="number"
+              step="0.01"
+              min="0"
+              value={formData.happyHourPrice}
+              onChange={(e) =>
+                setFormData({ ...formData, happyHourPrice: e.target.value })
+              }
+              placeholder="Enter new happy hour price"
               required
             />
           </div>
@@ -229,7 +306,9 @@ export function PriceUpdateForm({
                   </p>
                   <p
                     className={`text-xs ${
-                      newMargin > currentMargin ? 'text-green-600' : 'text-red-600'
+                      newMargin > currentMargin
+                        ? 'text-green-600'
+                        : 'text-red-600'
                     }`}
                   >
                     {newMargin > currentMargin ? '↑' : '↓'}{' '}
@@ -256,7 +335,11 @@ export function PriceUpdateForm({
           )}
 
           {/* Submit Button */}
-          <Button type="submit" disabled={isSubmitting || !hasChanges} className="w-full">
+          <Button
+            type="submit"
+            disabled={isSubmitting || !hasChanges}
+            className="w-full"
+          >
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

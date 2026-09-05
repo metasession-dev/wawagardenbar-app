@@ -46,6 +46,8 @@ async function getMenuItem(itemId: string) {
     mainCategory: menuItem.mainCategory,
     category: menuItem.category,
     price: menuItem.price,
+    showPrice: menuItem.showPrice,
+    happyHourPrice: menuItem.happyHourPrice,
     costPerUnit: menuItem.costPerUnit || 0,
     preparationTime: menuItem.preparationTime,
     servingSize: menuItem.servingSize || '',
@@ -166,6 +168,8 @@ export default async function EditMenuItemPage({
         menuItemId={menuItem._id}
         currentPrice={menuItem.price}
         currentCostPerUnit={menuItem.costPerUnit}
+        currentShowPrice={menuItem.showPrice}
+        currentHappyHourPrice={menuItem.happyHourPrice}
         menuItemName={menuItem.name}
       />
 

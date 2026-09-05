@@ -17,7 +17,17 @@
  *
  * Action wire-up coverage lives in e2e/menu-customization-picker.spec.ts.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+// REQ-102: reconcileAndValidateOrderLines now resolves the active price
+// field via SettingsService — stub it to 'price' (no window active) so
+// these pre-existing tests keep exercising the default-price path.
+vi.mock('@/services', () => ({
+  SettingsService: {
+    resolveActivePriceField: vi.fn().mockResolvedValue('price'),
+  },
+}));
+
 import {
   reconcileAndValidateOrderLines,
   type SubmittedLine,
@@ -28,6 +38,8 @@ const POUNDO: MenuItemForReconcile = {
   _id: 'menu_poundo',
   name: 'Poundo',
   price: 2000,
+  showPrice: 2000,
+  happyHourPrice: 2000,
   customizations: [
     {
       name: 'Soup',
@@ -52,6 +64,8 @@ const FRIES: MenuItemForReconcile = {
   _id: 'menu_fries',
   name: 'Fries',
   price: 1500,
+  showPrice: 1500,
+  happyHourPrice: 1500,
   customizations: [],
 };
 
@@ -62,11 +76,11 @@ function menuMap(
 }
 
 describe('REQ-031: reconcileAndValidateOrderLines — happy paths', () => {
-  it('recomputes subtotal for single legacy line (AC8)', () => {
+  it('recomputes subtotal for single legacy line (AC8)', async () => {
     const lines: SubmittedLine[] = [
       { menuItemId: 'menu_fries', quantity: 2, portionMultiplier: 1 },
     ];
-    const result = reconcileAndValidateOrderLines({
+    const result = await reconcileAndValidateOrderLines({
       menuItems: menuMap(FRIES),
       lines,
     });
@@ -76,7 +90,7 @@ describe('REQ-031: reconcileAndValidateOrderLines — happy paths', () => {
     }
   });
 
-  it('recomputes subtotal with surcharge added (AC12)', () => {
+  it('recomputes subtotal with surcharge added (AC12)', async () => {
     const lines: SubmittedLine[] = [
       {
         menuItemId: 'menu_poundo',
@@ -85,7 +99,7 @@ describe('REQ-031: reconcileAndValidateOrderLines — happy paths', () => {
         customizations: [{ name: 'Soup', option: 'Egusi', price: 500 }],
       },
     ];
-    const result = reconcileAndValidateOrderLines({
+    const result = await reconcileAndValidateOrderLines({
       menuItems: menuMap(POUNDO),
       lines,
     });
@@ -95,7 +109,7 @@ describe('REQ-031: reconcileAndValidateOrderLines — happy paths', () => {
     }
   });
 
-  it('half-portion: surcharge scales with multiplier (AC13)', () => {
+  it('half-portion: surcharge scales with multiplier (AC13)', async () => {
     const lines: SubmittedLine[] = [
       {
         menuItemId: 'menu_poundo',
@@ -104,7 +118,7 @@ describe('REQ-031: reconcileAndValidateOrderLines — happy paths', () => {
         customizations: [{ name: 'Soup', option: 'Egusi', price: 500 }],
       },
     ];
-    const result = reconcileAndValidateOrderLines({
+    const result = await reconcileAndValidateOrderLines({
       menuItems: menuMap(POUNDO),
       lines,
     });
@@ -114,7 +128,7 @@ describe('REQ-031: reconcileAndValidateOrderLines — happy paths', () => {
     }
   });
 
-  it('sums multiple lines into the subtotal', () => {
+  it('sums multiple lines into the subtotal', async () => {
     const lines: SubmittedLine[] = [
       {
         menuItemId: 'menu_poundo',
@@ -124,7 +138,7 @@ describe('REQ-031: reconcileAndValidateOrderLines — happy paths', () => {
       },
       { menuItemId: 'menu_fries', quantity: 1, portionMultiplier: 1 },
     ];
-    const result = reconcileAndValidateOrderLines({
+    const result = await reconcileAndValidateOrderLines({
       menuItems: menuMap(POUNDO, FRIES),
       lines,
     });
@@ -140,6 +154,8 @@ describe('REQ-097: reconcileAndValidateOrderLines — flat portion-option surcha
     _id: 'menu_catfish',
     name: 'Catfish Peppersoup',
     price: 12000,
+    showPrice: 12000,
+    happyHourPrice: 12000,
     portionOptions: {
       halfPortionEnabled: true,
       halfPortionSurcharge: 1000,
@@ -148,11 +164,11 @@ describe('REQ-097: reconcileAndValidateOrderLines — flat portion-option surcha
     },
   };
 
-  it('half portion: recomputed subtotal includes the flat surcharge (#613 repro)', () => {
+  it('half portion: recomputed subtotal includes the flat surcharge (#613 repro)', async () => {
     const lines: SubmittedLine[] = [
       { menuItemId: 'menu_catfish', quantity: 1, portionMultiplier: 0.5 },
     ];
-    const result = reconcileAndValidateOrderLines({
+    const result = await reconcileAndValidateOrderLines({
       menuItems: menuMap(CATFISH_PEPPERSOUP),
       lines,
     });
@@ -163,11 +179,11 @@ describe('REQ-097: reconcileAndValidateOrderLines — flat portion-option surcha
     }
   });
 
-  it('quarter portion: recomputed subtotal includes the flat surcharge (#613 repro)', () => {
+  it('quarter portion: recomputed subtotal includes the flat surcharge (#613 repro)', async () => {
     const lines: SubmittedLine[] = [
       { menuItemId: 'menu_catfish', quantity: 1, portionMultiplier: 0.25 },
     ];
-    const result = reconcileAndValidateOrderLines({
+    const result = await reconcileAndValidateOrderLines({
       menuItems: menuMap(CATFISH_PEPPERSOUP),
       lines,
     });
@@ -177,11 +193,11 @@ describe('REQ-097: reconcileAndValidateOrderLines — flat portion-option surcha
     }
   });
 
-  it('full portion is unaffected by portionOptions being present', () => {
+  it('full portion is unaffected by portionOptions being present', async () => {
     const lines: SubmittedLine[] = [
       { menuItemId: 'menu_catfish', quantity: 1, portionMultiplier: 1 },
     ];
-    const result = reconcileAndValidateOrderLines({
+    const result = await reconcileAndValidateOrderLines({
       menuItems: menuMap(CATFISH_PEPPERSOUP),
       lines,
     });
@@ -191,11 +207,11 @@ describe('REQ-097: reconcileAndValidateOrderLines — flat portion-option surcha
     }
   });
 
-  it('menu item with no portionOptions configured defaults surcharge to 0 (legacy-safe)', () => {
+  it('menu item with no portionOptions configured defaults surcharge to 0 (legacy-safe)', async () => {
     const lines: SubmittedLine[] = [
       { menuItemId: 'menu_poundo', quantity: 1, portionMultiplier: 0.5 },
     ];
-    const result = reconcileAndValidateOrderLines({
+    const result = await reconcileAndValidateOrderLines({
       menuItems: menuMap(POUNDO),
       lines,
     });
@@ -205,14 +221,14 @@ describe('REQ-097: reconcileAndValidateOrderLines — flat portion-option surcha
     }
   });
 
-  it('a clientTotal computed with the correct (surcharge-inclusive) number now passes the tamper-check', () => {
+  it('a clientTotal computed with the correct (surcharge-inclusive) number now passes the tamper-check', async () => {
     // Before REQ-097, a correctly-computing client (e.g. the menu editor's own
     // formula) would have been rejected here because the server recomputed
     // without the surcharge (6000 vs the client's correct 7000).
     const lines: SubmittedLine[] = [
       { menuItemId: 'menu_catfish', quantity: 1, portionMultiplier: 0.5 },
     ];
-    const result = reconcileAndValidateOrderLines({
+    const result = await reconcileAndValidateOrderLines({
       menuItems: menuMap(CATFISH_PEPPERSOUP),
       lines,
       clientTotal: 7000,
@@ -222,7 +238,7 @@ describe('REQ-097: reconcileAndValidateOrderLines — flat portion-option surcha
 });
 
 describe('REQ-031: reconcileAndValidateOrderLines — rejects bad customizations (AC7)', () => {
-  it('rejects when (group, option) pair is unknown', () => {
+  it('rejects when (group, option) pair is unknown', async () => {
     const lines: SubmittedLine[] = [
       {
         menuItemId: 'menu_poundo',
@@ -231,7 +247,7 @@ describe('REQ-031: reconcileAndValidateOrderLines — rejects bad customizations
         customizations: [{ name: 'Sauce', option: 'Mayo', price: 0 }],
       },
     ];
-    const result = reconcileAndValidateOrderLines({
+    const result = await reconcileAndValidateOrderLines({
       menuItems: menuMap(POUNDO),
       lines,
     });
@@ -242,11 +258,11 @@ describe('REQ-031: reconcileAndValidateOrderLines — rejects bad customizations
     }
   });
 
-  it('rejects when menu item is not found (defensive)', () => {
+  it('rejects when menu item is not found (defensive)', async () => {
     const lines: SubmittedLine[] = [
       { menuItemId: 'menu_unknown', quantity: 1, portionMultiplier: 1 },
     ];
-    const result = reconcileAndValidateOrderLines({
+    const result = await reconcileAndValidateOrderLines({
       menuItems: menuMap(POUNDO),
       lines,
     });
@@ -257,7 +273,7 @@ describe('REQ-031: reconcileAndValidateOrderLines — rejects bad customizations
     }
   });
 
-  it('reports the offending line index when error is on a later line', () => {
+  it('reports the offending line index when error is on a later line', async () => {
     const lines: SubmittedLine[] = [
       {
         menuItemId: 'menu_poundo',
@@ -272,7 +288,7 @@ describe('REQ-031: reconcileAndValidateOrderLines — rejects bad customizations
         customizations: [{ name: 'Soup', option: 'Pepper', price: 0 }],
       },
     ];
-    const result = reconcileAndValidateOrderLines({
+    const result = await reconcileAndValidateOrderLines({
       menuItems: menuMap(POUNDO),
       lines,
     });
@@ -283,7 +299,7 @@ describe('REQ-031: reconcileAndValidateOrderLines — rejects bad customizations
     }
   });
 
-  it('does NOT enforce required-group selection server-side (picker is the gate)', () => {
+  it('does NOT enforce required-group selection server-side (picker is the gate)', async () => {
     // Server only validates that what was submitted exists on the menu item.
     // Required-group enforcement is the picker's job (AC1, isValid). This
     // separation matches REQ-030's policy of silent skip at fulfilment.
@@ -295,7 +311,7 @@ describe('REQ-031: reconcileAndValidateOrderLines — rejects bad customizations
         // empty customizations even though Soup is required on the menu item
       },
     ];
-    const result = reconcileAndValidateOrderLines({
+    const result = await reconcileAndValidateOrderLines({
       menuItems: menuMap(POUNDO),
       lines,
     });
@@ -304,7 +320,7 @@ describe('REQ-031: reconcileAndValidateOrderLines — rejects bad customizations
 });
 
 describe('REQ-031: reconcileAndValidateOrderLines — tamper detection (AC15)', () => {
-  it('accepts when client total matches server-recomputed total exactly', () => {
+  it('accepts when client total matches server-recomputed total exactly', async () => {
     const lines: SubmittedLine[] = [
       {
         menuItemId: 'menu_poundo',
@@ -313,7 +329,7 @@ describe('REQ-031: reconcileAndValidateOrderLines — tamper detection (AC15)', 
         customizations: [{ name: 'Soup', option: 'Egusi', price: 500 }],
       },
     ];
-    const result = reconcileAndValidateOrderLines({
+    const result = await reconcileAndValidateOrderLines({
       menuItems: menuMap(POUNDO),
       lines,
       clientTotal: 2500,
@@ -321,7 +337,7 @@ describe('REQ-031: reconcileAndValidateOrderLines — tamper detection (AC15)', 
     expect(result.valid).toBe(true);
   });
 
-  it('accepts when client total differs by ≤ 1-naira rounding tolerance', () => {
+  it('accepts when client total differs by ≤ 1-naira rounding tolerance', async () => {
     const lines: SubmittedLine[] = [
       {
         menuItemId: 'menu_poundo',
@@ -331,7 +347,7 @@ describe('REQ-031: reconcileAndValidateOrderLines — tamper detection (AC15)', 
       },
     ];
     // Server recompute: round(0.5 × (2000 + 333)) = 1167
-    const result = reconcileAndValidateOrderLines({
+    const result = await reconcileAndValidateOrderLines({
       menuItems: menuMap(POUNDO),
       lines,
       clientTotal: 1166, // off by 1, within tolerance
@@ -339,7 +355,7 @@ describe('REQ-031: reconcileAndValidateOrderLines — tamper detection (AC15)', 
     expect(result.valid).toBe(true);
   });
 
-  it('rejects when client total differs by > 1-naira tolerance (tampered client)', () => {
+  it('rejects when client total differs by > 1-naira tolerance (tampered client)', async () => {
     const lines: SubmittedLine[] = [
       {
         menuItemId: 'menu_poundo',
@@ -348,7 +364,7 @@ describe('REQ-031: reconcileAndValidateOrderLines — tamper detection (AC15)', 
         customizations: [{ name: 'Soup', option: 'Egusi', price: 500 }],
       },
     ];
-    const result = reconcileAndValidateOrderLines({
+    const result = await reconcileAndValidateOrderLines({
       menuItems: menuMap(POUNDO),
       lines,
       clientTotal: 1000, // claims to pay 1000 for a 2500 order
@@ -361,11 +377,11 @@ describe('REQ-031: reconcileAndValidateOrderLines — tamper detection (AC15)', 
     }
   });
 
-  it('skips tamper check when clientTotal is undefined (legacy callers)', () => {
+  it('skips tamper check when clientTotal is undefined (legacy callers)', async () => {
     const lines: SubmittedLine[] = [
       { menuItemId: 'menu_fries', quantity: 1, portionMultiplier: 1 },
     ];
-    const result = reconcileAndValidateOrderLines({
+    const result = await reconcileAndValidateOrderLines({
       menuItems: menuMap(FRIES),
       lines,
       // clientTotal omitted

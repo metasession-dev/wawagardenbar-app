@@ -4,6 +4,7 @@ import Inventory from '@/models/inventory-model';
 import { IMenuItem } from '@/interfaces/menu-item.interface';
 import { computeInventoryStatus } from '@/lib/expense-inventory-link';
 import { SystemSettingsService } from './system-settings-service';
+import { SettingsService } from './settings-service';
 
 /**
  * Resolve the stock status to display on customer-facing surfaces.
@@ -31,6 +32,12 @@ function resolveStockStatus(
 export interface MenuItemWithStock extends IMenuItem {
   stockStatus: 'in-stock' | 'low-stock' | 'out-of-stock';
   currentStock?: number;
+  /**
+   * REQ-102 — server-resolved price the customer would actually be
+   * charged right now (happyHourPrice / showPrice / price, per ADR-004's
+   * precedence). Display surfaces render this instead of `price` directly.
+   */
+  displayPrice: number;
 }
 
 /**
@@ -59,6 +66,7 @@ export class CategoryService {
       .sort({ mainCategory: 1, category: 1, name: 1 })
       .lean();
 
+    const activePriceField = await SettingsService.resolveActivePriceField();
     const itemsWithStock = await Promise.all(
       items.map(async (item) => {
         const inventory = await Inventory.findOne({
@@ -68,6 +76,7 @@ export class CategoryService {
           ...item,
           stockStatus: resolveStockStatus(inventory),
           currentStock: inventory?.currentStock,
+          displayPrice: item[activePriceField],
         });
       })
     );
@@ -94,6 +103,7 @@ export class CategoryService {
       .sort({ category: 1, name: 1 })
       .lean();
 
+    const activePriceField = await SettingsService.resolveActivePriceField();
     const itemsWithStock = await Promise.all(
       items.map(async (item) => {
         const inventory = await Inventory.findOne({
@@ -103,6 +113,7 @@ export class CategoryService {
           ...item,
           stockStatus: resolveStockStatus(inventory),
           currentStock: inventory?.currentStock,
+          displayPrice: item[activePriceField],
         });
       })
     );
@@ -126,6 +137,7 @@ export class CategoryService {
       .sort({ name: 1 })
       .lean();
 
+    const activePriceField = await SettingsService.resolveActivePriceField();
     const itemsWithStock = await Promise.all(
       items.map(async (item) => {
         const inventory = await Inventory.findOne({
@@ -135,6 +147,7 @@ export class CategoryService {
           ...item,
           stockStatus: resolveStockStatus(inventory),
           currentStock: inventory?.currentStock,
+          displayPrice: item[activePriceField],
         });
       })
     );
@@ -157,11 +170,13 @@ export class CategoryService {
     if (!item) return null;
 
     const inventory = await Inventory.findOne({ menuItemId: item._id }).lean();
+    const activePriceField = await SettingsService.resolveActivePriceField();
 
     return serializeMenuItem({
       ...item,
       stockStatus: resolveStockStatus(inventory),
       currentStock: inventory?.currentStock,
+      displayPrice: item[activePriceField],
     }) as MenuItemWithStock;
   }
 
@@ -250,6 +265,7 @@ export class CategoryService {
       .sort({ name: 1 })
       .lean();
 
+    const activePriceField = await SettingsService.resolveActivePriceField();
     const itemsWithStock = await Promise.all(
       items.map(async (item) => {
         const inventory = await Inventory.findOne({
@@ -259,6 +275,7 @@ export class CategoryService {
           ...item,
           stockStatus: resolveStockStatus(inventory),
           currentStock: inventory?.currentStock,
+          displayPrice: item[activePriceField],
         });
       })
     );

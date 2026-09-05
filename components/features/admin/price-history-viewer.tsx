@@ -1,7 +1,13 @@
 'use client';
 
 import { useEffect, useState, useImperativeHandle, forwardRef } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { History, TrendingUp, TrendingDown, Minus } from 'lucide-react';
@@ -20,6 +26,10 @@ interface PriceHistoryRecord {
   _id: string;
   menuItemId: string;
   price: number;
+  /** REQ-102 */
+  showPrice: number;
+  /** REQ-102 */
+  happyHourPrice: number;
   costPerUnit: number;
   effectiveFrom: Date;
   effectiveTo?: Date;
@@ -45,42 +55,47 @@ const REASON_LABELS: Record<string, string> = {
   manual_adjustment: 'Manual Adjustment',
 };
 
-export const PriceHistoryViewer = forwardRef<PriceHistoryViewerRef, PriceHistoryViewerProps>(
-  function PriceHistoryViewer({ menuItemId, menuItemName }, ref) {
-    const [history, setHistory] = useState<PriceHistoryRecord[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+export const PriceHistoryViewer = forwardRef<
+  PriceHistoryViewerRef,
+  PriceHistoryViewerProps
+>(function PriceHistoryViewer({ menuItemId, menuItemName }, ref) {
+  const [history, setHistory] = useState<PriceHistoryRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-    async function fetchHistory() {
-      setIsLoading(true);
-      setError(null);
+  async function fetchHistory() {
+    setIsLoading(true);
+    setError(null);
 
-      try {
-        const result = await getPriceHistoryAction(menuItemId, 20);
+    try {
+      const result = await getPriceHistoryAction(menuItemId, 20);
 
-        if (result.success && result.data) {
-          setHistory(result.data as unknown as PriceHistoryRecord[]);
-        } else {
-          setError(result.error || 'Failed to load price history');
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An unexpected error occurred');
-      } finally {
-        setIsLoading(false);
+      if (result.success && result.data) {
+        setHistory(result.data as unknown as PriceHistoryRecord[]);
+      } else {
+        setError(result.error || 'Failed to load price history');
       }
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'An unexpected error occurred'
+      );
+    } finally {
+      setIsLoading(false);
     }
+  }
 
-    useEffect(() => {
-      fetchHistory();
-    }, [menuItemId]);
+  useEffect(() => {
+    fetchHistory();
+  }, [menuItemId]);
 
-    // Expose refresh method to parent
-    useImperativeHandle(ref, () => ({
-      refresh: fetchHistory,
-    }));
+  // Expose refresh method to parent
+  useImperativeHandle(ref, () => ({
+    refresh: fetchHistory,
+  }));
 
   function getPriceChangeIcon(currentPrice: number, previousPrice?: number) {
-    if (!previousPrice) return <Minus className="h-4 w-4 text-muted-foreground" />;
+    if (!previousPrice)
+      return <Minus className="h-4 w-4 text-muted-foreground" />;
     if (currentPrice > previousPrice)
       return <TrendingUp className="h-4 w-4 text-green-600" />;
     if (currentPrice < previousPrice)
@@ -97,7 +112,8 @@ export const PriceHistoryViewer = forwardRef<PriceHistoryViewerRef, PriceHistory
 
     return (
       <Badge variant={change > 0 ? 'default' : 'destructive'} className="ml-2">
-        {change > 0 ? '+' : ''}₦{change.toFixed(2)} ({percentChange > 0 ? '+' : ''}
+        {change > 0 ? '+' : ''}₦{change.toFixed(2)} (
+        {percentChange > 0 ? '+' : ''}
         {percentChange.toFixed(1)}%)
       </Badge>
     );
@@ -145,10 +161,14 @@ export const PriceHistoryViewer = forwardRef<PriceHistoryViewerRef, PriceHistory
             <History className="h-5 w-5" />
             Price History
           </CardTitle>
-          <CardDescription>Price change history for {menuItemName}</CardDescription>
+          <CardDescription>
+            Price change history for {menuItemName}
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">No price history available yet.</p>
+          <p className="text-sm text-muted-foreground">
+            No price history available yet.
+          </p>
         </CardContent>
       </Card>
     );
@@ -170,7 +190,10 @@ export const PriceHistoryViewer = forwardRef<PriceHistoryViewerRef, PriceHistory
         <div className="space-y-4">
           {history.map((record, index) => {
             const previousRecord = history[index + 1];
-            const margin = record.price > 0 ? ((record.price - record.costPerUnit) / record.price) * 100 : 0;
+            const margin =
+              record.price > 0
+                ? ((record.price - record.costPerUnit) / record.price) * 100
+                : 0;
             const isCurrent = !record.effectiveTo;
 
             return (
@@ -189,7 +212,10 @@ export const PriceHistoryViewer = forwardRef<PriceHistoryViewerRef, PriceHistory
                     <div>
                       <p className="font-semibold">
                         ₦{record.price.toLocaleString()}
-                        {getPriceChangeBadge(record.price, previousRecord?.price)}
+                        {getPriceChangeBadge(
+                          record.price,
+                          previousRecord?.price
+                        )}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {new Date(record.effectiveFrom).toLocaleString()}
@@ -207,7 +233,21 @@ export const PriceHistoryViewer = forwardRef<PriceHistoryViewerRef, PriceHistory
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                   <div>
                     <p className="text-muted-foreground">Cost Per Unit</p>
-                    <p className="font-medium">₦{record.costPerUnit.toLocaleString()}</p>
+                    <p className="font-medium">
+                      ₦{record.costPerUnit.toLocaleString()}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Show Price</p>
+                    <p className="font-medium">
+                      ₦{record.showPrice?.toLocaleString() ?? '—'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Happy Hour Price</p>
+                    <p className="font-medium">
+                      ₦{record.happyHourPrice?.toLocaleString() ?? '—'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Profit Margin</p>
@@ -216,7 +256,9 @@ export const PriceHistoryViewer = forwardRef<PriceHistoryViewerRef, PriceHistory
                   <div>
                     <p className="text-muted-foreground">Reason</p>
                     <p className="font-medium">
-                      {record.reason ? REASON_LABELS[record.reason] || record.reason : 'N/A'}
+                      {record.reason
+                        ? REASON_LABELS[record.reason] || record.reason
+                        : 'N/A'}
                     </p>
                   </div>
                   <div>
@@ -232,7 +274,8 @@ export const PriceHistoryViewer = forwardRef<PriceHistoryViewerRef, PriceHistory
                 {/* Effective Period */}
                 {!isCurrent && record.effectiveTo && (
                   <div className="mt-3 pt-3 border-t text-xs text-muted-foreground">
-                    Effective until: {new Date(record.effectiveTo).toLocaleString()}
+                    Effective until:{' '}
+                    {new Date(record.effectiveTo).toLocaleString()}
                   </div>
                 )}
               </div>
@@ -266,7 +309,10 @@ export const PriceHistoryViewer = forwardRef<PriceHistoryViewerRef, PriceHistory
                 <p className="font-bold text-lg">
                   {(
                     history.reduce((sum, h) => {
-                      const m = h.price > 0 ? ((h.price - h.costPerUnit) / h.price) * 100 : 0;
+                      const m =
+                        h.price > 0
+                          ? ((h.price - h.costPerUnit) / h.price) * 100
+                          : 0;
                       return sum + m;
                     }, 0) / history.length
                   ).toFixed(1)}
@@ -279,5 +325,4 @@ export const PriceHistoryViewer = forwardRef<PriceHistoryViewerRef, PriceHistory
       </CardContent>
     </Card>
   );
-  }
-);
+});

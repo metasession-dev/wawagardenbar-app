@@ -2,6 +2,7 @@
  * @requirement REQ-031 - End-to-end multi-inventory deduction for menu items with customization options
  * @requirement REQ-089 - Price override support for admin order management
  * @requirement REQ-097 - Fix half/quarter portion pricing (flat portion-option surcharge)
+ * @requirement REQ-102 - Time-window price resolution (happy-hour > show > default)
  *
  * Server-side reconciler. Single source of truth for the three order-creating
  * actions:
@@ -23,6 +24,10 @@
  *   5. REQ-089: When a line carries an admin price override, use the overridden
  *      price instead of the menu price. The override is only accepted from
  *      admin-authenticated callers.
+ *   6. REQ-102: Before the override check, resolve which of the menu item's
+ *      three prices (price / showPrice / happyHourPrice) is active right now
+ *      per SettingsService.resolveActivePriceField() (ADR-004) — the override
+ *      always wins over whichever price that resolves to.
  */
 
 import {
@@ -30,6 +35,7 @@ import {
   type SelectedCustomization,
 } from './customization-validation';
 import { computeLineTotal } from './cart-line-math';
+import { SettingsService } from '@/services';
 
 const TAMPER_TOLERANCE_NAIRA = 1;
 
@@ -46,6 +52,10 @@ export type MenuItemForReconcile = {
   _id: string;
   name: string;
   price: number;
+  /** REQ-102 */
+  showPrice: number;
+  /** REQ-102 */
+  happyHourPrice: number;
   customizations?: Array<{
     name: string;
     required?: boolean;
@@ -66,7 +76,7 @@ export type ReconcileResult =
   | { valid: true; recomputedSubtotal: number }
   | { valid: false; error: string };
 
-export function reconcileAndValidateOrderLines({
+export async function reconcileAndValidateOrderLines({
   menuItems,
   lines,
   clientTotal,
@@ -74,8 +84,12 @@ export function reconcileAndValidateOrderLines({
   menuItems: Map<string, MenuItemForReconcile>;
   lines: SubmittedLine[];
   clientTotal?: number;
-}): ReconcileResult {
+}): Promise<ReconcileResult> {
   let subtotal = 0;
+
+  // REQ-102: resolved once per call — the active window doesn't change
+  // mid-reconciliation, so every line in this order uses the same field.
+  const activePriceField = await SettingsService.resolveActivePriceField();
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -96,11 +110,15 @@ export function reconcileAndValidateOrderLines({
       };
     }
 
+    // REQ-102: resolve the time-window-active base price before considering
+    // any manual override (ADR-004 precedence: happy-hour > show > default).
+    const basePrice = menuItem[activePriceField];
+
     // REQ-089: use overridden price when admin supplies one and the menu item allows it.
     const effectivePrice =
       line.priceOverride !== undefined && menuItem.allowManualPriceOverride
         ? line.priceOverride
-        : menuItem.price;
+        : basePrice;
 
     // REQ-097: resolve the flat portion-option surcharge from the menu item
     // for the selected portion size — never from the client request.

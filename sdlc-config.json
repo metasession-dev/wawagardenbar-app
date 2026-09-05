@@ -75,5 +75,5 @@
   },
   "integration_branch": "develop",
   "release_branch": "main",
-  "devaudit_synced_version": "1.2.5"
+  "devaudit_synced_version": "1.2.6"
 }

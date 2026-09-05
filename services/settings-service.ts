@@ -229,6 +229,52 @@ class SettingsService {
   }
 
   /**
+   * REQ-102: check if the show-price window is currently active.
+   * Single daily window (not per-weekday, unlike business hours).
+   */
+  static async isShowPriceActive(): Promise<boolean> {
+    const settings = await this.getSettings();
+    const window = settings.showPriceWindow;
+    if (!window?.enabled) {
+      return false;
+    }
+    const currentTime = new Date().toTimeString().slice(0, 5);
+    return currentTime >= window.start && currentTime <= window.end;
+  }
+
+  /**
+   * REQ-102: check if the happy-hour window is currently active.
+   * Single daily window (not per-weekday, unlike business hours).
+   */
+  static async isHappyHourActive(): Promise<boolean> {
+    const settings = await this.getSettings();
+    const window = settings.happyHourWindow;
+    if (!window?.enabled) {
+      return false;
+    }
+    const currentTime = new Date().toTimeString().slice(0, 5);
+    return currentTime >= window.start && currentTime <= window.end;
+  }
+
+  /**
+   * REQ-102: resolve which price field is currently active, per ADR-004's
+   * centralized precedence rule — happy-hour beats show beats default.
+   * Every consumer (order reconciler, public menu display, bulk-edit page)
+   * calls this one function rather than re-implementing the comparison.
+   */
+  static async resolveActivePriceField(): Promise<
+    'happyHourPrice' | 'showPrice' | 'price'
+  > {
+    if (await this.isHappyHourActive()) {
+      return 'happyHourPrice';
+    }
+    if (await this.isShowPriceActive()) {
+      return 'showPrice';
+    }
+    return 'price';
+  }
+
+  /**
    * Get business hours for a specific day
    */
   static async getBusinessHoursForDay(

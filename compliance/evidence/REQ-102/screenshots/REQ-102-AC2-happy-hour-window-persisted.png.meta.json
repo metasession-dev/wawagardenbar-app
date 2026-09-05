@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-102",
+  "ac": 2,
+  "slug": "happy-hour-window-persisted",
+  "specFile": "e2e/settings/pricing-windows.spec.ts",
+  "capturedAt": "2026-09-04T20:24:43.351Z"
+}

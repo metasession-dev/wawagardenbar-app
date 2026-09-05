@@ -11,6 +11,7 @@ import { Plus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MenuItemsClient } from '@/components/features/admin/menu-items-client';
 import { CategoryService } from '@/services/category-service';
+import { Pencil } from 'lucide-react';
 
 /**
  * Get all menu items (customer-facing only — kind:'menu-item').
@@ -206,6 +207,12 @@ export default async function MenuPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link href="/dashboard/menu/edit-all">
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit All
+            </Link>
+          </Button>
           <Button asChild>
             <Link href="/dashboard/menu/new">
               <Plus className="mr-2 h-4 w-4" />

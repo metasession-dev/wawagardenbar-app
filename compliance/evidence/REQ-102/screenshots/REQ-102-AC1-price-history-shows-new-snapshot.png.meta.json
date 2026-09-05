@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-102",
+  "ac": 1,
+  "slug": "price-history-shows-new-snapshot",
+  "specFile": "e2e/admin/price-management-triple-price.spec.ts",
+  "capturedAt": "2026-09-04T20:48:46.745Z"
+}

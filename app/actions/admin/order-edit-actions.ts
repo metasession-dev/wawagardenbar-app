@@ -103,13 +103,15 @@ export async function updateOrderItemsAction(input: UpdateOrderItemsInput) {
           _id: m._id.toString(),
           name: m.name,
           price: m.price,
+          showPrice: m.showPrice,
+          happyHourPrice: m.happyHourPrice,
           customizations: m.customizations,
           allowManualPriceOverride: m.allowManualPriceOverride ?? false,
           portionOptions: m.portionOptions,
         },
       ])
     );
-    const reconciled = reconcileAndValidateOrderLines({
+    const reconciled = await reconcileAndValidateOrderLines({
       menuItems: menuMap,
       lines: input.items.map((item) => ({
         menuItemId: item.menuItemId,

@@ -14,6 +14,18 @@ const menuItemPriceHistorySchema = new Schema<IMenuItemPriceHistory>(
       required: true,
       min: 0,
     },
+    // REQ-102 — full pricing snapshot; required for new rows, absent on
+    // historical rows created before this REQ (never re-validated on read).
+    showPrice: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    happyHourPrice: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
     costPerUnit: {
       type: Number,
       required: true,
@@ -53,13 +65,20 @@ const menuItemPriceHistorySchema = new Schema<IMenuItemPriceHistory>(
 );
 
 // Compound index for efficient date range queries
-menuItemPriceHistorySchema.index({ menuItemId: 1, effectiveFrom: -1, effectiveTo: -1 });
+menuItemPriceHistorySchema.index({
+  menuItemId: 1,
+  effectiveFrom: -1,
+  effectiveTo: -1,
+});
 
 // Index for finding current prices (effectiveTo is null)
 menuItemPriceHistorySchema.index({ menuItemId: 1, effectiveTo: 1 });
 
 const MenuItemPriceHistory =
   models.MenuItemPriceHistory ||
-  model<IMenuItemPriceHistory>('MenuItemPriceHistory', menuItemPriceHistorySchema);
+  model<IMenuItemPriceHistory>(
+    'MenuItemPriceHistory',
+    menuItemPriceHistorySchema
+  );
 
 export default MenuItemPriceHistory;

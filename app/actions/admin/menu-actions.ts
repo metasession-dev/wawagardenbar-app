@@ -10,6 +10,7 @@ import InventoryModel from '@/models/inventory-model';
 import StockMovementModel from '@/models/stock-movement-model';
 import { AuditLogService } from '@/services/audit-log-service';
 import { SystemSettingsService } from '@/services/system-settings-service';
+import { PriceHistoryService } from '@/services/price-history-service';
 import { Types } from 'mongoose';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
@@ -151,6 +152,10 @@ export async function createMenuItemAction(
       mainCategory,
       category,
       price,
+      // REQ-102 — new items start with show/happy-hour price equal to the
+      // default price; adjusted afterward via Price Management if needed.
+      showPrice: price,
+      happyHourPrice: price,
       preparationTime: preparationTime || 15,
       isAvailable,
       portionOptions: {
@@ -957,6 +962,122 @@ export async function duplicateMenuItemAction(
     return {
       success: false,
       error: 'Failed to duplicate menu item',
+    };
+  }
+}
+
+interface UpdateMenuItemRowParams {
+  menuItemId: string;
+  name: string;
+  mainCategory: string;
+  category: string;
+  costPerUnit: number;
+  price: number;
+  showPrice: number;
+  happyHourPrice: number;
+}
+
+/**
+ * REQ-102 — bulk "Edit All" page row save.
+ *
+ * Only touches the fields the bulk table exposes (name, main category,
+ * category, cost/default/show/happy-hour price) — never the full
+ * `updateMenuItemAction` FormData contract, which would blank out fields
+ * (description, preparationTime, etc.) the bulk table doesn't carry.
+ * Price fields go through `PriceHistoryService.updatePrice` — the same
+ * audited snapshot convention as the single-item Price Management form —
+ * so a bulk edit is fully reconstructable from price history like any
+ * other price change (R-026 mitigation).
+ */
+export async function updateMenuItemRowAction(
+  params: UpdateMenuItemRowParams
+): Promise<ActionResult> {
+  try {
+    const cookieStore = await cookies();
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
+
+    // Only super-admin can update prices — same RBAC gate as the
+    // single-item Price Management form, reused verbatim for the bulk path.
+    if (!session.userId || session.role !== 'super-admin') {
+      return { success: false, error: 'Only super-admin can update prices' };
+    }
+
+    await connectDB();
+
+    if (!Types.ObjectId.isValid(params.menuItemId)) {
+      return { success: false, error: 'Invalid menu item ID' };
+    }
+
+    if (!params.name?.trim()) {
+      return { success: false, error: 'Name is required' };
+    }
+
+    if (!params.mainCategory || !params.category) {
+      return {
+        success: false,
+        error: 'Main category and category are required',
+      };
+    }
+
+    if (
+      params.price < 0 ||
+      params.costPerUnit < 0 ||
+      params.showPrice < 0 ||
+      params.happyHourPrice < 0
+    ) {
+      return { success: false, error: 'Prices must be positive numbers' };
+    }
+
+    const menuItem = await MenuItemModel.findById(params.menuItemId);
+    if (!menuItem) {
+      return { success: false, error: 'Menu item not found' };
+    }
+
+    const fieldsChanged =
+      menuItem.name !== params.name ||
+      menuItem.mainCategory !== params.mainCategory ||
+      menuItem.category !== params.category;
+
+    if (fieldsChanged) {
+      await MenuItemModel.findByIdAndUpdate(params.menuItemId, {
+        name: params.name,
+        mainCategory: params.mainCategory,
+        category: params.category,
+      });
+    }
+
+    const pricesChanged =
+      menuItem.price !== params.price ||
+      menuItem.costPerUnit !== params.costPerUnit ||
+      menuItem.showPrice !== params.showPrice ||
+      menuItem.happyHourPrice !== params.happyHourPrice;
+
+    if (pricesChanged) {
+      await PriceHistoryService.updatePrice(
+        params.menuItemId,
+        params.price,
+        params.costPerUnit,
+        'manual_adjustment',
+        session.userId,
+        params.showPrice,
+        params.happyHourPrice
+      );
+    }
+
+    revalidatePath('/dashboard/menu');
+    revalidatePath('/dashboard/menu/edit-all');
+    revalidatePath(`/dashboard/menu/${params.menuItemId}/edit`);
+    revalidatePath('/menu');
+
+    return { success: true, message: 'Menu item updated successfully' };
+  } catch (error) {
+    console.error('Error updating menu item row:', error);
+    return {
+      success: false,
+      error: 'Failed to update menu item',
     };
   }
 }

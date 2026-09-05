@@ -88,6 +88,8 @@ export async function createKitchenIngredientAction(
       mainCategory: 'food',
       category: input.category.trim(),
       price: 0,
+      showPrice: 0,
+      happyHourPrice: 0,
       costPerUnit: 0,
       preparationTime: 0,
       isAvailable: false,

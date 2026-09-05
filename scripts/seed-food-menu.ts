@@ -1,8 +1,8 @@
 /**
  * Seed Food Menu and Inventory
- * 
+ *
  * Populates menu items and inventory from the food menu data
- * 
+ *
  * Usage: npx tsx scripts/seed-food-menu.ts
  */
 
@@ -42,7 +42,8 @@ const foodMenu: FoodItem[] = [
   // Soups & Sauces
   {
     name: 'Efo',
-    description: 'Traditional Nigerian vegetable soup made with fresh spinach and assorted meats. Rich, flavorful, and packed with nutrients - a healthy, satisfying choice.',
+    description:
+      'Traditional Nigerian vegetable soup made with fresh spinach and assorted meats. Rich, flavorful, and packed with nutrients - a healthy, satisfying choice.',
     mainCategory: 'food',
     category: 'soups',
     price: 2000,
@@ -62,7 +63,8 @@ const foodMenu: FoodItem[] = [
   },
   {
     name: 'Ogbono',
-    description: 'Classic Nigerian soup made from ground ogbono seeds. Thick, rich, and deliciously smooth with a unique draw that pairs perfectly with any swallow.',
+    description:
+      'Classic Nigerian soup made from ground ogbono seeds. Thick, rich, and deliciously smooth with a unique draw that pairs perfectly with any swallow.',
     mainCategory: 'food',
     category: 'soups',
     price: 2000,
@@ -82,7 +84,8 @@ const foodMenu: FoodItem[] = [
   },
   {
     name: 'Egusi',
-    description: 'Popular Nigerian melon seed soup with a rich, nutty flavor. Thick, hearty, and loaded with authentic spices - a true Nigerian favorite.',
+    description:
+      'Popular Nigerian melon seed soup with a rich, nutty flavor. Thick, hearty, and loaded with authentic spices - a true Nigerian favorite.',
     mainCategory: 'food',
     category: 'soups',
     price: 1500,
@@ -102,7 +105,8 @@ const foodMenu: FoodItem[] = [
   },
   {
     name: 'Obe Ata and Goat',
-    description: 'Spicy Nigerian pepper sauce with tender goat meat. Bold, fiery flavors that awaken your taste buds - perfect for those who love heat.',
+    description:
+      'Spicy Nigerian pepper sauce with tender goat meat. Bold, fiery flavors that awaken your taste buds - perfect for those who love heat.',
     mainCategory: 'food',
     category: 'sauce',
     price: 2000,
@@ -122,7 +126,8 @@ const foodMenu: FoodItem[] = [
   },
   {
     name: 'Obe Ata and Beef',
-    description: 'Traditional Nigerian pepper sauce with succulent beef. Rich, spicy, and full of authentic flavors that complement any swallow perfectly.',
+    description:
+      'Traditional Nigerian pepper sauce with succulent beef. Rich, spicy, and full of authentic flavors that complement any swallow perfectly.',
     mainCategory: 'food',
     category: 'sauce',
     price: 1500,
@@ -144,7 +149,8 @@ const foodMenu: FoodItem[] = [
   // Swallows
   {
     name: 'Semo',
-    description: 'Smooth, stretchy swallow made from semolina. Light, easy to swallow, and the perfect companion for your favorite Nigerian soup.',
+    description:
+      'Smooth, stretchy swallow made from semolina. Light, easy to swallow, and the perfect companion for your favorite Nigerian soup.',
     mainCategory: 'food',
     category: 'swallow',
     price: 0,
@@ -164,7 +170,8 @@ const foodMenu: FoodItem[] = [
   },
   {
     name: 'Amala',
-    description: 'Traditional Yoruba swallow made from yam flour. Dark, earthy, and authentically Nigerian - a classic choice for soup lovers.',
+    description:
+      'Traditional Yoruba swallow made from yam flour. Dark, earthy, and authentically Nigerian - a classic choice for soup lovers.',
     mainCategory: 'food',
     category: 'swallow',
     price: 0,
@@ -184,7 +191,8 @@ const foodMenu: FoodItem[] = [
   },
   {
     name: 'Eba',
-    description: 'Popular Nigerian swallow made from cassava flour (garri). Firm, filling, and the most beloved companion for any Nigerian soup.',
+    description:
+      'Popular Nigerian swallow made from cassava flour (garri). Firm, filling, and the most beloved companion for any Nigerian soup.',
     mainCategory: 'food',
     category: 'swallow',
     price: 0,
@@ -206,7 +214,8 @@ const foodMenu: FoodItem[] = [
   // Carbs & Mains
   {
     name: 'Rice',
-    description: 'Perfectly cooked white rice, fluffy and aromatic. A versatile base that pairs wonderfully with any of our delicious sauces and stews.',
+    description:
+      'Perfectly cooked white rice, fluffy and aromatic. A versatile base that pairs wonderfully with any of our delicious sauces and stews.',
     mainCategory: 'food',
     category: 'rice-dishes',
     price: 1000,
@@ -226,7 +235,8 @@ const foodMenu: FoodItem[] = [
   },
   {
     name: 'Indomie',
-    description: 'Popular instant noodles prepared fresh with vegetables and seasonings. Quick, tasty, and satisfying - a Nigerian comfort food favorite.',
+    description:
+      'Popular instant noodles prepared fresh with vegetables and seasonings. Quick, tasty, and satisfying - a Nigerian comfort food favorite.',
     mainCategory: 'food',
     category: 'noodles',
     price: 1000,
@@ -248,7 +258,8 @@ const foodMenu: FoodItem[] = [
   // Small Chops
   {
     name: 'Peppered Beef',
-    description: 'Tender beef pieces coated in spicy pepper sauce. Juicy, flavorful, and perfectly seasoned - an irresistible Nigerian snack.',
+    description:
+      'Tender beef pieces coated in spicy pepper sauce. Juicy, flavorful, and perfectly seasoned - an irresistible Nigerian snack.',
     mainCategory: 'food',
     category: 'small-chops',
     price: 1000,
@@ -268,7 +279,8 @@ const foodMenu: FoodItem[] = [
   },
   {
     name: 'Peppered Pomo',
-    description: 'Soft, chewy cow skin in spicy pepper sauce. A unique Nigerian delicacy with bold flavors that keeps you coming back for more.',
+    description:
+      'Soft, chewy cow skin in spicy pepper sauce. A unique Nigerian delicacy with bold flavors that keeps you coming back for more.',
     mainCategory: 'food',
     category: 'small-chops',
     price: 1000,
@@ -288,7 +300,8 @@ const foodMenu: FoodItem[] = [
   },
   {
     name: 'Asun',
-    description: 'Spicy grilled goat meat, a Yoruba delicacy. Smoky, tender, and bursting with bold peppers - perfect with a cold drink.',
+    description:
+      'Spicy grilled goat meat, a Yoruba delicacy. Smoky, tender, and bursting with bold peppers - perfect with a cold drink.',
     mainCategory: 'food',
     category: 'small-chops',
     price: 2000,
@@ -310,7 +323,8 @@ const foodMenu: FoodItem[] = [
   // Pepper Soups
   {
     name: 'Cowtail Peppersoup',
-    description: 'Traditional Nigerian pepper soup with tender cowtail. Aromatic, spicy, and believed to have medicinal properties - comfort in a bowl.',
+    description:
+      'Traditional Nigerian pepper soup with tender cowtail. Aromatic, spicy, and believed to have medicinal properties - comfort in a bowl.',
     mainCategory: 'food',
     category: 'pepper-soup',
     price: 3000,
@@ -330,7 +344,8 @@ const foodMenu: FoodItem[] = [
   },
   {
     name: 'Goat meat pepper soup',
-    description: 'Classic Nigerian pepper soup with succulent goat meat. Hot, aromatic, and deeply satisfying - perfect for any weather or occasion.',
+    description:
+      'Classic Nigerian pepper soup with succulent goat meat. Hot, aromatic, and deeply satisfying - perfect for any weather or occasion.',
     mainCategory: 'food',
     category: 'pepper-soup',
     price: 3000,
@@ -350,7 +365,8 @@ const foodMenu: FoodItem[] = [
   },
   {
     name: 'Catfish Peppersoup',
-    description: 'Premium pepper soup with fresh whole catfish. Rich, spicy, and luxuriously flavorful - a special treat for seafood lovers.',
+    description:
+      'Premium pepper soup with fresh whole catfish. Rich, spicy, and luxuriously flavorful - a special treat for seafood lovers.',
     mainCategory: 'food',
     category: 'pepper-soup',
     price: 8000,
@@ -386,7 +402,9 @@ async function seedFoodMenu() {
     for (const item of foodMenu) {
       try {
         // Check if menu item already exists
-        const existingMenuItem = await MenuItemModel.findOne({ name: item.name });
+        const existingMenuItem = await MenuItemModel.findOne({
+          name: item.name,
+        });
 
         if (existingMenuItem) {
           console.log(`⏭️  Skipping ${item.name} - already exists`);
@@ -401,6 +419,10 @@ async function seedFoodMenu() {
           mainCategory: item.mainCategory,
           category: item.category,
           price: item.price,
+          // REQ-102 — new seed items start with show/happy-hour price
+          // equal to the default price, same as createMenuItemAction.
+          showPrice: item.price,
+          happyHourPrice: item.price,
           costPerUnit: item.inventoryTracking.costPerUnit,
           preparationTime: item.preparationTime,
           tags: item.tags,
@@ -424,7 +446,8 @@ async function seedFoodMenu() {
             costPerUnit: item.inventoryTracking.costPerUnit,
             supplier: item.inventoryTracking.supplier,
             lastRestocked: new Date(),
-            preventOrdersWhenOutOfStock: item.inventoryTracking.preventOrdersWhenOutOfStock,
+            preventOrdersWhenOutOfStock:
+              item.inventoryTracking.preventOrdersWhenOutOfStock,
           });
 
           console.log(`  📦 Created inventory record for ${item.name}`);

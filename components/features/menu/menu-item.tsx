@@ -95,12 +95,12 @@ export function MenuItem({ item }: MenuItemProps) {
               item.portionOptions?.quarterPortionEnabled
                 ? `from ${formatPrice(
                     item.portionOptions?.quarterPortionEnabled
-                      ? Math.round(item.price * 0.25) +
+                      ? Math.round(item.displayPrice * 0.25) +
                           (item.portionOptions?.quarterPortionSurcharge || 0)
-                      : Math.round(item.price * 0.5) +
+                      : Math.round(item.displayPrice * 0.5) +
                           (item.portionOptions?.halfPortionSurcharge || 0)
                   )}`
-                : formatPrice(item.price)}
+                : formatPrice(item.displayPrice)}
             </Badge>
           </div>
           <CardDescription className="line-clamp-2">

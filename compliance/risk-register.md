@@ -545,3 +545,93 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 **Framework cross-references:** ISO 27001 A.8.25; SOC 2 CC7.2 (system monitoring / data integrity).
 
 **Cross-links:** [REQ-098 implementation plan](plans/REQ-098/implementation-plan.md); [#626](https://github.com/metasession-dev/wawagardenbar-app/issues/626); ADR-003.
+
+---
+
+### R-024 — Time-window price precedence bug charges the wrong price (REQ-102)
+
+**Status:** OPEN
+**Opened:** 2026-09-04
+**Owner:** WGB maintainer
+**Review due:** 2027-09-04 (annual review)
+
+**The risk:** REQ-102 adds a happy-hour price and a show price on top of the existing default price, each activated by its own independently-configurable daily window, with a defined precedence (happy-hour > show > default) when windows overlap. A bug in this precedence logic charges the wrong price at the point of sale — unlike REQ-100/R-023's reporting-only defect, this has immediate financial impact (over/undercharging) the moment it ships, which is the reason this REQ is classified HIGH rather than MEDIUM.
+
+**Mitigations planned in this REQ:**
+
+1. Precedence is centralized in one function, `SettingsService.resolveActivePriceField()`, per ADR-004 — every consumer (order reconciler, public menu display, bulk-edit page) calls this one function rather than re-implementing the comparison.
+2. Unit tests cover all four window-state combinations (neither active / show-only / happy-hour-only / both active) directly against `resolveActivePriceField()` and against `reconcileAndValidateOrderLines()`.
+3. Manual smoke test after deploy: enable the happy-hour window briefly, place a real test order via both POS and public checkout, confirm charged price matches.
+
+**Residual likelihood × impact:** low × high (centralized, unit-tested resolution function makes a precedence bug unlikely; if one ships, financial impact is high — same impact profile as R-023, smaller likelihood due to the single-function design)
+
+**Framework cross-references:** ISO27001.A.8.25 (secure SDLC — arithmetic/logical correctness in a financial calculation path, same clause R-018/R-023 closed under); SOC2.CC7.1 (system monitoring — unit test suite as the control)
+
+**Cross-links:** [REQ-102 implementation plan](plans/REQ-102/implementation-plan.md); [#696](https://github.com/metasession-dev/wawagardenbar-app/issues/696); ADR-004; R-023 (prior financial-calculation defect in the same order-pricing lineage).
+
+---
+
+### R-025 — Missing `showPrice`/`happyHourPrice` on legacy documents breaks order creation (REQ-102)
+
+**Status:** OPEN
+**Opened:** 2026-09-04
+**Owner:** WGB maintainer
+**Review due:** 2027-09-04 (annual review)
+
+**The risk:** `showPrice` and `happyHourPrice` are added as required fields on `MenuItem`. Every menu item created before this REQ shipped lacks both fields. If any order-creating or price-display code path reads `menuItem.showPrice`/`menuItem.happyHourPrice` before a migration backfills them, the read resolves to `undefined`, which could either throw (if strictly typed/validated) or silently charge `NaN`/`0` — both are order-creation-breaking failure modes on the entire existing menu, not a narrow edge case.
+
+**Mitigations planned in this REQ:**
+
+1. A one-off migration script backfills `showPrice = price` and `happyHourPrice = price` for every `MenuItem` document missing them, run before the schema-required constraint is relied upon by any read path (AC9).
+2. Manual verification against a dev DB copy confirms every `MenuItem` has non-null `showPrice`/`happyHourPrice` after the migration runs, before the change reaches `develop`.
+
+**Residual likelihood × impact:** low × high (straightforward, verifiable backfill script; if the migration is skipped or fails partially, impact is high — the entire menu could fail to order)
+
+**Framework cross-references:** ISO27001.A.8.25 (secure SDLC — data migration integrity); SOC2.CC8.1 (change management — migration sequenced before dependent code path)
+
+**Cross-links:** [REQ-102 implementation plan](plans/REQ-102/implementation-plan.md); [#696](https://github.com/metasession-dev/wawagardenbar-app/issues/696); R-012 (prior financial-history migration-integrity precedent, REQ-094).
+
+---
+
+### R-026 — Bulk "Edit All" page broadens blast radius of a compromised/careless super-admin session (REQ-102)
+
+**Status:** OPEN
+**Opened:** 2026-09-04
+**Owner:** WGB maintainer
+**Review due:** 2027-09-04 (annual review)
+
+**The risk:** The new bulk-edit page lets one super-admin session change cost price, all three selling prices, name, category, and availability across the entire menu in a single page, with less friction per-change than the existing single-item flow. A compromised or careless super-admin session can do more damage, faster, through this surface than through the existing per-item Price Management form.
+
+**Mitigations planned in this REQ:**
+
+1. The bulk action reuses the exact same RBAC gate as the existing single-item price action (`super-admin` only) — no new, weaker authorization path is introduced for the bulk surface.
+2. Every price change made through the bulk page — like every change made through the single-item form — writes an audited price-history snapshot row via the same generalized `PriceHistoryService` call. No bulk path bypasses the audit trail; a full menu-wide price change is fully reconstructable after the fact from price history.
+
+**Residual likelihood × impact:** low × high (same RBAC + audit controls as the already-accepted single-item flow; impact is high only in the compromised-session scenario, which is already an accepted risk for any super-admin-gated write path in this application)
+
+**Framework cross-references:** ISO27001.A.8.25 (secure SDLC — no new authorization surface); SOC2.CC7.2 (system monitoring / data integrity — audit trail via price-history snapshots)
+
+**Cross-links:** [REQ-102 implementation plan](plans/REQ-102/implementation-plan.md); [#696](https://github.com/metasession-dev/wawagardenbar-app/issues/696).
+
+---
+
+### R-027 — Manual price override loses precedence to time-window price resolution (REQ-102)
+
+**Status:** OPEN
+**Opened:** 2026-09-04
+**Owner:** WGB maintainer
+**Review due:** 2027-09-04 (annual review)
+
+**The risk:** REQ-089's manual price override (R-011) is meant to always win when a staff member explicitly sets one. REQ-102 inserts a new window-based price resolution step ahead of the existing override branch in `lib/order-line-totals.ts`. If the new resolution is wired in incorrectly (e.g. ahead of, rather than feeding into, the override check), a staff-entered override could be silently discarded in favour of the happy-hour/show price during an active window.
+
+**Mitigations planned in this REQ:**
+
+1. AC5 pins the expected behaviour explicitly: override wins regardless of window state.
+2. The window-resolved `basePrice` is computed and then fed into the existing, otherwise-untouched override branch (`line.priceOverride !== undefined && menuItem.allowManualPriceOverride ? line.priceOverride : basePrice`) — the override branch's structure is unchanged, only what it falls back to changes.
+3. A dedicated unit test asserts an override is charged even when the happy-hour window is simultaneously active.
+
+**Residual likelihood × impact:** low × high (single, unchanged conditional structure; a dedicated regression test directly guards this interaction)
+
+**Framework cross-references:** ISO27001.A.8.25 (secure SDLC); SOC2.CC7.1 (system monitoring — regression test as the control)
+
+**Cross-links:** [REQ-102 implementation plan](plans/REQ-102/implementation-plan.md); [#696](https://github.com/metasession-dev/wawagardenbar-app/issues/696); R-011 (the original manual-override control this REQ must not regress); ADR-004.

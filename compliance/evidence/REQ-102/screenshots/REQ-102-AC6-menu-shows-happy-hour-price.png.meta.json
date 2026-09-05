@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-102",
+  "ac": 6,
+  "slug": "menu-shows-happy-hour-price",
+  "specFile": "e2e/customer/menu-price-window-display.spec.ts",
+  "capturedAt": "2026-09-04T20:46:49.564Z"
+}

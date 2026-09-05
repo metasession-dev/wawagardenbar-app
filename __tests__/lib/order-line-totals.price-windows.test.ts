@@ -134,3 +134,24 @@ describe('REQ-102: reconcileAndValidateOrderLines — manual override always win
     if (result.valid) expect(result.recomputedSubtotal).toBe(600);
   });
 });
+
+describe('REQ-102/R-025: falls back to `price` for documents predating the backfill migration', () => {
+  it('charges `price` when the resolved window field is undefined on the menu item', async () => {
+    const unmigratedItem: MenuItemForReconcile = {
+      _id: 'item-3',
+      name: 'Legacy Item',
+      price: 1000,
+      // Simulates a `.lean()` read of a pre-migration document: no
+      // showPrice/happyHourPrice fields exist at all.
+      showPrice: undefined as unknown as number,
+      happyHourPrice: undefined as unknown as number,
+    };
+    resolveActivePriceField.mockResolvedValue('happyHourPrice');
+    const result = await reconcileAndValidateOrderLines({
+      menuItems: new Map([['item-3', unmigratedItem]]),
+      lines: [{ menuItemId: 'item-3', quantity: 1, portionMultiplier: 1.0 }],
+    });
+    expect(result.valid).toBe(true);
+    if (result.valid) expect(result.recomputedSubtotal).toBe(1000);
+  });
+});

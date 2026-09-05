@@ -43,7 +43,10 @@ test.describe('REQ-022: Cost Per Unit field removed from inventory section', () 
     await page.waitForLoadState('networkidle');
 
     // Find and click the first edit link/button for a menu item
-    const editLink = page.locator('a[href*="/menu/"][href*="/edit"]').first();
+    // REQ-102: `$=` (ends-with), not `*=` (contains) — the new "Edit All"
+    // link at /dashboard/menu/edit-all otherwise also matches `*="/edit"`
+    // and, being first in DOM order, shadows every real item edit link.
+    const editLink = page.locator('a[href*="/menu/"][href$="/edit"]').first();
     const editExists = await editLink.count();
 
     if (editExists === 0) {
@@ -88,7 +91,10 @@ test.describe('REQ-022: Cost Per Unit field removed from inventory section', () 
     await page.goto('/dashboard/menu');
     await page.waitForLoadState('networkidle');
 
-    const editLink = page.locator('a[href*="/menu/"][href*="/edit"]').first();
+    // REQ-102: `$=` (ends-with), not `*=` (contains) — the new "Edit All"
+    // link at /dashboard/menu/edit-all otherwise also matches `*="/edit"`
+    // and, being first in DOM order, shadows every real item edit link.
+    const editLink = page.locator('a[href*="/menu/"][href$="/edit"]').first();
     const editExists = await editLink.count();
 
     if (editExists === 0) {
@@ -112,7 +118,10 @@ test.describe('REQ-022: Cost Per Unit field removed from inventory section', () 
     await page.goto('/dashboard/menu');
     await page.waitForLoadState('networkidle');
 
-    const editLink = page.locator('a[href*="/menu/"][href*="/edit"]').first();
+    // REQ-102: `$=` (ends-with), not `*=` (contains) — the new "Edit All"
+    // link at /dashboard/menu/edit-all otherwise also matches `*="/edit"`
+    // and, being first in DOM order, shadows every real item edit link.
+    const editLink = page.locator('a[href*="/menu/"][href$="/edit"]').first();
     const editExists = await editLink.count();
 
     if (editExists === 0) {

@@ -573,19 +573,22 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 
 ### R-025 — Missing `showPrice`/`happyHourPrice` on legacy documents breaks order creation (REQ-102)
 
-**Status:** OPEN
+**Status:** OPEN — CONFIRMED LIVE, MITIGATED
 **Opened:** 2026-09-04
 **Owner:** WGB maintainer
 **Review due:** 2027-09-04 (annual review)
 
 **The risk:** `showPrice` and `happyHourPrice` are added as required fields on `MenuItem`. Every menu item created before this REQ shipped lacks both fields. If any order-creating or price-display code path reads `menuItem.showPrice`/`menuItem.happyHourPrice` before a migration backfills them, the read resolves to `undefined`, which could either throw (if strictly typed/validated) or silently charge `NaN`/`0` — both are order-creation-breaking failure modes on the entire existing menu, not a narrow edge case.
 
+**2026-09-05 update — materialized on Railway UAT:** A super-admin hit "This page couldn't load" navigating to `/dashboard/menu/edit-all`, confirming the predicted failure mode against pre-migration legacy menu items via `.lean()` reads (which bypass Mongoose schema defaults). Fixed same-day with `?? price` fallbacks at all five read sites (`services/category-service.ts` ×5 call sites, both menu-item edit pages, `lib/order-line-totals.ts`) plus a regression-pin unit test (`__tests__/lib/order-line-totals.price-windows.test.ts`). This is a defensive stopgap, not the permanent fix — see mitigation 1 below, still pending as an operator action.
+
 **Mitigations planned in this REQ:**
 
-1. A one-off migration script backfills `showPrice = price` and `happyHourPrice = price` for every `MenuItem` document missing them, run before the schema-required constraint is relied upon by any read path (AC9).
+1. A one-off migration script (`scripts/migrate-show-happy-hour-prices.ts`) backfills `showPrice = price` and `happyHourPrice = price` for every `MenuItem` document missing them. **Not yet run against UAT/prod — pending operator action**, tracked in the release ticket.
 2. Manual verification against a dev DB copy confirms every `MenuItem` has non-null `showPrice`/`happyHourPrice` after the migration runs, before the change reaches `develop`.
+3. **Added 2026-09-05:** `?? price` fallback at every read site, so the app no longer crashes on legacy documents even before the backfill runs (see update above).
 
-**Residual likelihood × impact:** low × high (straightforward, verifiable backfill script; if the migration is skipped or fails partially, impact is high — the entire menu could fail to order)
+**Residual likelihood × impact:** low × high (straightforward, verifiable backfill script; if the migration is skipped or fails partially, impact is high — the entire menu could fail to order). Impact of the underlying gap is now bounded by mitigation 3, but the migration remains the authoritative fix — the fallback silently masks stale pricing rather than resolving it.
 
 **Framework cross-references:** ISO27001.A.8.25 (secure SDLC — data migration integrity); SOC2.CC8.1 (change management — migration sequenced before dependent code path)
 

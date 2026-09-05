@@ -37,8 +37,13 @@ export default async function EditAllMenuItemsPage() {
     category: item.category,
     costPerUnit: item.costPerUnit,
     price: item.price,
-    showPrice: item.showPrice,
-    happyHourPrice: item.happyHourPrice,
+    // REQ-102 — fall back to `price` for documents predating the
+    // showPrice/happyHourPrice backfill migration (R-025): `.lean()`
+    // reads bypass Mongoose schema defaults, so an unmigrated document's
+    // `showPrice`/`happyHourPrice` come back `undefined` here, which
+    // would otherwise crash the table's `.toString()` on the value.
+    showPrice: item.showPrice ?? item.price,
+    happyHourPrice: item.happyHourPrice ?? item.price,
     isAvailable: item.isAvailable,
   }));
 

@@ -205,8 +205,11 @@ superAdminTest.describe('REQ-102: Bulk "Edit All" menu page', () => {
       await expect(saveButton).toBeVisible();
       await saveButton.click();
 
+      // .first() — the toast text is duplicated by an aria-live
+      // announcer span, so the bare regex matches two elements and a
+      // strict-mode toBeVisible() would throw.
       await expect(
-        page.getByText(new RegExp(`${handle!.name}.*updated`, 'i'))
+        page.getByText(new RegExp(`${handle!.name}.*updated`, 'i')).first()
       ).toBeVisible({
         timeout: 10000,
       });

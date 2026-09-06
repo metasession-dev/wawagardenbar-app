@@ -132,8 +132,12 @@ superAdminTest.describe(
 
     superAdminTest(
       'AC6: menu item card shows happyHourPrice while the happy-hour window is active',
-      async ({ page }) => {
+      async ({ page }, testInfo) => {
         tagTest('REQ-102', 6);
+        // The dev-mode cross-bundle cache staleness this test polls
+        // through (see comment below) can take up to the 60s TTL to
+        // clear — give the test room beyond the default 30s.
+        testInfo.setTimeout(90000);
 
         // Read current settings so the happy-hour window can be restored.
         const before = await page.request.get('/api/settings');
@@ -159,13 +163,30 @@ superAdminTest.describe(
 
         // The displayed price is happyHourPrice (₦600), not the default
         // price (₦1,000) or show price (₦800).
-        await expect(page.getByText('₦600').first()).toBeVisible();
-        await evidenceShot(page, 'REQ-102', 6, 'menu-shows-happy-hour-price');
-
-        // Restore the happy-hour window before the next test / suite run.
-        await page.request.put('/api/settings', {
-          data: { happyHourWindow: previousHappyHourWindow },
-        });
+        //
+        // In Next.js dev mode, this public page's Server Component and
+        // the /api/settings Route Handler above can be compiled as
+        // separate bundles, each holding its own copy of
+        // SettingsService's 60s in-memory cache. A page load shortly
+        // after another bundle last read settings can therefore serve a
+        // stale window state for up to that TTL — poll with reloads
+        // rather than asserting once, so the test proves eventual
+        // consistency instead of racing dev-mode module duplication.
+        try {
+          await expect(async () => {
+            await page.reload({ waitUntil: 'domcontentloaded' });
+            await expect(page.getByText('₦600').first()).toBeVisible({
+              timeout: 2000,
+            });
+          }).toPass({ timeout: 65000, intervals: [2000] });
+          await evidenceShot(page, 'REQ-102', 6, 'menu-shows-happy-hour-price');
+        } finally {
+          // Restore the happy-hour window before the next test / suite
+          // run, even if the assertion above timed out.
+          await page.request.put('/api/settings', {
+            data: { happyHourWindow: previousHappyHourWindow },
+          });
+        }
       }
     );
   }

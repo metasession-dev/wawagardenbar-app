@@ -90,18 +90,6 @@ const settingsSchema = z.object({
     }),
   }),
 
-  // REQ-102 — single daily windows (not per-weekday) for show/happy-hour pricing.
-  showPriceWindow: z.object({
-    enabled: z.boolean(),
-    start: z.string(),
-    end: z.string(),
-  }),
-  happyHourWindow: z.object({
-    enabled: z.boolean(),
-    start: z.string(),
-    end: z.string(),
-  }),
-
   // Contact Information
   contactEmail: z.string().email(),
   contactPhone: z.string(),
@@ -189,11 +177,10 @@ export function SettingsForm({
 
   return (
     <Tabs defaultValue="fees" className="w-full">
-      <TabsList className="grid w-full grid-cols-7">
+      <TabsList className="grid w-full grid-cols-6">
         <TabsTrigger value="fees">Fees & Pricing</TabsTrigger>
         <TabsTrigger value="orders">Orders</TabsTrigger>
         <TabsTrigger value="hours">Business Hours</TabsTrigger>
-        <TabsTrigger value="pricing-windows">Pricing Windows</TabsTrigger>
         <TabsTrigger value="contact">Contact Info</TabsTrigger>
         <TabsTrigger value="notifications">Notifications</TabsTrigger>
         <TabsTrigger value="locations">Locations</TabsTrigger>
@@ -654,139 +641,6 @@ export function SettingsForm({
               ))}
             </div>
           </TabsContent>
-
-          {/* Pricing Windows Tab (REQ-102) */}
-          <TabsContent value="pricing-windows" className="space-y-6">
-            <div className="space-y-4">
-              <h3
-                className="text-lg font-semibold"
-                data-testid="show-price-window-heading"
-              >
-                Show Price Window
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                While enabled and within this daily window, menu items use their
-                Show Price instead of their default price.
-              </p>
-              <div className="space-y-2 rounded-lg border p-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-medium">Enabled</h4>
-                  <FormField
-                    control={form.control}
-                    name="showPriceWindow.enabled"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center space-x-2">
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                {form.watch('showPriceWindow.enabled') && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="showPriceWindow.start"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Start</FormLabel>
-                          <FormControl>
-                            <Input type="time" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="showPriceWindow.end"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>End</FormLabel>
-                          <FormControl>
-                            <Input type="time" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h3
-                className="text-lg font-semibold"
-                data-testid="happy-hour-window-heading"
-              >
-                Happy Hour Window
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                While enabled and within this daily window, menu items use their
-                Happy Hour Price. Takes precedence over the Show Price Window if
-                both are active.
-              </p>
-              <div className="space-y-2 rounded-lg border p-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-medium">Enabled</h4>
-                  <FormField
-                    control={form.control}
-                    name="happyHourWindow.enabled"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center space-x-2">
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                {form.watch('happyHourWindow.enabled') && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="happyHourWindow.start"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Start</FormLabel>
-                          <FormControl>
-                            <Input type="time" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="happyHourWindow.end"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>End</FormLabel>
-                          <FormControl>
-                            <Input type="time" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          </TabsContent>
-
           {/* Contact Info Tab */}
           <TabsContent value="contact" className="space-y-6">
             <div className="space-y-4">

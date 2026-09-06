@@ -11,7 +11,7 @@ import { Plus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MenuItemsClient } from '@/components/features/admin/menu-items-client';
 import { CategoryService } from '@/services/category-service';
-import { Pencil } from 'lucide-react';
+import { Pencil, Clock } from 'lucide-react';
 
 /**
  * Get all menu items (customer-facing only — kind:'menu-item').
@@ -211,6 +211,12 @@ export default async function MenuPage() {
             <Link href="/dashboard/menu/edit-all">
               <Pencil className="mr-2 h-4 w-4" />
               Edit All
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/dashboard/menu/pricing-windows">
+              <Clock className="mr-2 h-4 w-4" />
+              Pricing Windows
             </Link>
           </Button>
           <Button asChild>

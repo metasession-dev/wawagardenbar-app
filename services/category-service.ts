@@ -76,7 +76,7 @@ export class CategoryService {
           ...item,
           stockStatus: resolveStockStatus(inventory),
           currentStock: inventory?.currentStock,
-          displayPrice: item[activePriceField],
+          displayPrice: item[activePriceField] ?? item.price, // REQ-102/R-025 fallback
         });
       })
     );
@@ -113,7 +113,7 @@ export class CategoryService {
           ...item,
           stockStatus: resolveStockStatus(inventory),
           currentStock: inventory?.currentStock,
-          displayPrice: item[activePriceField],
+          displayPrice: item[activePriceField] ?? item.price, // REQ-102/R-025 fallback
         });
       })
     );
@@ -147,7 +147,7 @@ export class CategoryService {
           ...item,
           stockStatus: resolveStockStatus(inventory),
           currentStock: inventory?.currentStock,
-          displayPrice: item[activePriceField],
+          displayPrice: item[activePriceField] ?? item.price, // REQ-102/R-025 fallback
         });
       })
     );
@@ -176,7 +176,7 @@ export class CategoryService {
       ...item,
       stockStatus: resolveStockStatus(inventory),
       currentStock: inventory?.currentStock,
-      displayPrice: item[activePriceField],
+      displayPrice: item[activePriceField] ?? item.price, // REQ-102/R-025 fallback
     }) as MenuItemWithStock;
   }
 
@@ -275,7 +275,7 @@ export class CategoryService {
           ...item,
           stockStatus: resolveStockStatus(inventory),
           currentStock: inventory?.currentStock,
-          displayPrice: item[activePriceField],
+          displayPrice: item[activePriceField] ?? item.price, // REQ-102/R-025 fallback
         });
       })
     );

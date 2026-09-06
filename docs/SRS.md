@@ -155,6 +155,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-MENUMGT-007  | Menu management item lists use progressive category display with grouped items              | Should   | regression | `components/features/admin/menu-items-client.tsx`; `menu-item-form.tsx`; `menu-item-edit-form.tsx`; REQ-082      |
 | REQ-MENUMGT-008  | Price Management: default/show/happy-hour price editing with audited history                | Should   | regression | `components/features/admin/price-update-form.tsx`; `services/price-history-service.ts`; REQ-102                  |
 | REQ-MENUMGT-009  | "Edit All" bulk page: view/edit price fields, name, categories, availability                | Should   | regression | `app/dashboard/menu/edit-all/page.tsx`; `components/features/admin/menu-edit-all-table.tsx`; REQ-102             |
+| REQ-MENUMGT-010  | Pricing Windows: dedicated configuration page (linked from Menu, not Settings)              | Should   | regression | `app/dashboard/menu/pricing-windows/page.tsx`; `components/features/admin/pricing-windows-form.tsx`; REQ-102     |
 | REQ-CUST-001     | Customer list (csr/super-admin)                                                             | Should   | regression | `app/dashboard/customers/page.tsx`                                                                               |
 | REQ-CUST-002     | Delete + recreate customer by email                                                         | Could    | extended   | REQ-027                                                                                                          |
 | REQ-INV-001      | Inventory list with live status                                                             | Should   | regression | `app/dashboard/inventory/page.tsx:77`                                                                            |
@@ -435,7 +436,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 #### REQ-ORDER-006 — Time-window price resolution at order creation (happy-hour > show > default; override wins) · **Must** · regression
 
 **Source:** `lib/order-line-totals.ts` (`reconcileAndValidateOrderLines`), `services/settings-service.ts` (`isShowPriceActive`, `isHappyHourActive`, `resolveActivePriceField`); cross-ref REQ-089 (manual price override), REQ-102. Shared by all three order-creating paths: `app/api/public/orders/route.ts`, `app/actions/admin/express-actions.ts`, `app/actions/admin/order-edit-actions.ts`.
-**Behaviour:** Each menu item has a default, show, and happy-hour price. Two independently-configurable daily time windows (Show Price Window, Happy Hour Window — see REQ-SETTINGS-001) determine which price is charged for a line, in this precedence: happy-hour (if its window is active) beats show (if its window is active) beats default (if neither is active). A line-level manual price override (REQ-089, `allowManualPriceOverride` items only) always wins over the window-resolved price, regardless of window state.
+**Behaviour:** Each menu item has a default, show, and happy-hour price. Two independently-configurable daily time windows (Show Price Window, Happy Hour Window — see REQ-MENUMGT-010) determine which price is charged for a line, in this precedence: happy-hour (if its window is active) beats show (if its window is active) beats default (if neither is active). A line-level manual price override (REQ-089, `allowManualPriceOverride` items only) always wins over the window-resolved price, regardless of window state.
 
 - **Given** the happy-hour window is active (regardless of the show-price window's state), **When** an order is created via any of the three order-creating paths, **Then** the charged line price is the item's `happyHourPrice`.
 - **Given** only the show-price window is active, **When** an order is created, **Then** the charged line price is the item's `showPrice`.
@@ -909,6 +910,15 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 - **Given** the table is showing all items, **When** the super-admin selects a main category (and optionally a category within it), **Then** only matching items remain visible.
 - **Given** a row's price fields are edited and saved, **When** the save completes, **Then** a new price-history snapshot row is created for that item (same as REQ-MENUMGT-008) and the table reflects the saved values without a full page reload.
 
+#### REQ-MENUMGT-010 — Pricing Windows: dedicated configuration page · **Should** · regression
+
+**Source:** `app/dashboard/menu/pricing-windows/page.tsx`, `components/features/admin/pricing-windows-form.tsx`, `app/api/settings/route.ts`; cross-ref REQ-102, REQ-MENUMGT-008. Amends REQ-102 AC2 (2026-09-05): this page replaces an earlier Settings-tab design.
+**Behaviour:** A super-admin independently enables/configures the "Show Price Window" and/or "Happy Hour Window" (each a single daily enabled + start/end, same convention as Settings' Business Hours) on a dedicated page at `/dashboard/menu/pricing-windows`, reached via a "Pricing Windows" button next to "Edit All" on `/dashboard/menu`. Saving persists both windows via `PUT /api/settings` without touching any other settings, including Business Hours on `/dashboard/settings`.
+
+- **Given** `/dashboard/menu`, **When** a super-admin clicks "Pricing Windows", **Then** they land on `/dashboard/menu/pricing-windows` showing both the Show Price Window and Happy Hour Window sections.
+- **Given** the Pricing Windows page, **When** a super-admin enables/configures either window and saves, **Then** the change persists and is readable back via `GET /api/settings`, and Business Hours on `/dashboard/settings` is unaffected.
+- **Given** `/dashboard/settings`, **When** it renders, **Then** no "Pricing Windows" tab is present — the windows live only on the dedicated page.
+
 ---
 
 ## Feature Area 14 — Customers (CUST)
@@ -1198,10 +1208,9 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 
 #### REQ-SETTINGS-001 — Fees/delivery/hours config · **Should** · regression
 
-**Source:** `app/dashboard/settings/page.tsx`, `SettingsForm`, `app/api/settings/route.ts`; cross-ref REQ-102 (Show Price Window / Happy Hour Window sections added alongside Business Hours).
+**Source:** `app/dashboard/settings/page.tsx`, `SettingsForm`, `app/api/settings/route.ts`.
 
 - **Given** the settings hub, **When** a super-admin changes service fee % / delivery toggles / business hours and saves, **Then** the change persists and is reflected in checkout and the public settings endpoint.
-- **Given** the settings hub, **When** a super-admin independently enables/configures the "Show Price Window" and/or "Happy Hour Window" (each a single daily enabled + start/end, same convention as Business Hours) and saves, **Then** both windows persist via `PUT /api/settings` without affecting Business Hours, and each is readable back via `GET /api/settings`.
 
 #### REQ-SETTINGS-002 — Admin management · **Should** · regression
 

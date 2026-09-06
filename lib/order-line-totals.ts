@@ -112,7 +112,12 @@ export async function reconcileAndValidateOrderLines({
 
     // REQ-102: resolve the time-window-active base price before considering
     // any manual override (ADR-004 precedence: happy-hour > show > default).
-    const basePrice = menuItem[activePriceField];
+    // REQ-102/R-025 fallback — documents predating the showPrice/
+    // happyHourPrice backfill migration read back `undefined` for those
+    // fields (all three call sites fetch via `.lean()`, which bypasses
+    // Mongoose schema defaults); never let an unmigrated document resolve
+    // to a NaN/undefined charged price.
+    const basePrice = menuItem[activePriceField] ?? menuItem.price;
 
     // REQ-089: use overridden price when admin supplies one and the menu item allows it.
     const effectivePrice =

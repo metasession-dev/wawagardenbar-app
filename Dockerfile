@@ -55,30 +55,32 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
 # Copy only production dependencies (excludes dev deps like TypeScript, ESLint, etc.)
-COPY --from=prod-deps /app/node_modules ./node_modules
+# --chown here (and below) sets ownership per-layer during the copy itself,
+# instead of one final `chown -R /app` that has to walk the entire tree
+# (including all of node_modules) as an uncacheable, single-threaded step —
+# that final chown was observed taking 80+ minutes under host I/O
+# contention despite the copy itself being fast.
+COPY --from=prod-deps --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 # Copy Next.js build output
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/tsconfig.json ./tsconfig.json
+COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
+COPY --from=builder --chown=nextjs:nodejs /app/tsconfig.json ./tsconfig.json
 
 # Copy custom server (tsx will compile on-the-fly but it's in prod deps)
-COPY --from=builder /app/server.ts ./server.ts
-COPY --from=builder /app/lib ./lib
+COPY --from=builder --chown=nextjs:nodejs /app/server.ts ./server.ts
+COPY --from=builder --chown=nextjs:nodejs /app/lib ./lib
 
 # Copy scripts directory for database management
-COPY --from=builder /app/scripts ./scripts
-COPY --from=builder /app/models ./models
-COPY --from=builder /app/interfaces ./interfaces
-COPY --from=builder /app/services ./services
+COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
+COPY --from=builder --chown=nextjs:nodejs /app/models ./models
+COPY --from=builder --chown=nextjs:nodejs /app/interfaces ./interfaces
+COPY --from=builder --chown=nextjs:nodejs /app/services ./services
 
-# Create uploads directory with proper permissions
+# Create uploads directory with proper ownership (empty dir — cheap either way)
 RUN mkdir -p /app/public/uploads/menu-items && \
     chown -R nextjs:nodejs /app/public/uploads
-
-# Set proper permissions
-RUN chown -R nextjs:nodejs /app
 
 # Switch to non-root user
 USER nextjs

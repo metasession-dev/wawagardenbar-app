@@ -4,6 +4,25 @@
 >
 > **Successor:** REQ-031 / issue #67 / `compliance/evidence/REQ-031/`
 
+> **2026-09-07 addendum — unrelated maintenance fix tracked under this same
+> REQ ID.** PR #709 fixed an E2E selector collision in
+> `e2e/menu-customization-inventory.spec.ts` (this REQ's own spec file,
+> still live and in active use despite the feature ticket above being
+> superseded) and `e2e/menu-customization-picker.spec.ts`, caused by
+> REQ-102's new "Edit All" button broadening what a loose `/edit/i`
+> locator matches on `/dashboard/menu`. No application behavior changed.
+> See `compliance/evidence/REQ-030/` for this fix's own test-scope,
+> test-plan, and test-execution-summary. Filed under REQ-030 (the spec's
+> original owning requirement) rather than a fresh REQ number since the
+> `e2e-test-engineer`/`sdlc-implementer` convention ties evidence to the
+> REQ a spec file already carries in its `@requirement` annotation. See
+> the "Absorbed predecessor releases" line below (kept unindented so
+> `scripts/generate-bundled-changes.sh` can find it).
+
+- **Absorbed predecessor releases:** REQ-102 — already fully deployed to
+  production (PR #699, commit `5da6667`, confirmed live) before this fix
+  was authored; not re-bundled here.
+
 **Status:** SUPERSEDED (was: TESTED - PENDING SIGN-OFF)
 **Date:** 2026-04-24
 **Requirement ID:** REQ-030

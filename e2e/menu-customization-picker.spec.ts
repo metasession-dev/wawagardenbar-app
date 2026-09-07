@@ -13,6 +13,8 @@
 import { test as base, expect, Page } from '@playwright/test';
 import path from 'path';
 import { revealFirstExpressMenuCard } from './helpers/express-menu';
+import { tagTest } from './helpers/test-tags';
+import { evidenceShot } from './helpers/evidence';
 
 const SUPER_ADMIN_FILE = path.join(__dirname, '../.auth/super-admin.json');
 
@@ -85,18 +87,24 @@ superAdminTest.describe('REQ-031: Customization picker — user journeys', () =>
   superAdminTest(
     'AC14: Admin builder live combined-price preview renders for menu items with surcharges',
     async ({ page }, testInfo) => {
+      tagTest('REQ-031', 14);
       await page.goto('/dashboard/menu');
       await page.waitForLoadState('networkidle');
 
-      const editLink = page
-        .getByRole('link', { name: /edit/i })
-        .or(page.getByRole('button', { name: /edit/i }))
+      // The real per-item edit control lives inside a row's kebab dropdown
+      // (menu-items-table.tsx's "Open menu" trigger -> "Edit" menuitem) —
+      // a broad /edit/i link/button match is unsafe here since REQ-102's
+      // "Edit All" bulk-edit button also matches /edit/i and sits before
+      // any row in DOM order.
+      const rowMenuTrigger = page
+        .getByRole('button', { name: /open menu/i })
         .first();
-      if (!(await editLink.isVisible().catch(() => false))) {
+      if (!(await rowMenuTrigger.isVisible().catch(() => false))) {
         testInfo.skip(true, 'No editable menu items on UAT — skipping');
         return;
       }
-      await editLink.click();
+      await rowMenuTrigger.click();
+      await page.getByRole('menuitem', { name: /^edit$/i }).click();
       await page.waitForLoadState('networkidle');
 
       // Scroll to the customization options builder
@@ -110,6 +118,12 @@ superAdminTest.describe('REQ-031: Customization picker — user journeys', () =>
         );
         return;
       }
+      await evidenceShot(
+        page,
+        'REQ-031',
+        14,
+        'admin-builder-customization-card'
+      );
 
       // The combined-price preview only appears for items that have at
       // least one option name set. If a preview is visible, assert it

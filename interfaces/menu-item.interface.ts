@@ -75,6 +75,18 @@ export interface IMenuItem {
   mainCategory: MenuMainCategory;
   category: MenuCategory;
   price: number;
+  /**
+   * REQ-102 — price used when the settings-configured "Show Price Window"
+   * is active and the (higher-precedence) Happy Hour Window is not.
+   * Required like `price`; existing items are backfilled to equal `price`.
+   */
+  showPrice: number;
+  /**
+   * REQ-102 — price used when the settings-configured "Happy Hour Window"
+   * is active, taking precedence over both `showPrice` and `price`.
+   * Required like `price`; existing items are backfilled to equal `price`.
+   */
+  happyHourPrice: number;
   costPerUnit: number;
   images: string[];
   customizations: ICustomization[];

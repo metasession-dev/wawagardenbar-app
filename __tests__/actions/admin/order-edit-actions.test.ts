@@ -19,6 +19,8 @@ vi.mock('@/services', () => ({
       serviceCharge: 0,
       deliveryFee: 0,
     }),
+    // REQ-102: no window active in these portion/override/instructions tests.
+    resolveActivePriceField: vi.fn().mockResolvedValue('price'),
   },
 }));
 
@@ -78,6 +80,8 @@ describe('REQ-089: updateOrderItemsAction — portion, price override, instructi
         _id: { toString: () => '507f1f77bcf86cd799439012' },
         name: 'Efo Riro',
         price: 5000,
+        showPrice: 5000,
+        happyHourPrice: 5000,
         category: 'Food',
         portionOptions: true,
         allowManualPriceOverride: false,
@@ -119,6 +123,8 @@ describe('REQ-089: updateOrderItemsAction — portion, price override, instructi
         _id: { toString: () => '507f1f77bcf86cd799439012' },
         name: 'Special Item',
         price: 10000,
+        showPrice: 10000,
+        happyHourPrice: 10000,
         category: 'Drinks',
         allowManualPriceOverride: true,
         isAvailable: true,
@@ -161,6 +167,8 @@ describe('REQ-089: updateOrderItemsAction — portion, price override, instructi
         _id: { toString: () => '507f1f77bcf86cd799439012' },
         name: 'Jollof Rice',
         price: 3000,
+        showPrice: 3000,
+        happyHourPrice: 3000,
         category: 'Food',
         allowManualPriceOverride: false,
         isAvailable: true,

@@ -9,6 +9,7 @@ Updated `docker-compose.prod.yml` and `.env.docker.example` to use the correct e
 ## Changes Made
 
 ### 1. **MongoDB Configuration** ✅
+
 ```yaml
 # BEFORE (incorrect)
 - MONGODB_URI=${MONGODB_URI:-mongodb://mongodb:27017/wawa-garden-bar}
@@ -17,11 +18,13 @@ Updated `docker-compose.prod.yml` and `.env.docker.example` to use the correct e
 - MONGODB_WAWAGARDENBAR_APP_URI=${MONGODB_WAWAGARDENBAR_APP_URI}
 - MONGODB_DB_NAME=${MONGODB_DB_NAME}
 ```
+
 **Reason**: `lib/mongodb.ts` uses `MONGODB_WAWAGARDENBAR_APP_URI` and `MONGODB_DB_NAME`
 
 ---
 
 ### 2. **Session Configuration** ✅
+
 ```yaml
 # BEFORE (incorrect)
 - SESSION_SECRET=${SESSION_SECRET}
@@ -30,11 +33,13 @@ Updated `docker-compose.prod.yml` and `.env.docker.example` to use the correct e
 - SESSION_PASSWORD=${SESSION_PASSWORD}
 - SESSION_COOKIE_NAME=${SESSION_COOKIE_NAME:-wawa_session}
 ```
+
 **Reason**: `lib/session.ts` uses `SESSION_PASSWORD` and `SESSION_COOKIE_NAME`
 
 ---
 
 ### 3. **Email Configuration** ✅
+
 ```yaml
 # BEFORE (incorrect)
 - EMAIL_HOST=${EMAIL_HOST}
@@ -47,13 +52,15 @@ Updated `docker-compose.prod.yml` and `.env.docker.example` to use the correct e
 - SMTP_PORT=${SMTP_PORT}
 - SMTP_USER=${SMTP_USER}
 - SMTP_PASSWORD=${SMTP_PASSWORD}
-- EMAIL_FROM=${EMAIL_FROM}  # This one was already correct
+- EMAIL_FROM=${EMAIL_FROM} # This one was already correct
 ```
+
 **Reason**: `lib/email.ts` uses `SMTP_*` prefix for email configuration
 
 ---
 
 ### 4. **Monnify Payment Gateway** ✅
+
 ```yaml
 # BEFORE (incomplete)
 - MONNIFY_API_KEY=${MONNIFY_API_KEY}
@@ -68,22 +75,26 @@ Updated `docker-compose.prod.yml` and `.env.docker.example` to use the correct e
 - MONNIFY_WEBHOOK_SECRET=${MONNIFY_WEBHOOK_SECRET}
 - Wallet_Account_Number=${Wallet_Account_Number}
 ```
+
 **Reason**: `services/monnify-service.ts` uses `MONNIFY_BASE_URL`, and webhooks need `MONNIFY_WEBHOOK_SECRET`
 
 ---
 
 ### 5. **Application Configuration** ✅
+
 ```yaml
 # ADDED (were missing)
 - PORT=${PORT:-3002}
 - API_URL=${API_URL}
 - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ```
+
 **Reason**: Required by various parts of the application
 
 ---
 
 ### 6. **Port Configuration** ✅
+
 ```yaml
 # BEFORE
 ports:
@@ -93,11 +104,13 @@ ports:
 ports:
   - "127.0.0.1:3002:3002"
 ```
+
 **Reason**: Matches your production setup (port 3002, localhost only)
 
 ---
 
 ### 7. **Health Check** ✅
+
 ```yaml
 # BEFORE
 test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', ...)"]
@@ -105,11 +118,13 @@ test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/heal
 # AFTER
 test: ["CMD", "node", "-e", "require('http').get('http://localhost:3002/api/health', ...)"]
 ```
+
 **Reason**: Updated to use correct port 3002
 
 ---
 
 ### 8. **Network Configuration** ✅
+
 ```yaml
 # BEFORE
 networks:
@@ -121,11 +136,13 @@ networks:
   ostendo-network:
     external: true
 ```
+
 **Reason**: Matches your production setup using external `ostendo-network`
 
 ---
 
 ### 9. **MongoDB Service Removed** ✅
+
 Removed the standalone MongoDB service definition since your production uses a shared external `mongo` container.
 
 ---
@@ -135,6 +152,7 @@ Removed the standalone MongoDB service definition since your production uses a s
 Here's the complete list of environment variables your application needs:
 
 ### **Required Variables**
+
 ```bash
 # Database
 MONGODB_WAWAGARDENBAR_APP_URI=mongodb://user:password@mongo:27017/wawagardenbar-app?authSource=admin
@@ -172,6 +190,7 @@ EMAIL_FROM=Wawa Garden Bar <noreply@wawagardenbar.com>
 ```
 
 ### **Optional Variables**
+
 ```bash
 # Instagram Integration
 INSTAGRAM_APP_ID=your_instagram_app_id
@@ -179,6 +198,23 @@ INSTAGRAM_APP_SECRET=your_instagram_app_secret
 
 # GitHub Container Registry
 GITHUB_REPOSITORY=ostendo-io/wawagardenbar-app
+
+# Business timezone (IANA name) used by SettingsService for Business
+# Hours / Show Price Window / Happy Hour Window comparisons and the
+# next-open-slot / pickup-slot calculations (see lib/business-time.ts).
+# Decouples "is this window active right now" from whatever timezone the
+# host/pod/server actually runs in — a containerized deploy typically
+# defaults to UTC regardless of where the business is. Defaults to
+# "Africa/Lagos" if unset.
+BUSINESS_TIMEZONE=Africa/Lagos
+
+# Overrides the session cookie's Secure flag (normally tied to
+# NODE_ENV === 'production'). Set to "false" for an otherwise
+# production-configured environment served over plain HTTP with no TLS
+# yet (e.g. an internal LAN-only deployment) — browsers silently refuse
+# to store a Secure cookie over HTTP, which breaks login. Leave unset on
+# any environment served over HTTPS.
+SESSION_COOKIE_SECURE=true
 ```
 
 ---
@@ -205,6 +241,7 @@ GITHUB_REPOSITORY=ostendo-io/wawagardenbar-app
 If you have an existing `.env` file with the old variable names, here's how to migrate:
 
 ### **Variable Name Changes**
+
 ```bash
 # Old Name → New Name
 MONGODB_URI → MONGODB_WAWAGARDENBAR_APP_URI
@@ -216,6 +253,7 @@ EMAIL_PASSWORD → SMTP_PASSWORD
 ```
 
 ### **New Variables to Add**
+
 ```bash
 MONGODB_DB_NAME=wawagardenbar-app
 SESSION_COOKIE_NAME=wawa_session
@@ -234,16 +272,19 @@ Wallet_Account_Number=your_wallet_account
 To verify your environment variables are correct:
 
 1. **Check MongoDB connection**:
+
    ```bash
    docker exec wawa-garden-bar env | grep MONGODB
    ```
 
 2. **Check session configuration**:
+
    ```bash
    docker exec wawa-garden-bar env | grep SESSION
    ```
 
 3. **Check email configuration**:
+
    ```bash
    docker exec wawa-garden-bar env | grep SMTP
    ```
@@ -258,20 +299,24 @@ To verify your environment variables are correct:
 ## Troubleshooting
 
 ### **MongoDB Connection Fails**
+
 - Verify `MONGODB_WAWAGARDENBAR_APP_URI` is set correctly
 - Verify `MONGODB_DB_NAME` matches your database name
 - Check if `mongo` container is running: `docker ps | grep mongo`
 
 ### **Session Errors**
+
 - Verify `SESSION_PASSWORD` is at least 32 characters
 - Check `SESSION_COOKIE_NAME` is set
 
 ### **Email Not Sending**
+
 - Verify all `SMTP_*` variables are set correctly
 - Test SMTP credentials manually
 - Check firewall/network allows SMTP traffic
 
 ### **Payment Gateway Errors**
+
 - Verify all `MONNIFY_*` variables are set
 - Check `MONNIFY_BASE_URL` points to correct environment (sandbox vs production)
 - Verify webhook secret matches Monnify dashboard

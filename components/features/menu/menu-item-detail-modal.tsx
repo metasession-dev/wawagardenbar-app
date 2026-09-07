@@ -46,7 +46,7 @@ export function MenuItemDetailModal({
   const [portionSize, setPortionSize] = useState<'full' | 'half' | 'quarter'>(
     'full'
   );
-  const [adjustedPrice, setAdjustedPrice] = useState(item.price);
+  const [adjustedPrice, setAdjustedPrice] = useState(item.displayPrice);
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [selectedCustomizations, setSelectedCustomizations] = useState<
     SelectedCustomization[]
@@ -65,20 +65,20 @@ export function MenuItemDetailModal({
   // Update price when portion changes
   useEffect(() => {
     if (item.portionOptions?.halfPortionEnabled && portionSize === 'half') {
-      const basePrice = Math.round(item.price * 0.5);
+      const basePrice = Math.round(item.displayPrice * 0.5);
       const surcharge = item.portionOptions?.halfPortionSurcharge || 0;
       setAdjustedPrice(basePrice + surcharge);
     } else if (
       item.portionOptions?.quarterPortionEnabled &&
       portionSize === 'quarter'
     ) {
-      const basePrice = Math.round(item.price * 0.25);
+      const basePrice = Math.round(item.displayPrice * 0.25);
       const surcharge = item.portionOptions?.quarterPortionSurcharge || 0;
       setAdjustedPrice(basePrice + surcharge);
     } else {
-      setAdjustedPrice(item.price);
+      setAdjustedPrice(item.displayPrice);
     }
-  }, [portionSize, item.price, item.portionOptions]);
+  }, [portionSize, item.displayPrice, item.portionOptions]);
 
   const isOutOfStock = item.stockStatus === 'out-of-stock';
   const isLowStock = item.stockStatus === 'low-stock';
@@ -357,7 +357,7 @@ export function MenuItemDetailModal({
                     <div className="flex items-center justify-between">
                       <span>Full Portion</span>
                       <span className="font-semibold">
-                        {formatPrice(item.price)}
+                        {formatPrice(item.displayPrice)}
                       </span>
                     </div>
                   </Label>
@@ -373,7 +373,7 @@ export function MenuItemDetailModal({
                         <span>Half Portion (50%)</span>
                         <span className="font-semibold">
                           {formatPrice(
-                            Math.round(item.price * 0.5) +
+                            Math.round(item.displayPrice * 0.5) +
                               (item.portionOptions?.halfPortionSurcharge || 0)
                           )}
                         </span>
@@ -392,7 +392,7 @@ export function MenuItemDetailModal({
                         <span>Quarter Portion (25%)</span>
                         <span className="font-semibold">
                           {formatPrice(
-                            Math.round(item.price * 0.25) +
+                            Math.round(item.displayPrice * 0.25) +
                               (item.portionOptions?.quarterPortionSurcharge ||
                                 0)
                           )}

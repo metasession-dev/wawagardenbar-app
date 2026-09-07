@@ -46,6 +46,13 @@ async function getMenuItem(itemId: string) {
     mainCategory: menuItem.mainCategory,
     category: menuItem.category,
     price: menuItem.price,
+    // REQ-102 — fall back to `price` for documents predating the
+    // showPrice/happyHourPrice backfill migration (R-025): `.lean()`
+    // reads bypass Mongoose schema defaults, so an unmigrated document's
+    // `showPrice`/`happyHourPrice` come back `undefined` here, which
+    // would otherwise crash PriceUpdateForm's `.toString()` on the value.
+    showPrice: menuItem.showPrice ?? menuItem.price,
+    happyHourPrice: menuItem.happyHourPrice ?? menuItem.price,
     costPerUnit: menuItem.costPerUnit || 0,
     preparationTime: menuItem.preparationTime,
     servingSize: menuItem.servingSize || '',
@@ -166,6 +173,8 @@ export default async function EditMenuItemPage({
         menuItemId={menuItem._id}
         currentPrice={menuItem.price}
         currentCostPerUnit={menuItem.costPerUnit}
+        currentShowPrice={menuItem.showPrice}
+        currentHappyHourPrice={menuItem.happyHourPrice}
         menuItemName={menuItem.name}
       />
 

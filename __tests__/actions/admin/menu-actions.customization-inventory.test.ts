@@ -27,6 +27,17 @@ vi.mock('iron-session', () => ({
   })),
 }));
 
+// REQ-102: updateMenuItemRowAction (added to the same module) imports
+// PriceHistoryService, which pulls in the real Mongoose model. This test
+// only exercises updateMenuItemAction (unrelated to pricing), so stub the
+// service out rather than loading the real model against the mocked
+// mongoose module (which lacks a full `models`/`model` named-export mock).
+vi.mock('@/services/price-history-service', () => ({
+  PriceHistoryService: {
+    updatePrice: vi.fn(),
+  },
+}));
+
 vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }));

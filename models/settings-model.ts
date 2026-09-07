@@ -37,6 +37,19 @@ export interface ISettings extends Document {
     sunday: { open: string; close: string; closed: boolean };
   };
 
+  // REQ-102 — single daily windows (not per-weekday, unlike businessHours)
+  // that control when showPrice / happyHourPrice apply instead of price.
+  showPriceWindow: {
+    enabled: boolean;
+    start: string;
+    end: string;
+  };
+  happyHourWindow: {
+    enabled: boolean;
+    start: string;
+    end: string;
+  };
+
   // Contact Information
   contactEmail: string;
   contactPhone: string;
@@ -188,6 +201,24 @@ const SettingsSchema = new Schema<ISettings>(
           close: { type: String, default: '22:00' },
           closed: { type: Boolean, default: false },
         },
+      },
+      default: {},
+    },
+
+    // REQ-102 — single daily windows (not per-weekday) for show/happy-hour pricing.
+    showPriceWindow: {
+      type: {
+        enabled: { type: Boolean, default: false },
+        start: { type: String, default: '00:00' },
+        end: { type: String, default: '00:00' },
+      },
+      default: {},
+    },
+    happyHourWindow: {
+      type: {
+        enabled: { type: Boolean, default: false },
+        start: { type: String, default: '00:00' },
+        end: { type: String, default: '00:00' },
       },
       default: {},
     },

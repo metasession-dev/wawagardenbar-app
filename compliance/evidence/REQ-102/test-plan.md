@@ -1,0 +1,15 @@
+# Test plan — REQ-102
+
+| AC(s)   | Test file                                                                                                                                                                                   | Type   | Status  |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------- |
+| AC3-AC5 | `__tests__/lib/order-line-totals.price-windows.test.ts`                                                                                                                                     | unit   | Passing |
+| AC3-AC4 | `__tests__/services/settings-service.price-windows.test.ts`                                                                                                                                 | unit   | Passing |
+| AC1     | `__tests__/services/price-history-service.test.ts`                                                                                                                                          | unit   | Passing |
+| AC7-AC8 | `__tests__/actions/admin/menu-actions.edit-all-row.test.ts`                                                                                                                                 | unit   | Passing |
+| AC1     | `e2e/admin/price-management-triple-price.spec.ts`                                                                                                                                           | e2e    | Passing |
+| AC2     | `e2e/settings/pricing-windows.spec.ts`                                                                                                                                                      | e2e    | Passing |
+| AC6     | `e2e/customer/menu-price-window-display.spec.ts`                                                                                                                                            | e2e    | Passing |
+| AC7-AC8 | `e2e/admin/menu-edit-all.spec.ts`                                                                                                                                                           | e2e    | Passing |
+| AC9     | `scripts/migrate-show-happy-hour-prices.ts` — manual verification against a dev DB copy (no dedicated unit test, consistent with the existing `migrate-price-override-fields.ts` precedent) | manual | Pending |
+
+Regression coverage: `__tests__/lib/order-line-totals.test.ts`, `order-line-totals.price-override.test.ts`, `__tests__/services/category-service.kind-filter.test.ts`, `__tests__/actions/admin/order-edit-actions.test.ts`, `__tests__/actions/admin/express-actions-portion-pricing-req097.test.ts`, `__tests__/lib/inventory-kind.test.ts`, `__tests__/actions/admin/menu-actions.customization-inventory.test.ts` — all updated with `showPrice`/`happyHourPrice` fixtures and a `resolveActivePriceField` stub to keep exercising the pre-REQ-102 default-price path.

@@ -195,6 +195,8 @@ async function seedE2eFixtures() {
         mainCategory: 'food',
         category: foodMenuItem.category || 'food',
         price: 1000,
+        showPrice: 1000,
+        happyHourPrice: 1000,
         costPerUnit: 400,
         preparationTime: 1,
         isAvailable: false, // hidden from customer menu

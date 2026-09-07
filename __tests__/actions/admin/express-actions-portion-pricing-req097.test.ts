@@ -37,6 +37,8 @@ vi.mock('@/models/menu-item-model', () => ({
           _id: '507f1f77bcf86cd799439099',
           name: 'Catfish Peppersoup',
           price: 12000,
+          showPrice: 12000,
+          happyHourPrice: 12000,
           customizations: [],
           allowManualPriceOverride: true,
           portionOptions: {
@@ -63,6 +65,8 @@ vi.mock('@/services', () => ({
       tax: 0,
       total: 7000,
     }),
+    // REQ-102: no window active in these portion-pricing-only tests.
+    resolveActivePriceField: vi.fn().mockResolvedValue('price'),
   },
 }));
 

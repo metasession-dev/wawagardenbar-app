@@ -73,6 +73,8 @@ const baseMenuItemDoc = () => ({
   mainCategory: 'food',
   category: 'soups',
   price: 2500,
+  showPrice: 2500,
+  happyHourPrice: 2500,
   costPerUnit: 800,
   preparationTime: 20,
 });

@@ -13,6 +13,10 @@ interface UpdatePriceParams {
   costPerUnit: number;
   reason: PriceChangeReason;
   effectiveFrom?: Date;
+  /** REQ-102 */
+  showPrice: number;
+  /** REQ-102 */
+  happyHourPrice: number;
 }
 
 interface PriceUpdateResult {
@@ -22,6 +26,8 @@ interface PriceUpdateResult {
     menuItemId: string;
     price: number;
     costPerUnit: number;
+    showPrice: number;
+    happyHourPrice: number;
   };
 }
 
@@ -33,7 +39,10 @@ export async function updateMenuItemPriceAction(
 ): Promise<PriceUpdateResult> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     // Check authentication
     if (!session.userId) {
@@ -51,7 +60,21 @@ export async function updateMenuItemPriceAction(
     }
 
     if (params.costPerUnit < 0) {
-      return { success: false, error: 'Cost per unit must be a positive number' };
+      return {
+        success: false,
+        error: 'Cost per unit must be a positive number',
+      };
+    }
+
+    if (params.showPrice < 0) {
+      return { success: false, error: 'Show price must be a positive number' };
+    }
+
+    if (params.happyHourPrice < 0) {
+      return {
+        success: false,
+        error: 'Happy hour price must be a positive number',
+      };
     }
 
     // Update price and create history
@@ -60,12 +83,15 @@ export async function updateMenuItemPriceAction(
       params.price,
       params.costPerUnit,
       params.reason,
-      session.userId
+      session.userId,
+      params.showPrice,
+      params.happyHourPrice
     );
 
     // Revalidate relevant paths
     revalidatePath('/dashboard/menu');
     revalidatePath(`/dashboard/menu/${params.menuItemId}/edit`);
+    revalidatePath('/dashboard/menu/edit-all');
     revalidatePath('/menu');
 
     return {
@@ -74,6 +100,8 @@ export async function updateMenuItemPriceAction(
         menuItemId: params.menuItemId,
         price: params.price,
         costPerUnit: params.costPerUnit,
+        showPrice: params.showPrice,
+        happyHourPrice: params.happyHourPrice,
       },
     };
   } catch (error) {
@@ -88,10 +116,16 @@ export async function updateMenuItemPriceAction(
 /**
  * Get price history for a menu item
  */
-export async function getPriceHistoryAction(menuItemId: string, limit?: number) {
+export async function getPriceHistoryAction(
+  menuItemId: string,
+  limit?: number
+) {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     // Check authentication
     if (!session.userId) {
@@ -103,7 +137,10 @@ export async function getPriceHistoryAction(menuItemId: string, limit?: number) 
       return { success: false, error: 'Forbidden', data: null };
     }
 
-    const history = await PriceHistoryService.getPriceHistory(menuItemId, limit);
+    const history = await PriceHistoryService.getPriceHistory(
+      menuItemId,
+      limit
+    );
 
     return {
       success: true,
@@ -113,7 +150,10 @@ export async function getPriceHistoryAction(menuItemId: string, limit?: number) 
     console.error('Error fetching price history:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch price history',
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to fetch price history',
       data: null,
     };
   }

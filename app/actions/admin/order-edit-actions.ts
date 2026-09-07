@@ -103,13 +103,15 @@ export async function updateOrderItemsAction(input: UpdateOrderItemsInput) {
           _id: m._id.toString(),
           name: m.name,
           price: m.price,
+          showPrice: m.showPrice,
+          happyHourPrice: m.happyHourPrice,
           customizations: m.customizations,
           allowManualPriceOverride: m.allowManualPriceOverride ?? false,
           portionOptions: m.portionOptions,
         },
       ])
     );
-    const reconciled = reconcileAndValidateOrderLines({
+    const reconciled = await reconcileAndValidateOrderLines({
       menuItems: menuMap,
       lines: input.items.map((item) => ({
         menuItemId: item.menuItemId,
@@ -254,15 +256,23 @@ export async function getAvailableMenuItemsAction() {
       // REQ-031: include `customizations` so the Edit Order dialog can render
       // the picker for items with customization groups. The previous `.select`
       // referenced a non-existent `customizationOptions` field.
+      // REQ-102: showPrice/happyHourPrice so displayPrice below can be
+      // resolved the same way every other order-creating surface does.
       .select(
-        'name price category subcategory image customizations portionOptions allowManualPriceOverride'
+        'name price showPrice happyHourPrice category subcategory image customizations portionOptions allowManualPriceOverride'
       )
       .sort({ category: 1, name: 1 })
       .lean();
 
+    const activePriceField = await SettingsService.resolveActivePriceField();
+    const enriched = menuItems.map((item) => ({
+      ...item,
+      displayPrice: item[activePriceField] ?? item.price, // REQ-102/R-025 fallback
+    }));
+
     return {
       success: true,
-      data: JSON.parse(JSON.stringify(menuItems)),
+      data: JSON.parse(JSON.stringify(enriched)),
     };
   } catch (error: any) {
     console.error('Get menu items error:', error);

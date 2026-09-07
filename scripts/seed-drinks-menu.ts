@@ -1,8 +1,8 @@
 /**
  * Seed Drinks Menu and Inventory
- * 
+ *
  * Populates menu items and inventory from the drinks menu data
- * 
+ *
  * Usage: npx tsx scripts/seed-drinks-menu.ts
  */
 
@@ -41,7 +41,8 @@ interface DrinkItem {
 const drinksMenu: DrinkItem[] = [
   {
     name: 'Gulder',
-    description: 'Premium Nigerian lager with a crisp, refreshing taste. Perfect for unwinding after a long day.',
+    description:
+      'Premium Nigerian lager with a crisp, refreshing taste. Perfect for unwinding after a long day.',
     mainCategory: 'drinks',
     category: 'beer-local',
     price: 1500,
@@ -61,7 +62,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: '33',
-    description: 'Nigeria\'s classic lager beer with a smooth, balanced flavor. A timeless favorite that pairs perfectly with any meal.',
+    description:
+      "Nigeria's classic lager beer with a smooth, balanced flavor. A timeless favorite that pairs perfectly with any meal.",
     mainCategory: 'drinks',
     category: 'beer-local',
     price: 1300,
@@ -81,7 +83,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Smirnoff Ice - Small',
-    description: 'Vodka-based drink with a zesty lemon-lime flavor. Sweet, refreshing, and perfectly carbonated for a smooth taste.',
+    description:
+      'Vodka-based drink with a zesty lemon-lime flavor. Sweet, refreshing, and perfectly carbonated for a smooth taste.',
     mainCategory: 'drinks',
     category: 'pre-mixed-spirit',
     price: 1200,
@@ -101,7 +104,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Smirnoff Ice - Big',
-    description: 'Larger serving of the popular vodka cooler. Crisp citrus flavor with just the right amount of sweetness.',
+    description:
+      'Larger serving of the popular vodka cooler. Crisp citrus flavor with just the right amount of sweetness.',
     mainCategory: 'drinks',
     category: 'pre-mixed-spirit',
     price: 2000,
@@ -121,7 +125,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Guinness Small Stout',
-    description: 'Rich, creamy stout with bold flavors of roasted malt and coffee. The perfect pick-me-up with its smooth, velvety texture.',
+    description:
+      'Rich, creamy stout with bold flavors of roasted malt and coffee. The perfect pick-me-up with its smooth, velvety texture.',
     mainCategory: 'drinks',
     category: 'beer-local',
     price: 1200,
@@ -141,7 +146,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Guinness Medium Stout',
-    description: 'The iconic extra smooth stout in a satisfying medium size. Full-bodied with notes of chocolate and caramel.',
+    description:
+      'The iconic extra smooth stout in a satisfying medium size. Full-bodied with notes of chocolate and caramel.',
     mainCategory: 'drinks',
     category: 'beer-local',
     price: 1500,
@@ -161,7 +167,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Guinness Big Stout',
-    description: 'Extra large serving of Nigeria\'s most beloved stout. Rich, bold, and incredibly smooth - perfect for serious stout lovers.',
+    description:
+      "Extra large serving of Nigeria's most beloved stout. Rich, bold, and incredibly smooth - perfect for serious stout lovers.",
     mainCategory: 'drinks',
     category: 'beer-local',
     price: 2000,
@@ -181,7 +188,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Orijin Beer',
-    description: 'Unique herbal-infused beer blending traditional African botanicals with modern brewing. A bold, distinctive taste that celebrates Nigerian heritage.',
+    description:
+      'Unique herbal-infused beer blending traditional African botanicals with modern brewing. A bold, distinctive taste that celebrates Nigerian heritage.',
     mainCategory: 'drinks',
     category: 'beer-local',
     price: 1500,
@@ -201,7 +209,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Budweiser',
-    description: 'America\'s iconic lager, crisp and refreshing with a smooth finish. The King of Beers, enjoyed worldwide.',
+    description:
+      "America's iconic lager, crisp and refreshing with a smooth finish. The King of Beers, enjoyed worldwide.",
     mainCategory: 'drinks',
     category: 'beer-imported',
     price: 1500,
@@ -221,7 +230,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Flying Fish',
-    description: 'Refreshing fruit cider with a perfect blend of sweetness and fizz. Light, fruity, and incredibly easy to drink.',
+    description:
+      'Refreshing fruit cider with a perfect blend of sweetness and fizz. Light, fruity, and incredibly easy to drink.',
     mainCategory: 'drinks',
     category: 'cider',
     price: 1500,
@@ -241,7 +251,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Trophy Stout',
-    description: 'Dark, robust stout with a rich malty flavor. Smooth and satisfying, perfect for those who appreciate a good Nigerian stout.',
+    description:
+      'Dark, robust stout with a rich malty flavor. Smooth and satisfying, perfect for those who appreciate a good Nigerian stout.',
     mainCategory: 'drinks',
     category: 'beer-local',
     price: 1300,
@@ -261,7 +272,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Trophy',
-    description: 'Light, crisp lager with a clean finish. Refreshing and easy to drink, ideal for hot Nigerian afternoons.',
+    description:
+      'Light, crisp lager with a clean finish. Refreshing and easy to drink, ideal for hot Nigerian afternoons.',
     mainCategory: 'drinks',
     category: 'beer-local',
     price: 1300,
@@ -281,7 +293,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Goldberg',
-    description: 'Premium Nigerian lager with a distinctive golden color and smooth taste. Perfectly balanced for maximum refreshment.',
+    description:
+      'Premium Nigerian lager with a distinctive golden color and smooth taste. Perfectly balanced for maximum refreshment.',
     mainCategory: 'drinks',
     category: 'beer-local',
     price: 1300,
@@ -301,7 +314,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Heineken',
-    description: 'Premium Dutch lager with a distinctive taste and quality. Crisp, slightly bitter, and incredibly refreshing - a global favorite.',
+    description:
+      'Premium Dutch lager with a distinctive taste and quality. Crisp, slightly bitter, and incredibly refreshing - a global favorite.',
     mainCategory: 'drinks',
     category: 'beer-imported',
     price: 2000,
@@ -321,7 +335,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Star Radler',
-    description: 'Refreshing lemon-flavored beer with a perfect balance of citrus and malt. Light, fruity, and incredibly refreshing.',
+    description:
+      'Refreshing lemon-flavored beer with a perfect balance of citrus and malt. Light, fruity, and incredibly refreshing.',
     mainCategory: 'drinks',
     category: 'beer-local',
     price: 1200,
@@ -341,7 +356,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Desperados',
-    description: 'Bold tequila-flavored beer with a unique kick. Adventurous and exciting, perfect for those who like to try something different.',
+    description:
+      'Bold tequila-flavored beer with a unique kick. Adventurous and exciting, perfect for those who like to try something different.',
     mainCategory: 'drinks',
     category: 'beer-imported',
     price: 1500,
@@ -361,7 +377,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Tiger',
-    description: 'Premium Asian lager with a smooth, crisp taste. Refreshing and well-balanced, perfect for any occasion.',
+    description:
+      'Premium Asian lager with a smooth, crisp taste. Refreshing and well-balanced, perfect for any occasion.',
     mainCategory: 'drinks',
     category: 'beer-imported',
     price: 1300,
@@ -381,7 +398,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Action Bitters - Small',
-    description: 'Traditional Nigerian herbal bitters with medicinal properties. Bold, aromatic, and believed to aid digestion and boost vitality.',
+    description:
+      'Traditional Nigerian herbal bitters with medicinal properties. Bold, aromatic, and believed to aid digestion and boost vitality.',
     mainCategory: 'drinks',
     category: 'bitters',
     price: 1500,
@@ -401,7 +419,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Action Bitters - Big',
-    description: 'Large bottle of premium herbal bitters. Rich blend of African herbs and spices for health-conscious drinkers.',
+    description:
+      'Large bottle of premium herbal bitters. Rich blend of African herbs and spices for health-conscious drinkers.',
     mainCategory: 'drinks',
     category: 'bitters',
     price: 5000,
@@ -421,7 +440,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Orijin - Small',
-    description: 'Herbal bitters infused with African botanicals. Smooth, aromatic, and perfect for those who appreciate traditional Nigerian flavors.',
+    description:
+      'Herbal bitters infused with African botanicals. Smooth, aromatic, and perfect for those who appreciate traditional Nigerian flavors.',
     mainCategory: 'drinks',
     category: 'bitters',
     price: 1500,
@@ -441,7 +461,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Orijin - Big',
-    description: 'Premium large bottle of herbal bitters. Rich, complex flavors from carefully selected African herbs and roots.',
+    description:
+      'Premium large bottle of herbal bitters. Rich, complex flavors from carefully selected African herbs and roots.',
     mainCategory: 'drinks',
     category: 'bitters',
     price: 5000,
@@ -461,7 +482,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Cream Best - Small',
-    description: 'Smooth, creamy liqueur with a rich, indulgent taste. Perfect for sipping or mixing, with notes of vanilla and caramel.',
+    description:
+      'Smooth, creamy liqueur with a rich, indulgent taste. Perfect for sipping or mixing, with notes of vanilla and caramel.',
     mainCategory: 'drinks',
     category: 'liqueur',
     price: 2500,
@@ -481,7 +503,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Cream Best - Big',
-    description: 'Large bottle of premium cream liqueur. Luxuriously smooth and perfect for special occasions or sharing with friends.',
+    description:
+      'Large bottle of premium cream liqueur. Luxuriously smooth and perfect for special occasions or sharing with friends.',
     mainCategory: 'drinks',
     category: 'liqueur',
     price: 9000,
@@ -501,7 +524,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Black Bullet',
-    description: 'Bold pre-mixed spirit drink with an intense flavor. Strong, smooth, and perfect for those who like their drinks with a kick.',
+    description:
+      'Bold pre-mixed spirit drink with an intense flavor. Strong, smooth, and perfect for those who like their drinks with a kick.',
     mainCategory: 'drinks',
     category: 'pre-mixed-spirit',
     price: 3000,
@@ -521,7 +545,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: '4th Street Wine',
-    description: 'Sweet, fruity wine with vibrant flavors. Easy to drink and perfect for celebrations or relaxed evenings.',
+    description:
+      'Sweet, fruity wine with vibrant flavors. Easy to drink and perfect for celebrations or relaxed evenings.',
     mainCategory: 'drinks',
     category: 'wine',
     price: 7000,
@@ -541,7 +566,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Baron',
-    description: 'Smooth red wine with rich, full-bodied flavors. Perfect for pairing with meals or enjoying on its own.',
+    description:
+      'Smooth red wine with rich, full-bodied flavors. Perfect for pairing with meals or enjoying on its own.',
     mainCategory: 'drinks',
     category: 'wine',
     price: 6000,
@@ -561,7 +587,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Whiskey Best - Small',
-    description: 'Smooth blended whiskey with a mellow taste. Perfect for sipping neat or mixing in your favorite cocktail.',
+    description:
+      'Smooth blended whiskey with a mellow taste. Perfect for sipping neat or mixing in your favorite cocktail.',
     mainCategory: 'drinks',
     category: 'whisky',
     price: 3000,
@@ -581,7 +608,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Whiskey Best - Big',
-    description: 'Large bottle of quality blended whiskey. Smooth, versatile, and perfect for entertaining guests.',
+    description:
+      'Large bottle of quality blended whiskey. Smooth, versatile, and perfect for entertaining guests.',
     mainCategory: 'drinks',
     category: 'whisky',
     price: 6000,
@@ -601,7 +629,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Sierra Tequila',
-    description: 'Premium silver tequila from Mexico. Smooth, clean taste perfect for shots or margaritas. The life of any party!',
+    description:
+      'Premium silver tequila from Mexico. Smooth, clean taste perfect for shots or margaritas. The life of any party!',
     mainCategory: 'drinks',
     category: 'tequila',
     price: 16000,
@@ -621,7 +650,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'William Lawson',
-    description: 'Premium Scotch whisky with a smooth, refined character. Rich flavors of oak and vanilla for the sophisticated palate.',
+    description:
+      'Premium Scotch whisky with a smooth, refined character. Rich flavors of oak and vanilla for the sophisticated palate.',
     mainCategory: 'drinks',
     category: 'whisky',
     price: 15000,
@@ -641,7 +671,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Jameson',
-    description: 'World-renowned Irish whiskey, triple-distilled for exceptional smoothness. Rich, complex flavors with hints of vanilla and sherry.',
+    description:
+      'World-renowned Irish whiskey, triple-distilled for exceptional smoothness. Rich, complex flavors with hints of vanilla and sherry.',
     mainCategory: 'drinks',
     category: 'whisky',
     price: 35000,
@@ -661,7 +692,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Power Horse',
-    description: 'High-energy drink packed with caffeine and vitamins. Boost your energy and stay alert throughout the day.',
+    description:
+      'High-energy drink packed with caffeine and vitamins. Boost your energy and stay alert throughout the day.',
     mainCategory: 'drinks',
     category: 'energy-drink',
     price: 3000,
@@ -681,7 +713,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Super Commando Small',
-    description: 'Affordable energy boost in a convenient size. Quick pick-me-up when you need extra energy.',
+    description:
+      'Affordable energy boost in a convenient size. Quick pick-me-up when you need extra energy.',
     mainCategory: 'drinks',
     category: 'energy-drink',
     price: 500,
@@ -701,7 +734,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Fearless',
-    description: 'Bold energy drink with a powerful kick. Stay energized and focused with this refreshing boost.',
+    description:
+      'Bold energy drink with a powerful kick. Stay energized and focused with this refreshing boost.',
     mainCategory: 'drinks',
     category: 'energy-drink',
     price: 1000,
@@ -721,7 +755,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: '5 Alive (Pulpy)',
-    description: 'Real fruit juice with juicy orange pulp. Refreshing, nutritious, and bursting with natural citrus flavor.',
+    description:
+      'Real fruit juice with juicy orange pulp. Refreshing, nutritious, and bursting with natural citrus flavor.',
     mainCategory: 'drinks',
     category: 'juice',
     price: 1500,
@@ -741,7 +776,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Chi Active',
-    description: 'Nutritious fruit juice drink packed with vitamins. Healthy, delicious, and perfect for active lifestyles.',
+    description:
+      'Nutritious fruit juice drink packed with vitamins. Healthy, delicious, and perfect for active lifestyles.',
     mainCategory: 'drinks',
     category: 'juice',
     price: 2500,
@@ -761,7 +797,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Hollandia Plain',
-    description: 'Smooth, creamy plain yoghurt. Rich in probiotics, perfect for a healthy snack or breakfast addition.',
+    description:
+      'Smooth, creamy plain yoghurt. Rich in probiotics, perfect for a healthy snack or breakfast addition.',
     mainCategory: 'drinks',
     category: 'yoghurt',
     price: 2500,
@@ -781,7 +818,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Hollandia Vanilla',
-    description: 'Delicious vanilla-flavored yoghurt. Creamy, sweet, and packed with nutrients for a healthy treat.',
+    description:
+      'Delicious vanilla-flavored yoghurt. Creamy, sweet, and packed with nutrients for a healthy treat.',
     mainCategory: 'drinks',
     category: 'yoghurt',
     price: 2500,
@@ -801,7 +839,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Maltina',
-    description: 'Non-alcoholic malt drink with a rich, distinctive flavor. Nutritious and refreshing, perfect for all ages.',
+    description:
+      'Non-alcoholic malt drink with a rich, distinctive flavor. Nutritious and refreshing, perfect for all ages.',
     mainCategory: 'drinks',
     category: 'malt',
     price: 1000,
@@ -821,7 +860,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Coke',
-    description: 'The world\'s favorite cola. Crisp, refreshing, and perfectly carbonated. A timeless classic.',
+    description:
+      "The world's favorite cola. Crisp, refreshing, and perfectly carbonated. A timeless classic.",
     mainCategory: 'drinks',
     category: 'soft-drinks',
     price: 700,
@@ -841,7 +881,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Pepsi',
-    description: 'Bold cola taste with a refreshing finish. Smooth, sweet, and incredibly satisfying.',
+    description:
+      'Bold cola taste with a refreshing finish. Smooth, sweet, and incredibly satisfying.',
     mainCategory: 'drinks',
     category: 'soft-drinks',
     price: 700,
@@ -861,7 +902,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Fanta',
-    description: 'Bright, fruity orange soda bursting with citrus flavor. Fun, refreshing, and perfect for any occasion.',
+    description:
+      'Bright, fruity orange soda bursting with citrus flavor. Fun, refreshing, and perfect for any occasion.',
     mainCategory: 'drinks',
     category: 'soft-drinks',
     price: 700,
@@ -881,7 +923,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'Zobo',
-    description: 'Traditional Nigerian hibiscus drink. Naturally sweet, tangy, and packed with antioxidants. A healthy, refreshing choice.',
+    description:
+      'Traditional Nigerian hibiscus drink. Naturally sweet, tangy, and packed with antioxidants. A healthy, refreshing choice.',
     mainCategory: 'drinks',
     category: 'healthy-soft-drink',
     price: 1000,
@@ -901,7 +944,8 @@ const drinksMenu: DrinkItem[] = [
   },
   {
     name: 'C-Water',
-    description: 'Pure, refreshing bottled water. Stay hydrated with clean, crisp water perfect for any time of day.',
+    description:
+      'Pure, refreshing bottled water. Stay hydrated with clean, crisp water perfect for any time of day.',
     mainCategory: 'drinks',
     category: 'water',
     price: 300,
@@ -947,6 +991,10 @@ async function seedDrinksMenu() {
         mainCategory: drink.mainCategory,
         category: drink.category,
         price: drink.price,
+        // REQ-102 — new seed items start with show/happy-hour price
+        // equal to the default price, same as createMenuItemAction.
+        showPrice: drink.price,
+        happyHourPrice: drink.price,
         costPerUnit: drink.inventoryTracking.costPerUnit,
         preparationTime: drink.preparationTime,
         servingSize: '1 bottle',
@@ -957,7 +1005,9 @@ async function seedDrinksMenu() {
       });
 
       menuCreated++;
-      console.log(`✅ Created menu item: ${drink.name} (₦${drink.price.toLocaleString()})`);
+      console.log(
+        `✅ Created menu item: ${drink.name} (₦${drink.price.toLocaleString()})`
+      );
 
       // Create inventory if tracking is enabled
       if (drink.inventoryTracking.enabled) {
@@ -970,11 +1020,14 @@ async function seedDrinksMenu() {
           unit: drink.inventoryTracking.unit,
           costPerUnit: drink.inventoryTracking.costPerUnit,
           supplier: drink.inventoryTracking.supplier || 'Not specified',
-          preventOrdersWhenOutOfStock: drink.inventoryTracking.preventOrdersWhenOutOfStock,
+          preventOrdersWhenOutOfStock:
+            drink.inventoryTracking.preventOrdersWhenOutOfStock,
         });
 
         inventoryCreated++;
-        console.log(`   📊 Created inventory: ${drink.inventoryTracking.initialStock} ${drink.inventoryTracking.unit}\n`);
+        console.log(
+          `   📊 Created inventory: ${drink.inventoryTracking.initialStock} ${drink.inventoryTracking.unit}\n`
+        );
       }
     }
 
@@ -985,10 +1038,13 @@ async function seedDrinksMenu() {
     console.log(`   Total drinks: ${drinksMenu.length}\n`);
 
     // Category breakdown
-    const categories = drinksMenu.reduce((acc, drink) => {
-      acc[drink.category] = (acc[drink.category] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const categories = drinksMenu.reduce(
+      (acc, drink) => {
+        acc[drink.category] = (acc[drink.category] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
 
     console.log('📋 Category Breakdown:');
     Object.entries(categories)

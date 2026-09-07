@@ -127,6 +127,8 @@ export async function POST(request: NextRequest): Promise<Response> {
         price,
         costPerUnit,
         preparationTime,
+        showPrice,
+        happyHourPrice,
       } = body as Record<string, any>;
 
       if (!name || typeof name !== 'string') {
@@ -165,6 +167,18 @@ export async function POST(request: NextRequest): Promise<Response> {
       ) {
         return apiError('preparationTime must be a number >= 0', 400);
       }
+      if (
+        showPrice !== undefined &&
+        (typeof showPrice !== 'number' || showPrice < 0)
+      ) {
+        return apiError('showPrice must be a number >= 0', 400);
+      }
+      if (
+        happyHourPrice !== undefined &&
+        (typeof happyHourPrice !== 'number' || happyHourPrice < 0)
+      ) {
+        return apiError('happyHourPrice must be a number >= 0', 400);
+      }
 
       const item = await MenuItemModel.create({
         name,
@@ -172,6 +186,10 @@ export async function POST(request: NextRequest): Promise<Response> {
         mainCategory,
         category,
         price,
+        // REQ-102 — external callers that don't send show/happy-hour price
+        // get the same default-to-price behaviour as the admin create form.
+        showPrice: showPrice ?? price,
+        happyHourPrice: happyHourPrice ?? price,
         costPerUnit,
         preparationTime,
         images: body.images || undefined,

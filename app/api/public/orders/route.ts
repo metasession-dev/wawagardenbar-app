@@ -368,12 +368,14 @@ export async function POST(request: NextRequest): Promise<Response> {
             _id: m._id.toString(),
             name: m.name,
             price: m.price,
+            showPrice: m.showPrice,
+            happyHourPrice: m.happyHourPrice,
             customizations: m.customizations,
             portionOptions: m.portionOptions,
           },
         ])
       );
-      const reconciled = reconcileAndValidateOrderLines({
+      const reconciled = await reconcileAndValidateOrderLines({
         menuItems: menuMap,
         lines: items.map((item) => ({
           menuItemId: item.menuItemId,

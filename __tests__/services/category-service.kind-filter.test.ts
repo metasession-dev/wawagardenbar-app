@@ -41,6 +41,17 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }));
 
+// REQ-102: category-service now resolves the active price field per call —
+// stub it so these tests don't hit a real DB via SettingsService.getSettings.
+vi.mock('@/services/settings-service', () => ({
+  SettingsService: {
+    resolveActivePriceField: vi.fn().mockResolvedValue('price'),
+  },
+  default: {
+    resolveActivePriceField: vi.fn().mockResolvedValue('price'),
+  },
+}));
+
 vi.mock('@/services/system-settings-service', () => ({
   SystemSettingsService: {
     getMenuCategories: vi.fn(async () => ({

@@ -35,22 +35,22 @@ const settingsSchema = z.object({
   deliveryFeeReduced: z.number().min(0),
   freeDeliveryThreshold: z.number().min(0),
   minimumOrderAmount: z.number().min(0),
-  
+
   // Tax Configuration
   taxPercentage: z.number().min(0).max(1),
   taxEnabled: z.boolean(),
-  
+
   // Order Configuration
   estimatedPreparationTime: z.number().min(5).max(180),
   maxOrdersPerHour: z.number().min(1),
   allowGuestCheckout: z.boolean(),
-  
+
   // Delivery Configuration
   deliveryRadius: z.number().min(1).max(100),
   deliveryEnabled: z.boolean(),
   pickupEnabled: z.boolean(),
   dineInEnabled: z.boolean(),
-  
+
   // Business Hours
   businessHours: z.object({
     monday: z.object({
@@ -89,7 +89,7 @@ const settingsSchema = z.object({
       closed: z.boolean(),
     }),
   }),
-  
+
   // Contact Information
   contactEmail: z.string().email(),
   contactPhone: z.string(),
@@ -115,7 +115,11 @@ interface SettingsFormProps {
  * Settings form component
  * Allows super-admin to update application settings
  */
-export function SettingsForm({ initialSettings, notificationSettings, inventoryLocationsSettings }: SettingsFormProps) {
+export function SettingsForm({
+  initialSettings,
+  notificationSettings,
+  inventoryLocationsSettings,
+}: SettingsFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -152,7 +156,8 @@ export function SettingsForm({ initialSettings, notificationSettings, inventoryL
       console.error('Error updating settings:', error);
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to update settings',
+        description:
+          error instanceof Error ? error.message : 'Failed to update settings',
         variant: 'destructive',
       });
     } finally {
@@ -160,7 +165,15 @@ export function SettingsForm({ initialSettings, notificationSettings, inventoryL
     }
   }
 
-  const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
+  const days = [
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday',
+    'sunday',
+  ] as const;
 
   return (
     <Tabs defaultValue="fees" className="w-full">
@@ -208,7 +221,8 @@ export function SettingsForm({ initialSettings, notificationSettings, inventoryL
                       />
                     </FormControl>
                     <FormDescription>
-                      Enter as decimal (e.g., 0.02 for 2%). Current: {((field.value || 0) * 100).toFixed(2)}%
+                      Enter as decimal (e.g., 0.02 for 2%). Current:{' '}
+                      {((field.value || 0) * 100).toFixed(2)}%
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -310,9 +324,7 @@ export function SettingsForm({ initialSettings, notificationSettings, inventoryL
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                     <div className="space-y-0.5">
                       <FormLabel className="text-base">Enable Tax</FormLabel>
-                      <FormDescription>
-                        Apply tax to all orders
-                      </FormDescription>
+                      <FormDescription>Apply tax to all orders</FormDescription>
                     </div>
                     <FormControl>
                       <Switch
@@ -345,7 +357,8 @@ export function SettingsForm({ initialSettings, notificationSettings, inventoryL
                       />
                     </FormControl>
                     <FormDescription>
-                      Enter as decimal (e.g., 0.075 for 7.5%). Current: {((field.value || 0) * 100).toFixed(2)}%
+                      Enter as decimal (e.g., 0.075 for 7.5%). Current:{' '}
+                      {((field.value || 0) * 100).toFixed(2)}%
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -389,7 +402,7 @@ export function SettingsForm({ initialSettings, notificationSettings, inventoryL
           <TabsContent value="orders" className="space-y-6">
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Order Configuration</h3>
-              
+
               <FormField
                 control={form.control}
                 name="estimatedPreparationTime"
@@ -449,7 +462,9 @@ export function SettingsForm({ initialSettings, notificationSettings, inventoryL
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                     <div className="space-y-0.5">
-                      <FormLabel className="text-base">Allow Guest Checkout</FormLabel>
+                      <FormLabel className="text-base">
+                        Allow Guest Checkout
+                      </FormLabel>
                       <FormDescription>
                         Allow customers to checkout without creating an account
                       </FormDescription>
@@ -469,14 +484,16 @@ export function SettingsForm({ initialSettings, notificationSettings, inventoryL
 
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Order Types</h3>
-              
+
               <FormField
                 control={form.control}
                 name="dineInEnabled"
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                     <div className="space-y-0.5">
-                      <FormLabel className="text-base">Enable Dine-In</FormLabel>
+                      <FormLabel className="text-base">
+                        Enable Dine-In
+                      </FormLabel>
                       <FormDescription>
                         Allow customers to place dine-in orders
                       </FormDescription>
@@ -518,7 +535,9 @@ export function SettingsForm({ initialSettings, notificationSettings, inventoryL
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                     <div className="space-y-0.5">
-                      <FormLabel className="text-base">Enable Delivery</FormLabel>
+                      <FormLabel className="text-base">
+                        Enable Delivery
+                      </FormLabel>
                       <FormDescription>
                         Allow customers to place delivery orders
                       </FormDescription>
@@ -586,7 +605,7 @@ export function SettingsForm({ initialSettings, notificationSettings, inventoryL
                       )}
                     />
                   </div>
-                  
+
                   {!form.watch(`businessHours.${day}.closed`) && (
                     <div className="grid grid-cols-2 gap-4">
                       <FormField
@@ -602,7 +621,7 @@ export function SettingsForm({ initialSettings, notificationSettings, inventoryL
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={form.control}
                         name={`businessHours.${day}.close`}
@@ -622,12 +641,11 @@ export function SettingsForm({ initialSettings, notificationSettings, inventoryL
               ))}
             </div>
           </TabsContent>
-
           {/* Contact Info Tab */}
           <TabsContent value="contact" className="space-y-6">
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Contact Information</h3>
-              
+
               <FormField
                 control={form.control}
                 name="contactEmail"

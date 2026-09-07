@@ -1,0 +1,43 @@
+name: Deploy UAT (k3s)
+
+# Auto-deploys develop to the local k3s UAT instance on ostendo-server,
+# the way `main` -> Railway UAT already happens automatically outside
+# GitHub Actions. See ostendo-workhorse-platform/runbooks/ci-deploy-to-k3s-uat.md
+# for the full rationale and the RBAC/kubeconfig setup this depends on.
+#
+# A separate workflow (not a job appended to CI Pipeline) triggered by
+# workflow_run watching CI Pipeline's completion on develop — decouples
+# this from whichever runner label CI itself used. This deploy job always
+# targets ostendo-workhorse-ci, since that's the only machine that can
+# reach the cluster and holds the deploy credential.
+on:
+  workflow_run:
+    workflows: ['CI Pipeline']
+    types: [completed]
+    branches: [develop]
+
+jobs:
+  deploy-uat:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ostendo-workhorse-ci
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: develop
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build and push image
+        run: |
+          DOCKER_BUILDKIT=1 docker build -t ghcr.io/metasession-dev/wawagardenbar-app:develop .
+          docker push ghcr.io/metasession-dev/wawagardenbar-app:develop
+
+      - name: Roll out to k3s UAT
+        run: |
+          export KUBECONFIG=/opt/ostendo-workhorse-ci/.kube/config
+          kubectl rollout restart deployment/wawagardenbar-uat-app -n apps
+          kubectl rollout status deployment/wawagardenbar-uat-app -n apps --timeout=180s

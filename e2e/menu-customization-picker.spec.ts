@@ -88,15 +88,20 @@ superAdminTest.describe('REQ-031: Customization picker — user journeys', () =>
       await page.goto('/dashboard/menu');
       await page.waitForLoadState('networkidle');
 
-      const editLink = page
-        .getByRole('link', { name: /edit/i })
-        .or(page.getByRole('button', { name: /edit/i }))
+      // The real per-item edit control lives inside a row's kebab dropdown
+      // (menu-items-table.tsx's "Open menu" trigger -> "Edit" menuitem) —
+      // a broad /edit/i link/button match is unsafe here since REQ-102's
+      // "Edit All" bulk-edit button also matches /edit/i and sits before
+      // any row in DOM order.
+      const rowMenuTrigger = page
+        .getByRole('button', { name: /open menu/i })
         .first();
-      if (!(await editLink.isVisible().catch(() => false))) {
+      if (!(await rowMenuTrigger.isVisible().catch(() => false))) {
         testInfo.skip(true, 'No editable menu items on UAT — skipping');
         return;
       }
-      await editLink.click();
+      await rowMenuTrigger.click();
+      await page.getByRole('menuitem', { name: /^edit$/i }).click();
       await page.waitForLoadState('networkidle');
 
       // Scroll to the customization options builder

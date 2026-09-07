@@ -34,6 +34,34 @@ superAdminTest.beforeEach(async ({ page }, testInfo) => {
   }
 });
 
+/**
+ * Opens the first menu item's row-level "Edit" action from /dashboard/menu.
+ *
+ * The real per-item edit control lives inside a row's kebab dropdown
+ * (`components/features/admin/menu-items-table.tsx`'s "Open menu" trigger
+ * -> "Edit" menuitem), not a directly-visible link/button — a broad
+ * `getByRole('link'|'button', { name: /edit/i })` match is unsafe on this
+ * page since REQ-102's "Edit All" bulk-edit button also matches /edit/i
+ * and sits before any row in DOM order.
+ */
+async function openFirstItemEditScreen(
+  page: Page,
+  testInfo: { skip: (condition: boolean, description?: string) => void }
+): Promise<void> {
+  const rowMenuTrigger = page
+    .getByRole('button', { name: /open menu/i })
+    .first();
+
+  if ((await rowMenuTrigger.count()) === 0) {
+    testInfo.skip(true, 'No menu items available to edit — skipping');
+    return;
+  }
+
+  await rowMenuTrigger.click();
+  await page.getByRole('menuitem', { name: /^edit$/i }).click();
+  await page.waitForLoadState('networkidle');
+}
+
 superAdminTest.describe(
   'REQ-030: Menu customization inventory links — admin UI',
   () => {
@@ -43,18 +71,13 @@ superAdminTest.describe(
         await page.goto('/dashboard/menu');
         await page.waitForLoadState('networkidle');
 
-        const editLink = page
-          .getByRole('link', { name: /edit/i })
-          .or(page.getByRole('button', { name: /edit/i }))
-          .first();
-
-        if ((await editLink.count()) === 0) {
-          testInfo.skip(true, 'No menu items available to edit — skipping');
-        }
-
-        await editLink.click();
-        await page.waitForLoadState('networkidle');
-        await expect(page.getByText(/Customization Options/i)).toBeVisible();
+        await openFirstItemEditScreen(page, testInfo);
+        // exact:true — the regex form also matches the empty-state text
+        // "No customization options yet", a strict-mode violation once an
+        // item with no groups is reached.
+        await expect(
+          page.getByText('Customization Options', { exact: true })
+        ).toBeVisible();
       }
     );
 
@@ -64,20 +87,10 @@ superAdminTest.describe(
         await page.goto('/dashboard/menu');
         await page.waitForLoadState('networkidle');
 
-        const editLink = page
-          .getByRole('link', { name: /edit/i })
-          .or(page.getByRole('button', { name: /edit/i }))
-          .first();
-
-        if ((await editLink.count()) === 0) {
-          testInfo.skip(true, 'No menu items available to edit — skipping');
-        }
-
-        await editLink.click();
-        await page.waitForLoadState('networkidle');
+        await openFirstItemEditScreen(page, testInfo);
 
         const customizationCard = page
-          .getByText(/Customization Options/i)
+          .getByText('Customization Options', { exact: true })
           .locator('..')
           .locator('..');
         await expect(customizationCard).toBeVisible();

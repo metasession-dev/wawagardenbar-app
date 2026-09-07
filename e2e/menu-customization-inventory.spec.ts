@@ -1,5 +1,7 @@
 import { test as base, expect, Page } from '@playwright/test';
 import path from 'path';
+import { tagTest } from './helpers/test-tags';
+import { evidenceShot } from './helpers/evidence';
 
 /**
  * E2E Tests — REQ-030: Customization option inventory links — admin UI
@@ -68,6 +70,7 @@ superAdminTest.describe(
     superAdminTest(
       'menu list page reaches at least one item edit screen',
       async ({ page }, testInfo) => {
+        tagTest('REQ-030', 7);
         await page.goto('/dashboard/menu');
         await page.waitForLoadState('networkidle');
 
@@ -78,12 +81,14 @@ superAdminTest.describe(
         await expect(
           page.getByText('Customization Options', { exact: true })
         ).toBeVisible();
+        await evidenceShot(page, 'REQ-030', 7, 'item-edit-screen-reached');
       }
     );
 
     superAdminTest(
       'adding a customization group exposes inventory link controls',
       async ({ page }, testInfo) => {
+        tagTest('REQ-030', 7);
         await page.goto('/dashboard/menu');
         await page.waitForLoadState('networkidle');
 
@@ -122,6 +127,12 @@ superAdminTest.describe(
         await expect(
           page.getByText(/Deduct from inventory/i).first()
         ).toBeVisible();
+        await evidenceShot(
+          page,
+          'REQ-030',
+          7,
+          'inventory-link-controls-visible'
+        );
       }
     );
   }

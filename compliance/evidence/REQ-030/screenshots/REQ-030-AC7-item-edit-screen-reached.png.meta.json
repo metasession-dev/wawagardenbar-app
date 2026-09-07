@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-030",
+  "ac": 7,
+  "slug": "item-edit-screen-reached",
+  "specFile": "e2e/menu-customization-inventory.spec.ts",
+  "capturedAt": "2026-09-07T12:16:28.179Z"
+}

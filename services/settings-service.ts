@@ -2,47 +2,37 @@ import { connectDB } from '@/lib/mongodb';
 import SettingsModel, { ISettings } from '@/models/settings-model';
 import { haversineKm } from '@/lib/geo/haversine';
 import { geocodeAddress } from '@/lib/geo/geocode';
+import {
+  getCurrentBusinessHHMM,
+  getCurrentBusinessDayKey,
+  getCurrentBusinessDateParts,
+  businessLocalToInstant,
+} from '@/lib/business-time';
 
 const PICKUP_SLOT_INTERVAL_MIN = 15;
-
-const DAY_INDEX_TO_KEY = [
-  'sunday',
-  'monday',
-  'tuesday',
-  'wednesday',
-  'thursday',
-  'friday',
-  'saturday',
-] as const;
-type DayKey = (typeof DAY_INDEX_TO_KEY)[number];
 
 function hhmmToMinutes(hhmm: string): number {
   const [h, m] = hhmm.split(':').map(Number);
   return h * 60 + m;
 }
 
-function minutesToDate(date: Date, totalMinutes: number): Date {
-  const out = new Date(date);
-  out.setHours(0, 0, 0, 0);
-  out.setMinutes(totalMinutes);
-  return out;
+/**
+ * Advances `date` by `offsetDays` real calendar days in the business
+ * timezone, returning that day's Y/M/D (still in business-timezone terms).
+ * Adding 24h-per-day in absolute time is safe for timezones with no DST
+ * (e.g. Africa/Lagos, WAT, fixed UTC+1 year-round); a DST-observing zone
+ * could shift by an extra/missing hour on the transition day, which would
+ * not matter here since only the resulting calendar date (not a precise
+ * instant) is read back out.
+ */
+function addBusinessDays(date: Date, offsetDays: number) {
+  return getCurrentBusinessDateParts(
+    new Date(date.getTime() + offsetDays * 24 * 60 * 60 * 1000)
+  );
 }
 
-function formatHHMM(date: Date): string {
-  const h = String(date.getHours()).padStart(2, '0');
-  const m = String(date.getMinutes()).padStart(2, '0');
-  return `${h}:${m}`;
-}
-
-function isoLocal(date: Date): string {
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
-  const dd = String(date.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}T${formatHHMM(date)}`;
-}
-
-function dayKeyForDate(date: Date): DayKey {
-  return DAY_INDEX_TO_KEY[date.getDay()];
+function formatHHMM(hour: number, minute: number): string {
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
 
 /**
@@ -213,18 +203,14 @@ class SettingsService {
    */
   static async isWithinBusinessHours(): Promise<boolean> {
     const settings = await this.getSettings();
-    const now = new Date();
-    const dayOfWeek = now
-      .toLocaleDateString('en-US', { weekday: 'long' })
-      .toLowerCase() as keyof typeof settings.businessHours;
-
+    const dayOfWeek = getCurrentBusinessDayKey();
     const dayHours = settings.businessHours[dayOfWeek];
 
     if (dayHours.closed) {
       return false;
     }
 
-    const currentTime = now.toTimeString().slice(0, 5); // HH:MM format
+    const currentTime = getCurrentBusinessHHMM();
     return currentTime >= dayHours.open && currentTime <= dayHours.close;
   }
 
@@ -238,7 +224,7 @@ class SettingsService {
     if (!window?.enabled) {
       return false;
     }
-    const currentTime = new Date().toTimeString().slice(0, 5);
+    const currentTime = getCurrentBusinessHHMM();
     return currentTime >= window.start && currentTime <= window.end;
   }
 
@@ -252,7 +238,7 @@ class SettingsService {
     if (!window?.enabled) {
       return false;
     }
-    const currentTime = new Date().toTimeString().slice(0, 5);
+    const currentTime = getCurrentBusinessHHMM();
     return currentTime >= window.start && currentTime <= window.end;
   }
 
@@ -307,24 +293,35 @@ class SettingsService {
   }> {
     const settings = await this.getSettings();
     const now = new Date();
-    const todayKey = dayKeyForDate(now);
+    const todayParts = getCurrentBusinessDateParts(now);
+    const todayKey = getCurrentBusinessDayKey(now);
     const todayHours = settings.businessHours[todayKey];
 
     if (!todayHours.closed) {
       const openMin = hhmmToMinutes(todayHours.open);
       const closeMin = hhmmToMinutes(todayHours.close);
-      const nowMin = now.getHours() * 60 + now.getMinutes();
+      const nowMin = hhmmToMinutes(getCurrentBusinessHHMM(now));
 
       if (nowMin >= openMin && nowMin < closeMin) {
         // Open right now — return today's close time as the next slot.
         return {
-          openAt: minutesToDate(now, closeMin),
+          openAt: businessLocalToInstant(
+            todayParts.year,
+            todayParts.month,
+            todayParts.day,
+            todayHours.close
+          ),
           message: `We're open until ${todayHours.close}.`,
         };
       }
       if (nowMin < openMin) {
         return {
-          openAt: minutesToDate(now, openMin),
+          openAt: businessLocalToInstant(
+            todayParts.year,
+            todayParts.month,
+            todayParts.day,
+            todayHours.open
+          ),
           message: `We open at ${todayHours.open} today.`,
         };
       }
@@ -332,13 +329,22 @@ class SettingsService {
 
     // Walk forward through the week to find the next open day.
     for (let offset = 1; offset <= 7; offset += 1) {
-      const candidate = new Date(now);
-      candidate.setDate(candidate.getDate() + offset);
-      const key = dayKeyForDate(candidate);
+      const candidateParts = addBusinessDays(now, offset);
+      const candidateDate = businessLocalToInstant(
+        candidateParts.year,
+        candidateParts.month,
+        candidateParts.day,
+        '00:00'
+      );
+      const key = getCurrentBusinessDayKey(candidateDate);
       const hours = settings.businessHours[key];
       if (!hours.closed) {
-        const openMin = hhmmToMinutes(hours.open);
-        const openAt = minutesToDate(candidate, openMin);
+        const openAt = businessLocalToInstant(
+          candidateParts.year,
+          candidateParts.month,
+          candidateParts.day,
+          hours.open
+        );
         const label =
           offset === 1
             ? 'Tomorrow'
@@ -442,24 +448,37 @@ class SettingsService {
     const now = new Date();
     const prepMin = settings.estimatedPreparationTime;
 
-    const todaySlots = this.slotsForDay(settings, now, prepMin, 'Today', now);
+    const todayParts = getCurrentBusinessDateParts(now);
+    const nowMin = hhmmToMinutes(getCurrentBusinessHHMM(now));
+    const todaySlots = this.slotsForDay(
+      settings,
+      todayParts,
+      prepMin,
+      'Today',
+      nowMin
+    );
     if (todaySlots.length > 0) {
       return todaySlots;
     }
 
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return this.slotsForDay(settings, tomorrow, prepMin, 'Tomorrow', null);
+    const tomorrowParts = addBusinessDays(now, 1);
+    return this.slotsForDay(settings, tomorrowParts, prepMin, 'Tomorrow', null);
   }
 
   private static slotsForDay(
     settings: ISettings,
-    date: Date,
+    dateParts: { year: number; month: number; day: number },
     prepMin: number,
     labelPrefix: string,
-    nowForFloor: Date | null
+    nowMinForFloor: number | null
   ): Array<{ value: string; label: string; date: string }> {
-    const key = dayKeyForDate(date);
+    const dayInstant = businessLocalToInstant(
+      dateParts.year,
+      dateParts.month,
+      dateParts.day,
+      '00:00'
+    );
+    const key = getCurrentBusinessDayKey(dayInstant);
     const hours = settings.businessHours[key];
     if (hours.closed) {
       return [];
@@ -468,9 +487,8 @@ class SettingsService {
     const openMin = hhmmToMinutes(hours.open);
     const closeMin = hhmmToMinutes(hours.close);
     let firstSlotMin = openMin;
-    if (nowForFloor) {
-      const nowMin = nowForFloor.getHours() * 60 + nowForFloor.getMinutes();
-      const earliest = nowMin + prepMin;
+    if (nowMinForFloor !== null) {
+      const earliest = nowMinForFloor + prepMin;
       const rounded =
         Math.ceil(earliest / PICKUP_SLOT_INTERVAL_MIN) *
         PICKUP_SLOT_INTERVAL_MIN;
@@ -482,10 +500,7 @@ class SettingsService {
       return [];
     }
 
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const dd = String(date.getDate()).padStart(2, '0');
-    const dateStr = `${yyyy}-${mm}-${dd}`;
+    const dateStr = `${dateParts.year}-${String(dateParts.month).padStart(2, '0')}-${String(dateParts.day).padStart(2, '0')}`;
 
     const slots: Array<{ value: string; label: string; date: string }> = [];
     for (
@@ -493,10 +508,12 @@ class SettingsService {
       m <= lastSlotMin;
       m += PICKUP_SLOT_INTERVAL_MIN
     ) {
-      const slot = minutesToDate(date, m);
+      const hh = Math.floor(m / 60);
+      const mm = m % 60;
+      const hhmm = formatHHMM(hh, mm);
       slots.push({
-        value: isoLocal(slot),
-        label: `${labelPrefix} at ${formatHHMM(slot)}`,
+        value: `${dateStr}T${hhmm}`,
+        label: `${labelPrefix} at ${hhmm}`,
         date: dateStr,
       });
     }

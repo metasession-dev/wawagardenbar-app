@@ -5,8 +5,16 @@
  *   - isShowPriceActive
  *   - isHappyHourActive
  *   - resolveActivePriceField (ADR-004's centralized precedence)
+ *
+ * BUSINESS_TIMEZONE is pinned to UTC here so fake system times (all
+ * explicit 'Z'/UTC) map 1:1 onto the window comparisons regardless of
+ * which timezone the test runner's own host happens to be in — these
+ * tests exercise the comparison logic itself, not real business-timezone
+ * correctness (see business-time.test.ts for that).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+process.env.BUSINESS_TIMEZONE = 'UTC';
 
 vi.mock('@/lib/mongodb', () => ({
   default: vi.fn(),
@@ -40,7 +48,7 @@ beforeEach(() => {
 describe('REQ-102 SettingsService.isShowPriceActive', () => {
   it('returns false when the window is disabled', async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-06-01T18:00:00'));
+    vi.setSystemTime(new Date('2026-06-01T18:00:00Z'));
     mockFindOne.mockResolvedValue(
       makeSettings({
         showPriceWindow: { enabled: false, start: '17:00', end: '19:00' },
@@ -53,7 +61,7 @@ describe('REQ-102 SettingsService.isShowPriceActive', () => {
 
   it('returns true when enabled and current time is within the window', async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-06-01T18:00:00'));
+    vi.setSystemTime(new Date('2026-06-01T18:00:00Z'));
     mockFindOne.mockResolvedValue(
       makeSettings({
         showPriceWindow: { enabled: true, start: '17:00', end: '19:00' },
@@ -66,7 +74,7 @@ describe('REQ-102 SettingsService.isShowPriceActive', () => {
 
   it('returns false when enabled but current time is outside the window', async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-06-01T20:00:00'));
+    vi.setSystemTime(new Date('2026-06-01T20:00:00Z'));
     mockFindOne.mockResolvedValue(
       makeSettings({
         showPriceWindow: { enabled: true, start: '17:00', end: '19:00' },
@@ -81,7 +89,7 @@ describe('REQ-102 SettingsService.isShowPriceActive', () => {
 describe('REQ-102 SettingsService.isHappyHourActive', () => {
   it('returns true when enabled and current time is within the window', async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-06-01T16:30:00'));
+    vi.setSystemTime(new Date('2026-06-01T16:30:00Z'));
     mockFindOne.mockResolvedValue(
       makeSettings({
         happyHourWindow: { enabled: true, start: '16:00', end: '17:00' },
@@ -96,7 +104,7 @@ describe('REQ-102 SettingsService.isHappyHourActive', () => {
 describe('REQ-102 SettingsService.resolveActivePriceField — precedence (AC3-AC4)', () => {
   it('returns "price" when neither window is active', async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-06-01T10:00:00'));
+    vi.setSystemTime(new Date('2026-06-01T10:00:00Z'));
     mockFindOne.mockResolvedValue(makeSettings());
     const { SettingsService } = await import('@/services/settings-service');
     expect(await SettingsService.resolveActivePriceField()).toBe('price');
@@ -105,7 +113,7 @@ describe('REQ-102 SettingsService.resolveActivePriceField — precedence (AC3-AC
 
   it('returns "showPrice" when only the show-price window is active', async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-06-01T18:00:00'));
+    vi.setSystemTime(new Date('2026-06-01T18:00:00Z'));
     mockFindOne.mockResolvedValue(
       makeSettings({
         showPriceWindow: { enabled: true, start: '17:00', end: '19:00' },
@@ -119,7 +127,7 @@ describe('REQ-102 SettingsService.resolveActivePriceField — precedence (AC3-AC
 
   it('returns "happyHourPrice" when only the happy-hour window is active', async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-06-01T16:30:00'));
+    vi.setSystemTime(new Date('2026-06-01T16:30:00Z'));
     mockFindOne.mockResolvedValue(
       makeSettings({
         showPriceWindow: { enabled: false, start: '00:00', end: '00:00' },
@@ -135,7 +143,7 @@ describe('REQ-102 SettingsService.resolveActivePriceField — precedence (AC3-AC
 
   it('returns "happyHourPrice" when both windows are simultaneously active (happy-hour wins)', async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-06-01T17:30:00'));
+    vi.setSystemTime(new Date('2026-06-01T17:30:00Z'));
     mockFindOne.mockResolvedValue(
       makeSettings({
         showPriceWindow: { enabled: true, start: '16:00', end: '19:00' },

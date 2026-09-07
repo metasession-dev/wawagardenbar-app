@@ -73,6 +73,9 @@ interface MenuItem {
   _id: string;
   name: string;
   price: number;
+  // REQ-102: server-resolved price to display/charge — see
+  // getAvailableMenuItemsAction.
+  displayPrice: number;
   category: string;
   subcategory?: string;
   customizations?: ICustomization[];
@@ -205,7 +208,7 @@ export function EditOrderDialog({
       {
         menuItemId: menuItem._id,
         name: menuItem.name,
-        price: menuItem.price,
+        price: menuItem.displayPrice,
         quantity: 1,
         portionSize: 'full',
         customizations: customizations ?? [],
@@ -256,7 +259,7 @@ export function EditOrderDialog({
           : 0;
     newItems[index].portionSize = portionSize;
     if (!newItems[index].priceOverridden) {
-      newItems[index].price = menuItem.price + surcharge;
+      newItems[index].price = menuItem.displayPrice + surcharge;
     }
     setItems(newItems);
   }
@@ -375,7 +378,7 @@ export function EditOrderDialog({
               <SelectContent>
                 {availableMenuItems.map((menuItem) => (
                   <SelectItem key={menuItem._id} value={menuItem._id}>
-                    {menuItem.name} - ₦{menuItem.price.toLocaleString()}
+                    {menuItem.name} - ₦{menuItem.displayPrice.toLocaleString()}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -654,7 +657,7 @@ export function EditOrderDialog({
           open={!!portionPickerMenuItem}
           onOpenChange={(open) => !open && setPortionPickerMenuItem(null)}
           itemName={portionPickerMenuItem.name}
-          basePrice={portionPickerMenuItem.price}
+          basePrice={portionPickerMenuItem.displayPrice}
           portionOptions={portionPickerMenuItem.portionOptions}
           onConfirm={(portionSize) => {
             pushItem(portionPickerMenuItem);

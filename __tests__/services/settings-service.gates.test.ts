@@ -6,8 +6,14 @@
  *   - getBarCoordinates — lazy-cached bar lat/lng via Google Maps
  *   - checkDeliveryDistance — within radius? fail-open when coords missing
  *   - getPickupSlots — 15-min interval slots within business hours
+ *
+ * BUSINESS_TIMEZONE is pinned to UTC here so fake system times (all
+ * explicit 'Z'/UTC) map 1:1 onto business-hours comparisons regardless of
+ * which timezone the test runner's own host happens to be in.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+process.env.BUSINESS_TIMEZONE = 'UTC';
 
 vi.mock('@/lib/mongodb', () => ({
   default: vi.fn(),
@@ -69,7 +75,7 @@ beforeEach(() => {
 describe('REQ-061 SettingsService.getNextOpenSlot', () => {
   it('open right now → returns today + closing-time message', async () => {
     // Fixed clock at Monday 14:00 (within 09:00-22:00).
-    const fixedNow = new Date('2026-06-01T14:00:00');
+    const fixedNow = new Date('2026-06-01T14:00:00Z');
     vi.useFakeTimers();
     vi.setSystemTime(fixedNow);
     mockFindOne.mockResolvedValue(makeSettings());
@@ -82,7 +88,7 @@ describe('REQ-061 SettingsService.getNextOpenSlot', () => {
 
   it('closed earlier today, opens later today → returns today + open-at message', async () => {
     // Fixed clock at Monday 06:00 (before 09:00 open).
-    const fixedNow = new Date('2026-06-01T06:00:00');
+    const fixedNow = new Date('2026-06-01T06:00:00Z');
     vi.useFakeTimers();
     vi.setSystemTime(fixedNow);
     mockFindOne.mockResolvedValue(makeSettings());
@@ -94,7 +100,7 @@ describe('REQ-061 SettingsService.getNextOpenSlot', () => {
   });
 
   it('today fully closed → returns tomorrow open', async () => {
-    const fixedNow = new Date('2026-06-01T14:00:00');
+    const fixedNow = new Date('2026-06-01T14:00:00Z');
     vi.useFakeTimers();
     vi.setSystemTime(fixedNow);
     const settings = makeSettings();
@@ -108,7 +114,7 @@ describe('REQ-061 SettingsService.getNextOpenSlot', () => {
   });
 
   it('closed all week → returns null', async () => {
-    const fixedNow = new Date('2026-06-01T14:00:00');
+    const fixedNow = new Date('2026-06-01T14:00:00Z');
     vi.useFakeTimers();
     vi.setSystemTime(fixedNow);
     const settings = makeSettings();
@@ -138,7 +144,7 @@ describe('REQ-061 SettingsService.getBarCoordinates', () => {
         geocodedCoordinates: {
           lat: 6.5,
           lng: 3.4,
-          geocodedAt: new Date('2026-06-01T00:00:00'),
+          geocodedAt: new Date('2026-06-01T00:00:00Z'),
         },
       })
     );
@@ -240,7 +246,7 @@ describe('REQ-061 SettingsService.checkDeliveryDistance', () => {
 describe('REQ-061 SettingsService.getPickupSlots', () => {
   it('open day → returns 15-min interval slots starting after prep time', async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-06-01T10:00:00')); // Monday 10:00
+    vi.setSystemTime(new Date('2026-06-01T10:00:00Z')); // Monday 10:00
     mockFindOne.mockResolvedValue(makeSettings()); // 09:00-22:00, prep 30
     const { SettingsService } = await import('@/services/settings-service');
     const slots = await SettingsService.getPickupSlots();
@@ -252,7 +258,7 @@ describe('REQ-061 SettingsService.getPickupSlots', () => {
 
   it('closed today → rolls over to tomorrow', async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-06-01T10:00:00')); // Monday
+    vi.setSystemTime(new Date('2026-06-01T10:00:00Z')); // Monday
     const settings = makeSettings();
     settings.businessHours.monday.closed = true;
     mockFindOne.mockResolvedValue(settings);
@@ -266,7 +272,7 @@ describe('REQ-061 SettingsService.getPickupSlots', () => {
   it('all slots in the past today → rolls over to tomorrow', async () => {
     vi.useFakeTimers();
     // 23:00 (after 22:00 close) on a Monday — no slots today.
-    vi.setSystemTime(new Date('2026-06-01T23:00:00'));
+    vi.setSystemTime(new Date('2026-06-01T23:00:00Z'));
     mockFindOne.mockResolvedValue(makeSettings());
     const { SettingsService } = await import('@/services/settings-service');
     const slots = await SettingsService.getPickupSlots();
@@ -277,7 +283,7 @@ describe('REQ-061 SettingsService.getPickupSlots', () => {
 
   it('closed today AND tomorrow → returns []', async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-06-01T10:00:00')); // Monday
+    vi.setSystemTime(new Date('2026-06-01T10:00:00Z')); // Monday
     const settings = makeSettings();
     settings.businessHours.monday.closed = true;
     settings.businessHours.tuesday.closed = true;

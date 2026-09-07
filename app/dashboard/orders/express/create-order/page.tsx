@@ -58,6 +58,10 @@ interface MenuItem {
   _id: string;
   name: string;
   price: number;
+  // REQ-102: server-resolved price staff should see/charge — falls back
+  // to `price` for older payloads, but expressSearchMenuAction always
+  // sends it now.
+  displayPrice: number;
   category: string;
   mainCategory: string;
   description: string;
@@ -250,7 +254,7 @@ function ExpressCreateOrderContent() {
     // surcharge — matching the menu editor's own preview calculation.
     if (portionSize === 'half' && item.portionOptions?.halfPortionEnabled) {
       return (
-        Math.round(item.price * 0.5) +
+        Math.round(item.displayPrice * 0.5) +
         (item.portionOptions.halfPortionSurcharge ?? 0)
       );
     }
@@ -259,11 +263,11 @@ function ExpressCreateOrderContent() {
       item.portionOptions?.quarterPortionEnabled
     ) {
       return (
-        Math.round(item.price * 0.25) +
+        Math.round(item.displayPrice * 0.25) +
         (item.portionOptions.quarterPortionSurcharge ?? 0)
       );
     }
-    return item.price;
+    return item.displayPrice;
   }
 
   function hasPortionOptions(item: MenuItem): boolean {
@@ -639,7 +643,7 @@ function ExpressCreateOrderContent() {
                             {item.category}
                           </p>
                           <p className="font-bold mt-1">
-                            ₦{item.price.toLocaleString()}
+                            ₦{item.displayPrice.toLocaleString()}
                           </p>
                           {(isOutOfStock || isLowStock) && (
                             <p
@@ -720,7 +724,7 @@ function ExpressCreateOrderContent() {
                                       {item.category}
                                     </p>
                                     <p className="font-bold mt-1">
-                                      ₦{item.price.toLocaleString()}
+                                      ₦{item.displayPrice.toLocaleString()}
                                     </p>
                                     {(isOutOfStock || isLowStock) && (
                                       <p
@@ -1207,7 +1211,7 @@ function ExpressCreateOrderContent() {
           open={!!portionPickerItem}
           onOpenChange={(open) => !open && setPortionPickerItem(null)}
           itemName={portionPickerItem.name}
-          basePrice={portionPickerItem.price}
+          basePrice={portionPickerItem.displayPrice}
           portionOptions={portionPickerItem.portionOptions}
           onConfirm={(portionSize) => {
             addCartLine(portionPickerItem, undefined, portionSize);

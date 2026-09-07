@@ -19,6 +19,7 @@ import InventoryModel from '@/models/inventory-model';
 import { ITab, IMenuItem } from '@/interfaces';
 import { computeInventoryStatus } from '@/lib/expense-inventory-link';
 import { CategoryService } from '@/services/category-service';
+import { SettingsService } from '@/services/settings-service';
 import {
   reconcileAndValidateOrderLines,
   type MenuItemForReconcile,
@@ -134,6 +135,11 @@ export async function expressCreateTabAction(params: {
 export type ExpressMenuItem = IMenuItem & {
   stockStatus: 'in-stock' | 'low-stock' | 'out-of-stock';
   currentStock?: number;
+  // REQ-102: the price staff should actually see and select against —
+  // resolved via SettingsService.resolveActivePriceField() the same way
+  // the public menu resolves it, so this screen never shows a different
+  // number than what the order will actually be charged.
+  displayPrice: number;
 };
 
 export interface ExpressMainCategory {
@@ -192,6 +198,8 @@ export async function expressSearchMenuAction(params: {
       ])
     );
 
+    const activePriceField = await SettingsService.resolveActivePriceField();
+
     const enriched = items.map((item) => {
       const inv = invByMenuItem.get(String(item._id)) as
         | { currentStock?: number; minimumStock?: number }
@@ -203,6 +211,7 @@ export async function expressSearchMenuAction(params: {
         ...item,
         stockStatus,
         currentStock: inv?.currentStock,
+        displayPrice: item[activePriceField] ?? item.price, // REQ-102/R-025 fallback
       };
     });
 

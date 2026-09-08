@@ -89,9 +89,26 @@ superAdminTest.describe('REQ-082: progressive category display', () => {
         return;
       }
 
+      // Pick an in-stock (aria-disabled="false") item specifically, not
+      // just whichever item sorts first — in the full regression suite,
+      // hundreds of earlier tests can deplete stock and flip the
+      // alphabetically-first item to out-of-stock, which would make the
+      // later "an enabled match exists after searching" assertion below
+      // fail through no fault of this test's own logic.
+      const enabledItemCount = await page
+        .locator('[aria-disabled="false"]')
+        .count();
+      if (enabledItemCount === 0) {
+        testInfo.skip(
+          true,
+          'No in-stock express-order items available on landing'
+        );
+        return;
+      }
+
       const firstItemName = (
         (await page
-          .locator('[aria-disabled] p.font-medium')
+          .locator('[aria-disabled="false"] p.font-medium')
           .first()
           .textContent()) ?? ''
       ).trim();
@@ -104,7 +121,9 @@ superAdminTest.describe('REQ-082: progressive category display', () => {
         firstItemName
       );
 
-      await expect(page.locator('[aria-disabled="false"]').first()).toBeVisible();
+      await expect(
+        page.locator('[aria-disabled="false"]').first()
+      ).toBeVisible();
       await page.locator('[aria-disabled="false"]').first().click();
       const firstCheckoutCount = await checkoutCount(page);
       expect(firstCheckoutCount).toBeGreaterThan(0);
@@ -125,7 +144,9 @@ superAdminTest.describe('REQ-082: progressive category display', () => {
         return;
       }
 
-      await expect(page.locator('[aria-disabled="false"]').first()).toBeVisible();
+      await expect(
+        page.locator('[aria-disabled="false"]').first()
+      ).toBeVisible();
       await page.locator('[aria-disabled="false"]').first().click();
       const secondCheckoutCount = await checkoutCount(page);
       expect(secondCheckoutCount).toBeGreaterThan(firstCheckoutCount);

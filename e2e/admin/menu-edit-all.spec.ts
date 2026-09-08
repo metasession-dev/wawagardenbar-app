@@ -1,5 +1,8 @@
 /**
  * @requirement REQ-102 — AC7/AC8: bulk "Edit All" menu page
+ * @requirement REQ-103 — AC1/AC2/AC5: menuManagement-permitted admin can
+ * save Edit All rows (non-price + price fields); a session without the
+ * permission is still blocked at the page level.
  *
  * Covers AC7-AC8 from compliance/evidence/REQ-102/test-scope.md:
  *   AC7 — /dashboard/menu/edit-all shows every menu item with editable
@@ -17,6 +20,8 @@ import { tagTest } from '../helpers/test-tags';
 import { evidenceShot } from '../helpers/evidence';
 
 const SUPER_ADMIN_FILE = path.join(__dirname, '../../.auth/super-admin.json');
+const ADMIN_FILE = path.join(__dirname, '../../.auth/admin.json');
+const CSR_FILE = path.join(__dirname, '../../.auth/csr.json');
 
 function mongoConn() {
   return {
@@ -253,3 +258,151 @@ superAdminTest.describe('REQ-102: Bulk "Edit All" menu page', () => {
     }
   );
 });
+
+/**
+ * REQ-103 — AC1/AC2: `updateMenuItemRowAction` previously hard-coded
+ * `role !== 'super-admin'`, rejecting the whole row save for any
+ * `menuManagement`-permitted admin. `e2e-admin` (`.auth/admin.json`) is
+ * seeded with role `admin` + `permissions.menuManagement: true` (see
+ * `scripts/seed-e2e-admins.ts`) — exactly the account class this fix
+ * unblocks.
+ */
+const adminTest = base.extend({ storageState: ADMIN_FILE });
+adminTest.beforeEach(async ({ page }, testInfo) => {
+  if (!(await isAuthenticated(page))) {
+    testInfo.skip(true, 'Admin login failed — skipping');
+  }
+});
+
+adminTest.describe(
+  'REQ-103: Edit All save — menuManagement-permitted admin (non-super-admin)',
+  () => {
+    adminTest.describe.configure({ mode: 'serial' });
+
+    let handle: SeedHandle | null = null;
+
+    adminTest.beforeAll(async () => {
+      handle = await seedMenuItem();
+    });
+
+    adminTest.afterAll(async () => {
+      await cleanup(handle);
+    });
+
+    adminTest(
+      'AC1: a menuManagement-permitted admin can save a non-price field',
+      async ({ page }) => {
+        tagTest('REQ-103', 1);
+        await page.goto('/dashboard/menu/edit-all', {
+          waitUntil: 'domcontentloaded',
+        });
+
+        const row = page.locator(
+          `[data-testid="edit-all-row-${handle!.itemId}"]`
+        );
+        await expect(row).toBeVisible();
+
+        const nameInput = row.locator(
+          `[data-testid="edit-all-name-${handle!.itemId}"]`
+        );
+        const newName = `${handle!.name}-renamed`;
+        await nameInput.fill(newName);
+
+        const saveButton = page.locator(
+          `[data-testid="edit-all-save-${handle!.itemId}"]`
+        );
+        await saveButton.click();
+
+        await expect(
+          page.getByText(new RegExp(`${handle!.name}.*updated`, 'i')).first()
+        ).toBeVisible({ timeout: 10000 });
+        await evidenceShot(
+          page,
+          'REQ-103',
+          1,
+          'menu-management-admin-non-price-save'
+        );
+        handle!.name = newName;
+      }
+    );
+
+    adminTest(
+      'AC2: a menuManagement-permitted admin can save a price field',
+      async ({ page }) => {
+        tagTest('REQ-103', 2);
+        await page.goto('/dashboard/menu/edit-all', {
+          waitUntil: 'domcontentloaded',
+        });
+
+        const row = page.locator(
+          `[data-testid="edit-all-row-${handle!.itemId}"]`
+        );
+        await expect(row).toBeVisible();
+
+        const priceInputs = row.locator('input[type="number"]');
+        await priceInputs.nth(1).fill('1200');
+
+        const saveButton = page.locator(
+          `[data-testid="edit-all-save-${handle!.itemId}"]`
+        );
+        await saveButton.click();
+
+        await expect(
+          page.getByText(new RegExp(`${handle!.name}.*updated`, 'i')).first()
+        ).toBeVisible({ timeout: 10000 });
+        await evidenceShot(
+          page,
+          'REQ-103',
+          2,
+          'menu-management-admin-price-save'
+        );
+
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        const reloadedRow = page.locator(
+          `[data-testid="edit-all-row-${handle!.itemId}"]`
+        );
+        const reloadedPriceInputs = reloadedRow.locator('input[type="number"]');
+        await expect(reloadedPriceInputs.nth(1)).toHaveValue('1200');
+      }
+    );
+  }
+);
+
+/**
+ * REQ-103 — AC5 (negative, page-level defense-in-depth): a session with
+ * neither `super-admin` nor `menuManagement` must still be unable to reach
+ * the save surface at all. This is the pre-existing, unchanged
+ * `routePermissions['/dashboard/menu']` gate in `proxy.ts` — the actual
+ * save-action gate this REQ fixes (`hasSessionPermission`) is proven
+ * directly by unit tests (`__tests__/actions/admin/menu-actions.edit-all-row.test.ts`),
+ * since a session blocked here never reaches the save form to exercise it.
+ */
+const csrTest = base.extend({ storageState: CSR_FILE });
+csrTest.beforeEach(async ({ page }, testInfo) => {
+  try {
+    await page.goto('/dashboard/orders');
+    await page.waitForLoadState('domcontentloaded');
+    if (!page.url().includes('/dashboard')) {
+      testInfo.skip(true, 'CSR login failed — skipping');
+    }
+  } catch {
+    testInfo.skip(true, 'CSR login failed — skipping');
+  }
+});
+
+csrTest(
+  'REQ-103 AC5: a session without menuManagement is redirected away from Edit All',
+  async ({ page }) => {
+    tagTest('REQ-103', 5);
+    await page.goto('/dashboard/menu/edit-all', {
+      waitUntil: 'domcontentloaded',
+    });
+    await expect(page).toHaveURL(/\/dashboard\/forbidden/);
+    await evidenceShot(
+      page,
+      'REQ-103',
+      5,
+      'no-menu-management-blocked-edit-all'
+    );
+  }
+);

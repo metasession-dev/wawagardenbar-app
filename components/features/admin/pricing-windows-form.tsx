@@ -4,9 +4,12 @@
  * REQ-102 (amended) — Show Price Window / Happy Hour Window, standalone.
  *
  * Originally a tab inside the Settings page; moved to its own page linked
- * from /dashboard/menu (next to "Edit All") per operator request. Submits
- * a partial PUT to /api/settings — SettingsService.updateSettings() merges
- * via Object.assign, so this form never touches any other settings field.
+ * from /dashboard/menu (next to "Edit All") per operator request.
+ *
+ * REQ-103: submits via `updatePricingWindowsAction` (a dedicated,
+ * menuManagement-gated server action) instead of the generic super-admin-only
+ * `PUT /api/settings` — the action's typed parameters mean it can only ever
+ * write `showPriceWindow` / `happyHourWindow`, same as before.
  */
 
 import { useState } from 'react';
@@ -34,6 +37,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Save } from 'lucide-react';
+import { updatePricingWindowsAction } from '@/app/actions/admin/menu-actions';
 
 const pricingWindowsSchema = z.object({
   showPriceWindow: z.object({
@@ -67,13 +71,7 @@ export function PricingWindowsForm({ initialValues }: PricingWindowsFormProps) {
   async function onSubmit(data: PricingWindowsFormValues) {
     setIsSubmitting(true);
     try {
-      const response = await fetch('/api/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
+      const result = await updatePricingWindowsAction(data);
 
       if (!result.success) {
         throw new Error(result.error || 'Failed to update pricing windows');

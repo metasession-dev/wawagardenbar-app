@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-103",
+  "ac": 3,
+  "slug": "menu-management-admin-pricing-window-saved",
+  "specFile": "e2e/admin/pricing-windows.spec.ts",
+  "capturedAt": "2026-09-08T20:39:29.582Z"
+}

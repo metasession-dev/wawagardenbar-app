@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-103",
+  "ac": 1,
+  "slug": "menu-management-admin-non-price-save",
+  "specFile": "e2e/admin/menu-edit-all.spec.ts",
+  "capturedAt": "2026-09-08T20:39:04.468Z"
+}

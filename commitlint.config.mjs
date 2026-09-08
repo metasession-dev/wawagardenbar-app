@@ -44,6 +44,14 @@ export default {
     ],
     // Warn (not error) when body is missing — some commits are one-liners
     'body-empty': [1, 'never'],
+    // devaudit#775: the mandatory Sdlc-Implementer-Sentinel trailer is a
+    // single-line JSON array that grows with every phase transition across
+    // a session and routinely exceeds the conventional 100-char body-line
+    // limit. It's machine-generated and can't be wrapped without breaking
+    // JSON parsing, so the line-length rule is disabled rather than tuned
+    // to an arbitrary ceiling that will eventually be exceeded again.
+    'body-max-line-length': [0],
+    'footer-max-line-length': [0],
     // Implementation commits must trace to a requirement (ERROR)
     'requirement-ref-for-impl': [2, 'always'],
     // AI-authored commits should be attributed (warning)

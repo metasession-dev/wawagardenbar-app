@@ -4,6 +4,7 @@ import { getIronSession } from 'iron-session';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { sessionOptions, SessionData } from '@/lib/session';
+import { hasSessionPermission } from '@/lib/auth-middleware';
 import { PriceHistoryService } from '@/services/price-history-service';
 import { PriceChangeReason } from '@/interfaces';
 
@@ -49,9 +50,14 @@ export async function updateMenuItemPriceAction(
       return { success: false, error: 'Unauthorized' };
     }
 
-    // Only super-admin can update prices
-    if (session.role !== 'super-admin') {
-      return { success: false, error: 'Only super-admin can update prices' };
+    // REQ-103: was hard-coded to `role !== 'super-admin'`, the same stale
+    // gate as the bulk "Edit All" row save — now checks the intended
+    // `menuManagement` permission instead.
+    if (!hasSessionPermission(session, 'menuManagement')) {
+      return {
+        success: false,
+        error: 'You do not have permission to update menu items',
+      };
     }
 
     // Validate input

@@ -77,7 +77,8 @@ authored_at: '2026-09-08'
 
 ## 4. E2E test coverage
 
-To be populated by `e2e-test-engineer` at Phase 2 (UI-facing change — Edit All, Pricing Window, and the negative-access-check all need browser coverage).
+- **Spec(s):** `e2e/admin/menu-edit-all.spec.ts` (AC1/AC2 new `adminTest` describe; AC5 new top-level `csrTest`), `e2e/admin/pricing-windows.spec.ts` (AC3 new `adminTest`; AC5 new top-level `csrTest`).
+- **ACs covered:** AC1, AC2, AC3 (positive, via a `menuManagement`-permitted admin fixture — `.auth/admin.json`); AC5 (page-level defense-in-depth, via a no-permission fixture — `.auth/csr.json`). AC4 and AC6 are unit-only — see `compliance/evidence/REQ-103/e2e-scope-decision.md` for the full rationale, including why AC5's actual save-action gate is proven at the unit level (a session blocked at the page layer never reaches the save form).
 
 ## 5. Threat model + security considerations
 

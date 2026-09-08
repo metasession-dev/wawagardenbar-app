@@ -101,16 +101,55 @@ const baseParams = () => ({
   happyHourPrice: 1000,
 });
 
-describe('REQ-102 updateMenuItemRowAction — RBAC', () => {
-  it('rejects a non-super-admin session', async () => {
+describe('REQ-102/REQ-103 updateMenuItemRowAction — RBAC', () => {
+  it('rejects an admin session with no menuManagement permission (AC5)', async () => {
     mockGetIronSession.mockResolvedValue({
       userId: USER_ID,
       role: 'admin',
       email: 'staff@test.local',
+      permissions: { menuManagement: false },
     });
     const result = await updateMenuItemRowAction(baseParams());
     expect(result.success).toBe(false);
     expect(mockUpdatePrice).not.toHaveBeenCalled();
+  });
+
+  it('allows a menuManagement-permitted admin to save a non-price field (AC1)', async () => {
+    mockGetIronSession.mockResolvedValue({
+      userId: USER_ID,
+      role: 'admin',
+      email: 'staff@test.local',
+      permissions: { menuManagement: true },
+    });
+    const result = await updateMenuItemRowAction({
+      ...baseParams(),
+      category: 'sides',
+    });
+    expect(result.success).toBe(true);
+    expect(mockFindByIdAndUpdate).toHaveBeenCalled();
+  });
+
+  it('allows a menuManagement-permitted admin to save a price field (AC2)', async () => {
+    mockGetIronSession.mockResolvedValue({
+      userId: USER_ID,
+      role: 'admin',
+      email: 'staff@test.local',
+      permissions: { menuManagement: true },
+    });
+    const result = await updateMenuItemRowAction({
+      ...baseParams(),
+      showPrice: 800,
+    });
+    expect(result.success).toBe(true);
+    expect(mockUpdatePrice).toHaveBeenCalled();
+  });
+
+  it('still allows super-admin (regression)', async () => {
+    const result = await updateMenuItemRowAction({
+      ...baseParams(),
+      category: 'sides',
+    });
+    expect(result.success).toBe(true);
   });
 });
 

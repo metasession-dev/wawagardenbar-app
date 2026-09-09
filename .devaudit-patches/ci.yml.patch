@@ -73,3 +73,27 @@
 +        # plain `install chromium` is correct here: it's version-aware and
 +        # skips the browser download itself when already cached.
 +        run: npx playwright install chromium
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index a375499..e224ed7 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -86,6 +86,19 @@ jobs:
+           # cache entirely (devaudit-installer#676).
+           clean: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'true' || 'false' }}
+ 
++      - name: Remove stale .next build output
++        # clean:false above (devaudit-installer#676) intentionally keeps
++        # node_modules and other gitignored state between runs on the
++        # self-hosted runner — but .next is different: it's live scratch
++        # state a running dev server writes to, not a stable install-once
++        # cache, so a job whose dev server got killed mid-write (timeout,
++        # OOM, cancellation) can leave it torn/corrupted for every
++        # subsequent run's TypeScript Check and Build Check to trip over,
++        # on totally unrelated PRs. Regenerating it costs ~nothing in dev
++        # mode (lazy/incremental compilation), so there's no caching
++        # upside to keeping it — always start clean.
++        run: rm -rf .next
++
+       - name: Validate self-hosted runner prerequisites
+         env:
+           DEVAUDIT_RUNNER_ENVIRONMENT: ${{ runner.environment }}

@@ -32,6 +32,9 @@ on:
         required: false
         type: string
         default: ''
+      runner_label:
+        description: 'Optional one-run runner label override. Blank uses repository CI_RUNNER_LABEL.'
+        required: false
   # PR-to-main runs the critical tier (smoke + e2e/critical/), targeting
   # ~10-15 min wall-clock per the 3-tier model. Successful production
   # deployment runs the full regression safety net; manual dispatch
@@ -58,7 +61,7 @@ jobs:
        (github.event.deployment.environment == 'production' ||
         github.event.deployment.environment == 'prod' ||
         endsWith(github.event.deployment.environment, '/ production')))
-    runs-on: ubuntu-latest
+    runs-on: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'ubuntu-latest' || (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') }}
     # Keep the job budget above the Playwright budget so timeout metadata and
     # partial evidence can be retained before GitHub terminates the runner.
     timeout-minutes: 55

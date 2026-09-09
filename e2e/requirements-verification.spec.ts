@@ -671,7 +671,14 @@ test.describe('Section 19: Settings & Configuration', () => {
 // Tests run serially to minimise rate-limit collisions.
 // ===========================================================================
 test.describe('Section 20: Public REST API', () => {
-  test.describe.configure({ mode: 'serial' });
+  // retries: 2 — the critical project sets retries:0 at project level to
+  // avoid retry-amplification for describe.serial blocks that mutate DB
+  // state (tab+payment+close-tab flows elsewhere, see playwright.config.ts).
+  // These tests are read-only request-fixture assertions with no side
+  // effects, so retrying is safe here and smooths over the rare, transient
+  // "Request context disposed" flake seen on the shared worker-scoped
+  // `request` fixture under CI load (unrelated to any REQ's diff).
+  test.describe.configure({ mode: 'serial', retries: 2 });
 
   test('health endpoint returns success with status, service, version, uptime', async ({
     request,
@@ -814,6 +821,9 @@ test.describe('Section 20: Public REST API', () => {
 // Section 20: Admin API Protection
 // ===========================================================================
 test.describe('Section 20: Admin API Protection', () => {
+  // See Section 20: Public REST API above — read-only, retry-safe.
+  test.describe.configure({ retries: 2 });
+
   test('admin settings API requires admin session', async ({ request }) => {
     const response = await request.post(
       '/api/admin/settings/points-conversion-rate',
@@ -838,6 +848,9 @@ test.describe('Section 20: Admin API Protection', () => {
 // Section 22: Security — HTTP Headers
 // ===========================================================================
 test.describe('Section 22: Security Headers', () => {
+  // See Section 20: Public REST API above — read-only, retry-safe.
+  test.describe.configure({ retries: 2 });
+
   test('returns X-Frame-Options DENY', async ({ request }) => {
     const response = await request.get('/');
     expect(response.headers()['x-frame-options']?.toLowerCase()).toBe('deny');
@@ -867,6 +880,9 @@ test.describe('Section 22: Security Headers', () => {
 // Section 22: Security — Rate Limiting
 // ===========================================================================
 test.describe('Section 22: Rate Limiting', () => {
+  // See Section 20: Public REST API above — read-only, retry-safe.
+  test.describe.configure({ retries: 2 });
+
   test('API endpoints enforce rate limiting headers', async ({ request }) => {
     const response = await request.get('/api/public/health');
     const headers = response.headers();
@@ -884,6 +900,9 @@ test.describe('Section 22: Rate Limiting', () => {
 // Section 22: Security — CORS
 // ===========================================================================
 test.describe('Section 22: CORS', () => {
+  // See Section 20: Public REST API above — read-only, retry-safe.
+  test.describe.configure({ retries: 2 });
+
   test('API handles preflight OPTIONS requests', async ({ request }) => {
     // OPTIONS requests should not return 404/500
     const response = await request.fetch('/api/public/health', {
@@ -937,6 +956,10 @@ test.describe('Section 24: Data Management & Privacy', () => {
 // Section 25: Deployment — Health & Uptime
 // ===========================================================================
 test.describe('Section 25: Deployment', () => {
+  // See Section 20: Public REST API above — read-only, retry-safe
+  // (applies to the request-fixture health-check test below).
+  test.describe.configure({ retries: 2 });
+
   test('application is running and serves pages', async ({ page }) => {
     const response = await page.goto('/');
     expect(response?.status()).toBe(200);

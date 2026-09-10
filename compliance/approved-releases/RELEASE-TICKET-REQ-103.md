@@ -1,6 +1,6 @@
 # Release Ticket: REQ-103 — Menu Management permission holders can save Edit All / Pricing Window
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-09-08
 **Requirement ID:** REQ-103
 **Risk Level:** HIGH

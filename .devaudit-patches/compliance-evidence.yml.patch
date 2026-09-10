@@ -1,0 +1,33 @@
+diff --git a/.github/workflows/compliance-evidence.yml b/.github/workflows/compliance-evidence.yml
+index 8ce2b73..3186b75 100644
+--- a/.github/workflows/compliance-evidence.yml
++++ b/.github/workflows/compliance-evidence.yml
+@@ -611,6 +611,20 @@ jobs:
+               passed) CHECK_STATUS=successful ;;
+               *) CHECK_STATUS="$REQ_OUTCOME" ;;
+             esac
++            # devaudit-installer#798 — the `regression` tier (post-deploy
++            # production) is the Should/Could-tier per Test_Policy.md's own
++            # E2E gating model: "not pre-merge blocking." It structurally
++            # cannot complete before a production deployment exists, which
++            # itself only happens after this release's UAT approval + merge
++            # — reporting it as `required: true` (the report-release-check.sh
++            # default) deadlocks UAT approval on a check that can never
++            # resolve before the approval it's blocking. Only the `critical`
++            # (pre-merge, PR-triggered) tier is genuinely required here.
++            case "$TIER" in
++              critical)   CHECK_REQUIRED=true ;;
++              regression) CHECK_REQUIRED=false ;;
++              *)          CHECK_REQUIRED=true ;;
++            esac
+             CHECK_DETAILS=$(jq -cn \
+               --arg conclusion "${{ github.event.workflow_run.conclusion }}" \
+               --arg executionOutcome "${EXECUTION_OUTCOME:-unknown}" \
+@@ -620,6 +634,7 @@ jobs:
+               --project-slug wgb --release "${DERIVED_RELEASE}" \
+               --check-key "e2e-regression:${{ github.event.workflow_run.id }}:${{ github.event.workflow_run.run_attempt }}:${REQ}" \
+               --label "${TIER_LABEL} (${REQ})" --provider github_actions --status "$CHECK_STATUS" \
++              --required "$CHECK_REQUIRED" \
+               --external-run-id "${{ github.event.workflow_run.id }}" \
+               --external-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}" \
+               --commit-sha "${{ github.event.workflow_run.head_sha }}" --branch "${PRIOR_BRANCH}" \

@@ -364,15 +364,27 @@ jobs:
 
           # Tier metadata for the portal (the operator filters/groups by
           # this on the release detail). pull_request → critical;
-          # push to main → regression; otherwise dispatch/schedule.
+          # deployment_status (post-deploy production) → regression.
           PRIOR_EVENT="${{ github.event.workflow_run.event }}"
           PRIOR_BRANCH="${{ github.event.workflow_run.head_branch }}"
           E2E_ENVIRONMENT=uat
           case "$PRIOR_EVENT" in
             pull_request)       TIER=critical; STAGE=2 ;;
-            push)               TIER=regression; STAGE=5 ;;
             deployment_status)  TIER=regression; STAGE=5; E2E_ENVIRONMENT=production ;;
             *)                  TIER="${PRIOR_EVENT}"; STAGE="" ;;
+          esac
+          # devaudit-installer#787 — the two tiers are otherwise
+          # indistinguishable everywhere a human looks: same workflow name,
+          # same job name, same check label. A human looking at a
+          # develop→main PR sees a "regression"-tier check as structurally
+          # guaranteed absent/skipped (production doesn't exist yet) with
+          # no way to tell "fine, hasn't run yet" from "something's wrong" —
+          # both would otherwise render under the identical "E2E Regression"
+          # label. Give each tier its own label instead.
+          case "$TIER" in
+            critical)   TIER_LABEL="E2E Critical (pre-merge)" ;;
+            regression) TIER_LABEL="E2E Regression (post-deploy production)" ;;
+            *)          TIER_LABEL="E2E Regression" ;;
           esac
 
           # Common flags for upload-evidence.sh. Branch + SHA come from
@@ -599,6 +611,20 @@ jobs:
               passed) CHECK_STATUS=successful ;;
               *) CHECK_STATUS="$REQ_OUTCOME" ;;
             esac
+            # devaudit-installer#798 — the `regression` tier (post-deploy
+            # production) is the Should/Could-tier per Test_Policy.md's own
+            # E2E gating model: "not pre-merge blocking." It structurally
+            # cannot complete before a production deployment exists, which
+            # itself only happens after this release's UAT approval + merge
+            # — reporting it as `required: true` (the report-release-check.sh
+            # default) deadlocks UAT approval on a check that can never
+            # resolve before the approval it's blocking. Only the `critical`
+            # (pre-merge, PR-triggered) tier is genuinely required here.
+            case "$TIER" in
+              critical)   CHECK_REQUIRED=true ;;
+              regression) CHECK_REQUIRED=false ;;
+              *)          CHECK_REQUIRED=true ;;
+            esac
             CHECK_DETAILS=$(jq -cn \
               --arg conclusion "${{ github.event.workflow_run.conclusion }}" \
               --arg executionOutcome "${EXECUTION_OUTCOME:-unknown}" \
@@ -607,7 +633,8 @@ jobs:
             bash scripts/report-release-check.sh \
               --project-slug wgb --release "${DERIVED_RELEASE}" \
               --check-key "e2e-regression:${{ github.event.workflow_run.id }}:${{ github.event.workflow_run.run_attempt }}:${REQ}" \
-              --label "E2E Regression (${REQ})" --provider github_actions --status "$CHECK_STATUS" \
+              --label "${TIER_LABEL} (${REQ})" --provider github_actions --status "$CHECK_STATUS" \
+              --required "$CHECK_REQUIRED" \
               --external-run-id "${{ github.event.workflow_run.id }}" \
               --external-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}" \
               --commit-sha "${{ github.event.workflow_run.head_sha }}" --branch "${PRIOR_BRANCH}" \

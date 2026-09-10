@@ -610,11 +610,13 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 1. The bulk action reuses the exact same RBAC gate as the existing single-item price action (`super-admin` only) — no new, weaker authorization path is introduced for the bulk surface.
 2. Every price change made through the bulk page — like every change made through the single-item form — writes an audited price-history snapshot row via the same generalized `PriceHistoryService` call. No bulk path bypasses the audit trail; a full menu-wide price change is fully reconstructable after the fact from price history.
 
-**Residual likelihood × impact:** low × high (same RBAC + audit controls as the already-accepted single-item flow; impact is high only in the compromised-session scenario, which is already an accepted risk for any super-admin-gated write path in this application)
+**Updated by REQ-103 (2026-09-08):** Mitigation #1 above described the _actual shipped_ gate as `super-admin` only, but that gate was a bug — it was supposed to check the `menuManagement` permission (per the permission's own UI description, "Manage menu items, categories, and pricing") and instead hard-coded the role check, which is why `menuManagement`-permitted admins couldn't save at all. REQ-103 fixes the gate to check `menuManagement` as originally intended. This **widens** the actor set for this risk from "super-admin only" to "super-admin or any admin with `permissions.menuManagement === true`" — a materially larger pool of accounts now carries the bulk-edit blast radius described above. This was always the intended design (the permission exists specifically to delegate menu/pricing management), not a new exposure introduced by REQ-103.
 
-**Framework cross-references:** ISO27001.A.8.25 (secure SDLC — no new authorization surface); SOC2.CC7.2 (system monitoring / data integrity — audit trail via price-history snapshots)
+**Residual likelihood × impact:** low × high, revised to **low-medium × high** — likelihood ticks up slightly because the actor pool is now `menuManagement`-permitted admins (potentially several accounts) rather than only `super-admin` accounts (typically one or two). Mitigations #1 and #2 above are unchanged and still apply verbatim to the widened actor set — the RBAC gate is still a single, auditable permission check, and the audit trail is still universal. Compensating control: `menuManagement` is a per-admin toggle the super-admin controls (Settings → Manage Permissions) and is off by default (`DEFAULT_ADMIN_PERMISSIONS.menuManagement = false`), so the actor pool is intentionally curated, not "every admin."
 
-**Cross-links:** [REQ-102 implementation plan](plans/REQ-102/implementation-plan.md); [#696](https://github.com/metasession-dev/wawagardenbar-app/issues/696).
+**Framework cross-references:** ISO27001.A.8.25 (secure SDLC — no new authorization surface, corrected to the intended one); SOC2.CC7.2 (system monitoring / data integrity — audit trail via price-history snapshots)
+
+**Cross-links:** [REQ-102 implementation plan](plans/REQ-102/implementation-plan.md); [REQ-103 implementation plan](plans/REQ-103/implementation-plan.md); [#696](https://github.com/metasession-dev/wawagardenbar-app/issues/696); [#715](https://github.com/metasession-dev/wawagardenbar-app/issues/715); R-028.
 
 ---
 
@@ -638,3 +640,27 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 **Framework cross-references:** ISO27001.A.8.25 (secure SDLC); SOC2.CC7.1 (system monitoring — regression test as the control)
 
 **Cross-links:** [REQ-102 implementation plan](plans/REQ-102/implementation-plan.md); [#696](https://github.com/metasession-dev/wawagardenbar-app/issues/696); R-011 (the original manual-override control this REQ must not regress); ADR-004.
+
+---
+
+### R-028 — Menu/pricing save actions widen from super-admin-only to menuManagement-permission-holders (REQ-103)
+
+**Status:** OPEN
+**Opened:** 2026-09-08
+**Owner:** WGB maintainer
+**Review due:** 2027-09-08 (annual review)
+
+**The risk:** REQ-103 fixes three save actions (`updateMenuItemRowAction` "Edit All", the new `updatePricingWindowsAction`, and `updateMenuItemPriceAction` single-item Price Management) that were incorrectly hard-coded to `role === 'super-admin'` instead of checking the `menuManagement` permission the feature's own UI description promises. The fix is corrective — it grants access the permission was always meant to grant — but any authorization-gate change carries risk of being implemented incorrectly in a way that either (a) still blocks legitimate `menuManagement` holders (denial-of-service on a real workflow, not a security risk but an availability one) or (b) over-widens and grants save access to sessions that hold neither `super-admin` nor `menuManagement` (a real security regression).
+
+**Mitigations planned in this REQ:**
+
+1. A single, narrowly-scoped `hasSessionPermission(session, permission)` helper is introduced and reused across all three call sites, rather than three independent inline checks — one place to get right, one place to unit-test directly.
+2. AC5 (see `compliance/plans/REQ-103/implementation-plan.md` §1) is an explicit negative acceptance criterion: an admin _without_ `menuManagement` must still be rejected on all three save paths — required by unit tests and e2e coverage, not left as an assumption.
+3. The new `updatePricingWindowsAction` accepts a narrow, typed input (`{ showPriceWindow, happyHourWindow }` only) rather than passing through an arbitrary request body — AC6 plus a dedicated unit test assert no other `Settings` field can ride along through this new path, closing the exact class of surface-widening the generic `/api/settings` PUT it replaces would have risked if loosened wholesale instead (the issue's own proposed resolution explicitly rejected loosening that generic endpoint).
+4. `app/api/settings/route.ts` PUT is deliberately left untouched (still `super-admin`-only) — it also guards unrelated settings (business hours, fees, delivery config) that must not become reachable by `menuManagement` holders. Not touching it removes an entire class of over-widening risk from this REQ's scope.
+
+**Residual likelihood × impact:** low × medium (single shared helper + explicit negative-case tests directly guard the over-widening failure mode; impact is medium because a mis-implementation would affect authorization on a pricing surface, not authentication or data exfiltration)
+
+**Framework cross-references:** ISO27001.A.8.25 (secure SDLC — authorization-gate change with explicit test coverage for both the positive and negative case); SOC2.CC6.1 (logical access controls — permission-based, not role-hard-coded)
+
+**Cross-links:** [REQ-103 implementation plan](plans/REQ-103/implementation-plan.md); [#715](https://github.com/metasession-dev/wawagardenbar-app/issues/715); R-026 (the sibling entry this REQ's actor-set change updates).

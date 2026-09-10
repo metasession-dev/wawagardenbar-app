@@ -84,6 +84,26 @@ export function hasPermission(
 }
 
 /**
+ * REQ-103 — Non-redirecting permission check for use inside server actions.
+ *
+ * `requirePermission` redirects on failure, which is correct for page-level
+ * gates (Server Components / layouts) but wrong for server actions, which
+ * need to return an `ActionResult`-shaped error instead of navigating the
+ * page out from under an in-progress form submission. Super-admins always
+ * pass, mirroring `requirePermission`'s bypass.
+ */
+export function hasSessionPermission(
+  session: SessionData,
+  permission: keyof IAdminPermissions
+): boolean {
+  if (session.role === 'super-admin') {
+    return true;
+  }
+
+  return Boolean(session.permissions?.[permission]);
+}
+
+/**
  * Check if admin has specific permission
  * Super-admins always have access
  */

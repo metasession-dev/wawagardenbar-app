@@ -4,12 +4,14 @@ import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
 import { revalidatePath } from 'next/cache';
 import { sessionOptions, SessionData } from '@/lib/session';
+import { hasSessionPermission } from '@/lib/auth-middleware';
 import { connectDB } from '@/lib/mongodb';
 import MenuItemModel from '@/models/menu-item-model';
 import InventoryModel from '@/models/inventory-model';
 import StockMovementModel from '@/models/stock-movement-model';
 import { AuditLogService } from '@/services/audit-log-service';
 import { SystemSettingsService } from '@/services/system-settings-service';
+import { SettingsService } from '@/services/settings-service';
 import { PriceHistoryService } from '@/services/price-history-service';
 import { Types } from 'mongoose';
 import { writeFile, mkdir } from 'fs/promises';
@@ -999,10 +1001,15 @@ export async function updateMenuItemRowAction(
       sessionOptions
     );
 
-    // Only super-admin can update prices — same RBAC gate as the
-    // single-item Price Management form, reused verbatim for the bulk path.
-    if (!session.userId || session.role !== 'super-admin') {
-      return { success: false, error: 'Only super-admin can update prices' };
+    // REQ-103: was hard-coded to `role !== 'super-admin'`, rejecting the
+    // whole row save (not just price fields) for any menuManagement-permitted
+    // admin — contradicting the permission's own UI description ("Manage
+    // menu items, categories, and pricing").
+    if (!session.userId || !hasSessionPermission(session, 'menuManagement')) {
+      return {
+        success: false,
+        error: 'You do not have permission to update menu items',
+      };
     }
 
     await connectDB();
@@ -1078,6 +1085,66 @@ export async function updateMenuItemRowAction(
     return {
       success: false,
       error: 'Failed to update menu item',
+    };
+  }
+}
+
+interface PricingWindow {
+  enabled: boolean;
+  start: string;
+  end: string;
+}
+
+interface UpdatePricingWindowsParams {
+  showPriceWindow: PricingWindow;
+  happyHourWindow: PricingWindow;
+}
+
+/**
+ * REQ-103 — dedicated save action for `/dashboard/menu/pricing-windows`.
+ *
+ * Replaces the form's prior dependency on the generic `PUT /api/settings`
+ * endpoint (super-admin-only, and shared with unrelated settings like
+ * business hours/fees). This action is gated by the same `menuManagement`
+ * permission as the other menu-management save paths, and — by construction
+ * of its typed parameter list — can only ever write `showPriceWindow` /
+ * `happyHourWindow`; no other `Settings` field is reachable through it.
+ */
+export async function updatePricingWindowsAction(
+  params: UpdatePricingWindowsParams
+): Promise<ActionResult> {
+  try {
+    const cookieStore = await cookies();
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
+
+    if (!session.userId || !hasSessionPermission(session, 'menuManagement')) {
+      return {
+        success: false,
+        error: 'You do not have permission to update pricing windows',
+      };
+    }
+
+    await SettingsService.updateSettings(
+      {
+        showPriceWindow: params.showPriceWindow,
+        happyHourWindow: params.happyHourWindow,
+      },
+      session.userId,
+      session.email
+    );
+
+    revalidatePath('/dashboard/menu/pricing-windows');
+    revalidatePath('/menu');
+
+    return { success: true, message: 'Pricing windows updated successfully' };
+  } catch (error) {
+    console.error('Error updating pricing windows:', error);
+    return {
+      success: false,
+      error: 'Failed to update pricing windows',
     };
   }
 }

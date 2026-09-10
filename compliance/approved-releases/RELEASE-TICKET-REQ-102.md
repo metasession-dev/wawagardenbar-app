@@ -1,6 +1,6 @@
 # Release Ticket: REQ-102 — Triple menu pricing (default/show/happy-hour) + bulk "Edit All" page
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-09-04
 **Requirement ID:** REQ-102
 **Risk Level:** HIGH

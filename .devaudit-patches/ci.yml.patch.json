@@ -1,0 +1,4 @@
+{
+  "upstream_issue": "https://github.com/metasession-dev/DevAudit-Installer/issues/816",
+  "reason": "self-hosted-runner robustness fixes (stale .next wipe, npm audit-endpoint retirement bump, Playwright --with-deps removal for non-root, npm audit retry loop) with no sdlc-config.json key yet"
+}

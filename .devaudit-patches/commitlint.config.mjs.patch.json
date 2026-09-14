@@ -1,0 +1,4 @@
+{
+  "upstream_issue": "https://github.com/metasession-dev/DevAudit-Installer/issues/814",
+  "reason": "the Sdlc-Implementer-Sentinel commit trailer trips commitlint's default footer-max-line-length / body-max-line-length rules"
+}

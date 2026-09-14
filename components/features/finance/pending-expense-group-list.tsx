@@ -42,6 +42,29 @@ interface PendingExpenseGroupListProps {
   userRole: string;
 }
 
+// REQ-106 — payment-method badge, so admins can see batch homogeneity
+// before assigning groups together.
+function paymentMethodBadge(paymentMethod?: string) {
+  if (paymentMethod === 'cash') {
+    return (
+      <Badge
+        variant="outline"
+        className="text-emerald-700 border-emerald-300 bg-emerald-50"
+      >
+        Cash
+      </Badge>
+    );
+  }
+  return (
+    <Badge
+      variant="outline"
+      className="text-blue-700 border-blue-300 bg-blue-50"
+    >
+      Transfer
+    </Badge>
+  );
+}
+
 function statusBadge(status: string) {
   if (status === 'approved')
     return (
@@ -73,6 +96,12 @@ export function PendingExpenseGroupList({
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferGroupIds, setTransferGroupIds] = useState<string[]>([]);
   const [transferTotal, setTransferTotal] = useState(0);
+  // REQ-106 — the (homogeneous, by the batch-homogeneity guard) payment
+  // method of the groups being transferred; drives the dialog's reference
+  // field label/requirement.
+  const [transferPaymentMethod, setTransferPaymentMethod] = useState<
+    'cash' | 'transfer'
+  >('transfer');
 
   const fetchGroups = useCallback(async () => {
     setLoading(true);
@@ -173,6 +202,7 @@ export function PendingExpenseGroupList({
     const total = approvedGroups.reduce((sum, g) => sum + g.totalAmount, 0);
     setTransferGroupIds(ids);
     setTransferTotal(total);
+    setTransferPaymentMethod(approvedGroups[0]?.paymentMethod ?? 'transfer');
     setTransferOpen(true);
   }
 
@@ -182,12 +212,14 @@ export function PendingExpenseGroupList({
     const total = batchGroups.reduce((sum, g) => sum + g.totalAmount, 0);
     setTransferGroupIds(ids);
     setTransferTotal(total);
+    setTransferPaymentMethod(batchGroups[0]?.paymentMethod ?? 'transfer');
     setTransferOpen(true);
   }
 
   function openTransferForSingle(group: IPendingExpenseGroup) {
     setTransferGroupIds([group._id.toString()]);
     setTransferTotal(group.totalAmount);
+    setTransferPaymentMethod(group.paymentMethod ?? 'transfer');
     setTransferOpen(true);
   }
 
@@ -380,6 +412,7 @@ export function PendingExpenseGroupList({
       <TransferConfirmationDialog
         groupIds={transferGroupIds}
         totalAmount={transferTotal}
+        paymentMethod={transferPaymentMethod}
         open={transferOpen}
         onOpenChange={setTransferOpen}
         onSuccess={fetchGroups}
@@ -460,6 +493,7 @@ function GroupRow({
             </div>
           </div>
           <div className="flex items-center gap-2 ml-auto flex-wrap">
+            {paymentMethodBadge(group.paymentMethod)}
             {statusBadge(group.status)}
             <span className="text-sm font-semibold">
               ₦

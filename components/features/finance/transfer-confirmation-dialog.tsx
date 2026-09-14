@@ -22,6 +22,12 @@ import { toast } from '@/hooks/use-toast';
 interface TransferConfirmationDialogProps {
   groupIds: string[];
   totalAmount: number;
+  /**
+   * REQ-106 — the (homogeneous) payment method of the groups being
+   * transferred. 'transfer' requires a bank reference; 'cash' makes the
+   * field an optional handover acknowledgement.
+   */
+  paymentMethod?: 'cash' | 'transfer';
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
@@ -30,6 +36,7 @@ interface TransferConfirmationDialogProps {
 export function TransferConfirmationDialog({
   groupIds,
   totalAmount,
+  paymentMethod = 'transfer',
   open,
   onOpenChange,
   onSuccess,
@@ -37,9 +44,10 @@ export function TransferConfirmationDialog({
   const [transferReference, setTransferReference] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const referenceRequired = paymentMethod !== 'cash';
 
   async function handleConfirm() {
-    if (!transferReference.trim()) {
+    if (referenceRequired && !transferReference.trim()) {
       setError('Transfer reference is required');
       return;
     }
@@ -102,11 +110,21 @@ export function TransferConfirmationDialog({
         <div className="space-y-3 py-2">
           <div className="space-y-1.5">
             <Label htmlFor="transferRef">
-              Transfer Reference <span className="text-destructive">*</span>
+              {referenceRequired ? (
+                <>
+                  Transfer Reference <span className="text-destructive">*</span>
+                </>
+              ) : (
+                'Handed over by / notes (optional)'
+              )}
             </Label>
             <Input
               id="transferRef"
-              placeholder="e.g., TRF-2026041201"
+              placeholder={
+                referenceRequired
+                  ? 'e.g., TRF-2026041201'
+                  : 'e.g., handed to Chidi for safekeeping'
+              }
               value={transferReference}
               onChange={(e) => {
                 setTransferReference(e.target.value);
@@ -131,7 +149,9 @@ export function TransferConfirmationDialog({
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={isSubmitting || !transferReference.trim()}
+            disabled={
+              isSubmitting || (referenceRequired && !transferReference.trim())
+            }
           >
             {isSubmitting ? (
               <>

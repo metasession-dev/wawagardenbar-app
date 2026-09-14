@@ -10,6 +10,7 @@ import {
   normaliseLineItems,
   validateStatusTransition,
   buildExpenseRecordsFromGroup,
+  assertBatchPaymentMethodHomogeneous,
 } from '@/services/pending-expense-group-service';
 import {
   IExpenseLineItem,
@@ -212,6 +213,36 @@ describe('REQ-026: buildExpenseRecordsFromGroup', () => {
       buildExpenseRecordsFromGroup(group, 'TRF-006', 'user-id-abc')
     ).toThrow();
   });
+});
+
+// ── REQ-104: tag propagation ─────────────────────────────────────────────────
+
+describe('REQ-104: buildExpenseRecordsFromGroup propagates tagIds', () => {
+  it('propagates a line item tagIds array onto its Expense record', () => {
+    const group = makeGroup({
+      items: [makeItem({ tagIds: ['tag-1', 'tag-2'] })],
+    });
+    const records = buildExpenseRecordsFromGroup(group, 'TRF-104-1', 'user-1');
+    expect(records[0].tagIds).toEqual(['tag-1', 'tag-2']);
+  });
+
+  it('leaves tagIds undefined when the line item carries no tags', () => {
+    const group = makeGroup({ items: [makeItem({ tagIds: undefined })] });
+    const records = buildExpenseRecordsFromGroup(group, 'TRF-104-2', 'user-1');
+    expect(records[0].tagIds).toBeUndefined();
+  });
+
+  it('propagates different tagIds independently per line item', () => {
+    const group = makeGroup({
+      items: [
+        makeItem({ tagIds: ['tag-a'] }),
+        makeItem({ tagIds: ['tag-b', 'tag-c'] }),
+      ],
+    });
+    const records = buildExpenseRecordsFromGroup(group, 'TRF-104-3', 'user-1');
+    expect(records[0].tagIds).toEqual(['tag-a']);
+    expect(records[1].tagIds).toEqual(['tag-b', 'tag-c']);
+  });
 
   it('live Expense records are not present before transfer (service does not auto-create)', () => {
     // This is a contract test — buildExpenseRecordsFromGroup is a pure function
@@ -225,5 +256,79 @@ describe('REQ-026: buildExpenseRecordsFromGroup', () => {
     // Returns array of DTOs, not persisted documents
     expect(Array.isArray(records)).toBe(true);
     expect(records[0]).not.toHaveProperty('_id');
+  });
+});
+
+// ── REQ-106: conditional transferReference requirement ──────────────────────
+
+describe('REQ-106: buildExpenseRecordsFromGroup — payment-method-conditional reference', () => {
+  it('requires a non-empty transferReference for a transfer-method group', () => {
+    const group = makeGroup({ paymentMethod: 'transfer', items: [makeItem()] });
+    expect(() => buildExpenseRecordsFromGroup(group, '', 'user-1')).toThrow(
+      'Transfer reference is required'
+    );
+  });
+
+  it('allows an empty transferReference for a cash-method group', () => {
+    const group = makeGroup({ paymentMethod: 'cash', items: [makeItem()] });
+    expect(() =>
+      buildExpenseRecordsFromGroup(group, '', 'user-1')
+    ).not.toThrow();
+  });
+
+  it('treats a group with no paymentMethod (pre-REQ-106) as requiring a reference', () => {
+    const group = makeGroup({ paymentMethod: undefined, items: [makeItem()] });
+    expect(() => buildExpenseRecordsFromGroup(group, '', 'user-1')).toThrow(
+      'Transfer reference is required'
+    );
+  });
+
+  it('propagates paymentMethod onto each Expense record', () => {
+    const group = makeGroup({ paymentMethod: 'cash', items: [makeItem()] });
+    const records = buildExpenseRecordsFromGroup(group, 'ref', 'user-1');
+    expect(records[0].paymentMethod).toBe('cash');
+  });
+});
+
+// ── REQ-106: batch payment-method homogeneity guard ──────────────────────────
+
+describe('REQ-106: assertBatchPaymentMethodHomogeneous', () => {
+  it('allows a batch where every group shares the same payment method', () => {
+    expect(() =>
+      assertBatchPaymentMethodHomogeneous([
+        { paymentMethod: 'cash' },
+        { paymentMethod: 'cash' },
+      ])
+    ).not.toThrow();
+  });
+
+  it('rejects a batch mixing cash and transfer groups', () => {
+    expect(() =>
+      assertBatchPaymentMethodHomogeneous([
+        { paymentMethod: 'cash' },
+        { paymentMethod: 'transfer' },
+      ])
+    ).toThrow(/different payment methods/);
+  });
+
+  it('treats groups with no paymentMethod as transfer for the homogeneity check', () => {
+    expect(() =>
+      assertBatchPaymentMethodHomogeneous([
+        { paymentMethod: undefined },
+        { paymentMethod: 'transfer' },
+      ])
+    ).not.toThrow();
+    expect(() =>
+      assertBatchPaymentMethodHomogeneous([
+        { paymentMethod: undefined },
+        { paymentMethod: 'cash' },
+      ])
+    ).toThrow(/different payment methods/);
+  });
+
+  it('allows a single-group batch trivially', () => {
+    expect(() =>
+      assertBatchPaymentMethodHomogeneous([{ paymentMethod: 'cash' }])
+    ).not.toThrow();
   });
 });

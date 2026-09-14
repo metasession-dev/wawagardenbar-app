@@ -664,3 +664,71 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 **Framework cross-references:** ISO27001.A.8.25 (secure SDLC — authorization-gate change with explicit test coverage for both the positive and negative case); SOC2.CC6.1 (logical access controls — permission-based, not role-hard-coded)
 
 **Cross-links:** [REQ-103 implementation plan](plans/REQ-103/implementation-plan.md); [#715](https://github.com/metasession-dev/wawagardenbar-app/issues/715); R-026 (the sibling entry this REQ's actor-set change updates).
+
+---
+
+### R-029 — Cash Position adjustment bypassing the super-admin gate via a direct action call (REQ-106)
+
+**Status:** OPEN
+**Opened:** 2026-09-14
+**Owner:** WGB maintainer
+**Review due:** 2027-09-14 (annual review)
+
+**The risk:** `recordCashPositionAdjustmentAction` is the only write path to the till-balance audit ledger. If the `requireSuperAdmin` guard were mis-implemented or omitted, any admin (not just super-admin) could silently alter the reported Current Cash Position — a financial-reporting integrity issue, not a data-exfiltration one, but one that directly affects a figure the business uses to catch petty-cash discrepancies.
+
+**Mitigations planned in this REQ:**
+
+1. `recordCashPositionAdjustmentAction`/`listCashPositionAdjustmentsAction` enforce `requireSuperAdmin` unconditionally at the action layer — the same guard function already used by `approvePendingExpenseGroupAction`/`assignBatchAction`, not a new bespoke check.
+2. Every adjustment is an append-only, fully attributed row (`createdBy`/`createdAt`/optional `note`) — never a silent overwrite of a single mutable value — so even a successful unauthorized write would be individually visible in the audit-trail list, not hidden inside an aggregate.
+3. A dedicated unit test asserts a non-super-admin session is rejected by the action before it reaches `CashPositionService.recordAdjustment`.
+
+**Residual likelihood × impact:** low × medium (single reused guard function + explicit negative-case test; impact is medium because it's a reporting-integrity surface, not an authentication or payment-processing one)
+
+**Framework cross-references:** ISO27001.A.8.25 (secure SDLC); SOC2.CC6.1 (logical access controls)
+
+**Cross-links:** [REQ-106 implementation plan](plans/REQ-106/implementation-plan.md); [#769](https://github.com/metasession-dev/wawagardenbar-app/issues/769).
+
+---
+
+### R-030 — Mixed cash/transfer payment methods within one transfer batch causing ambiguous till deduction (REQ-106)
+
+**Status:** OPEN
+**Opened:** 2026-09-14
+**Owner:** WGB maintainer
+**Review due:** 2027-09-14 (annual review)
+
+**The risk:** `PendingExpenseGroup`s can be batched together (`paymentBatchId`) for one shared `confirmTransfer` call. If a batch mixed cash-method and transfer-method groups, `CashPositionService`'s on-demand cash-out calculation (which sums `paymentMethod:'cash'` transferred groups only) would still work correctly per-group — but the shared `transferReference` field's semantics (mandatory bank reference vs. optional cash handover note) become ambiguous for a mixed batch, and the UI's single reference input can't represent both at once.
+
+**Mitigations planned in this REQ:**
+
+1. A batch payment-method homogeneity check is enforced in **both** `assignBatch` (at batch-formation time) and `confirmTransfer` (defense in depth, since a batch could theoretically be re-assigned or `confirmTransfer` called directly against an ad-hoc `groupIds` list) — rejecting the operation with a clear error rather than silently misattributing cash flow or producing an ambiguous UI state.
+2. `assignBatch`'s check unions the batch's already-existing members with the newly-added group IDs, not just the incoming array in isolation, closing the batch-reassignment race edge case.
+3. Dedicated unit tests cover both rejection paths (mixed batch formation, mixed direct-transfer call).
+
+**Residual likelihood × impact:** low × low (structural validation at two independent call sites; the failure mode if missed is a rejected operation with a clear error, not silent data corruption)
+
+**Framework cross-references:** ISO27001.A.8.25 (secure SDLC — input validation)
+
+**Cross-links:** [REQ-106 implementation plan](plans/REQ-106/implementation-plan.md); [#769](https://github.com/metasession-dev/wawagardenbar-app/issues/769).
+
+---
+
+### R-031 — Backdated cash-position corrections could obscure a genuine shortfall (REQ-106)
+
+**Status:** ACCEPTED
+**Opened:** 2026-09-14
+**Owner:** WGB maintainer
+**Review due:** 2027-09-14 (annual review)
+
+**The risk:** A super-admin can record a `CashPositionAdjustment` with any `effectiveDate`, including one in the past. In principle this lets an admin "correct" the position to a figure that papers over a genuine cash shortfall rather than a legitimate miscount, and the on-demand computation model means the correction takes effect retroactively for any report date on or after `effectiveDate` with no special handling needed to make that "work" — which is also exactly what makes it easy to misuse.
+
+**Mitigations planned in this REQ:**
+
+1. Every adjustment (including backdated ones) is an individually visible, permanently retained row in the audit-trail list — `who`, `when` (both `effectiveDate` and the immutable `createdAt`), `amount`, and an optional `note` — never a silent overwrite. A reviewer comparing `createdAt` against `effectiveDate` can always see that a correction was backdated and by how much.
+2. This REQ does not add any additional guard beyond visibility — restricting _who_ can record an adjustment (R-029) and _making every adjustment visible_ are judged sufficient controls for a single-super-admin/solo-operator project; a stronger control (e.g. requiring a second super-admin's countersignature on backdated entries) is explicitly out of scope for this REQ.
+
+**Residual likelihood × impact:** low × medium (the operator-acknowledged trade-off: full visibility deters casual misuse but does not structurally prevent a determined single bad-actor super-admin; accepted because this project has one human operator and the compensating control is the same "one trusted human, full audit log" posture already accepted elsewhere in this project, e.g. the `solo_with_gap` approval-mode control gap)
+
+**Framework cross-references:** SOC2.CC7.2 (system monitoring — audit trail as the primary control, no automated prevention)
+
+**Cross-links:** [REQ-106 implementation plan](plans/REQ-106/implementation-plan.md); [#769](https://github.com/metasession-dev/wawagardenbar-app/issues/769).

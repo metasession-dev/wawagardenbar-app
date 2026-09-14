@@ -100,6 +100,14 @@ export interface IExpense {
   stockMovementId?: ObjectId;
   linkVoidedAt?: Date;
 
+  // REQ-104 — tags carried over from the originating pending-expense line
+  // item at transfer time (see PendingExpenseGroupService.confirmTransfer).
+  tagIds?: ObjectId[];
+
+  // REQ-106 — propagated from the originating pending-expense group at
+  // transfer time. Only 'cash' reduces Current Cash Position.
+  paymentMethod?: 'cash' | 'transfer';
+
   // Audit
   createdBy: ObjectId;
   createdAt: Date;
@@ -125,6 +133,8 @@ export interface CreateExpenseDTO {
   pendingGroupId?: string;
   // REQ-034: optional inventory link captured at submission.
   linkedInventoryId?: string;
+  // REQ-104: tags carried over from the originating pending-expense line item.
+  tagIds?: string[];
   createdBy: string;
 }
 

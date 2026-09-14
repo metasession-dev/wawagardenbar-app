@@ -72,6 +72,8 @@ const validGroupPayload = {
       totalCost: 25000,
     },
   ],
+  // REQ-106
+  paymentMethod: 'cash' as const,
 };
 
 // ── createPendingExpenseGroupAction ───────────────────────────────────────────
@@ -167,10 +169,11 @@ describe('REQ-026: confirmTransferAction RBAC', () => {
     expect(result.error).toMatch(/permission|unauthorized/i);
   });
 
-  it('super-admin blocked when transfer reference is empty', async () => {
-    mockSession('super-admin');
-    const result = await confirmTransferAction(['group-id-1'], '');
-    expect(result.success).toBe(false);
-    expect(result.error).toMatch(/reference/i);
-  });
+  // REQ-106: whether an empty transfer reference is rejected is now
+  // conditional on payment method (required for 'transfer', optional for
+  // 'cash'), decided by PendingExpenseGroupService.confirmTransfer — not
+  // this action, which now delegates entirely (service is mocked in this
+  // RBAC-focused file). See __tests__/pending-expense-group/
+  // pending-expense-group-service.test.ts for the conditional-reference
+  // service-level coverage.
 });

@@ -1,0 +1,64 @@
+# Test Execution Summary — REQ-106
+
+**Date:** 2026-09-14
+**Implementation branch:** `feat/bundle-cash-tags-expense-edit` (bundled with REQ-104, REQ-105 — #767, #768, #769)
+
+## Test design
+
+**Layers planned:** unit, E2E. Integration, visual regression, manual smoke: not needed (see exemptions).
+
+**Layers covered:** unit ✓ (33 new tests across 4 files), E2E ✓ (5 new tests, run locally against a real dev server + the tunneled UAT MongoDB, not mocked).
+
+**Exemptions:**
+
+- Integration — `NOT_NEEDED`: covered by the unit suite against mocked Mongoose/service dependencies plus the E2E spec against the real stack.
+- Visual regression — `NOT_NEEDED`: no visual-regression tooling configured.
+- Manual smoke — none required beyond the E2E spec's own verification.
+
+**Skill invocation:** `e2e-test-engineer` invoked during Phase 2 of this session, bundled with REQ-104/REQ-105. Shared spec file: `e2e/finance/cash-tags-and-edit.spec.ts`.
+
+## Notable finding
+
+E2E execution surfaced a genuine business-date resolution defect in `CashPositionService` (business-day boundaries derived from a synthetic "noon" anchor via `businessDayRange()` could resolve to the wrong business day under a late 15:00 WAT cutoff). Fixed by deriving the label via `watCalendarDateKey` and resolving exact bounds via `businessDateQueryRange`, matching `FinancialReportService.generateDateRangeReport`'s own approach. A regression unit test was added. See `compliance/evidence/REQ-106/e2e-scope-decision.md` for the full writeup.
+
+## Gate results
+
+| Gate                                                                                                                                       | Result                       | Details                                                                                                                                                                                                                                |
+| ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TypeScript                                                                                                                                 | PASS                         | `npx tsc --noEmit` — 0 errors                                                                                                                                                                                                          |
+| ESLint                                                                                                                                     | PASS                         | 0 errors (997 pre-existing warnings, unrelated to this REQ)                                                                                                                                                                            |
+| Unit + integration                                                                                                                         | PASS                         | 1,479 passed, 4 skipped (full suite); 33 new tests for this REQ                                                                                                                                                                        |
+| E2E — REQ-106 targeted                                                                                                                     | PASS                         | 5/5, local run against a dev server backed by the tunneled UAT database (`--project=regression`)                                                                                                                                       |
+| E2E — adjacent regression (pending-expenses, expense-category-groups, create-pending-from-expenses, expenses-search, kitchen/expense-link) | PASS (33/35, 2 pre-existing) | 2 failures in `expense-link.spec.ts` traced to a pre-existing UI-read timing flake — direct DB inspection confirmed the underlying stock-increment logic is correct (`currentStock: 5000` as expected); not a regression from this REQ |
+| npm audit                                                                                                                                  | PASS                         | Pre-existing accepted exceptions only; no new findings introduced by this REQ's diff                                                                                                                                                   |
+
+## Test executions
+
+| Source  | SDLC stage       | Execution | Kind                             | Outcome        | Workflow / run                                                                          | Related evidence                                                                                                                     | Date       |
+| ------- | ---------------- | --------- | -------------------------------- | -------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
+| REQ-106 | 2 implement/test | #1        | unit                             | passed         | Local Vitest; CI Quality Gates on the integration PR (pending)                          | `cash-position-service.test.ts` (12), `cash-deposit-service.test.ts` (7), `pending-expense-group-service.test.ts` REQ-106 blocks (9) | 2026-09-14 |
+| REQ-106 | 2 implement/test | #2        | e2e (local)                      | passed         | Local Playwright, `regression` project; CI in-scope E2E on the integration PR (pending) | `cash-tags-and-edit.spec.ts` — 4 REQ-106 describe blocks, AC1/AC2/AC5/AC6/AC7                                                        | 2026-09-14 |
+| REQ-106 | 2 implement/test | #3        | e2e (local, adjacent regression) | passed (33/35) | Local Playwright, `regression` project, existing finance specs                          | 2 pre-existing failures traced to UI-read timing flake, unrelated to this REQ's diff (see Gate results)                              | 2026-09-14 |
+
+## Test plan coverage
+
+| Acceptance criterion                                                              | Status | Test                                                                                                              |
+| --------------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------- |
+| AC1 — Current Cash Position section always renders, defined state                 | PASS   | `e2e/finance/cash-tags-and-edit.spec.ts`; `__tests__/services/cash-position-service.test.ts`                      |
+| AC2 — payment method required at expense creation                                 | PASS   | `e2e/finance/cash-tags-and-edit.spec.ts`; `__tests__/pending-expense-group/pending-expense-group-service.test.ts` |
+| AC3 — cash-method transferred expenses reduce the position                        | PASS   | `__tests__/services/cash-position-service.test.ts`                                                                |
+| AC4 — transfer-method expenses do not affect the position                         | PASS   | `__tests__/services/cash-position-service.test.ts`                                                                |
+| AC5 — cash deposit create → approve → transfer, optional reference                | PASS   | `e2e/finance/cash-tags-and-edit.spec.ts`; `__tests__/services/cash-deposit-service.test.ts`                       |
+| AC6 — super-admin adjustment updates position immediately, appears in audit trail | PASS   | `e2e/finance/cash-tags-and-edit.spec.ts`; `__tests__/services/cash-position-service.test.ts`                      |
+| AC7 — report date before opening balance shows "not tracked", not a misleading ₦0 | PASS   | `__tests__/services/cash-position-service.test.ts`                                                                |
+| AC8 — mixed-payment-method batch rejected with a clear error                      | PASS   | `__tests__/pending-expense-group/pending-expense-group-service.test.ts`                                           |
+
+## Accepted skips
+
+None. (The 2 `expense-link.spec.ts` failures are not skips — they are failed assertions traced to a UI-read timing flake, confirmed unrelated to this REQ via direct database inspection; documented above, not silently excluded.)
+
+## Evidence locations
+
+- Markdown evidence: `compliance/evidence/REQ-106/`
+- Screenshots: `compliance/evidence/REQ-106/screenshots/` (6 canonical PNGs across AC1/AC2/AC5/AC6)
+- CI run: pending — will populate on integration PR push to `develop`

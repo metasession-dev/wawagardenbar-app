@@ -45,6 +45,8 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import {
   createPendingExpenseGroupAction,
@@ -52,6 +54,11 @@ import {
   listSellableInventoryAction,
 } from '@/app/actions/finance/pending-expense-actions';
 import { getExpenseCategoriesAction } from '@/app/actions/finance/expense-categories-actions';
+import {
+  createTagAction,
+  listActiveTagsAction,
+} from '@/app/actions/finance/tag-actions';
+import { TagCombobox, type TagOption } from '@/components/ui/tag-combobox';
 import { getUnitsOfMeasurementAction } from '@/app/actions/units-actions';
 import {
   DEFAULT_UNITS_OF_MEASUREMENT,
@@ -81,12 +88,19 @@ const lineItemSchema = z.object({
   totalCost: z.number().min(0, 'Total cost must be 0 or more'),
   // REQ-034 AC5 — optional kitchen-ingredient inventory id.
   linkedInventoryId: z.string().optional(),
+  // REQ-104 — optional tags selected at submission.
+  tagIds: z.array(z.string()).optional(),
 });
 
 const expenseFormSchema = z.object({
   date: z.date({ required_error: 'Date is required' }),
   items: z.array(lineItemSchema).min(1, 'At least one line item is required'),
   notes: z.string().optional(),
+  // REQ-106 — how this payment run will be paid; group-level, one choice
+  // per creation action.
+  paymentMethod: z.enum(['cash', 'transfer'], {
+    required_error: 'Payment method is required',
+  }),
 });
 
 type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
@@ -101,6 +115,7 @@ function makeDefaultItem() {
     unitCost: 0,
     totalCost: 0,
     linkedInventoryId: undefined as string | undefined,
+    tagIds: [] as string[],
   };
 }
 
@@ -161,6 +176,8 @@ export function ExpenseForm({
   const [sellableLinkEnabled, setSellableLinkEnabled] = useState<
     Record<number, boolean>
   >({});
+  // REQ-104 — available tags for the per-line tag combobox.
+  const [availableTags, setAvailableTags] = useState<TagOption[]>([]);
 
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseFormSchema),
@@ -171,6 +188,7 @@ export function ExpenseForm({
           ? prefill.items
           : [makeDefaultItem()],
       notes: '',
+      paymentMethod: 'cash',
     },
   });
 
@@ -185,6 +203,7 @@ export function ExpenseForm({
       fetchUnits();
       fetchKitchenInventory();
       fetchSellableInventory();
+      fetchTags();
       setSellableLinkEnabled({});
       resetAutoDerive();
       form.reset({
@@ -194,6 +213,7 @@ export function ExpenseForm({
             ? prefill.items
             : [makeDefaultItem()],
         notes: '',
+        paymentMethod: 'cash',
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -254,6 +274,35 @@ export function ExpenseForm({
     }
   }
 
+  // REQ-104: load active tags for the per-line combobox.
+  async function fetchTags() {
+    try {
+      const result = await listActiveTagsAction();
+      if (result.success && result.tags) {
+        setAvailableTags(
+          result.tags.map((t: { _id: string; name: string }) => ({
+            id: t._id,
+            name: t.name,
+          }))
+        );
+      }
+    } catch {
+      /* combobox will simply show no existing tags */
+    }
+  }
+
+  async function handleCreateTag(name: string): Promise<TagOption> {
+    const result = await createTagAction(name);
+    if (!result.success || !result.tag) {
+      throw new Error(result.error || 'Failed to create tag');
+    }
+    const tag = { id: result.tag._id, name: result.tag.name };
+    setAvailableTags((prev) =>
+      prev.some((t) => t.id === tag.id) ? prev : [...prev, tag]
+    );
+    return tag;
+  }
+
   const items = form.watch('items');
 
   function getDropdownSections(expenseType: string) {
@@ -287,6 +336,7 @@ export function ExpenseForm({
         date: data.date,
         items: data.items,
         notes: data.notes,
+        paymentMethod: data.paymentMethod,
       });
 
       if (result.success) {
@@ -300,6 +350,7 @@ export function ExpenseForm({
             date: data.date,
             items: [makeDefaultItem()],
             notes: '',
+            paymentMethod: data.paymentMethod,
           });
           setSaveAndAddAnother(false);
         } else {
@@ -337,7 +388,49 @@ export function ExpenseForm({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-            {/* ── Header: Date only ── */}
+            {/* ── Header: Date + Payment Method ── */}
+            {/* REQ-106 — how this payment run will be paid; one choice per
+                creation action, applies to the whole group. */}
+            <FormField
+              control={form.control}
+              name="paymentMethod"
+              render={({ field }) => (
+                <FormItem className="max-w-xs">
+                  <FormLabel>Payment Method</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      className="flex gap-4"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="cash" id="payment-cash" />
+                        <Label
+                          htmlFor="payment-cash"
+                          className="cursor-pointer font-normal"
+                        >
+                          Cash
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem
+                          value="transfer"
+                          id="payment-transfer"
+                        />
+                        <Label
+                          htmlFor="payment-transfer"
+                          className="cursor-pointer font-normal"
+                        >
+                          Transfer
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="date"
@@ -678,6 +771,26 @@ export function ExpenseForm({
                           [index]: enabled,
                         }))
                       }
+                    />
+                    {/* REQ-104 — per-line tag combobox. */}
+                    <FormField
+                      control={form.control}
+                      name={`items.${index}.tagIds`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs text-muted-foreground">
+                            Tags
+                          </FormLabel>
+                          <FormControl>
+                            <TagCombobox
+                              value={field.value ?? []}
+                              onChange={field.onChange}
+                              availableTags={availableTags}
+                              onCreateTag={handleCreateTag}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
                     />
                   </div>
                 );

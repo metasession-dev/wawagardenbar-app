@@ -17,6 +17,7 @@ import {
   AssignBatchDTO,
 } from '@/interfaces/pending-expense-group.interface';
 import { applyExpenseInventoryLink } from './expense-inventory-link-service';
+import { validatePendingApprovedTransferredTransition } from '@/lib/status-transition';
 
 // ── Pure logic functions (exported for unit testing) ───────────────────────────
 
@@ -43,24 +44,13 @@ export function normaliseLineItems(
 /**
  * Validates that a status transition is allowed.
  * Allowed: pending → approved, approved → transferred.
+ * REQ-106: delegates to the generic helper shared with CashDepositService.
  */
 export function validateStatusTransition(
   current: PendingExpenseGroupStatus,
   next: PendingExpenseGroupStatus
 ): void {
-  const allowed: Record<
-    PendingExpenseGroupStatus,
-    PendingExpenseGroupStatus[]
-  > = {
-    pending: ['approved'],
-    approved: ['transferred'],
-    transferred: [],
-  };
-  if (!allowed[current].includes(next)) {
-    throw new Error(
-      `Invalid status transition: ${current} → ${next}. Allowed transitions from '${current}': [${allowed[current].join(', ') || 'none'}]`
-    );
-  }
+  validatePendingApprovedTransferredTransition(current, next);
 }
 
 /**
@@ -83,6 +73,12 @@ export interface ExpenseRecordDTO {
   // REQ-034 AC6 — propagated from the line item; consumed by confirmTransfer
   // to drive the Inventory side-effects after the Expense row is inserted.
   linkedInventoryId?: string;
+  // REQ-104 — tags propagated from the line item so a transferred Expense
+  // stays filterable.
+  tagIds?: string[];
+  // REQ-106 — propagated from the group so a transferred Expense records
+  // how it was paid.
+  paymentMethod?: 'cash' | 'transfer';
 }
 
 export function buildExpenseRecordsFromGroup(
@@ -90,7 +86,16 @@ export function buildExpenseRecordsFromGroup(
   transferReference: string,
   transferredBy: string
 ): ExpenseRecordDTO[] {
-  if (!transferReference || transferReference.trim() === '') {
+  // REQ-106 — a transfer reference (bank reference) is only meaningful for
+  // 'transfer'-method groups. A 'cash'-method group has no bank reference;
+  // the field becomes an optional "handed over by / notes" acknowledgement
+  // instead (enforced only for 'transfer' here; groups predating this REQ
+  // have no paymentMethod at all and are treated as 'transfer' for
+  // backward compatibility — the stricter, pre-existing behaviour).
+  if (
+    group.paymentMethod !== 'cash' &&
+    (!transferReference || transferReference.trim() === '')
+  ) {
     throw new Error('Transfer reference is required');
   }
   if (!group.items || group.items.length === 0) {
@@ -109,7 +114,28 @@ export function buildExpenseRecordsFromGroup(
     createdBy: transferredBy,
     pendingGroupId: group._id.toString(),
     linkedInventoryId: item.linkedInventoryId,
+    tagIds: item.tagIds,
+    paymentMethod: group.paymentMethod,
   }));
+}
+
+/**
+ * REQ-106 — a payment batch (or an ad-hoc confirmTransfer group list) must
+ * be payment-method-homogeneous: a single shared transferReference/notes
+ * field can't correctly represent both a bank reference and a cash
+ * handover acknowledgement at once, and mixing methods would make the
+ * cash-out-of-till deduction ambiguous. Groups predating this REQ (no
+ * paymentMethod set) are treated as 'transfer' for this check.
+ */
+export function assertBatchPaymentMethodHomogeneous(
+  groups: Pick<IPendingExpenseGroup, 'paymentMethod'>[]
+): void {
+  const methods = new Set(groups.map((g) => g.paymentMethod ?? 'transfer'));
+  if (methods.size > 1) {
+    throw new Error(
+      'Cannot batch/transfer groups with different payment methods — a batch must be all-cash or all-transfer'
+    );
+  }
 }
 
 // ── PendingExpenseGroupService ─────────────────────────────────────────────────
@@ -135,6 +161,7 @@ export class PendingExpenseGroupService {
       totalAmount,
       status: 'pending',
       notes: data.notes,
+      paymentMethod: data.paymentMethod,
       submittedBy: new ObjectId(data.submittedBy),
       submittedAt: now,
     });
@@ -157,6 +184,8 @@ export class PendingExpenseGroupService {
     const updates: Record<string, unknown> = {};
     if (data.date !== undefined) updates.date = data.date;
     if (data.notes !== undefined) updates.notes = data.notes;
+    if (data.paymentMethod !== undefined)
+      updates.paymentMethod = data.paymentMethod;
     if (data.items !== undefined) {
       const normalisedItems = normaliseLineItems(data.items);
       updates.items = normalisedItems;
@@ -219,6 +248,22 @@ export class PendingExpenseGroupService {
     paymentBatchId,
   }: AssignBatchDTO): Promise<void> {
     await connectDB();
+    // REQ-106 — homogeneity check against the UNION of already-batched
+    // members and the newly-added group IDs, not just the incoming array
+    // in isolation (a batch may already contain groups from a prior
+    // assignBatch call).
+    const existingMembers = (await PendingExpenseGroupModel.find({
+      paymentBatchId,
+    })
+      .select('paymentMethod')
+      .lean()) as Pick<IPendingExpenseGroup, 'paymentMethod'>[];
+    const newMembers = (await PendingExpenseGroupModel.find({
+      _id: { $in: groupIds.map((id) => new ObjectId(id)) },
+    })
+      .select('paymentMethod')
+      .lean()) as Pick<IPendingExpenseGroup, 'paymentMethod'>[];
+    assertBatchPaymentMethodHomogeneous([...existingMembers, ...newMembers]);
+
     await PendingExpenseGroupModel.updateMany(
       { _id: { $in: groupIds.map((id) => new ObjectId(id)) } },
       { $set: { paymentBatchId } }
@@ -247,12 +292,14 @@ export class PendingExpenseGroupService {
     transferredBy: string
   ): Promise<{ transferred: number }> {
     await connectDB();
-    if (!transferReference || transferReference.trim() === '') {
-      throw new Error('Transfer reference is required');
-    }
     const groups = (await PendingExpenseGroupModel.find({
       _id: { $in: groupIds.map((id) => new ObjectId(id)) },
     }).lean()) as IPendingExpenseGroup[];
+
+    // REQ-106 — defense-in-depth: assignBatch already enforces this at
+    // batch-formation time, but confirmTransfer can also be called
+    // directly against an ad-hoc groupIds list that was never batched.
+    assertBatchPaymentMethodHomogeneous(groups);
 
     // Validate ALL groups before writing anything — prevents partial transfer
     for (const group of groups) {
@@ -276,6 +323,10 @@ export class PendingExpenseGroupService {
           linkedInventoryId: r.linkedInventoryId
             ? new ObjectId(r.linkedInventoryId)
             : undefined,
+          tagIds: r.tagIds?.length
+            ? r.tagIds.map((id) => new ObjectId(id))
+            : undefined,
+          paymentMethod: r.paymentMethod,
         }))
       );
 

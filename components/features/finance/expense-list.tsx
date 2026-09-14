@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { MoreHorizontal, Pencil, Trash2, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -44,6 +44,12 @@ import { toast } from '@/hooks/use-toast';
 import { deleteExpenseAction } from '@/app/actions/finance/expense-actions';
 import { ExpenseType } from '@/interfaces/expense.interface';
 import { matchesExpenseSearch } from '@/lib/expense-search';
+import { listAllTagsAction } from '@/app/actions/finance/tag-actions';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
 /**
  * @requirement REQ-029 — Extended search fields (notes, referenceNumber) are
@@ -63,6 +69,15 @@ interface Expense {
   receiptReference?: string;
   referenceNumber?: string;
   notes?: string;
+  // REQ-104 — tags carried over from the originating pending-expense line
+  // item at transfer time.
+  tagIds?: string[];
+  // REQ-105 — previously fetched but never surfaced in the edit dialog.
+  transactionFee?: number;
+  linkedInventoryId?: string;
+  pendingGroupId?: string;
+  createdAt?: string;
+  updatedAt?: string;
   createdBy: {
     firstName: string;
     lastName: string;
@@ -98,11 +113,33 @@ export function ExpenseList({
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [deleteExpenseId, setDeleteExpenseId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  // REQ-104 — tag filter: a set of selected tag IDs; empty = no filter.
+  const [tagFilter, setTagFilter] = useState<Set<string>>(new Set());
+  const [tagNames, setTagNames] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    listAllTagsAction().then((result) => {
+      if (result.success && result.tags) {
+        const map: Record<string, string> = {};
+        for (const t of result.tags as { _id: string; name: string }[]) {
+          map[t._id] = t.name;
+        }
+        setTagNames(map);
+      }
+    });
+  }, []);
 
   // Get unique categories from expenses
   const categories = Array.from(
     new Set(expenses.map((expense) => expense.category))
   ).sort();
+
+  // REQ-104 — unique tag IDs actually present on the current expense set,
+  // mirroring how `categories` above is derived from the data rather than
+  // a separate registry fetch.
+  const availableTagIds = Array.from(
+    new Set(expenses.flatMap((expense) => expense.tagIds ?? []))
+  ).sort((a, b) => (tagNames[a] ?? '').localeCompare(tagNames[b] ?? ''));
 
   // Filter expenses — REQ-029: shared predicate covers description, notes,
   // supplier, receiptReference, referenceNumber, and exact-amount match.
@@ -121,7 +158,11 @@ export function ExpenseList({
     const matchesCategory =
       categoryFilter === 'all' || expense.category === categoryFilter;
 
-    return matchesSearch && matchesType && matchesCategory;
+    const matchesTags =
+      tagFilter.size === 0 ||
+      (expense.tagIds ?? []).some((id) => tagFilter.has(id));
+
+    return matchesSearch && matchesType && matchesCategory && matchesTags;
   });
 
   const handleDelete = async () => {
@@ -160,10 +201,23 @@ export function ExpenseList({
     setSearchTerm('');
     setTypeFilter('all');
     setCategoryFilter('all');
+    setTagFilter(new Set());
   };
 
   const hasActiveFilters =
-    searchTerm !== '' || typeFilter !== 'all' || categoryFilter !== 'all';
+    searchTerm !== '' ||
+    typeFilter !== 'all' ||
+    categoryFilter !== 'all' ||
+    tagFilter.size > 0;
+
+  function toggleTagFilter(tagId: string) {
+    setTagFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(tagId)) next.delete(tagId);
+      else next.add(tagId);
+      return next;
+    });
+  }
 
   return (
     <div className="space-y-4">
@@ -206,6 +260,41 @@ export function ExpenseList({
               ))}
             </SelectContent>
           </Select>
+
+          {/* REQ-104 — tag multi-select filter. */}
+          {availableTagIds.length > 0 && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="h-10 w-[160px] justify-between"
+                >
+                  Tags
+                  {tagFilter.size > 0 && (
+                    <Badge variant="secondary" className="ml-2">
+                      {tagFilter.size}
+                    </Badge>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-2" align="start">
+                <div className="max-h-56 space-y-1 overflow-y-auto">
+                  {availableTagIds.map((tagId) => (
+                    <label
+                      key={tagId}
+                      className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+                    >
+                      <Checkbox
+                        checked={tagFilter.has(tagId)}
+                        onCheckedChange={() => toggleTagFilter(tagId)}
+                      />
+                      {tagNames[tagId] ?? tagId}
+                    </label>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
 
           {hasActiveFilters && (
             <Button

@@ -9,7 +9,7 @@
 
 ## Bundled Release Context
 
-Part of a 3-issue bundle declared up front (`Bundles: #767, #768, #769`) — REQ-104, REQ-105, and REQ-106 share one branch, one PR to `develop`, and one release cycle to `main`, each with its own REQ number, plan, and evidence pack. Bundle eligibility: all three are LOW/MEDIUM risk (no CRITICAL member, no more than one risk tier apart), and each touches a distinct file set with no scope overlap between them.
+Part of a 3-issue bundle declared up front (`Bundles: #767, #768, #769`) — REQ-104, REQ-105, and REQ-106 share one branch, one PR to `develop`, and one release cycle to `main`, each with its own REQ number, plan, and evidence pack. Bundle eligibility: all three are LOW/MEDIUM risk (no CRITICAL member, no more than one risk tier apart), and each touches a distinct file set with no scope overlap between them. Bundle manifest: `compliance/pending-releases/BUNDLED-CHANGES-v2026.09.14.md` / `.json` (`sha256:910dda8e20537ae0c8983395a32bec2fb4f32855cda111b86383a2f639a0fd15`).
 
 ## Summary
 

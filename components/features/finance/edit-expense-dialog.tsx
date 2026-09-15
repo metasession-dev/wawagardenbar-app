@@ -67,6 +67,11 @@ import {
   listKitchenIngredientInventoryAction,
   listSellableInventoryAction,
 } from '@/app/actions/finance/pending-expense-actions';
+import {
+  createTagAction,
+  listAllTagsAction,
+} from '@/app/actions/finance/tag-actions';
+import { TagCombobox, type TagOption } from '@/components/ui/tag-combobox';
 
 const editExpenseSchema = z.object({
   date: z.date({ required_error: 'Date is required' }),
@@ -83,6 +88,8 @@ const editExpenseSchema = z.object({
   receiptReference: z.string().optional(),
   referenceNumber: z.string().optional(),
   linkedInventoryId: z.string().optional(),
+  // REQ-104 — tags remain editable post-transfer.
+  tagIds: z.array(z.string()).optional(),
 });
 
 type EditExpenseFormValues = z.infer<typeof editExpenseSchema>;
@@ -103,6 +110,8 @@ interface ExpenseRecord {
   receiptReference?: string;
   referenceNumber?: string;
   linkedInventoryId?: string;
+  // REQ-104 — tags carried over from the originating pending-expense line item.
+  tagIds?: string[];
   // REQ-105 — read-only audit/traceability fields.
   pendingGroupId?: string;
   createdBy?:
@@ -145,6 +154,10 @@ export function EditExpenseDialog({
   const [inventoryOptions, setInventoryOptions] = useState<
     { id: string; name: string }[]
   >([]);
+  // REQ-104 — `listAllTagsAction` (not `listActiveTagsAction`) so an
+  // already-attached-but-since-archived tag still renders as a removable
+  // badge here, same reasoning as expense-list.tsx's tag filter.
+  const [availableTags, setAvailableTags] = useState<TagOption[]>([]);
 
   function buildDefaultValues(e: ExpenseRecord): EditExpenseFormValues {
     return {
@@ -161,6 +174,7 @@ export function EditExpenseDialog({
       receiptReference: e.receiptReference ?? '',
       referenceNumber: e.referenceNumber ?? '',
       linkedInventoryId: e.linkedInventoryId ?? '',
+      tagIds: e.tagIds ?? [],
     };
   }
 
@@ -220,8 +234,34 @@ export function EditExpenseDialog({
         .catch(() => {
           /* keep seed defaults */
         });
+      listAllTagsAction()
+        .then((result) => {
+          if (result.success && result.tags) {
+            setAvailableTags(
+              result.tags.map((t: { _id: string; name: string }) => ({
+                id: t._id,
+                name: t.name,
+              }))
+            );
+          }
+        })
+        .catch(() => {
+          /* combobox will simply show no existing tags */
+        });
     }
   }, [open, expense]);
+
+  async function handleCreateTag(name: string): Promise<TagOption> {
+    const result = await createTagAction(name);
+    if (!result.success || !result.tag) {
+      throw new Error(result.error || 'Failed to create tag');
+    }
+    const tag = { id: result.tag._id, name: result.tag.name };
+    setAvailableTags((prev) =>
+      prev.some((t) => t.id === tag.id) ? prev : [...prev, tag]
+    );
+    return tag;
+  }
 
   const expenseType = form.watch('expenseType');
   const sections = buildDropdownSections(
@@ -249,6 +289,7 @@ export function EditExpenseDialog({
         receiptReference: data.receiptReference || undefined,
         referenceNumber: data.referenceNumber || undefined,
         linkedInventoryId: data.linkedInventoryId || null,
+        tagIds: data.tagIds ?? [],
       });
       if (result.success) {
         toast({ title: 'Updated', description: 'Expense updated.' });
@@ -601,6 +642,26 @@ export function EditExpenseDialog({
                       ))}
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* REQ-104 — tags remain editable post-transfer. */}
+            <FormField
+              control={form.control}
+              name="tagIds"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tags (Optional)</FormLabel>
+                  <FormControl>
+                    <TagCombobox
+                      value={field.value ?? []}
+                      onChange={field.onChange}
+                      availableTags={availableTags}
+                      onCreateTag={handleCreateTag}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

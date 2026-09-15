@@ -1,6 +1,6 @@
 # Release Ticket: REQ-106 — Cash Position tracking + Cash Deposits
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** TESTED - PENDING SIGN-OFF (ITERATION 1)
 **Date:** 2026-09-14
 **Requirement ID:** REQ-106
 **Risk Level:** MEDIUM
@@ -52,6 +52,10 @@ E2E execution (against a local dev server backed by the tunneled UAT database) s
 - E2E: 5/5 targeted tests passed; 33/35 adjacent regression specs passed (2 pre-existing UI-read timing flakes in `expense-link.spec.ts`, confirmed unrelated via direct database inspection — the underlying stock-increment logic is correct).
 - TypeScript/ESLint: 0 errors.
 - Full detail: `compliance/evidence/REQ-106/test-execution-summary.md`.
+
+## Iteration 1 — defect (post-UAT, 2026-09-15)
+
+UAT found a same-day cash-position adjustment did not update the displayed closing position until the following business day (AC6 regression). Root cause and fix: `compliance/plans/REQ-106/implementation-plan.md` § "Plan deviation". Filed as [wawagardenbar-app#779](https://github.com/metasession-dev/wawagardenbar-app/issues/779). New `adjustments` field on `CashPositionSummary`, `± Adjustments` UI line, strengthened e2e assertion, new unit regression test.
 
 ## Sign-off (dual-actor)
 

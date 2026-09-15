@@ -158,6 +158,9 @@ export interface UpdateExpenseDTO {
   // for the reversal of the prior link). Pass `null` to clear; omit to leave
   // the link untouched.
   linkedInventoryId?: string | null;
+  // REQ-104: tags remain editable post-transfer. Pass an empty array to
+  // clear all tags; omit to leave tags untouched.
+  tagIds?: string[];
 }
 
 /**

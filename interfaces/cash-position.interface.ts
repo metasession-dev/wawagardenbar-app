@@ -8,5 +8,7 @@ export interface CashPositionSummary {
   cashIn: number;
   cashOutExpenses: number;
   cashOutDeposits: number;
+  /** Seed/correction entries whose effectiveDate falls within this period — not yet folded into openingPosition. */
+  adjustments: number;
   closingPosition: number;
 }

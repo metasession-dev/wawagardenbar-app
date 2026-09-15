@@ -1145,6 +1145,7 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 - **Given** an expense with an active inventory link, **When** a super-admin changes `linkedInventoryId`/`quantity`/`amount` together via this dialog, **Then** the REQ-034 inventory-link reversal/reapply logic fires correctly.
 - **Given** the expense edit dialog, **When** a super-admin opens it, **Then** `pendingGroupId` (if set), `createdBy`, `createdAt`, and `updatedAt` are visible in a read-only info block, never editable.
 - **Given** a non-super-admin, **When** they view an expense, **Then** edit access remains unavailable.
+- **Given** an already-transferred expense with or without tags attached, **When** a super-admin opens the edit dialog, **Then** they can add a tag (existing or newly created inline) and remove any attached tag — including clearing all tags — and the change persists on save (REQ-104's tag combobox, previously only reachable at pending-expense creation time, not on an already-transferred `Expense` record).
 
 #### REQ-FIN-008 — Cash deposit workflow · **Should** · regression
 

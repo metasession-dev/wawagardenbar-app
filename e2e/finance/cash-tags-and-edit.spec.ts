@@ -149,6 +149,51 @@ superAdminTest.describe(
         });
       }
     );
+
+    superAdminTest(
+      'AC5: super-admin can add and remove a tag on an already-transferred expense',
+      async ({ page }) => {
+        tagTest('REQ-105', 5);
+        await page.goto('/dashboard/finance/expenses');
+        await expect(page.locator('table')).toBeVisible({ timeout: 20000 });
+
+        const rowMenuTrigger = page
+          .getByRole('button', { name: 'Open menu' })
+          .first();
+        if (!(await rowMenuTrigger.count())) {
+          superAdminTest.skip(true, 'No live expense record available to edit');
+        }
+        await rowMenuTrigger.click();
+        await page.getByRole('menuitem', { name: /^Edit$/ }).click();
+        const dialog = page.locator('[role="dialog"]');
+        await expect(dialog).toBeVisible();
+
+        const uniqueTagName = `E2E-EditTag-${Date.now()}`;
+        await dialog.getByRole('button', { name: /Add tags/i }).click();
+        await page
+          .getByPlaceholder(/Search or create a tag/i)
+          .fill(uniqueTagName);
+        await page
+          .getByRole('button', {
+            name: new RegExp(`Create "${uniqueTagName}"`),
+          })
+          .click();
+        await expect(dialog.getByText(uniqueTagName)).toBeVisible();
+        await evidenceShot(page, 'REQ-105', 5, 'tag-added-in-edit-dialog');
+
+        // Remove the just-added tag via its badge's remove control.
+        await dialog
+          .getByRole('button', { name: `Remove tag ${uniqueTagName}` })
+          .click();
+        await expect(dialog.getByText(uniqueTagName)).not.toBeVisible();
+        await evidenceShot(page, 'REQ-105', 5, 'tag-removed-in-edit-dialog');
+
+        await dialog.locator('button', { hasText: /Save Changes/ }).click();
+        await expect(page.getByText(/^Updated$/i).first()).toBeVisible({
+          timeout: 10000,
+        });
+      }
+    );
   }
 );
 
@@ -300,6 +345,14 @@ superAdminTest.describe('REQ-106: Cash Position adjustment', () => {
 
       const summary = page.locator('[data-testid="cash-position-summary"]');
       await expect(summary).toBeVisible({ timeout: 10000 });
+      // Regression: the closing position must reflect the just-entered
+      // amount immediately, on THIS load — not merely become visible.
+      // The visibility-only assertion previously here missed a real bug
+      // where same-day adjustments were silently excluded from the
+      // closing-position calculation until the following business day.
+      await expect(
+        page.locator('[data-testid="cash-position-closing"]')
+      ).toContainText('50,000');
       await evidenceShot(
         page,
         'REQ-106',

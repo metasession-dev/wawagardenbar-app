@@ -34,12 +34,20 @@ authored_at: '2026-09-14'
 | AC2 | Given an expense with an active inventory link, When a super-admin changes `linkedInventoryId`/`quantity`/`amount` together via this dialog, Then the existing REQ-034 inventory-link reversal/reapply logic in `ExpenseService.updateExpense` fires correctly (no regression). | REQ-FIN-007 (new)     |
 | AC3 | Given the expense edit dialog, When a super-admin opens it, Then `pendingGroupId` (if set), `createdBy`, `createdAt`, and `updatedAt` are visible in a read-only info block, not editable.                                                                                      | REQ-FIN-007 (new)     |
 | AC4 | Given a non-super-admin, When they view an expense, Then edit access remains unavailable, unchanged from current behavior.                                                                                                                                                      | REQ-FIN-007 (new)     |
+| AC5 | Given an already-transferred expense, When a super-admin opens the edit dialog, Then they can add (existing or newly created inline) and remove tags — including clearing all tags — and the change persists on save.                                                           | REQ-FIN-007 (amended) |
+
+## Requirements gap accepted (amended post-UAT, iteration 1)
+
+**Gap:** AC5 was missing from the original plan. The plan's own §2 scope note ("If Part 1 (Tags) ships first or alongside, add a TagCombobox field here too so tags remain editable post-transfer") correctly identified the touchpoint but never turned it into an AC, so it shipped as a silent gap: `UpdateExpenseDTO` had no `tagIds` field and `edit-expense-dialog.tsx` had no tag UI at all. Surfaced during UAT of the shared bundle PR — the operator could not edit or remove a tag on an existing expense.
+
+**Resolution:** Amended the AC table (AC5 above), added `tagIds?: string[]` to `UpdateExpenseDTO`/`ExpenseService.updateExpense` (the generic `$set` payload builder already handled it once typed — including an empty array to clear all tags), added the `TagCombobox` to `edit-expense-dialog.tsx` sourced from `listAllTagsAction()` (not `listActiveTagsAction()`, so an already-attached-but-since-archived tag still renders/removes correctly). `docs/SRS.md` REQ-FIN-007 updated with the new Given/When/Then. New unit test (`expense-service.update-fields.test.ts`) and e2e test (`cash-tags-and-edit.spec.ts` AC5) added.
 
 ## SRS items proposed/touched
 
 | AC      | SRS item                     | Status                                           | Notes                                                                                                                                                                                                                                                                                                                |
 | ------- | ---------------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | AC1-AC4 | REQ-FIN-007 (new — proposed) | authored (canonical Given/When/Then, not a stub) | No existing SRS item covers the expense-edit dialog at all (grep confirms zero hits for `updateExpenseAction`/`EditExpenseDialog`) — this is retroactively documenting an existing capability while fixing its field-completeness gap. Cross-referenced from REQ-FIN-001 (create+list) and REQ-034 (inventory-link). |
+| AC5     | REQ-FIN-007 (amended)        | authored (canonical Given/When/Then, not a stub) | Added post-UAT — see "Requirements gap accepted" above.                                                                                                                                                                                                                                                              |
 
 ## 2. Scope
 

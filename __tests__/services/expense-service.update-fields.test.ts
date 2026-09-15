@@ -123,4 +123,24 @@ describe('REQ-105: ExpenseService.updateExpense persists previously-unsurfaced f
     expect(updateOps.$set).not.toHaveProperty('receiptReference');
     expect(updateOps.$set).not.toHaveProperty('referenceNumber');
   });
+
+  it('REQ-104: includes tagIds in the $set payload, including clearing all tags with an empty array', async () => {
+    (ExpenseModel.findById as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockPrior({ tagIds: ['tag-1', 'tag-2'] })
+    );
+    (
+      ExpenseModel.findByIdAndUpdate as ReturnType<typeof vi.fn>
+    ).mockReturnValue({
+      populate: () => ({ lean: () => Promise.resolve(mockPrior()) }),
+    });
+
+    await ExpenseService.updateExpense('exp-1', { tagIds: [] }, 'user-1');
+
+    const [, updateOps] = (
+      ExpenseModel.findByIdAndUpdate as ReturnType<typeof vi.fn>
+    ).mock.calls[0];
+    // An empty array is not `undefined` — it must still reach $set so a
+    // super-admin can remove every tag from an expense, not just add ones.
+    expect(updateOps.$set).toEqual({ tagIds: [] });
+  });
 });

@@ -180,13 +180,14 @@ describe('REQ-106: CashPositionService.getCashPositionForDate', () => {
     expect(summary.seeded).toBe(true);
   });
 
-  it('computes opening + cashIn - cashOutExpenses - cashOutDeposits for a seeded date', async () => {
+  it('computes opening + cashIn - cashOutExpenses - cashOutDeposits + adjustments for a seeded date', async () => {
     mockAdjustmentFindOne.mockReturnValue({
       sort: () => ({
         lean: () => Promise.resolve({ effectiveDate: new Date('2026-01-01') }),
       }),
     });
-    // seedTotal (opening as-of) then no further adjustments in range
+    // seedTotal (opening as-of) and today's in-range adjustments both read
+    // from the same aggregate mock — fixed at 50000 for both calls.
     mockAdjustmentAggregate.mockResolvedValue([{ total: 50000 }]);
     mockGenerateDateRangeReport.mockResolvedValue({
       paymentBreakdown: { cash: 10000 },
@@ -207,11 +208,44 @@ describe('REQ-106: CashPositionService.getCashPositionForDate', () => {
       summary.openingPosition +
         summary.cashIn -
         summary.cashOutExpenses -
-        summary.cashOutDeposits
+        summary.cashOutDeposits +
+        summary.adjustments
     );
     expect(summary.cashIn).toBe(10000);
     expect(summary.cashOutExpenses).toBe(2000);
     expect(summary.cashOutDeposits).toBe(1000);
+    expect(summary.adjustments).toBe(50000);
+  });
+
+  it("regression: a correction recorded THIS business day is reflected in TODAY's closing position, not just tomorrow's opening", async () => {
+    // This pins the UAT-reported bug: a super-admin adjustment made
+    // "right now" (effectiveDate within today's business day) must move
+    // today's displayed closing position immediately — not only appear
+    // once folded into a later day's opening balance.
+    mockAdjustmentFindOne.mockReturnValue({
+      sort: () => ({
+        lean: () => Promise.resolve({ effectiveDate: new Date('2026-01-01') }),
+      }),
+    });
+    // First aggregate call = opening-as-of (before today, so 0 corrections
+    // yet); second call = today's in-range adjustments (the correction
+    // just recorded). Distinguish by call order.
+    mockAdjustmentAggregate
+      .mockResolvedValueOnce([{ total: 0 }])
+      .mockResolvedValueOnce([{ total: 75000 }]);
+    mockGenerateDateRangeReport.mockResolvedValue({
+      paymentBreakdown: { cash: 0 },
+    });
+    mockGroupAggregate.mockResolvedValue([]);
+    mockDepositAggregate.mockResolvedValue([]);
+
+    const summary = await CashPositionService.getCashPositionForDate(
+      new Date('2026-06-15')
+    );
+
+    expect(summary.openingPosition).toBe(0);
+    expect(summary.adjustments).toBe(75000);
+    expect(summary.closingPosition).toBe(75000);
   });
 });
 

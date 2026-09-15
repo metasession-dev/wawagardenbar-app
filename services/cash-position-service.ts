@@ -48,6 +48,20 @@ export class CashPositionService {
   }
 
   /**
+   * Sum of seed/correction deltas with effectiveDate in [start,end] —
+   * adjustments recorded within the period being viewed, which openingPosition
+   * (computed as of just before `start`) does not yet include.
+   */
+  static async getAdjustmentsForRange(start: Date, end: Date): Promise<number> {
+    await connectDB();
+    const result = await CashPositionAdjustmentModel.aggregate([
+      { $match: { effectiveDate: { $gte: start, $lte: end } } },
+      { $group: { _id: null, total: { $sum: '$amount' } } },
+    ]);
+    return result[0]?.total ?? 0;
+  }
+
+  /**
    * Cash sale revenue in [start,end] — reuses `paymentBreakdown.cash` from
    * FinancialReportService rather than re-deriving the order/tab
    * aggregation, so the two "cash in" figures can never diverge. Tips are
@@ -136,6 +150,7 @@ export class CashPositionService {
         cashIn: 0,
         cashOutExpenses: 0,
         cashOutDeposits: 0,
+        adjustments: 0,
         closingPosition: 0,
       };
     }
@@ -155,6 +170,7 @@ export class CashPositionService {
       dayStart,
       dayEnd
     );
+    const adjustments = await this.getAdjustmentsForRange(dayStart, dayEnd);
 
     return {
       seeded: true,
@@ -162,8 +178,13 @@ export class CashPositionService {
       cashIn,
       cashOutExpenses,
       cashOutDeposits,
+      adjustments,
       closingPosition:
-        openingPosition + cashIn - cashOutExpenses - cashOutDeposits,
+        openingPosition +
+        cashIn -
+        cashOutExpenses -
+        cashOutDeposits +
+        adjustments,
     };
   }
 
@@ -191,6 +212,7 @@ export class CashPositionService {
         cashIn: 0,
         cashOutExpenses: 0,
         cashOutDeposits: 0,
+        adjustments: 0,
         closingPosition: 0,
       };
     }
@@ -210,6 +232,7 @@ export class CashPositionService {
       rangeStart,
       rangeEnd
     );
+    const adjustments = await this.getAdjustmentsForRange(rangeStart, rangeEnd);
 
     return {
       seeded: true,
@@ -217,8 +240,13 @@ export class CashPositionService {
       cashIn,
       cashOutExpenses,
       cashOutDeposits,
+      adjustments,
       closingPosition:
-        openingPosition + cashIn - cashOutExpenses - cashOutDeposits,
+        openingPosition +
+        cashIn -
+        cashOutExpenses -
+        cashOutDeposits +
+        adjustments,
     };
   }
 

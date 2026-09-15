@@ -53,6 +53,12 @@ E2E execution surfaced a genuine business-date resolution defect in `CashPositio
 | AC7 — report date before opening balance shows "not tracked", not a misleading ₦0 | PASS   | `__tests__/services/cash-position-service.test.ts`                                                                |
 | AC8 — mixed-payment-method batch rejected with a clear error                      | PASS   | `__tests__/pending-expense-group/pending-expense-group-service.test.ts`                                           |
 
+## Iteration 1 — defect (post-UAT)
+
+UAT found that AC6 did not actually hold: a super-admin correction recorded with an effective date within the currently-viewed business day was silently excluded from that day's displayed closing position — it only appeared starting the _following_ day's report (once folded into "opening"). Root cause: `CashPositionService.getCashPositionForDate`/`getCashPositionForRange`'s closing formula (`opening + cashIn − cashOutExpenses − cashOutDeposits`) never summed same-day `CashPositionAdjustment` entries. The original AC6 e2e test only asserted the summary card became _visible_ after saving, never that the closing figure actually changed — which is why this passed CI.
+
+**Fix:** added `CashPositionService.getAdjustmentsForRange`, summed into the closing calculation as a new `adjustments` field on `CashPositionSummary`, surfaced as a `± Adjustments` line in `CashPositionSection` (only rendered when non-zero, to keep the visible breakdown arithmetic-consistent). Strengthened the AC6 e2e assertion to check the closing figure's displayed value, not just visibility. Added a unit regression test pinning same-day-adjustment inclusion. Filed as [wawagardenbar-app#779](https://github.com/metasession-dev/wawagardenbar-app/issues/779) per the incident-filing convention.
+
 ## Accepted skips
 
 None. (The 2 `expense-link.spec.ts` failures are not skips — they are failed assertions traced to a UI-read timing flake, confirmed unrelated to this REQ via direct database inspection; documented above, not silently excluded.)

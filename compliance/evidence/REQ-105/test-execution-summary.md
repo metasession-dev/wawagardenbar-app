@@ -42,6 +42,11 @@
 | AC2 — REQ-034 inventory-link reversal/reapply logic unaffected                               | PASS   | Pre-existing `expense-inventory-link.*.test.ts` suite (unchanged logic, not re-tested)               |
 | AC3 — read-only audit block visible                                                          | PASS   | `e2e/finance/cash-tags-and-edit.spec.ts`                                                             |
 | AC4 — non-super-admin has no edit access (unchanged)                                         | PASS   | Pre-existing behavior, unchanged by this REQ                                                         |
+| AC5 — add/remove tags on an already-transferred expense (added iteration 1, post-UAT)        | PASS   | `e2e/finance/cash-tags-and-edit.spec.ts`; `__tests__/services/expense-service.update-fields.test.ts` |
+
+## Iteration 1 — requirements gap (post-UAT)
+
+UAT surfaced that tags could not be added or removed on an existing expense via the edit dialog — a gap in the original plan, not a defect against a documented AC (see `compliance/plans/REQ-105/implementation-plan.md` § "Requirements gap accepted"). Amended AC5 added, implemented (`UpdateExpenseDTO.tagIds`, `TagCombobox` in `edit-expense-dialog.tsx`), and covered by the unit + e2e tests above.
 
 ## Accepted skips
 

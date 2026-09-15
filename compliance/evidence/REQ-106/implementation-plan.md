@@ -128,6 +128,10 @@ N/A.
 - **Manual smoke after deploy:** Create a cash-method pending expense group, approve, transfer with no reference → confirm Current Cash Position on the Daily Report drops by that amount on the transfer date; create a transfer-method group → confirm cash position is unaffected. Create and transfer a cash deposit → confirm position drops. As super-admin, record an adjustment → confirm the position updates immediately and appears in the audit list.
 - **Monitoring / alerting:** None added — reporting/tracking feature, no new failure mode beyond existing expense-management error handling.
 
+## Plan deviation (post-UAT, iteration 1)
+
+UAT (see [wawagardenbar-app#779](https://github.com/metasession-dev/wawagardenbar-app/issues/779)) found that AC6 did not hold in practice: a same-day adjustment did not update the currently-displayed closing position, only the following business day's. This is an **implementation deviation**, not a requirements deviation — AC6's intent ("updates immediately") was correctly stated; `CashPositionService`'s closing-position formula simply never summed in-range adjustments. Fixed by adding `getAdjustmentsForRange` + a new `adjustments` field on `CashPositionSummary`, and by strengthening the AC6 e2e assertion (which had only checked visibility, not value) to catch this class of regression going forward.
+
 ## 10. Sign-off
 
 - **Plan reviewer (eng):** N/A — solo-operator project; reviewed by the sdlc-implementer skill flow, human sign-off at UAT.

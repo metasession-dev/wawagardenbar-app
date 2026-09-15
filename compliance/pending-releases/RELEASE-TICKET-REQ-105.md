@@ -1,6 +1,6 @@
 # Release Ticket: REQ-105 — Expense edit dialog full field visibility
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** TESTED - PENDING SIGN-OFF (ITERATION 1)
 **Date:** 2026-09-14
 **Requirement ID:** REQ-105
 **Risk Level:** LOW
@@ -42,6 +42,10 @@ Part of a 3-issue bundle declared up front (`Bundles: #767, #768, #769`) — REQ
 - E2E: 1/1, run locally against a dev server backed by the tunneled UAT database.
 - TypeScript/ESLint: 0 errors.
 - Full detail: `compliance/evidence/REQ-105/test-execution-summary.md`.
+
+## Iteration 1 — requirements gap (post-UAT, 2026-09-15)
+
+UAT found tags could not be added or removed on an already-transferred expense via the edit dialog — a gap the plan flagged as a possible touchpoint but never turned into an AC. Amended AC5, implemented (`UpdateExpenseDTO.tagIds`, `TagCombobox` in `edit-expense-dialog.tsx`, `listAllTagsAction` so archived-but-attached tags still display), `docs/SRS.md` REQ-FIN-007 updated, new unit + e2e coverage added. See `compliance/plans/REQ-105/implementation-plan.md` § "Requirements gap accepted".
 
 ## Sign-off (dual-actor)
 

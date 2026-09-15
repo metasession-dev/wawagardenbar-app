@@ -16,6 +16,7 @@ export interface CashPositionSummary {
   cashIn: number;
   cashOutExpenses: number;
   cashOutDeposits: number;
+  adjustments: number;
   closingPosition: number;
 }
 
@@ -107,6 +108,25 @@ export function CashPositionSection({
                   {formatCurrency(cashPosition.cashOutDeposits)}
                 </span>
               </div>
+              {cashPosition.adjustments !== 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    {cashPosition.adjustments > 0
+                      ? '+ Adjustments'
+                      : '− Adjustments'}
+                  </span>
+                  <span
+                    className={
+                      cashPosition.adjustments > 0
+                        ? 'text-green-700'
+                        : 'text-destructive'
+                    }
+                    data-testid="cash-position-adjustments"
+                  >
+                    {formatCurrency(Math.abs(cashPosition.adjustments))}
+                  </span>
+                </div>
+              )}
               <div className="mt-2 flex justify-between border-t pt-2 text-lg font-semibold">
                 <span>Closing Position</span>
                 <span data-testid="cash-position-closing">

@@ -7,9 +7,18 @@
 **Issue:** [#769](https://github.com/metasession-dev/wawagardenbar-app/issues/769)
 **Implementation branch:** `feat/bundle-cash-tags-expense-edit`
 
-## Bundled Release Context
+## Bundled Changes
 
-Part of a 3-issue bundle declared up front (`Bundles: #767, #768, #769`) — REQ-104, REQ-105, and REQ-106 share one branch, one PR to `develop`, and one release cycle to `main`, each with its own REQ number, plan, and evidence pack. Bundle eligibility: all three are LOW/MEDIUM risk (no CRITICAL member, no more than one risk tier apart), and each touches a distinct file set with no scope overlap between them. Bundle manifest: `compliance/pending-releases/BUNDLED-CHANGES-v2026.09.14.md` / `.json` (`sha256:910dda8e20537ae0c8983395a32bec2fb4f32855cda111b86383a2f639a0fd15`). Bundle ceremony runs at MEDIUM (the max risk across the set).
+Part of a 3-issue bundle declared up front (`Bundles: #767, #768, #769`) — REQ-104, REQ-105, and REQ-106 share one branch, one PR to `develop`, and one release cycle to `main`, each with its own REQ number, plan, and evidence pack. Bundle eligibility: all three are LOW/MEDIUM risk (no CRITICAL member, no more than one risk tier apart), and each touches a distinct file set with no scope overlap between them. Bundle manifest: `compliance/pending-releases/BUNDLED-CHANGES-REQ-104.md` / `.json` (`sha256:910dda8e20537ae0c8983395a32bec2fb4f32855cda111b86383a2f639a0fd15`). Bundle ceremony runs at MEDIUM (the max risk across the set).
+
+- **Core tracked release:** REQ-106 (declared bundle key; co-tracked with REQ-104, REQ-105)
+- **Absorbed predecessor releases:** None
+- **Absorbed non-release work:** housekeeping commits since `main` — see `compliance/pending-releases/BUNDLED-CHANGES-REQ-104.md` / `.json`
+- **Why bundled here:** REQ-104, REQ-105, and REQ-106 were declared as an explicit bundle at Phase 1 planning time (`Bundles: #767, #768, #769`) — all three are LOW/MEDIUM risk, share one branch/PR/release cycle, and touch distinct file sets with no scope overlap between them.
+- **Evidence impact:** Evidence ownership remains on each source REQ; the bundle manifest provides lineage and inherited visibility only.
+- **Reviewer impact:** Approval scope covers all three co-tracked REQs plus the absorbed non-release housekeeping work listed in the bundle manifest.
+- **Security / risk impact:** Bundle ceremony runs at MEDIUM (the max risk across the set, from REQ-106). No additional security/risk impact beyond what each REQ's own risk-register entries (R-029/R-030/R-031 for REQ-106) already document.
+- **Reference:** `compliance/pending-releases/BUNDLED-CHANGES-REQ-104.md` / `.json`
 
 ## Summary
 

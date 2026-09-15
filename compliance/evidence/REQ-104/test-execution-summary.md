@@ -53,3 +53,14 @@ None.
 - Markdown evidence: `compliance/evidence/REQ-104/`
 - Screenshots: `compliance/evidence/REQ-104/screenshots/`
 - CI run: pending — will populate on integration PR push to `develop`
+
+## Bundled Release Context
+
+- **Core tracked release:** REQ-104 (declared bundle key; co-tracked with REQ-105, REQ-106)
+- **Absorbed predecessor releases:** None
+- **Absorbed non-release work:** housekeeping commits since `main` — see `compliance/pending-releases/BUNDLED-CHANGES-REQ-104.md` / `.json`
+- **Why bundled here:** REQ-104, REQ-105, and REQ-106 were declared as an explicit bundle at Phase 1 planning time (`Bundles: #767, #768, #769`) — all three are LOW/MEDIUM risk, share one branch/PR/release cycle, and touch distinct file sets with no scope overlap between them.
+- **Evidence impact:** Evidence ownership remains on each source REQ; the bundle manifest provides lineage and inherited visibility only.
+- **Reviewer impact:** Approval scope covers all three co-tracked REQs plus the absorbed non-release housekeeping work listed in the bundle manifest.
+- **Security / risk impact:** Bundle ceremony runs at MEDIUM (the max risk across the set, from REQ-106). No additional security/risk impact beyond what each REQ's own risk-register entries (R-029/R-030/R-031 for REQ-106) already document.
+- **Reference:** `compliance/pending-releases/BUNDLED-CHANGES-REQ-104.md` / `.json`

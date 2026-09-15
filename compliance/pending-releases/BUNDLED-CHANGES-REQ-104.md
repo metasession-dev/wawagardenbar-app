@@ -1,7 +1,7 @@
 ## Bundled Changes
 
-- **Core tracked release:** `v2026.09.14`
-- **Bundle manifest:** `BUNDLED-CHANGES-v2026.09.14.json`
+- **Core tracked release:** `REQ-104` (declared bundle key; co-tracked with REQ-105, REQ-106)
+- **Bundle manifest:** `BUNDLED-CHANGES-REQ-104.json`
 - **Manifest hash:** `sha256:910dda8e20537ae0c8983395a32bec2fb4f32855cda111b86383a2f639a0fd15`
 - **Absorbed predecessor releases:** None
 - **Co-tracked bundle members:** REQ-104 REQ-105 REQ-106

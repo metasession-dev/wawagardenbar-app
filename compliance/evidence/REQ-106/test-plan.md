@@ -15,3 +15,5 @@ generated_from: compliance/plans/REQ-106/implementation-plan.md
 | AC9                | `e2e/finance/cash-tags-and-edit.spec.ts`                                                 | e2e       | yes      |
 | AC10               | `__tests__/services/cash-position-service.test.ts`                                       | unit      | yes      |
 | AC10               | `e2e/finance/cash-tags-and-edit.spec.ts`                                                 | e2e       | yes      |
+| AC11               | `__tests__/services/cash-position-service.test.ts`                                       | unit      | yes      |
+| AC11               | `e2e/finance/cash-tags-and-edit.spec.ts`                                                 | e2e       | yes      |

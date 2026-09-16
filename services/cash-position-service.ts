@@ -311,15 +311,29 @@ export class CashPositionService {
   }
 
   /**
-   * @requirement REQ-106 (amended — AC10)
+   * @requirement REQ-106 (amended — AC10; paginated per iteration-3 amendment)
    * The live position plus every individual non-sales movement composing
-   * it, for the dedicated Cash Position page's audit ledger.
+   * it, for the dedicated Cash Position page's audit ledger. `page` is
+   * 1-indexed; the full reverse-chronological entry list is paginated
+   * in-memory after merging the three source collections, since the
+   * combined list must stay sorted by date across sources.
    */
-  static async getLedger(): Promise<CashPositionLedger> {
+  static async getLedger(
+    page: number = 1,
+    pageSize: number = 20
+  ): Promise<CashPositionLedger> {
     const now = new Date();
     const currentSummary = await this.getCashPositionForDate(now);
     if (!currentSummary.seeded) {
-      return { seeded: false, current: 0, totalCashIn: 0, entries: [] };
+      return {
+        seeded: false,
+        current: 0,
+        totalCashIn: 0,
+        entries: [],
+        totalEntries: 0,
+        page: 1,
+        pageSize,
+      };
     }
 
     await connectDB();
@@ -369,11 +383,19 @@ export class CashPositionService {
       })),
     ].sort((a, b) => b.date.getTime() - a.date.getTime());
 
+    const totalEntries = entries.length;
+    const safePage = Math.max(1, page);
+    const start = (safePage - 1) * pageSize;
+    const pagedEntries = entries.slice(start, start + pageSize);
+
     return {
       seeded: true,
       current: currentSummary.closingPosition,
       totalCashIn,
-      entries,
+      entries: pagedEntries,
+      totalEntries,
+      page: safePage,
+      pageSize,
     };
   }
 }

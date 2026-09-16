@@ -40,6 +40,7 @@ authored_at: '2026-09-14'
 | AC8  | Given a batch of pending expense groups assigned together for one transfer, When the batch would mix cash-method and transfer-method groups, Then the system rejects the batch/transfer with a clear error.                                                                                                                                                                                                                                      | REQ-FIN-003 (updated — drift) |
 | AC9  | Given the Daily Report is viewed for any date or range, When the Current Cash Position figure renders, Then it always reflects the live position as of now — never the closing position of whatever date/range the rest of the report happens to be scoped to.                                                                                                                                                                                   | REQ-REPORT-007 (amended)      |
 | AC10 | Given the need to verify how the Current Cash Position figure was derived, When an admin/super-admin opens the dedicated Cash Position page, Then they see the live current balance, total cash sales in since the opening balance was set, and a reverse-chronological list of every individual transferred cash-method expense, transferred cash deposit, and manual adjustment composing the balance (date, amount, identifying detail each). | REQ-REPORT-007 (amended)      |
+| AC11 | Given the Cash Position page's ledger, When it contains more entries than fit on one page, Then the entries are paginated with Previous/Next controls and a "Page X of Y (N total)" indicator; the controls never render when there are zero entries, and navigating pages never errors.                                                                                                                                                         | REQ-REPORT-007 (amended)      |
 
 ## SRS items proposed/touched
 
@@ -48,7 +49,13 @@ authored_at: '2026-09-14'
 | AC1, AC3, AC4, AC6, AC7 | REQ-REPORT-007 (new — proposed)  | authored (canonical prose) | New item covering the Daily Report's Current Cash Position section, its empty state, and the super-admin adjustment/audit-trail capability.                        |
 | AC2, AC8                | REQ-FIN-003 (existing — updated) | updated (drift resolved)   | Existing item covered pending-expense group submit/approve but never described a payment-method field or batch-homogeneity constraint — both added as new bullets. |
 | AC5                     | REQ-FIN-008 (new — proposed)     | authored (canonical prose) | New item covering the parallel Cash Deposit pending→approved→transferred workflow.                                                                                 |
-| AC9, AC10               | REQ-REPORT-007 (amended)         | authored (canonical prose) | Added post-UAT — see "Requirements gap accepted" below.                                                                                                            |
+| AC9-AC11                | REQ-REPORT-007 (amended)         | authored (canonical prose) | Added post-UAT — see "Requirements gap accepted" below.                                                                                                            |
+
+## Requirements gap accepted (amended post-UAT, iteration 3)
+
+**Gap:** AC10 (the dedicated Cash Position ledger page, iteration 2) rendered every composing entry unbounded on one page. The operator flagged this as a missing AC before it could grow into a real usability problem in production.
+
+**Resolution:** Added AC11. `CashPositionService.getLedger(page, pageSize=20)` now merges the three source collections, sorts by date, and slices the requested page in-memory (true DB-level pagination across three collections isn't practical at this data volume and isn't needed for a single-restaurant ledger). `CashPositionLedger` gained `totalEntries`/`page`/`pageSize`. The page UI adds Previous/Next buttons and a page indicator, only rendered when `totalEntries > 0`. New unit tests pin the pagination math (`__tests__/services/cash-position-service.test.ts`); new e2e test confirms the controls render correctly and Next/Previous never crash the page.
 
 ## Requirements gap accepted (amended post-UAT, iteration 2)
 

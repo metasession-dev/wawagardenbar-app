@@ -171,15 +171,3 @@ export interface ExpenseFilters {
   category?: string;
   searchTerm?: string;
 }
-
-/**
- * Expense Summary
- */
-export interface ExpenseSummary {
-  totalDirectCosts: number;
-  totalOperatingExpenses: number;
-  totalExpenses: number;
-  directCostsByCategory: Record<string, number>;
-  operatingExpensesByCategory: Record<string, number>;
-  expenseCount: number;
-}

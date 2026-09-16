@@ -5,13 +5,15 @@ import { evidenceShot } from '../helpers/evidence';
 
 /**
  * E2E Tests — REQ-104 (Expense Tags), REQ-105 (Expense edit completeness),
- * REQ-106 (Cash Position + Cash Deposits)
+ * REQ-106 (Cash Position + Cash Deposits, incl. AC9-11 post-UAT amendments),
+ * REQ-107 (Expense summary totals follow list filters)
  *
  * Regression tier — Should-priority, not a headline revenue-blocking flow.
  *
  * @requirement REQ-104
  * @requirement REQ-105
  * @requirement REQ-106
+ * @requirement REQ-107
  */
 
 const ADMIN_FILE = path.join(__dirname, '../../.auth/admin.json');
@@ -328,6 +330,109 @@ adminTest.describe('REQ-106: Dedicated Cash Position page', () => {
         await expect(ledger.or(ledgerEmpty)).toBeVisible();
       }
       await evidenceShot(page, 'REQ-106', 10, 'cash-position-page');
+    }
+  );
+
+  adminTest(
+    'AC11: the ledger is paginated — controls render when entries exist and never crash the page',
+    async ({ page }) => {
+      tagTest('REQ-106', 11);
+      await page.goto('/dashboard/finance/cash-position');
+
+      const current = page.locator(
+        '[data-testid="cash-position-page-current"]'
+      );
+      const notSeeded = page.locator(
+        '[data-testid="cash-position-page-not-seeded"]'
+      );
+      await expect(notSeeded.or(current)).toBeVisible({ timeout: 15000 });
+
+      if (await current.isVisible()) {
+        const ledger = page.locator(
+          '[data-testid="cash-position-page-ledger"]'
+        );
+        const pagination = page.locator(
+          '[data-testid="cash-position-page-pagination"]'
+        );
+        // Pagination controls only render when there's at least one entry
+        // (ledger.totalEntries > 0) — if the ledger is empty, there's
+        // nothing to paginate and the controls are correctly absent.
+        if (await ledger.isVisible()) {
+          await expect(pagination).toBeVisible();
+          await evidenceShot(page, 'REQ-106', 11, 'pagination-controls');
+
+          const nextBtn = page.locator(
+            '[data-testid="cash-position-page-next"]'
+          );
+          const prevBtn = page.locator(
+            '[data-testid="cash-position-page-prev"]'
+          );
+          await expect(prevBtn).toBeDisabled();
+          // Clicking Next when there's only one page is a no-op (button
+          // disabled); when there are 21+ entries, it must not crash and
+          // must load a second page without error.
+          if (await nextBtn.isEnabled()) {
+            await nextBtn.click();
+            await expect(ledger).toBeVisible();
+            await expect(prevBtn).toBeEnabled();
+            await evidenceShot(page, 'REQ-106', 11, 'page-two');
+          }
+        }
+      }
+    }
+  );
+});
+
+// ===========================================================================
+// REQ-107: Expense summary totals follow the applied filters
+// ===========================================================================
+
+adminTest.describe('REQ-107: Expense summary totals follow filters', () => {
+  adminTest(
+    'AC1: filtering by expense type recomputes the summary cards, not just the table',
+    async ({ page }) => {
+      tagTest('REQ-107', 1);
+      await page.goto('/dashboard/finance/expenses');
+      await expect(page.locator('table')).toBeVisible({ timeout: 20000 });
+
+      const directCostsCard = page.locator(
+        '[data-testid="expense-summary-direct-costs"]'
+      );
+      const totalCard = page.locator(
+        '[data-testid="expense-summary-total-expenses"]'
+      );
+      await expect(directCostsCard).toBeVisible();
+      const beforeDirectCosts = (await directCostsCard.textContent())?.trim();
+      const beforeTotal = await totalCard.textContent();
+      await evidenceShot(page, 'REQ-107', 1, 'unfiltered-totals');
+
+      if (beforeDirectCosts === '₦0.00') {
+        adminTest.skip(
+          true,
+          'No direct-cost records in the current date range — nothing to prove by filtering them out'
+        );
+      }
+
+      // Filter to Operating Expense only — the Total Direct Costs card
+      // must drop to ₦0.00 since no direct-cost rows remain in the
+      // filtered subset. Before the fix, this card stayed at the
+      // unfiltered date-range total regardless of the table filter.
+      const typeFilterTrigger = page
+        .locator('button', { hasText: /All Types/ })
+        .first();
+      if (!(await typeFilterTrigger.count())) {
+        adminTest.skip(true, 'No expense records available to filter');
+      }
+      await typeFilterTrigger.click();
+      await page.getByRole('option', { name: 'Operating Expense' }).click();
+
+      await expect(directCostsCard).toHaveText('₦0.00', { timeout: 10000 });
+      const afterTotal = await totalCard.textContent();
+      await evidenceShot(page, 'REQ-107', 1, 'filtered-totals');
+
+      // The overall total must also have changed, since direct-cost rows
+      // (previously contributing beforeDirectCosts > 0) are now excluded.
+      expect(afterTotal).not.toBe(beforeTotal);
     }
   );
 });

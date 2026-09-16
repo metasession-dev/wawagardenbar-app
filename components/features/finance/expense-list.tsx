@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { MoreHorizontal, Pencil, Trash2, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -56,7 +56,7 @@ import {
  * required on this shape so the shared matchesExpenseSearch predicate can
  * consult them.
  */
-interface Expense {
+export interface Expense {
   _id: string;
   date: Date;
   expenseType: ExpenseType;
@@ -97,6 +97,12 @@ interface ExpenseListProps {
    */
   selectedIds?: Set<string>;
   onSelectionChange?: (next: Set<string>) => void;
+  /**
+   * @requirement REQ-107 — reports the currently-filtered subset back to the
+   * parent so summary totals can be computed from what's actually shown,
+   * not from an unfiltered date-range-only server query.
+   */
+  onFilteredChange?: (filtered: Expense[]) => void;
 }
 
 export function ExpenseList({
@@ -106,6 +112,7 @@ export function ExpenseList({
   userRole,
   selectedIds,
   onSelectionChange,
+  onFilteredChange,
 }: ExpenseListProps) {
   const selectionEnabled = selectedIds !== undefined && !!onSelectionChange;
   const [searchTerm, setSearchTerm] = useState('');
@@ -146,24 +153,36 @@ export function ExpenseList({
   // `category` is intentionally not in the shared predicate (it has its own
   // dropdown filter below); keep the legacy category-substring fallback so
   // typing a category name in the search still narrows the list as before.
-  const filteredExpenses = expenses.filter((expense) => {
-    const termLower = searchTerm.toLowerCase();
-    const matchesSearch =
-      matchesExpenseSearch(expense, searchTerm) ||
-      (termLower !== '' && expense.category.toLowerCase().includes(termLower));
+  const filteredExpenses = useMemo(
+    () =>
+      expenses.filter((expense) => {
+        const termLower = searchTerm.toLowerCase();
+        const matchesSearch =
+          matchesExpenseSearch(expense, searchTerm) ||
+          (termLower !== '' &&
+            expense.category.toLowerCase().includes(termLower));
 
-    const matchesType =
-      typeFilter === 'all' || expense.expenseType === typeFilter;
+        const matchesType =
+          typeFilter === 'all' || expense.expenseType === typeFilter;
 
-    const matchesCategory =
-      categoryFilter === 'all' || expense.category === categoryFilter;
+        const matchesCategory =
+          categoryFilter === 'all' || expense.category === categoryFilter;
 
-    const matchesTags =
-      tagFilter.size === 0 ||
-      (expense.tagIds ?? []).some((id) => tagFilter.has(id));
+        const matchesTags =
+          tagFilter.size === 0 ||
+          (expense.tagIds ?? []).some((id) => tagFilter.has(id));
 
-    return matchesSearch && matchesType && matchesCategory && matchesTags;
-  });
+        return matchesSearch && matchesType && matchesCategory && matchesTags;
+      }),
+    [expenses, searchTerm, typeFilter, categoryFilter, tagFilter]
+  );
+
+  // REQ-107 — keep the parent's summary totals in sync with what's actually
+  // filtered/displayed here, instead of an unfiltered date-range-only total.
+  useEffect(() => {
+    onFilteredChange?.(filteredExpenses);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredExpenses]);
 
   const handleDelete = async () => {
     if (!deleteExpenseId) return;

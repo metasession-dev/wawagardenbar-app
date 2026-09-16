@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-105",
+  "ac": 5,
+  "slug": "tag-added-in-edit-dialog",
+  "specFile": "e2e/finance/cash-tags-and-edit.spec.ts",
+  "capturedAt": "2026-09-16T14:53:24.600Z"
+}

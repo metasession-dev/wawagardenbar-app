@@ -30,9 +30,11 @@ export interface CashPositionLedgerEntry {
 }
 
 /**
- * @requirement REQ-106 (amended — AC10)
+ * @requirement REQ-106 (amended — AC10, paginated per iteration-3 amendment)
  * The live ("as of now") position plus every non-sales movement that
- * composes it, for the dedicated Cash Position page.
+ * composes it, for the dedicated Cash Position page. `entries` is one page
+ * of the full reverse-chronological list; `totalEntries`/`page`/`pageSize`
+ * describe where that page sits within the whole.
  */
 export interface CashPositionLedger {
   seeded: boolean;
@@ -40,4 +42,7 @@ export interface CashPositionLedger {
   /** Total cash sales in since the opening balance was set — a single rolled-up figure, not itemized. */
   totalCashIn: number;
   entries: CashPositionLedgerEntry[];
+  totalEntries: number;
+  page: number;
+  pageSize: number;
 }

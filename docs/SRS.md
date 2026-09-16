@@ -185,6 +185,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-FIN-006      | Expense tags: create, archive, attach to pending expenses, filter                           | Should   | regression | `services/tag-service.ts`; `components/ui/tag-combobox.tsx`; REQ-026/REQ-FIN-003                                      |
 | REQ-FIN-007      | Expense edit dialog: full field visibility/editability (super-admin)                        | Should   | regression | `components/features/finance/edit-expense-dialog.tsx`; `app/actions/finance/expense-actions.ts`; REQ-FIN-001, REQ-034 |
 | REQ-FIN-008      | Cash deposit workflow: pending \| approved \| transferred, till → bank                      | Should   | regression | `services/cash-deposit-service.ts`; `app/actions/finance/cash-deposit-actions.ts`; REQ-REPORT-007                     |
+| REQ-FIN-009      | Expense summary totals recompute from the list's applied filters                            | Should   | regression | `app/dashboard/finance/expenses/expenses-client.tsx`; `components/features/finance/expense-list.tsx`; REQ-FIN-001     |
 | REQ-REPORT-001   | Daily report: payment accuracy + reconciliation                                             | Should   | regression | `app/actions/reports/report-actions.ts:11`; REQ-013/014                                                               |
 | REQ-REPORT-002   | Business-day cutoff grouping                                                                | Should   | regression | REQ-025                                                                                                               |
 | REQ-REPORT-003   | Profitability report by item/category                                                       | Could    | extended   | `profitability-analytics-actions.ts:15`                                                                               |
@@ -1158,6 +1159,15 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 - **Given** an approved deposit, **When** a super-admin confirms the transfer (with or without a reference), **Then** it moves to transferred and Current Cash Position (REQ-REPORT-007) reflects the deduction on that transfer date.
 - **Given** a transferred deposit, **When** any report queries `Expense`-derived P&L figures, **Then** the deposit never appears there — deposits and expenses are fully separate collections.
 
+#### REQ-FIN-009 — Expense summary totals follow list filters · **Should** · regression
+
+**Source:** `app/dashboard/finance/expenses/expenses-client.tsx`; `components/features/finance/expense-list.tsx`; cross-ref REQ-FIN-001
+
+**Behaviour:** The Expenses page's three summary cards (Total Direct Costs, Total Operating Expenses, Total Expenses) are computed from the same filtered subset `ExpenseList` renders in its table — search term, expense type, category, and tag filters all narrow both the table and the cards together. Previously the cards were computed via a separate, unfiltered, date-range-only server query, so applying a table filter never changed the displayed totals.
+
+- **Given** the Expenses page with a mix of direct-cost and operating-expense records, **When** an admin applies a filter (search, type, category, or tag) that narrows the visible rows, **Then** the Total Direct Costs, Total Operating Expenses, and Total Expenses cards recompute from exactly the filtered subset shown in the table, not the full unfiltered date range.
+- **Given** no filter is applied, **When** the page renders, **Then** the summary cards equal the sum of every row in the selected date range, unchanged from prior behaviour.
+
 ---
 
 ## Feature Area 17 — Reports & Analytics (REPORT)
@@ -1222,6 +1232,7 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 - **Given** a super-admin, **When** they record a cash position adjustment (the initial opening balance or a later correction), **Then** the position updates immediately (including on the same business day it was recorded) and the adjustment appears in an audit-trail list showing who, when, the amount, and an optional reason.
 - **Given** no opening balance has ever been set, **When** the Current Cash Position is computed, **Then** it explicitly states the position is not yet tracked, never a misleading ₦0.
 - **Given** the need to verify how the current figure was derived, **When** an admin/super-admin opens the dedicated Cash Position page, **Then** they see the live balance, total cash sales in since opening, and a reverse-chronological, itemized list of every transferred cash-method expense, transferred cash deposit, and manual adjustment composing it (cash sales are shown as a single rolled-up total, not itemized per sale — that detail belongs to the Daily/Range Report's own revenue breakdown).
+- **Given** the Cash Position page's ledger contains more entries than fit on one page, **When** it renders, **Then** the entries are paginated with Previous/Next controls and a "Page X of Y (N total)" indicator; the controls never render when there are zero entries, and navigating pages never errors (amended post-UAT — see `compliance/plans/REQ-106/implementation-plan.md` § "Requirements gap accepted (amended post-UAT, iteration 3)").
 
 ---
 

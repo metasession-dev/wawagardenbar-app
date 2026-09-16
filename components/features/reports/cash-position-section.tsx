@@ -6,6 +6,7 @@
  * hidden, always has a defined state (including "not yet seeded"), so an
  * absent opening balance is never ambiguous with "not implemented".
  */
+import Link from 'next/link';
 import { Wallet } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -43,7 +44,7 @@ export function CashPositionSection({
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">
             {cashPosition?.seeded
-              ? 'Till balance for this period'
+              ? 'Live till balance, as of now'
               : 'Not yet tracked'}
           </CardTitle>
           {isSuperAdmin && (
@@ -128,10 +129,19 @@ export function CashPositionSection({
                 </div>
               )}
               <div className="mt-2 flex justify-between border-t pt-2 text-lg font-semibold">
-                <span>Closing Position</span>
+                <span>Current Position</span>
                 <span data-testid="cash-position-closing">
                   {formatCurrency(cashPosition.closingPosition)}
                 </span>
+              </div>
+              <div className="pt-1 text-right">
+                <Link
+                  href="/dashboard/finance/cash-position"
+                  className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                  data-testid="cash-position-view-details-link"
+                >
+                  View full breakdown →
+                </Link>
               </div>
             </div>
           )}

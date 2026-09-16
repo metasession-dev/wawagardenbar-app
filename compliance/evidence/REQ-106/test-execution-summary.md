@@ -42,16 +42,24 @@ E2E execution surfaced a genuine business-date resolution defect in `CashPositio
 
 ## Test plan coverage
 
-| Acceptance criterion                                                              | Status | Test                                                                                                              |
-| --------------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------- |
-| AC1 — Current Cash Position section always renders, defined state                 | PASS   | `e2e/finance/cash-tags-and-edit.spec.ts`; `__tests__/services/cash-position-service.test.ts`                      |
-| AC2 — payment method required at expense creation                                 | PASS   | `e2e/finance/cash-tags-and-edit.spec.ts`; `__tests__/pending-expense-group/pending-expense-group-service.test.ts` |
-| AC3 — cash-method transferred expenses reduce the position                        | PASS   | `__tests__/services/cash-position-service.test.ts`                                                                |
-| AC4 — transfer-method expenses do not affect the position                         | PASS   | `__tests__/services/cash-position-service.test.ts`                                                                |
-| AC5 — cash deposit create → approve → transfer, optional reference                | PASS   | `e2e/finance/cash-tags-and-edit.spec.ts`; `__tests__/services/cash-deposit-service.test.ts`                       |
-| AC6 — super-admin adjustment updates position immediately, appears in audit trail | PASS   | `e2e/finance/cash-tags-and-edit.spec.ts`; `__tests__/services/cash-position-service.test.ts`                      |
-| AC7 — report date before opening balance shows "not tracked", not a misleading ₦0 | PASS   | `__tests__/services/cash-position-service.test.ts`                                                                |
-| AC8 — mixed-payment-method batch rejected with a clear error                      | PASS   | `__tests__/pending-expense-group/pending-expense-group-service.test.ts`                                           |
+| Acceptance criterion                                                                                         | Status | Test                                                                                                              |
+| ------------------------------------------------------------------------------------------------------------ | ------ | ----------------------------------------------------------------------------------------------------------------- |
+| AC1 — Current Cash Position section always renders, defined state                                            | PASS   | `e2e/finance/cash-tags-and-edit.spec.ts`; `__tests__/services/cash-position-service.test.ts`                      |
+| AC2 — payment method required at expense creation                                                            | PASS   | `e2e/finance/cash-tags-and-edit.spec.ts`; `__tests__/pending-expense-group/pending-expense-group-service.test.ts` |
+| AC3 — cash-method transferred expenses reduce the position                                                   | PASS   | `__tests__/services/cash-position-service.test.ts`                                                                |
+| AC4 — transfer-method expenses do not affect the position                                                    | PASS   | `__tests__/services/cash-position-service.test.ts`                                                                |
+| AC5 — cash deposit create → approve → transfer, optional reference                                           | PASS   | `e2e/finance/cash-tags-and-edit.spec.ts`; `__tests__/services/cash-deposit-service.test.ts`                       |
+| AC6 — super-admin adjustment updates position immediately, appears in audit trail                            | PASS   | `e2e/finance/cash-tags-and-edit.spec.ts`; `__tests__/services/cash-position-service.test.ts`                      |
+| AC7 — report date before opening balance shows "not tracked", not a misleading ₦0                            | PASS   | `__tests__/services/cash-position-service.test.ts`                                                                |
+| AC8 — mixed-payment-method batch rejected with a clear error                                                 | PASS   | `__tests__/pending-expense-group/pending-expense-group-service.test.ts`                                           |
+| AC9 — Current Cash Position always reflects "now", decoupled from report range (added iteration 2, post-UAT) | PASS   | `__tests__/services/cash-position-service.test.ts`; `e2e/finance/cash-tags-and-edit.spec.ts`                      |
+| AC10 — dedicated Cash Position page: live balance + itemized ledger (added iteration 2, post-UAT)            | PASS   | `__tests__/services/cash-position-service.test.ts`; `e2e/finance/cash-tags-and-edit.spec.ts`                      |
+
+## Iteration 2 — requirements gap (post-UAT)
+
+UAT flagged that "Current Cash Position" read like an accumulation of movement over the Daily Report's selected date/range, rather than the actual present-moment till balance — a real ambiguity in AC1, which never specified this. The operator also asked that the figure's composition (expenses, cash payments, bank deposits, manual edits) be independently verifiable rather than trusted as a bare arithmetic sum, and directed this be folded into REQ-106 as a requirements-gap fix rather than a new REQ.
+
+Amended AC9 (decouple the Daily Report section from the date picker — it now always fetches `getCurrentCashPositionAction()`, never a date-scoped query) and AC10 (new `/dashboard/finance/cash-position` page: live balance, total cash sales in since opening, and a reverse-chronological itemized ledger of every transferred cash-method expense, transferred cash deposit, and manual adjustment). See `compliance/plans/REQ-106/implementation-plan.md` § "Requirements gap accepted (amended post-UAT, iteration 2)".
 
 ## Iteration 1 — defect (post-UAT)
 

@@ -246,6 +246,90 @@ adminTest.describe('REQ-106: Current Cash Position section', () => {
       await expect(notSeeded.or(summary)).toBeVisible();
     }
   );
+
+  adminTest(
+    "AC9: Current Cash Position is unchanged by switching the Daily Report's date range",
+    async ({ page }) => {
+      tagTest('REQ-106', 9);
+      await page.goto('/dashboard/reports/daily');
+
+      const section = page.locator('[data-testid="cash-position-section"]');
+      await expect(section).toBeVisible({ timeout: 15000 });
+
+      const readClosing = async () => {
+        const closing = section.locator(
+          '[data-testid="cash-position-closing"]'
+        );
+        const notSeeded = section.locator(
+          '[data-testid="cash-position-not-seeded"]'
+        );
+        if (await notSeeded.isVisible()) return 'not-seeded';
+        return closing.textContent();
+      };
+
+      const beforeSwitch = await readClosing();
+
+      // Switch to the "Date Range" tab — the report content changes, but
+      // Current Cash Position must not.
+      await page.getByRole('tab', { name: /Date Range/i }).click();
+      const last7 = page.locator('button', { hasText: /Last 7 Days/i });
+      if (await last7.count()) {
+        await last7.click();
+        await page.waitForTimeout(500);
+      }
+
+      const afterSwitch = await readClosing();
+      expect(afterSwitch).toBe(beforeSwitch);
+      await evidenceShot(
+        page,
+        'REQ-106',
+        9,
+        'position-unchanged-across-ranges'
+      );
+    }
+  );
+});
+
+// ===========================================================================
+// REQ-106: Dedicated Cash Position page
+// ===========================================================================
+
+adminTest.describe('REQ-106: Dedicated Cash Position page', () => {
+  adminTest(
+    'AC10: the Cash Position page shows the live balance and an itemized ledger',
+    async ({ page }) => {
+      tagTest('REQ-106', 10);
+      await page.goto('/dashboard/finance/cash-position');
+
+      await expect(
+        page.getByRole('heading', { name: 'Cash Position' })
+      ).toBeVisible({ timeout: 15000 });
+
+      const notSeeded = page.locator(
+        '[data-testid="cash-position-page-not-seeded"]'
+      );
+      const current = page.locator(
+        '[data-testid="cash-position-page-current"]'
+      );
+      await expect(notSeeded.or(current)).toBeVisible({ timeout: 15000 });
+
+      if (await current.isVisible()) {
+        await expect(
+          page.locator('[data-testid="cash-position-page-total-cash-in"]')
+        ).toBeVisible();
+        // Either the itemized ledger or its explicit empty state renders —
+        // never neither.
+        const ledger = page.locator(
+          '[data-testid="cash-position-page-ledger"]'
+        );
+        const ledgerEmpty = page.locator(
+          '[data-testid="cash-position-page-ledger-empty"]'
+        );
+        await expect(ledger.or(ledgerEmpty)).toBeVisible();
+      }
+      await evidenceShot(page, 'REQ-106', 10, 'cash-position-page');
+    }
+  );
 });
 
 // ===========================================================================

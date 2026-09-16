@@ -38,7 +38,7 @@ import {
   type CashPositionSummary,
 } from '@/components/features/reports/cash-position-section';
 import { CashPositionAdjustmentDialog } from '@/components/features/finance/cash-position-adjustment-dialog';
-import { getCashPositionAction } from '@/app/actions/finance/cash-position-actions';
+import { getCurrentCashPositionAction } from '@/app/actions/finance/cash-position-actions';
 import {
   exportReportAsPDF,
   exportReportAsExcel,
@@ -125,17 +125,13 @@ export function DailyReportClient({ userRole }: DailyReportClientProps = {}) {
     }
   };
 
-  // REQ-106 — fetched independently of `runFetch`/DailySummaryReport;
-  // cash position is orthogonal to the revenue/cost report.
-  const fetchCashPosition = async (
-    range: DateRange,
-    type: 'single' | 'range'
-  ) => {
+  // REQ-106 (amended — AC9) — fetched independently of `runFetch`/
+  // DailySummaryReport and of the report's date/range picker: "Current
+  // Cash Position" always means the live position as of now, never the
+  // closing position of whatever date/range the rest of the report shows.
+  const fetchCashPosition = async () => {
     try {
-      const result =
-        type === 'single'
-          ? await getCashPositionAction(range.from)
-          : await getCashPositionAction(range.from, range.to);
+      const result = await getCurrentCashPositionAction();
       if (result.success && result.summary) {
         setCashPosition(result.summary);
       }
@@ -160,7 +156,7 @@ export function DailyReportClient({ userRole }: DailyReportClientProps = {}) {
         )
       );
     }
-    await fetchCashPosition(range, type);
+    await fetchCashPosition();
   };
 
   /** Re-fetch whatever is currently selected — the manual "Generate Report" button. */
@@ -186,7 +182,7 @@ export function DailyReportClient({ userRole }: DailyReportClientProps = {}) {
     if (result?.success && result.resolvedLabel) {
       const resolved = new Date(`${result.resolvedLabel}T12:00:00`);
       setDateRange({ from: resolved, to: resolved });
-      await fetchCashPosition({ from: resolved, to: resolved }, 'single');
+      await fetchCashPosition();
     }
   };
 
@@ -216,7 +212,7 @@ export function DailyReportClient({ userRole }: DailyReportClientProps = {}) {
         to: new Date(`${result.resolvedEndLabel}T12:00:00`),
       };
       setDateRange(resolvedRange);
-      await fetchCashPosition(resolvedRange, 'range');
+      await fetchCashPosition();
     }
   };
 
@@ -709,7 +705,7 @@ export function DailyReportClient({ userRole }: DailyReportClientProps = {}) {
       <CashPositionAdjustmentDialog
         open={adjustmentDialogOpen}
         onOpenChange={setAdjustmentDialogOpen}
-        onSuccess={() => fetchCashPosition(dateRange, reportType)}
+        onSuccess={() => fetchCashPosition()}
         seeded={cashPosition?.seeded ?? false}
         currentPosition={cashPosition?.closingPosition ?? 0}
         formatCurrency={formatCurrency}

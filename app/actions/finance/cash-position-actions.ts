@@ -31,16 +31,16 @@ function requireSuperAdmin(session: SessionData): void {
 }
 
 /**
- * Get the Current Cash Position for a single date, or a range when
- * `endDate` is provided.
+ * @requirement REQ-106 (amended — AC9)
+ * The live position as of right now — independent of any report's
+ * selected date/range. This is what the Daily Report's Current Cash
+ * Position section fetches, regardless of which date/range it displays.
  */
-export async function getCashPositionAction(startDate: Date, endDate?: Date) {
+export async function getCurrentCashPositionAction() {
   try {
     const session = await getSession();
     requireReportViewer(session);
-    const summary = endDate
-      ? await CashPositionService.getCashPositionForRange(startDate, endDate)
-      : await CashPositionService.getCashPositionForDate(startDate);
+    const summary = await CashPositionService.getCurrentPosition();
     return { success: true, summary };
   } catch (error) {
     return {
@@ -49,6 +49,26 @@ export async function getCashPositionAction(startDate: Date, endDate?: Date) {
         error instanceof Error
           ? error.message
           : 'Failed to compute cash position',
+    };
+  }
+}
+
+/**
+ * @requirement REQ-106 (amended — AC10)
+ * The live position plus an itemized ledger of every non-sales movement
+ * composing it, for the dedicated Cash Position page.
+ */
+export async function getCashPositionLedgerAction() {
+  try {
+    const session = await getSession();
+    requireReportViewer(session);
+    const ledger = await CashPositionService.getLedger();
+    return { success: true, ledger: JSON.parse(JSON.stringify(ledger)) };
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : 'Failed to compute ledger',
     };
   }
 }
@@ -83,6 +103,7 @@ export async function recordCashPositionAdjustmentAction({
       createdBy: session.userId!,
     });
     revalidatePath('/dashboard/reports/daily');
+    revalidatePath('/dashboard/finance/cash-position');
     return {
       success: true,
       adjustment: JSON.parse(JSON.stringify(adjustment)),

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { startOfMonth, endOfMonth, subDays } from 'date-fns';
 import {
   Plus,
@@ -13,13 +13,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { ExpenseForm } from '@/components/features/finance/expense-form';
-import { ExpenseList } from '@/components/features/finance/expense-list';
+import {
+  ExpenseList,
+  type Expense,
+} from '@/components/features/finance/expense-list';
 import { EditExpenseDialog } from '@/components/features/finance/edit-expense-dialog';
 import { CSVImportButton } from '@/components/features/admin/expenses/csv-import-button';
-import {
-  getExpensesAction,
-  getExpenseSummaryAction,
-} from '@/app/actions/finance/expense-actions';
+import { getExpensesAction } from '@/app/actions/finance/expense-actions';
 import { toast } from '@/hooks/use-toast';
 import { DateRange } from 'react-day-picker';
 import Link from 'next/link';
@@ -36,7 +36,11 @@ export function ExpensesPageClient({ userRole }: ExpensesPageClientProps) {
     to: endOfMonth(new Date()),
   });
   const [expenses, setExpenses] = useState<any[]>([]);
-  const [summary, setSummary] = useState<any>(null);
+  // REQ-107 — the subset ExpenseList currently has filtered/displayed;
+  // summary totals are computed from this, not a separate unfiltered
+  // date-range-only server query, so filtering the table also updates
+  // the totals shown above it.
+  const [filteredExpenses, setFilteredExpenses] = useState<Expense[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [editExpense, setEditExpense] = useState<any | null>(null);
@@ -62,17 +66,10 @@ export function ExpensesPageClient({ userRole }: ExpensesPageClientProps) {
       const endOfDay = new Date(dateRange.to);
       endOfDay.setHours(23, 59, 59, 999);
 
-      const [expensesResult, summaryResult] = await Promise.all([
-        getExpensesAction(dateRange.from, endOfDay),
-        getExpenseSummaryAction(dateRange.from, endOfDay),
-      ]);
+      const expensesResult = await getExpensesAction(dateRange.from, endOfDay);
 
       if (expensesResult.success && expensesResult.expenses) {
         setExpenses(expensesResult.expenses);
-      }
-
-      if (summaryResult.success && summaryResult.summary) {
-        setSummary(summaryResult.summary);
       }
     } catch (error) {
       toast({
@@ -109,6 +106,27 @@ export function ExpensesPageClient({ userRole }: ExpensesPageClientProps) {
     setDateRange({ from, to });
   };
 
+  // REQ-107 — recomputed from filteredExpenses (what ExpenseList actually
+  // shows), so applying a search/category/tag/type filter updates these
+  // totals the same way it updates the table beneath them.
+  const displaySummary = useMemo(() => {
+    let totalDirectCosts = 0;
+    let totalOperatingExpenses = 0;
+    for (const expense of filteredExpenses) {
+      if (expense.expenseType === 'direct-cost') {
+        totalDirectCosts += expense.amount;
+      } else {
+        totalOperatingExpenses += expense.amount;
+      }
+    }
+    return {
+      totalDirectCosts,
+      totalOperatingExpenses,
+      totalExpenses: totalDirectCosts + totalOperatingExpenses,
+      expenseCount: filteredExpenses.length,
+    };
+  }, [filteredExpenses]);
+
   return (
     <div className="space-y-4">
       {/* Summary Cards */}
@@ -121,9 +139,12 @@ export function ExpensesPageClient({ userRole }: ExpensesPageClientProps) {
             <TrendingDown className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div
+              className="text-2xl font-bold"
+              data-testid="expense-summary-direct-costs"
+            >
               ₦
-              {summary?.totalDirectCosts?.toLocaleString('en-NG', {
+              {displaySummary.totalDirectCosts?.toLocaleString('en-NG', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               }) || '0.00'}
@@ -142,9 +163,12 @@ export function ExpensesPageClient({ userRole }: ExpensesPageClientProps) {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div
+              className="text-2xl font-bold"
+              data-testid="expense-summary-operating-expenses"
+            >
               ₦
-              {summary?.totalOperatingExpenses?.toLocaleString('en-NG', {
+              {displaySummary.totalOperatingExpenses?.toLocaleString('en-NG', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               }) || '0.00'}
@@ -163,16 +187,19 @@ export function ExpensesPageClient({ userRole }: ExpensesPageClientProps) {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div
+              className="text-2xl font-bold"
+              data-testid="expense-summary-total-expenses"
+            >
               ₦
-              {summary?.totalExpenses?.toLocaleString('en-NG', {
+              {displaySummary.totalExpenses?.toLocaleString('en-NG', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               }) || '0.00'}
             </div>
             <p className="text-xs text-muted-foreground">
-              {summary?.expenseCount || 0} expense
-              {summary?.expenseCount !== 1 ? 's' : ''}
+              {displaySummary.expenseCount} expense
+              {displaySummary.expenseCount !== 1 ? 's' : ''}
             </p>
           </CardContent>
         </Card>
@@ -277,6 +304,7 @@ export function ExpensesPageClient({ userRole }: ExpensesPageClientProps) {
               userRole={userRole}
               selectedIds={selectedExpenseIds}
               onSelectionChange={setSelectedExpenseIds}
+              onFilteredChange={setFilteredExpenses}
             />
           )}
         </CardContent>

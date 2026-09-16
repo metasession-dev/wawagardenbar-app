@@ -17,3 +17,4 @@ generated_from: compliance/plans/REQ-106/implementation-plan.md
 | AC8  | REQ-FIN-003    | MEDIUM | Unit (batch homogeneity guard, both `assignBatch` and `confirmTransfer`)        |
 | AC9  | REQ-REPORT-007 | MEDIUM | Unit (`getCurrentPosition` delegation) + E2E (position unchanged across ranges) |
 | AC10 | REQ-REPORT-007 | MEDIUM | Unit (`getLedger` composition/sorting) + E2E (dedicated page renders)           |
+| AC11 | REQ-REPORT-007 | LOW    | Unit (`getLedger` pagination math) + E2E (controls render, Next/Prev safe)      |

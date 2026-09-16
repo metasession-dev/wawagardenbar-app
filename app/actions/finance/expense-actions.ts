@@ -14,9 +14,14 @@ import {
 /**
  * Create a new expense
  */
-export async function createExpenseAction(data: Omit<CreateExpenseDTO, 'createdBy'>) {
+export async function createExpenseAction(
+  data: Omit<CreateExpenseDTO, 'createdBy'>
+) {
   try {
-    const session = await getIronSession<SessionData>(await cookies(), sessionOptions);
+    const session = await getIronSession<SessionData>(
+      await cookies(),
+      sessionOptions
+    );
     if (!session.isLoggedIn || !session.userId) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -41,7 +46,8 @@ export async function createExpenseAction(data: Omit<CreateExpenseDTO, 'createdB
     console.error('Error creating expense:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to create expense',
+      error:
+        error instanceof Error ? error.message : 'Failed to create expense',
     };
   }
 }
@@ -55,7 +61,10 @@ export async function getExpensesAction(
   filters?: ExpenseFilters
 ) {
   try {
-    const session = await getIronSession<SessionData>(await cookies(), sessionOptions);
+    const session = await getIronSession<SessionData>(
+      await cookies(),
+      sessionOptions
+    );
     if (!session.isLoggedIn || !session.userId) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -79,37 +88,8 @@ export async function getExpensesAction(
     console.error('Error fetching expenses:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch expenses',
-    };
-  }
-}
-
-/**
- * Get expense summary for date range
- */
-export async function getExpenseSummaryAction(startDate: Date, endDate: Date) {
-  try {
-    const session = await getIronSession<SessionData>(await cookies(), sessionOptions);
-    if (!session.isLoggedIn || !session.userId) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
-    // Only super-admin and admin can view expense summary
-    if (session.role !== 'super-admin' && session.role !== 'admin') {
-      return { success: false, error: 'Insufficient permissions' };
-    }
-
-    const summary = await ExpenseService.getExpenseSummary(startDate, endDate);
-
-    return {
-      success: true,
-      summary: JSON.parse(JSON.stringify(summary)),
-    };
-  } catch (error) {
-    console.error('Error fetching expense summary:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch expense summary',
+      error:
+        error instanceof Error ? error.message : 'Failed to fetch expenses',
     };
   }
 }
@@ -119,7 +99,10 @@ export async function getExpenseSummaryAction(startDate: Date, endDate: Date) {
  */
 export async function getExpenseByIdAction(id: string) {
   try {
-    const session = await getIronSession<SessionData>(await cookies(), sessionOptions);
+    const session = await getIronSession<SessionData>(
+      await cookies(),
+      sessionOptions
+    );
     if (!session.isLoggedIn || !session.userId) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -153,7 +136,10 @@ export async function getExpenseByIdAction(id: string) {
  */
 export async function updateExpenseAction(id: string, data: UpdateExpenseDTO) {
   try {
-    const session = await getIronSession<SessionData>(await cookies(), sessionOptions);
+    const session = await getIronSession<SessionData>(
+      await cookies(),
+      sessionOptions
+    );
     if (!session.isLoggedIn || !session.userId) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -163,7 +149,11 @@ export async function updateExpenseAction(id: string, data: UpdateExpenseDTO) {
       return { success: false, error: 'Only super-admin can update expenses' };
     }
 
-    const expense = await ExpenseService.updateExpense(id, data, session.userId);
+    const expense = await ExpenseService.updateExpense(
+      id,
+      data,
+      session.userId
+    );
 
     revalidatePath('/dashboard/finance/expenses');
 
@@ -175,7 +165,8 @@ export async function updateExpenseAction(id: string, data: UpdateExpenseDTO) {
     console.error('Error updating expense:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update expense',
+      error:
+        error instanceof Error ? error.message : 'Failed to update expense',
     };
   }
 }
@@ -185,8 +176,11 @@ export async function updateExpenseAction(id: string, data: UpdateExpenseDTO) {
  */
 export async function deleteExpenseAction(id: string) {
   try {
-    const session = await getIronSession<SessionData>(await cookies(), sessionOptions);
-    
+    const session = await getIronSession<SessionData>(
+      await cookies(),
+      sessionOptions
+    );
+
     // Only super-admin can delete expenses
     if (session.role !== 'super-admin') {
       return { success: false, error: 'Only super-admin can delete expenses' };
@@ -204,7 +198,8 @@ export async function deleteExpenseAction(id: string) {
     console.error('Error deleting expense:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to delete expense',
+      error:
+        error instanceof Error ? error.message : 'Failed to delete expense',
     };
   }
 }
@@ -214,7 +209,10 @@ export async function deleteExpenseAction(id: string) {
  */
 export async function getUsedCategoriesAction() {
   try {
-    const session = await getIronSession<SessionData>(await cookies(), sessionOptions);
+    const session = await getIronSession<SessionData>(
+      await cookies(),
+      sessionOptions
+    );
     if (!session.isLoggedIn || !session.userId) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -234,7 +232,8 @@ export async function getUsedCategoriesAction() {
     console.error('Error fetching categories:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch categories',
+      error:
+        error instanceof Error ? error.message : 'Failed to fetch categories',
     };
   }
 }

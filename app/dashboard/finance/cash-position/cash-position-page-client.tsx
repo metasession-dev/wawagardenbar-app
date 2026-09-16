@@ -2,14 +2,15 @@
 
 /**
  * @requirement REQ-106 (amended — AC10) - Cash Position page client: live
- * balance + itemized, reverse-chronological ledger of every transferred
- * cash-method expense, transferred cash deposit, and manual adjustment.
- * Cash sales are shown as a single rolled-up total, not itemized — see
- * `compliance/plans/REQ-106/implementation-plan.md` § "Requirements gap
- * accepted (amended post-UAT, iteration 2)".
+ * balance + itemized, reverse-chronological, paginated ledger of every
+ * transferred cash-method expense, transferred cash deposit, and manual
+ * adjustment. Cash sales are shown as a single rolled-up total, not
+ * itemized — see `compliance/plans/REQ-106/implementation-plan.md` §
+ * "Requirements gap accepted (amended post-UAT, iteration 2)" and iteration
+ * 3 (pagination).
  */
 import { useEffect, useState } from 'react';
-import { Wallet } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Wallet } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getCashPositionLedgerAction } from '@/app/actions/finance/cash-position-actions';
@@ -41,13 +42,18 @@ export function CashPositionPageClient({
   const [ledger, setLedger] = useState<CashPositionLedger | null>(null);
   const [loading, setLoading] = useState(true);
   const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false);
+  // REQ-106 iteration 3 — the ledger is paginated; page resets to 1 whenever
+  // an adjustment is recorded (load(1)) so a newly-added entry is visible.
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
 
-  async function load() {
+  async function load(targetPage: number = page) {
     setLoading(true);
     try {
-      const result = await getCashPositionLedgerAction();
+      const result = await getCashPositionLedgerAction(targetPage, PAGE_SIZE);
       if (result.success && result.ledger) {
         setLedger(result.ledger);
+        setPage(result.ledger.page);
       }
     } finally {
       setLoading(false);
@@ -55,8 +61,13 @@ export function CashPositionPageClient({
   }
 
   useEffect(() => {
-    load();
-  }, []);
+    load(page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
+
+  const totalPages = ledger
+    ? Math.max(1, Math.ceil(ledger.totalEntries / ledger.pageSize))
+    : 1;
 
   return (
     <div className="space-y-6">
@@ -165,6 +176,38 @@ export function CashPositionPageClient({
                 ))}
               </div>
             )}
+            {ledger.totalEntries > 0 && (
+              <div
+                className="mt-3 flex items-center justify-between border-t pt-3 text-sm"
+                data-testid="cash-position-page-pagination"
+              >
+                <span className="text-muted-foreground">
+                  Page {page} of {totalPages} ({ledger.totalEntries} total)
+                </span>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={page <= 1 || loading}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    data-testid="cash-position-page-prev"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={page >= totalPages || loading}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    data-testid="cash-position-page-next"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -172,7 +215,7 @@ export function CashPositionPageClient({
       <CashPositionAdjustmentDialog
         open={adjustmentDialogOpen}
         onOpenChange={setAdjustmentDialogOpen}
-        onSuccess={load}
+        onSuccess={() => load(1)}
         seeded={ledger?.seeded ?? false}
         currentPosition={ledger?.current ?? 0}
         formatCurrency={formatCurrency}

@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-107",
+  "ac": 1,
+  "slug": "unfiltered-totals",
+  "specFile": "e2e/finance/cash-tags-and-edit.spec.ts",
+  "capturedAt": "2026-09-16T14:53:44.800Z"
+}

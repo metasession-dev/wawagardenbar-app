@@ -11,7 +11,7 @@
     "repository": "metasession-dev/wawagardenbar-app",
     "version": "0.0.0"
   },
-  "manifestHash": "sha256:910dda8e20537ae0c8983395a32bec2fb4f32855cda111b86383a2f639a0fd15",
+  "manifestHash": "sha256:e84a35121bd6a67702a783a8fdfbbcc773fe716f0865a89d70498cc4b257df43",
   "members": [
     {
       "commitFrom": "0c691e8",
@@ -66,6 +66,24 @@
       "role": "co-tracked",
       "scopeSummary": "Adds a system-computed **Current Cash Position** to the Daily Report — cash sale revenue in (reusing `paymentBreakdown.cash`, tips excluded per operator decision), transferred cash-method expenses and cash deposits out, computed on-demand (mirrors `financial-report-service.ts`'s existing convention, no running counter). Pending expense groups gain a required Cash/Transfer payment method; only cash-method transferred groups reduce the position. A new Cash Deposit workflow (pending → approved → transferred, optional reference) moves till cash into the bank. A super-admin can adjust the position (initial opening balance or later correction) via a fully audited, append-only ledger.",
       "version": "REQ-106"
+    },
+    {
+      "commitFrom": null,
+      "commitTo": null,
+      "evidenceInheritancePolicy": {
+        "includeCycles": false,
+        "mode": "none",
+        "reason": "Co-tracked bundle members keep fully isolated per-REQ evidence — nothing is inherited between them.",
+        "scopes": []
+      },
+      "originalTitle": "Expense summary totals follow list filters",
+      "prNumber": null,
+      "prUrl": null,
+      "reason": "LOW-risk, unrelated-file defect added as a bundle addendum mid-cycle rather than a new branch/PR/release, per operator direction.",
+      "relationship": "bundled",
+      "role": "co-tracked",
+      "scopeSummary": "The Expenses page's three summary cards (Total Direct Costs, Total Operating Expenses, Total Expenses) were computed via a separate unfiltered date-range-only server query. Fixed so the cards recompute from ExpenseList's client-side filtered subset instead, via a new onFilteredChange callback prop.",
+      "version": "REQ-107"
     }
   ],
   "nonReleaseWorkItems": [

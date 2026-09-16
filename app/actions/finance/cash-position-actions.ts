@@ -54,15 +54,18 @@ export async function getCurrentCashPositionAction() {
 }
 
 /**
- * @requirement REQ-106 (amended — AC10)
- * The live position plus an itemized ledger of every non-sales movement
- * composing it, for the dedicated Cash Position page.
+ * @requirement REQ-106 (amended — AC10; paginated per iteration-3 amendment)
+ * The live position plus a paginated, itemized ledger of every non-sales
+ * movement composing it, for the dedicated Cash Position page.
  */
-export async function getCashPositionLedgerAction() {
+export async function getCashPositionLedgerAction(
+  page: number = 1,
+  pageSize: number = 20
+) {
   try {
     const session = await getSession();
     requireReportViewer(session);
-    const ledger = await CashPositionService.getLedger();
+    const ledger = await CashPositionService.getLedger(page, pageSize);
     return { success: true, ledger: JSON.parse(JSON.stringify(ledger)) };
   } catch (error) {
     return {

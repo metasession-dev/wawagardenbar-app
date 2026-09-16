@@ -302,6 +302,9 @@ describe('REQ-106 (amended — AC10): CashPositionService.getLedger', () => {
       current: 0,
       totalCashIn: 0,
       entries: [],
+      totalEntries: 0,
+      page: 1,
+      pageSize: 20,
     });
   });
 
@@ -393,5 +396,58 @@ describe('REQ-106 (amended — AC10): CashPositionService.getLedger', () => {
         description: 'Opening balance set',
       },
     ]);
+    expect(ledger.totalEntries).toBe(3);
+    expect(ledger.page).toBe(1);
+    expect(ledger.pageSize).toBe(20);
+  });
+
+  it('REQ-106 iteration 3: paginates the merged entry list', async () => {
+    mockAdjustmentFindOne.mockReturnValue({
+      sort: () => ({
+        lean: () => Promise.resolve({ effectiveDate: new Date('2026-01-01') }),
+      }),
+    });
+    mockAdjustmentAggregate
+      .mockResolvedValueOnce([{ total: 0 }])
+      .mockResolvedValueOnce([{ total: 0 }]);
+    mockGenerateDateRangeReport.mockResolvedValue({
+      paymentBreakdown: { cash: 0 },
+    });
+    mockGroupAggregate.mockResolvedValue([]);
+    mockDepositAggregate.mockResolvedValue([]);
+
+    // 5 adjustment entries, dated 2026-06-01 through 2026-06-05.
+    mockAdjustmentFind.mockReturnValue({
+      sort: () => ({
+        lean: () =>
+          Promise.resolve(
+            Array.from({ length: 5 }, (_, i) => ({
+              type: 'correction',
+              amount: 100 * (i + 1),
+              effectiveDate: new Date(`2026-06-0${i + 1}`),
+              note: `Correction ${i + 1}`,
+            }))
+          ),
+      }),
+    });
+    mockGroupFind.mockReturnValue({
+      sort: () => ({ lean: () => Promise.resolve([]) }),
+    });
+    mockDepositFind.mockReturnValue({
+      sort: () => ({ lean: () => Promise.resolve([]) }),
+    });
+
+    const pageOne = await CashPositionService.getLedger(1, 2);
+    expect(pageOne.totalEntries).toBe(5);
+    expect(pageOne.page).toBe(1);
+    expect(pageOne.pageSize).toBe(2);
+    expect(pageOne.entries).toHaveLength(2);
+    // Newest first: 06-05, 06-04.
+    expect(pageOne.entries[0].description).toBe('Correction 5');
+    expect(pageOne.entries[1].description).toBe('Correction 4');
+
+    const pageThree = await CashPositionService.getLedger(3, 2);
+    expect(pageThree.entries).toHaveLength(1);
+    expect(pageThree.entries[0].description).toBe('Correction 1');
   });
 });

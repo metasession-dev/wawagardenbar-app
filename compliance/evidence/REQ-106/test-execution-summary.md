@@ -54,6 +54,13 @@ E2E execution surfaced a genuine business-date resolution defect in `CashPositio
 | AC8 — mixed-payment-method batch rejected with a clear error                                                 | PASS   | `__tests__/pending-expense-group/pending-expense-group-service.test.ts`                                           |
 | AC9 — Current Cash Position always reflects "now", decoupled from report range (added iteration 2, post-UAT) | PASS   | `__tests__/services/cash-position-service.test.ts`; `e2e/finance/cash-tags-and-edit.spec.ts`                      |
 | AC10 — dedicated Cash Position page: live balance + itemized ledger (added iteration 2, post-UAT)            | PASS   | `__tests__/services/cash-position-service.test.ts`; `e2e/finance/cash-tags-and-edit.spec.ts`                      |
+| AC11 — ledger is paginated; controls render correctly and Next/Previous never crash (added iteration 3)      | PASS   | `__tests__/services/cash-position-service.test.ts`; `e2e/finance/cash-tags-and-edit.spec.ts`                      |
+
+## Iteration 3 — requirements gap (post-UAT, 2026-09-16)
+
+Operator flagged pagination as a missing AC for the iteration-2 Cash Position ledger page (unbounded entry list). Added AC11 — `CashPositionService.getLedger(page, pageSize=20)` now merges + sorts the three source collections and slices the requested page in-memory; `CashPositionLedger` gained `totalEntries`/`page`/`pageSize`. New unit tests pin the pagination math; new e2e test confirms the controls render and Next/Previous never crash the page. See `compliance/plans/REQ-106/implementation-plan.md` § "Requirements gap accepted (amended post-UAT, iteration 3)".
+
+Ran against a local disposable `mongo:7` Docker container — matching CI's `e2e-regression.yml` setup exactly, not the UAT tunnel used in earlier iterations of this REQ; no k8s secrets or port-forwards involved. All 15 specs in the shared spec file pass with `--workers=1`. One pre-existing test (AC6) is flaky under the default multi-worker Playwright config due to a genuine, pre-existing test-isolation gap — several specs in this file mutate the same shared Current Cash Position concurrently. Confirmed unrelated to this iteration's diff by isolating and re-running AC6 alone (passes consistently). Documented here rather than silently dismissed; worth a follow-up to make these specs either serial or state-independent.
 
 ## Iteration 2 — requirements gap (post-UAT)
 

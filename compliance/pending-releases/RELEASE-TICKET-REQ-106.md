@@ -1,6 +1,6 @@
 # Release Ticket: REQ-106 — Cash Position tracking + Cash Deposits
 
-**Status:** TESTED - PENDING SIGN-OFF (ITERATION 1)
+**Status:** TESTED - PENDING SIGN-OFF (ITERATION 2)
 **Date:** 2026-09-14
 **Requirement ID:** REQ-106
 **Risk Level:** MEDIUM
@@ -56,6 +56,10 @@ E2E execution (against a local dev server backed by the tunneled UAT database) s
 ## Iteration 1 — defect (post-UAT, 2026-09-15)
 
 UAT found a same-day cash-position adjustment did not update the displayed closing position until the following business day (AC6 regression). Root cause and fix: `compliance/plans/REQ-106/implementation-plan.md` § "Plan deviation". Filed as [wawagardenbar-app#779](https://github.com/metasession-dev/wawagardenbar-app/issues/779). New `adjustments` field on `CashPositionSummary`, `± Adjustments` UI line, strengthened e2e assertion, new unit regression test.
+
+## Iteration 2 — requirements gap (post-UAT, 2026-09-16)
+
+UAT flagged that "Current Cash Position" behaved like an accumulation over the Daily Report's selected date/range rather than the live till balance right now — AC1 never specified this. Folded into REQ-106 per operator direction. Added AC9 (decouples the Daily Report section from the date picker — always live) and AC10 (new `/dashboard/finance/cash-position` page: live balance, total cash sales in since opening, itemized reverse-chronological ledger of every transferred cash expense, transferred deposit, and manual adjustment). See `compliance/plans/REQ-106/implementation-plan.md` § "Requirements gap accepted (amended post-UAT, iteration 2)".
 
 ## Sign-off (dual-actor)
 

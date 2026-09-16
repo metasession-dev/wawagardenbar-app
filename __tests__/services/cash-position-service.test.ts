@@ -28,16 +28,20 @@ vi.mock('@/models/cash-position-adjustment-model', () => ({
 }));
 
 const mockGroupAggregate = vi.fn();
+const mockGroupFind = vi.fn();
 vi.mock('@/models/pending-expense-group-model', () => ({
   PendingExpenseGroupModel: {
     aggregate: (...args: unknown[]) => mockGroupAggregate(...args),
+    find: (...args: unknown[]) => mockGroupFind(...args),
   },
 }));
 
 const mockDepositAggregate = vi.fn();
+const mockDepositFind = vi.fn();
 vi.mock('@/models/cash-deposit-model', () => ({
   CashDepositModel: {
     aggregate: (...args: unknown[]) => mockDepositAggregate(...args),
+    find: (...args: unknown[]) => mockDepositFind(...args),
   },
 }));
 
@@ -274,5 +278,120 @@ describe('REQ-106: CashPositionService.recordAdjustment', () => {
       expect.objectContaining({ type: 'seed', amount: 50000 })
     );
     expect(result).toEqual({ type: 'seed', amount: 50000 });
+  });
+});
+
+describe('REQ-106 (amended — AC9): CashPositionService.getCurrentPosition', () => {
+  it('delegates to getCashPositionForDate(now) — always live, never period-scoped', async () => {
+    mockAdjustmentFindOne.mockReturnValue({
+      sort: () => ({ lean: () => Promise.resolve(null) }),
+    });
+    const result = await CashPositionService.getCurrentPosition();
+    expect(result.seeded).toBe(false);
+  });
+});
+
+describe('REQ-106 (amended — AC10): CashPositionService.getLedger', () => {
+  it('returns seeded:false with an empty ledger when no opening balance exists', async () => {
+    mockAdjustmentFindOne.mockReturnValue({
+      sort: () => ({ lean: () => Promise.resolve(null) }),
+    });
+    const ledger = await CashPositionService.getLedger();
+    expect(ledger).toEqual({
+      seeded: false,
+      current: 0,
+      totalCashIn: 0,
+      entries: [],
+    });
+  });
+
+  it('composes entries from adjustments, transferred cash expenses, and transferred cash deposits, sorted newest first', async () => {
+    mockAdjustmentFindOne.mockReturnValue({
+      sort: () => ({
+        lean: () => Promise.resolve({ effectiveDate: new Date('2026-01-01') }),
+      }),
+    });
+    // getCashPositionForDate(now) internals — opening as-of, then today's
+    // in-range adjustments.
+    mockAdjustmentAggregate
+      .mockResolvedValueOnce([{ total: 50000 }])
+      .mockResolvedValueOnce([{ total: 0 }]);
+    mockGenerateDateRangeReport.mockResolvedValue({
+      paymentBreakdown: { cash: 20000 },
+    });
+    mockGroupAggregate.mockResolvedValue([{ total: 3000 }]);
+    mockDepositAggregate.mockResolvedValue([{ total: 1000 }]);
+
+    mockAdjustmentFind.mockReturnValue({
+      sort: () => ({
+        lean: () =>
+          Promise.resolve([
+            {
+              type: 'seed',
+              amount: 50000,
+              effectiveDate: new Date('2026-01-01'),
+              note: undefined,
+            },
+          ]),
+      }),
+    });
+    mockGroupFind.mockReturnValue({
+      sort: () => ({
+        lean: () =>
+          Promise.resolve([
+            {
+              totalAmount: 3000,
+              transferredAt: new Date('2026-06-14'),
+              items: [{ description: 'Generator fuel' }],
+            },
+          ]),
+      }),
+    });
+    mockDepositFind.mockReturnValue({
+      sort: () => ({
+        lean: () =>
+          Promise.resolve([
+            {
+              amount: 1000,
+              transferredAt: new Date('2026-06-15'),
+              reference: 'DEP-1',
+            },
+          ]),
+      }),
+    });
+
+    const ledger = await CashPositionService.getLedger();
+
+    expect(ledger.seeded).toBe(true);
+    // `current` delegates to getCashPositionForDate(now).closingPosition,
+    // whose openingPosition itself sums cashIn/cashOutExpenses/
+    // cashOutDeposits for the opening period via computePositionAsOf —
+    // with these mocks returning a fixed value regardless of the date
+    // range passed, that math is counted once for "opening" and once
+    // more for "today", same mock-arithmetic artifact the pre-existing
+    // getCashPositionForDate test documents; not a getLedger-specific bug.
+    expect(ledger.current).toBe(50000 + 2 * (20000 - 3000 - 1000));
+    expect(ledger.totalCashIn).toBe(20000);
+    expect(ledger.entries).toEqual([
+      // Newest first: deposit (06-15) before expense (06-14) before seed (01-01).
+      {
+        type: 'cash-out-deposit',
+        date: new Date('2026-06-15'),
+        amount: -1000,
+        description: 'Deposit — DEP-1',
+      },
+      {
+        type: 'cash-out-expense',
+        date: new Date('2026-06-14'),
+        amount: -3000,
+        description: 'Generator fuel',
+      },
+      {
+        type: 'seed',
+        amount: 50000,
+        date: new Date('2026-01-01'),
+        description: 'Opening balance set',
+      },
+    ]);
   });
 });

@@ -12,3 +12,32 @@ export interface CashPositionSummary {
   adjustments: number;
   closingPosition: number;
 }
+
+/**
+ * @requirement REQ-106 (amended — AC10)
+ * One itemizable movement composing the current position. Cash sales are
+ * deliberately NOT itemized here (see CashPositionLedger.totalCashIn) —
+ * per-transaction sale detail already belongs to the Daily/Range Report's
+ * own revenue breakdown; this ledger exists to make the non-sales
+ * movements (expenses/deposits/manual edits) individually verifiable.
+ */
+export interface CashPositionLedgerEntry {
+  type: 'seed' | 'correction' | 'cash-out-expense' | 'cash-out-deposit';
+  date: Date;
+  /** Signed — positive increases the position, negative decreases it. */
+  amount: number;
+  description: string;
+}
+
+/**
+ * @requirement REQ-106 (amended — AC10)
+ * The live ("as of now") position plus every non-sales movement that
+ * composes it, for the dedicated Cash Position page.
+ */
+export interface CashPositionLedger {
+  seeded: boolean;
+  current: number;
+  /** Total cash sales in since the opening balance was set — a single rolled-up figure, not itemized. */
+  totalCashIn: number;
+  entries: CashPositionLedgerEntry[];
+}

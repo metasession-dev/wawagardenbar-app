@@ -22,7 +22,13 @@ import {
   ICashPositionAdjustment,
   CreateCashPositionAdjustmentDTO,
 } from '@/interfaces/cash-position-adjustment.interface';
-import { CashPositionSummary } from '@/interfaces/cash-position.interface';
+import {
+  CashPositionSummary,
+  CashPositionLedger,
+  CashPositionLedgerEntry,
+} from '@/interfaces/cash-position.interface';
+import { IPendingExpenseGroup } from '@/interfaces/pending-expense-group.interface';
+import { ICashDeposit } from '@/interfaces/cash-deposit.interface';
 import { ObjectId } from 'mongodb';
 
 export class CashPositionService {
@@ -293,4 +299,87 @@ export class CashPositionService {
       .sort({ effectiveDate: -1, createdAt: -1 })
       .lean() as Promise<ICashPositionAdjustment[]>;
   }
+
+  /**
+   * @requirement REQ-106 (amended — AC9)
+   * The live position as of right now — independent of any report's
+   * selected date/range. Delegates to getCashPositionForDate(now), which
+   * already folds in same-day adjustments correctly.
+   */
+  static async getCurrentPosition(): Promise<CashPositionSummary> {
+    return this.getCashPositionForDate(new Date());
+  }
+
+  /**
+   * @requirement REQ-106 (amended — AC10)
+   * The live position plus every individual non-sales movement composing
+   * it, for the dedicated Cash Position page's audit ledger.
+   */
+  static async getLedger(): Promise<CashPositionLedger> {
+    const now = new Date();
+    const currentSummary = await this.getCashPositionForDate(now);
+    if (!currentSummary.seeded) {
+      return { seeded: false, current: 0, totalCashIn: 0, entries: [] };
+    }
+
+    await connectDB();
+    const earliestSeed = (await this.getEarliestSeedDate()) as Date;
+    const totalCashIn = await this.getCashInForRange(earliestSeed, now);
+
+    const adjustments = (await CashPositionAdjustmentModel.find({
+      effectiveDate: { $lte: now },
+    })
+      .sort({ effectiveDate: -1 })
+      .lean()) as unknown as ICashPositionAdjustment[];
+
+    const expenseGroups = (await PendingExpenseGroupModel.find({
+      status: 'transferred',
+      paymentMethod: 'cash',
+      transferredAt: { $lte: now },
+    })
+      .sort({ transferredAt: -1 })
+      .lean()) as unknown as IPendingExpenseGroup[];
+
+    const deposits = (await CashDepositModel.find({
+      status: 'transferred',
+      transferredAt: { $lte: now },
+    })
+      .sort({ transferredAt: -1 })
+      .lean()) as unknown as ICashDeposit[];
+
+    const entries: CashPositionLedgerEntry[] = [
+      ...adjustments.map((a) => ({
+        type: a.type,
+        date: a.effectiveDate,
+        amount: a.amount,
+        description:
+          a.note || (a.type === 'seed' ? 'Opening balance set' : 'Correction'),
+      })),
+      ...expenseGroups.map((g) => ({
+        type: 'cash-out-expense' as const,
+        date: g.transferredAt as Date,
+        amount: -g.totalAmount,
+        description: describeExpenseGroup(g),
+      })),
+      ...deposits.map((d) => ({
+        type: 'cash-out-deposit' as const,
+        date: d.transferredAt as Date,
+        amount: -d.amount,
+        description: d.reference ? `Deposit — ${d.reference}` : 'Cash deposit',
+      })),
+    ].sort((a, b) => b.date.getTime() - a.date.getTime());
+
+    return {
+      seeded: true,
+      current: currentSummary.closingPosition,
+      totalCashIn,
+      entries,
+    };
+  }
+}
+
+function describeExpenseGroup(group: IPendingExpenseGroup): string {
+  const first = group.items[0]?.description ?? 'Expense';
+  const extra = group.items.length - 1;
+  return extra > 0 ? `${first} +${extra} more` : first;
 }

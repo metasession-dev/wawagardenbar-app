@@ -225,6 +225,9 @@ export function ExpensesPageClient({ userRole }: ExpensesPageClientProps) {
           <Button variant="outline" size="sm" asChild>
             <Link href="/dashboard/finance/deposits">Cash Deposits</Link>
           </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/dashboard/finance/cash-position">Cash Position</Link>
+          </Button>
           <Button variant="outline" size="sm" disabled>
             <Download className="mr-2 h-4 w-4" />
             Export

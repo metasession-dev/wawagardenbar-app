@@ -127,22 +127,10 @@ jobs:
           # records (snapshot list/detail, expenses-search clearing).
           npx tsx scripts/seed-e2e-fixtures.ts
 
-      - name: Build
-        # #793 — the full critical/regression tier (304+ tests) hammers
-        # rarely-hit routes (/dashboard/audit-logs, /privacy, ...) that
-        # `npm run dev` would otherwise JIT-compile on first request. That
-        # cold-compile tax (up to several seconds per route, observed on a
-        # loaded self-hosted runner) competes with Playwright's fixed 5s/30s
-        # timeouts and produced intermittent, non-reproducible failures —
-        # a different unrelated test failing each run, never the same one
-        # twice. Building once up front removes the JIT-compile step from
-        # the critical path entirely.
-        run: npm run build
-
-      - name: Start server
+      - name: Start dev server
         run: |
           set -euo pipefail
-          npm run start > e2e-server.log 2>&1 &
+          npm run dev > e2e-server.log 2>&1 &
           echo "$!" > .e2e-server.pid
           echo "Started E2E server pid $(cat .e2e-server.pid)"
 
@@ -151,6 +139,40 @@ jobs:
         # deadline is needed so a hung child cannot leave the required check
         # in progress until the job-level 55-minute timeout.
         run: timeout --signal=TERM --kill-after=15s 150s npx wait-on http://localhost:3000 --timeout 120000
+
+      - name: Warm up dev-compiled routes
+        # #793 — the full critical/regression tier (304+ tests) hammers
+        # rarely-hit routes (/dashboard/audit-logs, /privacy, ...) that
+        # `npm run dev` JIT-compiles on first request. That cold-compile tax
+        # (up to several seconds per route, observed on a loaded self-hosted
+        # runner) competed with Playwright's fixed 5s/30s timeouts and
+        # produced intermittent, non-reproducible failures — a different
+        # unrelated test failing each run, never the same one twice.
+        #
+        # Serving a production build (`next build && next start`) instead
+        # was tried and reverted: it eliminates the compile tax but silently
+        # turns on Next.js's production-only Link prefetching, which keeps
+        # link-heavy pages' background network traffic alive indefinitely —
+        # breaking `page.waitForLoadState('networkidle')` (used ~450 times
+        # across the suite) with reproducible 30s timeouts on every run.
+        # Fixing that pattern suite-wide is real, separate scope; not
+        # something to fold into this CI-only fix.
+        #
+        # Instead, pre-compile every route the suite actually visits (mined
+        # straight from the specs, so this self-maintains as routes are
+        # added) by hitting each once before the timed test run starts —
+        # the JIT cost lands here, off the Playwright-timeout clock, and
+        # `npm run dev` stays untouched otherwise.
+        run: |
+          set -uo pipefail
+          grep -ohrE "page\.goto\('/[^']*'\)" e2e/ \
+            | sed -E "s/page\.goto\('(.*)'\)/\1/" \
+            | sed -E 's/\?.*//' \
+            | sort -u \
+            | while read -r route; do
+                curl -sf -o /dev/null --max-time 20 "http://localhost:3000$route" || true
+              done
+          echo "Warmed $(grep -ohrE "page\.goto\('/[^']*'\)" e2e/ | sed -E "s/page\.goto\('(.*)'\)/\1/" | sed -E 's/\?.*//' | sort -u | wc -l) routes"
 
       # Decide which Playwright project to run based on the trigger.
       # PR-to-main runs `critical` (~10-15 min); push-to-main runs
@@ -199,7 +221,7 @@ jobs:
             --arg targetUrl "http://localhost:3000" \
             --arg project "${{ steps.select.outputs.project }}" \
             --arg specs "${{ steps.select.outputs.specs }}" \
-            --arg serverStart "npm run build && npm run start (pid ${SERVER_PID:-unknown})" \
+            --arg serverStart "npm run dev (pid ${SERVER_PID:-unknown})" \
             --arg serverStop "kill ${SERVER_PID:-unknown}" \
             --arg startedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             --argjson timeoutMinutes 40 \

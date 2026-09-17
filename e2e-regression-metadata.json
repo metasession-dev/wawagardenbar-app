@@ -1,0 +1,10 @@
+{
+  "target_url": "http://localhost:3000",
+  "project": "regression",
+  "selected_specs": "",
+  "test_server_start": "npm run dev (pid 3551457)",
+  "test_server_stop": "kill 3551457",
+  "timeout_minutes": 40,
+  "started_at": "2026-09-17T09:00:16Z",
+  "outcome": "running"
+}

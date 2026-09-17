@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-083",
+  "ac": 2,
+  "slug": "preparing-status-updates-inplace-no-revert",
+  "specFile": "e2e/realtime/order-status-revert-ui.spec.ts",
+  "capturedAt": "2026-09-17T09:28:24.430Z"
+}

@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-088",
+  "ac": 8,
+  "slug": "alarm-layer-incident-event-on-cancel",
+  "specFile": "e2e/invariants/silent-path-alarm-layer.spec.ts",
+  "capturedAt": "2026-09-17T09:18:53.420Z"
+}

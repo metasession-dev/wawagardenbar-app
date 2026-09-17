@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-086",
+  "ac": 3,
+  "slug": "quick-actions-cards",
+  "specFile": "e2e/authenticated.spec.ts",
+  "capturedAt": "2026-09-17T09:03:56.745Z"
+}

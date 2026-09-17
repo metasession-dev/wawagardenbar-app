@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-089",
+  "ac": 1,
+  "slug": "express-portion-picker",
+  "specFile": "e2e/critical/express-order-portion-price-override.spec.ts",
+  "capturedAt": "2026-09-17T09:10:25.182Z"
+}

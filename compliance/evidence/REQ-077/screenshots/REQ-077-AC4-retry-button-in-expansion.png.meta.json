@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-077",
+  "ac": 4,
+  "slug": "retry-button-in-expansion",
+  "specFile": "e2e/critical/incidents-expansion.spec.ts",
+  "capturedAt": "2026-09-17T09:12:35.640Z"
+}

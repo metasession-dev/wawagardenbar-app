@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-088",
+  "ac": 6,
+  "slug": "notification-log-after-order-confirm",
+  "specFile": "e2e/invariants/notification-log-invariant.spec.ts",
+  "capturedAt": "2026-09-17T09:18:47.481Z"
+}

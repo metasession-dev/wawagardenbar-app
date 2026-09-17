@@ -127,10 +127,22 @@ jobs:
           # records (snapshot list/detail, expenses-search clearing).
           npx tsx scripts/seed-e2e-fixtures.ts
 
-      - name: Start dev server
+      - name: Build
+        # #793 — the full critical/regression tier (304+ tests) hammers
+        # rarely-hit routes (/dashboard/audit-logs, /privacy, ...) that
+        # `npm run dev` would otherwise JIT-compile on first request. That
+        # cold-compile tax (up to several seconds per route, observed on a
+        # loaded self-hosted runner) competes with Playwright's fixed 5s/30s
+        # timeouts and produced intermittent, non-reproducible failures —
+        # a different unrelated test failing each run, never the same one
+        # twice. Building once up front removes the JIT-compile step from
+        # the critical path entirely.
+        run: npm run build
+
+      - name: Start server
         run: |
           set -euo pipefail
-          npm run dev > e2e-server.log 2>&1 &
+          npm run start > e2e-server.log 2>&1 &
           echo "$!" > .e2e-server.pid
           echo "Started E2E server pid $(cat .e2e-server.pid)"
 
@@ -187,7 +199,7 @@ jobs:
             --arg targetUrl "http://localhost:3000" \
             --arg project "${{ steps.select.outputs.project }}" \
             --arg specs "${{ steps.select.outputs.specs }}" \
-            --arg serverStart "npm run dev (pid ${SERVER_PID:-unknown})" \
+            --arg serverStart "npm run build && npm run start (pid ${SERVER_PID:-unknown})" \
             --arg serverStop "kill ${SERVER_PID:-unknown}" \
             --arg startedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             --argjson timeoutMinutes 40 \

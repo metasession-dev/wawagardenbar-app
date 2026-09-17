@@ -1,0 +1,104 @@
+# Backfill Security Evidence — one-off fan-out tool for DevAudit-Installer#819
+#
+# ci.yml's SAST/dependency-audit upload only ever targets the commit-derived
+# "primary" release (needs.register-release.outputs.version) — unlike the
+# E2E fan-out block a few steps later, there is no per-REQ fan-out for
+# sast_report / dependency_audit. On a bundled release (several REQs sharing
+# one branch/PR), every REQ except the primary ships with those two gates
+# permanently blank on the portal.
+#
+# This is a manual, workflow_dispatch-only recovery tool: it re-uploads an
+# already-produced sast-results.json / dependency-audit.json (pulled from a
+# specific ci.yml run's `ci-results` artifact) to a list of sibling REQs that
+# share the same underlying scan. It does not re-run semgrep/npm audit — the
+# evidence must already exist and be genuinely applicable to the releases
+# named (same commit / same shared PR).
+#
+# Not auto-triggered. Not a substitute for fixing the upstream fan-out gap
+# (tracked upstream as DevAudit-Installer#819) — this just unblocks releases
+# that are stuck behind it today.
+
+name: Backfill Security Evidence
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: 'ci.yml run ID whose ci-results artifact holds the real sast-results.json / dependency-audit.json'
+        required: true
+        type: string
+      releases:
+        description: "Space-separated REQ-XXX list to backfill (the run's own primary REQ already has this evidence — do not include it)"
+        required: true
+        type: string
+      runner_label:
+        description: 'Optional one-run runner label override. Blank uses repository CI_RUNNER_LABEL.'
+        required: false
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  backfill:
+    name: Backfill SAST + dependency-audit evidence
+    runs-on: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'ubuntu-latest' || (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') }}
+    env:
+      DEVAUDIT_BASE_URL_VAR: ${{ vars.DEVAUDIT_BASE_URL }}
+      DEVAUDIT_API_KEY: ${{ secrets.DEVAUDIT_API_KEY }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Resolve DevAudit base URL
+        run: |
+          BASE=""
+          if [ -f "$GITHUB_WORKSPACE/sdlc-config.json" ]; then
+            BASE=$(jq -r '.devaudit.base_url // empty' "$GITHUB_WORKSPACE/sdlc-config.json" 2>/dev/null || true)
+          fi
+          [ -n "$BASE" ] || BASE="$DEVAUDIT_BASE_URL_VAR"
+          if [ -z "$BASE" ]; then
+            echo "::error::No DevAudit base URL resolved from sdlc-config.json or DEVAUDIT_BASE_URL var."
+            exit 1
+          fi
+          echo "DEVAUDIT_BASE_URL=${BASE%/}" >> "$GITHUB_ENV"
+
+      - name: Download source run's ci-results artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+        run: |
+          mkdir -p ci-evidence
+          gh run download "$SOURCE_RUN_ID" -n ci-results -D ci-evidence \
+            --repo "${{ github.repository }}"
+          test -f ci-evidence/sast-results.json || { echo "::error::sast-results.json missing from run ${SOURCE_RUN_ID}'s ci-results artifact"; exit 1; }
+          test -f ci-evidence/dependency-audit.json || { echo "::error::dependency-audit.json missing from run ${SOURCE_RUN_ID}'s ci-results artifact"; exit 1; }
+          echo "Recovered sast-results.json + dependency-audit.json from run ${SOURCE_RUN_ID}."
+
+      - name: Backfill evidence onto each named release
+        run: |
+          chmod +x scripts/upload-evidence.sh
+          FAILURES=0
+          SOURCE_SHA=""
+          if [ -f ci-evidence/gate-outcomes.json ]; then
+            SOURCE_SHA=$(jq -r '.sha // empty' ci-evidence/gate-outcomes.json 2>/dev/null || true)
+          fi
+          for REQ_ID in ${{ inputs.releases }}; do
+            echo "=== Backfilling ${REQ_ID} ==="
+            FLAGS="--ci-run-id ${{ inputs.source_run_id }} --release ${REQ_ID} --create-release-if-missing"
+            FLAGS="${FLAGS} --environment uat --category security_scan --sdlc-stage 3"
+            [ -n "$SOURCE_SHA" ] && FLAGS="${FLAGS} --git-sha ${SOURCE_SHA}"
+
+            if ! ./scripts/upload-evidence.sh wgb "${REQ_ID}" sast_report ci-evidence/sast-results.json ${FLAGS}; then
+              echo "::error::sast_report backfill failed for ${REQ_ID}"
+              FAILURES=$((FAILURES + 1))
+            fi
+            if ! ./scripts/upload-evidence.sh wgb "${REQ_ID}" dependency_audit ci-evidence/dependency-audit.json ${FLAGS}; then
+              echo "::error::dependency_audit backfill failed for ${REQ_ID}"
+              FAILURES=$((FAILURES + 1))
+            fi
+          done
+          if [ "$FAILURES" -gt 0 ]; then
+            echo "::error::${FAILURES} backfill upload(s) failed."
+            exit 1
+          fi
+          echo "Backfill complete for: ${{ inputs.releases }}"

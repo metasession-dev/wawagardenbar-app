@@ -75,6 +75,19 @@ const ExpenseSchema = new Schema<IExpense>(
     linkVoidedAt: {
       type: Date,
     },
+    // REQ-104 — tags carried over from the originating pending-expense line
+    // item at transfer time, so a transferred Expense stays filterable.
+    tagIds: {
+      type: [{ type: Schema.Types.ObjectId, ref: 'Tag' }],
+      default: undefined,
+    },
+    // REQ-106 — propagated from the originating pending-expense group at
+    // transfer time. Only 'cash'-method transferred expenses reduce
+    // Current Cash Position (see CashPositionService).
+    paymentMethod: {
+      type: String,
+      enum: ['cash', 'transfer'],
+    },
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',
@@ -94,6 +107,9 @@ ExpenseSchema.index({ category: 1, date: -1 });
 
 // Text index for search functionality
 ExpenseSchema.index({ description: 'text', notes: 'text' });
+
+// REQ-104 — tag-filter queries on the expense list
+ExpenseSchema.index({ tagIds: 1 });
 
 export const ExpenseModel: Model<IExpense> =
   mongoose.models.Expense || mongoose.model<IExpense>('Expense', ExpenseSchema);

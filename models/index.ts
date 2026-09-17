@@ -10,3 +10,6 @@ export { default as PointsTransactionModel } from './points-transaction-model';
 export { ExpenseModel } from './expense-model';
 export { default as ApiKeyModel } from './api-key-model';
 export { default as StockMovementModel } from './stock-movement-model';
+export { TagModel } from './tag-model';
+export { CashPositionAdjustmentModel } from './cash-position-adjustment-model';
+export { CashDepositModel } from './cash-deposit-model';

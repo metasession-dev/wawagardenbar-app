@@ -184,7 +184,9 @@ export async function removeBatchAction(groupIds: string[]) {
 
 /**
  * Confirm transfer/payment for a list of approved groups.
- * Transfer reference is mandatory.
+ * REQ-106: transfer reference is mandatory for 'transfer'-method groups,
+ * optional for 'cash'-method groups — PendingExpenseGroupService is the
+ * single source of truth for this, not a pre-check here.
  * Available to: super-admin only.
  */
 export async function confirmTransferAction(
@@ -192,9 +194,6 @@ export async function confirmTransferAction(
   transferReference: string
 ) {
   try {
-    if (!transferReference || transferReference.trim() === '') {
-      return { success: false, error: 'Transfer reference is required' };
-    }
     const session = await getSession();
     requireSuperAdmin(session);
     const result = await PendingExpenseGroupService.confirmTransfer(

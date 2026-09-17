@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-105",
+  "ac": 1,
+  "slug": "edit-fields-filled",
+  "specFile": "e2e/finance/cash-tags-and-edit.spec.ts",
+  "capturedAt": "2026-09-16T14:53:18.510Z"
+}

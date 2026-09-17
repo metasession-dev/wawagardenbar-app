@@ -1,0 +1,137 @@
+{
+  "approvalRelease": {
+    "version": "v2026.09.14"
+  },
+  "coreRelease": {
+    "version": "v2026.09.14"
+  },
+  "generator": {
+    "generatedAt": "2026-09-14T20:40:57Z",
+    "name": "devaudit-installer",
+    "repository": "metasession-dev/wawagardenbar-app",
+    "version": "0.0.0"
+  },
+  "manifestHash": "sha256:e84a35121bd6a67702a783a8fdfbbcc773fe716f0865a89d70498cc4b257df43",
+  "members": [
+    {
+      "commitFrom": "0c691e8",
+      "commitTo": "cb62774",
+      "evidenceInheritancePolicy": {
+        "includeCycles": false,
+        "mode": "none",
+        "reason": "Co-tracked bundle members keep fully isolated per-REQ evidence — nothing is inherited between them.",
+        "scopes": []
+      },
+      "originalTitle": "Expense Tags",
+      "prNumber": null,
+      "prUrl": null,
+      "reason": "Declared co-primary REQ, bundled onto one shared branch/PR/release at Phase 1 planning time.",
+      "relationship": "bundled",
+      "role": "co-tracked",
+      "scopeSummary": "Adds creatable, archivable tags for expense line items: create a new tag inline while adding a pending expense (or pick an existing one), archive tags so the list stays manageable without losing historical attribution, and filter the expense list by one or more tags. Tags survive the transfer from pending group to the live `Expense` ledger.",
+      "version": "REQ-104"
+    },
+    {
+      "commitFrom": "7c27a71",
+      "commitTo": "cb62774",
+      "evidenceInheritancePolicy": {
+        "includeCycles": false,
+        "mode": "none",
+        "reason": "Co-tracked bundle members keep fully isolated per-REQ evidence — nothing is inherited between them.",
+        "scopes": []
+      },
+      "originalTitle": "Expense edit dialog full field visibility",
+      "prNumber": null,
+      "prUrl": null,
+      "reason": "Declared co-primary REQ, bundled onto one shared branch/PR/release at Phase 1 planning time.",
+      "relationship": "bundled",
+      "role": "co-tracked",
+      "scopeSummary": "`EditExpenseDialog` (super-admin only) silently omitted `transactionFee`, `receiptReference`, `referenceNumber`, and `linkedInventoryId` — all four already accepted by `UpdateExpenseDTO`/`ExpenseService.updateExpense`, just never wired into the UI. Surfaces the four as editable fields (reusing the existing kitchen/sellable inventory lookups for the link picker) plus a read-only audit block (`pendingGroupId`/`createdBy`/`createdAt`/`updatedAt`). No backend change.",
+      "version": "REQ-105"
+    },
+    {
+      "commitFrom": "1c1d664",
+      "commitTo": "cb62774",
+      "evidenceInheritancePolicy": {
+        "includeCycles": false,
+        "mode": "none",
+        "reason": "Co-tracked bundle members keep fully isolated per-REQ evidence — nothing is inherited between them.",
+        "scopes": []
+      },
+      "originalTitle": "Cash Position tracking + Cash Deposits",
+      "prNumber": null,
+      "prUrl": null,
+      "reason": "Declared co-primary REQ, bundled onto one shared branch/PR/release at Phase 1 planning time.",
+      "relationship": "bundled",
+      "role": "co-tracked",
+      "scopeSummary": "Adds a system-computed **Current Cash Position** to the Daily Report — cash sale revenue in (reusing `paymentBreakdown.cash`, tips excluded per operator decision), transferred cash-method expenses and cash deposits out, computed on-demand (mirrors `financial-report-service.ts`'s existing convention, no running counter). Pending expense groups gain a required Cash/Transfer payment method; only cash-method transferred groups reduce the position. A new Cash Deposit workflow (pending → approved → transferred, optional reference) moves till cash into the bank. A super-admin can adjust the position (initial opening balance or later correction) via a fully audited, append-only ledger.",
+      "version": "REQ-106"
+    },
+    {
+      "commitFrom": null,
+      "commitTo": null,
+      "evidenceInheritancePolicy": {
+        "includeCycles": false,
+        "mode": "none",
+        "reason": "Co-tracked bundle members keep fully isolated per-REQ evidence — nothing is inherited between them.",
+        "scopes": []
+      },
+      "originalTitle": "Expense summary totals follow list filters",
+      "prNumber": null,
+      "prUrl": null,
+      "reason": "LOW-risk, unrelated-file defect added as a bundle addendum mid-cycle rather than a new branch/PR/release, per operator direction.",
+      "relationship": "bundled",
+      "role": "co-tracked",
+      "scopeSummary": "The Expenses page's three summary cards (Total Direct Costs, Total Operating Expenses, Total Expenses) were computed via a separate unfiltered date-range-only server query. Fixed so the cards recompute from ExpenseList's client-side filtered subset instead, via a new onFilteredChange callback prop.",
+      "version": "REQ-107"
+    }
+  ],
+  "nonReleaseWorkItems": [
+    {
+      "kind": "housekeeping_commit",
+      "reference": "9653126",
+      "title": "chore: sync SDLC templates from DevAudit (v1.4.0 → v1.4.2) (#765)"
+    },
+    {
+      "kind": "housekeeping_commit",
+      "reference": "ff9dab0",
+      "title": "test: retry the read-only request-fixture blocks in the critical E2E tier"
+    },
+    {
+      "kind": "housekeeping_commit",
+      "reference": "dd02aa3",
+      "title": "ci: route e2e-regression.yml through CI_RUNNER_LABEL like every other workflow"
+    },
+    {
+      "kind": "housekeeping_commit",
+      "reference": "4d7bec4",
+      "title": "ci: wipe .next before every run to prevent cross-run build corruption (again)"
+    },
+    {
+      "kind": "housekeeping_commit",
+      "reference": "ecdcf41",
+      "title": "ci: drop always-failing --with-deps attempt from Playwright install (again)"
+    },
+    {
+      "kind": "housekeeping_commit",
+      "reference": "318832a",
+      "title": "build: bump next/sharp/nodemailer/js-yaml to clear high/critical advisories"
+    },
+    {
+      "kind": "housekeeping_commit",
+      "reference": "41c9ac6",
+      "title": "ci: don't mark post-deploy E2E Regression tier as a required portal check"
+    },
+    {
+      "kind": "housekeeping_commit",
+      "reference": "dda99c7",
+      "title": "chore: sync SDLC templates from DevAudit (v1.4.0)"
+    },
+    {
+      "kind": "housekeeping_commit",
+      "reference": "a628b92",
+      "title": "test: fix stock-state assumption in menu-category-cascade spec (#725)"
+    }
+  ],
+  "schemaVersion": 2
+}

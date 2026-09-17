@@ -22,12 +22,22 @@ export interface IExpenseLineItem {
   // Stored as a string (24-char hex ObjectId) for serialisation friendliness
   // through server actions.
   linkedInventoryId?: string;
+  // REQ-104 — optional tags selected at submission, per line item. Stored
+  // as strings (24-char hex ObjectId) for serialisation friendliness
+  // through server actions, same convention as `linkedInventoryId`.
+  tagIds?: string[];
 }
 
 /**
  * Status lifecycle: pending → approved → transferred
  */
 export type PendingExpenseGroupStatus = 'pending' | 'approved' | 'transferred';
+
+/**
+ * REQ-106 — cash vs bank-transfer payment method for a pending expense
+ * group. Selected once at creation (group-level, not per line item).
+ */
+export type PendingExpenseGroupPaymentMethod = 'cash' | 'transfer';
 
 /**
  * A group of line items submitted together, awaiting approval and payment
@@ -39,6 +49,10 @@ export interface IPendingExpenseGroup {
   totalAmount: number;
 
   status: PendingExpenseGroupStatus;
+  // REQ-106 — optional at the schema/interface level so groups created
+  // before this REQ deployed remain valid; enforced as required at
+  // create-time by the service/action layer (see CreatePendingExpenseGroupDTO).
+  paymentMethod?: PendingExpenseGroupPaymentMethod;
   paymentBatchId?: string;
 
   submittedBy: ObjectId;
@@ -64,6 +78,9 @@ export interface CreatePendingExpenseGroupDTO {
   items: IExpenseLineItem[];
   notes?: string;
   submittedBy: string;
+  // REQ-106 — required at creation (enforced in the service, not the
+  // Mongoose schema — see IPendingExpenseGroup.paymentMethod).
+  paymentMethod: PendingExpenseGroupPaymentMethod;
 }
 
 /**
@@ -73,6 +90,7 @@ export interface UpdatePendingExpenseGroupDTO {
   date?: Date;
   items?: IExpenseLineItem[];
   notes?: string;
+  paymentMethod?: PendingExpenseGroupPaymentMethod;
 }
 
 /**

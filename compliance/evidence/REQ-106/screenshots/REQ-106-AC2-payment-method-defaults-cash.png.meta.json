@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-106",
+  "ac": 2,
+  "slug": "payment-method-defaults-cash",
+  "specFile": "e2e/finance/cash-tags-and-edit.spec.ts",
+  "capturedAt": "2026-09-16T14:53:29.663Z"
+}

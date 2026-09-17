@@ -7,6 +7,7 @@ import { ExpenseModel } from '@/models/expense-model';
 import { InventorySnapshotModel } from '@/models/inventory-snapshot-model';
 import SystemSettingsModel from '@/models/system-settings-model';
 import OrderModel from '@/models/order-model';
+import { CashPositionAdjustmentModel } from '@/models/cash-position-adjustment-model';
 
 dotenv.config({ path: '.env.local' });
 
@@ -104,8 +105,15 @@ async function seedE2eFixtures() {
 
     // ── Expense ───────────────────────────────────────────────────────────
     // Idempotent via deletion of the fixture's distinctive description.
+    // One of each expenseType — REQ-107's e2e spec filters by type and
+    // asserts the Total Direct Costs summary card zeroes out when scoped
+    // to Operating Expense only; that needs at least one direct-cost row
+    // to exist alongside the operating-expense one.
     const EXPENSE_DESC = 'E2E-FIXTURE Seed expense';
-    await ExpenseModel.deleteMany({ description: EXPENSE_DESC });
+    const DIRECT_COST_DESC = 'E2E-FIXTURE Seed direct cost';
+    await ExpenseModel.deleteMany({
+      description: { $in: [EXPENSE_DESC, DIRECT_COST_DESC] },
+    });
 
     await ExpenseModel.create({
       date: new Date(),
@@ -117,6 +125,33 @@ async function seedE2eFixtures() {
       createdBy: superAdmin._id,
     });
     console.log('✓ Seeded 1 expense (operating / Utilities / ₦1,000)');
+
+    await ExpenseModel.create({
+      date: new Date(),
+      expenseType: 'direct-cost',
+      category: 'Meat/Protein',
+      description: DIRECT_COST_DESC,
+      amount: 2500,
+      transactionFee: 0,
+      createdBy: superAdmin._id,
+    });
+    console.log('✓ Seeded 1 expense (direct-cost / Meat/Protein / ₦2,500)');
+
+    // ── Cash Position opening balance ────────────────────────────────────
+    // REQ-106 AC10/AC11 — the dedicated Cash Position page and its ledger
+    // pagination only exercise their "seeded" branch when an opening
+    // balance exists. Idempotent via deletion of the fixture's distinctive
+    // note before re-creating it.
+    const CASH_SEED_NOTE = 'E2E-FIXTURE opening balance';
+    await CashPositionAdjustmentModel.deleteMany({ note: CASH_SEED_NOTE });
+    await CashPositionAdjustmentModel.create({
+      type: 'seed',
+      amount: 50000,
+      effectiveDate: new Date('2026-01-01'),
+      note: CASH_SEED_NOTE,
+      createdBy: superAdmin._id,
+    });
+    console.log('✓ Seeded Cash Position opening balance (₦50,000)');
 
     // ── Profitability report ─────────────────────────────────────────────
     // REQ-094 AC3 must prove the category filter scopes an actual report,

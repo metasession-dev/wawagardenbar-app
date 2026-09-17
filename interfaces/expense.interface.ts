@@ -100,6 +100,14 @@ export interface IExpense {
   stockMovementId?: ObjectId;
   linkVoidedAt?: Date;
 
+  // REQ-104 — tags carried over from the originating pending-expense line
+  // item at transfer time (see PendingExpenseGroupService.confirmTransfer).
+  tagIds?: ObjectId[];
+
+  // REQ-106 — propagated from the originating pending-expense group at
+  // transfer time. Only 'cash' reduces Current Cash Position.
+  paymentMethod?: 'cash' | 'transfer';
+
   // Audit
   createdBy: ObjectId;
   createdAt: Date;
@@ -125,6 +133,8 @@ export interface CreateExpenseDTO {
   pendingGroupId?: string;
   // REQ-034: optional inventory link captured at submission.
   linkedInventoryId?: string;
+  // REQ-104: tags carried over from the originating pending-expense line item.
+  tagIds?: string[];
   createdBy: string;
 }
 
@@ -148,6 +158,9 @@ export interface UpdateExpenseDTO {
   // for the reversal of the prior link). Pass `null` to clear; omit to leave
   // the link untouched.
   linkedInventoryId?: string | null;
+  // REQ-104: tags remain editable post-transfer. Pass an empty array to
+  // clear all tags; omit to leave tags untouched.
+  tagIds?: string[];
 }
 
 /**
@@ -157,16 +170,4 @@ export interface ExpenseFilters {
   expenseType?: ExpenseType;
   category?: string;
   searchTerm?: string;
-}
-
-/**
- * Expense Summary
- */
-export interface ExpenseSummary {
-  totalDirectCosts: number;
-  totalOperatingExpenses: number;
-  totalExpenses: number;
-  directCostsByCategory: Record<string, number>;
-  operatingExpensesByCategory: Record<string, number>;
-  expenseCount: number;
 }

@@ -23,6 +23,12 @@ const ExpenseLineItemSchema = new Schema(
       ref: 'Inventory',
       sparse: true,
     },
+    // REQ-104 — optional tags selected at submission, per line item
+    // (mirrors `category`'s existing per-line-item granularity).
+    tagIds: {
+      type: [{ type: Schema.Types.ObjectId, ref: 'Tag' }],
+      default: undefined,
+    },
   },
   { _id: false }
 );
@@ -38,6 +44,17 @@ const PendingExpenseGroupSchema = new Schema<IPendingExpenseGroup>(
       enum: ['pending', 'approved', 'transferred'],
       default: 'pending',
       index: true,
+    },
+    // REQ-106 — cash vs bank-transfer payment method, selected once at
+    // creation. Group-level (not per-line-item): the user picks how THIS
+    // payment run will be paid, not per individual purchase.
+    // Not `required` at the schema level (deliberately) — enforced instead
+    // in `createPendingExpenseGroupAction`/`PendingExpenseGroupService`, so
+    // pending/approved groups created before this REQ deployed (and thus
+    // lacking the field) don't fail Mongoose validation on their next edit.
+    paymentMethod: {
+      type: String,
+      enum: ['cash', 'transfer'],
     },
     paymentBatchId: { type: String, index: true, sparse: true },
 
@@ -58,6 +75,12 @@ const PendingExpenseGroupSchema = new Schema<IPendingExpenseGroup>(
 
 PendingExpenseGroupSchema.index({ status: 1, date: -1 });
 PendingExpenseGroupSchema.index({ paymentBatchId: 1, status: 1 });
+// REQ-106 — Current Cash Position's cash-out-expenses aggregation query
+PendingExpenseGroupSchema.index({
+  status: 1,
+  paymentMethod: 1,
+  transferredAt: 1,
+});
 
 export const PendingExpenseGroupModel: Model<IPendingExpenseGroup> =
   mongoose.models.PendingExpenseGroup ||

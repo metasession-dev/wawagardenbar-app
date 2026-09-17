@@ -34,6 +34,12 @@ import { ReportCharts } from '@/components/features/reports/report-charts';
 import { TipsSection } from '@/components/features/reports/tips-section';
 import { WrittenOffSection } from '@/components/features/reports/written-off-section';
 import {
+  CashPositionSection,
+  type CashPositionSummary,
+} from '@/components/features/reports/cash-position-section';
+import { CashPositionAdjustmentDialog } from '@/components/features/finance/cash-position-adjustment-dialog';
+import { getCurrentCashPositionAction } from '@/app/actions/finance/cash-position-actions';
+import {
   exportReportAsPDF,
   exportReportAsExcel,
   exportReportAsCSV,
@@ -53,7 +59,12 @@ interface ReportActionResult {
   resolvedEndLabel?: string;
 }
 
-export function DailyReportClient() {
+interface DailyReportClientProps {
+  userRole?: string;
+}
+
+export function DailyReportClient({ userRole }: DailyReportClientProps = {}) {
+  const isSuperAdmin = userRole === 'super-admin';
   const [dateRange, setDateRange] = useState<DateRange>({
     from: new Date(),
     to: new Date(),
@@ -62,6 +73,12 @@ export function DailyReportClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reportType, setReportType] = useState<'single' | 'range'>('single');
+  // REQ-106 — Current Cash Position, fetched via a separate action call
+  // rather than bloating DailySummaryReport's shape.
+  const [cashPosition, setCashPosition] = useState<CashPositionSummary | null>(
+    null
+  );
+  const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false);
 
   /**
    * REQ-095 - Resolve Today once on mount rather than fetching the raw
@@ -108,6 +125,21 @@ export function DailyReportClient() {
     }
   };
 
+  // REQ-106 (amended — AC9) — fetched independently of `runFetch`/
+  // DailySummaryReport and of the report's date/range picker: "Current
+  // Cash Position" always means the live position as of now, never the
+  // closing position of whatever date/range the rest of the report shows.
+  const fetchCashPosition = async () => {
+    try {
+      const result = await getCurrentCashPositionAction();
+      if (result.success && result.summary) {
+        setCashPosition(result.summary);
+      }
+    } catch {
+      /* section renders its own "not seeded" state on missing data */
+    }
+  };
+
   const loadExplicitRange = async (
     range: DateRange,
     type: 'single' | 'range'
@@ -124,6 +156,7 @@ export function DailyReportClient() {
         )
       );
     }
+    await fetchCashPosition();
   };
 
   /** Re-fetch whatever is currently selected — the manual "Generate Report" button. */
@@ -149,6 +182,7 @@ export function DailyReportClient() {
     if (result?.success && result.resolvedLabel) {
       const resolved = new Date(`${result.resolvedLabel}T12:00:00`);
       setDateRange({ from: resolved, to: resolved });
+      await fetchCashPosition();
     }
   };
 
@@ -173,10 +207,12 @@ export function DailyReportClient() {
       result.resolvedStartLabel &&
       result.resolvedEndLabel
     ) {
-      setDateRange({
+      const resolvedRange = {
         from: new Date(`${result.resolvedStartLabel}T12:00:00`),
         to: new Date(`${result.resolvedEndLabel}T12:00:00`),
-      });
+      };
+      setDateRange(resolvedRange);
+      await fetchCashPosition();
     }
   };
 
@@ -557,6 +593,15 @@ export function DailyReportClient() {
               </div>
             )}
 
+          {/* REQ-106 — Current Cash Position. Always renders, including a
+              "not yet seeded" empty state — never hidden. */}
+          <CashPositionSection
+            cashPosition={cashPosition}
+            isSuperAdmin={isSuperAdmin}
+            onAdjust={() => setAdjustmentDialogOpen(true)}
+            formatCurrency={formatCurrency}
+          />
+
           {/* REQ-035 — Tips received, broken down by the method each
               tip arrived on. Renders nothing on zero-tip days. */}
           <TipsSection
@@ -655,6 +700,16 @@ export function DailyReportClient() {
           </CardContent>
         </Card>
       )}
+
+      {/* REQ-106 — super-admin cash position adjustment (opening balance / correction). */}
+      <CashPositionAdjustmentDialog
+        open={adjustmentDialogOpen}
+        onOpenChange={setAdjustmentDialogOpen}
+        onSuccess={() => fetchCashPosition()}
+        seeded={cashPosition?.seeded ?? false}
+        currentPosition={cashPosition?.closingPosition ?? 0}
+        formatCurrency={formatCurrency}
+      />
     </div>
   );
 }

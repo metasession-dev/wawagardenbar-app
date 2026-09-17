@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-106",
+  "ac": 6,
+  "slug": "position-updated-after-adjustment",
+  "specFile": "e2e/finance/cash-tags-and-edit.spec.ts",
+  "capturedAt": "2026-09-16T14:53:53.824Z"
+}

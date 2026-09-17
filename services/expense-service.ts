@@ -7,7 +7,6 @@ import {
   CreateExpenseDTO,
   UpdateExpenseDTO,
   ExpenseFilters,
-  ExpenseSummary,
 } from '@/interfaces/expense.interface';
 import {
   SEARCHABLE_STRING_FIELDS,
@@ -169,42 +168,6 @@ export class ExpenseService {
       .lean();
 
     return expenses as IExpense[];
-  }
-
-  /**
-   * Get expense summary for a date range
-   */
-  static async getExpenseSummary(
-    startDate: Date,
-    endDate: Date
-  ): Promise<ExpenseSummary> {
-    const expenses = await this.getExpensesByDateRange(startDate, endDate);
-
-    let totalDirectCosts = 0;
-    let totalOperatingExpenses = 0;
-    const directCostsByCategory: Record<string, number> = {};
-    const operatingExpensesByCategory: Record<string, number> = {};
-
-    expenses.forEach((expense) => {
-      if (expense.expenseType === 'direct-cost') {
-        totalDirectCosts += expense.amount;
-        directCostsByCategory[expense.category] =
-          (directCostsByCategory[expense.category] || 0) + expense.amount;
-      } else {
-        totalOperatingExpenses += expense.amount;
-        operatingExpensesByCategory[expense.category] =
-          (operatingExpensesByCategory[expense.category] || 0) + expense.amount;
-      }
-    });
-
-    return {
-      totalDirectCosts,
-      totalOperatingExpenses,
-      totalExpenses: totalDirectCosts + totalOperatingExpenses,
-      directCostsByCategory,
-      operatingExpensesByCategory,
-      expenseCount: expenses.length,
-    };
   }
 
   /**

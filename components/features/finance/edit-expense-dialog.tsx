@@ -63,6 +63,15 @@ import {
   type UnitOfMeasurement,
 } from '@/interfaces/unit-of-measurement.interface';
 import { getActiveUnits } from '@/lib/units';
+import {
+  listKitchenIngredientInventoryAction,
+  listSellableInventoryAction,
+} from '@/app/actions/finance/pending-expense-actions';
+import {
+  createTagAction,
+  listAllTagsAction,
+} from '@/app/actions/finance/tag-actions';
+import { TagCombobox, type TagOption } from '@/components/ui/tag-combobox';
 
 const editExpenseSchema = z.object({
   date: z.date({ required_error: 'Date is required' }),
@@ -74,6 +83,13 @@ const editExpenseSchema = z.object({
   amount: z.number().min(0, 'Amount must be 0 or more'),
   supplier: z.string().optional(),
   notes: z.string().optional(),
+  // REQ-105 — previously accepted by UpdateExpenseDTO but never surfaced.
+  transactionFee: z.number().min(0).optional(),
+  receiptReference: z.string().optional(),
+  referenceNumber: z.string().optional(),
+  linkedInventoryId: z.string().optional(),
+  // REQ-104 — tags remain editable post-transfer.
+  tagIds: z.array(z.string()).optional(),
 });
 
 type EditExpenseFormValues = z.infer<typeof editExpenseSchema>;
@@ -89,6 +105,21 @@ interface ExpenseRecord {
   amount: number;
   supplier?: string;
   notes?: string;
+  // REQ-105 — previously accepted by the update DTO but never surfaced.
+  transactionFee?: number;
+  receiptReference?: string;
+  referenceNumber?: string;
+  linkedInventoryId?: string;
+  // REQ-104 — tags carried over from the originating pending-expense line item.
+  tagIds?: string[];
+  // REQ-105 — read-only audit/traceability fields.
+  pendingGroupId?: string;
+  createdBy?:
+    | { firstName: string; lastName: string; email: string }
+    | string
+    | null;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
 }
 
 interface EditExpenseDialogProps {
@@ -118,37 +149,64 @@ export function EditExpenseDialog({
   const [unitsRegistry, setUnitsRegistry] = useState<UnitOfMeasurement[]>([
     ...DEFAULT_UNITS_OF_MEASUREMENT,
   ]);
+  // REQ-105 — combined kitchen + sellable inventory options for the
+  // "Linked inventory item" picker.
+  const [inventoryOptions, setInventoryOptions] = useState<
+    { id: string; name: string }[]
+  >([]);
+  // REQ-104 — `listAllTagsAction` (not `listActiveTagsAction`) so an
+  // already-attached-but-since-archived tag still renders as a removable
+  // badge here, same reasoning as expense-list.tsx's tag filter.
+  const [availableTags, setAvailableTags] = useState<TagOption[]>([]);
+
+  function buildDefaultValues(e: ExpenseRecord): EditExpenseFormValues {
+    return {
+      date: new Date(e.date),
+      expenseType: e.expenseType,
+      category: e.category,
+      description: e.description,
+      quantity: e.quantity ?? undefined,
+      unit: e.unit ?? '',
+      amount: e.amount,
+      supplier: e.supplier ?? '',
+      notes: e.notes ?? '',
+      transactionFee: e.transactionFee ?? undefined,
+      receiptReference: e.receiptReference ?? '',
+      referenceNumber: e.referenceNumber ?? '',
+      linkedInventoryId: e.linkedInventoryId ?? '',
+      tagIds: e.tagIds ?? [],
+    };
+  }
 
   const form = useForm<EditExpenseFormValues>({
     resolver: zodResolver(editExpenseSchema),
-    defaultValues: expense
-      ? {
-          date: new Date(expense.date),
-          expenseType: expense.expenseType,
-          category: expense.category,
-          description: expense.description,
-          quantity: expense.quantity ?? undefined,
-          unit: expense.unit ?? '',
-          amount: expense.amount,
-          supplier: expense.supplier ?? '',
-          notes: expense.notes ?? '',
-        }
-      : undefined,
+    defaultValues: expense ? buildDefaultValues(expense) : undefined,
   });
 
   useEffect(() => {
     if (open && expense) {
-      form.reset({
-        date: new Date(expense.date),
-        expenseType: expense.expenseType,
-        category: expense.category,
-        description: expense.description,
-        quantity: expense.quantity ?? undefined,
-        unit: expense.unit ?? '',
-        amount: expense.amount,
-        supplier: expense.supplier ?? '',
-        notes: expense.notes ?? '',
-      });
+      form.reset(buildDefaultValues(expense));
+      Promise.all([
+        listKitchenIngredientInventoryAction(),
+        listSellableInventoryAction(),
+      ])
+        .then(([kitchen, sellable]) => {
+          const options: { id: string; name: string }[] = [];
+          if (kitchen.success && kitchen.items) {
+            options.push(
+              ...kitchen.items.map((i) => ({ id: i.id, name: i.name }))
+            );
+          }
+          if (sellable.success && sellable.items) {
+            options.push(
+              ...sellable.items.map((i) => ({ id: i.id, name: i.name }))
+            );
+          }
+          setInventoryOptions(options);
+        })
+        .catch(() => {
+          /* dropdown will simply be empty */
+        });
       // Pull live admin config so newly added categories/groups appear here too.
       getExpenseCategoriesAction()
         .then((result) => {
@@ -176,8 +234,34 @@ export function EditExpenseDialog({
         .catch(() => {
           /* keep seed defaults */
         });
+      listAllTagsAction()
+        .then((result) => {
+          if (result.success && result.tags) {
+            setAvailableTags(
+              result.tags.map((t: { _id: string; name: string }) => ({
+                id: t._id,
+                name: t.name,
+              }))
+            );
+          }
+        })
+        .catch(() => {
+          /* combobox will simply show no existing tags */
+        });
     }
   }, [open, expense]);
+
+  async function handleCreateTag(name: string): Promise<TagOption> {
+    const result = await createTagAction(name);
+    if (!result.success || !result.tag) {
+      throw new Error(result.error || 'Failed to create tag');
+    }
+    const tag = { id: result.tag._id, name: result.tag.name };
+    setAvailableTags((prev) =>
+      prev.some((t) => t.id === tag.id) ? prev : [...prev, tag]
+    );
+    return tag;
+  }
 
   const expenseType = form.watch('expenseType');
   const sections = buildDropdownSections(
@@ -201,6 +285,11 @@ export function EditExpenseDialog({
         amount: data.amount,
         supplier: data.supplier || undefined,
         notes: data.notes || undefined,
+        transactionFee: data.transactionFee,
+        receiptReference: data.receiptReference || undefined,
+        referenceNumber: data.referenceNumber || undefined,
+        linkedInventoryId: data.linkedInventoryId || null,
+        tagIds: data.tagIds ?? [],
       });
       if (result.success) {
         toast({ title: 'Updated', description: 'Expense updated.' });
@@ -468,6 +557,116 @@ export function EditExpenseDialog({
               )}
             />
 
+            {/* REQ-105 — transaction fee + receipt/reference numbers */}
+            <div className="grid grid-cols-3 gap-3">
+              <FormField
+                control={form.control}
+                name="transactionFee"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Transaction Fee (₦)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        {...field}
+                        value={field.value ?? ''}
+                        onChange={(e) =>
+                          field.onChange(
+                            e.target.value
+                              ? parseFloat(e.target.value)
+                              : undefined
+                          )
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="receiptReference"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Receipt Reference</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Receipt #" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="referenceNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Reference Number</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Txn reference" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* REQ-105 — linked inventory item, previously supported by
+                UpdateExpenseDTO but never surfaced in this dialog. */}
+            <FormField
+              control={form.control}
+              name="linkedInventoryId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Linked Inventory Item (Optional)</FormLabel>
+                  <Select
+                    value={field.value || '__none__'}
+                    onValueChange={(v) =>
+                      field.onChange(v === '__none__' ? '' : v)
+                    }
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="No inventory link" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="__none__">
+                        No inventory link
+                      </SelectItem>
+                      {inventoryOptions.map((opt) => (
+                        <SelectItem key={opt.id} value={opt.id}>
+                          {opt.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* REQ-104 — tags remain editable post-transfer. */}
+            <FormField
+              control={form.control}
+              name="tagIds"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tags (Optional)</FormLabel>
+                  <FormControl>
+                    <TagCombobox
+                      value={field.value ?? []}
+                      onChange={field.onChange}
+                      availableTags={availableTags}
+                      onCreateTag={handleCreateTag}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             {/* Notes */}
             <FormField
               control={form.control}
@@ -486,6 +685,34 @@ export function EditExpenseDialog({
                 </FormItem>
               )}
             />
+
+            {/* REQ-105 — read-only audit/traceability block. */}
+            {expense && (
+              <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground space-y-1">
+                {expense.pendingGroupId && (
+                  <p>
+                    Originated from pending expense group #
+                    {expense.pendingGroupId}
+                  </p>
+                )}
+                {expense.createdBy && (
+                  <p>
+                    Created by:{' '}
+                    {typeof expense.createdBy === 'string'
+                      ? expense.createdBy
+                      : `${expense.createdBy.firstName} ${expense.createdBy.lastName} (${expense.createdBy.email})`}
+                  </p>
+                )}
+                {expense.createdAt && (
+                  <p>Created: {format(new Date(expense.createdAt), 'PPpp')}</p>
+                )}
+                {expense.updatedAt && (
+                  <p>
+                    Last updated: {format(new Date(expense.updatedAt), 'PPpp')}
+                  </p>
+                )}
+              </div>
+            )}
 
             <DialogFooter>
               <Button

@@ -26,5 +26,5 @@ export default async function DailyReportPage() {
     redirect('/dashboard');
   }
 
-  return <DailyReportClient />;
+  return <DailyReportClient userRole={session.role} />;
 }

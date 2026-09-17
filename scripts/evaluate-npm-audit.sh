@@ -167,12 +167,15 @@ vulnerabilities = audit["vulnerabilities"]
 def concrete_advisories(finding_name, trail=()):
     if finding_name in trail:
         # devaudit-installer#799 — a cyclic back-edge doesn't need to fail
-        # the gate: `finding_name` gets its own independent top-level
-        # resolution from the driver loop below regardless of this edge
-        # (mutually-referencing findings, e.g. tightly-coupled sibling
-        # packages like vitest/@vitest/coverage-v8, are a legitimate npm
-        # audit shape), so short-circuiting here doesn't drop any advisory
-        # the driver loop wouldn't already see.
+        # the gate: the driver loop below calls concrete_advisories once
+        # per top-level finding name, so `finding_name` gets its own
+        # independent top-level resolution regardless of this edge —
+        # short-circuiting here doesn't drop any advisory the driver loop
+        # wouldn't already see. Two mutually-referencing findings (e.g.
+        # vitest <-> @vitest/coverage-v8) is a legitimate npm audit shape
+        # for tightly-coupled sibling packages, not malformed/untrustworthy
+        # data on its own — only genuinely malformed structure (missing
+        # findings, wrong types, missing via entries) stays fatal below.
         print(
             f"::warning::audit vulnerability graph has a cycle back-edge into {finding_name} "
             f"(trail: {' -> '.join(trail)}) — short-circuiting, not failing",

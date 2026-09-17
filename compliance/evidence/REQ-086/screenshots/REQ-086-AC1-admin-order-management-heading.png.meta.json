@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-086",
+  "ac": 1,
+  "slug": "admin-order-management-heading",
+  "specFile": "e2e/authenticated.spec.ts",
+  "capturedAt": "2026-09-17T09:03:56.518Z"
+}

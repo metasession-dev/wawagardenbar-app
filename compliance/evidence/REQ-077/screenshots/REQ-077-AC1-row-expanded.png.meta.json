@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-077",
+  "ac": 1,
+  "slug": "row-expanded",
+  "specFile": "e2e/critical/incidents-expansion.spec.ts",
+  "capturedAt": "2026-09-17T09:12:24.974Z"
+}

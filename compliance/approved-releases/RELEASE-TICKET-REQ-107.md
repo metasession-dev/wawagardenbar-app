@@ -1,6 +1,6 @@
 # Release Ticket: REQ-107 — Expense summary totals follow list filters
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-09-16
 **Requirement ID:** REQ-107
 **Risk Level:** LOW

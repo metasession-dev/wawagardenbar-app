@@ -1,0 +1,102 @@
+# Backfill E2E Evidence — release-attribution recovery tool
+#
+# compliance-evidence.yml's E2E fan-out loop (`for REQ in "${REQS[@]}"`)
+# correctly targets each sibling REQ as the *requirement id* passed to
+# upload-evidence.sh, but hardcodes `--release "${DERIVED_RELEASE}"` — the
+# single commit-derived primary release — instead of `--release "${REQ}"`.
+# On a bundled release where each REQ has its own portal release row, this
+# misattributes every non-primary REQ's e2e evidence to the primary REQ's
+# release instead of its own, so the portal's per-REQ E2E gate shows
+# "Missing" even though the run genuinely executed and evidence was
+# uploaded somewhere.
+#
+# This is a manual, workflow_dispatch-only recovery tool: given an E2E
+# Regression Suite run ID and the REQ it should have been attributed to, it
+# re-uploads that run's e2e-regression-results.json / -metadata.json with
+# the correct `--release` value.
+#
+# Not auto-triggered. Not a fix to compliance-evidence.yml's generated
+# fan-out logic (that file is framework-generated and shouldn't be
+# hand-edited) — file the underlying bug upstream separately.
+
+name: Backfill E2E Evidence
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: 'E2E Regression Suite run ID whose e2e-regression-report artifact holds the real results for this REQ'
+        required: true
+        type: string
+      release:
+        description: 'REQ-XXX to attribute this evidence to (its own release, not the bundle primary)'
+        required: true
+        type: string
+      runner_label:
+        description: 'Optional one-run runner label override. Blank uses repository CI_RUNNER_LABEL.'
+        required: false
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  backfill:
+    name: Backfill E2E evidence with correct release attribution
+    runs-on: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'ubuntu-latest' || (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') }}
+    env:
+      DEVAUDIT_BASE_URL_VAR: ${{ vars.DEVAUDIT_BASE_URL }}
+      DEVAUDIT_API_KEY: ${{ secrets.DEVAUDIT_API_KEY }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Resolve DevAudit base URL
+        run: |
+          BASE=""
+          if [ -f "$GITHUB_WORKSPACE/sdlc-config.json" ]; then
+            BASE=$(jq -r '.devaudit.base_url // empty' "$GITHUB_WORKSPACE/sdlc-config.json" 2>/dev/null || true)
+          fi
+          [ -n "$BASE" ] || BASE="$DEVAUDIT_BASE_URL_VAR"
+          if [ -z "$BASE" ]; then
+            echo "::error::No DevAudit base URL resolved from sdlc-config.json or DEVAUDIT_BASE_URL var."
+            exit 1
+          fi
+          echo "DEVAUDIT_BASE_URL=${BASE%/}" >> "$GITHUB_ENV"
+
+      - name: Download source run's e2e-regression-report artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: e2e-regression-report
+          path: e2e-artifacts/
+          run-id: ${{ inputs.source_run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Re-upload with correct release attribution
+        run: |
+          set -euo pipefail
+          chmod +x scripts/upload-evidence.sh
+          test -f e2e-artifacts/e2e-regression-results.json || { echo "::error::e2e-regression-results.json missing from run ${{ inputs.source_run_id }}'s artifact"; exit 1; }
+
+          FAILURES=0
+          FLAGS="--ci-run-id ${{ inputs.source_run_id }} --release ${{ inputs.release }}"
+          FLAGS="${FLAGS} --create-release-if-missing --environment uat"
+
+          if ! ./scripts/upload-evidence.sh wgb "${{ inputs.release }}" e2e_result \
+              e2e-artifacts/e2e-regression-results.json --category e2e_result ${FLAGS}; then
+            echo "::error::e2e_result backfill failed for ${{ inputs.release }}"
+            FAILURES=$((FAILURES + 1))
+          fi
+
+          if [ -f e2e-artifacts/e2e-regression-metadata.json ]; then
+            if ! ./scripts/upload-evidence.sh wgb "${{ inputs.release }}" test_report \
+                e2e-artifacts/e2e-regression-metadata.json --category test_report ${FLAGS}; then
+              echo "::error::test_report backfill failed for ${{ inputs.release }}"
+              FAILURES=$((FAILURES + 1))
+            fi
+          fi
+
+          if [ "$FAILURES" -gt 0 ]; then
+            echo "::error::${FAILURES} backfill upload(s) failed."
+            exit 1
+          fi
+          echo "Backfill complete: e2e evidence from run ${{ inputs.source_run_id }} correctly attributed to ${{ inputs.release }}."

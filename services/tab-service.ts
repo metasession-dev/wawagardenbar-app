@@ -170,6 +170,21 @@ export class TabService {
       await tab.save();
     }
 
+    // REQ-108 — this is the single chokepoint every "attach order to tab"
+    // call site goes through. Previously only `tab.orders[]` was updated
+    // here, leaving `Order.tabId` unset unless the caller separately set it
+    // on creation (only `payment-actions.ts` did). `updateOrderStatusAction`'s
+    // auto-cash-mark guard relies on `Order.tabId` to exclude tab orders —
+    // an unset `tabId` made that guard fail open, so tab orders created via
+    // the public ordering API or `expressCreateOrderAction` were falsely
+    // marked paid-in-cash on kitchen completion. Setting it here, always,
+    // makes every current and future attach path correct without relying on
+    // each caller to remember.
+    await OrderModel.updateOne(
+      { _id: new Types.ObjectId(orderId) },
+      { $set: { tabId: tab._id } }
+    );
+
     // Recalculate tab totals
     await this.recalculateTabTotals(tabId);
 

@@ -10,6 +10,7 @@ const mockGetIronSession = vi.fn();
 const mockConnectDB = vi.fn();
 const mockCountDocuments = vi.fn();
 const mockFind = vi.fn();
+const mockFindById = vi.fn();
 
 vi.mock('next/headers', () => ({
   cookies: mockCookies,
@@ -27,15 +28,24 @@ vi.mock('@/models/order-model', () => ({
   default: {
     countDocuments: mockCountDocuments,
     find: mockFind,
+    findById: (...a: unknown[]) => mockFindById(...a),
   },
 }));
 
+const mockTabExists = vi.fn();
+
 vi.mock('@/models/tab-model', () => ({
-  default: {},
+  default: {
+    exists: (...a: unknown[]) => mockTabExists(...a),
+  },
 }));
 
+const mockCreateLog = vi.fn();
+
 vi.mock('@/services/audit-log-service', () => ({
-  AuditLogService: {},
+  AuditLogService: {
+    createLog: (...a: unknown[]) => mockCreateLog(...a),
+  },
 }));
 
 const mockDeleteOrder = vi.fn();
@@ -61,13 +71,22 @@ vi.mock('@/lib/socket-emit-helper', () => ({
   emitOrderCancelledEvent: vi.fn(),
 }));
 
+const mockGetBusinessDayCutoff = vi.fn();
+
 vi.mock('@/services/system-settings-service', () => ({
-  SystemSettingsService: {},
+  SystemSettingsService: {
+    getBusinessDayCutoff: (...a: unknown[]) => mockGetBusinessDayCutoff(...a),
+  },
 }));
 
-const { getOrdersAction, deleteOrderAction } = await import(
-  '@/app/actions/admin/order-management-actions'
-);
+const FIXED_BUSINESS_DATE = new Date('2026-09-21T00:00:00.000Z');
+
+vi.mock('@/lib/business-date', () => ({
+  deriveBusinessDate: vi.fn(() => FIXED_BUSINESS_DATE),
+}));
+
+const { getOrdersAction, deleteOrderAction, updateOrderStatusAction } =
+  await import('@/app/actions/admin/order-management-actions');
 
 describe('REQ-090: getOrdersAction serialization hardening', () => {
   beforeEach(() => {
@@ -212,5 +231,107 @@ describe('REQ-096: deleteOrderAction role gate — AC2', () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toBe('Cannot delete a live order.');
+  });
+});
+
+describe('REQ-108: updateOrderStatusAction auto-mark-cash guard', () => {
+  const buildOrder = (overrides: Record<string, unknown> = {}) => {
+    const order: Record<string, unknown> = {
+      _id: 'order-1',
+      status: 'ready',
+      tabId: undefined,
+      paymentStatus: 'pending',
+      paymentMethod: undefined,
+      paymentReference: undefined,
+      paidAt: undefined,
+      businessDate: undefined,
+      inventoryDeducted: true, // skip the completeOrder/inventory chokepoint entirely
+      statusHistory: [] as unknown[],
+      save: vi.fn().mockResolvedValue(undefined),
+      ...overrides,
+    };
+    (order.statusHistory as unknown[]).push = vi.fn();
+    return order;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockCookies.mockResolvedValue({});
+    mockGetIronSession.mockResolvedValue({
+      userId: 'kitchen-1',
+      role: 'kitchen-staff',
+    });
+    mockConnectDB.mockResolvedValue(undefined);
+    mockTabExists.mockResolvedValue(null);
+    mockGetBusinessDayCutoff.mockResolvedValue('15:00');
+    mockCreateLog.mockResolvedValue(undefined);
+  });
+
+  it('AC2 — auto-marks a non-tab order paid/cash on completion (regression guard)', async () => {
+    const order = buildOrder();
+    mockFindById.mockResolvedValue(order);
+
+    const result = await updateOrderStatusAction('order-1', 'completed');
+
+    expect(result.success).toBe(true);
+    expect(order.paymentStatus).toBe('paid');
+    expect(order.paymentMethod).toBe('cash');
+    expect(order.paymentReference).toMatch(/^CASH-\d+$/);
+    expect(order.paidAt).toBeInstanceOf(Date);
+    expect(order.businessDate).toBe(FIXED_BUSINESS_DATE);
+  });
+
+  it('AC1 — does NOT auto-mark a tab order paid when Order.tabId is set', async () => {
+    const order = buildOrder({ tabId: 'tab-1' });
+    mockFindById.mockResolvedValue(order);
+
+    const result = await updateOrderStatusAction('order-1', 'completed');
+
+    expect(result.success).toBe(true);
+    expect(order.paymentStatus).toBe('pending');
+    expect(order.paymentMethod).toBeUndefined();
+    expect(mockTabExists).not.toHaveBeenCalled();
+  });
+
+  it('AC1 — does NOT auto-mark a tab order paid via the TabModel.exists fallback (the actual historical bug scenario: tabId unset but genuinely tab-linked)', async () => {
+    const order = buildOrder({ tabId: undefined });
+    mockFindById.mockResolvedValue(order);
+    mockTabExists.mockResolvedValue({ _id: 'tab-1' });
+
+    const result = await updateOrderStatusAction('order-1', 'completed');
+
+    expect(result.success).toBe(true);
+    expect(mockTabExists).toHaveBeenCalledWith({ orders: 'order-1' });
+    expect(order.paymentStatus).toBe('pending');
+    expect(order.paymentMethod).toBeUndefined();
+  });
+
+  it('does not double-stamp an order that is already paid', async () => {
+    const order = buildOrder({
+      paymentStatus: 'paid',
+      paymentMethod: 'card',
+      paymentReference: 'EXISTING-REF',
+    });
+    mockFindById.mockResolvedValue(order);
+
+    const result = await updateOrderStatusAction('order-1', 'completed');
+
+    expect(result.success).toBe(true);
+    expect(order.paymentMethod).toBe('card');
+    expect(order.paymentReference).toBe('EXISTING-REF');
+    expect(mockTabExists).not.toHaveBeenCalled();
+  });
+
+  it('completion still succeeds (non-fatal) when getBusinessDayCutoff rejects', async () => {
+    const order = buildOrder();
+    mockFindById.mockResolvedValue(order);
+    mockGetBusinessDayCutoff.mockRejectedValue(new Error('settings down'));
+
+    const result = await updateOrderStatusAction('order-1', 'completed');
+
+    expect(result.success).toBe(true);
+    expect(order.status).toBe('completed');
+    expect(order.paymentStatus).toBe('pending');
+    expect(order.paymentMethod).toBeUndefined();
   });
 });

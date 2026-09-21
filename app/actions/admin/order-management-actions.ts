@@ -375,21 +375,27 @@ export async function updateOrderStatusAction(
 
     // Auto-mark non-tab orders as cash paid on completion.
     // Tab orders are paid when the tab is closed — leave them alone.
-    if (
-      newStatus === 'completed' &&
-      !order.tabId &&
-      order.paymentStatus !== 'paid'
-    ) {
-      try {
-        const cutoff = await SystemSettingsService.getBusinessDayCutoff();
-        order.paymentStatus = 'paid';
-        order.paymentMethod = 'cash';
-        order.paymentReference = `CASH-${Date.now()}`;
-        order.paidAt = new Date();
-        order.businessDate = deriveBusinessDate(new Date(), cutoff);
-      } catch (error) {
-        console.error('Error auto-marking cash payment:', error);
-        // Non-fatal — order still completes, staff can use Process Payment
+    //
+    // REQ-108 — `!order.tabId` alone previously failed open for tab orders
+    // whose `tabId` wasn't set at attach time (fixed at the source in
+    // `TabService.addOrderToTab`, REQ-108). This independent membership
+    // check is defense-in-depth: the exclusion no longer rests on a single
+    // field staying in sync across two documents.
+    if (newStatus === 'completed' && order.paymentStatus !== 'paid') {
+      const isTabOrder =
+        !!order.tabId || (await TabModel.exists({ orders: order._id }));
+      if (!isTabOrder) {
+        try {
+          const cutoff = await SystemSettingsService.getBusinessDayCutoff();
+          order.paymentStatus = 'paid';
+          order.paymentMethod = 'cash';
+          order.paymentReference = `CASH-${Date.now()}`;
+          order.paidAt = new Date();
+          order.businessDate = deriveBusinessDate(new Date(), cutoff);
+        } catch (error) {
+          console.error('Error auto-marking cash payment:', error);
+          // Non-fatal — order still completes, staff can use Process Payment
+        }
       }
     }
 

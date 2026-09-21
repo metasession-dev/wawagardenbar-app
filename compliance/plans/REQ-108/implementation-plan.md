@@ -114,11 +114,15 @@ N/A — this REQ does not introduce or change any AI/ML behaviour.
 - **Manual smoke after deploy:** Create a tab via the express/POS flow in the deployed environment, add an order, progress it through kitchen statuses to Completed, confirm `paymentStatus` stays `pending` via an admin view or DB check.
 - **Monitoring / alerting:** None new; existing revenue/cash-position reports are the implicit monitor (their numbers should stop drifting for tab-heavy days once this ships).
 
+## Plan deviation
+
+`scripts/backfill-order-tabid.ts` is not unit-tested. This is an implementation-approach deviation, not a requirements deviation: it matches this repo's existing convention for one-off migration scripts (`scripts/backfill-business-dates.ts` and similar have no dedicated test file, connecting directly via the raw MongoDB driver rather than through testable service functions). Correctness is verified via the script's mandatory `--dry-run` review before any write. None of AC1-AC3 require backfill-script test coverage, so no AC/SRS update is needed.
+
 ## 10. Sign-off
 
-- **Plan reviewer (eng):** REPLACE — operator, at plan-approval checkpoint (HIGH risk pause)
+- **Plan reviewer (eng):** operator, approved via plan-approval checkpoint (HIGH risk pause), 2026-09-21
 - **Plan reviewer (security / DPO):** N/A — no personal data / no non-trivial threat-model surface beyond the financial-correctness point already covered above
-- **Plan approved by operator:** REPLACE — pending
+- **Plan approved by operator:** approved, 2026-09-21
 
 ## Upload path
 

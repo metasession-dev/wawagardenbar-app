@@ -1,0 +1,7 @@
+# Test plan — REQ-108
+
+| Test file                                                       | Type | AC(s) covered | Notes                                                                                                                                                                                        |
+| --------------------------------------------------------------- | ---- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `__tests__/services/tab-service.test.ts`                        | Unit | AC3           | New/extended case: `addOrderToTab` sets `order.tabId` on the Order document.                                                                                                                 |
+| `__tests__/actions/admin/order-management-actions.test.ts`      | Unit | AC1, AC2      | New `describe('updateOrderStatusAction', ...)` block — non-tab auto-mark (AC2), `tabId`-set exclusion, `TabModel.exists` fallback exclusion (AC1), already-paid no-op, non-fatal error path. |
+| `e2e/critical/tab-payment-no-status-reset.spec.ts` (or sibling) | E2E  | AC1           | Via `e2e-test-engineer` — real `expressCreateOrderAction` attach path, drive kitchen statuses to Completed, assert `paymentStatus` stays `pending`.                                          |

@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-108",
+  "ac": 1,
+  "slug": "completed-payment-status-unchanged",
+  "specFile": "e2e/critical/tab-order-no-false-cash-mark-req108.spec.ts",
+  "capturedAt": "2026-09-21T20:27:20.482Z"
+}

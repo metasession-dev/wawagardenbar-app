@@ -1,0 +1,11 @@
+# Test plan — REQ-108
+
+| Test file                                                  | Type | AC(s) covered | Notes                                                                                                                                                                                                                              |
+| ---------------------------------------------------------- | ---- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `__tests__/services/tab-service.add-order-tabid.test.ts`   | Unit | AC3           | New file (matches this repo's per-topic naming convention of one file per tab-service behaviour rather than one combined file) — `addOrderToTab` sets `order.tabId` on attach, idempotently, and only when the tab is open/exists. |
+| `__tests__/actions/admin/order-management-actions.test.ts` | Unit | AC1, AC2      | New `describe('updateOrderStatusAction', ...)` block — non-tab auto-mark (AC2), `tabId`-set exclusion, `TabModel.exists` fallback exclusion (AC1), already-paid no-op, non-fatal error path.                                       |
+| `e2e/critical/tab-order-no-false-cash-mark-req108.spec.ts` | E2E  | AC1           | Via `e2e-test-engineer` — real `expressCreateOrderAction` attach path, drive kitchen statuses to Completed, assert `paymentStatus` stays `pending`. Sibling of `e2e/critical/tab-payment-no-status-reset.spec.ts` (REQ-085).       |
+
+## Deviation from the implementation plan
+
+`scripts/backfill-order-tabid.ts` is not unit-tested — matching this repo's existing convention for one-off migration scripts (`scripts/backfill-business-dates.ts` and others have no dedicated test file; they connect directly via the raw MongoDB driver rather than through testable service functions). Correctness is verified via mandatory `--dry-run` review before any write, consistent with how this repo already handles this script category. This is an implementation-approach deviation, not a requirements deviation — none of AC1-AC3 require backfill-script test coverage.

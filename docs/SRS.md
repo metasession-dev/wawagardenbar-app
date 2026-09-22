@@ -129,6 +129,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-ORDMGT-010   | Admin Order Management section on orders dashboard                                          | Should   | smoke      | `app/dashboard/orders/page.tsx`; REQ-086                                                                              |
 | REQ-ORDMGT-013   | Delete order (soft-delete; super-admin override for live orders)                            | Could    | extended   | `order-service.ts` `deleteOrder()`; REQ-096                                                                           |
 | REQ-ORDMGT-014   | Delete order: independent inventory/payment revert choices                                  | Could    | extended   | `order-service.ts` `deleteOrder()`; REQ-096                                                                           |
+| REQ-ORDMGT-015   | Order completion auto-cash-mark is scoped to non-tab orders only, reliably                  | Must     | regression | `order-management-actions.ts:376-394`; `tab-service.ts` `addOrderToTab`; REQ-108                                      |
 | REQ-TABMGT-001   | Tab list with status filter + stats                                                         | Should   | regression | `app/dashboard/orders/tabs/page.tsx`                                                                                  |
 | REQ-TABMGT-002   | Tab detail with partial payments                                                            | Should   | regression | `tabs/[tabId]/page.tsx:82`; REQ-012/035/036                                                                           |
 | REQ-TABMGT-003   | Admin pay tab with method + independent tip                                                 | Should   | regression | `admin-pay-tab-dialog`; REQ-036                                                                                       |
@@ -673,6 +674,15 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 
 - **Given** a super-admin deleting an order with inventory deducted, **When** they choose to restock inventory, **Then** stock is restored via the same mechanism as order cancellation and the order's status becomes `cancelled` if it wasn't already.
 - **Given** a super-admin deleting an order with `paymentStatus: 'paid'`, **When** they choose to reverse the payment, **Then** `paymentStatus` becomes `'refunded'` and the order is excluded from subsequent financial reports for its business date.
+
+#### REQ-ORDMGT-015 — Order completion auto-cash-mark scoped to non-tab orders · **Must** · regression
+
+**Source:** `app/actions/admin/order-management-actions.ts:376-394` (`updateOrderStatusAction`), `services/tab-service.ts` (`addOrderToTab`); cross-ref REQ-108.
+**Behaviour:** On transition to `completed`, a non-tab ("pay now"/express/counter) order that isn't already paid is automatically marked `paymentStatus: 'paid'`, `paymentMethod: 'cash'`, `paymentReference: CASH-<timestamp>`, `paidAt`, and `businessDate` — no extra staff step. Orders attached to a tab must be excluded from this auto-mark, since a tab order is only paid when the tab itself is closed (`TabService.markTabPaid` / `completeTabPaymentManually`). Exclusion is enforced both by `Order.tabId` being reliably set on attach (`TabService.addOrderToTab` sets it on every attach path, not left to each caller) and by an independent tab-membership check (`TabModel.exists({ orders: order._id })`) so the exclusion doesn't rest on a single field staying in sync.
+
+- **Given** a non-tab order not yet paid, **When** it is marked `completed`, **Then** it is auto-marked `paymentStatus: 'paid'`/`paymentMethod: 'cash'` with a reference and timestamp, with no extra staff action.
+- **Given** an order attached to an open tab (via any attach path — customer checkout, express/POS add-to-tab, or the public ordering API), **When** it is marked `completed`, **Then** `paymentStatus` is left unchanged and the tab remains open/unpaid.
+- **Given** an order already `paymentStatus: 'paid'`, **When** it is marked `completed`, **Then** the existing payment fields are not overwritten/double-stamped.
 - **Given** a super-admin deleting an order and choosing neither option, **When** they confirm, **Then** the order is hidden from active views but its `status`/`paymentStatus` are left unchanged.
 
 #### REQ-ORDMGT-015 — Portion picker preview price matches menu-editor calculation · **Must** · regression

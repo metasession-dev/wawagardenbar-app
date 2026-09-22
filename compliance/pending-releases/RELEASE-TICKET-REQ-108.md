@@ -22,7 +22,7 @@
 - `services/tab-service.ts` — `TabService.addOrderToTab` (the single chokepoint every attach call site goes through) now sets `Order.tabId` on every attach via `OrderModel.updateOne`, instead of relying on each caller to set it separately.
 - `app/actions/admin/order-management-actions.ts` — `updateOrderStatusAction`'s auto-cash-mark guard adds an independent `TabModel.exists({ orders: order._id })` membership check alongside `!order.tabId`, so the exclusion no longer rests on a single field staying in sync across two documents.
 - `scripts/backfill-order-tabid.ts` — one-time migration: backfills missing/mismatched `Order.tabId` for existing tab-linked orders; separately reports (and, with `--revert-false-positives`, reverts) orders that show the auto-mark-cash fingerprint while genuinely tab-linked and their tab is still open/unpaid. Not run as part of this REQ — a separate operator action post-merge.
-- New SRS item `REQ-ORDMGT-015`. No ADR needed (2-file fix, no new dependency/data tier). Risk register: `R-032` (MITIGATED — the bug itself), `R-033` (ACCEPTED — residual risk in the separately-run backfill script, mitigated by opt-in flag + narrow scoping + mandatory dry-run-first process).
+- New SRS item `REQ-ORDMGT-017`. No ADR needed (2-file fix, no new dependency/data tier). Risk register: `R-032` (MITIGATED — the bug itself), `R-033` (ACCEPTED — residual risk in the separately-run backfill script, mitigated by opt-in flag + narrow scoping + mandatory dry-run-first process).
 - Tests: 4 new unit tests in `tab-service.add-order-tabid.test.ts`, 5 new unit tests in `order-management-actions.test.ts`; 1 new e2e test via `e2e-test-engineer` against the real express add-to-tab attach flow.
 
 ## Verification

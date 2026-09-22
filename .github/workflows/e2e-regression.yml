@@ -163,6 +163,22 @@ jobs:
         # added) by hitting each once before the timed test run starts —
         # the JIT cost lands here, off the Playwright-timeout clock, and
         # `npm run dev` stays untouched otherwise.
+        #
+        # API routes were missed by the original #793 fix — only
+        # `page.goto()` page routes were mined, never the `request.get/
+        # post/put/delete()` calls (32+ across e2e/) or fetch targets from
+        # within test helpers (e.g. `sendWebhook` posting to
+        # /api/webhooks/monnify). Those are compiled independently by
+        # Next.js and are just as cold on first hit, producing the exact
+        # same "different unrelated test failing each run" pattern #793
+        # already diagnosed — just scoped to /api/ instead of pages.
+        # Mined straight from `app/api/**/route.ts` (self-maintains as
+        # routes are added) rather than from the specs, since a request
+        # helper's target path isn't always a literal string grep can
+        # find. Dynamic segments (`[itemId]`, etc.) are substituted with a
+        # placeholder — Next.js compiles the whole route module on first
+        # request regardless of whether the param resolves to a real
+        # record, so the response code (404/401/405/...) doesn't matter.
         run: |
           set -uo pipefail
           grep -ohrE "page\.goto\('/[^']*'\)" e2e/ \
@@ -172,7 +188,16 @@ jobs:
             | while read -r route; do
                 curl -sf -o /dev/null --max-time 20 "http://localhost:3000$route" || true
               done
-          echo "Warmed $(grep -ohrE "page\.goto\('/[^']*'\)" e2e/ | sed -E "s/page\.goto\('(.*)'\)/\1/" | sed -E 's/\?.*//' | sort -u | wc -l) routes"
+          echo "Warmed $(grep -ohrE "page\.goto\('/[^']*'\)" e2e/ | sed -E "s/page\.goto\('(.*)'\)/\1/" | sed -E 's/\?.*//' | sort -u | wc -l) page routes"
+
+          find app/api -name 'route.ts' \
+            | sed -E 's#^app(/api/.*)/route\.ts$#\1#' \
+            | sed -E 's/\[[^]]+\]/warmup/g' \
+            | sort -u \
+            | while read -r route; do
+                curl -sf -o /dev/null --max-time 20 "http://localhost:3000$route" || true
+              done
+          echo "Warmed $(find app/api -name 'route.ts' | wc -l) API routes"
 
       # Decide which Playwright project to run based on the trigger.
       # PR-to-main runs `critical` (~10-15 min); push-to-main runs

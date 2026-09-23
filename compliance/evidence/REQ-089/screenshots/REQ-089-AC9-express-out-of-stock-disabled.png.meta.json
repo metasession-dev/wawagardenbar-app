@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-089",
+  "ac": 9,
+  "slug": "express-out-of-stock-disabled",
+  "specFile": "e2e/critical/express-order-portion-price-override.spec.ts",
+  "capturedAt": "2026-09-17T09:10:34.518Z"
+}

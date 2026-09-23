@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-077",
+  "ac": 3,
+  "slug": "panel-error-details-and-order-snapshot",
+  "specFile": "e2e/critical/incidents-expansion.spec.ts",
+  "capturedAt": "2026-09-17T09:12:32.988Z"
+}

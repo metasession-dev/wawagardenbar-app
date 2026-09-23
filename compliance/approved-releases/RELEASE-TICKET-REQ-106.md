@@ -1,6 +1,6 @@
 # Release Ticket: REQ-106 — Cash Position tracking + Cash Deposits
 
-**Status:** TESTED - PENDING SIGN-OFF (ITERATION 2)
+**Status:** RELEASED
 **Date:** 2026-09-14
 **Requirement ID:** REQ-106
 **Risk Level:** MEDIUM

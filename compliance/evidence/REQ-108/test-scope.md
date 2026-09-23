@@ -1,0 +1,7 @@
+# Test scope — REQ-108
+
+| AC  | Description                                                                                                               | Risk | SRS item             | Verification method                                                                                                                              |
+| --- | ------------------------------------------------------------------------------------------------------------------------- | ---- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| AC1 | Tab-linked order progressed to Completed on the kitchen display must NOT be auto-marked paid/cash; tab stays open/unpaid. | HIGH | REQ-ORDMGT-017 (new) | Unit test (`TabModel.exists` fallback case) + E2E (real `expressCreateOrderAction` attach path)                                                  |
+| AC2 | Non-tab order progressed to Completed must still be auto-marked paid/cash (regression guard for existing behaviour).      | HIGH | REQ-ORDMGT-017 (new) | Unit test                                                                                                                                        |
+| AC3 | `Order.tabId` is reliably set by `TabService.addOrderToTab` for any current/future attach path.                           | HIGH | REQ-ORDMGT-017 (new) | Unit test on `TabService.addOrderToTab` + implicit coverage via AC1's e2e path (uses the real `expressCreateOrderAction` → `addOrderToTab` flow) |

@@ -732,3 +732,48 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 **Framework cross-references:** SOC2.CC7.2 (system monitoring — audit trail as the primary control, no automated prevention)
 
 **Cross-links:** [REQ-106 implementation plan](plans/REQ-106/implementation-plan.md); [#769](https://github.com/metasession-dev/wawagardenbar-app/issues/769).
+
+### R-032 — Tab orders falsely auto-marked cash-paid on kitchen completion (REQ-108)
+
+**Status:** MITIGATED
+**Opened:** 2026-09-21
+**Owner:** WGB maintainer
+**Review due:** 2027-09-21 (annual review)
+
+**The risk:** `updateOrderStatusAction`'s completion-time auto-cash-mark feature (commit c3731ca) intentionally excludes tab-linked orders via `!order.tabId`, but `order.tabId` was never reliably set by two of three tab-attach code paths (`app/api/public/orders/route.ts`, `expressCreateOrderAction`). The guard failed open, so tab orders were silently marked `paymentStatus: 'paid'`/`paymentMethod: 'cash'` on kitchen completion while their tab was still open/unpaid — corrupting revenue and cash-method reporting and the cash-position tracking feature (REQ-106/107). This is a confirmed, already-occurring production defect, not a hypothetical.
+
+**Mitigations applied in this REQ:**
+
+1. Root-cause fix at the single chokepoint (`TabService.addOrderToTab`) sets `order.tabId` on every attach, present and future, instead of requiring each call site to remember to do it.
+2. Defense-in-depth: `updateOrderStatusAction`'s guard also checks `TabModel.exists({ orders: order._id })` independently of `order.tabId`, so the exclusion doesn't rest on a single field staying in sync across two documents — the same failure shape that caused this bug (two independent call sites each individually forgetting) is now structurally harder to reintroduce.
+3. Unit tests cover both the non-tab auto-mark (regression guard) and both tab-exclusion paths (`tabId` set, and the `TabModel.exists` fallback — the actual historical bug scenario); an e2e regression test drives a real `expressCreateOrderAction`-attached order through kitchen completion and asserts payment status is untouched.
+4. A separate backfill script (written in this REQ, run by the operator afterward — see R-033) will correct existing production/UAT data already affected.
+
+**Residual likelihood × impact:** low × low (two independent enforcement mechanisms — a reliable source-of-truth field plus an independent membership check — cover the identified failure mode; a future change would need to break both simultaneously to reintroduce the bug)
+
+**Framework cross-references:** SOC2.CC7.2 (system monitoring/ops impact — a financial-reporting regression); ISO27001.A.8.25 (secure SDLC — defense-in-depth control design)
+
+**Cross-links:** [REQ-108 implementation plan](plans/REQ-108/implementation-plan.md); [#815](https://github.com/metasession-dev/wawagardenbar-app/issues/815).
+
+---
+
+### R-033 — Backfill script for REQ-108 could incorrectly revert a legitimately-paid order
+
+**Status:** ACCEPTED
+**Opened:** 2026-09-21
+**Owner:** WGB maintainer
+**Review due:** 2027-09-21 (annual review)
+
+**The risk:** `scripts/backfill-order-tabid.ts` (written in REQ-108, executed separately by the operator afterward) offers an opt-in `--revert-false-positives` flag that resets payment fields on orders matching the auto-mark-cash fingerprint. If run against a tab that was subsequently, legitimately paid through the normal `TabService.markTabPaid`/`completeTabPaymentManually` flow after the bug's original false mark, an overly broad match could incorrectly revert a now-genuinely-paid order back to `pending`.
+
+**Mitigations planned in this REQ:**
+
+1. `--revert-false-positives` is opt-in, not the default behavior — the default run only reports candidates for manual review.
+2. The revert path is scoped narrowly: only orders on tabs that are still `open` and not `paymentStatus: 'paid'` at the tab level are eligible; orders on already-closed/paid tabs are excluded entirely and left for manual reconciliation.
+3. The script is never run automatically as part of this REQ's deployment — it is a deliberate, separate, operator-initiated step, dry-run first against UAT, then production, per this project's existing migration-script practice (e.g. `scripts/backfill-business-dates.ts`).
+
+**Residual likelihood × impact:** low × medium (narrow scoping + opt-in flag + human-reviewed dry-run report substantially reduce likelihood; impact if it did occur is a real, if rare, reintroduced financial-reporting error requiring manual correction)
+
+**Framework cross-references:** SOC2.CC7.2 (change management — controlled, reviewed data migration)
+
+**Cross-links:** [REQ-108 implementation plan](plans/REQ-108/implementation-plan.md); [#815](https://github.com/metasession-dev/wawagardenbar-app/issues/815).

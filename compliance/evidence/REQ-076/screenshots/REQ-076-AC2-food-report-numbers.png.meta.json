@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-076",
+  "ac": 2,
+  "slug": "food-report-numbers",
+  "specFile": "e2e/critical/by-main-category-report.spec.ts",
+  "capturedAt": "2026-09-17T09:07:01.192Z"
+}

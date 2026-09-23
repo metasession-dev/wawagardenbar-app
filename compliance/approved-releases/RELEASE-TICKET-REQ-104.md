@@ -1,6 +1,6 @@
 # Release Ticket: REQ-104 — Expense Tags
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-09-14
 **Requirement ID:** REQ-104
 **Risk Level:** LOW

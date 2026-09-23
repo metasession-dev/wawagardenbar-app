@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-076",
+  "ac": 6,
+  "slug": "editor-section-renders",
+  "specFile": "e2e/admin/main-category-report-permissions-ui.spec.ts",
+  "capturedAt": "2026-09-17T09:01:25.594Z"
+}

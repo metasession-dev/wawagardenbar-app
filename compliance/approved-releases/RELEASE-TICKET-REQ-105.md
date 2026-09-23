@@ -1,6 +1,6 @@
 # Release Ticket: REQ-105 — Expense edit dialog full field visibility
 
-**Status:** TESTED - PENDING SIGN-OFF (ITERATION 1)
+**Status:** RELEASED
 **Date:** 2026-09-14
 **Requirement ID:** REQ-105
 **Risk Level:** LOW

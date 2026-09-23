@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-088",
+  "ac": 3,
+  "slug": "cancel-reversal-inventory-restored",
+  "specFile": "e2e/invariants/cancel-reversal.spec.ts",
+  "capturedAt": "2026-09-17T09:18:39.159Z"
+}

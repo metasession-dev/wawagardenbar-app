@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-088",
+  "ac": 1,
+  "slug": "inventory-decremented-on-kitchen-complete",
+  "specFile": "e2e/invariants/inventory-deduction-checkout.spec.ts",
+  "capturedAt": "2026-09-17T09:18:44.711Z"
+}

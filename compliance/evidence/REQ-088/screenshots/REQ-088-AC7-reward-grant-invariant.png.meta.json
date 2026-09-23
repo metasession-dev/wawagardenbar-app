@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-088",
+  "ac": 7,
+  "slug": "reward-grant-invariant",
+  "specFile": "e2e/invariants/reward-grant-invariant.spec.ts",
+  "capturedAt": "2026-09-17T09:18:50.089Z"
+}

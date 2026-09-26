@@ -1,6 +1,6 @@
 # Release Ticket: REQ-108 — Tab orders falsely auto-marked "paid as cash" on kitchen completion
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-09-21
 **Requirement ID:** REQ-108
 **Risk Level:** HIGH

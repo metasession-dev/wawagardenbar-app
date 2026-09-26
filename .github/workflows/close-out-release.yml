@@ -69,13 +69,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          # devaudit-installer#676 (DEVAUDIT-004) — self-hosted runners share
-          # one fixed workspace per repo across every workflow; default
-          # clean:true wipes node_modules between runs, defeating the
-          # npm-ci cache entirely. No-op on ephemeral github-ci runners.
-          clean: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'true' || 'false' }}
           ref: develop
           fetch-depth: 0
+          # See ci.yml.template's checkout step for why (devaudit-installer#676/#815).
+          clean: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'true' || 'false' }}
           token: ${{ secrets.INSTALLER_DISPATCH_TOKEN || github.token }}
 
       - name: Resolve inputs

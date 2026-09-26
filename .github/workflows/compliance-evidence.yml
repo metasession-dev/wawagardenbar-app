@@ -64,16 +64,13 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          # devaudit-installer#676 (DEVAUDIT-004) — self-hosted runners share
-          # one fixed workspace per repo across every workflow; default
-          # clean:true wipes node_modules between runs, defeating the
-          # npm-ci cache entirely. No-op on ephemeral github-ci runners.
-          clean: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'true' || 'false' }}
           # Full history so `req_meta_args` can `git log --grep "[REQ-XXX]|Ref: REQ-XXX"`
           # against the implementation commits (the merge commit alone never
           # carries the REQ tag in a feature → develop PR flow, so without this
           # the change_type derivation is null nearly everywhere — #77).
           fetch-depth: 0
+          # See ci.yml.template's checkout step for why (devaudit-installer#676/#815).
+          clean: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'true' || 'false' }}
 
       - name: Resolve DevAudit base URL
         id: resolve
@@ -305,15 +302,14 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          # devaudit-installer#676 (DEVAUDIT-004) — see the job above for
-          # the full rationale.
-          clean: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'true' || 'false' }}
           # Check out the SHA the E2E Regression ran against — that
           # determines the release version + the in-scope REQs via the
           # pending release tickets at that snapshot, not whatever
           # default branch currently points to.
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
+          # See ci.yml.template's checkout step for why (devaudit-installer#676/#815).
+          clean: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'true' || 'false' }}
 
       - name: Resolve DevAudit base URL
         id: resolve

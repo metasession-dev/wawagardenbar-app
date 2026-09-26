@@ -328,28 +328,6 @@ if [ -f "$PENDING" ]; then
   echo "Moved ticket -> ${APPROVED}"
 fi
 
-# ── Archive the declared-bundle manifest alongside its ticket (if any) ────────
-# The manifest is named for REQ_ID only when REQ_ID is the bundle's declared
-# primary/core-tracked key (see generate-bundled-changes.sh) — a member REQ's
-# own close-out won't have one here. Without this, an orphaned pending
-# manifest survives close-out forever, and derive-release-version.sh's
-# step-0 declared-bundle check keeps matching it against every later,
-# unrelated merge (devaudit-installer#838).
-PENDING_BUNDLE_MD="compliance/pending-releases/BUNDLED-CHANGES-${REQ_ID}.md"
-PENDING_BUNDLE_JSON="compliance/pending-releases/BUNDLED-CHANGES-${REQ_ID}.json"
-if [ -f "$PENDING_BUNDLE_MD" ]; then
-  git mv "$PENDING_BUNDLE_MD" "${APPROVED_DIR}/BUNDLED-CHANGES-${REQ_ID}.md" 2>/dev/null \
-    || mv "$PENDING_BUNDLE_MD" "${APPROVED_DIR}/BUNDLED-CHANGES-${REQ_ID}.md"
-  git add "${APPROVED_DIR}/BUNDLED-CHANGES-${REQ_ID}.md" 2>/dev/null || true
-  echo "Moved bundle manifest -> ${APPROVED_DIR}/BUNDLED-CHANGES-${REQ_ID}.md"
-fi
-if [ -f "$PENDING_BUNDLE_JSON" ]; then
-  git mv "$PENDING_BUNDLE_JSON" "${APPROVED_DIR}/BUNDLED-CHANGES-${REQ_ID}.json" 2>/dev/null \
-    || mv "$PENDING_BUNDLE_JSON" "${APPROVED_DIR}/BUNDLED-CHANGES-${REQ_ID}.json"
-  git add "${APPROVED_DIR}/BUNDLED-CHANGES-${REQ_ID}.json" 2>/dev/null || true
-  echo "Moved bundle manifest -> ${APPROVED_DIR}/BUNDLED-CHANGES-${REQ_ID}.json"
-fi
-
 # ── Flip ticket Status + backlink + sign-off (edit AFTER the move, then stage —
 #    avoids leaving content edits unstaged behind a rename) ────────────────────
 TMP="$(mktemp)"

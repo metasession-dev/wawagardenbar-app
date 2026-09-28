@@ -6,12 +6,12 @@ source_release: "REQ-030"
 source_issue: "707"
 source_issue_url: "https://github.com/metasession-dev/wawagardenbar-app/issues/707"
 semantic_id: "INC-20260907-707"
-severity: "REPLACE — low | medium | high | critical"
+severity: "low"
 detected_at: "2026-09-07T11:47:05Z"
 resolved_at: "2026-09-08T12:52:19Z"
-involves_personal_data: "REPLACE — true | false"
-reported_to_supervisory_authority: "REPLACE — true | false | n/a"
-notification_window_72h: "REPLACE — within | outside | n/a"
+involves_personal_data: "false"
+reported_to_supervisory_authority: "n/a"
+notification_window_72h: "n/a"
 last_reviewed_at: "2026-09-08"
 ---
 
@@ -39,17 +39,17 @@ last_reviewed_at: "2026-09-08"
 **Assignees:** _unassigned_  
 **Labels:** `incident`, `application-defect`
 
-## 1. Personal data scope (GDPR triage) — REPLACE
+## 1. Personal data scope (GDPR triage)
 
 | Question | Answer |
 | --- | --- |
-| Did the incident involve personal data? | REPLACE — Y / N |
-| If Y: estimated number of data subjects affected | REPLACE |
-| If Y: categories of personal data involved | REPLACE |
-| If Y: likely consequences for data subjects | REPLACE |
-| Notify supervisory authority (Art. 33)? | REPLACE — required if Y and risk to rights/freedoms |
-| Notify data subjects (Art. 34)? | REPLACE — required if high risk to rights/freedoms |
-| 72-hour notification window | REPLACE — within / outside / n/a |
+| Did the incident involve personal data? | N — CI-caught pre-merge test regression against fixture/seed data, no live user data involved |
+| If Y: estimated number of data subjects affected | N/A |
+| If Y: categories of personal data involved | N/A |
+| If Y: likely consequences for data subjects | N/A |
+| Notify supervisory authority (Art. 33)? | N/A — no personal data scope |
+| Notify data subjects (Art. 34)? | N/A — no personal data scope |
+| 72-hour notification window | N/A |
 
 ## 2. Narrative (from the GitHub issue)
 
@@ -91,14 +91,16 @@ last_reviewed_at: "2026-09-08"
 Fixed by PR #709 (tighten menu edit-link selector), part of the REQ-030 release (PR #710), now on main.
 
 
-## 4. Sign-off — REPLACE
+## 4. Sign-off
 
 | Role                                | Name    | Date    |
 | ----------------------------------- | ------- | ------- |
-| Incident Commander                  | REPLACE | REPLACE |
-| Engineering lead                    | REPLACE | REPLACE |
-| DPO (if personal data involved)     | REPLACE | REPLACE |
-| Security lead                       | REPLACE | REPLACE |
+| Incident Commander | N/A — bulk-triaged, see note below | 2026-09-28 |
+| Engineering lead | N/A — bulk-triaged, see note below | 2026-09-28 |
+| DPO (if personal data involved) | N/A — bulk-triaged, see note below | 2026-09-28 |
+| Security lead | N/A — bulk-triaged, see note below | 2026-09-28 |
+
+> **Bulk triage note:** this auto-filed CI regression incident was one of a batch of 30 reviewed together on 2026-09-28, per explicit operator instruction (see [devaudit-installer#899](https://github.com/metasession-dev/DevAudit-Installer/issues/899) for the root-cause fix preventing this backlog from recurring). Confirmed: no personal data involved (test/fixture data only, not live user data), not a live production incident (caught pre-merge in CI), routine test regression already resolved (issue closed).
 
 ---
 

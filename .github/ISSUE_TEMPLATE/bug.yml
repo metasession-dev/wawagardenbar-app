@@ -1,7 +1,7 @@
 name: Bug
 description: Defect in shipped behaviour. Full SDLC if it touches a high-risk surface; otherwise lighter.
-title: '[BUG] <one-line symptom>'
-labels: ['bug', 'needs-triage']
+title: "[BUG] <one-line symptom>"
+labels: ["bug", "needs-triage"]
 body:
   - type: markdown
     attributes:
@@ -46,13 +46,13 @@ body:
     id: surface_risk
     attributes:
       label: Affected surface — risk class
-      description: 'Same scale as the Requirement template. Defects in HIGH/CRITICAL surfaces still need stage-1 risk classification and full evidence even if the fix is small.'
+      description: "Same scale as the Requirement template. Defects in HIGH/CRITICAL surfaces still need stage-1 risk classification and full evidence even if the fix is small."
       options:
-        - 'LOW — UI polish, low-traffic admin tooling, no security/data/payment surface'
-        - 'MEDIUM — user-visible feature defect, no security/data risk'
-        - 'HIGH — auth, payments, RBAC, evidence/audit storage, third-party data egress'
-        - 'CRITICAL — regulated data, AI making decisions about people, production infra'
-        - 'Unsure — defer to stage-1 plan to classify'
+        - "LOW — UI polish, low-traffic admin tooling, no security/data/payment surface"
+        - "MEDIUM — user-visible feature defect, no security/data risk"
+        - "HIGH — auth, payments, RBAC, evidence/audit storage, third-party data egress"
+        - "CRITICAL — regulated data, AI making decisions about people, production infra"
+        - "Unsure — defer to stage-1 plan to classify"
     validations:
       required: true
 

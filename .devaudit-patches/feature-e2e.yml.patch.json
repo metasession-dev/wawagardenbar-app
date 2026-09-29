@@ -1,4 +1,0 @@
-{
-  "upstream_issue": "https://github.com/metasession-dev/DevAudit-Installer/issues/868",
-  "reason": "--with-deps needs root to apt-get system libs and always fails on this non-root self-hosted runner (libs are already provisioned on the host); plain `install chromium` is correct here, is version-aware, and skips the browser download when already cached. Re-rolled 2026-09-26: the clean: checkout fix this patch used to also carry (devaudit-installer#815) is now natively in the template, so that hunk was dropped."
-}

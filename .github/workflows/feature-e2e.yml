@@ -165,7 +165,7 @@ jobs:
             echo "$LOCK_HASH" > node_modules/.lock-hash
           fi
       - name: Install Playwright (skip if already cached)
-        run: npx playwright install chromium
+        run: npx playwright install${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && ' --with-deps' || '' }} chromium
 
       - name: Set database URI from dynamic port
         run: |

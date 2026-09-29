@@ -86,17 +86,16 @@ jobs:
           # cache entirely (devaudit-installer#676).
           clean: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'true' || 'false' }}
 
-      - name: Remove stale .next build output
-        # clean:false above (devaudit-installer#676) intentionally keeps
-        # node_modules and other gitignored state between runs on the
-        # self-hosted runner — but .next is different: it's live scratch
-        # state a running dev server writes to, not a stable install-once
-        # cache, so a job whose dev server got killed mid-write (timeout,
-        # OOM, cancellation) can leave it torn/corrupted for every
-        # subsequent run's TypeScript Check and Build Check to trip over,
-        # on totally unrelated PRs. Regenerating it costs ~nothing in dev
-        # mode (lazy/incremental compilation), so there's no caching
-        # upside to keeping it — always start clean.
+      - name: Clean stale .next build output (self-hosted only)
+        # A dev-server-writing job killed mid-write (timeout, OOM,
+        # cancellation) on a persistent self-hosted runner can leave `.next`
+        # torn/corrupted for every subsequent run's TypeScript Check / Build
+        # Check, on unrelated PRs. Companion to the `clean: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'true' || 'false' }}`
+        # optimization above (devaudit-installer#676/#815), which
+        # intentionally preserves node_modules but shouldn't preserve live
+        # scratch state (devaudit-installer#816). No-op on the ephemeral
+        # github-ci path, where nothing persists between runs anyway.
+        if: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') != 'github-ci' }}
         run: rm -rf .next
 
       - name: Validate self-hosted runner prerequisites
@@ -145,17 +144,6 @@ jobs:
         with:
           node-version: 20
 
-      # Node 20's bundled npm (10.8.2) still calls the `/v1/security/audits/quick`
-      # audit endpoint, which npm has begun actively retiring — it now returns
-      # "400 Bad Request … Invalid package tree, run npm install to rebuild your
-      # package-lock.json" (plus an `npm-notice: This endpoint is being retired`
-      # response header) regardless of lockfile validity. npm 10.9.x+ calls the
-      # replacement `/v1/security/advisories/bulk` endpoint instead, which is
-      # unaffected. Pin npm explicitly rather than relying on Node 20's bundled
-      # version so the Dependency Audit gate doesn't fail on every run.
-      - name: Bump npm past the retired audit-endpoint boundary
-        run: npm install -g npm@^10.9.8
-
       - name: Install dependencies (skip if lockfile unchanged)
         run: |
           LOCK_HASH=$(sha256sum package-lock.json | cut -d' ' -f1)
@@ -178,12 +166,7 @@ jobs:
           echo "$VENV/bin" >> "$GITHUB_PATH"
 
       - name: Install Playwright (skip if already cached)
-        # --with-deps needs root to apt-get system libs (libnss3 etc.) and
-        # always fails on this non-root self-hosted runner — those libs are
-        # already provisioned on the host (see runner setup docs), so a
-        # plain `install chromium` is correct here: it's version-aware and
-        # skips the browser download itself when already cached.
-        run: npx playwright install chromium
+        run: npx playwright install${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && ' --with-deps' || '' }} chromium
 
       # ── Gate 1: TypeScript ──
 
@@ -219,40 +202,42 @@ jobs:
 
       # ── Gate 3: Dependency Audit ──
 
+      - name: Ensure npm supports the current audit API endpoint
+        # Node's bundled npm (10.8.2) calls the now-retired
+        # /v1/security/audits/quick endpoint, which 400s ("Invalid package
+        # tree") regardless of lockfile validity. npm 10.9.x+ calls the
+        # replacement /v1/security/advisories/bulk endpoint. Not
+        # runner-specific — every runner ships whatever npm version its Node
+        # install bundled (devaudit-installer#816).
+        run: npm install -g npm@^10.9.8
+
       - name: Dependency Audit
         id: dep-audit
         run: |
-          echo "npm version for this step: $(npm --version)"
-          echo "npm binary path: $(which npm)"
-          # npm's `/v1/security/audits/quick` endpoint (still called by npm
-          # CLI regardless of version — 10.8.2 and 10.9.9 both hit it) is
-          # mid-retirement and flapping: some individual calls return valid
-          # JSON in ~5s, others hang for minutes before erroring with a 400/503
-          # and an `npm-notice: This endpoint is being retired` header. A
-          # single failed attempt is not evidence of a real vulnerability
-          # regression, so retry a handful of times before treating it as a
-          # gate failure — a fresh attempt frequently lands on a healthy
-          # backend quickly even when the prior one didn't.
-          AUDIT_OK=false
-          for attempt in 1 2 3 4 5; do
-            echo "npm audit attempt $attempt/5..."
-            # stderr → /dev/null so warnings can't corrupt the JSON (DevAudit #48)
+          # stderr → /dev/null so warnings can't corrupt the JSON (DevAudit #48)
+          # npm audit's own exit code is not a useful retry signal — it's
+          # nonzero whenever vulnerabilities are found, which is a
+          # *successful* audit, not a failure. Retry only when the call
+          # produced no parseable JSON at all (npm's own signal that the
+          # call itself didn't complete, e.g. a transient ECONNRESET/5xx
+          # registry blip), bounded so a persistent outage still fails fast
+          # rather than hanging (devaudit-installer#816).
+          MAX_ATTEMPTS=${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && '1' || '5' }}
+          ATTEMPT=1
+          while true; do
             npm audit --json > dependency-audit.json 2>/dev/null || true
-            if node -e "const d=require('./dependency-audit.json'); process.exit(d && typeof d.vulnerabilities === 'object' ? 0 : 1)" 2>/dev/null; then
-              echo "npm audit attempt $attempt succeeded."
-              AUDIT_OK=true
+            if jq empty dependency-audit.json 2>/dev/null; then
               break
             fi
-            echo "npm audit attempt $attempt did not return a valid vulnerabilities object; retrying..."
-            sleep 5
+            if [ "$ATTEMPT" -ge "$MAX_ATTEMPTS" ]; then
+              echo "::warning::npm audit produced no parseable JSON after ${ATTEMPT} attempt(s); continuing with an empty result."
+              echo '{"vulnerabilities":{}}' > dependency-audit.json
+              break
+            fi
+            echo "npm audit attempt ${ATTEMPT}/${MAX_ATTEMPTS} produced no parseable JSON — retrying..."
+            ATTEMPT=$((ATTEMPT + 1))
+            sleep $((ATTEMPT * 2))
           done
-          echo "--- dependency-audit.json (first 2000 chars) ---"
-          head -c 2000 dependency-audit.json || true
-          echo ""
-          echo "--- end dependency-audit.json excerpt ---"
-          if [ "$AUDIT_OK" != "true" ]; then
-            echo "npm audit did not return a valid vulnerabilities object after 5 attempts."
-          fi
           # The helper evaluates each high/critical advisory independently
           # against the installed package-lock path and writes an auditable
           # decision record. It is intentionally fail-closed: malformed audit
@@ -608,7 +593,7 @@ jobs:
           DECLARED_BUNDLE_ARGS=()
           if [ -f "$BUNDLED_FILE" ] && grep -q 'Co-Tracked Bundle Members' "$BUNDLED_FILE" 2>/dev/null \
              && [ -f "$BUNDLED_MANIFEST" ]; then
-            DECLARED_MEMBERS=$(jq -r '(.members // [])[] | select(.role == "co-tracked") | .version' "$BUNDLED_MANIFEST" 2>/dev/null | paste -sd, - || true)
+            DECLARED_MEMBERS=$(jq -r '(.members // [])[] | select(.role == "co_tracked") | .version' "$BUNDLED_MANIFEST" 2>/dev/null | paste -sd, - || true)
             if [ -n "$DECLARED_MEMBERS" ]; then
               echo "Preserving declared co-tracked bundle members: ${DECLARED_MEMBERS}"
               DECLARED_BUNDLE_ARGS=(--declared-bundle "$DECLARED_MEMBERS")
@@ -625,22 +610,16 @@ jobs:
             exit 0
           fi
 
-          # devaudit-installer#817 — the portal doesn't accept
-          # role="co-tracked"/relationship="bundled" yet (devaudit#857), and
-          # submit-bundle-manifest.sh hard-fails this step on any non-201
-          # response with no error suppression at the call site — submitting
-          # co-tracked members today would break this step on every push for
-          # every declared bundle. Submit a filtered copy that excludes
-          # them; they stay in $BUNDLED_MANIFEST / $BUNDLED_FILE for the
-          # evidence upload below (a generic document upload, not
-          # schema-validated) and for local/PR visibility. Relies on
-          # submit-bundle-manifest.sh's own existing "no members or work
-          # items" no-op guard for the case where filtering leaves nothing
-          # submittable. Drop this filter once devaudit#857 ships.
-          SUBMIT_MANIFEST="$(mktemp)"
-          jq '.members |= map(select(.role != "co-tracked"))' "$BUNDLED_MANIFEST" > "$SUBMIT_MANIFEST"
-          bash scripts/submit-bundle-manifest.sh wgb "$VERSION" "$SUBMIT_MANIFEST"
-          rm -f "$SUBMIT_MANIFEST"
+          # devaudit-installer#817 — devaudit#857 (shipped 2026-09-25) added
+          # role="co_tracked"/relationship="bundled" to the portal's
+          # accepted vocabulary and gates UAT approval atomically across
+          # every co_tracked member of a release. Submit the full manifest,
+          # co_tracked members included — an earlier version of this step
+          # filtered them out because the portal 400'd on them and
+          # submit-bundle-manifest.sh hard-fails on any non-201 response
+          # with no error suppression at the call site; that filter is no
+          # longer needed now that the portal accepts the role.
+          bash scripts/submit-bundle-manifest.sh wgb "$VERSION" "$BUNDLED_MANIFEST"
           # Upload as bundled_changes evidence against this release (REQ-tracked
           # or bare-date housekeeping — devaudit-installer#622).
           bash scripts/upload-evidence.sh \
@@ -882,7 +861,7 @@ jobs:
           BUNDLE_MANIFEST="compliance/pending-releases/BUNDLED-CHANGES-${{ needs.register-release.outputs.version }}.json"
           if [ -f "$BUNDLE_DECLARATION" ] && [ -f "$BUNDLE_MANIFEST" ] \
              && grep -q 'Co-Tracked Bundle Members' "$BUNDLE_DECLARATION"; then
-            BUNDLE_MEMBERS=$(jq -r '(.members // [])[] | select(.role == "co-tracked") | .version' "$BUNDLE_MANIFEST" 2>/dev/null || true)
+            BUNDLE_MEMBERS=$(jq -r '(.members // [])[] | select(.role == "co_tracked") | .version' "$BUNDLE_MANIFEST" 2>/dev/null || true)
             if [ -n "$BUNDLE_MEMBERS" ]; then
               echo "Fanning out SAST/Dependency Audit evidence to declared-bundle members: $(echo "$BUNDLE_MEMBERS" | tr '\n' ' ')"
             fi

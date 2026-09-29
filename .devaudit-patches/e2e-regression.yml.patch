@@ -82,15 +82,18 @@
        - name: E2E setup
          env:
            MONGODB_URI: mongodb://localhost:27017
-@@ -125,6 +193,7 @@ jobs:
+@@ -123,8 +191,10 @@ jobs:
+           npx tsx scripts/seed-food-menu.ts
+           npx tsx scripts/seed-drinks-menu.ts
            npx tsx scripts/seed-inventory.ts
++          npx tsx scripts/seed-e2e-fixtures.ts
  
        - name: Start dev server
 +        if: steps.select.outputs.sharded != 'true'
          run: |
            set -euo pipefail
            npm run dev > e2e-server.log 2>&1 &
-@@ -132,12 +201,14 @@ jobs:
+@@ -132,12 +202,14 @@ jobs:
            echo "Started E2E server pid $(cat .e2e-server.pid)"
  
        - name: Wait for dev server
@@ -105,7 +108,7 @@
          # DevAudit-Installer#793/#820/#821 — the full critical/regression
          # tier hammers rarely-hit routes that `npm run dev`-equivalent
          # servers JIT-compile on first request. That cold-compile tax
-@@ -175,46 +246,8 @@ jobs:
+@@ -175,46 +247,8 @@ jobs:
                done
            echo "Warmed $(grep -ohrE "page\.goto\('/[^']*'\)" e2e/ | sed -E "s/page\.goto\('(.*)'\)/\1/" | sed -E 's/\?.*//' | sort -u | wc -l) routes"
  
@@ -153,7 +156,7 @@
          run: |
            set -euo pipefail
            SERVER_PID="$(cat .e2e-server.pid 2>/dev/null || true)"
-@@ -230,6 +263,7 @@ jobs:
+@@ -230,6 +264,7 @@ jobs:
              > e2e-regression-metadata.json
  
        - name: E2E Regression Tests
@@ -161,7 +164,7 @@
          env:
            PLAYWRIGHT_HTML_REPORTER_OPEN: never
            PLAYWRIGHT_JSON_OUTPUT_NAME: e2e-regression-results.json
-@@ -237,15 +271,21 @@ jobs:
+@@ -237,15 +272,21 @@ jobs:
            set -uo pipefail
            PROJECT="${{ steps.select.outputs.project }}"
            SPECS="${{ steps.select.outputs.specs }}"
@@ -186,7 +189,7 @@
            if [ "$STATUS" -eq 124 ]; then
              OUTCOME="timed_out"
              echo "::error::E2E regression exceeded its 40-minute execution budget. Partial evidence will be uploaded."
-@@ -260,6 +300,118 @@ jobs:
+@@ -260,6 +301,118 @@ jobs:
            mv e2e-regression-metadata.tmp e2e-regression-metadata.json
            exit "$STATUS"
  
@@ -305,7 +308,7 @@
        - name: Stop dev server
          if: always()
          run: |
-@@ -291,6 +443,13 @@ jobs:
+@@ -291,6 +444,13 @@ jobs:
              # playwright-report/data/, accepted for the debuggability win.
              test-results/
              e2e-server.log

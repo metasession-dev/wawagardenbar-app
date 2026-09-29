@@ -1,0 +1,4 @@
+{
+  "upstream_issue": "https://github.com/metasession-dev/wawagardenbar-app/issues/897",
+  "reason": "Adds `npx tsx scripts/seed-e2e-fixtures.ts` to the E2E setup step. Discovered during #897 verification: scripts/seed-e2e-fixtures.ts already existed (with an explicit warning comment for the exact symptom hit) but was never wired into sdlc-config.json's e2e_setup_command, so the smoke/critical Gate 4 tier never seeded the payment-gateway-config, inventory snapshot, expense row, or profitability order several regression/critical specs depend on. Repo-specific fixture wiring, not a generic template concern — re-roll or drop if e2e_setup_command's generation logic changes upstream."
+}

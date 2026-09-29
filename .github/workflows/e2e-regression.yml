@@ -191,6 +191,7 @@ jobs:
           npx tsx scripts/seed-food-menu.ts
           npx tsx scripts/seed-drinks-menu.ts
           npx tsx scripts/seed-inventory.ts
+          npx tsx scripts/seed-e2e-fixtures.ts
 
       - name: Start dev server
         if: steps.select.outputs.sharded != 'true'

@@ -62,7 +62,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 0   # full history so merged commits' REQ tags are readable
+          fetch-depth: 0 # full history so merged commits' REQ tags are readable
           # See ci.yml.template's checkout step for why (devaudit-installer#676/#815).
           clean: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'true' || 'false' }}
 

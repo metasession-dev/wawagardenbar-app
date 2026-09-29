@@ -1,7 +1,7 @@
 name: Task
 description: Chore, refactor, doc update, or dependency bump. Uses the trivial-change escape hatch — skips SDLC stages 1 + 3.
-title: "[TASK] <one-line summary>"
-labels: ["task", "chore"]
+title: '[TASK] <one-line summary>'
+labels: ['task', 'chore']
 body:
   - type: markdown
     attributes:

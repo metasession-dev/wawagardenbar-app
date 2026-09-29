@@ -1,6 +1,21 @@
 --- a/.github/workflows/e2e-regression.yml
 +++ b/.github/workflows/e2e-regression.yml
-@@ -104,6 +104,66 @@ jobs:
+@@ -73,6 +73,14 @@ jobs:
+     env:
+       MONGODB_URI: mongodb://localhost:27017
+       MONGODB_DB_NAME: wawagardenbar_test
++      # sdlc-config.json's app_env values ci.yml's smoke/critical gates
++      # already set — missing here entirely in the generated template
++      # (wawagardenbar-app#897: discovered when SESSION_PASSWORD's absence
++      # produced "iron-session: Bad usage. Missing password." on every
++      # login attempt, failing auth-setup before any regression spec runs).
++      NEXT_PUBLIC_API_URL: http://localhost:3000/api
++      NEXT_PUBLIC_APP_URL: http://localhost:3000
++      SESSION_PASSWORD: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2
+       E2E_ADMIN_USERNAME: e2e-admin
+       E2E_ADMIN_PASSWORD: E2eTest@2026!
+       E2E_SUPER_ADMIN_USERNAME: e2e-superadmin
+@@ -104,6 +112,66 @@ jobs:
        - name: Install Playwright browser
          run: npx playwright install${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && ' --with-deps' || '' }} chromium
  
@@ -67,7 +82,7 @@
        - name: E2E setup
          env:
            MONGODB_URI: mongodb://localhost:27017
-@@ -125,6 +185,7 @@ jobs:
+@@ -125,6 +193,7 @@ jobs:
            npx tsx scripts/seed-inventory.ts
  
        - name: Start dev server
@@ -75,7 +90,7 @@
          run: |
            set -euo pipefail
            npm run dev > e2e-server.log 2>&1 &
-@@ -132,12 +193,14 @@ jobs:
+@@ -132,12 +201,14 @@ jobs:
            echo "Started E2E server pid $(cat .e2e-server.pid)"
  
        - name: Wait for dev server
@@ -90,7 +105,7 @@
          # DevAudit-Installer#793/#820/#821 — the full critical/regression
          # tier hammers rarely-hit routes that `npm run dev`-equivalent
          # servers JIT-compile on first request. That cold-compile tax
-@@ -175,46 +238,8 @@ jobs:
+@@ -175,46 +246,8 @@ jobs:
                done
            echo "Warmed $(grep -ohrE "page\.goto\('/[^']*'\)" e2e/ | sed -E "s/page\.goto\('(.*)'\)/\1/" | sed -E 's/\?.*//' | sort -u | wc -l) routes"
  
@@ -138,7 +153,7 @@
          run: |
            set -euo pipefail
            SERVER_PID="$(cat .e2e-server.pid 2>/dev/null || true)"
-@@ -230,6 +255,7 @@ jobs:
+@@ -230,6 +263,7 @@ jobs:
              > e2e-regression-metadata.json
  
        - name: E2E Regression Tests
@@ -146,7 +161,32 @@
          env:
            PLAYWRIGHT_HTML_REPORTER_OPEN: never
            PLAYWRIGHT_JSON_OUTPUT_NAME: e2e-regression-results.json
-@@ -260,6 +286,109 @@ jobs:
+@@ -237,15 +271,21 @@ jobs:
+           set -uo pipefail
+           PROJECT="${{ steps.select.outputs.project }}"
+           SPECS="${{ steps.select.outputs.specs }}"
++          # `cmd; STATUS=$?` loses the exit code under this step's default
++          # `bash -e` shell: a failing command aborts the script before
++          # `STATUS=$?` is reached. `cmd || STATUS=$?` keeps the compound
++          # statement's exit status 0 on failure, so `-e` never fires
++          # (wawagardenbar-app#897 — found while verifying the sharded path,
++          # same bug class applies here).
++          STATUS=0
+           if [ -n "$SPECS" ]; then
+             echo "::notice::Running scoped regression — project=$PROJECT specs=$SPECS"
+             # shellcheck disable=SC2086
+-            timeout --signal=TERM --kill-after=60s 40m npx playwright test --project="$PROJECT" --reporter=json,html $SPECS
++            timeout --signal=TERM --kill-after=60s 40m npx playwright test --project="$PROJECT" --reporter=json,html $SPECS || STATUS=$?
+           else
+             echo "::notice::Running project=$PROJECT"
+-            timeout --signal=TERM --kill-after=60s 40m npx playwright test --project="$PROJECT" --reporter=json,html
++            timeout --signal=TERM --kill-after=60s 40m npx playwright test --project="$PROJECT" --reporter=json,html || STATUS=$?
+           fi
+-          STATUS=$?
+           if [ "$STATUS" -eq 124 ]; then
+             OUTCOME="timed_out"
+             echo "::error::E2E regression exceeded its 40-minute execution budget. Partial evidence will be uploaded."
+@@ -260,6 +300,118 @@ jobs:
            mv e2e-regression-metadata.tmp e2e-regression-metadata.json
            exit "$STATUS"
  
@@ -201,12 +241,20 @@
 +                  curl -sf -o /dev/null --max-time 20 "http://localhost:3000$route" || true
 +                done
 +
++            # `cmd; STATUS=$?` loses the exit code under this step's default
++            # `bash -e` shell (GitHub Actions' default `run:` shell): a
++            # nonzero exit from the command aborts the script immediately,
++            # before `STATUS=$?` is ever reached — silently killing the loop
++            # after shard 1 every time a shard has any failing test. The
++            # `cmd || STATUS=$?` form keeps the compound statement's own
++            # exit status 0 on failure (the assignment succeeds), so `-e`
++            # never fires.
++            SHARD_STATUS=0
 +            PLAYWRIGHT_JSON_OUTPUT_NAME="e2e-regression-results-shard-$i.json" \
 +            PLAYWRIGHT_HTML_OUTPUT_DIR="playwright-report-shard-$i" \
 +              timeout --signal=TERM --kill-after=60s "${SHARD_TIMEOUT_MINUTES}m" \
 +              npx playwright test --project=regression --shard="$i/$SHARD_COUNT" \
-+                --reporter=json,html --output="test-results-shard-$i"
-+            SHARD_STATUS=$?
++                --reporter=json,html --output="test-results-shard-$i" || SHARD_STATUS=$?
 +            echo "Shard $i/$SHARD_COUNT exit status: $SHARD_STATUS"
 +
 +            echo "Stopping dev server for shard $i"
@@ -232,7 +280,8 @@
 +
 +          echo "Merging $SHARD_COUNT shard JSON reports into e2e-regression-results.json"
 +          if ls e2e-regression-results-shard-*.json >/dev/null 2>&1; then
-+            jq -s '.' e2e-regression-results-shard-*.json > e2e-regression-results.json
++            jq -s '.' e2e-regression-results-shard-*.json > e2e-regression-results.json \
++              || echo "::warning::failed to merge shard JSON reports (malformed shard output?)"
 +          fi
 +
 +          jq -n \
@@ -256,7 +305,7 @@
        - name: Stop dev server
          if: always()
          run: |
-@@ -291,6 +420,13 @@ jobs:
+@@ -291,6 +443,13 @@ jobs:
              # playwright-report/data/, accepted for the debuggability win.
              test-results/
              e2e-server.log

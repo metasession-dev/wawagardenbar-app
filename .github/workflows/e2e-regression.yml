@@ -71,16 +71,11 @@ jobs:
           - 27017:27017
 
     env:
-      MONGODB_URI: mongodb://localhost:27017
-      MONGODB_DB_NAME: wawagardenbar_test
-      # sdlc-config.json's app_env values ci.yml's smoke/critical gates
-      # already set — missing here entirely in the generated template
-      # (wawagardenbar-app#897: discovered when SESSION_PASSWORD's absence
-      # produced "iron-session: Bad usage. Missing password." on every
-      # login attempt, failing auth-setup before any regression spec runs).
       NEXT_PUBLIC_API_URL: http://localhost:3000/api
       NEXT_PUBLIC_APP_URL: http://localhost:3000
       SESSION_PASSWORD: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2
+      MONGODB_URI: mongodb://localhost:27017
+      MONGODB_DB_NAME: wawagardenbar_test
       E2E_ADMIN_USERNAME: e2e-admin
       E2E_ADMIN_PASSWORD: E2eTest@2026!
       E2E_SUPER_ADMIN_USERNAME: e2e-superadmin
@@ -112,11 +107,31 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && ' --with-deps' || '' }} chromium
 
+      - name: E2E setup
+        env:
+          MONGODB_URI: mongodb://localhost:27017
+          MONGODB_DB_NAME: wawagardenbar_test
+          E2E_ADMIN_USERNAME: e2e-admin
+          E2E_ADMIN_PASSWORD: E2eTest@2026!
+          E2E_SUPER_ADMIN_USERNAME: e2e-superadmin
+          E2E_SUPER_ADMIN_PASSWORD: E2eTest@2026!
+          E2E_CSR_USERNAME: e2e-csr
+          E2E_CSR_PASSWORD: E2eTest@2026!
+          INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
+          MONNIFY_SECRET_KEY: ${{ secrets.MONNIFY_SECRET_KEY }}
+          PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
+          ENABLE_E2E_PIN_INTERCEPT: true
+        run: |
+          npx tsx scripts/seed-e2e-admins.ts
+          npx tsx scripts/seed-food-menu.ts
+          npx tsx scripts/seed-drinks-menu.ts
+          npx tsx scripts/seed-inventory.ts
+          npx tsx scripts/seed-e2e-fixtures.ts
+
       # Decide which Playwright project to run based on the trigger, and
-      # whether this run qualifies for sharding. Moved ahead of the
-      # dev-server steps (was previously right before "Record E2E
-      # execution context") so both the unsharded and sharded paths below
-      # can branch on `steps.select.outputs.*` from the start.
+      # whether this run qualifies for sharding. Kept ahead of the
+      # dev-server steps so both the unsharded and sharded paths below can
+      # branch on `steps.select.outputs.*` from the start.
       #
       # PR-to-main runs `critical`; push/deploy-to-main runs `regression`;
       # workflow_dispatch runs regression with optional spec filter for
@@ -127,7 +142,7 @@ jobs:
       # so PR-to-main stays green. Detected via a simple grep of the
       # config file.
       #
-      # Sharding (wawagardenbar-app#897, closing #832): only the full,
+      # Sharding (wawagardenbar-app#897, closes #832): only the full,
       # unscoped `regression` run (deployment_status, or workflow_dispatch
       # with no `specs` filter) qualifies. The critical tier is already
       # fast and warmed; a scoped workflow_dispatch run is by definition
@@ -151,47 +166,47 @@ jobs:
                 echo "::warning::No 'critical' Playwright project defined; falling back to smoke."
               fi
               echo "specs=" >> "$GITHUB_OUTPUT"
-              echo "sharded=false" >> "$GITHUB_OUTPUT"
               ;;
             deployment_status)
               echo "project=regression" >> "$GITHUB_OUTPUT"
               echo "specs=" >> "$GITHUB_OUTPUT"
-              echo "sharded=true" >> "$GITHUB_OUTPUT"
-              echo "Running full regression project (sharded)"
+              echo "Running full regression project"
               ;;
             workflow_dispatch)
               echo "project=regression" >> "$GITHUB_OUTPUT"
               echo "specs=${{ github.event.inputs.specs }}" >> "$GITHUB_OUTPUT"
               if [ -n "${{ github.event.inputs.specs }}" ]; then
-                echo "sharded=false" >> "$GITHUB_OUTPUT"
                 echo "Scoped dispatch: ${{ github.event.inputs.specs }}"
+              fi
+              ;;
+          esac
+
+          # Sharding (wawagardenbar-app#897, closes #832): only the full,
+          # unscoped `regression` run (deployment_status, or workflow_dispatch
+          # with no `specs` filter) qualifies. The critical tier is already
+          # fast and warmed; a scoped workflow_dispatch run is by definition
+          # small. Neither hits the accumulated process/connection-degradation
+          # failure class #832 diagnosed (isolated reruns pass clean, no
+          # positional/host-ceiling correlation, failure rate scales with
+          # total tests executed) — see e2e-ci-reliability skill's
+          # diagnostic-playbook.md.
+          case "$EVENT" in
+            pull_request)
+              echo "sharded=false" >> "$GITHUB_OUTPUT"
+              ;;
+            deployment_status)
+              echo "sharded=true" >> "$GITHUB_OUTPUT"
+              echo "Running full regression project (sharded)"
+              ;;
+            workflow_dispatch)
+              if [ -n "${{ github.event.inputs.specs }}" ]; then
+                echo "sharded=false" >> "$GITHUB_OUTPUT"
               else
                 echo "sharded=true" >> "$GITHUB_OUTPUT"
                 echo "Unscoped dispatch — running full regression project (sharded)"
               fi
               ;;
           esac
-
-      - name: E2E setup
-        env:
-          MONGODB_URI: mongodb://localhost:27017
-          MONGODB_DB_NAME: wawagardenbar_test
-          E2E_ADMIN_USERNAME: e2e-admin
-          E2E_ADMIN_PASSWORD: E2eTest@2026!
-          E2E_SUPER_ADMIN_USERNAME: e2e-superadmin
-          E2E_SUPER_ADMIN_PASSWORD: E2eTest@2026!
-          E2E_CSR_USERNAME: e2e-csr
-          E2E_CSR_PASSWORD: E2eTest@2026!
-          INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
-          MONNIFY_SECRET_KEY: ${{ secrets.MONNIFY_SECRET_KEY }}
-          PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
-          ENABLE_E2E_PIN_INTERCEPT: true
-        run: |
-          npx tsx scripts/seed-e2e-admins.ts
-          npx tsx scripts/seed-food-menu.ts
-          npx tsx scripts/seed-drinks-menu.ts
-          npx tsx scripts/seed-inventory.ts
-          npx tsx scripts/seed-e2e-fixtures.ts
 
       - name: Start dev server
         if: steps.select.outputs.sharded != 'true'
@@ -276,8 +291,7 @@ jobs:
           # `bash -e` shell: a failing command aborts the script before
           # `STATUS=$?` is reached. `cmd || STATUS=$?` keeps the compound
           # statement's exit status 0 on failure, so `-e` never fires
-          # (wawagardenbar-app#897 — found while verifying the sharded path,
-          # same bug class applies here).
+          # (wawagardenbar-app#897).
           STATUS=0
           if [ -n "$SPECS" ]; then
             echo "::notice::Running scoped regression — project=$PROJECT specs=$SPECS"

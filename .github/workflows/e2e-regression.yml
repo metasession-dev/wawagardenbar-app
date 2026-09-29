@@ -104,6 +104,66 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && ' --with-deps' || '' }} chromium
 
+      # Decide which Playwright project to run based on the trigger, and
+      # whether this run qualifies for sharding. Moved ahead of the
+      # dev-server steps (was previously right before "Record E2E
+      # execution context") so both the unsharded and sharded paths below
+      # can branch on `steps.select.outputs.*` from the start.
+      #
+      # PR-to-main runs `critical`; push/deploy-to-main runs `regression`;
+      # workflow_dispatch runs regression with optional spec filter for
+      # scoped iteration.
+      #
+      # Fallback: if the `critical` project isn't defined in
+      # playwright.config.ts (e.g. during migration), fall back to `smoke`
+      # so PR-to-main stays green. Detected via a simple grep of the
+      # config file.
+      #
+      # Sharding (wawagardenbar-app#897, closing #832): only the full,
+      # unscoped `regression` run (deployment_status, or workflow_dispatch
+      # with no `specs` filter) qualifies. The critical tier is already
+      # fast and warmed; a scoped workflow_dispatch run is by definition
+      # small. Neither hits the accumulated process/connection-degradation
+      # failure class #832 diagnosed (isolated reruns pass clean, no
+      # positional/host-ceiling correlation, failure rate scales with
+      # total tests executed) — see e2e-ci-reliability skill's
+      # diagnostic-playbook.md.
+      - name: Determine E2E project + spec selector
+        id: select
+        run: |
+          set -euo pipefail
+          EVENT="${{ github.event_name }}"
+          case "$EVENT" in
+            pull_request)
+              if grep -qE "name:\s*['\"]critical['\"]" playwright.config.ts 2>/dev/null; then
+                echo "project=critical" >> "$GITHUB_OUTPUT"
+                echo "Using critical-tier project (smoke + e2e/critical/)"
+              else
+                echo "project=smoke" >> "$GITHUB_OUTPUT"
+                echo "::warning::No 'critical' Playwright project defined; falling back to smoke."
+              fi
+              echo "specs=" >> "$GITHUB_OUTPUT"
+              echo "sharded=false" >> "$GITHUB_OUTPUT"
+              ;;
+            deployment_status)
+              echo "project=regression" >> "$GITHUB_OUTPUT"
+              echo "specs=" >> "$GITHUB_OUTPUT"
+              echo "sharded=true" >> "$GITHUB_OUTPUT"
+              echo "Running full regression project (sharded)"
+              ;;
+            workflow_dispatch)
+              echo "project=regression" >> "$GITHUB_OUTPUT"
+              echo "specs=${{ github.event.inputs.specs }}" >> "$GITHUB_OUTPUT"
+              if [ -n "${{ github.event.inputs.specs }}" ]; then
+                echo "sharded=false" >> "$GITHUB_OUTPUT"
+                echo "Scoped dispatch: ${{ github.event.inputs.specs }}"
+              else
+                echo "sharded=true" >> "$GITHUB_OUTPUT"
+                echo "Unscoped dispatch — running full regression project (sharded)"
+              fi
+              ;;
+          esac
+
       - name: E2E setup
         env:
           MONGODB_URI: mongodb://localhost:27017
@@ -125,6 +185,7 @@ jobs:
           npx tsx scripts/seed-inventory.ts
 
       - name: Start dev server
+        if: steps.select.outputs.sharded != 'true'
         run: |
           set -euo pipefail
           npm run dev > e2e-server.log 2>&1 &
@@ -132,12 +193,14 @@ jobs:
           echo "Started E2E server pid $(cat .e2e-server.pid)"
 
       - name: Wait for dev server
+        if: steps.select.outputs.sharded != 'true'
         # `wait-on` owns its internal readiness budget, but a process-level
         # deadline is needed so a hung child cannot leave the required check
         # in progress until the job-level timeout.
         run: timeout --signal=TERM --kill-after=15s 150s npx wait-on http://localhost:3000 --timeout 120000
 
       - name: Warm up dev-compiled routes
+        if: steps.select.outputs.sharded != 'true'
         # DevAudit-Installer#793/#820/#821 — the full critical/regression
         # tier hammers rarely-hit routes that `npm run dev`-equivalent
         # servers JIT-compile on first request. That cold-compile tax
@@ -175,46 +238,8 @@ jobs:
               done
           echo "Warmed $(grep -ohrE "page\.goto\('/[^']*'\)" e2e/ | sed -E "s/page\.goto\('(.*)'\)/\1/" | sed -E 's/\?.*//' | sort -u | wc -l) routes"
 
-      # Decide which Playwright project to run based on the trigger.
-      # PR-to-main runs `critical`; push/deploy-to-main runs `regression`;
-      # workflow_dispatch runs regression with optional spec filter for
-      # scoped iteration.
-      #
-      # Fallback: if the `critical` project isn't defined in
-      # playwright.config.ts (e.g. during migration), fall back to `smoke`
-      # so PR-to-main stays green. Detected via a simple grep of the
-      # config file.
-      - name: Determine E2E project + spec selector
-        id: select
-        run: |
-          set -euo pipefail
-          EVENT="${{ github.event_name }}"
-          case "$EVENT" in
-            pull_request)
-              if grep -qE "name:\s*['\"]critical['\"]" playwright.config.ts 2>/dev/null; then
-                echo "project=critical" >> "$GITHUB_OUTPUT"
-                echo "Using critical-tier project (smoke + e2e/critical/)"
-              else
-                echo "project=smoke" >> "$GITHUB_OUTPUT"
-                echo "::warning::No 'critical' Playwright project defined; falling back to smoke."
-              fi
-              echo "specs=" >> "$GITHUB_OUTPUT"
-              ;;
-            deployment_status)
-              echo "project=regression" >> "$GITHUB_OUTPUT"
-              echo "specs=" >> "$GITHUB_OUTPUT"
-              echo "Running full regression project"
-              ;;
-            workflow_dispatch)
-              echo "project=regression" >> "$GITHUB_OUTPUT"
-              echo "specs=${{ github.event.inputs.specs }}" >> "$GITHUB_OUTPUT"
-              if [ -n "${{ github.event.inputs.specs }}" ]; then
-                echo "Scoped dispatch: ${{ github.event.inputs.specs }}"
-              fi
-              ;;
-          esac
-
       - name: Record E2E execution context
+        if: steps.select.outputs.sharded != 'true'
         run: |
           set -euo pipefail
           SERVER_PID="$(cat .e2e-server.pid 2>/dev/null || true)"
@@ -230,6 +255,7 @@ jobs:
             > e2e-regression-metadata.json
 
       - name: E2E Regression Tests
+        if: steps.select.outputs.sharded != 'true'
         env:
           PLAYWRIGHT_HTML_REPORTER_OPEN: never
           PLAYWRIGHT_JSON_OUTPUT_NAME: e2e-regression-results.json
@@ -259,6 +285,109 @@ jobs:
             e2e-regression-metadata.json > e2e-regression-metadata.tmp
           mv e2e-regression-metadata.tmp e2e-regression-metadata.json
           exit "$STATUS"
+
+      # Sharded full-regression run (wawagardenbar-app#897, closes #832).
+      #
+      # #832 diagnosed the unsharded 576-test/38-min single-worker run as
+      # accumulated process/connection-degradation: a different unrelated
+      # spec fails each run, isolated reruns of the same specs pass clean
+      # 3/3, and the failure rate (~33-50% across repeated full runs) scales
+      # with total tests executed rather than correlating with a specific
+      # position or a host resource ceiling. Sharding — restarting the dev
+      # server fresh between shards — breaks the long-lived-process/
+      # connection-pool pattern without the added cost of a DB reset per
+      # shard (the lighter fix; see e2e-ci-reliability's reliability-fixes.md).
+      #
+      # SHARD_COUNT=4 / ~12min-per-shard budget is a starting point (per the
+      # skill's own guidance), not a hard rule — tune against actual
+      # per-shard wall-clock once this has run for real. Only self-contained
+      # in one job step (a loop, not a GitHub Actions matrix) so the
+      # existing evidence-upload and auto-issue-filing steps below don't
+      # need a parallel-job redesign.
+      - name: Run sharded E2E regression (N shards)
+        if: steps.select.outputs.sharded == 'true'
+        env:
+          PLAYWRIGHT_HTML_REPORTER_OPEN: never
+          SHARD_COUNT: 4
+          SHARD_TIMEOUT_MINUTES: 12
+        run: |
+          set -uo pipefail
+          STARTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          OVERALL_STATUS=0
+          OVERALL_OUTCOME="passed"
+
+          for i in $(seq 1 "$SHARD_COUNT"); do
+            echo "::group::Shard $i/$SHARD_COUNT"
+
+            echo "Starting dev server for shard $i"
+            npm run dev > "e2e-server-shard-$i.log" 2>&1 &
+            echo "$!" > .e2e-server.pid
+            echo "Started E2E server pid $(cat .e2e-server.pid) for shard $i"
+
+            timeout --signal=TERM --kill-after=15s 150s npx wait-on http://localhost:3000 --timeout 120000
+
+            # Same route-warm-up as the unsharded path (DevAudit-Installer#793)
+            # — each shard gets a fresh dev-server process, so the JIT
+            # cold-compile tax applies per shard, not just once per job.
+            grep -ohrE "page\.goto\('/[^']*'\)" e2e/ \
+              | sed -E "s/page\.goto\('(.*)'\)/\1/" \
+              | sed -E 's/\?.*//' \
+              | sort -u \
+              | while read -r route; do
+                  curl -sf -o /dev/null --max-time 20 "http://localhost:3000$route" || true
+                done
+
+            PLAYWRIGHT_JSON_OUTPUT_NAME="e2e-regression-results-shard-$i.json" \
+            PLAYWRIGHT_HTML_OUTPUT_DIR="playwright-report-shard-$i" \
+              timeout --signal=TERM --kill-after=60s "${SHARD_TIMEOUT_MINUTES}m" \
+              npx playwright test --project=regression --shard="$i/$SHARD_COUNT" \
+                --reporter=json,html --output="test-results-shard-$i"
+            SHARD_STATUS=$?
+            echo "Shard $i/$SHARD_COUNT exit status: $SHARD_STATUS"
+
+            echo "Stopping dev server for shard $i"
+            if [ -f .e2e-server.pid ]; then
+              PID="$(cat .e2e-server.pid)"
+              if kill -0 "$PID" 2>/dev/null; then
+                kill "$PID"
+                wait "$PID" 2>/dev/null || true
+              fi
+              rm -f .e2e-server.pid
+            fi
+
+            if [ "$SHARD_STATUS" -eq 124 ]; then
+              OVERALL_OUTCOME="timed_out"
+              OVERALL_STATUS=124
+              echo "::error::Shard $i/$SHARD_COUNT exceeded its ${SHARD_TIMEOUT_MINUTES}-minute execution budget."
+            elif [ "$SHARD_STATUS" -ne 0 ] && [ "$OVERALL_STATUS" -ne 124 ]; then
+              OVERALL_OUTCOME="failed"
+              OVERALL_STATUS=1
+            fi
+            echo "::endgroup::"
+          done
+
+          echo "Merging $SHARD_COUNT shard JSON reports into e2e-regression-results.json"
+          if ls e2e-regression-results-shard-*.json >/dev/null 2>&1; then
+            jq -s '.' e2e-regression-results-shard-*.json > e2e-regression-results.json
+          fi
+
+          jq -n \
+            --arg targetUrl "http://localhost:3000" \
+            --arg project "regression" \
+            --arg specs "" \
+            --argjson sharded true \
+            --argjson shardCount "$SHARD_COUNT" \
+            --arg serverStart "npm run dev, restarted per shard" \
+            --arg serverStop "killed per shard" \
+            --arg startedAt "$STARTED_AT" \
+            --arg completedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --argjson timeoutMinutes "$((SHARD_COUNT * SHARD_TIMEOUT_MINUTES))" \
+            --arg outcome "$OVERALL_OUTCOME" \
+            --argjson exitCode "$OVERALL_STATUS" \
+            '{target_url: $targetUrl, project: $project, selected_specs: $specs, sharded: $sharded, shard_count: $shardCount, test_server_start: $serverStart, test_server_stop: $serverStop, timeout_minutes: $timeoutMinutes, started_at: $startedAt, completed_at: $completedAt, outcome: $outcome, exit_code: $exitCode}' \
+            > e2e-regression-metadata.json
+
+          exit "$OVERALL_STATUS"
 
       - name: Stop dev server
         if: always()
@@ -291,6 +420,13 @@ jobs:
             # playwright-report/data/, accepted for the debuggability win.
             test-results/
             e2e-server.log
+            # Sharded-run shapes (wawagardenbar-app#897) — same rationale as
+            # above, per shard, since a sharded run never writes the
+            # unsharded paths above.
+            playwright-report-shard-*/
+            test-results-shard-*/
+            e2e-regression-results-shard-*.json
+            e2e-server-shard-*.log
           if-no-files-found: warn
           retention-days: 30
 

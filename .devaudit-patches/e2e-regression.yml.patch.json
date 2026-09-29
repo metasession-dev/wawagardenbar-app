@@ -1,0 +1,4 @@
+{
+  "upstream_issue": "https://github.com/metasession-dev/wawagardenbar-app/issues/897",
+  "reason": "Shards the full, unscoped `regression` Playwright project (deployment_status trigger, or unscoped workflow_dispatch) into 4 shards, restarting the dev server between each, per the e2e-ci-reliability skill's diagnostic playbook. wawagardenbar-app#832 diagnosed the unsharded 576-test/38-min single-worker run as accumulated process/connection-degradation (isolated reruns pass clean 3/3, no positional/host-ceiling correlation, ~33-50% intermittent failure rate scaling with total tests executed). The critical tier (PR-to-main) and scoped workflow_dispatch runs are left unsharded — both are already small/fast and don't hit this failure class. This is repo-specific tuning (SHARD_COUNT=4, ~12min/shard) on top of the generated template, not yet a generalized DevAudit-Installer feature; re-roll against upstream if/when the generator grows native sharding support."
+}

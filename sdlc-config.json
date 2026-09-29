@@ -51,7 +51,9 @@
   "uat": {
     "enabled": true,
     "url": "https://wawagardenbar-app-uat.up.railway.app/",
-    "required_risk_classes": ["*"]
+    "required_risk_classes": [
+      "*"
+    ]
   },
   "approval": {
     "mode": "dual_actor",
@@ -75,5 +77,6 @@
   },
   "integration_branch": "develop",
   "release_branch": "main",
-  "devaudit_synced_version": "1.6.0"
+  "devaudit_synced_version": "1.7.1",
+  "e2e_regression_enabled": true
 }

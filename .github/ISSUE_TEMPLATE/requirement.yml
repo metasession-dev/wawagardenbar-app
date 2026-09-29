@@ -1,7 +1,7 @@
 name: Requirement
 description: A new feature, enhancement, or significant change. Goes through full SDLC stages 1–5.
-title: '[REQ] <one-line summary>'
-labels: ['requirement', 'needs-triage']
+title: "[REQ] <one-line summary>"
+labels: ["requirement", "needs-triage"]
 body:
   - type: markdown
     attributes:
@@ -37,13 +37,13 @@ body:
     id: suspected_risk
     attributes:
       label: Suspected risk class
-      description: 'Per Test_Policy.md §Risk-Based Testing. Final classification happens in stage 1; this is your first-cut signal.'
+      description: "Per Test_Policy.md §Risk-Based Testing. Final classification happens in stage 1; this is your first-cut signal."
       options:
-        - 'LOW — UI polish, low-traffic admin tooling, no security/data/payment surface'
-        - 'MEDIUM — new feature, integration, refactor with user-visible effect'
-        - 'HIGH — auth, payments, RBAC, evidence/audit storage, third-party data egress'
-        - 'CRITICAL — regulated data, AI making decisions about people, production infra'
-        - 'Unsure — defer to stage-1 plan to classify'
+        - "LOW — UI polish, low-traffic admin tooling, no security/data/payment surface"
+        - "MEDIUM — new feature, integration, refactor with user-visible effect"
+        - "HIGH — auth, payments, RBAC, evidence/audit storage, third-party data egress"
+        - "CRITICAL — regulated data, AI making decisions about people, production infra"
+        - "Unsure — defer to stage-1 plan to classify"
     validations:
       required: true
 

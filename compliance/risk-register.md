@@ -348,6 +348,52 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 
 ---
 
+### R-034 — `csr` granted destructive tab/order-management actions previously restricted to admin/super-admin
+
+**Status:** ACCEPTED
+**Opened:** 2026-09-29 (REQ-109)
+**Owner:** WGB maintainer
+**Review due:** 2027-09-29 (annual review)
+
+**The risk:** REQ-109 widens `csr`'s server-side role checks to match `admin`/`super-admin` across `app/actions/admin/express-actions.ts`, `app/actions/tabs/tab-actions.ts`, and `app/actions/admin/order-management-actions.ts`, so `csr` can now call `deleteOrderAction`, `deleteTabAction`'s general (non-override) path, and `writeOffTabAction` — actions previously restricted to `admin`/`super-admin` only. This is an intentional scope decision (issue [#902](https://github.com/metasession-dev/wawagardenbar-app/issues/902), operator-confirmed), not an oversight, but it is a genuine, real increase in what a `csr` account can do to financial/order records if that account is compromised or misused.
+
+**Mitigations applied in this REQ:**
+
+1. Scope is deliberately narrow: only the general (non-override) delete/write-off/cancel paths are widened; `deleteTabAction`'s `superAdminOverride` path is explicitly excluded and remains `super-admin`-only (see R-035 for the regression risk this could be accidentally loosened too, and its mitigation).
+2. Every widened action already writes to `AuditLogService` (unchanged by this REQ) — `csr`-performed deletions, write-offs, and cancellations remain individually attributable by actor, action, and timestamp in the existing audit log, so misuse is detectable after the fact even though not prevented up front.
+3. `csr` already had read access to the same tabs/orders data via the dashboard's other cards (Tabs Display, Kitchen Display) before this REQ — this REQ lets `csr` _act_ on data it could already see, not see new data.
+
+**Residual likelihood × impact:** low × medium (likelihood is low — this requires a `csr` account to be compromised or a `csr` staff member to act maliciously/carelessly, and the action is logged; impact if it did occur is real — a wrongly deleted order or written-off tab affects financial reporting and requires manual correction).
+
+**Framework cross-references:** SOC2.CC6.1 (logical access — role-based restriction of destructive actions); SOC2.CC7.2 (system monitoring — audit-log attribution as the compensating control).
+
+**Cross-links:** [REQ-109 implementation plan](plans/REQ-109/implementation-plan.md); [#902](https://github.com/metasession-dev/wawagardenbar-app/issues/902); SRS REQ-ORDMGT-018, REQ-TABMGT-010.
+
+---
+
+### R-035 — Role-guard widening for `csr` could accidentally also loosen the `super-admin`-only delete-tab override
+
+**Status:** MITIGATED
+**Opened:** 2026-09-29 (REQ-109)
+**Owner:** WGB maintainer
+**Review due:** 2027-09-29 (annual review)
+
+**The risk:** REQ-109 edits allowed-role string arrays/checks in up to ten call sites across three action files to admit `csr`. `deleteTabAction` (`app/actions/tabs/tab-actions.ts`) has two independent role checks — a general check (widened to admit `csr`, per R-034) and a separate `superAdminOverride` check (`session.role !== 'super-admin'`) gating a more privileged path (bypassing closed/paid guards, with inventory/payment revert). A careless edit could merge or conflate the two checks, accidentally admitting `csr` or `admin` into the override path. A related, lower-probability risk: a typo in any of the widened checks could admit a role beyond `csr` (e.g. `customer`).
+
+**Mitigations applied in this REQ:**
+
+1. The two `deleteTabAction` checks are edited independently — the general check's allowed-roles list gains `csr`; the `superAdminOverride` check (`tab-actions.ts:674`) is explicitly left untouched, verified by diff review.
+2. AC7 (implementation plan §1) adds an explicit regression test asserting `csr` and `admin` are both rejected when `superAdminOverride: true` is passed — this is a permanent regression guard, not a one-time review.
+3. Every other widened check is a small, independently reviewable one-line edit (adding `'csr'` to an existing array/condition); unit/integration tests assert `customer`-role and unauthenticated callers remain rejected on every widened action.
+
+**Residual likelihood × impact:** low × high (the explicit AC7 regression test substantially reduces likelihood of this shipping or persisting undetected; impact would be high if it did — the override path bypasses financial guards intentionally reserved for the most trusted role).
+
+**Framework cross-references:** SOC2.CC6.1 (logical access — segregation between general and privileged-override permission tiers); ISO27001.A.8.25 (secure SDLC — regression test as a durable control against future re-introduction).
+
+**Cross-links:** [REQ-109 implementation plan](plans/REQ-109/implementation-plan.md); [#902](https://github.com/metasession-dev/wawagardenbar-app/issues/902); SRS REQ-TABMGT-010, REQ-TABMGT-004 (unchanged override behaviour).
+
+---
+
 ## Closed
 
 ### R-002 — `xlsx` (SheetJS) high advisory — CLOSED (REQ-041, 2026-05-24)

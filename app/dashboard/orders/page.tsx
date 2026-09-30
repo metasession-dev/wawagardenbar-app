@@ -4,7 +4,6 @@ import { getCurrentSession } from '@/lib/auth-middleware';
 import { getOrdersAction } from '@/app/actions/admin/order-management-actions';
 import { OrderQueue } from '@/components/features/admin/order-queue';
 import { OrderStats } from '@/components/features/admin/order-stats';
-import { CreateTabDialog } from '@/components/features/admin/tabs/create-tab-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Card,
@@ -19,8 +18,6 @@ import {
   Receipt,
   ArrowRight,
   ShoppingBag,
-  PlusCircle,
-  FilePlus,
   ClipboardList,
   Plus,
   XCircle,
@@ -205,67 +202,6 @@ export default async function OrdersPage() {
                 </CardTitle>
                 <CardDescription>
                   Review and adjust daily inventory counts.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-        <div className="grid gap-4 md:grid-cols-3">
-          {/* Open a Order */}
-          <Link href="/menu">
-            <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full border-l-4 border-l-purple-500">
-              <CardHeader>
-                <CardTitle className="flex items-center text-lg">
-                  <ShoppingBag className="h-5 w-5 mr-2 text-purple-500" />
-                  Open a Order
-                  <ArrowRight className="ml-auto h-4 w-4 opacity-50" />
-                </CardTitle>
-                <CardDescription>
-                  Start a new takeaway or quick order for a customer.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
-
-          {/* Open a New Tab */}
-          <CreateTabDialog
-            trigger={
-              <Card
-                role="button"
-                tabIndex={0}
-                className="hover:bg-accent/50 transition-colors cursor-pointer h-full border-l-4 border-l-indigo-500 w-full text-left"
-              >
-                <CardHeader>
-                  <CardTitle className="flex items-center text-lg">
-                    <PlusCircle className="h-5 w-5 mr-2 text-indigo-500" />
-                    Open a New Tab
-                    <ArrowRight className="ml-auto h-4 w-4 opacity-50" />
-                  </CardTitle>
-                  <CardDescription>
-                    Create a new tab for a table. Cannot be created for existing
-                    tables.
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            }
-          />
-
-          {/* Add to Existing Tab */}
-          <Link href="/dashboard/orders/tabs">
-            <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full border-l-4 border-l-cyan-500">
-              <CardHeader>
-                <CardTitle className="flex items-center text-lg">
-                  <FilePlus className="h-5 w-5 mr-2 text-cyan-500" />
-                  Add to Existing Tab
-                  <ArrowRight className="ml-auto h-4 w-4 opacity-50" />
-                </CardTitle>
-                <CardDescription>
-                  Find an open tab to add new orders to it.
                 </CardDescription>
               </CardHeader>
             </Card>

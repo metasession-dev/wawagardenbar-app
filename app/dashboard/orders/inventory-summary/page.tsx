@@ -8,9 +8,16 @@ import { InventorySummaryClient } from '@/components/features/inventory/inventor
 
 export default async function InventorySummaryPage() {
   const cookieStore = await cookies();
-  const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+  const session = await getIronSession<SessionData>(
+    cookieStore,
+    sessionOptions
+  );
 
-  if (!session.userId || !session.role || !['admin', 'super-admin'].includes(session.role)) {
+  if (
+    !session.userId ||
+    !session.role ||
+    !['csr', 'admin', 'super-admin'].includes(session.role)
+  ) {
     redirect('/dashboard');
   }
 

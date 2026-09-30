@@ -2,6 +2,7 @@ import { test as base, expect, Page } from '@playwright/test';
 import path from 'path';
 import { tagTest } from './helpers/test-tags';
 import { evidenceShot } from './helpers/evidence';
+import { csrTest } from './kitchen/helpers';
 
 /**
  * E2E Tests — REQ-007: Authenticated Feature Verification
@@ -13,6 +14,8 @@ import { evidenceShot } from './helpers/evidence';
  * or credentials are missing from env, tests skip gracefully.
  *
  * @requirement REQ-007 - Comprehensive Requirements Document
+ * @requirement REQ-109 - Remove Quick Actions from staff dashboard; csr
+ * gets Admin Order Management parity with admin/super-admin.
  */
 
 // ---------------------------------------------------------------------------
@@ -57,6 +60,17 @@ superAdminTest.beforeEach(async ({ page }, testInfo) => {
     testInfo.skip(
       true,
       'Super-admin login failed or credentials not configured — skipping'
+    );
+  }
+});
+
+// csrTest is shared from e2e/kitchen/helpers.ts (REQ-109 — csr now has
+// Admin Order Management parity with admin/super-admin).
+csrTest.beforeEach(async ({ page }, testInfo) => {
+  if (!(await isAuthenticated(page))) {
+    testInfo.skip(
+      true,
+      'CSR login failed or credentials not configured — skipping'
     );
   }
 });
@@ -164,20 +178,23 @@ adminTest.describe('Section 12: Order Management', () => {
   });
 
   adminTest(
-    'orders page shows Admin Order Management and Quick Actions sections',
+    'orders page shows Admin Order Management section; Quick Actions is gone (REQ-109)',
     async ({ page }) => {
-      tagTest('REQ-086', [1, 2, 3, 6]);
+      tagTest('REQ-086', [1, 2]);
+      tagTest('REQ-109', [1, 2]);
       await page.goto('/dashboard/orders');
       await page.waitForLoadState('networkidle');
       await expect(page.locator('text=Admin Order Management')).toBeVisible();
-      await expect(page.locator('text=Quick Actions')).toBeVisible();
+      // REQ-109 — Quick Actions was removed entirely; it must never render
+      // for any staff role.
+      await expect(page.locator('text=Quick Actions')).toHaveCount(0);
       const body = await page.textContent('body');
-      expect(body).toContain('Open a Order');
-      expect(body).toContain('Open a New Tab');
-      expect(body).toContain('Add to Existing Tab');
       expect(body).toContain('Inventory Summary');
       expect(body).toContain('Create a new Tab');
       expect(body).toContain('Close a Tab');
+      // The three Quick Actions cards must not be present either.
+      expect(body).not.toContain('Open a New Tab');
+      expect(body).not.toContain('Add to Existing Tab');
       await evidenceShot(page, 'REQ-086', 1, 'admin-order-management-heading');
       await evidenceShot(
         page,
@@ -185,7 +202,7 @@ adminTest.describe('Section 12: Order Management', () => {
         2,
         'inventory-summary-in-admin-section'
       );
-      await evidenceShot(page, 'REQ-086', 3, 'quick-actions-cards');
+      await evidenceShot(page, 'REQ-109', 1, 'quick-actions-absent-admin');
     }
   );
 });
@@ -203,8 +220,39 @@ superAdminTest.describe(
         expect(body).toContain('sales performance');
       }
     );
+
+    superAdminTest(
+      'Quick Actions is gone for super-admin too (REQ-109 AC1)',
+      async ({ page }) => {
+        tagTest('REQ-109', 1);
+        await page.goto('/dashboard/orders');
+        await page.waitForLoadState('networkidle');
+        await expect(page.locator('text=Quick Actions')).toHaveCount(0);
+      }
+    );
   }
 );
+
+// ===========================================================================
+// Section 12: Order Management — CSR parity (REQ-109)
+// ===========================================================================
+csrTest.describe('Section 12: Order Management — CSR Parity (REQ-109)', () => {
+  csrTest(
+    'csr sees Admin Order Management (not Quick Actions) on the orders dashboard',
+    async ({ page }) => {
+      tagTest('REQ-109', [1, 2]);
+      await page.goto('/dashboard/orders');
+      await page.waitForLoadState('networkidle');
+      await expect(page.locator('text=Admin Order Management')).toBeVisible();
+      await expect(page.locator('text=Quick Actions')).toHaveCount(0);
+      const body = await page.textContent('body');
+      expect(body).toContain('Create a new Tab');
+      expect(body).toContain('Create a new Order');
+      expect(body).toContain('Close a Tab');
+      await evidenceShot(page, 'REQ-109', 2, 'csr-sees-admin-order-management');
+    }
+  );
+});
 
 // ===========================================================================
 // Section 8: Tab Management (Admin)

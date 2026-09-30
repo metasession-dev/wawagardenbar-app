@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-109",
+  "ac": 7,
+  "slug": "csr-delete-override-blocked",
+  "specFile": "e2e/critical/csr-order-tab-parity-req109.spec.ts",
+  "capturedAt": "2026-09-30T01:22:00.634Z"
+}

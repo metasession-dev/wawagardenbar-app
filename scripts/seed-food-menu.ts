@@ -8,7 +8,16 @@
 
 import { config } from 'dotenv';
 const result = config({ path: '.env.local' });
-if (result.error && !process.env.MONGODB_WAWAGARDENBAR_APP_URI) {
+// lib/mongodb.ts accepts either MONGODB_URI or MONGODB_WAWAGARDENBAR_APP_URI
+// (see its `process.env.MONGODB_URI || process.env.MONGODB_WAWAGARDENBAR_APP_URI`
+// fallback) — this guard must recognize both, or a CI workflow that only sets
+// MONGODB_URI (e.g. e2e-regression.yml) fails here before ever reaching
+// connectDB.
+if (
+  result.error &&
+  !process.env.MONGODB_WAWAGARDENBAR_APP_URI &&
+  !process.env.MONGODB_URI
+) {
   console.error('⚠️  Environment variables not set');
   process.exit(1);
 }

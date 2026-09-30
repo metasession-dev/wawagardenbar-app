@@ -42,7 +42,7 @@ async function requireAdminSession(): Promise<SessionData> {
 
   if (
     !session.userId ||
-    !['admin', 'super-admin'].includes(session.role as string)
+    !['csr', 'admin', 'super-admin'].includes(session.role as string)
   ) {
     throw new Error('Unauthorized');
   }

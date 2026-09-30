@@ -62,7 +62,7 @@ export async function getOrdersAction(
     if (
       !session.userId ||
       !session.role ||
-      !['admin', 'super-admin', 'kitchen-staff'].includes(session.role)
+      !['csr', 'admin', 'super-admin', 'kitchen-staff'].includes(session.role)
     ) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -206,7 +206,7 @@ export async function getOrderDetailsAction(
     if (
       !session.userId ||
       !session.role ||
-      !['admin', 'super-admin', 'kitchen-staff'].includes(session.role)
+      !['csr', 'admin', 'super-admin', 'kitchen-staff'].includes(session.role)
     ) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -294,7 +294,7 @@ export async function updateOrderStatusAction(
     if (
       !session.userId ||
       !session.role ||
-      !['admin', 'super-admin', 'kitchen-staff'].includes(session.role)
+      !['csr', 'admin', 'super-admin', 'kitchen-staff'].includes(session.role)
     ) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -464,7 +464,7 @@ export async function batchUpdateOrdersAction(
     if (
       !session.userId ||
       !session.role ||
-      !['admin', 'super-admin'].includes(session.role)
+      !['csr', 'admin', 'super-admin'].includes(session.role)
     ) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -566,7 +566,7 @@ export async function cancelOrderAction(
     if (
       !session.userId ||
       !session.role ||
-      !['admin', 'super-admin'].includes(session.role)
+      !['csr', 'admin', 'super-admin'].includes(session.role)
     ) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -705,7 +705,11 @@ export async function deleteOrderAction(
       };
     }
 
-    if (session.role !== 'admin' && session.role !== 'super-admin') {
+    if (
+      session.role !== 'csr' &&
+      session.role !== 'admin' &&
+      session.role !== 'super-admin'
+    ) {
       return {
         success: false,
         error: 'Insufficient permissions',
@@ -751,7 +755,7 @@ export async function addOrderNoteAction(
     if (
       !session.userId ||
       !session.role ||
-      !['admin', 'super-admin', 'kitchen-staff'].includes(session.role)
+      !['csr', 'admin', 'super-admin', 'kitchen-staff'].includes(session.role)
     ) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -839,7 +843,7 @@ export async function toggleOrderReconciliationAction(
     if (
       !session.userId ||
       !session.role ||
-      !['admin', 'super-admin'].includes(session.role)
+      !['csr', 'admin', 'super-admin'].includes(session.role)
     ) {
       return { success: false, error: 'Unauthorized' };
     }

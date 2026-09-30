@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-109",
+  "ac": 6,
+  "slug": "csr-delete-order-succeeds",
+  "specFile": "e2e/critical/csr-order-tab-parity-req109.spec.ts",
+  "capturedAt": "2026-09-30T01:21:56.039Z"
+}

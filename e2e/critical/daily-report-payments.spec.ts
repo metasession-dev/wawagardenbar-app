@@ -8,6 +8,8 @@
 import { test as base, expect, Page } from '@playwright/test';
 import path from 'path';
 import { waitForAuthLoaded } from '../helpers/customer-auth';
+import { withMongo } from '../helpers/db-assertions';
+import { ObjectId } from 'mongodb';
 
 const ADMIN_FILE = path.join(__dirname, '../../.auth/admin.json');
 
@@ -36,6 +38,42 @@ async function isAuthenticated(page: Page): Promise<boolean> {
 function parseNGN(text: string): number {
   const match = text.match(/(?:₦|NGN)\s*([\d,]+(?:\.\d{2})?)/);
   return match ? parseFloat(match[1].replace(/,/g, '')) : 0;
+}
+
+/**
+ * Create a tab for the given table via the Express create-tab flow
+ * (`createAdminTabAction`), returning the new tab's ID.
+ *
+ * REQ-109 removed the "Quick Actions" → "Open a New Tab" dialog this
+ * helper used to drive (`CreateTabDialog`, now orphaned/deleted) — the
+ * underlying action is unchanged, only the UI entry point moved.
+ */
+async function expressCreateTabForTable(
+  page: Page,
+  tableNumber: string
+): Promise<string> {
+  await page.goto('/dashboard/orders/express/create-tab');
+  await page.waitForLoadState('networkidle');
+
+  await expect(page.locator('#tableNumber')).toBeVisible({ timeout: 10000 });
+  await page.locator('#tableNumber').fill(tableNumber);
+  await page.getByRole('button', { name: 'Create Tab' }).click();
+
+  await expect(
+    page.getByRole('main').getByText('Tab Created', { exact: true })
+  ).toBeVisible({ timeout: 10000 });
+
+  // The "done" screen offers no direct link to the tab detail page — look
+  // the tab up by tableNumber (same pattern used elsewhere in this suite).
+  const tab = await withMongo<{ _id: ObjectId } | null>((db) =>
+    db.collection('tabs').findOne({ tableNumber, status: 'open' })
+  );
+  const tabId = tab?._id ? String(tab._id) : '';
+  expect(tabId).toBeTruthy();
+
+  await page.goto(`/dashboard/orders/tabs/${tabId}`);
+  await page.waitForLoadState('networkidle');
+  return tabId;
 }
 
 /**
@@ -101,26 +139,9 @@ test.describe
   });
 
   test('create tab and add order', async ({ page }) => {
-    // ── Create tab ────────────────────────────────────────────
-    await page.goto('/dashboard/orders');
-    await page.waitForLoadState('networkidle');
-
-    // Scope both controls by their accessible names. The broad text locator
-    // could resolve before the intended card/dialog was ready.
-    await page.getByRole('button', { name: /Open a New Tab/ }).click();
-    const createDialog = page.getByRole('dialog', { name: 'Create New Tab' });
-    await expect(createDialog).toBeVisible();
-    await createDialog.getByLabel('Table Number').fill(TEST_TABLE);
-    await createDialog.getByRole('button', { name: 'Create Tab' }).click();
-
-    // Redirect to tab details page — capture tab ID
-    await page.waitForURL(/\/dashboard\/orders\/tabs\/[a-f0-9]+/, {
-      timeout: 10000,
-    });
-    const urlMatch = page.url().match(/\/tabs\/([a-f0-9]+)/);
-    tabId = urlMatch?.[1] ?? '';
+    // ── Create tab (Express flow — REQ-109 removed Quick Actions) ──
+    tabId = await expressCreateTabForTable(page, TEST_TABLE);
     expect(tabId).toBeTruthy();
-    await page.waitForLoadState('networkidle');
 
     // ── Navigate to menu ──────────────────────────────────────
     await page.goto(`/menu?tableNumber=${TEST_TABLE}`);
@@ -335,23 +356,9 @@ test.describe
   });
 
   test('create tab, add order, record partial payment', async ({ page }) => {
-    // ── Create tab ────────────────────────────────────────────
-    await page.goto('/dashboard/orders');
-    await page.waitForLoadState('networkidle');
-
-    await page.getByRole('button', { name: /Open a New Tab/ }).click();
-    const createDialog = page.getByRole('dialog', { name: 'Create New Tab' });
-    await expect(createDialog).toBeVisible();
-    await createDialog.getByLabel('Table Number').fill(TEST_TABLE_OPEN);
-    await createDialog.getByRole('button', { name: 'Create Tab' }).click();
-
-    await page.waitForURL(/\/dashboard\/orders\/tabs\/[a-f0-9]+/, {
-      timeout: 10000,
-    });
-    const urlMatch = page.url().match(/\/tabs\/([a-f0-9]+)/);
-    openTabId = urlMatch?.[1] ?? '';
+    // ── Create tab (Express flow — REQ-109 removed Quick Actions) ──
+    openTabId = await expressCreateTabForTable(page, TEST_TABLE_OPEN);
     expect(openTabId).toBeTruthy();
-    await page.waitForLoadState('networkidle');
 
     // ── Add order via menu ────────────────────────────────────
     await page.goto(`/menu?tableNumber=${TEST_TABLE_OPEN}`);

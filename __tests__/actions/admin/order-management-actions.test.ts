@@ -196,6 +196,54 @@ describe('REQ-096: deleteOrderAction role gate — AC2', () => {
     });
   });
 
+  it('allows csr to delete without override (REQ-109 AC6)', async () => {
+    mockGetIronSession.mockResolvedValue({
+      isLoggedIn: true,
+      userId: 'csr-1',
+      role: 'csr',
+      email: 'csr@wgb.test',
+    });
+
+    const result = await deleteOrderAction('order-1');
+
+    expect(result.success).toBe(true);
+    expect(mockDeleteOrder).toHaveBeenCalledWith('order-1', 'csr-1', {
+      deletedByEmail: 'csr@wgb.test',
+    });
+  });
+
+  it('rejects an override attempt from csr, regardless of client input (REQ-109 AC7)', async () => {
+    mockGetIronSession.mockResolvedValue({
+      isLoggedIn: true,
+      userId: 'csr-1',
+      role: 'csr',
+    });
+
+    const result = await deleteOrderAction('order-1', {
+      superAdminOverride: true,
+      revertInventory: true,
+      revertPayment: true,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/only super-admin/i);
+    expect(mockDeleteOrder).not.toHaveBeenCalled();
+  });
+
+  it('rejects a customer role (non-staff)', async () => {
+    mockGetIronSession.mockResolvedValue({
+      isLoggedIn: true,
+      userId: 'customer-1',
+      role: 'customer',
+    });
+
+    const result = await deleteOrderAction('order-1');
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/insufficient permissions/i);
+    expect(mockDeleteOrder).not.toHaveBeenCalled();
+  });
+
   it('allows a super-admin override with revert choices', async () => {
     mockGetIronSession.mockResolvedValue({
       isLoggedIn: true,

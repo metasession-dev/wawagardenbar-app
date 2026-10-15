@@ -51,7 +51,9 @@ async function getTabDetails(tabId: string) {
 
   if (
     !session.userId ||
-    (session.role !== 'admin' && session.role !== 'super-admin')
+    (session.role !== 'csr' &&
+      session.role !== 'admin' &&
+      session.role !== 'super-admin')
   ) {
     redirect('/dashboard');
   }

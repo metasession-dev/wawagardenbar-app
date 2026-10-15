@@ -67,11 +67,11 @@ describe('REQ-098 AC3: writeOffTabAction role gate', () => {
     expect(mockWriteOffTab).not.toHaveBeenCalled();
   });
 
-  it('rejects a non-admin/non-super-admin', async () => {
+  it('rejects a customer role (non-staff)', async () => {
     mockGetIronSession.mockResolvedValue({
       isLoggedIn: true,
-      userId: 'csr-1',
-      role: 'csr',
+      userId: 'customer-1',
+      role: 'customer',
     });
 
     const result = await writeOffTabAction('tab-1', { reason: 'Dormant.' });
@@ -79,6 +79,24 @@ describe('REQ-098 AC3: writeOffTabAction role gate', () => {
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/insufficient permissions/i);
     expect(mockWriteOffTab).not.toHaveBeenCalled();
+  });
+
+  it('allows csr to write off a tab (REQ-109)', async () => {
+    mockGetIronSession.mockResolvedValue({
+      isLoggedIn: true,
+      userId: 'csr-1',
+      role: 'csr',
+    });
+
+    const result = await writeOffTabAction('tab-1', {
+      reason: 'Dormant since Dec 2025.',
+    });
+
+    expect(result.success).toBe(true);
+    expect(mockWriteOffTab).toHaveBeenCalledWith('tab-1', {
+      reason: 'Dormant since Dec 2025.',
+      writtenOffBy: 'csr-1',
+    });
   });
 
   it('rejects a missing/blank reason before calling the service', async () => {

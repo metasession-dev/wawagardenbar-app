@@ -212,7 +212,9 @@ export async function listOpenTabsAction(filters?: {
     // Check if user is staff/admin
     if (
       !session.userId ||
-      (session.role !== 'admin' && session.role !== 'super-admin')
+      (session.role !== 'csr' &&
+        session.role !== 'admin' &&
+        session.role !== 'super-admin')
     ) {
       return {
         success: false,
@@ -336,7 +338,9 @@ export async function getDashboardFilteredTabsAction(filters: {
 
     if (
       !session.userId ||
-      (session.role !== 'admin' && session.role !== 'super-admin')
+      (session.role !== 'csr' &&
+        session.role !== 'admin' &&
+        session.role !== 'super-admin')
     ) {
       return {
         success: false,
@@ -390,7 +394,9 @@ export async function recordPartialPaymentAction(params: {
 
     if (
       !session.userId ||
-      (session.role !== 'admin' && session.role !== 'super-admin')
+      (session.role !== 'csr' &&
+        session.role !== 'admin' &&
+        session.role !== 'super-admin')
     ) {
       return {
         success: false,
@@ -471,7 +477,9 @@ export async function completeTabPaymentManuallyAction(params: {
     // Check if user is staff/admin
     if (
       !session.userId ||
-      (session.role !== 'admin' && session.role !== 'super-admin')
+      (session.role !== 'csr' &&
+        session.role !== 'admin' &&
+        session.role !== 'super-admin')
     ) {
       return {
         success: false,
@@ -538,7 +546,9 @@ export async function closeTabAction(
     // Check if user is staff/admin
     if (
       !session.userId ||
-      (session.role !== 'admin' && session.role !== 'super-admin')
+      (session.role !== 'csr' &&
+        session.role !== 'admin' &&
+        session.role !== 'super-admin')
     ) {
       return {
         success: false,
@@ -588,7 +598,9 @@ export async function createAdminTabAction(params: {
     // Check if user is staff/admin
     if (
       !session.userId ||
-      (session.role !== 'admin' && session.role !== 'super-admin')
+      (session.role !== 'csr' &&
+        session.role !== 'admin' &&
+        session.role !== 'super-admin')
     ) {
       return {
         success: false,
@@ -678,7 +690,11 @@ export async function deleteTabAction(
       };
     }
 
-    if (session.role !== 'admin' && session.role !== 'super-admin') {
+    if (
+      session.role !== 'csr' &&
+      session.role !== 'admin' &&
+      session.role !== 'super-admin'
+    ) {
       return {
         success: false,
         error: 'Insufficient permissions',
@@ -729,7 +745,11 @@ export async function writeOffTabAction(
       };
     }
 
-    if (session.role !== 'admin' && session.role !== 'super-admin') {
+    if (
+      session.role !== 'csr' &&
+      session.role !== 'admin' &&
+      session.role !== 'super-admin'
+    ) {
       return {
         success: false,
         error: 'Insufficient permissions',
@@ -786,7 +806,11 @@ export async function updateTabNameAction(
     }
 
     // Only admin and super-admin can update tab names
-    if (session.role !== 'admin' && session.role !== 'super-admin') {
+    if (
+      session.role !== 'csr' &&
+      session.role !== 'admin' &&
+      session.role !== 'super-admin'
+    ) {
       return {
         success: false,
         error: 'Insufficient permissions',
@@ -828,7 +852,9 @@ export async function toggleTabReconciliationAction(
     if (
       !session.isLoggedIn ||
       !session.userId ||
-      (session.role !== 'admin' && session.role !== 'super-admin')
+      (session.role !== 'csr' &&
+        session.role !== 'admin' &&
+        session.role !== 'super-admin')
     ) {
       return { success: false, error: 'Unauthorized' };
     }

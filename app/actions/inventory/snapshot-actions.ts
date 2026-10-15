@@ -34,7 +34,7 @@ export async function generateSnapshotDataAction(
     if (
       !session.userId ||
       !session.role ||
-      !['admin', 'super-admin'].includes(session.role)
+      !['csr', 'admin', 'super-admin'].includes(session.role)
     ) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -75,7 +75,7 @@ export async function submitSnapshotAction(
     if (
       !session.userId ||
       !session.role ||
-      !['admin', 'super-admin'].includes(session.role)
+      !['csr', 'admin', 'super-admin'].includes(session.role)
     ) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -278,7 +278,10 @@ export async function getSnapshotHistoryAction(
       sessionOptions
     );
 
-    if (session.role !== 'super-admin') {
+    if (
+      !session.role ||
+      !['csr', 'admin', 'super-admin'].includes(session.role)
+    ) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -317,7 +320,7 @@ export async function checkExistingSnapshotAction(
     if (
       !session.userId ||
       !session.role ||
-      !['admin', 'super-admin'].includes(session.role)
+      !['csr', 'admin', 'super-admin'].includes(session.role)
     ) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -410,7 +413,7 @@ export async function resubmitSnapshotAction(
     if (
       !session.userId ||
       !session.role ||
-      !['admin', 'super-admin'].includes(session.role)
+      !['csr', 'admin', 'super-admin'].includes(session.role)
     ) {
       return { success: false, error: 'Unauthorized' };
     }

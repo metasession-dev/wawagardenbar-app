@@ -126,7 +126,8 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-ORDMGT-007   | Order completion → inventory deduction chokepoint                                           | Must     | regression | `services/order-service.ts:806`; REQ-066                                                                              |
 | REQ-ORDMGT-008   | Express order item selection uses progressive category display with grouped items           | Should   | regression | `app/dashboard/orders/express/create-order/page.tsx`; `app/actions/admin/express-actions.ts`; REQ-082                 |
 | REQ-ORDMGT-009   | Express create order: order type selector + customer info for pickup/delivery               | Must     | regression | `app/dashboard/orders/express/create-order/page.tsx`; `app/actions/admin/express-actions.ts`; REQ-084                 |
-| REQ-ORDMGT-010   | Admin Order Management section on orders dashboard                                          | Should   | smoke      | `app/dashboard/orders/page.tsx`; REQ-086                                                                              |
+| REQ-ORDMGT-010   | Admin Order Management section on orders dashboard (no separate Quick Actions)              | Should   | smoke      | `app/dashboard/orders/page.tsx`; REQ-086, REQ-109                                                                     |
+| REQ-ORDMGT-018   | Order-management action parity for `csr`                                                    | Should   | regression | `order-management-actions.ts`, `express-actions.ts`; REQ-109                                                          |
 | REQ-ORDMGT-013   | Delete order (soft-delete; super-admin override for live orders)                            | Could    | extended   | `order-service.ts` `deleteOrder()`; REQ-096                                                                           |
 | REQ-ORDMGT-014   | Delete order: independent inventory/payment revert choices                                  | Could    | extended   | `order-service.ts` `deleteOrder()`; REQ-096                                                                           |
 | REQ-ORDMGT-017   | Order completion auto-cash-mark is scoped to non-tab orders only, reliably                  | Must     | regression | `order-management-actions.ts:376-394`; `tab-service.ts` `addOrderToTab`; REQ-108                                      |
@@ -136,9 +137,10 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-TABMGT-004   | Delete tab (guard closed/paid; super-admin override with inventory/payment revert)          | Could    | extended   | `delete-tab-dialog`; REQ-096                                                                                          |
 | REQ-TABMGT-005   | Admin tab checkout: manual payment (no Monnify redirect)                                    | Must     | regression | `components/features/admin/admin-tab-checkout-form.tsx`; REQ-084                                                      |
 | REQ-TABMGT-006   | Tab payment preserves order fulfillment status                                              | Must     | regression | `services/tab-service.ts`; REQ-085                                                                                    |
-| REQ-TABMGT-007   | Dormant tab write-off (bad-debt accounting)                                                 | Should   | regression | `services/tab-service.ts` `writeOffTab()`; REQ-098                                                                    |
+| REQ-TABMGT-007   | Dormant tab write-off (bad-debt accounting; csr parity — REQ-109)                           | Should   | regression | `services/tab-service.ts` `writeOffTab()`; REQ-098, REQ-109                                                           |
 | REQ-TABMGT-008   | Dormant open-tab visibility (list flag)                                                     | Could    | extended   | `app/dashboard/orders/tabs/page.tsx`; REQ-098                                                                         |
 | REQ-TABMGT-009   | Written-off tab list badge + filter (distinct from generic closed/paid)                     | Should   | regression | `dashboard-tabs-list-client.tsx`, `dashboard-tabs-filter.tsx`; REQ-099                                                |
+| REQ-TABMGT-010   | Tab-management action parity for `csr` (super-admin override unaffected)                    | Should   | regression | `app/actions/tabs/tab-actions.ts`; REQ-109                                                                            |
 | REQ-KITCHEN-001  | Kitchen display shows active orders real-time                                               | Should   | regression | `app/dashboard/kitchen-display/page.tsx`                                                                              |
 | REQ-KITCHEN-002  | `kitchenManagement` gates kitchen routes                                                    | Must     | regression | `app/dashboard/kitchen/layout.tsx`; REQ-034                                                                           |
 | REQ-KITCHEN-003  | Recipe CRUD + validation                                                                    | Should   | regression | `services/recipe-service.ts:41`; REQ-034                                                                              |
@@ -639,11 +641,20 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 
 #### REQ-ORDMGT-010 — Admin Order Management section · **Should** · smoke
 
-**Source:** `app/dashboard/orders/page.tsx`; cross-ref REQ-086.
-**Behaviour:** The orders dashboard groups admin operational shortcuts into an "Admin Order Management" section containing Create Tab, Create Order, Close Tab, and Inventory Summary. A separate "Quick Actions" section contains Open a Order, Open a New Tab, and Add to Existing Tab. The Admin Order Management section uses a neutral icon (ClipboardList) and a 4-column grid on desktop. Quick Actions uses a 3-column grid on desktop.
+**Source:** `app/dashboard/orders/page.tsx`; cross-ref REQ-086, REQ-109.
+**Behaviour:** The orders dashboard groups staff operational shortcuts into a single "Admin Order Management" section containing Create Tab, Create Order, Close Tab, and Inventory Summary, using a neutral icon (ClipboardList) and a 4-column grid on desktop. The section is visible to any staff role (`csr`, `admin`, `super-admin`) reaching `/dashboard/orders`. There is no separate "Quick Actions" section on this page — it was removed (REQ-109); staff ordering/tab actions live entirely under Admin Order Management, and customers use the existing `/menu` → `/checkout` flow instead (REQ-CHECKOUT-007), which has no tab-opening or add-to-tab affordance.
 
-- **Given** an admin opens `/dashboard/orders`, **When** the page renders, **Then** a section titled "Admin Order Management" is visible containing cards for Create a new Tab, Create a new Order, Close a Tab, and Inventory Summary.
-- **Given** an admin opens `/dashboard/orders`, **When** the "Quick Actions" section renders, **Then** it contains only Open a Order, Open a New Tab, and Add to Existing Tab.
+- **Given** a `csr`, `admin`, or `super-admin` user opens `/dashboard/orders`, **When** the page renders, **Then** a section titled "Admin Order Management" is visible containing cards for Create a new Tab, Create a new Order, Close a Tab, and Inventory Summary.
+- **Given** any staff role opens `/dashboard/orders`, **When** the page renders, **Then** no "Quick Actions" heading or its cards (Open a Order, Open a New Tab, Add to Existing Tab) are present anywhere on the page.
+
+#### REQ-ORDMGT-018 — Order-management action parity for `csr` · **Should** · regression
+
+**Source:** `app/actions/admin/express-actions.ts` (`requireAdminSession`), `app/actions/admin/order-management-actions.ts` (`getOrdersAction`, `getOrderDetailsAction`, `updateOrderStatusAction`, `batchUpdateOrdersAction`, `cancelOrderAction`, `deleteOrderAction`, `addOrderNoteAction`, `toggleOrderReconciliationAction`); cross-ref REQ-109.
+**Behaviour:** `csr` has the same operational access as `admin`/`super-admin` to order-management actions reachable from `/dashboard/orders`'s Admin Order Management section and the Express flow (`/dashboard/orders/express/*`): creating an order, cancelling an order, deleting an order (soft-delete path — the super-admin-only live-order override from REQ-ORDMGT-013 is unaffected), adding an order note, and toggling reconciliation. Previously these actions rejected `csr` with "Unauthorized" even though the UI was visible to them.
+
+- **Given** a `csr` user, **When** they create an order via the Express flow (`/dashboard/orders/express/create-order`) against an open tab, **Then** the order is added successfully, matching `admin`'s behaviour.
+- **Given** a `csr` user, **When** they cancel an unpaid order with a reason, **Then** the order is cancelled and audit-logged, same as REQ-ORDMGT-005 describes for admin.
+- **Given** a `csr` user, **When** they soft-delete a cancelled, unpaid order, **Then** it is deleted per REQ-ORDMGT-013's non-override path; a live/paid order still requires the super-admin override exactly as before.
 
 #### REQ-ORDMGT-011 — Price override removed from customer cart · **Must** · regression
 
@@ -756,13 +767,13 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 
 #### REQ-TABMGT-007 — Dormant tab write-off · **Should** · regression
 
-**Source:** `services/tab-service.ts` `writeOffTab()`; `app/actions/tabs/tab-actions.ts` `writeOffTabAction()`; `write-off-tab-dialog.tsx`; cross-ref REQ-098, REQ-096 (deleteTab precedent).
-**Behaviour:** A manager (admin/super-admin) can reclassify a dormant or otherwise uncollectible tab as written-off bad debt, distinct from both the existing pay-tab and delete-tab paths. Unlike `deleteTab`, write-off does not refuse tabs with `partialPayments` — that split/partial-payment shape is exactly the case this exists to handle. Write-off requires a reason, sets `Tab.paymentStatus`/every linked `Order.paymentStatus` to `'written-off'`, closes the tab, stamps a `writeOff` record (amount, reason, actor, timestamp) on both, and writes an audit-log entry. It refuses if the tab is already written-off. `deleteTab`, `completeTabPaymentManually`, and `closeTab` are unmodified by this requirement.
+**Source:** `services/tab-service.ts` `writeOffTab()`; `app/actions/tabs/tab-actions.ts` `writeOffTabAction()`; `write-off-tab-dialog.tsx`; cross-ref REQ-098, REQ-096 (deleteTab precedent), REQ-109 (csr parity).
+**Behaviour:** Staff (`csr`/admin/super-admin — REQ-109) can reclassify a dormant or otherwise uncollectible tab as written-off bad debt, distinct from both the existing pay-tab and delete-tab paths. Unlike `deleteTab`, write-off does not refuse tabs with `partialPayments` — that split/partial-payment shape is exactly the case this exists to handle. Write-off requires a reason, sets `Tab.paymentStatus`/every linked `Order.paymentStatus` to `'written-off'`, closes the tab, stamps a `writeOff` record (amount, reason, actor, timestamp) on both, and writes an audit-log entry. It refuses if the tab is already written-off. `deleteTab`'s `superAdminOverride` path, `completeTabPaymentManually`, and `closeTab` are unmodified by this requirement.
 
-- **Given** an open or closed tab that is not already written-off (including one with `partialPayments`), **When** a manager/super-admin writes it off with a reason, **Then** the tab and every linked order become `paymentStatus: 'written-off'`, the tab closes, a `writeOff` record is stamped on both, and an audit-log entry (`tab.write_off`) is written.
+- **Given** an open or closed tab that is not already written-off (including one with `partialPayments`), **When** staff (`csr`/admin/super-admin) write it off with a reason, **Then** the tab and every linked order become `paymentStatus: 'written-off'`, the tab closes, a `writeOff` record is stamped on both, and an audit-log entry (`tab.write_off`) is written.
 - **Given** a tab already `'written-off'`, **When** write-off is attempted again, **Then** it is refused server-side.
-- **Given** a staff member who is not admin/super-admin, **When** they attempt the write-off action (directly or via UI), **Then** it is refused server-side with "Insufficient permissions" — the same gate as `deleteTabAction`.
-- **Given** a manager/super-admin on a tab's detail page, **When** they open the write-off dialog, **Then** a reason is required before submitting; the existing Delete action remains unmodified and available side by side.
+- **Given** an unauthenticated user or a `customer`-role session, **When** they attempt the write-off action (directly or via UI), **Then** it is refused server-side with "Insufficient permissions".
+- **Given** a `csr`/admin/super-admin on a tab's detail page, **When** they open the write-off dialog, **Then** a reason is required before submitting; the existing Delete action remains unmodified and available side by side.
 
 #### REQ-TABMGT-009 — Written-off tab list badge + filter · **Should** · regression
 
@@ -777,6 +788,15 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 **Behaviour:** The tabs list page flags any open tab that has been open longer than a configurable dormancy threshold (default 24h, stored via `SystemSettingsModel` following the `business-day-cutoff` key/value/changeHistory pattern). This is a visibility aid only — it never auto-executes a write-off.
 
 - **Given** an open tab whose `openedAt` is older than the configured dormant threshold, **When** a manager/super-admin views `/dashboard/orders/tabs`, **Then** the tab is visibly flagged (and filterable) as dormant.
+
+#### REQ-TABMGT-010 — Tab-management action parity for `csr` · **Should** · regression
+
+**Source:** `app/actions/tabs/tab-actions.ts` (`listOpenTabsAction`, `getDashboardFilteredTabsAction`, `recordPartialPaymentAction`, `completeTabPaymentManuallyAction`, `closeTabAction`, `createAdminTabAction`, `deleteTabAction`, `writeOffTabAction`, `updateTabNameAction`, `toggleTabReconciliationAction`); cross-ref REQ-109.
+**Behaviour:** `csr` has the same operational access as `admin`/`super-admin` to every general tab-management action in `tab-actions.ts` — creating a tab (Express flow), recording a partial payment, closing/paying a tab, deleting a tab (non-override path, per REQ-TABMGT-004), writing off a tab (per REQ-TABMGT-007), renaming a tab, and toggling reconciliation. The one exception is `deleteTabAction`'s `superAdminOverride` path, which remains `super-admin`-only, unaffected by this requirement — REQ-TABMGT-004's override behaviour is unchanged.
+
+- **Given** a `csr` user, **When** they create a tab via the Express flow (`/dashboard/orders/express/create-tab`) for a table with no existing open tab, **Then** the tab is created successfully, matching `admin`'s behaviour.
+- **Given** a `csr` user, **When** they close and pay an open tab via the Express flow (`/dashboard/orders/express/close-tab`), **Then** the tab closes and payment is recorded successfully.
+- **Given** a `csr` or `admin` user (not `super-admin`), **When** they call `deleteTabAction` with `superAdminOverride: true`, **Then** the action is rejected — only `super-admin` may use the override path, exactly as REQ-TABMGT-004 already specifies.
 
 ---
 

@@ -37,6 +37,8 @@ This REQ removes "Quick Actions" entirely (it is not a staff concern; customers 
 - npm audit: no new dependencies.
 - Full detail: `compliance/evidence/REQ-109/test-execution-summary.md`.
 
+**Release-PR gate note (2026-10-15):** PR #906's `E2E Regression Suite` check failed on `e2e/critical/webhook-idempotency-replay.spec.ts` (run 36659647566, 2026-09-30) — unrelated to this REQ's scope (payments/webhooks vs. this REQ's staff-dashboard role-guard changes). Triaged as a non-incident CI-environment flake: code unchanged since last green run, reproduced correctly both warm and cold locally. Rerun on the same head commit passed clean with no code change (job 116264158435). `E2E Regression Suite` is green on PR #906 as of this note; the `DevAudit Release Approval` gate's own re-dispatch (workflow run 38688527722) confirms the remaining blocker is the portal UAT review itself (`REQ-109` is `uat_review`, not yet approved) — not a gate or CI issue. Portal-side non-incident triage record still needs an operator/CI write (`DEVAUDIT_API_KEY` not available in this session).
+
 ## Sign-off (dual-actor)
 
 Solo-operator team — the "reviewer ≠ submitter" check is interpreted as actor type, not human identity: AI tooling (this implementation) and the human operator (portal approver) are distinct actors. HIGH-risk plan-approval checkpoint was passed at Phase 1 (see `compliance/plans/REQ-109/implementation-plan.md` § Sign-off); the operator reviews the PR + performs the portal UAT review before Production approval.

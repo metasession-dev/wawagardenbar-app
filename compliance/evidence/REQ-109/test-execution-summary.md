@@ -54,8 +54,20 @@
 
 None.
 
+## Non-incident triage — PR #906 E2E Regression Suite (2026-09-30 → 2026-10-15)
+
+**Failure:** `E2E Regression Suite` check on release PR [#906](https://github.com/metasession-dev/wawagardenbar-app/pull/906) (run [36659647566](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/36659647566)) failed `e2e/critical/webhook-idempotency-replay.spec.ts:167` — the 2nd (replay) webhook delivery was processed as a new event (`"Webhook processed successfully"`) instead of being deduped (`"Event already processed"`).
+
+**Classification: non-incident / CI-environment flake, not an application regression.** Evidence:
+
+- `lib/webhook-idempotency.ts`, `app/api/webhooks/monnify/route.ts`, and `models/processed-webhook-event-model.ts` (the unique `(provider, eventId)` index) are unchanged since REQ-049 (2026-05-28) / REQ-066 (inventory ownership) / REQ-088 (incident-event catch sites) — no commit between the last known-green run of this spec (2026-09-22, PR success) and the 2026-09-30 failure touched any idempotency-related file. REQ-109 itself only touches staff-dashboard role-guard code, nothing payment-related.
+- Reproduced the exact replay scenario locally twice against a disposable `mongo:7` container: once against an already-warm route, and once against a **never-hit** route (mirroring CI exactly — the regression workflow's route warm-up step only pre-compiles `page.goto()` UI routes mined from specs, never POST API routes hit via `fetch`, so this spec is the first real exercise of `/api/webhooks/monnify` in a CI run). Both reproductions deduped correctly on the 2nd delivery.
+- Re-ran the failed job on PR #906's unchanged head commit (`389bf6f`) via `gh run rerun 36659647566 --failed` — **passed clean** (run [116264158435](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/36659647566/job/116264158435), 2026-10-15), with no code change. A real application regression would not self-resolve on an identical commit; a CI-environment timing issue on the self-hosted runner would.
+
+**Resolution:** No code change. `E2E Regression Suite` on PR #906 is now green on the current head SHA. Portal non-incident triage for the failed execution still needs recording by whoever holds `DEVAUDIT_API_KEY` locally (not set in this session) — see the release ticket's Verification section.
+
 ## Evidence locations
 
 - Markdown evidence: `compliance/evidence/REQ-109/`
 - Screenshots: `compliance/evidence/REQ-109/screenshots/`
-- CI run: pending — this run's local verification is the authoritative pre-PR evidence; CI on the integration PR will re-confirm.
+- CI run: PR #906, `E2E Regression Suite` green on head `389bf6f` as of 2026-10-15 (see non-incident triage above).

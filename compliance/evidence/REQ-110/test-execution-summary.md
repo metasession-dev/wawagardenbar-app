@@ -5,7 +5,7 @@
 
 ## Test design
 
-**Layers planned:** Unit/integration regression + security-ledger gate, per HIGH-risk depth (`Test_Policy.md`). No E2E — this REQ has no UI-facing surface (`@e2e-deferred`, see implementation plan §4).
+**Layers planned:** Unit/integration regression + security-ledger gate, per HIGH-risk depth (`Test_Policy.md`). E2E gate: NOT_NEEDED — this REQ has no UI-facing surface (see implementation plan §4 and `e2e-scope-decision.md`).
 
 **Layers covered:** Unit/integration regression ✓ (full suite re-run, no new tests needed — no call-site change required in `lib/email.ts`). Security-ledger gate ✓ (`scripts/evaluate-npm-audit.sh`, the authoritative CI gate for this class of change).
 

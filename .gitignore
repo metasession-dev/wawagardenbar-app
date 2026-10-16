@@ -60,3 +60,5 @@ next-env.d.ts
 .sdlc-implementer-invoked
 .e2e-evidence-wired
 .sdlc-pr-watch.json
+*.devaudit-new
+.env.local

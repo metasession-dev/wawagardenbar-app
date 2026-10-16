@@ -68,7 +68,7 @@
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.451.0",
     "mongoose": "^8.24.1",
-    "next": "^16.2.12",
+    "next": "^16.3.8",
     "nodemailer": "^9.0.1",
     "nuqs": "^2.2.0",
     "papaparse": "^5.5.3",
@@ -132,6 +132,8 @@
     "js-yaml": "4.3.2",
     "fast-uri": "^4.1.4",
     "browserslist": "^4.28.8",
-    "sharp": "^0.35.4"
+    "sharp": "^0.35.5",
+    "engine.io": "^6.6.10",
+    "source-map-js": "^1.2.2"
   }
 }

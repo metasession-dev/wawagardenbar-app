@@ -823,3 +823,24 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 **Framework cross-references:** SOC2.CC7.2 (change management — controlled, reviewed data migration)
 
 **Cross-links:** [REQ-108 implementation plan](plans/REQ-108/implementation-plan.md); [#815](https://github.com/metasession-dev/wawagardenbar-app/issues/815).
+
+---
+
+### R-036 — `braces@3.0.3` ReDoS advisory has no patched upstream release (REQ-110)
+
+**Status:** ACCEPTED
+**Opened:** 2026-10-16 (REQ-110, plan APPROVAL)
+**Owner:** WGB maintainer
+**Review due:** 2026-11-15 (matches the risk-acceptance expiry in `compliance/security/accepted-vulnerabilities.json`)
+
+**The risk:** `GHSA-vfj7-8cjw-p6xm` (a ReDoS in `braces`) has no fix available — `3.0.3` is the latest published release on npm as of 2026-10-16, so there is nothing to upgrade to. `braces` is a transitive dev/build-tooling dependency (`chokidar`/`fast-glob`/`tailwindcss`/`eslint` chain), not reachable from user input. Unlike the `nodemailer` and `brace-expansion` advisories tracked alongside it in #910 — both resolved outright by REQ-110 — this one remains genuinely open after this REQ ships, since the remediation is entirely upstream-gated.
+
+**Inherent likelihood × impact:** low × low (dev/build-tooling-only execution path; repository-controlled inputs, not attacker-controlled; bounded CI resources)
+
+**Mitigations applied in this REQ:** None available — no patched release exists to adopt. The existing risk acceptance in `compliance/security/accepted-vulnerabilities.json` is renewed (re-verified still the latest release at implementation time) rather than removed.
+
+**Residual likelihood × impact:** low × low (unchanged — no new exposure introduced, no mitigation possible yet)
+
+**Framework cross-references:** ISO27001.A.8.25 (secure development — tracked dependency risk awaiting upstream fix)
+
+**Cross-links:** [REQ-110 implementation plan](plans/REQ-110/implementation-plan.md); [#910](https://github.com/metasession-dev/wawagardenbar-app/issues/910).

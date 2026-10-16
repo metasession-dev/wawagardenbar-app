@@ -138,7 +138,7 @@ devaudit join .
 # Skips: write sdlc-config, issue API key, set GH secrets, apply branch protection.
 ```
 
-The output will tell you which steps it skipped and why (developer mode). If `git status` is clean after the join, your local state matches the team — you're done. If templates drift (occasionally on a new CLI version), commit the drift on a `chore:` branch and open a PR.
+The output will tell you which steps it skipped and why (developer mode). If `git status` is clean after the join, your local state matches the team — you're done. If templates drift (occasionally on a new CLI version), commit the drift on a `chore:` branch and open a PR. If `join` reports a sync conflict (devaudit-installer#930 — a managed file that's diverged from what the team's last sync recorded), resolve it per `docs/consuming-projects.md#sync-conflicts` before opening that PR; `join` never overwrites a locally-modified file, it leaves it in place and writes the fresh template alongside it as `<path>.devaudit-new`.
 
 You can skip this step entirely if the synced templates from `git clone` are already current — `devaudit status .` will tell you.
 
@@ -150,11 +150,11 @@ Two distinct credentials exist; conflating them is what causes the silent-CI-tok
 
 | Credential | Format | Where it lives | Who it identifies | Used by |
 | --- | --- | --- | --- | --- |
-| **Personal PAT** | `mctok_…` | `~/.config/devaudit/auth.json` (per developer) | You (the user) | Your local CLI commands, and — for whoever holds the operator's PAT specifically — UAT-submission attribution via `scripts/submit-for-uat-review.sh` |
+| **Personal PAT** | `mctok_…` | `~/.config/devaudit/auth.json` (per developer) | You (the user) | Your local CLI commands, and — for whoever holds the operator's PAT specifically — UAT-submission attribution via `scripts/submit-for-uat-review.sh`, and an admin's manual portal defer/resume of a release (admin-only; never the API/viewer keys or CI) |
 | **Project API key** | `dak_…` | Repo secret `DEVAUDIT_API_KEY` | The project | CI's `devaudit push` calls |
 | **GitHub workflow token** | `${{ github.token }}` | Issued automatically per workflow run | The GitHub Actions workflow | CI's GitHub repo mutations (checkout, branch push, PR, issue, comment, label, check-run updates) |
 
-**`DEVAUDIT_USER_TOKEN` is never a repo secret** (devaudit-installer#912 — `install` stopped writing it as one; nothing in generated CI ever consumed it that way). It's a personal credential that stays on each developer's own machine (`~/.config/devaudit/auth.json` via `devaudit auth login`, or an exported env var) — the same "Personal PAT" row above. The one place it matters whose PAT it is: submitting a release for UAT review is attributed to whichever developer's PAT ran that command locally, so **use your own PAT for that action, not a shared or copied one** — the same principle the old "never paste your personal PAT into a repo secret" warning was protecting, just enforced by there being no repo secret to paste it into at all anymore.
+**`DEVAUDIT_USER_TOKEN` is never a repo secret** (devaudit-installer#912 — `install` stopped writing it as one; nothing in generated CI ever consumed it that way). It's a personal credential that stays on each developer's own machine (`~/.config/devaudit/auth.json` via `devaudit auth login`, or an exported env var) — the same "Personal PAT" row above. The one place it matters whose PAT it is: submitting a release for UAT review is attributed to whichever developer's PAT ran that command locally, so **use your own PAT for that action, not a shared or copied one** (the same goes for an admin deferring or resuming a release on the portal, which is also done with a personal PAT or portal session) — the same principle the old "never paste your personal PAT into a repo secret" warning was protecting, just enforced by there being no repo secret to paste it into at all anymore.
 
 If `devaudit auth status` shows the wrong user, run `devaudit auth logout && devaudit auth login` and paste the right PAT.
 

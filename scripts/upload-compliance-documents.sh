@@ -378,8 +378,19 @@ if [ -d "compliance/pending-releases" ]; then
     case "$TICKET_BASE" in
       RELEASE-TICKET-REQ-*)
         TICKET_REQ="${TICKET_BASE#RELEASE-TICKET-}"
-        TICKET_OWNER="$TICKET_REQ"; TICKET_RELEASE="$TICKET_REQ"
-        TICKET_META_ARGS=$(req_meta_args "$TICKET_REQ") ;;
+        # devaudit-installer#955 — a declared-bundle member's ticket is filed
+        # against the bundle's single release (owner stays the member's own
+        # REQ); the member must not set title/summary on the core's row.
+        TICKET_OWNER="$TICKET_REQ"
+        if ! TICKET_RELEASE="$(bash scripts/resolve-bundle-release.sh "$TICKET_REQ")"; then
+          echo "::warning::Skipping $(basename "$TICKET"): could not resolve its portal release (see the resolve-bundle-release error above)."
+          continue
+        fi
+        if [ "$TICKET_RELEASE" = "$TICKET_REQ" ]; then
+          TICKET_META_ARGS=$(req_meta_args "$TICKET_REQ")
+        else
+          TICKET_META_ARGS=""
+        fi ;;
       *)
         TICKET_OWNER="_compliance-docs"; TICKET_RELEASE="$DERIVED_RELEASE"
         TICKET_META_ARGS="" ;;
@@ -410,6 +421,11 @@ if [ -d compliance/pending-releases ]; then
       echo "Skipping ${REQ_ID}: already in a terminal release directory (stale pending ticket)"
       continue
     fi
+    # devaudit-installer#956 — deferred tickets stay in pending-releases/ but are not part of this release.
+    if [ -f scripts/is-deferred-ticket.sh ] && bash scripts/is-deferred-ticket.sh "$TICKET"; then
+      echo "Skipping ${REQ_ID}: deferred (Release intent: deferred-to-next)"
+      continue
+    fi
     IN_SCOPE_REQS+=("$REQ_ID")
   done
 fi
@@ -424,7 +440,18 @@ else
       echo "Warning: pending ticket for ${REQ_ID} but no ${REQ_DIR} on disk"
       continue
     fi
-    REQ_META_ARGS=$(req_meta_args "$REQ_ID")
+    # devaudit-installer#955 — file a declared-bundle member's artifacts
+    # against the bundle's single release; the member's own REQ stays the
+    # requirement tag, and must not set title/summary on the core's row.
+    if ! REQ_RELEASE="$(bash scripts/resolve-bundle-release.sh "$REQ_ID")"; then
+      echo "::warning::Skipping ${REQ_ID} evidence: could not resolve its portal release (see the resolve-bundle-release error above)."
+      continue
+    fi
+    if [ "$REQ_RELEASE" = "$REQ_ID" ]; then
+      REQ_META_ARGS=$(req_meta_args "$REQ_ID")
+    else
+      REQ_META_ARGS=""
+    fi
     for ARTIFACT in "$REQ_DIR"*.md; do
       [ -f "$ARTIFACT" ] || continue
       # Per-REQ basename → (evidence_type, evidence_category) routing.
@@ -515,7 +542,7 @@ else
       echo "Uploading: ${REQ_ID}/${BASENAME} (${EVTYPE})"
       eval "bash scripts/upload-evidence.sh \
         ${DEVAUDIT_PROJECT_SLUG} \"${REQ_ID}\" ${EVTYPE} \"$ARTIFACT\" \
-        --category ${EVCAT} ${FLAGS} --release \"${REQ_ID}\" \
+        --category ${EVCAT} ${FLAGS} --release \"${REQ_RELEASE}\" \
         ${REQ_META_ARGS}" \
         || echo "Warning: Failed to upload ${BASENAME}"
     done

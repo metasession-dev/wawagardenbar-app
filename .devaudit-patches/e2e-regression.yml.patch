@@ -22,7 +22,42 @@
            echo "Started E2E server pid $(cat .e2e-server.pid)"
  
        - name: Wait for dev server
-@@ -295,13 +306,19 @@
+@@ -265,19 +276,28 @@
+           E2E_PORT: 3000
+         run: |
+           set -uo pipefail
++          # wawagardenbar-app#925 — GitHub Actions' default shell for `run:`
++          # blocks already has `-e` set before this script's own
++          # `set -uo pipefail` runs (set doesn't clear a flag it doesn't
++          # mention), so `cmd; STATUS=$?` loses the exit code: a failing
++          # command aborts the script before `STATUS=$?` is ever reached,
++          # skipping the outcome/completed_at/exit_code metadata merge
++          # below entirely (the step still correctly fails, since the
++          # aborting command's own exit code becomes the step's exit code
++          # — this only breaks the metadata annotation, not pass/fail).
++          # `cmd || STATUS=$?` keeps the compound statement's exit status 0
++          # on failure, so `-e` never fires.
++          STATUS=0
+           if [ -f e2e/ci-reliability/regression-run.sh ]; then
+             echo "::notice::Using project hook e2e/ci-reliability/regression-run.sh (PROJECT=$PROJECT)"
+-            bash e2e/ci-reliability/regression-run.sh
+-            STATUS=$?
++            bash e2e/ci-reliability/regression-run.sh || STATUS=$?
+           elif [ -n "$SPECS" ]; then
+             echo "::notice::Running scoped regression — project=$PROJECT specs=$SPECS"
+             # shellcheck disable=SC2086
+-            timeout --signal=TERM --kill-after=60s 40m npx playwright test --project="$PROJECT" --reporter=json,html $SPECS
+-            STATUS=$?
++            timeout --signal=TERM --kill-after=60s 40m npx playwright test --project="$PROJECT" --reporter=json,html $SPECS || STATUS=$?
+           else
+             echo "::notice::Running project=$PROJECT"
+-            timeout --signal=TERM --kill-after=60s 40m npx playwright test --project="$PROJECT" --reporter=json,html
+-            STATUS=$?
++            timeout --signal=TERM --kill-after=60s 40m npx playwright test --project="$PROJECT" --reporter=json,html || STATUS=$?
+           fi
+           if [ "$STATUS" -eq 124 ]; then
+             OUTCOME="timed_out"
+@@ -295,13 +315,19 @@
  
        - name: Stop dev server
          if: always()

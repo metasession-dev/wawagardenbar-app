@@ -1,0 +1,15 @@
+# Test scope — REQ-110
+
+Extracted from `compliance/plans/REQ-110/implementation-plan.md` §1.
+
+| AC  | Description                                                                                                                                                                                                                                           | SRS item it traces to | Risk class | Verification method                                                                                    |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- | ---------- | ------------------------------------------------------------------------------------------------------ |
+| AC1 | `brace-expansion` overrides for `minimatch@3.1.5`/`minimatch@9.0.9` bumped to `^1.1.21`/`^2.1.7`; `npm audit` no longer reports `GHSA-mh99-v99m-4gvg`, `GHSA-rgw5-rvv9-x895`, `GHSA-qhr7-859c-m2p7`, or `GHSA-6j4f-fj2g-mc7p` at any dependency path. | `@srs-deferred`       | HIGH       | `npm audit --json` + `bash scripts/evaluate-npm-audit.sh` (unresolved count)                           |
+| AC2 | `nodemailer` upgraded from `9.1.1` to a patched `10.x` release; `npm audit` no longer reports `GHSA-v53p-9fqp-m79j` or `GHSA-prgh-xp8r-p3m5`.                                                                                                         | `@srs-deferred`       | HIGH       | `npm audit --json` + `bash scripts/evaluate-npm-audit.sh`                                              |
+| AC3 | `sendEmail()` (`lib/email.ts`) continues to deliver mail via the same SMTP transport configuration with no observable behaviour change to any caller.                                                                                                 | `@srs-deferred`       | HIGH       | Unit/integration suite (`npx vitest run`) passing unchanged; manual SMTP smoke against UAT post-deploy |
+| AC4 | `braces@3.0.3`'s risk acceptance (`GHSA-vfj7-8cjw-p6xm`) remains, re-verified as still the latest published release.                                                                                                                                  | `@srs-deferred`       | HIGH       | `npm view braces versions` re-check at implementation time                                             |
+| AC5 | `compliance/security/accepted-vulnerabilities.json` has exactly 1 exception remaining (`braces`); #584 closed.                                                                                                                                        | `@srs-deferred`       | HIGH       | Diff review of the exceptions file + `bash scripts/evaluate-npm-audit.sh` (0 unresolved)               |
+
+**Surface inventory:** N/A — dependency/security remediation with no UI surface (see plan §2).
+
+**E2E:** `@e2e-deferred` — no UI-facing files touched (see plan §4).

@@ -1,6 +1,6 @@
 # Release Ticket: REQ-109 — Remove Quick Actions from staff dashboard; give csr Admin Order Management parity
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-09-30
 **Requirement ID:** REQ-109
 **Risk Level:** HIGH

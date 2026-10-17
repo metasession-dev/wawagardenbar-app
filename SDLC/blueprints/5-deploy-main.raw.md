@@ -10,7 +10,7 @@ If you are an AI agent reading this file, you are strictly prohibited from manua
 - **OTHER AGENTS (Cursor, Windsurf, Gemini, etc.):** Halt manual execution and output this exact message to the user: 
   "I am pausing to request authorization for the SDLC workflow on this issue. Please confirm if I should proceed."
   
-  CRITICAL WORKFLOW REQUIRED AFTER AUTHORIZATION: Once the operator grants permission to proceed, you MUST immediately execute 'node SDLC/bin/devaudit-sdlc.js --phase=5' to generate the required commit sentinel file in the root directory BEFORE making any file modifications or code changes. Failure to create this file will result in your local git commits being automatically blocked by our pre-commit hooks.
+  CRITICAL WORKFLOW REQUIRED AFTER AUTHORIZATION: Once the operator grants permission to proceed, you MUST immediately execute 'node SDLC/bin/devaudit-sdlc.cjs --phase=5' to generate the required commit sentinel file in the root directory BEFORE making any file modifications or code changes. Failure to create this file will result in your local git commits being automatically blocked by our pre-commit hooks.
 
 ---
 
@@ -168,7 +168,7 @@ consumer repository. `close-out-release.yml` then opens a
 `chore/close-out-REQ-XXX` PR to the configured integration branch. That PR is
 the canonical reconciliation record: it updates the RTM, moves the release
 ticket to `approved-releases/`, and moves manifest-listed absorbed predecessors
-to `superseded-releases/`.
+to `superseded-releases/`. A deferred predecessor that this release absorbs (listed under `Absorbed predecessor releases`) is superseded here, the same way; one that was not absorbed stays pending and, if a portal admin deferred it, remains `deferred` (reversible) until resumed or superseded. Deferring or resuming a portal release is a manual admin action with a PAT or portal session, never part of this flow.
 
 Review and merge the close-out PR after its required checks are terminal green
 on its current head SHA. It is an administrative reconciliation PR, not a new

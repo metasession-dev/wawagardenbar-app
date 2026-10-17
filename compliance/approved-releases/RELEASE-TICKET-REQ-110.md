@@ -1,6 +1,6 @@
 # Release Ticket: REQ-110 — Resolve nodemailer/brace-expansion CVEs; braces stays accepted
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-10-16
 **Requirement ID:** REQ-110
 **Risk Level:** HIGH

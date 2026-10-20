@@ -63,8 +63,10 @@ Scoped slice of [#933](https://github.com/metasession-dev/wawagardenbar-app/issu
 
 ## 4. E2E test coverage
 
-**Spec:** `e2e/whatsapp-inbound-registration-templates.spec.ts` (new).
-**ACs covered:** AC1 (phone-mismatch via email), AC2 (phone-mismatch via order number — if not covered by a dedicated case, covered at the unit level per §9), AC3 (same-phone negative case — unit level), AC4 (new/unrecognized phone with no signal — e2e, regression).
+**Spec:** `e2e/whatsapp-inbound-registration-templates.spec.ts` (new, authored via `e2e-test-engineer` skill invocation). Transport-layer spec (no `page` object) — `evidenceShot()` N/A; see `compliance/evidence/REQ-111/e2e-scope-decision.md`.
+**ACs covered:** AC1 (phone-mismatch via email — e2e), AC2 (phone-mismatch via order number — unit level, `whatsapp-inbound-service.classify.test.ts`), AC3 (same-phone negative case — unit level, `.classify.test.ts` + `.routing.test.ts`), AC4 (new/unrecognized phone with no signal — e2e, regression).
+
+Verified locally in a detached worktree + isolated dev server against a disposable e2e-only MongoDB (sandbox network constraints meant the host's real `mongod` wasn't reachable — see §9 and `e2e-scope-decision.md` for the full account). Both e2e cases pass. This local run also caught and fixed a real bug: `actionTaken` was initially gated on `WhatsAppService.sendMessage()`'s `success` flag, which is always `false` under `ENABLE_WHATSAPP_NOTIFICATIONS` disabled — the fix now matches the existing `welcome_new_user`/`welcome_back` branches' "attempted, not delivered" convention.
 
 ## 5. Threat model + security considerations
 

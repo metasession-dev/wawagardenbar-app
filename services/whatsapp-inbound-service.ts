@@ -290,14 +290,18 @@ export class WhatsAppInboundService {
         if (consented) {
           try {
             const matchedPhoneLast4 = sanitizePhone(user.phone ?? '').slice(-4);
-            const result = await WhatsAppService.sendMessage(
-              from,
-              'account_recovery',
-              [matchedPhoneLast4]
-            );
-            actionTaken = result.success
-              ? 'sent_account_recovery'
-              : 'send_failed';
+            // Matches the existing welcome_new_user/welcome_back branch's
+            // convention below: WhatsAppService.sendMessage (like
+            // NotificationService.send) resolves with `success: false`
+            // rather than throwing on a non-fatal failure (including the
+            // SERVICE_DISABLED short-circuit when ENABLE_WHATSAPP_NOTIFICATIONS
+            // isn't 'true', e.g. in tests). actionTaken reflects "attempted"
+            // (the call didn't throw), not "Meta confirmed delivery" — same
+            // semantics the rest of this file already relies on.
+            await WhatsAppService.sendMessage(from, 'account_recovery', [
+              matchedPhoneLast4,
+            ]);
+            actionTaken = 'sent_account_recovery';
           } catch (error) {
             console.error(
               '[WhatsAppInbound] account_recovery send failed:',

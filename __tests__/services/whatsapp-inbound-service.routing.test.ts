@@ -416,13 +416,13 @@ describe('REQ-111 WhatsAppInboundService.handle — account_recovery routing', (
     expect(result).toBe('noop');
   });
 
-  it('WhatsAppService.sendMessage failure is tagged send_failed, does not throw', async () => {
+  it('a resolved (non-throwing) sendMessage failure is still tagged sent_account_recovery — matches the attempted-not-delivered convention the welcome branches already use', async () => {
     mockFindOne.mockReset();
     mockFindOne.mockResolvedValueOnce(null);
     mockFindOne.mockResolvedValueOnce(MISMATCHED_ACCOUNT);
     mockSendMessage.mockResolvedValue({
       success: false,
-      errorCode: 'TEMPLATE_NOT_FOUND',
+      errorCode: 'SERVICE_DISABLED',
     });
     const { WhatsAppInboundService } = await import(
       '@/services/whatsapp-inbound-service'
@@ -431,6 +431,23 @@ describe('REQ-111 WhatsAppInboundService.handle — account_recovery routing', (
       inboundText("Hi it's customer@example.com"),
       {}
     );
+    expect(result).toBe('sent_account_recovery');
+  });
+
+  it('WhatsAppService.sendMessage throwing is tagged send_failed, does not throw out of handle()', async () => {
+    mockFindOne.mockReset();
+    mockFindOne.mockResolvedValueOnce(null);
+    mockFindOne.mockResolvedValueOnce(MISMATCHED_ACCOUNT);
+    mockSendMessage.mockRejectedValue(new Error('network error'));
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { WhatsAppInboundService } = await import(
+      '@/services/whatsapp-inbound-service'
+    );
+    const result = await WhatsAppInboundService.handle(
+      inboundText("Hi it's customer@example.com"),
+      {}
+    );
     expect(result).toBe('send_failed');
+    spy.mockRestore();
   });
 });

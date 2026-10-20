@@ -844,3 +844,28 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 **Framework cross-references:** ISO27001.A.8.25 (secure development — tracked dependency risk awaiting upstream fix)
 
 **Cross-links:** [REQ-110 implementation plan](plans/REQ-110/implementation-plan.md); [#910](https://github.com/metasession-dev/wawagardenbar-app/issues/910).
+
+---
+
+### R-037 — Account-recovery hint disclosure via WhatsApp (REQ-111)
+
+**Status:** ACCEPTED (v1 design limitation, documented)
+**Opened:** 2026-10-20 (REQ-111, plan APPROVAL)
+**Owner:** WGB maintainer
+**Review due:** 2027-10-20 (annual review, or immediately if a `YES`/`NEW` reply handler for `account_recovery` is ever built)
+
+**The risk:** REQ-111 adds detection that resolves an inbound WhatsApp message's body (email address or order number) to an existing account whose phone differs from the sender's, then sends that account's `account_recovery` template — which reveals the account's last-4 phone digits — to the inbound sender. Order numbers are sequential (`WG` + date + zero-padded counter) and not secret; emails are commonly known or leaked (e.g. via a receipt). An attacker who knows either could trigger the send and learn a real customer's last-4 phone digits. Inherent likelihood medium (both identifiers are low-entropy/guessable or commonly available); inherent impact low-medium (a hint is disclosed, not an account takeover).
+
+**Mitigations applied in this REQ:**
+
+1. The detector only _sends a message_ — it never links the new phone to the account or grants any access. No code anywhere handles the `account_recovery` template's own implied `YES`/`NEW` reply (confirmed by code search), so an attacker who receives the last-4-digit hint gains no further access via this REQ's code.
+2. Detection requires an exact DB match (`UserModel.findOne`/`OrderModel.findOne`) on the identifier — a non-matching guess returns no mismatch and falls through to ordinary new-customer handling (proven by AC3/AC4 tests), bounding the blast radius to "this exact identifier belongs to a real account."
+3. Explicitly documented in `compliance/plans/REQ-111/implementation-plan.md` §5 and in the PR description as a known, accepted v1 limitation — not a silently-introduced gap.
+
+**Residual likelihood × impact:** medium × low (the disclosure itself is still possible — this REQ does not prevent an attacker who knows a valid email/order number from triggering the hint — but the impact ceiling is "learn last-4 digits," not "gain account access," since no reply-handling code exists to escalate further).
+
+**Required control before any future escalation:** a future handler for the `account_recovery` template's `YES`/`NEW` reply must require a second factor (e.g. re-verification via PIN sent to the _original_ phone) before linking the new phone or granting any access — email/order-number knowledge alone is forgeable and must never be sufficient on its own. This is a precondition for closing this risk further, not optional hardening.
+
+**Framework cross-references:** ISO 27001 A.8.25 (secure development life cycle — information disclosure via a new messaging surface); SOC 2 CC3.2 (risk identification — documented acceptance rather than silent exposure).
+
+**Cross-links:** [REQ-111 implementation plan](plans/REQ-111/implementation-plan.md); [#933](https://github.com/metasession-dev/wawagardenbar-app/issues/933); SRS REQ-WA-007.

@@ -32,7 +32,7 @@ permissions:
 jobs:
   generate:
     name: Generate quarterly periodic-review.md
-    runs-on: ubuntu-latest
+    runs-on: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'ubuntu-latest' || (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') }}
     steps:
       - uses: actions/checkout@v6
         with:

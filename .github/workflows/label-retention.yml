@@ -36,7 +36,7 @@ permissions:
 jobs:
   enforce:
     name: Enforce incident label retention
-    runs-on: ubuntu-latest
+    runs-on: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'ubuntu-latest' || (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') }}
     if: github.repository == github.event.repository.full_name || github.event_name == 'schedule'
     steps:
       - uses: actions/checkout@v6

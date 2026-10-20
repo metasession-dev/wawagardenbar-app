@@ -369,8 +369,24 @@ jobs:
           SHOTS=("${SHOT_DIR}"/*.png)
           shopt -u nullglob
           if [ "${#SHOTS[@]}" -eq 0 ]; then
-            echo "::error::No evidenceShot screenshots were captured for ${REQ_ID}."
-            exit 1
+            # Stopgap hand-edit pending DevAudit-Installer#1067: the gate has
+            # no built-in exemption for REQs whose only e2e coverage is a
+            # transport-layer spec (no `page` object — nothing to screenshot).
+            # sdlc-config.json:e2e_screenshot_exempt_reqs lists such REQs
+            # explicitly; remove this block once #1067 lands upstream and
+            # `devaudit update` regenerates this file.
+            SCREENSHOT_EXEMPT="false"
+            if [ -f "$GITHUB_WORKSPACE/sdlc-config.json" ]; then
+              SCREENSHOT_EXEMPT=$(jq -r --arg req "$REQ_ID" \
+                '(.e2e_screenshot_exempt_reqs // []) | index($req) != null' \
+                "$GITHUB_WORKSPACE/sdlc-config.json" 2>/dev/null || echo false)
+            fi
+            if [ "$SCREENSHOT_EXEMPT" = "true" ]; then
+              echo "::warning::No evidenceShot screenshots for ${REQ_ID} — exempted via sdlc-config.json:e2e_screenshot_exempt_reqs (transport-layer-only e2e coverage; see DevAudit-Installer#1067)."
+            else
+              echo "::error::No evidenceShot screenshots were captured for ${REQ_ID}."
+              exit 1
+            fi
           fi
           for shot in "${SHOTS[@]}"; do
             bash $GITHUB_WORKSPACE/scripts/upload-evidence.sh \

@@ -35,7 +35,7 @@
  * swallowed (REQ-054's NotificationService handles its own fallback).
  */
 import { connectDB } from '@/lib/mongodb';
-import { UserModel } from '@/models';
+import { UserModel, OrderModel } from '@/models';
 import IncomingMessageModel, {
   type IncomingCustomerState,
   type IncomingMessageIntent,
@@ -50,6 +50,14 @@ const DORMANT_THRESHOLD_MS = 30 * 24 * 60 * 60 * 1000;
 const STOP_REGEX = /^\s*(stop|unsubscribe|opt[-\s]?out)\s*$/i;
 const CHAT_WITH_STAFF_LABEL = '💬 Chat with Staff';
 const CHAT_WITH_STAFF_ID = 'chat_with_staff';
+
+// REQ-111 — account-recovery detection. EMAIL_REGEX is a permissive
+// first-match scan (not full RFC 5322 validation — we only need "does the
+// body contain something that looks like an email" to try a DB lookup).
+// ORDER_NUMBER_REGEX matches OrderService.generateOrderNumber()'s format:
+// 'WG' + 6-digit dateKey + 4-digit sequence = 'WG' + 10 digits.
+const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+const ORDER_NUMBER_REGEX = /\bWG\d{10}\b/;
 
 const OPT_OUT_CONFIRMATION_TEXT =
   "You've been unsubscribed from WhatsApp messages. " +
@@ -107,6 +115,45 @@ export class WhatsAppInboundService {
   }
 
   /**
+   * REQ-111 — scan an inbound message body for an identifying token
+   * (email or order number) and resolve it to an existing User. Pure
+   * lookup, no mutation — the caller decides what to do with the result.
+   * Returns null if no token is present, or it's present but doesn't
+   * resolve to anyone (deliberately not a mismatch signal on its own —
+   * see handle()'s same-phone check for why a resolved match still isn't
+   * automatically a mismatch).
+   */
+  static async detectAccountRecoverySignal(body: string | null) {
+    if (!body) return null;
+    await connectDB();
+
+    const emailMatch = body.match(EMAIL_REGEX);
+    if (emailMatch) {
+      const user = await UserModel.findOne({
+        email: emailMatch[0].toLowerCase(),
+        accountStatus: { $ne: 'deleted' },
+      });
+      if (user) return user;
+    }
+
+    const orderMatch = body.match(ORDER_NUMBER_REGEX);
+    if (orderMatch) {
+      const order = await OrderModel.findOne({
+        orderNumber: orderMatch[0],
+      }).select('userId');
+      if (order?.userId) {
+        const user = await UserModel.findOne({
+          _id: order.userId,
+          accountStatus: { $ne: 'deleted' },
+        });
+        if (user) return user;
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * Classify the intent of an inbound message. Pure function on the
    * Meta payload; no DB. Order matters: opt_out is checked before
    * chat_with_staff so a quick-reply labelled "STOP" (shouldn't happen
@@ -151,10 +198,32 @@ export class WhatsAppInboundService {
     try {
       const classified = await this.classifyCustomerState(from);
       state = classified.state;
-      let user = classified.user as { _id: { toString(): string } } | null;
+      let user = classified.user as {
+        _id: { toString(): string };
+        phone?: string;
+        preferences?: {
+          communicationPreferences?: { whatsappTransactional?: boolean };
+        };
+      } | null;
+
+      // REQ-111 — attempt account-recovery detection before auto-create,
+      // but only when the baseline classifier said 'new'. An already-
+      // classified existing user (signing_up/active/dormant) is
+      // definitionally not a phone mismatch — they ARE on file already.
+      if (state === 'new') {
+        const matched = await this.detectAccountRecoverySignal(body);
+        if (
+          matched &&
+          sanitizePhone(matched.phone ?? '') !== sanitizePhone(from)
+        ) {
+          state = 'phone_mismatch';
+          user = matched as typeof user;
+        }
+      }
 
       // Auto-create when new (per AC6) — needed before opt-out
-      // persistence and before any consent-gated outbound.
+      // persistence and before any consent-gated outbound. Skipped for
+      // phone_mismatch: the matched account already exists.
       if (state === 'new') {
         try {
           await connectDB();
@@ -207,8 +276,40 @@ export class WhatsAppInboundService {
           );
         }
         actionTaken = 'persisted_opt_out';
+      } else if (state === 'phone_mismatch' && user) {
+        // REQ-111 — reply directly to the inbound sender, not via
+        // NotificationService: that service resolves the recipient phone
+        // from the matched (old) account, which is the opposite of who
+        // needs to receive this message (the person texting right now).
+        // Mirrors the opt_out branch's precedent of calling WhatsAppService
+        // directly for the same reason. Consent check replicated inline
+        // since this bypasses NotificationService's own gating.
+        const consented =
+          user.preferences?.communicationPreferences?.whatsappTransactional !==
+          false; // default true, same as shouldSendWhatsApp()
+        if (consented) {
+          try {
+            const matchedPhoneLast4 = sanitizePhone(user.phone ?? '').slice(-4);
+            const result = await WhatsAppService.sendMessage(
+              from,
+              'account_recovery',
+              [matchedPhoneLast4]
+            );
+            actionTaken = result.success
+              ? 'sent_account_recovery'
+              : 'send_failed';
+          } catch (error) {
+            console.error(
+              '[WhatsAppInbound] account_recovery send failed:',
+              error instanceof Error ? error.message : String(error)
+            );
+            actionTaken = 'send_failed';
+          }
+        } else {
+          actionTaken = 'noop';
+        }
       } else {
-        // Non-opt-out: route by state.
+        // Non-opt-out, non-phone_mismatch: route by state.
         const templateKey = INBOUND_WELCOME_TEMPLATE[state];
         if (templateKey && userId) {
           try {

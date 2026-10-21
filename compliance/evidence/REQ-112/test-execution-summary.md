@@ -56,3 +56,14 @@ None.
 ## Final assessment
 
 Code and type-level verification are complete for all 4 ACs. No new business logic was introduced — the full existing unit suite (1,512 tests) passes unchanged, confirming no regression. Manual smoke verification of all 4 ACs on UAT is pending this branch's auto-deploy via `deploy-uat-k3s.yml` after merge to `develop`; this is expected and tracked, not a gap — it is the actual purpose of landing this REQ on UAT before any production release. CI's Quality Gates on the integration PR is the authoritative automated gate check.
+
+## Bundled Release Context
+
+- **Core tracked release:** `REQ-112`
+- **Absorbed predecessor releases:** None
+- **Absorbed non-release work:** housekeeping commits since `51e0f8390b51ad252cbbe0138e268e42139c31d8` (see `compliance/pending-releases/BUNDLED-CHANGES-REQ-112.md`)
+- **Why bundled here:** REQ-112 and REQ-111 (co-tracked, declared at Phase 1 planning per the operator's decision 2026-10-21) ship under one shared release approval — see `compliance/pending-releases/BUNDLED-CHANGES-REQ-112.md` § Co-Tracked Bundle Members.
+- **Evidence impact:** Evidence ownership remains on each source REQ; nothing inherited between REQ-111 and REQ-112.
+- **Reviewer impact:** UAT/Production approval scope covers both REQ-112 and REQ-111 together.
+- **Security / risk impact:** No additional security/risk impact from bundling itself; see each REQ's own risk register entries (REQ-112: `@risk-deferred`; REQ-111: `R-037` ACCEPTED).
+- **Reference:** commit range `51e0f8390b51ad252cbbe0138e268e42139c31d8..HEAD`

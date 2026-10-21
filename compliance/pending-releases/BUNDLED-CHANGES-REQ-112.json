@@ -1,0 +1,78 @@
+{
+  "approvalRelease": {
+    "version": "REQ-112"
+  },
+  "coreRelease": {
+    "version": "REQ-112"
+  },
+  "generator": {
+    "generatedAt": "2026-10-21T12:58:49Z",
+    "name": "devaudit-installer",
+    "repository": "metasession-dev/wawagardenbar-app",
+    "version": "0.0.0"
+  },
+  "manifestHash": "sha256:3101c5e46539191afd32cd36f9d7535eac33a51c5d3f4a53da658b6245b93faf",
+  "members": [
+    {
+      "commitFrom": "e87454e",
+      "commitTo": "b30e06e",
+      "evidenceInheritancePolicy": {
+        "includeCycles": false,
+        "mode": "none",
+        "reason": "Co-tracked bundle members keep fully isolated per-REQ evidence — nothing is inherited between them.",
+        "scopes": []
+      },
+      "originalTitle": "Account-recovery routing for inbound WhatsApp messages",
+      "prNumber": null,
+      "prUrl": null,
+      "reason": "Declared co-primary REQ, bundled onto one shared branch/PR/release at Phase 1 planning time.",
+      "relationship": "bundled",
+      "role": "co_tracked",
+      "scopeSummary": "Scoped slice of #933: adds `phone_mismatch` detection to the inbound WhatsApp router. Previously, an inbound message from a phone number not on file was always classified `new`, even when the message proactively identified the sender as an existing customer (e.g. by email or order number). Now, when such an identifier resolves to an existing account whose phone differs from the sender's, the message is classified `phone_mismatch` and the business sends the `account_recovery` template directly to the inbound sender — instead of silently auto-creating a brand-new account for someone who already has one. #933's Sections A/B/C (dev/UAT Meta App provisioning, UAT infra config, template-submission scripts) remain separately tracked and are explicitly out of scope for this REQ.",
+      "version": "REQ-111"
+    }
+  ],
+  "nonReleaseWorkItems": [
+    {
+      "kind": "housekeeping_commit",
+      "reference": "f203f10",
+      "title": "chore: bump transitive vite to 8.3.4 via overrides (GHSA-587h-7wmj-h5pm)"
+    },
+    {
+      "kind": "housekeeping_commit",
+      "reference": "8224770",
+      "title": "chore: sync SDLC templates from DevAudit (1.8.0 -> 1.9.0)"
+    },
+    {
+      "kind": "housekeeping_commit",
+      "reference": "25f51f3",
+      "title": "chore(compliance): export incident #923"
+    },
+    {
+      "kind": "housekeeping_commit",
+      "reference": "1775c27",
+      "title": "chore(compliance): export incident #922"
+    },
+    {
+      "kind": "housekeeping_commit",
+      "reference": "44b3509",
+      "title": "chore(compliance): export incident #921"
+    },
+    {
+      "kind": "housekeeping_commit",
+      "reference": "639c4de",
+      "title": "chore(compliance): export incident #920"
+    },
+    {
+      "kind": "housekeeping_commit",
+      "reference": "d291426",
+      "title": "ci: fix STATUS-capture bug in E2E Regression Tests step (925 follow-up)"
+    },
+    {
+      "kind": "housekeeping_commit",
+      "reference": "123fe4f",
+      "title": "ci: restore sharded full-regression run dropped by devaudit sync 7a7f3e4; fix dev-server reaping bug"
+    }
+  ],
+  "schemaVersion": 2
+}

@@ -13,11 +13,13 @@
 
 Adds a public `/terms` page (mirrors the existing `/privacy` page's layout/style) and fixes `/data-deletion` to render deletion instructions for logged-out visitors instead of unconditionally redirecting to `/login` — the interactive submission form stays gated to logged-in users, unchanged. Activates two pre-existing, commented-out footer links to both pages. Unblocks the WGB DEV Meta WhatsApp app's Go Live checklist, which requires a reachable Terms of Service URL and a Data Deletion instructions URL that doesn't hide its content behind a login wall from an unauthenticated reviewer.
 
+**Change-request iteration 1 (2026-10-21):** operator requested additional, related changes be folded into this REQ — see `compliance/plans/REQ-112/implementation-plan.md` § Change-request iteration 1 for the full amendment record. Summary: `/contact` rewritten to show only WhatsApp + email (hours and support-ticket form removed); `/privacy`/`/terms` Contact Us sections now link to `/contact` instead of duplicating details; footer gains the business's physical address and is reduced to Instagram + TikTok social links only.
+
 ## AI contributors
 
-| Tool        | Version  | Commits                                                  | Date       |
-| ----------- | -------- | -------------------------------------------------------- | ---------- |
-| Claude Code | Sonnet 5 | `635ec11` (plan + SRS + RTM + implementation + evidence) | 2026-10-21 |
+| Tool        | Version  | Commits                                                                                             | Date       |
+| ----------- | -------- | --------------------------------------------------------------------------------------------------- | ---------- |
+| Claude Code | Sonnet 5 | `635ec11`, `482c654` (plan + SRS + RTM + implementation + evidence); iteration 1 commit TBD on push | 2026-10-21 |
 
 ## Implementation details
 
@@ -29,18 +31,27 @@ Adds a public `/terms` page (mirrors the existing `/privacy` page's layout/style
 - No ADR needed (4-file content/small-fix change, no new dependency/service/DB tier — see `compliance/evidence/REQ-112/architecture-decision.md`).
 - Risk register: `@risk-deferred` (LOW risk, no register-worthy surface).
 
+**Iteration 1:**
+
+- `app/(customer)/contact/page.tsx` — rewritten: removed `SettingsService`/Mongo fetch, the Hours card, and the "File a support ticket" card/`SupportForm`; now a static page hardcoding WhatsApp (+234 814 825 3342) and email (ade@wawagardenbar.com) as the only two contact methods.
+- `app/(public)/privacy/page.tsx` §7, `app/(public)/terms/page.tsx` §11 — Contact Us sections now link to `/contact` instead of listing separate contact details.
+- `components/shared/navigation/footer.tsx` — added the business address; social links reduced from Facebook/Instagram/Twitter to Instagram + TikTok only (TikTok has no lucide-react icon, so a minimal inline SVG was added).
+- `docs/SRS.md` — new Feature Area 28 (Contact / Support): `REQ-CONTACT-001` (centralized contact info), `REQ-CONTACT-002` (footer address + social handles). Also closes a stated SRS backlog gap — Appendix A explicitly listed "the `/contact` page" as planned-but-uncovered.
+- No ADR needed (re-confirmed — see implementation plan §3 iteration 1 re-check).
+- Risk register: `@risk-deferred` unchanged.
+
 ## Scope note
 
 This REQ lands on `develop` only for now — no `main`/production release yet. `develop` auto-deploys to UAT via `deploy-uat-k3s.yml`, which is sufficient to unblock the Meta Go Live checklist (WGB DEV's Basic Settings URLs point at the UAT domain, not production, since this app exists only for UAT testing). Production release is deferred and will be bundled with REQ-111 once REQ-111's WhatsApp UAT test passes — see **Release intent** above.
 
 ## Verification
 
-- TypeScript: 0 errors.
+- TypeScript: 0 errors (both the original diff and iteration 1).
 - ESLint: 0 errors on changed files (1 pre-existing warning in `data-deletion-form.tsx`, unrelated to this REQ).
-- Unit: 1,512 passed, 4 skipped (full suite) — no new tests needed (no new business logic); confirms no regression.
+- Unit: 1,512 passed, 4 skipped (full suite) — no new tests needed (no new business logic in either iteration); confirms no regression.
 - npm audit --audit-level=high: 23 pre-existing findings (15 high), confirmed unrelated — no `package.json`/`package-lock.json` changes in this diff.
 - E2E: `@e2e-deferred` — see `compliance/evidence/REQ-112/e2e-scope-decision.md`.
-- Full detail: `compliance/evidence/REQ-112/test-execution-summary.md`.
+- Full detail: `compliance/evidence/REQ-112/test-execution-summary.md` (re-compiled for iteration 1, covers all 7 ACs).
 
 ## Sign-off (dual-actor)
 

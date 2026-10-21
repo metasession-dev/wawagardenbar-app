@@ -226,6 +226,8 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-PRIVACY-001  | `/privacy` + `/data-deletion` public                                                          | Should   | smoke      | `app/(public)/privacy`, `app/(public)/data-deletion`                                                                        |
 | REQ-PRIVACY-002  | Data-deletion request → soft delete                                                           | Could    | extended   | `accountStatus: 'deleted'`                                                                                                  |
 | REQ-PRIVACY-003  | `/terms` public legal page                                                                    | Should   | smoke      | `app/(public)/terms`                                                                                                        |
+| REQ-CONTACT-001  | Centralized contact information (WhatsApp + email only, legal pages link here)                | Should   | smoke      | `app/(customer)/contact/page.tsx`                                                                                           |
+| REQ-CONTACT-002  | Footer business address and social handles                                                    | Should   | smoke      | `components/shared/navigation/footer.tsx`                                                                                   |
 | REQ-WA-001       | OTP delivery via WhatsApp (authentication category, no consent gate)                          | Must     | regression | `lib/notification-templates.ts`; `services/notification-service.ts`; REQ-053/054                                            |
 | REQ-WA-002       | Transactional WhatsApp templates (order confirmation, status update, receipt, payment)        | Should   | regression | `lib/notification-templates.ts`; `services/notification-service.ts`; REQ-054/062                                            |
 | REQ-WA-003       | Support reply via WhatsApp (transactional, falls through to email until Meta approval)        | Should   | regression | `lib/notification-templates.ts`; `services/notification-service.ts`; REQ-064                                                |
@@ -1578,6 +1580,25 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 
 ---
 
+## Feature Area 28 — Contact / Support (CONTACT)
+
+Closes the "`/contact` page" gap listed under Appendix A / Feature Area 26's "Planned areas not yet in the SRS" note — the page existed (REQ-062) but had no SRS item until this REQ.
+
+#### REQ-CONTACT-001 — Centralized contact information · **Should** · smoke
+
+**Source:** `app/(customer)/contact/page.tsx`; cross-ref `app/(public)/privacy/page.tsx`, `app/(public)/terms/page.tsx`
+
+- **Given** any visitor, **When** they open `/contact`, **Then** exactly two contact methods are shown — WhatsApp and email — with no business-hours listing and no support-ticket form on the page.
+- **Given** any visitor, **When** they open `/privacy` or `/terms` and view its "Contact Us" section, **Then** it links to `/contact` instead of listing its own separate contact details, so contact information has one source of truth.
+
+#### REQ-CONTACT-002 — Footer business address and social handles · **Should** · smoke
+
+**Source:** `components/shared/navigation/footer.tsx`
+
+- **Given** any visitor, **When** they view the site footer, **Then** the business's physical address is shown, and the only social links present are Instagram and TikTok.
+
+---
+
 ## Feature Area 26 — Won't (this cycle)
 
 Excluded from the E2E suite this cycle, with rationale:
@@ -1690,7 +1711,7 @@ BASE_URL=https://wawagardenbar-app-uat.up.railway.app npx playwright test --proj
 | REQ-ORDMGT-005 (cancel order)                  | P0#2      | Defect — points/rewards not reversed on cancel                       |
 | (reward expiry enforcement)                    | P0#3      | Defect — `RewardsService.expireOldRewards()` has no scheduled caller |
 
-**Planned areas not yet in the SRS.** These enter the SRS as new requirements/areas only when built (each is a #117 band): Instagram engagement campaigns (IG), order reviews, support tickets/queue, real provider-side refunds, reservations/table booking, self-service data export, cookie consent, the `/contact` page, the reorder action, business-hours gate at checkout, max-delivery-distance validation, and the pickup-time slot picker.
+**Planned areas not yet in the SRS.** These enter the SRS as new requirements/areas only when built (each is a #117 band): Instagram engagement campaigns (IG), order reviews, support tickets/queue, real provider-side refunds, reservations/table booking, self-service data export, cookie consent, the reorder action, business-hours gate at checkout, max-delivery-distance validation, and the pickup-time slot picker. (The `/contact` page itself is now covered — REQ-CONTACT-001/002, Feature Area 28.)
 
 ---
 

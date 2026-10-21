@@ -1,7 +1,9 @@
 # Test Execution Summary — REQ-112
 
-**Date:** 2026-10-21
-**Implementation branch:** `feat/REQ-112-terms-data-deletion`
+**Date:** 2026-10-21 (re-compiled for change-request iteration 1)
+**Implementation branch:** `feat/REQ-112-terms-data-deletion` (iteration 1 landed as a follow-up commit on `develop`)
+
+**Iteration 1 note:** this summary was re-compiled per the scope-expansion amendment recorded in `compliance/plans/REQ-112/implementation-plan.md` § Change-request iteration 1. AC1-AC4 results below are unchanged from the original compile; AC5-AC7 are new.
 
 ## Test design
 
@@ -30,10 +32,12 @@
 
 ## Test executions
 
-| Source  | SDLC stage       | Execution | Kind              | Outcome | Workflow / run                                                                    | Related evidence                                                                                                                     | Date       |
-| ------- | ---------------- | --------- | ----------------- | ------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
-| REQ-112 | 2 implement/test | #1        | type-check        | passed  | Local `tsc --noEmit` + `eslint`; CI Quality Gates on the integration PR (pending) | `app/(public)/terms/page.tsx`, `app/(public)/data-deletion/{page,data-deletion-form}.tsx`, `components/shared/navigation/footer.tsx` | 2026-10-21 |
-| REQ-112 | 2 implement/test | #2        | unit (regression) | passed  | Local Vitest full suite                                                           | 1,512 passed, 4 skipped — confirms no regression from this REQ's changes                                                             | 2026-10-21 |
+| Source  | SDLC stage                     | Execution | Kind              | Outcome | Workflow / run                                                                    | Related evidence                                                                                                                                         | Date       |
+| ------- | ------------------------------ | --------- | ----------------- | ------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| REQ-112 | 2 implement/test               | #1        | type-check        | passed  | Local `tsc --noEmit` + `eslint`; CI Quality Gates on the integration PR (pending) | `app/(public)/terms/page.tsx`, `app/(public)/data-deletion/{page,data-deletion-form}.tsx`, `components/shared/navigation/footer.tsx`                     | 2026-10-21 |
+| REQ-112 | 2 implement/test               | #2        | unit (regression) | passed  | Local Vitest full suite                                                           | 1,512 passed, 4 skipped — confirms no regression from this REQ's changes                                                                                 | 2026-10-21 |
+| REQ-112 | 2 implement/test (iteration 1) | #3        | type-check        | passed  | Local `tsc --noEmit` + `eslint`                                                   | `app/(customer)/contact/page.tsx` (rewritten), `app/(public)/privacy/page.tsx`, `app/(public)/terms/page.tsx`, `components/shared/navigation/footer.tsx` | 2026-10-21 |
+| REQ-112 | 2 implement/test (iteration 1) | #4        | unit (regression) | passed  | Local Vitest full suite                                                           | 1,512 passed, 4 skipped — confirms no regression from iteration 1's changes                                                                              | 2026-10-21 |
 
 ## Test plan coverage
 
@@ -43,6 +47,9 @@
 | AC2 — `/data-deletion` renders instructions for logged-out visitors | PASS (type-check); manual smoke PENDING (post-deploy)                              | `npx tsc --noEmit`; manual visit on UAT |
 | AC3 — `/data-deletion` logged-in submission form unchanged          | PASS (regression — full unit suite unaffected); manual smoke PENDING (post-deploy) | Full Vitest suite; manual visit on UAT  |
 | AC4 — Footer links to `/terms` + `/privacy`                         | PASS (type-check); manual smoke PENDING (post-deploy)                              | `npx tsc --noEmit`; manual visit on UAT |
+| AC5 — `/contact` shows only WhatsApp + email                        | PASS (type-check); manual smoke PENDING (post-deploy)                              | `npx tsc --noEmit`; manual visit on UAT |
+| AC6 — `/privacy`/`/terms` Contact Us links to `/contact`            | PASS (type-check); manual smoke PENDING (post-deploy)                              | `npx tsc --noEmit`; manual visit on UAT |
+| AC7 — Footer address + Instagram/TikTok-only socials                | PASS (type-check); manual smoke PENDING (post-deploy)                              | `npx tsc --noEmit`; manual visit on UAT |
 
 ## Accepted skips
 
@@ -55,7 +62,7 @@ None.
 
 ## Final assessment
 
-Code and type-level verification are complete for all 4 ACs. No new business logic was introduced — the full existing unit suite (1,512 tests) passes unchanged, confirming no regression. Manual smoke verification of all 4 ACs on UAT is pending this branch's auto-deploy via `deploy-uat-k3s.yml` after merge to `develop`; this is expected and tracked, not a gap — it is the actual purpose of landing this REQ on UAT before any production release. CI's Quality Gates on the integration PR is the authoritative automated gate check.
+Code and type-level verification are complete for all 7 ACs (4 original + 3 from change-request iteration 1). No new business logic was introduced in either the original REQ or iteration 1 — the `/contact` rewrite removes logic (Mongo/SettingsService fetch, support-ticket form) rather than adding any. The full existing unit suite (1,512 tests) passes unchanged across both iterations, confirming no regression. Manual smoke verification of all 7 ACs on UAT is pending this branch's auto-deploy via `deploy-uat-k3s.yml`; this is expected and tracked, not a gap — it is the actual purpose of landing this REQ on UAT before any production release. CI's Quality Gates on the integration PR is the authoritative automated gate check.
 
 ## Bundled Release Context
 

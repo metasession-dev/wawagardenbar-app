@@ -150,11 +150,11 @@ export default function TermsOfServicePage() {
           <section className="mb-8">
             <h2 className="text-xl font-semibold mb-4">11. Contact Us</h2>
             <p>
-              If you have any questions about these Terms, please contact us at:
-              <br />
-              <strong>Wawa Garden Bar</strong>
-              <br />
-              Email: support@wawagardenbar.com
+              If you have any questions about these Terms, please visit our{' '}
+              <a href="/contact" className="text-primary hover:underline">
+                Contact Us
+              </a>{' '}
+              page.
             </p>
           </section>
         </div>

@@ -18,10 +18,10 @@ const footerLinks: {
     // { label: 'Careers', href: '/careers' },
   ],
   support: [
-    // TODO: Create these pages
+    // TODO: Create this page
     // { label: 'Help Center', href: '/help' },
-    // { label: 'Terms of Service', href: '/terms' },
-    // { label: 'Privacy Policy', href: '/privacy' },
+    { label: 'Terms of Service', href: '/terms' },
+    { label: 'Privacy Policy', href: '/privacy' },
   ],
   quick: [
     { label: 'Menu', href: '/menu' },

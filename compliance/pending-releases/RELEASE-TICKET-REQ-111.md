@@ -42,3 +42,9 @@ Local e2e verification caught a real implementation bug (not a test-authoring is
 ## Sign-off (dual-actor)
 
 Solo-operator team — the "reviewer ≠ submitter" check is interpreted as actor type, not human identity: AI tooling (this implementation) and the human operator (portal approver) are distinct actors. MEDIUM risk auto-continued through Phase 1 per skill policy (no HIGH/CRITICAL plan-approval pause); the operator reviews the PR + performs the portal UAT review before Production approval.
+
+## Release status note (2026-10-21)
+
+**Not abandoned — deliberately held pending real WhatsApp UAT verification.** This REQ's remaining gap before Phase 4 (release PR + UAT review request) is a genuine round-trip WhatsApp message test in the UAT environment, which cannot run until the WGB DEV Meta app is published. Publishing that app is itself blocked on Meta's Go Live checklist requiring a reachable Terms of Service URL and a Data Deletion instructions URL that doesn't redirect unauthenticated reviewers to a login wall — both addressed by REQ-112 ([#938](https://github.com/metasession-dev/wawagardenbar-app/issues/938)).
+
+**Decision (operator, 2026-10-21):** REQ-112 proceeds independently to `develop` (auto-deploys to UAT via `deploy-uat-k3s.yml`, no `main` release needed to unblock Meta review — UAT's domain is used for the app's Basic Settings URLs, not production). Once the WGB DEV app is published and this REQ's WhatsApp round-trip test passes in UAT, this release will be explicitly declared as a bundle with REQ-112 (`Bundles: #933, #938`) and submitted together via one shared `develop → main` release PR — both REQs are bundle-eligible (neither CRITICAL, only one risk tier apart, no file/logic overlap). This ticket's **Status** field remains `TESTED - PENDING SIGN-OFF` until that submission; no change needed here in the interim.

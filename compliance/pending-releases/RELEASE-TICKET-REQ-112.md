@@ -45,3 +45,19 @@ This REQ lands on `develop` only for now — no `main`/production release yet. `
 ## Sign-off (dual-actor)
 
 Solo-operator team — the "reviewer ≠ submitter" check is interpreted as actor type, not human identity: AI tooling (this implementation) and the human operator (portal approver) are distinct actors. LOW risk auto-continued through Phase 1 per skill policy (no HIGH/CRITICAL plan-approval pause); the operator reviews the PR before merge to `develop`.
+
+## Bundled Changes
+
+- **Core tracked release:** `REQ-112`
+- **Bundle manifest:** `BUNDLED-CHANGES-REQ-112.json`
+- **Manifest hash:** `sha256:3101c5e46539191afd32cd36f9d7535eac33a51c5d3f4a53da658b6245b93faf`
+- **Absorbed predecessor releases:** None
+- **Co-tracked bundle members:** REQ-111
+- **Absorbed non-release work:** housekeeping commits since `51e0f8390b51ad252cbbe0138e268e42139c31d8`
+- **Why bundled here:** REQ-111 and REQ-112 were declared co-primary at Phase 1 planning time per the operator's decision (2026-10-21) — both ship under one shared `develop → main` release, one UAT review, one Production approval. REQ-111 keeps its own fully isolated plan/evidence; nothing is absorbed or superseded.
+- **Evidence impact:** Evidence ownership remains on the source releases; the bundle manifest provides lineage and inherited visibility only.
+- **Reviewer impact:** Approval scope includes both REQ-112 and REQ-111.
+- **Security / risk impact:** No additional security/risk impact from bundling itself; see each REQ's own risk register entries.
+- **Reference:** commit range `51e0f8390b51ad252cbbe0138e268e42139c31d8..HEAD`
+
+See `compliance/pending-releases/BUNDLED-CHANGES-REQ-112.md` for the full generated manifest.

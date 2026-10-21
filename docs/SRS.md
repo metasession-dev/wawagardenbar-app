@@ -225,6 +225,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-SEC-004      | Auth endpoints strict rate limit (5/min)                                                      | Should   | regression | `lib/rate-limiter.ts:19`                                                                                                    |
 | REQ-PRIVACY-001  | `/privacy` + `/data-deletion` public                                                          | Should   | smoke      | `app/(public)/privacy`, `app/(public)/data-deletion`                                                                        |
 | REQ-PRIVACY-002  | Data-deletion request → soft delete                                                           | Could    | extended   | `accountStatus: 'deleted'`                                                                                                  |
+| REQ-PRIVACY-003  | `/terms` public legal page                                                                    | Should   | smoke      | `app/(public)/terms`                                                                                                        |
 | REQ-WA-001       | OTP delivery via WhatsApp (authentication category, no consent gate)                          | Must     | regression | `lib/notification-templates.ts`; `services/notification-service.ts`; REQ-053/054                                            |
 | REQ-WA-002       | Transactional WhatsApp templates (order confirmation, status update, receipt, payment)        | Should   | regression | `lib/notification-templates.ts`; `services/notification-service.ts`; REQ-054/062                                            |
 | REQ-WA-003       | Support reply via WhatsApp (transactional, falls through to email until Meta approval)        | Should   | regression | `lib/notification-templates.ts`; `services/notification-service.ts`; REQ-064                                                |
@@ -1498,6 +1499,12 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 **Source:** `app/(public)/data-deletion`, `settings/data-requests/`; cross-ref REQ-027
 
 - **Given** a submitted deletion request, **When** a super-admin approves it, **Then** the customer's `accountStatus` becomes `deleted` and they are excluded from active lists.
+
+#### REQ-PRIVACY-003 — `/terms` public legal page · **Should** · smoke
+
+**Source:** `app/(public)/terms`; cross-ref REQ-PRIVACY-001 (sibling public legal page, same route group/layout pattern)
+
+- **Given** any visitor (authenticated or not), **When** they open `/terms`, **Then** the Terms of Service page loads without authentication, following the same `MainLayout`/`prose` styling as `/privacy`.
 
 ---
 

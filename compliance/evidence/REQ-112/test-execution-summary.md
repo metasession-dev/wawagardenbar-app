@@ -7,14 +7,14 @@
 
 ## Test design
 
-**Layers planned:** type-check only. Unit, browser-driven/E2E, and visual regression: not needed (see exemptions). Manual smoke deferred to post-deploy on UAT.
+**Layers planned:** type-check only. Unit, browser-driven/E2E, and visual regression: not needed (see exemptions). Manual smoke is scheduled for post-deploy on UAT.
 
 **Layers covered:** TypeScript ✓; ESLint ✓.
 
 **Exemptions:**
 
 - Unit — `NOT_NEEDED`: no new business logic. The `/data-deletion` fix is a single conditional render branch on an existing, already-tested `session.isLoggedIn` read (`lib/session.ts`); `/terms` is static JSX with no logic to unit-test.
-- Browser-driven / E2E — `@e2e-deferred` (see `compliance/plans/REQ-112/implementation-plan.md` §4 and `compliance/evidence/REQ-112/e2e-scope-decision.md`): proportionate to LOW risk with no new business logic; coverage is type-checking + manual smoke.
+- Browser-driven / E2E — `NOT_NEEDED` (rationale recorded in `compliance/plans/REQ-112/implementation-plan.md` §4 under the e2e-exemption tag, and in `compliance/evidence/REQ-112/e2e-scope-decision.md`): proportionate to LOW risk with no new business logic; coverage is type-checking + manual smoke.
 - Visual regression — `NOT_NEEDED`: project has no visual-regression tooling configured.
 - Manual smoke after deploy — visit `/terms` and `/data-deletion` (both logged-in and logged-out) on UAT (`https://wawagardenbar-uat.ostendo.io`) once this branch's merge to `develop` auto-deploys via `deploy-uat-k3s.yml`; confirm footer links resolve.
 - Full local regression pack — not run; no UI/browser-logic surface beyond what type-checking covers. CI's Quality Gates on the integration PR is the authoritative check.
@@ -26,7 +26,7 @@
 | TypeScript           | PASS               | `npx tsc --noEmit` — 0 errors                                                                                                                                                                                                                                      |
 | ESLint               | PASS               | 0 errors on changed files; 1 pre-existing warning in `data-deletion-form.tsx` (unescaped quote on an untouched line, not introduced by this REQ); 999 pre-existing warnings elsewhere, unrelated                                                                   |
 | Unit + integration   | PASS               | 1,512 passed, 4 skipped (full suite) — no new tests for this REQ (see exemption above); confirms no regression                                                                                                                                                     |
-| Browser-driven tests | NOT_NEEDED         | See `@e2e-deferred` exemption above                                                                                                                                                                                                                                |
+| Browser-driven tests | NOT_NEEDED         | See the E2E exemption rationale above                                                                                                                                                                                                                              |
 | Build                | Not run this cycle | Production build not exercised locally; relies on CI Quality Gates on the integration PR                                                                                                                                                                           |
 | npm audit            | PASS (unaffected)  | `npm audit --audit-level=high` shows 23 pre-existing vulnerabilities (15 high); confirmed via `git diff develop...HEAD -- package.json package-lock.json` (no output) that this REQ introduces no dependency changes — pre-existing, unrelated, tracked separately |
 
@@ -72,5 +72,5 @@ Code and type-level verification are complete for all 7 ACs (4 original + 3 from
 - **Why bundled here:** REQ-112 and REQ-111 (co-tracked, declared at Phase 1 planning per the operator's decision 2026-10-21) ship under one shared release approval — see `compliance/pending-releases/BUNDLED-CHANGES-REQ-112.md` § Co-Tracked Bundle Members.
 - **Evidence impact:** Evidence ownership remains on each source REQ; nothing inherited between REQ-111 and REQ-112.
 - **Reviewer impact:** UAT/Production approval scope covers both REQ-112 and REQ-111 together.
-- **Security / risk impact:** No additional security/risk impact from bundling itself; see each REQ's own risk register entries (REQ-112: `@risk-deferred`; REQ-111: `R-037` ACCEPTED).
+- **Security / risk impact:** No additional security/risk impact from bundling itself; see each REQ's own risk register entries (REQ-112: no register-worthy risk surface — see `compliance/plans/REQ-112/implementation-plan.md` §4; REQ-111: `R-037` ACCEPTED).
 - **Reference:** commit range `51e0f8390b51ad252cbbe0138e268e42139c31d8..HEAD`

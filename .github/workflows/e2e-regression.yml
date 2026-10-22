@@ -134,10 +134,21 @@ jobs:
           npx tsx scripts/seed-e2e-fixtures.ts
 
       - name: Start dev server
+        # Backgrounded with `set -m` so the job runs in its own process
+        # group — `kill "$PID"` alone (the prior shape) only ever signals
+        # this one tracked PID. When `npm run dev` is a wrapper spawning
+        # `next dev` as a child, the wrapper exits on SIGTERM but the real
+        # server process is never signaled, so it's orphaned and
+        # accumulates across job runs until the runner's memory cap is hit
+        # (wawagardenbar-app#925 root-caused the runner's week-long Oct
+        # 9-16 crash/restart loop to exactly this). The negative-PID kill
+        # in "Stop dev server" below targets the whole group this starts.
         run: |
           set -euo pipefail
+          set -m
           npm run dev > e2e-server.log 2>&1 &
           echo "$!" > .e2e-server.pid
+          set +m
           echo "Started E2E server pid $(cat .e2e-server.pid)"
 
       - name: Wait for dev server
@@ -265,19 +276,28 @@ jobs:
           E2E_PORT: 3000
         run: |
           set -uo pipefail
+          # wawagardenbar-app#925 — GitHub Actions' default shell for `run:`
+          # blocks already has `-e` set before this script's own
+          # `set -uo pipefail` runs (set doesn't clear a flag it doesn't
+          # mention), so `cmd; STATUS=$?` loses the exit code: a failing
+          # command aborts the script before `STATUS=$?` is ever reached,
+          # skipping the outcome/completed_at/exit_code metadata merge
+          # below entirely (the step still correctly fails, since the
+          # aborting command's own exit code becomes the step's exit code
+          # — this only breaks the metadata annotation, not pass/fail).
+          # `cmd || STATUS=$?` keeps the compound statement's exit status 0
+          # on failure, so `-e` never fires.
+          STATUS=0
           if [ -f e2e/ci-reliability/regression-run.sh ]; then
             echo "::notice::Using project hook e2e/ci-reliability/regression-run.sh (PROJECT=$PROJECT)"
-            bash e2e/ci-reliability/regression-run.sh
-            STATUS=$?
+            bash e2e/ci-reliability/regression-run.sh || STATUS=$?
           elif [ -n "$SPECS" ]; then
             echo "::notice::Running scoped regression — project=$PROJECT specs=$SPECS"
             # shellcheck disable=SC2086
-            timeout --signal=TERM --kill-after=60s 40m npx playwright test --project="$PROJECT" --reporter=json,html $SPECS
-            STATUS=$?
+            timeout --signal=TERM --kill-after=60s 40m npx playwright test --project="$PROJECT" --reporter=json,html $SPECS || STATUS=$?
           else
             echo "::notice::Running project=$PROJECT"
-            timeout --signal=TERM --kill-after=60s 40m npx playwright test --project="$PROJECT" --reporter=json,html
-            STATUS=$?
+            timeout --signal=TERM --kill-after=60s 40m npx playwright test --project="$PROJECT" --reporter=json,html || STATUS=$?
           fi
           if [ "$STATUS" -eq 124 ]; then
             OUTCOME="timed_out"
@@ -295,13 +315,19 @@ jobs:
 
       - name: Stop dev server
         if: always()
+        # Process-group-safe stop (wawagardenbar-app#925) — see "Start dev
+        # server" above. `kill -TERM -- "-$PID"` signals the whole process
+        # group; the plain-PID kill and pkill -9 -P fallbacks cover
+        # shells/runners where the group signal doesn't reach every child.
         run: |
           set -euo pipefail
           if [ -f .e2e-server.pid ]; then
             PID="$(cat .e2e-server.pid)"
             if kill -0 "$PID" 2>/dev/null; then
-              kill "$PID"
-              wait "$PID" 2>/dev/null || true
+              kill -TERM -- "-${PID}" 2>/dev/null || kill -TERM "$PID" 2>/dev/null || true
+              sleep 2
+              pkill -9 -P "$PID" 2>/dev/null || true
+              kill -9 "$PID" 2>/dev/null || true
             fi
           fi
 

@@ -13,12 +13,17 @@ vi.mock('@/lib/mongodb', () => ({
 }));
 
 const mockFindOne = vi.fn();
+const mockOrderFindOne = vi.fn();
+const mockOrderSelect = vi.fn();
 
 vi.mock('@/models', () => ({
   UserModel: {
     findOne: (...args: unknown[]) => mockFindOne(...args),
     create: vi.fn(),
     updateOne: vi.fn(),
+  },
+  OrderModel: {
+    findOne: (...args: unknown[]) => mockOrderFindOne(...args),
   },
 }));
 
@@ -56,6 +61,9 @@ const DORMANT_NEVER_LOGGED_IN = {
 
 beforeEach(() => {
   mockFindOne.mockReset();
+  mockOrderFindOne.mockReset();
+  mockOrderSelect.mockReset();
+  mockOrderFindOne.mockReturnValue({ select: mockOrderSelect });
 });
 
 describe('REQ-056 classifyCustomerState', () => {
@@ -214,5 +222,105 @@ describe('REQ-056 classifyMessageIntent', () => {
       text: { body: 'hi can I get a menu' },
     });
     expect(intent).toBe('support_text');
+  });
+});
+
+describe('REQ-111 detectAccountRecoverySignal', () => {
+  const MATCHED_USER = {
+    _id: { toString: () => '65a1b2c3d4e5f6a7b8c9d0ff' },
+    phone: '+2348099998888',
+    email: 'customer@example.com',
+    accountStatus: 'active',
+  };
+
+  it('AC1 — email in message body resolves to the matching account', async () => {
+    mockFindOne.mockResolvedValue(MATCHED_USER);
+    const { WhatsAppInboundService } = await import(
+      '@/services/whatsapp-inbound-service'
+    );
+    const result = await WhatsAppInboundService.detectAccountRecoverySignal(
+      "Hi, it's me, customer@example.com, I lost my old phone"
+    );
+    expect(result).toBe(MATCHED_USER);
+    const filter = mockFindOne.mock.calls[0][0] as Record<string, unknown>;
+    expect(filter.email).toBe('customer@example.com');
+    expect(mockOrderFindOne).not.toHaveBeenCalled();
+  });
+
+  it('AC1 — email match is lowercased before the lookup', async () => {
+    mockFindOne.mockResolvedValue(MATCHED_USER);
+    const { WhatsAppInboundService } = await import(
+      '@/services/whatsapp-inbound-service'
+    );
+    await WhatsAppInboundService.detectAccountRecoverySignal(
+      'Customer@Example.COM is my account'
+    );
+    const filter = mockFindOne.mock.calls[0][0] as Record<string, unknown>;
+    expect(filter.email).toBe('customer@example.com');
+  });
+
+  it('AC2 — order number (WG + 10 digits) in message body resolves via the order to its user', async () => {
+    mockFindOne.mockReset();
+    // No email in the body, so the first UserModel.findOne call is skipped
+    // entirely; the order-number path does its own UserModel.findOne by id.
+    mockOrderSelect.mockResolvedValue({ userId: MATCHED_USER._id });
+    mockFindOne.mockResolvedValue(MATCHED_USER);
+    const { WhatsAppInboundService } = await import(
+      '@/services/whatsapp-inbound-service'
+    );
+    const result = await WhatsAppInboundService.detectAccountRecoverySignal(
+      'My order WG2610200001 never arrived'
+    );
+    expect(result).toBe(MATCHED_USER);
+    expect(mockOrderFindOne).toHaveBeenCalledWith({
+      orderNumber: 'WG2610200001',
+    });
+    const userFilter = mockFindOne.mock.calls[0][0] as Record<string, unknown>;
+    expect(userFilter._id).toBe(MATCHED_USER._id);
+  });
+
+  it('order number not found → returns null, no User lookup by id', async () => {
+    mockOrderSelect.mockResolvedValue(null);
+    const { WhatsAppInboundService } = await import(
+      '@/services/whatsapp-inbound-service'
+    );
+    const result = await WhatsAppInboundService.detectAccountRecoverySignal(
+      'My order WG2610200099 never arrived'
+    );
+    expect(result).toBeNull();
+  });
+
+  it('no identifying token in body → returns null without any DB lookup', async () => {
+    const { WhatsAppInboundService } = await import(
+      '@/services/whatsapp-inbound-service'
+    );
+    const result =
+      await WhatsAppInboundService.detectAccountRecoverySignal('hi there');
+    expect(result).toBeNull();
+    expect(mockFindOne).not.toHaveBeenCalled();
+    expect(mockOrderFindOne).not.toHaveBeenCalled();
+  });
+
+  it('null body → returns null without any DB lookup', async () => {
+    const { WhatsAppInboundService } = await import(
+      '@/services/whatsapp-inbound-service'
+    );
+    const result =
+      await WhatsAppInboundService.detectAccountRecoverySignal(null);
+    expect(result).toBeNull();
+    expect(mockFindOne).not.toHaveBeenCalled();
+  });
+
+  it('email present but resolves to no account → falls through to order-number check', async () => {
+    mockFindOne.mockResolvedValueOnce(null); // email lookup finds nobody
+    mockOrderSelect.mockResolvedValue({ userId: MATCHED_USER._id });
+    mockFindOne.mockResolvedValueOnce(MATCHED_USER); // order->user lookup
+    const { WhatsAppInboundService } = await import(
+      '@/services/whatsapp-inbound-service'
+    );
+    const result = await WhatsAppInboundService.detectAccountRecoverySignal(
+      'unknown@example.com but also my order WG2610200001'
+    );
+    expect(result).toBe(MATCHED_USER);
   });
 });

@@ -36,9 +36,58 @@ type DeletionFormData = z.infer<typeof deletionSchema>;
 
 interface DataDeletionFormProps {
   initialEmail?: string;
+  isLoggedIn: boolean;
 }
 
-export function DataDeletionForm({ initialEmail }: DataDeletionFormProps) {
+function DataDeletionInstructions() {
+  return (
+    <div className="mb-8 text-sm text-muted-foreground space-y-3">
+      <p>
+        You can request permanent deletion of your Wawa Garden Bar account and
+        all associated personal data (profile details, order history, and
+        rewards) at any time:
+      </p>
+      <ol className="list-decimal pl-6 space-y-1">
+        <li>
+          Log in to your account at{' '}
+          <Link
+            href="/login?redirect=/data-deletion"
+            className="text-primary hover:underline"
+          >
+            /login
+          </Link>
+          .
+        </li>
+        <li>
+          Return to this page — a deletion request form will appear below.
+        </li>
+        <li>
+          Enter your reason for deletion and type &quot;DELETE&quot; to confirm.
+        </li>
+        <li>
+          We process deletion requests within 30 days and email a confirmation
+          once complete.
+        </li>
+      </ol>
+      <p>
+        If you no longer have access to your account, email{' '}
+        <a
+          href="mailto:support@wawagardenbar.com"
+          className="text-primary hover:underline"
+        >
+          support@wawagardenbar.com
+        </a>{' '}
+        from the email address on file and we will verify and process the
+        request manually.
+      </p>
+    </div>
+  );
+}
+
+export function DataDeletionForm({
+  initialEmail,
+  isLoggedIn,
+}: DataDeletionFormProps) {
   const { toast } = useToast();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [ticketId, setTicketId] = useState<string | null>(null);
@@ -117,6 +166,29 @@ export function DataDeletionForm({ initialEmail }: DataDeletionFormProps) {
     );
   }
 
+  if (!isLoggedIn) {
+    return (
+      <MainLayout>
+        <Container className="py-12 max-w-lg">
+          <div className="mb-8 text-center">
+            <h1 className="text-3xl font-bold tracking-tight">
+              Data Deletion Request
+            </h1>
+            <p className="mt-2 text-muted-foreground">
+              Request permanent deletion of your account and personal data
+            </p>
+          </div>
+          <DataDeletionInstructions />
+          <Button asChild className="w-full">
+            <Link href="/login?redirect=/data-deletion">
+              Log In to Continue
+            </Link>
+          </Button>
+        </Container>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
       <Container className="py-12 max-w-lg">
@@ -128,6 +200,8 @@ export function DataDeletionForm({ initialEmail }: DataDeletionFormProps) {
             Request permanent deletion of your account and personal data
           </p>
         </div>
+
+        <DataDeletionInstructions />
 
         <Card>
           <CardHeader>

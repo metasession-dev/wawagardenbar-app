@@ -22,4 +22,8 @@ export const INBOUND_WELCOME_TEMPLATE: Record<
   signing_up: 'welcome_new_user',
   active: null, // free-form / staff handles it
   dormant: 'welcome_back',
+  // Documentation-only entry: the actual send for phone_mismatch bypasses
+  // this map's generic branch (see WhatsAppInboundService.handle) because
+  // it must reply to the inbound sender, not a DB-resolved user phone.
+  phone_mismatch: 'account_recovery',
 };

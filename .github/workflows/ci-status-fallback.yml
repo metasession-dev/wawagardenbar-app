@@ -49,7 +49,7 @@ permissions:
 jobs:
   quality-gates:
     name: Quality Gates
-    runs-on: ubuntu-latest
+    runs-on: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'ubuntu-latest' || (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') }}
     steps:
       - name: Acknowledge docs/compliance-only commit
         run: |

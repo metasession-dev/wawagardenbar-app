@@ -11,7 +11,12 @@
  */
 import { Schema, model, models, type Model, type Document } from 'mongoose';
 
-export type IncomingCustomerState = 'new' | 'signing_up' | 'active' | 'dormant';
+export type IncomingCustomerState =
+  | 'new'
+  | 'signing_up'
+  | 'active'
+  | 'dormant'
+  | 'phone_mismatch';
 
 export type IncomingMessageIntent =
   | 'opt_out'
@@ -41,7 +46,7 @@ const incomingMessageSchema = new Schema<IIncomingMessage>(
     classifiedState: {
       type: String,
       required: true,
-      enum: ['new', 'signing_up', 'active', 'dormant'],
+      enum: ['new', 'signing_up', 'active', 'dormant', 'phone_mismatch'],
     },
     classifiedIntent: {
       type: String,

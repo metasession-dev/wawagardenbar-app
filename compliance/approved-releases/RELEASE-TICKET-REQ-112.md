@@ -1,6 +1,6 @@
 # Release Ticket: REQ-112 — Terms of Service page + public Data Deletion instructions
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-10-21
 **Requirement ID:** REQ-112
 **Risk Level:** LOW

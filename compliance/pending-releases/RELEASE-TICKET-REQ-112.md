@@ -7,7 +7,7 @@
 **Issue:** [#938](https://github.com/metasession-dev/wawagardenbar-app/issues/938)
 **Implementation branch:** `feat/REQ-112-terms-data-deletion`
 
-- **Release intent:** deferred-to-next — not yet submitted for a `develop → main` release PR, will bundle with REQ-111 (`Bundles: #933, #938`) once REQ-111's WhatsApp UAT round-trip test passes. See `compliance/pending-releases/RELEASE-TICKET-REQ-111.md` § Release status note (2026-10-21).
+**Release status (2026-10-22):** proceeding to a bundled `develop → main` release now with REQ-111 (`Bundles: #933, #938`), rather than continuing to wait on REQ-111's live WhatsApp round-trip test — see `compliance/pending-releases/RELEASE-TICKET-REQ-111.md` § Requirements gap accepted (2026-10-22) for the operator's decision and rationale. This REQ's own evidence (legal pages, contact page, footer) is unaffected and was already fully verified live on UAT.
 
 ## Summary
 
@@ -42,7 +42,7 @@ Adds a public `/terms` page (mirrors the existing `/privacy` page's layout/style
 
 ## Scope note
 
-This REQ lands on `develop` only for now — no `main`/production release yet. `develop` auto-deploys to UAT via `deploy-uat-k3s.yml`, which is sufficient to unblock the Meta Go Live checklist (WGB DEV's Basic Settings URLs point at the UAT domain, not production, since this app exists only for UAT testing). Production release is deferred and will be bundled with REQ-111 once REQ-111's WhatsApp UAT test passes — see **Release intent** above.
+This REQ previously landed on `develop` only, auto-deploying to UAT via `deploy-uat-k3s.yml` to unblock the Meta Go Live checklist (WGB DEV's Basic Settings URLs point at the UAT domain, not production). As of 2026-10-22 it proceeds to the bundled `develop → main` production release alongside REQ-111 — see **Release status** above.
 
 ## Verification
 

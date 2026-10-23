@@ -20,3 +20,14 @@ No personal data is processed. The action reads menu item names, categories and 
 
 - No migration and no schema change.
 - Reversible via `git revert` of the REQ-113 merge. The feature is additive: a new route, new modules and one toolbar button.
+
+## Bundled Release Context
+
+- **Core tracked release:** `REQ-113`
+- **Absorbed predecessor releases:** `REQ-114`, the zod 3 → 4 upgrade (#956, PR #958). It merged to `develop` first and has not yet been released to `main`.
+- **Absorbed non-release work:** the housekeeping commits REQ-114 already carried since `origin/main`: `ff2171b` (#955), `208f3da` (#952), `4ee226e` (#951) and `055ddb4` (#950). See `compliance/pending-releases/BUNDLED-CHANGES-REQ-113.md`.
+- **Why bundled here:** REQ-113 is rebased onto REQ-114 and its code depends on it, because `menu-print-actions.ts` imports `z` from `@/lib/zod`. REQ-114's commits are in `origin/main..HEAD`, so they ship under this release.
+- **Evidence impact:** Evidence ownership stays with each source. REQ-114's evidence is in `compliance/evidence/REQ-114/`, and nothing in it is relabelled as REQ-113's. The tests above cover REQ-113 and were run on top of REQ-114.
+- **Reviewer impact:** UAT and Production approval covers REQ-113, plus REQ-114 and the four housekeeping commits.
+- **Security / risk impact:** REQ-114 is itself a security fix (GHSA-mrhx-c7xc-m3w5), with risks R-038 and R-039 reviewed in PR #958. Bundling adds no risk, and REQ-113 adds none to the register (LOW, `@risk-deferred`).
+- **Reference:** commit range `origin/main..HEAD`

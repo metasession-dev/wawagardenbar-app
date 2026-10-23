@@ -6,7 +6,8 @@
 import { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { z } from '@/lib/zod';
+import { requiredError } from '@/lib/validation/zod-errors';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon, Loader2, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -79,7 +80,7 @@ import { IPendingExpenseGroup } from '@/interfaces/pending-expense-group.interfa
 
 const lineItemSchema = z.object({
   expenseType: z.enum(['direct-cost', 'operating-expense'], {
-    required_error: 'Expense type is required',
+    error: requiredError('Expense type is required'),
   }),
   category: z.string().min(1, 'Category is required'),
   description: z.string().min(3, 'Description must be at least 3 characters'),
@@ -93,13 +94,13 @@ const lineItemSchema = z.object({
 });
 
 const editSchema = z.object({
-  date: z.date({ required_error: 'Date is required' }),
+  date: z.date({ error: requiredError('Date is required') }),
   items: z.array(lineItemSchema).min(1),
   notes: z.string().optional(),
   // REQ-106 — editable while status !== 'transferred' (enforced by the
   // service's existing edit-lock rule).
   paymentMethod: z.enum(['cash', 'transfer'], {
-    required_error: 'Payment method is required',
+    error: requiredError('Payment method is required'),
   }),
 });
 

@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { z } from '@/lib/zod';
 import { Loader2, Save, Send } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -70,7 +70,11 @@ export function NotificationSettingsForm({
   const [isTestPending, startTestTransition] = useTransition();
   const [testPhone, setTestPhone] = useState('');
 
-  const form = useForm<SettingsFormValues>({
+  const form = useForm<
+    z.input<typeof settingsSchema>,
+    unknown,
+    SettingsFormValues
+  >({
     resolver: zodResolver(settingsSchema),
     defaultValues: {
       smsEnabled: initialSettings.smsEnabled,

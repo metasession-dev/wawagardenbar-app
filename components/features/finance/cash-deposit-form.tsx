@@ -8,7 +8,8 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { z } from '@/lib/zod';
+import { requiredError } from '@/lib/validation/zod-errors';
 import { format } from 'date-fns';
 import { CalendarIcon, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -41,7 +42,7 @@ import { createCashDepositAction } from '@/app/actions/finance/cash-deposit-acti
 import { toast } from '@/hooks/use-toast';
 
 const depositFormSchema = z.object({
-  date: z.date({ required_error: 'Date is required' }),
+  date: z.date({ error: requiredError('Date is required') }),
   amount: z.number().positive('Amount must be greater than 0'),
   reference: z.string().optional(),
   notes: z.string().optional(),

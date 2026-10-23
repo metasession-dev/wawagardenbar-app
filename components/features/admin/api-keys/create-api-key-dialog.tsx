@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 import { Plus, Copy, Check, AlertTriangle } from 'lucide-react';
 import {
   Dialog,
@@ -50,7 +50,7 @@ export function CreateApiKeyDialog({ onCreated }: CreateApiKeyDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCustomScopes, setShowCustomScopes] = useState(false);
 
-  const form = useForm<FormValues>({
+  const form = useForm<z.input<typeof schema>, unknown, FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { name: '', role: '', scopes: ['menu:read'], rateLimit: 60 },
   });

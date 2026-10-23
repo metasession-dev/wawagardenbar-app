@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 import { Loader2 } from 'lucide-react';
 import {
   Dialog,
@@ -64,7 +64,7 @@ export function AddressFormDialog({
     watch,
     setValue,
     formState: { errors },
-  } = useForm<AddressFormData>({
+  } = useForm<z.input<typeof addressSchema>, unknown, AddressFormData>({
     resolver: zodResolver(addressSchema),
     defaultValues: address
       ? {

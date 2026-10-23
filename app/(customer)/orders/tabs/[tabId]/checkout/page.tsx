@@ -4,7 +4,8 @@ import { use, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { z } from '@/lib/zod';
+import { requiredError } from '@/lib/validation/zod-errors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
@@ -31,7 +32,7 @@ import { IReward } from '@/interfaces';
 const checkoutSchema = z.object({
   tipAmount: z.number().min(0).optional(),
   paymentMethod: z.enum(['CARD', 'ACCOUNT_TRANSFER', 'USSD', 'PHONE_NUMBER'], {
-    required_error: 'Please select a payment method',
+    error: requiredError('Please select a payment method'),
   }),
   customerName: z.string().min(2),
   customerEmail: z.string().email(),

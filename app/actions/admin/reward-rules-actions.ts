@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 import { RewardsService } from '@/services/rewards-service';
 import { requireAdmin } from '@/lib/auth-middleware';
 import { IRewardRule } from '@/interfaces';
@@ -166,7 +166,7 @@ export async function createRewardRuleAction(
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: error.errors[0].message,
+        error: error.issues[0].message,
       };
     }
 
@@ -283,7 +283,7 @@ export async function updateRewardRuleAction(
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: error.errors[0].message,
+        error: error.issues[0].message,
       };
     }
 

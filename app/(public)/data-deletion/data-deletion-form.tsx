@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 import { Loader2, AlertTriangle, CheckCircle, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,7 +28,7 @@ const deletionSchema = z.object({
     .string()
     .min(10, 'Please provide a reason (at least 10 characters)'),
   confirmation: z.literal('DELETE', {
-    errorMap: () => ({ message: 'Please type DELETE to confirm' }),
+    error: 'Please type DELETE to confirm',
   }),
 });
 

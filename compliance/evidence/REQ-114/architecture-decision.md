@@ -8,7 +8,7 @@ generated_at: 2026-10-23T22:55:00Z
 
 ## Outcome
 
-**No ADR needed (candidate verdict — awaiting operator confirmation).** Security-forced version migration of two existing dependencies (`zod` 3 → 4, `@hookform/resolvers` 3 → 5). The app keeps the same validation architecture (zod schemas, `zodResolver` in react-hook-form forms, `parse`/`safeParse` in server actions).
+**No ADR needed — confirmed by the operator on 2026-10-23.** Security-forced version migration of two existing dependencies (`zod` 3 → 4, `@hookform/resolvers` 3 → 5). The app keeps the same validation architecture (zod schemas, `zodResolver` in react-hook-form forms, `parse`/`safeParse` in server actions).
 
 ## Detail
 
@@ -22,7 +22,7 @@ generated_at: 2026-10-23T22:55:00Z
   - File-path signals (defaults `lib/services/`, `lib/repositories/`, `prisma/`, `infra/`) — none touched.
   - Dependency bump — **major with API changes** (edge: not the "no API change" case).
   - Pattern change spanning > 3 files — **edge.** The migration touches the 40 zod files: a mechanical API migration, plus one new convention, importing `z` from `@/lib/zod` (which carries zod-3-compatible default messages) instead of `'zod'`. The validation pattern itself is unchanged.
-- **Why the verdict is flagged rather than final:** two edge signals score borderline, and the operator asked for an ADR on REQ-113. If the operator wants one, the natural subject is the new convention: "all zod imports go through `@/lib/zod`, which pins zod-3 default messages". Next free ID: ADR-006 (ADR-005 is in use by REQ-113 on its branch).
+- **Why the verdict was flagged before confirmation:** two edge signals score borderline, and the operator asked for an ADR on REQ-113. If the operator wants one, the natural subject is the new convention: "all zod imports go through `@/lib/zod`, which pins zod-3 default messages". Next free ID: ADR-006 (ADR-005 is in use by REQ-113 on its branch).
 - **Cross-references:** plan §3 and § Plan deviation items 1–2; risk register R-038, R-039; SRS trace-only (see `srs-alignment.md`).
 
 ## Operator sign-off

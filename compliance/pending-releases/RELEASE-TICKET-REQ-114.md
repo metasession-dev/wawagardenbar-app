@@ -26,8 +26,8 @@
 - `app/actions/admin/reward-rules-actions.ts`, `app/actions/profile/profile-actions.ts` — `ZodError.errors` → `.issues` (5 sites).
 - Five react-hook-form forms typed with the schema's input and output types (`useForm<z.input<…>, unknown, Output>`); `expense-categories-form.tsx` gains `?? []` on reads of fields the form always initialises.
 - A separate `style:` commit applies the repo's pre-commit formatting to the touched files first, so the migration diff shows only real changes.
-- **Known behaviour change:** zod 4's `z.number()` rejects `±Infinity`, which zod 3 accepted ("Number must be finite"). No number input can produce it; recorded in the plan's Plan deviation.
-- SRS: trace-only to existing items; AC1/AC4 `@srs-deferred`. ADR: candidate "No ADR" pending operator confirmation (`compliance/evidence/REQ-114/architecture-decision.md`). Risk register: R-038, R-039 (OPEN; operator moves them to MITIGATED at review).
+- **Known behaviour change:** zod 4's `z.number()` rejects `±Infinity`, which zod 3 accepted ("Number must be finite"). No number input can produce it; recorded in the plan's Plan deviation, and the operator chose to keep it strict (2026-10-23).
+- SRS: trace-only to existing items; AC1/AC4 `@srs-deferred`. ADR: none (operator-confirmed "no ADR needed", 2026-10-23) (`compliance/evidence/REQ-114/architecture-decision.md`). Risk register: R-038, R-039 (OPEN; operator moves them to MITIGATED at review).
 
 ## Verification
 

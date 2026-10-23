@@ -97,7 +97,8 @@ authored_at: '2026-10-23'
 
 > _Populated by the `adr-author` skill at Stage 1._
 
-- **No ADR needed** — Self-contained additive feature: new `lib/menu-print/` module, one read-only server action, one new route and its client components, plus a single button on `/dashboard/menu`. No new dependency (reuses `jspdf` ^4.2.1), external service, data tier or schema change; no existing code path changes pattern (`lib/report-export.ts` is untouched); risk LOW. The one notable design choice — a pure layout engine emitting millimetre draw operations that both the SVG preview and the jsPDF renderer draw, so preview and PDF cannot disagree (review finding R8) — is internal to this feature and fully specified in the #954 build guide (Part 4.5). _Signals examined (adr-author, 2026-10-23): dependency none; external service none; data tier none; pattern change across >3 existing files none (all new files); schema none; risk LOW; file-path signals (defaults `lib/services/`, `lib/repositories/`, `prisma/`, `infra/`) none touched._
+- **ADR-005 — Printable menu: one pure layout engine drawn by both the SVG preview and a client-side jsPDF renderer** — Drafted by `adr-author` at the operator's request. File at `docs/ADR/ADR-005-menu-print-shared-layout-ops.md`. Status _Proposed_; the operator flips it to _Accepted_.
+  - _History:_ `adr-author`'s Stage 1 verdict was "No ADR needed" (self-contained additive module; no new dependency, external service, data tier or schema; no existing code path changes pattern; risk LOW). On 2026-10-23 the operator asked for the ADR to be included anyway, to record the shared draw-ops design (review finding R8), client-side jsPDF without `jspdf-autotable`, and the WinAnsi font constraints (`N4,500`, ASCII `...`).
 
 ## 4. E2E test coverage
 

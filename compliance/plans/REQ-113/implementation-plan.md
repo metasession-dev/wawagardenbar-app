@@ -57,15 +57,15 @@ authored_at: '2026-10-23'
 
 ### SRS items proposed/touched
 
-| AC       | SRS item                         | Status                 | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| -------- | -------------------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| AC1–AC20 | REQ-MENUMGT-011 (new — proposed) | stub (`@srs-stub`)     | Print New Menu. Added to `docs/SRS.md` (summary table + Given/When/Then block). **ID differs from #954's proposed `REQ-MENU-009`:** the `REQ-MENU-*` area is the customer-facing menu and cart (Feature Area: Menu), while admin menu tooling, including Edit All (REQ-MENUMGT-009) and Pricing Windows (REQ-MENUMGT-010), lives under Feature Area 13 — Menu Management. Operator confirms wording and removes the `@srs-stub` marker at plan approval. |
-| AC6      | REQ-MENUMGT-009 (existing)       | unchanged (trace-only) | Price fallback mirrors Edit All's unset-value fallback; Edit All itself is not changed.                                                                                                                                                                                                                                                                                                                                                                  |
-| AC2, AC5 | REQ-MENUMGT-005 (existing)       | unchanged (trace-only) | Reads the configurable main-category registry (enabled flag, order); the registry is not changed.                                                                                                                                                                                                                                                                                                                                                        |
+| AC       | SRS item                         | Status                 | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| -------- | -------------------------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AC1–AC20 | REQ-MENUMGT-011 (new — proposed) | added (approved)       | Print New Menu. Added to `docs/SRS.md` (summary table + Given/When/Then block). **ID differs from #954's proposed `REQ-MENU-009`:** the `REQ-MENU-*` area is the customer-facing menu and cart (Feature Area: Menu), while admin menu tooling, including Edit All (REQ-MENUMGT-009) and Pricing Windows (REQ-MENUMGT-010), lives under Feature Area 13 — Menu Management. Operator approved the ID and wording on 2026-10-23; `@srs-stub` marker removed. |
+| AC6      | REQ-MENUMGT-009 (existing)       | unchanged (trace-only) | Price fallback mirrors Edit All's unset-value fallback; Edit All itself is not changed.                                                                                                                                                                                                                                                                                                                                                                   |
+| AC2, AC5 | REQ-MENUMGT-005 (existing)       | unchanged (trace-only) | Reads the configurable main-category registry (enabled flag, order); the registry is not changed.                                                                                                                                                                                                                                                                                                                                                         |
 
 **SRS drift found (advisory, not this REQ's scope):** `REQ-ORDMGT-011`, `REQ-ORDMGT-012`, `REQ-ORDMGT-015` and `REQ-ORDMGT-016` have heading blocks in `docs/SRS.md` but no row in the summary table. Worth a separate `docs:` fix so future ID allocation can't collide.
 
-**Stage 1 gate:** advisory (`requirements_aligner.block_on_stage_1` defaults to `false`). Every AC traces to an SRS item; the only open item is the operator's wording confirmation of the REQ-MENUMGT-011 stub, which is required before Phase 2.
+**Stage 1 gate:** advisory (`requirements_aligner.block_on_stage_1` defaults to `false`). Every AC traces to an SRS item; REQ-MENUMGT-011 wording approved by the operator on 2026-10-23.
 
 ## 2. Scope
 
@@ -151,9 +151,9 @@ N/A — this REQ does not introduce or change AI behaviour. PDF layout is determ
 
 ## 10. Sign-off
 
-- **Plan reviewer (eng):** _pending_
+- **Plan reviewer (eng):** William (operator) — 2026-10-23
 - **Plan reviewer (security / DPO):** N/A — LOW risk, no personal data.
-- **Plan approved by operator:** _pending — #954 requires Stage 1 approval before any code._
+- **Plan approved by operator:** William — 2026-10-23. Approved in the Claude Code session: SRS ID REQ-MENUMGT-011 (instead of #954's proposed REQ-MENU-009) approved; REQ-MENUMGT-011 wording accepted as written (`@srs-stub` marker removed); venue address/phone stays out of the default footer (#954 open question closed as out of scope).
 
 ## Upload path
 

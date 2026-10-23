@@ -75,7 +75,7 @@
   },
   "integration_branch": "develop",
   "release_branch": "main",
-  "devaudit_synced_version": "1.9.0",
+  "devaudit_synced_version": "1.10.0",
   "e2e_regression_enabled": true,
   "e2e_screenshot_exempt_reqs": ["REQ-111"]
 }

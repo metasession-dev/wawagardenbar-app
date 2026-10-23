@@ -1,7 +1,7 @@
 --- a/.github/workflows/e2e-regression.yml
 +++ b/.github/workflows/e2e-regression.yml
-@@ -134,10 +134,21 @@
-           npx tsx scripts/seed-e2e-fixtures.ts
+@@ -157,10 +157,21 @@
+           fi
  
        - name: Start dev server
 +        # Backgrounded with `set -m` so the job runs in its own process
@@ -22,7 +22,7 @@
            echo "Started E2E server pid $(cat .e2e-server.pid)"
  
        - name: Wait for dev server
-@@ -265,19 +276,28 @@
+@@ -288,19 +299,28 @@
            E2E_PORT: 3000
          run: |
            set -uo pipefail
@@ -57,7 +57,7 @@
            fi
            if [ "$STATUS" -eq 124 ]; then
              OUTCOME="timed_out"
-@@ -295,13 +315,19 @@
+@@ -318,13 +338,19 @@
  
        - name: Stop dev server
          if: always()

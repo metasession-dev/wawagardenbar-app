@@ -124,17 +124,20 @@ describe('getPrintableMenuDataAction', () => {
     expect(result.success).toBe(true);
   });
 
-  it.each([[[]], [['Bad Slug']], [['food', '$where']]])(
-    'rejects invalid slugs %j without querying',
-    async (slugs) => {
-      const result = await getPrintableMenuDataAction(slugs as string[]);
-      expect(result).toEqual({
-        success: false,
-        error: 'Select at least one valid main category',
-      });
-      expect(mockFind).not.toHaveBeenCalled();
-    }
-  );
+  it.each([
+    [[]],
+    [['Bad Slug']],
+    [['food', '$where']],
+    [[{ $ne: null }]],
+    [Array.from({ length: 51 }, (_, i) => `cat-${i}`)],
+  ])('rejects invalid slugs %j without querying', async (slugs) => {
+    const result = await getPrintableMenuDataAction(slugs as string[]);
+    expect(result).toEqual({
+      success: false,
+      error: 'Select at least one valid main category',
+    });
+    expect(mockFind).not.toHaveBeenCalled();
+  });
 
   it('queries only available menu items in the selected main categories (AC9)', async () => {
     await getPrintableMenuDataAction(['food', 'drinks']);

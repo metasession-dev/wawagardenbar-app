@@ -102,8 +102,8 @@ authored_at: '2026-10-23'
 
 ## 4. E2E test coverage
 
-- **Spec(s):** `e2e/admin/menu-print.spec.ts` — to be authored by the `e2e-test-engineer` skill in Phase 2 (this skill does not author e2e specs).
-- **ACs covered (planned, per build guide Part 6):** AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11 (columns via out-of-date flow), AC12, AC14 (`data-template`), AC17, AC18. AC13, AC15, AC16, AC19 and AC20 are layout/theme properties proved by unit tests (§9).
+- **Spec(s):** `e2e/admin/menu-print.spec.ts` — authored by the `e2e-test-engineer` skill (Phase 2), regression tier (REQ-MENUMGT-011 is a _Should_; no smoke/critical promotion). Seeds three `e2e-req113-*` items in `food` (A available 1000/800, B unavailable, C available 1500 with no `happyHourPrice` field) and removes them `afterAll`.
+- **ACs covered:** AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC14, AC17, AC18 — each with `tagTest('REQ-113', …)` and an `evidenceShot` at the proving assertion. AC13, AC15, AC16, AC19 and AC20 are layout/theme properties with no separate UI surface and are proved by the Vitest layout, themes and render-pdf tests.
 
 ## 5. Threat model + security considerations
 
@@ -155,6 +155,17 @@ N/A — this REQ does not introduce or change AI behaviour. PDF layout is determ
 - **Plan reviewer (eng):** William (operator) — 2026-10-23
 - **Plan reviewer (security / DPO):** N/A — LOW risk, no personal data.
 - **Plan approved by operator:** William — 2026-10-23. Approved in the Claude Code session: SRS ID REQ-MENUMGT-011 (instead of #954's proposed REQ-MENU-009) approved; REQ-MENUMGT-011 wording accepted as written (`@srs-stub` marker removed); venue address/phone stays out of the default footer (#954 open question closed as out of scope).
+
+## Plan deviation
+
+Implementation deviations only (approach changed; every AC is unchanged):
+
+1. **Clipped titles end in ASCII `...`, not `…`** (build guide Part 4.5 said `…`). Verified at implementation time that jsPDF's built-in Helvetica silently drops U+2026 from the PDF while still measuring its width — the same WinAnsi limit as review finding R3 (`₦`). Recorded in ADR-005.
+2. **`ColorRole` is defined in `lib/menu-print/themes.ts` and re-exported from `layout.ts`** (the guide put it in `layout.ts`). One definition shared by both modules; `computeMenuLayout` still imports types only and takes no theme argument (AC15).
+3. **Layout step 3.1 only breaks to a new page when the cursor is below the page top.** Prevents an empty page if a section's first unit is taller than a whole page (cannot happen with real menu data; defensive).
+4. **Generate waits for the logo to finish loading** before laying out, because the logo reserves space on page 1; without this a fast first click could lay out without the logo and the preview would be marked as having none.
+5. **AC13 and AC14 are additionally proved at the PDF level** (`render-pdf.test.ts` reads the colour operators from the real jsPDF output), on top of the theme tests the guide listed.
+6. **ADR-005 added** at the operator's request (see §3).
 
 ## Upload path
 

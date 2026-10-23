@@ -1,0 +1,8 @@
+{
+  "origin": "feature",
+  "reqId": "REQ-113",
+  "ac": 4,
+  "slug": "edited-title-kept",
+  "specFile": "e2e/admin/menu-print.spec.ts",
+  "capturedAt": "2026-10-23T21:27:22.137Z"
+}

@@ -84,7 +84,10 @@ _Populated by `requirements-aligner` (Stage 1, 2026-10-23)._
 
 ## 4. E2E test coverage
 
-Pending `e2e-test-engineer` (Phase 2). Expected: no new spec. The existing regression suite already drives these forms, and the behaviour must not change. `e2e-test-engineer` decides and records it.
+- **Spec(s):** `e2e/settings/zod-validation-messages.spec.ts` — authored by the `e2e-test-engineer` skill (Phase 2), regression tier. It covers the one path unit tests cannot: a real form rendering a zod error through `@hookform/resolvers` 5 in the client bundle. Settings → Contact Info → Contact Email (`.email()` with no custom message) must show zod 3's "Invalid email", not zod 4's "Invalid email address", and a valid address must clear it. Nothing is saved.
+- **ACs covered:** AC3 and AC2 (UI level), each with `tagTest` and `evidenceShot`. A negative control (compatibility map disabled) makes the spec fail, so it genuinely guards AC3.
+- **Not driven through the UI:** the `requiredError` messages. Every admin form that uses them seeds a default value (date = today, payment method = cash, …), so the "required" path is unreachable from the UI. It is proved by `__tests__/lib/zod4-migration.test.ts`. AC1 (audit gate) and AC4 (suite integrity) have no UI surface.
+- **Regression:** the full existing Playwright suite is re-run on this branch and compared with `develop`.
 
 ## 5. Threat model + security considerations
 
@@ -133,6 +136,16 @@ N/A — this REQ does not introduce or change AI behaviour.
 - **Plan reviewer (eng):** _pending_ (MEDIUM — passes Phase 1 automatically; operator reviews at UAT)
 - **Plan reviewer (security / DPO):** N/A — no new personal-data processing.
 - **Plan approved by operator:** risk class MEDIUM and the fix-not-accept route confirmed by William, 2026-10-23.
+
+## Plan deviation
+
+Implementation deviations only (approach refined; the ACs are unchanged except where noted):
+
+1. **One zod entry point with zod-3-compatible default messages.** The plan's default-message audit (§2) found about 100 validators without custom messages, several of them user-visible (for example the tab-checkout email and name fields, and server-action errors returned to toasts). Rather than pin messages one call site at a time, `lib/zod.ts` configures zod 4 once (`z.config({ customError })`) to reproduce zod 3.25's default wording, and all 40 app files import `z` from `@/lib/zod` instead of `'zod'`. It is consulted only when a schema has no message of its own, so custom messages are untouched. Verified against zod 3.25.76 itself: 39 of 40 message cases identical; the one difference is item 3.
+2. **`requiredError()` helper** (`lib/validation/zod-errors.ts`) replaces v3's `required_error` in 12 places, with identical semantics: the custom message only when the value is missing, zod's own message otherwise.
+3. **Known behaviour change (requirements note):** zod 4's `z.number()` rejects `±Infinity`, which zod 3 accepted. No form can produce `Infinity` from a number input; only a typed `"Infinity"` string through `z.coerce.number()` would now fail, which rejects meaningless input. Reported with the message "Number must be finite" (zod 3's wording for non-finite numbers). Not reverted, because doing so would mean re-loosening validation. Flagged to the operator.
+4. **Formatting split into its own commit.** The repo's pre-commit hook (`eslint --fix`, `prettier --write`) reformats every staged file; several touched files weren't Prettier-clean on `develop`. A `style:` commit formats them first, so the migration commit's diff contains only real changes.
+5. **Server-action error tests added** (`__tests__/actions/zod4-action-errors.test.ts`) for the `.errors` → `.issues` change: address, profile phone, and reward-rule create/update return the pre-upgrade message.
 
 ## Upload path
 

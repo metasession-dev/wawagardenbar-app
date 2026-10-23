@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 import { Edit, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -41,7 +41,9 @@ const modificationSchema = z.object({
     'change-address',
     'other',
   ]),
-  details: z.string().min(10, 'Please provide more details (at least 10 characters)'),
+  details: z
+    .string()
+    .min(10, 'Please provide more details (at least 10 characters)'),
 });
 
 type ModificationFormData = z.infer<typeof modificationSchema>;

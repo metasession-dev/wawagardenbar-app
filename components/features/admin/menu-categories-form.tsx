@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useForm, useFieldArray, type ArrayPath } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { z } from '@/lib/zod';
 import { Plus, X, Loader2, GripVertical, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {

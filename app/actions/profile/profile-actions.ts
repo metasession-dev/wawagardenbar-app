@@ -3,7 +3,7 @@
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
 import { revalidatePath } from 'next/cache';
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 import { ProfileService, OrderService, TabService } from '@/services';
 import { sessionOptions, SessionData } from '@/lib/session';
 import { IUser, IAddress, IPreferences } from '@/interfaces';
@@ -193,7 +193,7 @@ export async function updateProfileAction(
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: error.errors[0].message,
+        error: error.issues[0].message,
       };
     }
     console.error('Error updating profile:', error);
@@ -277,7 +277,7 @@ export async function updatePreferencesAction(
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: error.errors[0].message,
+        error: error.issues[0].message,
       };
     }
     console.error('Error updating preferences:', error);
@@ -413,7 +413,7 @@ export async function addAddressAction(
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: error.errors[0].message,
+        error: error.issues[0].message,
       };
     }
     console.error('Error adding address:', error);

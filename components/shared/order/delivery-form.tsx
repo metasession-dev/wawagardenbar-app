@@ -3,9 +3,19 @@
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { TextField, TextareaField, SubmitButton } from '@/components/shared/forms';
+import { z } from '@/lib/zod';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  TextField,
+  TextareaField,
+  SubmitButton,
+} from '@/components/shared/forms';
 import { MapPin, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -19,7 +29,10 @@ const deliverySchema = z.object({
 type DeliveryFormData = z.infer<typeof deliverySchema>;
 
 // TODO: Implement actual geolocation and radius validation
-function validateDeliveryRadius(_address: string): { valid: boolean; distance?: number } {
+function validateDeliveryRadius(_address: string): {
+  valid: boolean;
+  distance?: number;
+} {
   // Placeholder validation - always returns valid for now
   // In production, this would use Google Maps API or similar
   return { valid: true, distance: 5 };
@@ -45,7 +58,8 @@ export function DeliveryForm() {
       if (!validation.valid) {
         toast({
           title: 'Outside Delivery Area',
-          description: 'Sorry, we don\'t deliver to this location yet. Please try pickup instead.',
+          description:
+            "Sorry, we don't deliver to this location yet. Please try pickup instead.",
           variant: 'destructive',
         });
         return;
@@ -82,7 +96,8 @@ export function DeliveryForm() {
             <CardTitle>Delivery Address</CardTitle>
           </div>
           <CardDescription>
-            Enter your delivery address. We'll verify it's within our delivery area.
+            Enter your delivery address. We'll verify it's within our delivery
+            area.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -150,8 +165,8 @@ export function DeliveryForm() {
 
       <div className="rounded-lg bg-muted p-4">
         <p className="text-sm text-muted-foreground">
-          <strong>Note:</strong> We'll call you if we have trouble finding your address. Please
-          keep your phone nearby.
+          <strong>Note:</strong> We'll call you if we have trouble finding your
+          address. Please keep your phone nearby.
         </p>
       </div>
     </div>

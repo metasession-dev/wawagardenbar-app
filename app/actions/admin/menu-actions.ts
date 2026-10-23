@@ -16,7 +16,7 @@ import { PriceHistoryService } from '@/services/price-history-service';
 import { Types } from 'mongoose';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 
 // REQ-030: customizations validation for admin action boundary
 const customizationOptionInputSchema = z.object({

@@ -5,7 +5,8 @@
  */
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { z } from '@/lib/zod';
+import { requiredError } from '@/lib/validation/zod-errors';
 import { Plus, Trash2, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -52,7 +53,7 @@ const unitSchema = z.object({
     ),
   label: z.string().min(1, 'Label is required'),
   category: z.enum(UOM_CATEGORIES, {
-    required_error: 'Category is required',
+    error: requiredError('Category is required'),
   }),
   isActive: z.boolean(),
 });

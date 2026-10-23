@@ -3,8 +3,14 @@
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { z } from '@/lib/zod';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { SelectField, SubmitButton } from '@/components/shared/forms';
 import { Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -73,7 +79,9 @@ export function PickupForm() {
       });
 
       // Redirect to menu with order type in URL
-      router.push(`/menu?type=pickup&time=${encodeURIComponent(data.pickupTime)}`);
+      router.push(
+        `/menu?type=pickup&time=${encodeURIComponent(data.pickupTime)}`
+      );
     } catch (error) {
       toast({
         title: 'Error',
@@ -92,7 +100,8 @@ export function PickupForm() {
             <CardTitle>Select Pickup Time</CardTitle>
           </div>
           <CardDescription>
-            Choose when you'd like to pick up your order. We'll have it ready for you!
+            Choose when you'd like to pick up your order. We'll have it ready
+            for you!
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -117,13 +126,15 @@ export function PickupForm() {
       <div className="rounded-lg bg-muted p-4 space-y-2">
         <p className="text-sm font-medium">Pickup Location:</p>
         <p className="text-sm text-muted-foreground">
-          Wawa Garden Bar<br />
-          123 Main Street<br />
+          Wawa Garden Bar
+          <br />
+          123 Main Street
+          <br />
           Lagos, Nigeria
         </p>
         <p className="text-xs text-muted-foreground mt-2">
-          <strong>Note:</strong> Please arrive within 15 minutes of your selected time to ensure
-          your order is fresh.
+          <strong>Note:</strong> Please arrive within 15 minutes of your
+          selected time to ensure your order is fresh.
         </p>
       </div>
     </div>

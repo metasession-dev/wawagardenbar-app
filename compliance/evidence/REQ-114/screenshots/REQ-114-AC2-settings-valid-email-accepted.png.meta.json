@@ -1,0 +1,8 @@
+{
+  "origin": "feature",
+  "reqId": "REQ-114",
+  "ac": 2,
+  "slug": "settings-valid-email-accepted",
+  "specFile": "e2e/settings/zod-validation-messages.spec.ts",
+  "capturedAt": "2026-10-23T22:35:08.903Z"
+}

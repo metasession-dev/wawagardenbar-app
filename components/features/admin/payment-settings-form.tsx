@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { z } from '@/lib/zod';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -21,7 +21,13 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Save, CreditCard, CheckCircle2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { updatePaymentSettingsAction } from '@/app/dashboard/settings/actions';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 
 const paymentSettingsSchema = z.object({
   activeProvider: z.enum(['monnify', 'paystack']),
@@ -50,7 +56,9 @@ interface PaymentSettingsFormProps {
   };
 }
 
-export function PaymentSettingsForm({ initialSettings }: PaymentSettingsFormProps) {
+export function PaymentSettingsForm({
+  initialSettings,
+}: PaymentSettingsFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -104,7 +112,6 @@ export function PaymentSettingsForm({ initialSettings }: PaymentSettingsFormProp
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            
             <FormField
               control={form.control}
               name="activeProvider"
@@ -129,9 +136,7 @@ export function PaymentSettingsForm({ initialSettings }: PaymentSettingsFormProp
                         <FormControl>
                           <RadioGroupItem value="paystack" />
                         </FormControl>
-                        <FormLabel className="font-normal">
-                          Paystack
-                        </FormLabel>
+                        <FormLabel className="font-normal">Paystack</FormLabel>
                       </FormItem>
                     </RadioGroup>
                   </FormControl>
@@ -143,14 +148,20 @@ export function PaymentSettingsForm({ initialSettings }: PaymentSettingsFormProp
             {activeProvider === 'paystack' && (
               <div className="rounded-lg border p-4 space-y-4 bg-slate-50 dark:bg-slate-900">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-medium">Paystack Configuration</h3>
+                  <h3 className="text-sm font-medium">
+                    Paystack Configuration
+                  </h3>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">
-                      {form.watch('paystack.mode') === 'live' ? 'Live Mode' : 'Test Mode'}
+                      {form.watch('paystack.mode') === 'live'
+                        ? 'Live Mode'
+                        : 'Test Mode'}
                     </span>
                     <Switch
                       checked={form.watch('paystack.enabled')}
-                      onCheckedChange={(checked) => form.setValue('paystack.enabled', checked)}
+                      onCheckedChange={(checked) =>
+                        form.setValue('paystack.enabled', checked)
+                      }
                     />
                   </div>
                 </div>
@@ -208,7 +219,11 @@ export function PaymentSettingsForm({ initialSettings }: PaymentSettingsFormProp
                       <FormItem>
                         <FormLabel>Secret Key</FormLabel>
                         <FormControl>
-                          <Input type="password" placeholder="sk_test_..." {...field} />
+                          <Input
+                            type="password"
+                            placeholder="sk_test_..."
+                            {...field}
+                          />
                         </FormControl>
                         <FormDescription>
                           For security, the existing secret key is masked.
@@ -223,7 +238,9 @@ export function PaymentSettingsForm({ initialSettings }: PaymentSettingsFormProp
                   <CheckCircle2 className="h-4 w-4" />
                   <AlertTitle>Webhook URL</AlertTitle>
                   <AlertDescription className="break-all">
-                    {typeof window !== 'undefined' ? `${window.location.origin}/api/webhooks/paystack` : '/api/webhooks/paystack'}
+                    {typeof window !== 'undefined'
+                      ? `${window.location.origin}/api/webhooks/paystack`
+                      : '/api/webhooks/paystack'}
                   </AlertDescription>
                 </Alert>
               </div>

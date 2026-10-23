@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { z } from '@/lib/zod';
 import { Plus, X, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -124,7 +124,11 @@ export function ExpenseCategoriesForm({
     { directCost: '', operatingExpense: '' }
   );
 
-  const form = useForm<ExpenseCategoriesFormValues>({
+  const form = useForm<
+    z.input<typeof expenseCategoriesSchema>,
+    unknown,
+    ExpenseCategoriesFormValues
+  >({
     resolver: zodResolver(expenseCategoriesSchema),
     defaultValues: {
       directCostCategories: initialCategories.directCostCategories,
@@ -190,7 +194,7 @@ export function ExpenseCategoriesForm({
       current.filter((_, i) => i !== index)
     );
     // Cascade: remove this name from any group that contained it.
-    const groups = form.getValues(config.groupField);
+    const groups = form.getValues(config.groupField) ?? [];
     form.setValue(
       config.groupField,
       groups.map((g) => ({
@@ -204,7 +208,7 @@ export function ExpenseCategoriesForm({
     const config = TYPE_CONFIG[typeKey];
     const raw = newGroupInputs[typeKey].trim();
     if (!raw) return;
-    const groups = form.getValues(config.groupField);
+    const groups = form.getValues(config.groupField) ?? [];
     if (groups.some((g) => g.name.toLowerCase() === raw.toLowerCase())) {
       toast({
         title: 'Duplicate group name',
@@ -222,7 +226,7 @@ export function ExpenseCategoriesForm({
 
   function removeGroup(typeKey: TypeKey, index: number) {
     const config = TYPE_CONFIG[typeKey];
-    const groups = form.getValues(config.groupField);
+    const groups = form.getValues(config.groupField) ?? [];
     form.setValue(
       config.groupField,
       groups.filter((_, i) => i !== index)
@@ -231,7 +235,7 @@ export function ExpenseCategoriesForm({
 
   function renameGroup(typeKey: TypeKey, index: number, name: string) {
     const config = TYPE_CONFIG[typeKey];
-    const groups = form.getValues(config.groupField);
+    const groups = form.getValues(config.groupField) ?? [];
     const next = groups.map((g, i) => (i === index ? { ...g, name } : g));
     form.setValue(config.groupField, next);
   }
@@ -242,7 +246,7 @@ export function ExpenseCategoriesForm({
     categoryName: string
   ) {
     const config = TYPE_CONFIG[typeKey];
-    const groups = form.getValues(config.groupField);
+    const groups = form.getValues(config.groupField) ?? [];
     const target = groups[groupIndex];
     if (!target) return;
     const isMember = target.categoryNames.includes(categoryName);
@@ -272,7 +276,7 @@ export function ExpenseCategoriesForm({
   function renderTypeSection(typeKey: TypeKey) {
     const config = TYPE_CONFIG[typeKey];
     const categories = form.watch(config.categoryField);
-    const groups = form.watch(config.groupField);
+    const groups = form.watch(config.groupField) ?? [];
 
     const membershipOf = new Map<string, string>();
     for (const g of groups) {

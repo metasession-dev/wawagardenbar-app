@@ -11,7 +11,7 @@
 
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 import { sessionOptions, SessionData } from '@/lib/session';
 import { hasSessionPermission } from '@/lib/auth-middleware';
 import { connectDB } from '@/lib/mongodb';

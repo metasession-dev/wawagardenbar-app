@@ -148,6 +148,13 @@ async function isAuthenticated(page: Page): Promise<boolean> {
 async function openPrintPage(page: Page): Promise<void> {
   await page.goto('/dashboard/menu/print', { waitUntil: 'domcontentloaded' });
   await expect(page.getByTestId('print-generate')).toBeVisible();
+  // The form is server-rendered; a click that lands before React hydrates it
+  // is silently dropped (seen under full-suite load with cold dev compiles).
+  // React tags hydrated DOM nodes with a `__reactFiber$…` key.
+  await page.waitForFunction(() => {
+    const el = document.querySelector('[data-testid="print-generate"]');
+    return !!el && Object.keys(el).some((k) => k.startsWith('__reactFiber$'));
+  });
 }
 
 /** Leave only the given main category checked. */

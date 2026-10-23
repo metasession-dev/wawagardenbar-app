@@ -1,6 +1,6 @@
 # Release Ticket: REQ-111 — Account-recovery routing for inbound WhatsApp messages
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-10-20
 **Requirement ID:** REQ-111
 **Risk Level:** MEDIUM
@@ -62,3 +62,5 @@ The precondition described in the note above (a genuine, live WhatsApp round-tri
 
 **Reviewer:** william@ostendo.io
 **Date:** 2026-10-22
+**Release PR:** #943
+**Released with bundle:** REQ-112 (closed out 2026-10-22)

@@ -13,8 +13,16 @@ import { useToast } from '@/hooks/use-toast';
 import { guestCheckoutAction } from '@/app/actions/auth';
 
 const guestSchema = z.object({
-  email: z.string().email('Please enter a valid email address').optional().or(z.literal('')),
-  name: z.string().min(2, 'Name must be at least 2 characters').optional().or(z.literal('')),
+  email: z
+    .string()
+    .email('Please enter a valid email address')
+    .optional()
+    .or(z.literal('')),
+  name: z
+    .string()
+    .min(2, 'Name must be at least 2 characters')
+    .optional()
+    .or(z.literal('')),
 });
 
 type GuestFormData = z.infer<typeof guestSchema>;
@@ -24,7 +32,10 @@ interface GuestCheckoutFormProps {
   onSuccess?: () => void;
 }
 
-export function GuestCheckoutForm({ redirectTo = '/menu', onSuccess }: GuestCheckoutFormProps) {
+export function GuestCheckoutForm({
+  redirectTo = '/menu',
+  onSuccess,
+}: GuestCheckoutFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -45,13 +56,13 @@ export function GuestCheckoutForm({ redirectTo = '/menu', onSuccess }: GuestChec
       const name = data.name || undefined;
 
       const result = await guestCheckoutAction(email, name);
-      
+
       if (result.success) {
         toast({
           title: 'Success',
           description: 'Guest session created. You can now place your order.',
         });
-        
+
         if (onSuccess) {
           onSuccess();
         } else {

@@ -41,7 +41,9 @@ const modificationSchema = z.object({
     'change-address',
     'other',
   ]),
-  details: z.string().min(10, 'Please provide more details (at least 10 characters)'),
+  details: z
+    .string()
+    .min(10, 'Please provide more details (at least 10 characters)'),
 });
 
 type ModificationFormData = z.infer<typeof modificationSchema>;

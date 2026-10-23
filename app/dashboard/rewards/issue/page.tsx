@@ -6,46 +6,82 @@ import Link from 'next/link';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { ArrowLeft, Search, Loader2, User, Mail, Phone, Gift, Percent, DollarSign, Star } from 'lucide-react';
+import {
+  ArrowLeft,
+  Search,
+  Loader2,
+  User,
+  Mail,
+  Phone,
+  Gift,
+  Percent,
+  DollarSign,
+  Star,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { searchUsersAction, issueManualRewardAction } from '@/app/actions/admin/manual-reward-actions';
+import {
+  searchUsersAction,
+  issueManualRewardAction,
+} from '@/app/actions/admin/manual-reward-actions';
 import { IUser } from '@/interfaces';
 
 // Zod validation schema
-const rewardFormSchema = z.object({
-  rewardType: z.enum(['discount-percentage', 'discount-fixed', 'loyalty-points'], {
-    required_error: 'Please select a reward type',
-  }),
-  rewardValue: z.string()
-    .min(1, 'Reward value is required')
-    .refine((val) => !isNaN(parseFloat(val)), 'Please enter a valid number')
-    .refine((val) => parseFloat(val) > 0, 'Value must be greater than 0'),
-  validityDays: z.string()
-    .min(1, 'Validity period is required')
-    .refine((val) => !isNaN(parseInt(val)), 'Please enter a valid number')
-    .refine((val) => parseInt(val) > 0, 'Must be at least 1 day')
-    .refine((val) => parseInt(val) <= 365, 'Cannot exceed 365 days'),
-  description: z.string().max(200, 'Description cannot exceed 200 characters').optional(),
-}).refine(
-  (data) => {
-    if (data.rewardType === 'discount-percentage') {
-      const value = parseFloat(data.rewardValue);
-      return value <= 100;
+const rewardFormSchema = z
+  .object({
+    rewardType: z.enum(
+      ['discount-percentage', 'discount-fixed', 'loyalty-points'],
+      {
+        required_error: 'Please select a reward type',
+      }
+    ),
+    rewardValue: z
+      .string()
+      .min(1, 'Reward value is required')
+      .refine((val) => !isNaN(parseFloat(val)), 'Please enter a valid number')
+      .refine((val) => parseFloat(val) > 0, 'Value must be greater than 0'),
+    validityDays: z
+      .string()
+      .min(1, 'Validity period is required')
+      .refine((val) => !isNaN(parseInt(val)), 'Please enter a valid number')
+      .refine((val) => parseInt(val) > 0, 'Must be at least 1 day')
+      .refine((val) => parseInt(val) <= 365, 'Cannot exceed 365 days'),
+    description: z
+      .string()
+      .max(200, 'Description cannot exceed 200 characters')
+      .optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.rewardType === 'discount-percentage') {
+        const value = parseFloat(data.rewardValue);
+        return value <= 100;
+      }
+      return true;
+    },
+    {
+      message: 'Percentage discount cannot exceed 100%',
+      path: ['rewardValue'],
     }
-    return true;
-  },
-  {
-    message: 'Percentage discount cannot exceed 100%',
-    path: ['rewardValue'],
-  }
-);
+  );
 
 type RewardFormValues = z.infer<typeof rewardFormSchema>;
 
@@ -159,11 +195,11 @@ export default function IssueRewardPage() {
           title: 'Success',
           description: result.message || 'Reward issued successfully',
         });
-        
+
         // Reset form and user selection
         setSelectedUser(null);
         reset();
-        
+
         // Redirect to issued rewards page
         setTimeout(() => {
           router.push('/dashboard/rewards/issued');
@@ -224,7 +260,9 @@ export default function IssueRewardPage() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Issue Manual Reward</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Issue Manual Reward
+          </h1>
           <p className="text-muted-foreground mt-1">
             Search for a customer and issue a reward directly
           </p>
@@ -237,9 +275,7 @@ export default function IssueRewardPage() {
           <Card>
             <CardHeader>
               <CardTitle>1. Select Customer</CardTitle>
-              <CardDescription>
-                Search by email or phone number
-              </CardDescription>
+              <CardDescription>Search by email or phone number</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Search Input */}
@@ -258,7 +294,11 @@ export default function IssueRewardPage() {
                     disabled={isSearching}
                   />
                 </div>
-                <Button type="button" onClick={handleSearch} disabled={isSearching}>
+                <Button
+                  type="button"
+                  onClick={handleSearch}
+                  disabled={isSearching}
+                >
                   {isSearching ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
@@ -396,14 +436,17 @@ export default function IssueRewardPage() {
                   )}
                 />
                 {errors.rewardType && (
-                  <p className="text-sm text-red-500">{errors.rewardType.message}</p>
+                  <p className="text-sm text-red-500">
+                    {errors.rewardType.message}
+                  </p>
                 )}
               </div>
 
               {/* Reward Value */}
               <div className="space-y-2">
                 <Label htmlFor="rewardValue">
-                  {rewardType === 'discount-percentage' && 'Discount Percentage'}
+                  {rewardType === 'discount-percentage' &&
+                    'Discount Percentage'}
                   {rewardType === 'discount-fixed' && 'Discount Amount (₦)'}
                   {rewardType === 'loyalty-points' && 'Points Amount'}
                 </Label>
@@ -419,29 +462,36 @@ export default function IssueRewardPage() {
                         rewardType === 'discount-percentage'
                           ? 'e.g., 10'
                           : rewardType === 'discount-fixed'
-                          ? 'e.g., 500'
-                          : 'e.g., 100'
+                            ? 'e.g., 500'
+                            : 'e.g., 100'
                       }
                       min="1"
-                      max={rewardType === 'discount-percentage' ? '100' : undefined}
+                      max={
+                        rewardType === 'discount-percentage' ? '100' : undefined
+                      }
                       step={rewardType === 'discount-percentage' ? '1' : '10'}
                       className={errors.rewardValue ? 'border-red-500' : ''}
                     />
                   )}
                 />
                 {errors.rewardValue && (
-                  <p className="text-sm text-red-500">{errors.rewardValue.message}</p>
+                  <p className="text-sm text-red-500">
+                    {errors.rewardValue.message}
+                  </p>
                 )}
                 {!errors.rewardValue && rewardValue && (
                   <p className="text-sm text-muted-foreground">
-                    Customer will receive: <strong>{getRewardValueDisplay()}</strong>
+                    Customer will receive:{' '}
+                    <strong>{getRewardValueDisplay()}</strong>
                   </p>
                 )}
-                {!errors.rewardValue && rewardType === 'discount-percentage' && !rewardValue && (
-                  <p className="text-xs text-muted-foreground">
-                    Enter a value between 1-100
-                  </p>
-                )}
+                {!errors.rewardValue &&
+                  rewardType === 'discount-percentage' &&
+                  !rewardValue && (
+                    <p className="text-xs text-muted-foreground">
+                      Enter a value between 1-100
+                    </p>
+                  )}
               </div>
 
               {/* Validity Days */}
@@ -463,11 +513,14 @@ export default function IssueRewardPage() {
                   )}
                 />
                 {errors.validityDays && (
-                  <p className="text-sm text-red-500">{errors.validityDays.message}</p>
+                  <p className="text-sm text-red-500">
+                    {errors.validityDays.message}
+                  </p>
                 )}
                 {!errors.validityDays && (
                   <p className="text-sm text-muted-foreground">
-                    Reward will expire in {validityDays || '0'} days (max 365 days)
+                    Reward will expire in {validityDays || '0'} days (max 365
+                    days)
                   </p>
                 )}
               </div>
@@ -489,7 +542,9 @@ export default function IssueRewardPage() {
                   )}
                 />
                 {errors.description && (
-                  <p className="text-sm text-red-500">{errors.description.message}</p>
+                  <p className="text-sm text-red-500">
+                    {errors.description.message}
+                  </p>
                 )}
                 <p className="text-xs text-muted-foreground text-right">
                   {description.length}/200 characters
@@ -528,10 +583,15 @@ export default function IssueRewardPage() {
               <strong>How it works:</strong>
             </p>
             <ul className="list-disc list-inside space-y-1 ml-2">
-              <li>Search for a registered customer by their email or phone number</li>
+              <li>
+                Search for a registered customer by their email or phone number
+              </li>
               <li>Select the customer from the search results</li>
               <li>Configure the reward type, value, and validity period</li>
-              <li>The reward will be immediately available in the customer's profile</li>
+              <li>
+                The reward will be immediately available in the customer's
+                profile
+              </li>
               <li>Customer can apply the reward during checkout</li>
             </ul>
           </div>

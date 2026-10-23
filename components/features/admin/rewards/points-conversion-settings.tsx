@@ -8,7 +8,13 @@ import { Loader2, Save, RotateCcw, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -22,7 +28,10 @@ import {
 } from '@/components/ui/alert-dialog';
 
 const conversionRateSchema = z.object({
-  rate: z.number().min(1, 'Rate must be at least 1').max(1000, 'Rate must not exceed 1000'),
+  rate: z
+    .number()
+    .min(1, 'Rate must be at least 1')
+    .max(1000, 'Rate must not exceed 1000'),
   reason: z.string().optional(),
 });
 
@@ -79,7 +88,9 @@ export function PointsConversionSettings() {
         const data = await response.json();
         setCurrentRate(data.rate || 100);
         setValue('rate', data.rate || 100);
-        setLastUpdated(data.updatedAt ? new Date(data.updatedAt).toLocaleString() : '');
+        setLastUpdated(
+          data.updatedAt ? new Date(data.updatedAt).toLocaleString() : ''
+        );
       } catch (error) {
         console.error('Failed to fetch conversion rate:', error);
         toast({
@@ -135,14 +146,17 @@ export function PointsConversionSettings() {
     setShowConfirmDialog(false);
 
     try {
-      const response = await fetch('/api/admin/settings/points-conversion-rate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          rate: pendingRate,
-          reason: watch('reason') || 'Rate updated',
-        }),
-      });
+      const response = await fetch(
+        '/api/admin/settings/points-conversion-rate',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            rate: pendingRate,
+            reason: watch('reason') || 'Rate updated',
+          }),
+        }
+      );
 
       const result = await response.json();
 
@@ -200,7 +214,8 @@ export function PointsConversionSettings() {
         <CardHeader>
           <CardTitle>Points Conversion Settings</CardTitle>
           <CardDescription>
-            Configure how many loyalty points equal ₦1 when customers redeem points
+            Configure how many loyalty points equal ₦1 when customers redeem
+            points
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -210,7 +225,9 @@ export function PointsConversionSettings() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium">Current Rate</p>
-                  <p className="text-2xl font-bold">{currentRate} points = ₦1</p>
+                  <p className="text-2xl font-bold">
+                    {currentRate} points = ₦1
+                  </p>
                 </div>
                 {lastUpdated && (
                   <div className="text-right text-sm text-muted-foreground">
@@ -233,14 +250,18 @@ export function PointsConversionSettings() {
                   disabled={isLoading}
                   className="max-w-xs"
                 />
-                <span className="text-sm text-muted-foreground">points = ₦1</span>
+                <span className="text-sm text-muted-foreground">
+                  points = ₦1
+                </span>
               </div>
               {errors.rate && (
-                <p className="text-sm text-destructive">{errors.rate.message}</p>
+                <p className="text-sm text-destructive">
+                  {errors.rate.message}
+                </p>
               )}
               <p className="text-xs text-muted-foreground">
-                This rate determines how many loyalty points equal ₦1 when customers redeem
-                points for items.
+                This rate determines how many loyalty points equal ₦1 when
+                customers redeem points for items.
               </p>
             </div>
 
@@ -264,8 +285,13 @@ export function PointsConversionSettings() {
                   <div className="space-y-2 flex-1">
                     <p className="font-medium text-sm">Impact Analysis</p>
                     <div className="text-sm space-y-1">
-                      <p>• {impactData.affectedMenuItems} menu items have points redemption enabled</p>
-                      <p className="font-medium">• {impactData.customerImpact}</p>
+                      <p>
+                        • {impactData.affectedMenuItems} menu items have points
+                        redemption enabled
+                      </p>
+                      <p className="font-medium">
+                        • {impactData.customerImpact}
+                      </p>
                       {impactData.newRate < impactData.currentRate && (
                         <p className="text-green-700 dark:text-green-400">
                           Items will cost FEWER points to redeem
@@ -281,10 +307,17 @@ export function PointsConversionSettings() {
                       <div className="mt-3 space-y-2">
                         <p className="text-sm font-medium">Example changes:</p>
                         {impactData.exampleChanges.map((change, idx) => (
-                          <div key={idx} className="text-xs bg-white dark:bg-gray-900 rounded p-2">
-                            <p className="font-medium">{change.itemName} (₦{change.price.toLocaleString()})</p>
+                          <div
+                            key={idx}
+                            className="text-xs bg-white dark:bg-gray-900 rounded p-2"
+                          >
+                            <p className="font-medium">
+                              {change.itemName} (₦
+                              {change.price.toLocaleString()})
+                            </p>
                             <p>
-                              {change.currentPoints.toLocaleString()} points → {change.newPoints.toLocaleString()} points
+                              {change.currentPoints.toLocaleString()} points →{' '}
+                              {change.newPoints.toLocaleString()} points
                             </p>
                           </div>
                         ))}
@@ -308,7 +341,10 @@ export function PointsConversionSettings() {
 
             {/* Action Buttons */}
             <div className="flex gap-3">
-              <Button type="submit" disabled={isLoading || rate === currentRate}>
+              <Button
+                type="submit"
+                disabled={isLoading || rate === currentRate}
+              >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 <Save className="mr-2 h-4 w-4" />
                 Save Changes
@@ -332,12 +368,12 @@ export function PointsConversionSettings() {
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>⚠️ Confirm Conversion Rate Change</AlertDialogTitle>
+            <AlertDialogTitle>
+              ⚠️ Confirm Conversion Rate Change
+            </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3">
-                <p>
-                  You are changing the conversion rate from:
-                </p>
+                <p>You are changing the conversion rate from:</p>
                 <p className="font-medium text-foreground">
                   {currentRate} points = ₦1 → {pendingRate} points = ₦1
                 </p>
@@ -345,7 +381,10 @@ export function PointsConversionSettings() {
                   <div className="space-y-2 text-sm">
                     <p className="font-medium text-foreground">Impact:</p>
                     <ul className="list-disc list-inside space-y-1">
-                      <li>{impactData.affectedMenuItems} menu items have points redemption enabled</li>
+                      <li>
+                        {impactData.affectedMenuItems} menu items have points
+                        redemption enabled
+                      </li>
                       <li>{impactData.customerImpact}</li>
                       {pendingRate < currentRate ? (
                         <li className="text-green-600 dark:text-green-400">
@@ -360,7 +399,8 @@ export function PointsConversionSettings() {
                   </div>
                 )}
                 <p className="text-muted-foreground">
-                  This change will affect all future redemptions. Existing points balances remain unchanged.
+                  This change will affect all future redemptions. Existing
+                  points balances remain unchanged.
                 </p>
               </div>
             </AlertDialogDescription>

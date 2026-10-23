@@ -5,14 +5,23 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { TextField, SubmitButton } from '@/components/shared/forms';
 import { QrCode } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const dineInSchema = z.object({
-  tableNumber: z.string().min(1, 'Table number is required').regex(/^\d+$/, 'Must be a valid table number'),
+  tableNumber: z
+    .string()
+    .min(1, 'Table number is required')
+    .regex(/^\d+$/, 'Must be a valid table number'),
 });
 
 type DineInFormData = z.infer<typeof dineInSchema>;
@@ -37,7 +46,7 @@ export function DineInForm() {
         title: 'Table Set!',
         description: `You're ordering from Table ${data.tableNumber}`,
       });
-      
+
       // Redirect to menu with order type in URL
       router.push(`/menu?type=dine-in&table=${data.tableNumber}`);
     } catch (error) {
@@ -65,7 +74,8 @@ export function DineInForm() {
         <CardHeader>
           <CardTitle>Scan QR Code</CardTitle>
           <CardDescription>
-            Scan the QR code on your table to automatically set your table number
+            Scan the QR code on your table to automatically set your table
+            number
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -95,7 +105,9 @@ export function DineInForm() {
           <span className="w-full border-t" />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-2 text-muted-foreground">Or enter manually</span>
+          <span className="bg-background px-2 text-muted-foreground">
+            Or enter manually
+          </span>
         </div>
       </div>
 
@@ -127,8 +139,8 @@ export function DineInForm() {
 
       <div className="rounded-lg bg-muted p-4">
         <p className="text-sm text-muted-foreground">
-          <strong>Note:</strong> Your order will be delivered to your table. Please ensure you're
-          seated at the correct table number.
+          <strong>Note:</strong> Your order will be delivered to your table.
+          Please ensure you're seated at the correct table number.
         </p>
       </div>
     </div>

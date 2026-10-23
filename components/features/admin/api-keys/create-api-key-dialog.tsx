@@ -85,7 +85,9 @@ export function CreateApiKeyDialog({ onCreated }: CreateApiKeyDialogProps) {
         setPlainKey(result.plainKey);
         onCreated();
       } else {
-        form.setError('root', { message: result.error ?? 'Failed to create key' });
+        form.setError('root', {
+          message: result.error ?? 'Failed to create key',
+        });
       }
     } finally {
       setIsSubmitting(false);
@@ -107,7 +109,13 @@ export function CreateApiKeyDialog({ onCreated }: CreateApiKeyDialogProps) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); else setOpen(true); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) handleClose();
+        else setOpen(true);
+      }}
+    >
       <DialogTrigger asChild>
         <Button size="sm">
           <Plus className="mr-2 h-4 w-4" />
@@ -117,7 +125,9 @@ export function CreateApiKeyDialog({ onCreated }: CreateApiKeyDialogProps) {
 
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{plainKey ? 'API Key Created' : 'Create API Key'}</DialogTitle>
+          <DialogTitle>
+            {plainKey ? 'API Key Created' : 'Create API Key'}
+          </DialogTitle>
         </DialogHeader>
 
         {plainKey ? (
@@ -154,7 +164,9 @@ export function CreateApiKeyDialog({ onCreated }: CreateApiKeyDialogProps) {
                 {...form.register('name')}
               />
               {form.formState.errors.name && (
-                <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
+                <p className="text-xs text-destructive">
+                  {form.formState.errors.name.message}
+                </p>
               )}
             </div>
 
@@ -206,7 +218,9 @@ export function CreateApiKeyDialog({ onCreated }: CreateApiKeyDialogProps) {
                 </button>
               </div>
               {form.formState.errors.scopes && (
-                <p className="text-xs text-destructive">{form.formState.errors.scopes.message}</p>
+                <p className="text-xs text-destructive">
+                  {form.formState.errors.scopes.message}
+                </p>
               )}
             </div>
 
@@ -279,7 +293,9 @@ export function CreateApiKeyDialog({ onCreated }: CreateApiKeyDialogProps) {
             </div>
 
             {form.formState.errors.root && (
-              <p className="text-xs text-destructive">{form.formState.errors.root.message}</p>
+              <p className="text-xs text-destructive">
+                {form.formState.errors.root.message}
+              </p>
             )}
 
             <div className="flex justify-end gap-2">

@@ -4,7 +4,14 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Percent, DollarSign, Gift, Star, Instagram } from 'lucide-react';
+import {
+  Loader2,
+  Percent,
+  DollarSign,
+  Gift,
+  Star,
+  Instagram,
+} from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { addYears } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -50,28 +57,42 @@ const optionalCount = z.preprocess(
  */
 export const formSchema = z.object({
   name: z.string().min(3, 'Name must be at least 3 characters').max(100),
-  description: z.string().min(10, 'Description must be at least 10 characters').max(500),
+  description: z
+    .string()
+    .min(10, 'Description must be at least 10 characters')
+    .max(500),
   isActive: z.boolean(),
   spendThreshold: z.coerce.number().min(0, 'Must be 0 or greater'),
-  triggerType: z.enum(['transaction', 'social_instagram']).default('transaction'),
-  socialConfig: z.object({
-    platform: z.enum(['instagram']),
-    hashtag: z.string().min(2, 'Hashtag required'),
-    minViews: z.coerce.number().min(0),
-    maxPostsPerPeriod: z.coerce.number().min(1),
-    // REQ-046 D4: the Period Type <Select> renders "weekly" as a display
-    // fallback (value={watch(...) || 'weekly'}) but never writes it to
-    // react-hook-form state, so an untouched select submits periodType:
-    // undefined and the required enum aborts the save (same class as the D1
-    // platform bug above). Default to 'weekly' so the displayed value is the
-    // one persisted; an edited rule still loads its stored value first.
-    periodType: z.enum(['weekly', 'monthly', 'campaign_duration']).default('weekly'),
-    pointsAwarded: z.coerce.number().min(1),
-    postsRequired: optionalCount,
-    windowDays: optionalCount,
-    requireMention: z.boolean().optional(),
-  }).optional(),
-  rewardType: z.enum(['discount-percentage', 'discount-fixed', 'free-item', 'loyalty-points']),
+  triggerType: z
+    .enum(['transaction', 'social_instagram'])
+    .default('transaction'),
+  socialConfig: z
+    .object({
+      platform: z.enum(['instagram']),
+      hashtag: z.string().min(2, 'Hashtag required'),
+      minViews: z.coerce.number().min(0),
+      maxPostsPerPeriod: z.coerce.number().min(1),
+      // REQ-046 D4: the Period Type <Select> renders "weekly" as a display
+      // fallback (value={watch(...) || 'weekly'}) but never writes it to
+      // react-hook-form state, so an untouched select submits periodType:
+      // undefined and the required enum aborts the save (same class as the D1
+      // platform bug above). Default to 'weekly' so the displayed value is the
+      // one persisted; an edited rule still loads its stored value first.
+      periodType: z
+        .enum(['weekly', 'monthly', 'campaign_duration'])
+        .default('weekly'),
+      pointsAwarded: z.coerce.number().min(1),
+      postsRequired: optionalCount,
+      windowDays: optionalCount,
+      requireMention: z.boolean().optional(),
+    })
+    .optional(),
+  rewardType: z.enum([
+    'discount-percentage',
+    'discount-fixed',
+    'free-item',
+    'loyalty-points',
+  ]),
   rewardValue: z.coerce.number().positive('Must be positive'),
   freeItemId: z.string().nullable().optional(),
   probability: z.coerce.number().min(0).max(100),
@@ -82,14 +103,23 @@ export const formSchema = z.object({
   // here: a top-level ZodEffects makes z.input !== z.output and breaks
   // react-hook-form's handleSubmit typing. .nullable() then accepts the null
   // without coercing it; the submit handler maps it to undefined (unlimited).
-  maxRedemptionsPerUser: z.coerce.number().int().positive().nullable().optional(),
+  maxRedemptionsPerUser: z.coerce
+    .number()
+    .int()
+    .positive()
+    .nullable()
+    .optional(),
   validityDays: z.coerce.number().int().positive('Must be positive'),
   startDate: z.string().nullable().optional(),
   endDate: z.string().nullable().optional(),
-  campaignDates: z.array(z.object({
-    from: z.string(),
-    to: z.string(),
-  })).optional(),
+  campaignDates: z
+    .array(
+      z.object({
+        from: z.string(),
+        to: z.string(),
+      })
+    )
+    .optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -189,10 +219,14 @@ export function RewardRuleForm({
     }
     // Fallback to legacy startDate/endDate
     if (initialData?.startDate || initialData?.endDate) {
-      return [{
-        from: initialData.startDate ? new Date(initialData.startDate) : undefined,
-        to: initialData.endDate ? new Date(initialData.endDate) : undefined,
-      }];
+      return [
+        {
+          from: initialData.startDate
+            ? new Date(initialData.startDate)
+            : undefined,
+          to: initialData.endDate ? new Date(initialData.endDate) : undefined,
+        },
+      ];
     }
     return [];
   });
@@ -211,21 +245,25 @@ export function RewardRuleForm({
       isActive: initialData?.isActive ?? true,
       spendThreshold: initialData?.spendThreshold || 0,
       triggerType: initialData?.triggerType || 'transaction',
-      socialConfig: initialData?.socialConfig ? {
-        platform: 'instagram',
-        hashtag: initialData.socialConfig.hashtag,
-        minViews: initialData.socialConfig.minViews,
-        maxPostsPerPeriod: initialData.socialConfig.maxPostsPerPeriod,
-        periodType: initialData.socialConfig.periodType,
-        pointsAwarded: initialData.socialConfig.pointsAwarded,
-        postsRequired: initialData.socialConfig.postsRequired,
-        windowDays: initialData.socialConfig.windowDays,
-        requireMention: initialData.socialConfig.requireMention ?? true,
-      } : undefined,
+      socialConfig: initialData?.socialConfig
+        ? {
+            platform: 'instagram',
+            hashtag: initialData.socialConfig.hashtag,
+            minViews: initialData.socialConfig.minViews,
+            maxPostsPerPeriod: initialData.socialConfig.maxPostsPerPeriod,
+            periodType: initialData.socialConfig.periodType,
+            pointsAwarded: initialData.socialConfig.pointsAwarded,
+            postsRequired: initialData.socialConfig.postsRequired,
+            windowDays: initialData.socialConfig.windowDays,
+            requireMention: initialData.socialConfig.requireMention ?? true,
+          }
+        : undefined,
       rewardType: initialData?.rewardType || 'discount-percentage',
       rewardValue: initialData?.rewardValue || 10,
       freeItemId: initialData?.freeItemId?.toString() || null,
-      probability: initialData?.probability ? initialData.probability * 100 : 30,
+      probability: initialData?.probability
+        ? initialData.probability * 100
+        : 30,
       maxRedemptionsPerUser: initialData?.maxRedemptionsPerUser || null,
       validityDays: initialData?.validityDays || 30,
       startDate: initialData?.startDate
@@ -276,9 +314,9 @@ export function RewardRuleForm({
           from: range.from!.toISOString().split('T')[0],
           to: range.to!.toISOString().split('T')[0],
         }));
-      
+
       setValue('campaignDates', campaignDates);
-      
+
       // Also set legacy fields for backward compatibility (use first range)
       if (dateRanges[0]?.from) {
         setValue('startDate', dateRanges[0].from.toISOString().split('T')[0]);
@@ -302,19 +340,21 @@ export function RewardRuleForm({
         maxRedemptionsPerUser: data.maxRedemptionsPerUser || undefined,
         startDate: data.startDate || undefined,
         endDate: data.endDate || undefined,
-        campaignDates: data.campaignDates && data.campaignDates.length > 0
-          ? data.campaignDates.map((range) => ({
-              from: range.from,
-              to: range.to,
-            }))
-          : undefined,
+        campaignDates:
+          data.campaignDates && data.campaignDates.length > 0
+            ? data.campaignDates.map((range) => ({
+                from: range.from,
+                to: range.to,
+              }))
+            : undefined,
       };
 
       await onSubmit(submitData as any);
     } catch (error) {
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to submit form',
+        description:
+          error instanceof Error ? error.message : 'Failed to submit form',
         variant: 'destructive',
       });
     }
@@ -345,7 +385,9 @@ export function RewardRuleForm({
       <Card>
         <CardHeader>
           <CardTitle>Basic Information</CardTitle>
-          <CardDescription>General details about the reward rule</CardDescription>
+          <CardDescription>
+            General details about the reward rule
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -369,7 +411,9 @@ export function RewardRuleForm({
               {...register('description')}
             />
             {errors.description && (
-              <p className="text-sm text-red-600">{errors.description.message}</p>
+              <p className="text-sm text-red-600">
+                {errors.description.message}
+              </p>
             )}
           </div>
 
@@ -527,14 +571,18 @@ export function RewardRuleForm({
                   <SelectContent>
                     <SelectItem value="weekly">Weekly</SelectItem>
                     <SelectItem value="monthly">Monthly</SelectItem>
-                    <SelectItem value="campaign_duration">Campaign Duration</SelectItem>
+                    <SelectItem value="campaign_duration">
+                      Campaign Duration
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="space-y-2">
-                 <Label htmlFor="socialConfig.pointsAwarded">Points to Award *</Label>
-                 <Input
+                <Label htmlFor="socialConfig.pointsAwarded">
+                  Points to Award *
+                </Label>
+                <Input
                   id="socialConfig.pointsAwarded"
                   type="number"
                   min="1"
@@ -545,27 +593,29 @@ export function RewardRuleForm({
                     setValue('socialConfig.pointsAwarded', val);
                     setValue('rewardValue', val); // Sync with main reward value
                   }}
-                 />
-                 {errors.socialConfig?.pointsAwarded && (
+                />
+                {errors.socialConfig?.pointsAwarded && (
                   <p className="text-sm text-red-600">
                     {errors.socialConfig.pointsAwarded.message}
                   </p>
                 )}
               </div>
-              
-               {/* Hidden field to set platform */}
-               <input type="hidden" {...register('socialConfig.platform')} value="instagram" />
+
+              {/* Hidden field to set platform */}
+              <input
+                type="hidden"
+                {...register('socialConfig.platform')}
+                value="instagram"
+              />
             </div>
 
             <div className="mt-6 space-y-4 rounded-md border border-dashed p-4">
               <div>
-                <h4 className="text-sm font-semibold">
-                  Cadence (optional)
-                </h4>
+                <h4 className="text-sm font-semibold">Cadence (optional)</h4>
                 <p className="text-xs text-muted-foreground">
                   Use these to require N qualifying posts within a rolling
-                  window before a customer earns the points (e.g. &ldquo;3
-                  posts in 7 days&rdquo;). Leave blank for the legacy
+                  window before a customer earns the points (e.g. &ldquo;3 posts
+                  in 7 days&rdquo;). Leave blank for the legacy
                   one-award-per-post behaviour.
                 </p>
               </div>
@@ -589,9 +639,7 @@ export function RewardRuleForm({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="socialConfig.windowDays">
-                    Window (days)
-                  </Label>
+                  <Label htmlFor="socialConfig.windowDays">Window (days)</Label>
                   <Input
                     id="socialConfig.windowDays"
                     type="number"
@@ -621,8 +669,8 @@ export function RewardRuleForm({
                     />
                   </Label>
                   <p className="text-xs text-muted-foreground">
-                    When on, a qualifying post must tag the bar&apos;s
-                    Instagram Business account.
+                    When on, a qualifying post must tag the bar&apos;s Instagram
+                    Business account.
                   </p>
                 </div>
               </div>
@@ -635,7 +683,9 @@ export function RewardRuleForm({
       <Card>
         <CardHeader>
           <CardTitle>Spend Threshold</CardTitle>
-          <CardDescription>Minimum order amount to qualify for this reward</CardDescription>
+          <CardDescription>
+            Minimum order amount to qualify for this reward
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
@@ -649,7 +699,9 @@ export function RewardRuleForm({
               {...register('spendThreshold')}
             />
             {errors.spendThreshold && (
-              <p className="text-sm text-red-600">{errors.spendThreshold.message}</p>
+              <p className="text-sm text-red-600">
+                {errors.spendThreshold.message}
+              </p>
             )}
             <p className="text-sm text-muted-foreground">
               Set to 0 for no minimum spend requirement
@@ -670,7 +722,9 @@ export function RewardRuleForm({
               <Label htmlFor="rewardType">Reward Type *</Label>
               <Select
                 value={rewardType}
-                onValueChange={(value: string) => setValue('rewardType', value as any)}
+                onValueChange={(value: string) =>
+                  setValue('rewardType', value as any)
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -702,33 +756,47 @@ export function RewardRuleForm({
                 <Input
                   id="rewardValue"
                   type="number"
-                  min={'valueMin' in selectedType ? selectedType.valueMin : undefined}
-                  max={'valueMax' in selectedType ? selectedType.valueMax : undefined}
+                  min={
+                    'valueMin' in selectedType
+                      ? selectedType.valueMin
+                      : undefined
+                  }
+                  max={
+                    'valueMax' in selectedType
+                      ? selectedType.valueMax
+                      : undefined
+                  }
                   placeholder={selectedType.placeholder}
                   {...register('rewardValue')}
                 />
                 {errors.rewardValue && (
-                  <p className="text-sm text-red-600">{errors.rewardValue.message}</p>
+                  <p className="text-sm text-red-600">
+                    {errors.rewardValue.message}
+                  </p>
                 )}
               </div>
             )}
 
-            {selectedType && 'requiresItemSelection' in selectedType && selectedType.requiresItemSelection && (
-              <div className="space-y-2">
-                <Label htmlFor="freeItemId">Free Menu Item *</Label>
-                <Input
-                  id="freeItemId"
-                  placeholder="Menu item ID (to be replaced with selector)"
-                  {...register('freeItemId')}
-                />
-                {errors.freeItemId && (
-                  <p className="text-sm text-red-600">{errors.freeItemId.message}</p>
-                )}
-                <p className="text-sm text-muted-foreground">
-                  Note: Menu item selector to be implemented
-                </p>
-              </div>
-            )}
+            {selectedType &&
+              'requiresItemSelection' in selectedType &&
+              selectedType.requiresItemSelection && (
+                <div className="space-y-2">
+                  <Label htmlFor="freeItemId">Free Menu Item *</Label>
+                  <Input
+                    id="freeItemId"
+                    placeholder="Menu item ID (to be replaced with selector)"
+                    {...register('freeItemId')}
+                  />
+                  {errors.freeItemId && (
+                    <p className="text-sm text-red-600">
+                      {errors.freeItemId.message}
+                    </p>
+                  )}
+                  <p className="text-sm text-muted-foreground">
+                    Note: Menu item selector to be implemented
+                  </p>
+                </div>
+              )}
           </CardContent>
         </Card>
       )}
@@ -737,7 +805,9 @@ export function RewardRuleForm({
       <Card>
         <CardHeader>
           <CardTitle>Probability & Limits</CardTitle>
-          <CardDescription>Control how often this reward is issued</CardDescription>
+          <CardDescription>
+            Control how often this reward is issued
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-4">
@@ -756,7 +826,8 @@ export function RewardRuleForm({
               className="w-full"
             />
             <p className="text-sm text-muted-foreground">
-              Chance of receiving this reward when eligible (0% = never, 100% = always)
+              Chance of receiving this reward when eligible (0% = never, 100% =
+              always)
             </p>
           </div>
 
@@ -797,7 +868,9 @@ export function RewardRuleForm({
               {...register('validityDays')}
             />
             {errors.validityDays && (
-              <p className="text-sm text-red-600">{errors.validityDays.message}</p>
+              <p className="text-sm text-red-600">
+                {errors.validityDays.message}
+              </p>
             )}
             <p className="text-sm text-muted-foreground">
               Number of days until the reward expires after being issued
@@ -811,7 +884,8 @@ export function RewardRuleForm({
         <CardHeader>
           <CardTitle>Campaign Schedule (Optional)</CardTitle>
           <CardDescription>
-            Set start and end dates for time-limited campaigns (up to 1 year in advance)
+            Set start and end dates for time-limited campaigns (up to 1 year in
+            advance)
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -826,14 +900,17 @@ export function RewardRuleForm({
             />
             {(errors.startDate || errors.endDate || errors.campaignDates) && (
               <p className="text-sm text-red-600">
-                {errors.startDate?.message || errors.endDate?.message || errors.campaignDates?.message}
+                {errors.startDate?.message ||
+                  errors.endDate?.message ||
+                  errors.campaignDates?.message}
               </p>
             )}
           </div>
           <p className="text-sm text-muted-foreground">
-            Leave empty for permanent rules. Select multiple date ranges for non-contiguous campaigns
-            (e.g., weekends only, specific holidays). You can select dates up to 1 year in advance.
-            Use the "Clear All" button to remove all selected dates.
+            Leave empty for permanent rules. Select multiple date ranges for
+            non-contiguous campaigns (e.g., weekends only, specific holidays).
+            You can select dates up to 1 year in advance. Use the "Clear All"
+            button to remove all selected dates.
           </p>
         </CardContent>
       </Card>

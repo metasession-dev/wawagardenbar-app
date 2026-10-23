@@ -35,9 +35,9 @@ import {
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 
-import { 
-  updateNotificationSettingsAction, 
-  sendTestSMSAction 
+import {
+  updateNotificationSettingsAction,
+  sendTestSMSAction,
 } from '@/app/actions/admin/settings-actions';
 
 // Schema for notification settings
@@ -63,7 +63,9 @@ interface NotificationSettingsFormProps {
   };
 }
 
-export function NotificationSettingsForm({ initialSettings }: NotificationSettingsFormProps) {
+export function NotificationSettingsForm({
+  initialSettings,
+}: NotificationSettingsFormProps) {
   const [isPending, startTransition] = useTransition();
   const [isTestPending, startTestTransition] = useTransition();
   const [testPhone, setTestPhone] = useState('');
@@ -107,7 +109,7 @@ export function NotificationSettingsForm({ initialSettings }: NotificationSettin
     startTestTransition(async () => {
       try {
         const result = await sendTestSMSAction(testPhone);
-        
+
         if (result.success) {
           toast.success(result.message);
         } else {
@@ -138,7 +140,9 @@ export function NotificationSettingsForm({ initialSettings }: NotificationSettin
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                     <div className="space-y-0.5">
-                      <FormLabel className="text-base">Email Notifications</FormLabel>
+                      <FormLabel className="text-base">
+                        Email Notifications
+                      </FormLabel>
                       <FormDescription>
                         Send notifications via email (SMTP).
                       </FormDescription>
@@ -152,14 +156,16 @@ export function NotificationSettingsForm({ initialSettings }: NotificationSettin
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="smsEnabled"
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                     <div className="space-y-0.5">
-                      <FormLabel className="text-base">SMS Notifications</FormLabel>
+                      <FormLabel className="text-base">
+                        SMS Notifications
+                      </FormLabel>
                       <FormDescription>
                         Send notifications via SMS (Africa's Talking).
                       </FormDescription>
@@ -192,8 +198,8 @@ export function NotificationSettingsForm({ initialSettings }: NotificationSettin
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Authentication (PINs)</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
+                      <Select
+                        onValueChange={field.onChange}
                         defaultValue={field.value}
                         disabled={!smsEnabled && field.value === 'email'}
                       >
@@ -204,8 +210,12 @@ export function NotificationSettingsForm({ initialSettings }: NotificationSettin
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="email">Email Only</SelectItem>
-                          <SelectItem value="sms" disabled={!smsEnabled}>SMS Only</SelectItem>
-                          <SelectItem value="both" disabled={!smsEnabled}>Both (Email & SMS)</SelectItem>
+                          <SelectItem value="sms" disabled={!smsEnabled}>
+                            SMS Only
+                          </SelectItem>
+                          <SelectItem value="both" disabled={!smsEnabled}>
+                            Both (Email & SMS)
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                       <FormDescription>
@@ -222,8 +232,8 @@ export function NotificationSettingsForm({ initialSettings }: NotificationSettin
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Order Updates</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
+                      <Select
+                        onValueChange={field.onChange}
                         defaultValue={field.value}
                         disabled={!smsEnabled && field.value === 'email'}
                       >
@@ -234,8 +244,12 @@ export function NotificationSettingsForm({ initialSettings }: NotificationSettin
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="email">Email Only</SelectItem>
-                          <SelectItem value="sms" disabled={!smsEnabled}>SMS Only</SelectItem>
-                          <SelectItem value="both" disabled={!smsEnabled}>Both (Email & SMS)</SelectItem>
+                          <SelectItem value="sms" disabled={!smsEnabled}>
+                            SMS Only
+                          </SelectItem>
+                          <SelectItem value="both" disabled={!smsEnabled}>
+                            Both (Email & SMS)
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                       <FormDescription>
@@ -272,18 +286,21 @@ export function NotificationSettingsForm({ initialSettings }: NotificationSettin
         <CardContent>
           <div className="flex w-full max-w-sm items-end space-x-2">
             <div className="grid gap-1.5 flex-1">
-              <label htmlFor="phone" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+              <label
+                htmlFor="phone"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
                 Phone Number
               </label>
-              <Input 
-                id="phone" 
-                placeholder="+234..." 
+              <Input
+                id="phone"
+                placeholder="+234..."
                 value={testPhone}
                 onChange={(e) => setTestPhone(e.target.value)}
               />
             </div>
-            <Button 
-              onClick={handleTestSMS} 
+            <Button
+              onClick={handleTestSMS}
               disabled={!smsEnabled || isTestPending || !testPhone}
               variant="secondary"
             >

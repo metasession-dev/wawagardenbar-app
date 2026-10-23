@@ -94,6 +94,11 @@ FILE_PATH="$4"
 shift 4
 
 GIT_SHA=""
+# devaudit-installer#1019 -- on a pull_request run, a PR that changes no code
+# (documentation / compliance records only) must not bind its head SHA or branch
+# to a release, nor create the release: it uploads the document without them.
+# Default on; --no-attribution-guard or DEVAUDIT_ATTRIBUTION_GUARD=0 disables it.
+ATTRIBUTION_GUARD="${DEVAUDIT_ATTRIBUTION_GUARD:-1}"
 CI_RUN_ID=""
 BRANCH=""
 RELEASE_VERSION=""
@@ -123,6 +128,7 @@ while [ "$#" -gt 0 ]; do
     --branch) BRANCH="$2"; shift 2 ;;
     --release) RELEASE_VERSION="$2"; shift 2 ;;
     --create-release-if-missing) CREATE_RELEASE_IF_MISSING=true; shift ;;
+    --no-attribution-guard) ATTRIBUTION_GUARD=0; shift ;;
     --environment) ENVIRONMENT="$2"; shift 2 ;;
     --category) EVIDENCE_CATEGORY="$2"; shift 2 ;;
     # Descriptive title + conventional-commit change type passed through to
@@ -158,6 +164,18 @@ if [ -n "$ENVIRONMENT" ] && [ -z "$RELEASE_VERSION" ]; then
   echo "Error: --environment requires --release (evidence without a release is orphaned)"
   exit 1
 fi
+
+if [ "$ATTRIBUTION_GUARD" != "0" ] && [ "${GITHUB_EVENT_NAME:-}" = "pull_request" ] \
+   && [ -n "$RELEASE_VERSION" ] && { [ -n "$GIT_SHA" ] || [ -n "$BRANCH" ] || [ "$CREATE_RELEASE_IF_MISSING" = true ]; } \
+   && [ -n "${GITHUB_BASE_REF:-}" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/classify-pr-attribution.sh" ]; then
+  ATTRIBUTION="$(bash "$(dirname "${BASH_SOURCE[0]}")/classify-pr-attribution.sh" --base "origin/${GITHUB_BASE_REF}" 2>/dev/null || echo attach)"
+  case "$ATTRIBUTION" in
+    skip:*)
+      echo "::warning::This PR changes no code (${ATTRIBUTION#skip:}); uploading to ${RELEASE_VERSION} WITHOUT binding its SHA/branch or creating the release (devaudit-installer#1019). Pass --no-attribution-guard to override."
+      GIT_SHA=""; BRANCH=""; CREATE_RELEASE_IF_MISSING=false
+      ;;
+  esac
+fi
 if [ -n "$RELEASE_VERSION" ] && [ -z "$EVIDENCE_CATEGORY" ]; then
   echo "Error: --category is required when --release is specified (gate validation)"
   exit 1
@@ -184,8 +202,14 @@ if [ -z "${DEVAUDIT_BASE_URL:-}" ]; then
   exit 1
 fi
 if [ -z "${DEVAUDIT_API_KEY:-}" ]; then
-  echo "Error: DEVAUDIT_API_KEY environment variable is required (issue from"
-  echo "       Project Settings → API Keys in META-COMPLY)"
+  echo "Error: DEVAUDIT_API_KEY environment variable is required (issue an"
+  echo "       uploader-role key from Project Settings → API Keys in META-COMPLY;"
+  echo "       CI already has one as a repo secret)."
+  echo "       Consequence: this evidence upload / release pre-creation cannot"
+  echo "       run without it. Fallback (devaudit-installer#845): CI's own"
+  echo "       register-release job re-uploads the same evidence on push and"
+  echo "       creates the release as a safety net if this call was skipped —"
+  echo "       or an operator can upload the file manually via the portal UI."
   exit 1
 fi
 
@@ -235,16 +259,81 @@ is_tracked_change_type() {
   esac
 }
 
+# devaudit#775 — a CI checkout never has the gitignored, local-only
+# `.sdlc-implementer-invoked` file, so evidence uploaded from a CI
+# workflow run could never carry sentinel provenance even when
+# sdlc-implementer genuinely drove the work — it read identically to a
+# real manual bypass. The skill now embeds the same phase-history JSON
+# as a `Sdlc-Implementer-Sentinel:` trailer on every commit it makes
+# during a tracked session (see SKILL.md Phase 2 step 7). Scan the
+# target commit and its recent ancestors for that trailer when the
+# local file is absent — this also covers squash-merged PRs, since
+# GitHub's default squash message concatenates each original commit's
+# message (trailer included) into the merge commit body.
+detect_sentinel_git_trailer() {
+  local target="$1"
+  # devaudit-installer#1082 — a 50-commit window silently lost the trailer on a long-lived
+  # branch (many commits after the one sdlc-implementer made), and "newest trailer wins" could
+  # attribute another requirement's phase history to this upload. Scan SENTINEL_SCAN_LIMIT
+  # commits (default 500) and prefer the newest trailer on a commit that mentions this
+  # upload's requirement id, else the newest trailer. Prints "<sha><TAB><value>", or nothing.
+  # `|| true` — under `set -o pipefail` a scan that finds nothing (the common case: no
+  # trailer, genuinely untracked, or already covered by the local file) must not abort the
+  # whole upload script via `set -e`.
+  git log "$target" -n "${SENTINEL_SCAN_LIMIT:-500}" --format='%x01%H%n%B' 2>/dev/null \
+    | awk -v req="$REQUIREMENT_ID" '
+        BEGIN { RS = "\001"; FS = "\n" }
+        NF {
+          for (i = 2; i <= NF; i++) {
+            if ($i ~ /^Sdlc-Implementer-Sentinel:/) {
+              v = $i; sub(/^Sdlc-Implementer-Sentinel:[ \t]*/, "", v)
+              if (first == "") first = $1 "\t" v
+              if (req != "" && matched == "" && index($0, req)) matched = $1 "\t" v
+              break
+            }
+          }
+        }
+        END { if (matched != "") print matched; else if (first != "") print first }' || true
+}
+
+# Warn when the sentinel is not what the portal expects (a JSON array/object of phase history,
+# or the legacy plain "INVOKED" marker): the portal stores anything it cannot parse as
+# unverified, which blocks approval, and the cause is invisible from the upload side.
+check_sentinel_shape() {
+  local value="$1" source="$2"
+  [ "$value" = "INVOKED" ] && return 0
+  command -v jq >/dev/null 2>&1 || return 0
+  if ! printf '%s' "$value" | jq -e 'type == "array" or type == "object"' >/dev/null 2>&1; then
+    echo "::warning::sentinel from ${source} is not a JSON array/object of phase history; the portal may record this upload as unverified."
+  fi
+}
+
 resolve_sentinel_context() {
   if ! is_tracked_change_type "$CHANGE_TYPE"; then
     return 0
   fi
+  local source=""
   if [ -f ".sdlc-implementer-invoked" ]; then
     SENTINEL_CONTENT=$(cat .sdlc-implementer-invoked)
+    source="local file"
   fi
   local git_target="HEAD"
   if [ -n "$GIT_SHA" ]; then
     git_target="$GIT_SHA"
+  fi
+  if [ -z "$SENTINEL_CONTENT" ]; then
+    local found
+    found=$(detect_sentinel_git_trailer "$git_target")
+    if [ -n "$found" ]; then
+      SENTINEL_CONTENT="${found#*$'\t'}"
+      source="trailer from commit ${found%%$'\t'*}"
+    fi
+  fi
+  if [ -n "$SENTINEL_CONTENT" ]; then
+    echo "sentinel: ${source} (change type ${CHANGE_TYPE})"
+    check_sentinel_shape "$SENTINEL_CONTENT" "$source"
+  else
+    echo "sentinel: none found (change type ${CHANGE_TYPE}, scanned up to ${SENTINEL_SCAN_LIMIT:-500} commits from ${git_target}); the portal will record this upload as unverified"
   fi
   COMMIT_TIMESTAMP=$(git show -s --format=%cI "$git_target" 2>/dev/null || true)
 }
@@ -612,12 +701,29 @@ for FILE in "${FILES[@]}"; do
         continue
       fi
     fi
-    rm -f "$RESP_HEADERS_FILE"
     break
   done
 
+  # DevAudit-Installer#1018 — a 400 ("Failed to parse body as FormData") or
+  # 413 on the multipart path means the file exceeded a body limit that sits
+  # below PRESIGNED_THRESHOLD_BYTES (reverse proxy / framework). Retrying the
+  # same multipart POST cannot succeed, so fall back to the presigned flow
+  # once (unless it was already the path taken above).
+  if [ "$FILE_SIZE" -lt "$PRESIGNED_THRESHOLD_BYTES" ] && { [ "$HTTP_CODE" = "400" ] || [ "$HTTP_CODE" = "413" ]; }; then
+    echo -n "(multipart HTTP ${HTTP_CODE} at ${FILE_SIZE} bytes, trying presigned fallback) "
+    FALLBACK_RESULT=0
+    upload_presigned "$FILE" || FALLBACK_RESULT=$?
+    if [ "$FALLBACK_RESULT" -eq 0 ]; then
+      rm -f "$RESP_BODY_FILE" "$RESP_HEADERS_FILE"
+      echo "OK (${FILE_SIZE} bytes, presigned R2 upload after multipart HTTP ${HTTP_CODE})"
+      SUCCEEDED=$((SUCCEEDED + 1))
+      TOTAL_SIZE=$((TOTAL_SIZE + FILE_SIZE))
+      continue
+    fi
+  fi
+
   if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
-    rm -f "$RESP_BODY_FILE"
+    rm -f "$RESP_BODY_FILE" "$RESP_HEADERS_FILE"
     if [ "$ATTEMPT" -gt 1 ]; then
       echo "OK (${FILE_SIZE} bytes, attempt ${ATTEMPT}/${MAX_ATTEMPTS})"
     else
@@ -634,7 +740,14 @@ for FILE in "${FILES[@]}"; do
     if [ -s "$RESP_BODY_FILE" ]; then
       echo "  Response: $(head -c 500 "$RESP_BODY_FILE")"
     fi
-    rm -f "$RESP_BODY_FILE"
+    # DevAudit-Installer#1018 — diagnostics so a size/limit failure is
+    # attributable from the log alone: size, upload path, content type of
+    # the part, and the response headers (proxy/server identification).
+    echo "  Diagnostics: file=${FILENAME} size=${FILE_SIZE}B path=multipart evidenceType=${EVIDENCE_TYPE} presigned_threshold=${PRESIGNED_THRESHOLD_BYTES}B"
+    if [ -s "$RESP_HEADERS_FILE" ]; then
+      echo "  Response headers: $(tr -d '\r' < "$RESP_HEADERS_FILE" | grep -iE '^(HTTP/|server:|content-type:|content-length:|via:|x-)' | head -8 | tr '\n' '|')"
+    fi
+    rm -f "$RESP_BODY_FILE" "$RESP_HEADERS_FILE"
     FAILED=$((FAILED + 1))
   fi
 done

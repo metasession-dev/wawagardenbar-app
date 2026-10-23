@@ -1,8 +1,8 @@
 {
-  "origin": "feature",
+  "origin": "regression",
   "reqId": "REQ-113",
   "ac": 14,
   "slug": "black-and-white-preview",
   "specFile": "e2e/admin/menu-print.spec.ts",
-  "capturedAt": "2026-10-23T21:52:47.922Z"
+  "capturedAt": "2026-10-23T23:11:41.659Z"
 }

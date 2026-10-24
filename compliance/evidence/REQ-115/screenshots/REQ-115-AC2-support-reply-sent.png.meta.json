@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-115",
+  "ac": 2,
+  "slug": "support-reply-sent",
+  "specFile": "e2e/support-ticket-staff-flow.spec.ts",
+  "capturedAt": "2026-10-24T16:30:34.635Z"
+}

@@ -1,0 +1,22 @@
+{
+  "name": "reward_earned",
+  "language": "en",
+  "category": "MARKETING",
+  "builder": "rewardEarnedParams",
+  "header": {
+    "format": "TEXT",
+    "text": "You earned points! 🎉",
+    "example": []
+  },
+  "body": {
+    "text": "Hi {{1}}, thanks for your latest order — you just earned {{2}} loyalty points. Your new balance is {{3}} points (≈ {{4}}). Use them at your next visit!",
+    "example": ["Adaeze", "55", "420", "₦4,200"]
+  },
+  "footer": "Wawa Garden Bar Rewards",
+  "buttons": [
+    {
+      "type": "QUICK_REPLY",
+      "text": "Check Balance"
+    }
+  ]
+}

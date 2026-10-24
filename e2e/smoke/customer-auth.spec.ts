@@ -23,38 +23,31 @@ test.describe('Customer auth — passwordless SMS PIN @smoke', () => {
     await expect(page.locator('#pin')).toBeVisible({ timeout: 15000 });
   }
 
-  test(
-    'REQ-AUTHC-001: SMS PIN login creates a session',
-    async ({ page }) => {
-      const { phone, digits } = uniquePhone();
-      await requestSmsPin(page, phone);
+  test('REQ-AUTHC-001: SMS PIN login creates a session', async ({ page }) => {
+    const { phone, digits } = uniquePhone();
+    await requestSmsPin(page, phone);
 
-      const pin = await getVerificationPinByPhone(digits);
-      expect(
-        pin,
-        'a verification PIN should be stored for the customer'
-      ).toMatch(/^\d{4}$/);
+    const pin = await getVerificationPinByPhone(digits);
+    expect(pin, 'a verification PIN should be stored for the customer').toMatch(
+      /^\d{6}$/
+    );
 
-      await page.fill('#pin', pin as string);
-      await evidenceShot(page, 'REQ-007', 1, 'authc-001-pin-entered');
-      await page.getByRole('button', { name: /verify & login/i }).click();
-      await expect(page).not.toHaveURL(/\/login(\?|$)/, { timeout: 15000 });
-    }
-  );
+    await page.fill('#pin', pin as string);
+    await evidenceShot(page, 'REQ-007', 1, 'authc-001-pin-entered');
+    await page.getByRole('button', { name: /verify & login/i }).click();
+    await expect(page).not.toHaveURL(/\/login(\?|$)/, { timeout: 15000 });
+  });
 
-  test(
-    'REQ-AUTHC-002: wrong PIN is rejected, no session',
-    async ({ page }) => {
-      const { phone, digits } = uniquePhone();
-      await requestSmsPin(page, phone);
+  test('REQ-AUTHC-002: wrong PIN is rejected, no session', async ({ page }) => {
+    const { phone, digits } = uniquePhone();
+    await requestSmsPin(page, phone);
 
-      const real = (await getVerificationPinByPhone(digits)) ?? '1234';
-      const wrong = String((Number(real) + 1) % 10000).padStart(4, '0');
+    const real = (await getVerificationPinByPhone(digits)) ?? '123456';
+    const wrong = String((Number(real) + 1) % 1000000).padStart(6, '0');
 
-      await page.fill('#pin', wrong);
-      await page.getByRole('button', { name: /verify & login/i }).click();
-      await expect(page.locator('#pin')).toBeVisible();
-      await expect(page).toHaveURL(/\/login(\?|$)/);
-    }
-  );
+    await page.fill('#pin', wrong);
+    await page.getByRole('button', { name: /verify & login/i }).click();
+    await expect(page.locator('#pin')).toBeVisible();
+    await expect(page).toHaveURL(/\/login(\?|$)/);
+  });
 });

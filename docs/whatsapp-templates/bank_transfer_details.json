@@ -1,0 +1,22 @@
+{
+  "name": "bank_transfer_details",
+  "language": "en",
+  "category": "UTILITY",
+  "builder": "bankTransferDetailsParams",
+  "header": {
+    "format": "TEXT",
+    "text": "Bank transfer details",
+    "example": []
+  },
+  "body": {
+    "text": "Transfer {{1}} to the account below within {{5}} hours:\n\nAccount: {{2}}\nName: {{3}}\nBank: {{4}}\n\nYour order is confirmed automatically once we receive payment.",
+    "example": ["₦12,500", "9019823745", "Wawa Garden Bar", "Wema Bank", "2"]
+  },
+  "footer": "Wawa Garden Bar",
+  "buttons": [
+    {
+      "type": "QUICK_REPLY",
+      "text": "📋 Copy details"
+    }
+  ]
+}

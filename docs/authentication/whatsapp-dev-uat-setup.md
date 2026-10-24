@@ -51,7 +51,7 @@ WHATSAPP_BUSINESS_ACCOUNT_ID=<UAT WABA ID>
 WHATSAPP_ACCESS_TOKEN=<UAT access token>
 WHATSAPP_APP_SECRET=<UAT App Secret>
 WHATSAPP_WEBHOOK_VERIFY_TOKEN=<UAT verify token>
-WHATSAPP_API_VERSION=v18.0
+WHATSAPP_API_VERSION=v23.0   # code default is v23.0; a stale v18.0 set here overrides it, so update or unset it
 WHATSAPP_API_URL=https://graph.facebook.com
 WHATSAPP_PIN_TEMPLATE_NAME=verification_pin
 ```
@@ -136,9 +136,16 @@ Three registration-flow templates are in scope: `welcome_new_user`, `welcome_bac
 3. Submit — approval is async, typically 24–48h. Templates are scoped per-WABA, so this is a separate submission per environment's WABA, not one.
 4. Check status under Message Templates until `APPROVED`. A referenced-but-unapproved template fails to send — expected, documented in `compliance/RTM.md`.
 
-## account_recovery routing (code gap)
+## account_recovery routing
 
-As of this writing, `services/whatsapp-inbound-service.ts` has no detection for "this inbound phone doesn't match the account on file" — this is being built as part of #933 Sections D/E (routing logic + unit tests + new Playwright spec). Until that lands, there's nothing to manually exercise for `account_recovery` beyond confirming the template itself is approved.
+Implemented in `services/whatsapp-inbound-service.ts` (REQ-111, SRS REQ-WA-007): an inbound message from an unrecognised number that includes an email or order number belonging to another account is classified `phone_mismatch`, and `account_recovery` is sent to the sender. The template's `YES`/`NEW` reply is deliberately not handled (a second factor is required first; tracked in risk R-037), so the manual UAT check is: confirm the template is `APPROVED`, send a message from an unknown number containing a known customer's email, and see `account_recovery` arrive.
+
+## Live UAT sign-in round-trip: two configuration traps
+
+1. **`ENABLE_E2E_PIN_INTERCEPT` must be `false` on UAT** for any live WhatsApp round-trip. When it is `true`, the send actions persist the PIN and short-circuit, returning "PIN persisted (E2E intercept mode)" without calling Meta.
+2. **No trailing `# comments` in `--from-env-file` values.** When rebuilding the `wawagardenbar-uat-env` secret from `.env.uat.local` with `--from-env-file`, a trailing comment becomes part of the value. This made `ENABLE_WHATSAPP_NOTIFICATIONS` not equal `'true'`, so sign-in showed "WhatsApp service is currently unavailable". Put comments on their own lines.
+
+Also: verification PINs are 6 digits (Meta rejects any other length for the authentication template).
 
 ## E2E testing
 
@@ -155,7 +162,7 @@ For a **real** round-trip (not simulated), use the manual tests in each environm
 - [ ] UAT: Meta App created, k8s Secret `wawagardenbar-uat-env` updated + deployment restarted, webhook verified via `wawagardenbar-uat.ostendo.io`, one real round-trip.
 - [ ] `welcome_new_user` / `welcome_back` / `account_recovery` submitted for UAT's WABA.
 - [ ] All three show `APPROVED` (24–48h after submission) for UAT.
-- [ ] #933 Sections D/E code (routing + tests + e2e spec) merged.
+- [x] #933 Sections D/E code (routing + tests + e2e spec) merged.
 - [ ] Production's existing config reviewed/rotated if the leaked-token issue is actioned.
 - [ ] (Optional, later) Dev Meta App + ngrok, only if recurring local live-testing becomes necessary.
 

@@ -8,6 +8,7 @@ import {
   getPinExpirationTime,
   validateEmail,
   sanitizePhone,
+  phoneLookupVariants,
 } from '@/lib/auth-utils';
 
 interface SendEmailPinResult {
@@ -44,7 +45,7 @@ export async function sendEmailPinAction(
       // Find potential users
       const notDeleted = { accountStatus: { $ne: 'deleted' } };
       const userByPhone = await UserModel.findOne({
-        phone: sanitizedPhone,
+        phone: { $in: phoneLookupVariants(sanitizedPhone) },
         ...notDeleted,
       });
       const userByEmail = await UserModel.findOne({

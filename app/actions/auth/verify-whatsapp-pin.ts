@@ -9,6 +9,8 @@ import {
   generateSessionToken,
   isPinExpired,
   sanitizePhone,
+  isValidPinFormat,
+  phoneLookupVariants,
 } from '@/lib/auth-utils';
 
 interface VerifyWhatsAppPinResult {
@@ -41,7 +43,7 @@ export async function verifyWhatsAppPinAction(
       };
     }
 
-    if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+    if (!isValidPinFormat(pin)) {
       return {
         success: false,
         message: 'Invalid PIN format',
@@ -53,7 +55,7 @@ export async function verifyWhatsAppPinAction(
     await connectDB();
 
     const user = await UserModel.findOne({
-      phone: sanitizedPhone,
+      phone: { $in: phoneLookupVariants(sanitizedPhone) },
       accountStatus: { $ne: 'deleted' },
     }).select('+verificationPin +pinExpiresAt');
 

@@ -236,6 +236,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-WA-005       | Inbound WhatsApp message handling (welcome, opt-out, support routing)                         | Should   | regression | `services/whatsapp-inbound-service.ts`; `app/api/webhooks/whatsapp/route.ts`; REQ-056                                       |
 | REQ-WA-006       | Consent model: transactional default on, marketing default off                                | Must     | regression | `services/notification-service.ts`; `lib/notification-templates.ts`; REQ-053/063                                            |
 | REQ-WA-007       | Account-recovery detection for inbound WhatsApp messages (phone-mismatch via email/order no.) | Should   | regression | `services/whatsapp-inbound-service.ts`; `models/incoming-message-model.ts`; `lib/whatsapp-inbound-templates.ts`; REQ-WA-005 |
+| REQ-WA-008       | Canonical E.164 phone format for WhatsApp identity lookups                                    | Must     | regression | `lib/auth-utils.ts` (`normalizePhone`); `services/whatsapp-inbound-service.ts`; REQ-115                                     |
 
 ---
 
@@ -502,9 +503,10 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 #### REQ-AUTHC-001 — Passwordless PIN login · **Must** · smoke
 
 **Source:** `components/shared/auth/login-form.tsx`, `app/actions/auth/send-pin.ts:22`, `verify-pin.ts:20`
-**Behaviour:** Choose method (SMS/Email/WhatsApp) → enter phone/email → a 4-digit PIN is sent → enter PIN → session created (7-day iron-session cookie), `phoneVerified=true`, redirect to `?redirect=` (default `/`). Resend has a 60s countdown.
+**Behaviour:** Choose method (SMS/Email/WhatsApp) → enter phone/email → a 6-digit PIN (generated with a cryptographically secure RNG) is sent → enter PIN → session created (7-day iron-session cookie), `phoneVerified=true`, redirect to `?redirect=` (default `/`). Resend has a 60s countdown.
 
 - **Given** the login page, **When** the customer requests and enters the correct PIN, **Then** a session is created and they are redirected.
+- **Given** a customer enters a 4-digit (or any non-6-digit) PIN, **When** they submit, **Then** the normal "Invalid PIN" error shows and no session is created.
 
 #### REQ-AUTHC-002 — PIN error handling · **Should** · regression
 
@@ -1568,7 +1570,7 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 #### REQ-WA-005 — Inbound WhatsApp message handling · **Should** · regression
 
 **Source:** `services/whatsapp-inbound-service.ts`, `app/api/webhooks/whatsapp/route.ts`, `lib/whatsapp.ts`; cross-ref REQ-056.
-**Behaviour:** Inbound WhatsApp messages are received via the webhook at `/api/webhooks/whatsapp` and routed through `WhatsAppInboundService.handle`. The service classifies the sender's customer state (`new`, `signing_up`, `active`, `dormant`) and the message intent (`opt_out`, `chat_with_staff`, `support_text`). STOP/opt-out messages matching `/^\s*(stop|unsubscribe|opt[-\s]?out)\s*$/i` clear both `whatsappTransactional` and `whatsappMarketing` regardless of customer state (Meta WABA policy). New/signing-up users receive a `welcome_new_user` template; dormant users receive `welcome_back`. Active users are queued for staff. Support-text intents create a `SupportTicket` with `source: whatsapp`. An `IncomingMessage` audit record is persisted for every inbound message.
+**Behaviour:** Inbound WhatsApp messages are received via the webhook at `/api/webhooks/whatsapp` and routed through `WhatsAppInboundService.handle`. The service classifies the sender's customer state (`new`, `signing_up`, `active`, `dormant`) and the message intent (`opt_out`, `chat_with_staff`, `support_text`). STOP/opt-out messages matching `/^\s*(stop|unsubscribe|opt[-\s]?out)\s*$/i` clear both `whatsappTransactional` and `whatsappMarketing` regardless of customer state (Meta WABA policy). New/signing-up users receive a `welcome_new_user` template with parameters [today's opening time, closing time] (`h:mm a`, from business-hours settings); dormant users receive `welcome_back` with [first name, fallback `there`]. `actionTaken` records `<template>_sent` only when the send succeeded, otherwise `<template>_failed:<errorCode>`. Sender phones are matched using the canonical format (REQ-WA-008); a recovery-detected mismatch is classified `phone_mismatch` (REQ-WA-007). Active users are queued for staff. Support-text intents create a `SupportTicket` with `source: whatsapp`. An `IncomingMessage` audit record is persisted for every inbound message.
 
 - **Given** an inbound WhatsApp message from an unknown phone number, **When** `WhatsAppInboundService.handle` processes it, **Then** a new `User` row is auto-created and a `welcome_new_user` template is sent.
 - **Given** an inbound message matching the STOP opt-out pattern, **When** the service processes it, **Then** both `whatsappTransactional` and `whatsappMarketing` are set to false and a free-form STOP confirmation is sent within the 24h customer-service window.
@@ -1596,6 +1598,15 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 - **Given** a brand-new phone number with no identifying email or order number in the message body, **When** the service processes it, **Then** it is classified `new` and handled per REQ-WA-005 unchanged (regression — this REQ introduces no behaviour change for that case).
 
 ---
+
+#### REQ-WA-008 — Canonical E.164 phone format for WhatsApp identity lookups · **Must** · regression
+
+**Source:** `lib/auth-utils.ts` (`normalizePhone`, `sanitizePhone`), `services/whatsapp-inbound-service.ts`, `app/actions/auth/send-whatsapp-pin.ts`, `verify-whatsapp-pin.ts`, `scripts/migrate-normalize-phones.ts`; cross-ref REQ-WA-005, REQ-AUTHC-001, REQ-115.
+**Behaviour:** Phone numbers are stored and compared in E.164 with a leading `+` (default country NG). `normalizePhone` converts `234…`, `0…` and `+234…` to `+234…`. Meta's inbound `from` (no `+`) and web-entered numbers therefore resolve to the same `User`. The migration script normalises stored `users.phone` values and reports duplicates; it never merges accounts.
+
+- **Given** a user saved as `+2348012345678`, **When** an inbound WhatsApp message arrives from `2348012345678`, **Then** the sender is classified as an existing customer and no second `User` is created.
+- **Given** the numbers `08012345678`, `2348012345678` and `+2348012345678`, **When** `normalizePhone` runs, **Then** each returns `+2348012345678`.
+- **Given** two stored users whose phones normalise to the same value, **When** the migration script runs, **Then** it lists them in a duplicate report and changes neither account.
 
 ## Feature Area 28 — Contact / Support (CONTACT)
 

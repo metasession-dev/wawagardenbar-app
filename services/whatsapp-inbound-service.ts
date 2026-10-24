@@ -43,7 +43,13 @@ import IncomingMessageModel, {
 import { NotificationService } from '@/services/notification-service';
 import { WhatsAppService } from '@/lib/whatsapp';
 import { INBOUND_WELCOME_TEMPLATE } from '@/lib/whatsapp-inbound-templates';
-import { sanitizePhone } from '@/lib/auth-utils';
+import { normalizePhone, phoneLookupVariants } from '@/lib/auth-utils';
+import { SettingsService } from '@/services/settings-service';
+import {
+  accountRecoveryParams,
+  welcomeBackParams,
+  welcomeNewUserParams,
+} from '@/lib/whatsapp-template-params';
 
 const DORMANT_THRESHOLD_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -80,6 +86,20 @@ interface ClassifyResult {
   user: unknown;
 }
 
+/**
+ * REQ-115 (D8) — `actionTaken` reflects the real send outcome:
+ * `<template>_sent` only when the send succeeded, otherwise
+ * `<template>_failed:<errorCode>`.
+ */
+function outcomeTag(
+  template: string,
+  result: { success: boolean; errorCode?: string }
+): string {
+  return result.success
+    ? `${template}_sent`
+    : `${template}_failed:${result.errorCode ?? 'UNKNOWN'}`;
+}
+
 function extractBody(message: MetaInboundMessage): string | null {
   if (message.type === 'text') return message.text?.body ?? null;
   if (message.type === 'interactive') {
@@ -98,9 +118,10 @@ export class WhatsAppInboundService {
    */
   static async classifyCustomerState(phone: string): Promise<ClassifyResult> {
     await connectDB();
-    const sanitized = sanitizePhone(phone);
+    // REQ-115 / ADR-006 — Meta's `from` has no '+'; match the canonical
+    // form and, until the phone migration has run, the legacy stored forms.
     const user = await UserModel.findOne({
-      phone: sanitized,
+      phone: { $in: phoneLookupVariants(phone) },
       accountStatus: { $ne: 'deleted' },
     });
     if (!user) return { state: 'new', user: null };
@@ -201,6 +222,8 @@ export class WhatsAppInboundService {
       let user = classified.user as {
         _id: { toString(): string };
         phone?: string;
+        firstName?: string;
+        name?: string;
         preferences?: {
           communicationPreferences?: { whatsappTransactional?: boolean };
         };
@@ -214,7 +237,7 @@ export class WhatsAppInboundService {
         const matched = await this.detectAccountRecoverySignal(body);
         if (
           matched &&
-          sanitizePhone(matched.phone ?? '') !== sanitizePhone(from)
+          normalizePhone(matched.phone ?? '') !== normalizePhone(from)
         ) {
           state = 'phone_mismatch';
           user = matched as typeof user;
@@ -228,7 +251,7 @@ export class WhatsAppInboundService {
         try {
           await connectDB();
           user = await UserModel.create({
-            phone: sanitizePhone(from),
+            phone: normalizePhone(from),
             phoneVerified: false,
             isGuest: false,
           });
@@ -289,25 +312,21 @@ export class WhatsAppInboundService {
           false; // default true, same as shouldSendWhatsApp()
         if (consented) {
           try {
-            const matchedPhoneLast4 = sanitizePhone(user.phone ?? '').slice(-4);
-            // Matches the existing welcome_new_user/welcome_back branch's
-            // convention below: WhatsAppService.sendMessage (like
-            // NotificationService.send) resolves with `success: false`
-            // rather than throwing on a non-fatal failure (including the
-            // SERVICE_DISABLED short-circuit when ENABLE_WHATSAPP_NOTIFICATIONS
-            // isn't 'true', e.g. in tests). actionTaken reflects "attempted"
-            // (the call didn't throw), not "Meta confirmed delivery" — same
-            // semantics the rest of this file already relies on.
-            await WhatsAppService.sendMessage(from, 'account_recovery', [
-              matchedPhoneLast4,
-            ]);
-            actionTaken = 'sent_account_recovery';
+            const result = await WhatsAppService.sendMessage(
+              from,
+              'account_recovery',
+              accountRecoveryParams(user.phone ?? '')
+            );
+            actionTaken = outcomeTag('account_recovery', result);
           } catch (error) {
             console.error(
               '[WhatsAppInbound] account_recovery send failed:',
               error instanceof Error ? error.message : String(error)
             );
-            actionTaken = 'send_failed';
+            actionTaken = outcomeTag('account_recovery', {
+              success: false,
+              errorCode: 'EXCEPTION',
+            });
           }
         } else {
           actionTaken = 'noop';
@@ -317,21 +336,33 @@ export class WhatsAppInboundService {
         const templateKey = INBOUND_WELCOME_TEMPLATE[state];
         if (templateKey && userId) {
           try {
-            await NotificationService.send({
+            const params =
+              templateKey === 'welcome_back'
+                ? welcomeBackParams(user ?? {})
+                : welcomeNewUserParams(
+                    (await SettingsService.getSettings()).businessHours
+                  );
+            const result = await NotificationService.send({
               userId,
               templateKey,
-              whatsapp: { params: [] },
+              whatsapp: { params: params.bodyParams },
             });
-            actionTaken =
-              templateKey === 'welcome_back'
-                ? 'sent_welcome_back'
-                : 'sent_welcome_new_user';
+            const whatsappAttempt = result.attempts.find(
+              (attempt) => attempt.channel === 'whatsapp'
+            );
+            actionTaken = outcomeTag(templateKey, {
+              success: result.success,
+              errorCode: whatsappAttempt?.errorCode ?? 'NOT_SENT',
+            });
           } catch (error) {
             console.error(
               '[WhatsAppInbound] welcome template send failed:',
               error instanceof Error ? error.message : String(error)
             );
-            actionTaken = 'send_failed';
+            actionTaken = outcomeTag(templateKey, {
+              success: false,
+              errorCode: 'EXCEPTION',
+            });
           }
         } else {
           // REQ-064 — `support_text` intent (or any non-welcome path)

@@ -1,0 +1,23 @@
+{
+  "name": "reward_expiring_soon",
+  "language": "en",
+  "category": "MARKETING",
+  "builder": "rewardExpiringSoonParams",
+  "header": {
+    "format": "TEXT",
+    "text": "Don't lose your points ⏰",
+    "example": []
+  },
+  "body": {
+    "text": "Hi {{1}}, {{2}} of your loyalty points (worth {{4}}) expire in {{3}} days. Visit Wawa Garden Bar or order online to redeem them — every plate counts.",
+    "example": ["Adaeze", "100", "7", "₦1,000"]
+  },
+  "footer": "Wawa Garden Bar Rewards",
+  "buttons": [
+    {
+      "type": "URL",
+      "text": "Order Now",
+      "url": "https://app.wawagardenbar.com/menu"
+    }
+  ]
+}

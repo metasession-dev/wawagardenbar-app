@@ -1,0 +1,33 @@
+{
+  "name": "welcome_back",
+  "language": "en",
+  "category": "UTILITY",
+  "builder": "welcomeBackParams",
+  "header": {
+    "format": "TEXT",
+    "text": "Welcome back 👋",
+    "example": []
+  },
+  "body": {
+    "text": "Hi {{1}}, we've missed you at Wawa Garden Bar. Place a quick order with your saved details, book your next celebration, or reach out to our team.",
+    "example": ["Adaeze"]
+  },
+  "footer": "Wawa Garden Bar",
+  "buttons": [
+    {
+      "type": "URL",
+      "text": "🛒 Order Now",
+      "url": "https://app.wawagardenbar.com/menu"
+    },
+    {
+      "type": "URL",
+      "text": "🎉 Book an Event",
+      "url": "https://app.wawagardenbar.com/book"
+    },
+    {
+      "type": "QUICK_REPLY",
+      "text": "💬 Chat with Staff"
+    }
+  ],
+  "holdUntil": "WA-13: submit only once /book is live"
+}

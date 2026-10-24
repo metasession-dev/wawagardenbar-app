@@ -42,6 +42,7 @@ import {
   type NotificationCategory,
 } from '@/lib/notification-templates';
 import { NotificationLogService } from '@/services/notification-log-service';
+import type { INotificationLog } from '@/models/notification-log-model';
 
 export type NotificationChannel = 'whatsapp' | 'email' | 'sms';
 
@@ -49,6 +50,10 @@ export interface NotificationAttempt {
   channel: NotificationChannel;
   success: boolean;
   error?: string;
+  /** REQ-115 — WhatsApp error code (e.g. TEMPLATE_PARAM_ERROR) for failed sends. */
+  errorCode?: string;
+  /** REQ-115 — template variables sent (WhatsApp attempts only). */
+  templateParams?: INotificationLog['templateParams'];
   durationMs?: number;
   /** REQ-055 — Meta's wamid from a successful WhatsApp send; null for
    *  email/SMS or for failed WA sends. Persisted on the audit log
@@ -73,7 +78,12 @@ export interface SendOptions {
    *  affordance; the default is the map lookup. */
   category?: NotificationCategory;
   /** WhatsApp payload — omit to skip the channel entirely. */
-  whatsapp?: { params: string[] };
+  /** `params` fill the body; header/button params are optional (REQ-115). */
+  whatsapp?: {
+    params: string[];
+    headerParams?: string[];
+    buttonParams?: { index: number; params: string[] }[];
+  };
   /** Email closure — caller owns content shape; throws on failure. */
   email?: () => Promise<void>;
   /** SMS closure — caller owns content; returns a result object. */
@@ -144,6 +154,7 @@ function logAttempt(
       success: attempt.success,
       durationMs: attempt.durationMs,
       error: attempt.error,
+      errorCode: attempt.errorCode,
       messageId: attempt.messageId,
     })
   );
@@ -159,6 +170,8 @@ function logAttempt(
     success: attempt.success,
     messageId: attempt.messageId ?? null,
     failureReason: attempt.error ?? null,
+    errorCode: attempt.errorCode ?? null,
+    templateParams: attempt.templateParams ?? null,
     durationMs: attempt.durationMs ?? null,
   }).catch(() => undefined);
 }
@@ -204,15 +217,25 @@ export class NotificationService {
       const phone = user?.phone ?? '';
       if (phone) {
         const t0 = Date.now();
+        const { params, headerParams, buttonParams } = opts.whatsapp;
+        // Plain body-param array when there is no header/button payload, so
+        // existing callers' sendMessage calls are byte-identical.
+        const hasExtra = Boolean(headerParams?.length || buttonParams?.length);
         const result = await WhatsAppService.sendMessage(
           phone,
           opts.templateKey,
-          opts.whatsapp.params
+          hasExtra ? { headerParams, bodyParams: params, buttonParams } : params
         );
         const attempt: NotificationAttempt = {
           channel: 'whatsapp',
           success: result.success,
           error: result.success ? undefined : result.message,
+          errorCode: result.success ? undefined : result.errorCode,
+          templateParams: {
+            header: headerParams ?? [],
+            body: params,
+            buttons: buttonParams ?? [],
+          },
           durationMs: Date.now() - t0,
           // REQ-055 — capture Meta's wamid for delivery-status reconciliation.
           messageId: result.success ? (result.messageId ?? null) : null,

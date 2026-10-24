@@ -6,7 +6,9 @@
  * share one persistence + side-effect path (reply notifications via REQ-054's
  * NotificationService).
  */
+import { supportReplyParams } from '@/lib/whatsapp-template-params';
 import { connectDB } from '@/lib/mongodb';
+import { UserModel } from '@/models';
 import SupportTicketModel, {
   type ISupportTicket,
   type SupportTicketStatus,
@@ -185,10 +187,24 @@ export class SupportTicketService {
       // WhatsApp template won't exist until WA-1 is approved at Meta;
       // falls through to email — that's the right behaviour today.
       try {
+        await connectDB();
+        const customer = await UserModel.findById(updated.userId)
+          .select('firstName name')
+          .lean<{ firstName?: string; name?: string }>();
+        const replyParams = supportReplyParams({
+          ticketNumber: updated.ticketNumber,
+          customerName: customer?.firstName ?? customer?.name,
+          subject: updated.subject,
+          reply: opts.body,
+        });
         await NotificationService.send({
           userId: updated.userId,
           templateKey: 'support_reply',
-          whatsapp: { params: [updated.ticketNumber, opts.body] },
+          // REQ-115 (D2) — header [ticket no.], body [first name, subject, reply].
+          whatsapp: {
+            params: replyParams.bodyParams,
+            headerParams: replyParams.headerParams,
+          },
           email: async () => {
             if (updated.customerEmail) {
               await sendSupportTicketEmail(updated.customerEmail, {

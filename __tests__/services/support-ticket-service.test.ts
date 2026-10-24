@@ -38,7 +38,18 @@ vi.mock('@/models/support-ticket-model', () => ({
   },
 }));
 
+const mockUserFindById = vi.fn();
+vi.mock('@/models', () => ({
+  UserModel: {
+    findById: (...a: unknown[]) => mockUserFindById(...a),
+  },
+}));
+
 beforeEach(() => {
+  mockUserFindById.mockReset().mockReturnValue({
+    select: vi.fn().mockReturnThis(),
+    lean: vi.fn().mockResolvedValue({ firstName: 'Ada' }),
+  });
   mockCreate.mockReset();
   mockFind.mockReset();
   mockCount.mockReset();
@@ -167,6 +178,13 @@ describe('REQ-064 SupportTicketService.addReply', () => {
     const sendArgs = mockNotificationSend.mock.calls[0][0];
     expect(sendArgs.templateKey).toBe('support_reply');
     expect(sendArgs.userId).toBe('user-5');
+    // REQ-115 (D2) — header [ticket no.], body [first name, subject, reply].
+    expect(sendArgs.whatsapp.headerParams).toEqual([updated.ticketNumber]);
+    expect(sendArgs.whatsapp.params).toEqual([
+      'Ada',
+      updated.subject,
+      'Sorry about that…',
+    ]);
   });
 
   it('AC5 — guest ticket (no userId) — reply persisted, no notification', async () => {

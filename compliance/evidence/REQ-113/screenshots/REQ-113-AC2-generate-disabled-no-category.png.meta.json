@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-113",
+  "ac": 2,
+  "slug": "generate-disabled-no-category",
+  "specFile": "e2e/admin/menu-print.spec.ts",
+  "capturedAt": "2026-10-23T23:11:23.129Z"
+}

@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-113",
+  "ac": 17,
+  "slug": "landscape-preview",
+  "specFile": "e2e/admin/menu-print.spec.ts",
+  "capturedAt": "2026-10-23T23:11:38.696Z"
+}

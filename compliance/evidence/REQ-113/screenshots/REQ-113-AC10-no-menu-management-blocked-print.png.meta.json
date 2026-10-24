@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-113",
+  "ac": 10,
+  "slug": "no-menu-management-blocked-print",
+  "specFile": "e2e/admin/menu-print.spec.ts",
+  "capturedAt": "2026-10-23T23:11:43.539Z"
+}

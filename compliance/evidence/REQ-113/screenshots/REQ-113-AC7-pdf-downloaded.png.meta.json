@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-113",
+  "ac": 7,
+  "slug": "pdf-downloaded",
+  "specFile": "e2e/admin/menu-print.spec.ts",
+  "capturedAt": "2026-10-23T23:11:32.143Z"
+}

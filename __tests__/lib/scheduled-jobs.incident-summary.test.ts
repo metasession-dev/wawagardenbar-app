@@ -74,9 +74,13 @@ describe('REQ-088 runDailyIncidentSummaryJob', () => {
     });
     mockUserFind.mockReturnValue({
       select: vi.fn().mockReturnThis(),
-      lean: vi
-        .fn()
-        .mockResolvedValue([{ email: 'admin@wawa.com', phone: '+1234567890' }]),
+      lean: vi.fn().mockResolvedValue([
+        {
+          _id: { toString: () => 'admin-id-1' },
+          email: 'admin@wawa.com',
+          phone: '+1234567890',
+        },
+      ]),
     });
     mockNotificationSend.mockResolvedValue({});
     const { runDailyIncidentSummaryJob } = await import('@/lib/scheduled-jobs');
@@ -84,7 +88,29 @@ describe('REQ-088 runDailyIncidentSummaryJob', () => {
     expect(mockNotificationSend).toHaveBeenCalledTimes(1);
     const sendArg = mockNotificationSend.mock.calls[0][0];
     expect(sendArg.templateKey).toBe('incident_summary');
-    expect(sendArg.userId).toBe('admin@wawa.com');
+    // REQ-115 (D3) — the recipient is the user's _id, not their email, and
+    // the WhatsApp channel is attempted with the incident total.
+    expect(sendArg.userId).toBe('admin-id-1');
+    expect(sendArg.whatsapp).toEqual({ params: ['3'] });
+  });
+
+  it('REQ-115 D3 — a recipient with no resolvable user id skips WhatsApp and logs', async () => {
+    mockGetUnresolvedSummary.mockResolvedValue({ total: 2, byKind: [] });
+    mockUserFind.mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      lean: vi.fn().mockResolvedValue([{ email: 'ghost@wawa.com' }]),
+    });
+    mockNotificationSend.mockResolvedValue({});
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const { runDailyIncidentSummaryJob } = await import('@/lib/scheduled-jobs');
+    await runDailyIncidentSummaryJob();
+    const sendArg = mockNotificationSend.mock.calls[0][0];
+    expect(sendArg.userId).toBeNull();
+    expect(sendArg.whatsapp).toBeUndefined();
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('skipping WhatsApp')
+    );
+    warn.mockRestore();
   });
 
   it('AC9 — skips when no admin users found', async () => {

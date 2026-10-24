@@ -80,7 +80,11 @@ SRS drift (table vs headings): none found for REQ-WA-_ or REQ-AUTHC-_.
 
 ## 4. E2E test coverage
 
-Delegated to `e2e-test-engineer` in Phase 2. Planned specs: `e2e/critical/whatsapp-welcome-params.spec.ts` (AC1), `e2e/critical/whatsapp-phone-normalisation.spec.ts` (AC5), update `e2e/support-ticket-staff-flow.spec.ts` (AC2), shared helper (AC10), PIN-length journey on the sign-in page (AC15, intercept mode).
+Authored via `e2e-test-engineer` (invoked in Phase 2).
+
+- **Spec(s):** `e2e/critical/whatsapp-welcome-params.spec.ts` (AC1), `e2e/critical/whatsapp-phone-normalisation.spec.ts` (AC5), `e2e/critical/customer-pin-six-digits.spec.ts` (AC15), `e2e/support-ticket-staff-flow.spec.ts` (AC2, new test), plus the shared `e2e/helpers/whatsapp-webhook.ts` now used by `e2e/whatsapp-inbound-registration-templates.spec.ts` and `e2e/support-ticket-whatsapp-inbound.spec.ts` (AC10).
+- **ACs covered:** AC1, AC2, AC5, AC10, AC15. Other ACs are unit-level, documentation or operator evidence (see `test-scope.md`).
+- The two WhatsApp critical specs are transport-layer (no `page`); their evidence form is `test-execution-summary.md`, not screenshots.
 
 ## 5. Threat model + security considerations
 
@@ -134,6 +138,18 @@ N/A — this REQ does not introduce or change AI behaviour.
 - **Manual after UAT deploy:** live `account_recovery` round-trip; live PIN sign-in with `ENABLE_E2E_PIN_INTERCEPT=false`; dry-run of the phone migration against UAT data.
 - **Monitoring:** `NotificationLog` outcomes by template.
 
+## Plan deviation (Phase 2)
+
+All implementation-approach deviations; no acceptance criterion changed.
+
+1. **`NotificationLog` gains `templateParams` and `errorCode`.** The plan's e2e stories (US-01.1/01.2/01.3) assert "the NotificationLog row has these params", but the model stored neither. Two optional fields were added (`templateParams: {header, body, buttons}`, `errorCode`); `NotificationAttempt` also carries `errorCode`, which D8 needs to write `<template>_failed:<errorCode>`. Existing rows and callers are unaffected.
+2. **`phoneLookupVariants` added alongside `normalizePhone`.** ADR-006 says lookups must keep finding accounts stored in legacy formats until the migration has run; otherwise the first sign-in after deploy would create a duplicate user. Lookups use `$in` over the canonical form, the digits-only form, the local `0…` form and the value as typed.
+3. **`payment_link` template renumbered.** The contract test found that the doc's body used `{{1}} {{2}} {{4}}` (with `{{3}}` reserved for the button URL), which Meta rejects. Body is now `{{1}} {{2}} {{3}}` and the URL button has its own `{{1}}`.
+4. **`support_reply` header.** The doc had `Re: {{2}}` (a header variable reusing a body number). Per the issue it is now `Support ticket {{1}}` with the ticket number as the header parameter; the subject moved into the body.
+5. **`incident_summary` has no template definition** in the doc or on Meta. D3 now resolves a real user id and passes the incident total as the WhatsApp parameter, but until a template is defined and approved the send fails with `TEMPLATE_NOT_FOUND` and falls back to email, as before. Not in scope here; noted for WA-12's alerting template work.
+6. **`WHATSAPP_API_VERSION` env override.** The default is now `v23.0`, but UAT and production set `WHATSAPP_API_VERSION=v18.0` explicitly in their env/secrets, which overrides the default. Operator task: change that variable to `v23.0` (or unset it) per environment.
+7. **`actionTaken` strings renamed** (`sent_welcome_new_user` → `welcome_new_user_sent`, `sent_account_recovery` → `account_recovery_sent`, `send_failed` → `<template>_failed:<code>`) as D8 specifies; existing unit and e2e assertions updated.
+
 ## 10. Operator tasks (non-code)
 
 1. Rotate the WhatsApp access token present in git history (AC8).
@@ -141,7 +157,8 @@ N/A — this REQ does not introduce or change AI behaviour.
 3. UAT config: `ENABLE_E2E_PIN_INTERCEPT=false`; no trailing `# comments` in `--from-env-file` values (documented in AC9 docs change).
 4. Run `scripts/migrate-normalize-phones.ts` after UAT approval, review the duplicate report.
 5. Live UAT round-trips (AC14, AC15).
+6. Set `WHATSAPP_API_VERSION=v23.0` (or remove it) in the UAT and production env, since an explicit `v18.0` overrides the new default (AC7).
 
 ## 11. Sign-off
 
-- **Plan approved by operator:** PENDING (HIGH risk checkpoint)
+- **Plan approved by operator:** approved 2026-10-24 ("continue" after HIGH-risk checkpoint)

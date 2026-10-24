@@ -2,7 +2,7 @@ import { MongoClient } from 'mongodb';
 import { expect, type Page } from '@playwright/test';
 
 /**
- * Read a customer's current 4-digit verification PIN straight from Mongo.
+ * Read a customer's current 6-digit verification PIN straight from Mongo.
  *
  * The PIN is normally delivered via SMS/WhatsApp/email (all stubbed in test),
  * and `User.verificationPin` is `select: false`, so the app never exposes it.
@@ -13,7 +13,10 @@ import { expect, type Page } from '@playwright/test';
  */
 export async function getVerificationPinByPhone(
   phoneDigits: string,
-  { timeoutMs = 8000, intervalMs = 250 }: { timeoutMs?: number; intervalMs?: number } = {}
+  {
+    timeoutMs = 8000,
+    intervalMs = 250,
+  }: { timeoutMs?: number; intervalMs?: number } = {}
 ): Promise<string | null> {
   const uri =
     process.env.MONGODB_URI ||
@@ -46,7 +49,8 @@ export async function getVerificationPinByPhone(
  * number to type and the unique digit-substring to look the user up by.
  */
 export function uniquePhone(): { phone: string; digits: string } {
-  const digits = String(Date.now()).slice(-8) + String(Math.floor(Math.random() * 10));
+  const digits =
+    String(Date.now()).slice(-8) + String(Math.floor(Math.random() * 10));
   return { phone: `+2348${digits}`, digits };
 }
 
@@ -60,7 +64,9 @@ export function uniquePhone(): { phone: string; digits: string } {
  * and submit it. Returns the unique phone digit-substring so callers can look
  * the user up in Mongo afterwards.
  */
-export async function loginAsCustomer(page: Page): Promise<{ phone: string; digits: string }> {
+export async function loginAsCustomer(
+  page: Page
+): Promise<{ phone: string; digits: string }> {
   const { phone, digits } = uniquePhone();
 
   // Pre-seed cookie-consent so the fixed-bottom CookieConsentBanner never
@@ -86,7 +92,9 @@ export async function loginAsCustomer(page: Page): Promise<{ phone: string; digi
   await expect(page.locator('#pin')).toBeVisible({ timeout: 15000 });
 
   const pin = await getVerificationPinByPhone(digits);
-  expect(pin, 'a verification PIN should be stored for the customer').toMatch(/^\d{4}$/);
+  expect(pin, 'a verification PIN should be stored for the customer').toMatch(
+    /^\d{6}$/
+  );
 
   await page.fill('#pin', pin as string);
   await page.getByRole('button', { name: /verify & login/i }).click();

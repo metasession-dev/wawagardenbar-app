@@ -18,9 +18,13 @@
  *
  * @requirement REQ-064
  */
-import { expect, type APIRequestContext } from '@playwright/test';
+import { expect } from '@playwright/test';
 import { MongoClient } from 'mongodb';
 import { csrTest, isAuthenticated } from './kitchen/helpers';
+import {
+  metaInboundPayload,
+  postSignedWebhook,
+} from './helpers/whatsapp-webhook';
 
 function mongoConn() {
   return {
@@ -33,45 +37,12 @@ function mongoConn() {
 }
 
 function uniqueDigits(): string {
-  return String(Date.now()).slice(-8) + String(Math.floor(Math.random() * 10));
-}
-
-function metaInboundPayload(opts: { from: string; body: string; id: string }) {
-  return {
-    object: 'whatsapp_business_account',
-    entry: [
-      {
-        id: '0',
-        changes: [
-          {
-            field: 'messages',
-            value: {
-              messaging_product: 'whatsapp',
-              metadata: {
-                display_phone_number: '15550100000',
-                phone_number_id: '0',
-              },
-              contacts: [
-                {
-                  profile: { name: 'E2E Customer' },
-                  wa_id: opts.from,
-                },
-              ],
-              messages: [
-                {
-                  from: opts.from,
-                  id: opts.id,
-                  timestamp: String(Math.floor(Date.now() / 1000)),
-                  type: 'text',
-                  text: { body: opts.body },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    ],
-  };
+  // REQ-115 — a realistic Meta sender: Nigerian country code + 10 digits, no '+'.
+  return (
+    '234' +
+    String(Date.now()).slice(-8) +
+    String(Math.floor(Math.random() * 100)).padStart(2, '0')
+  );
 }
 
 async function readTicketByMessage(message: string) {
@@ -138,27 +109,13 @@ async function deleteUserByPhone(phone: string) {
   const client = new MongoClient(uri);
   try {
     await client.connect();
-    await client.db(dbName).collection('users').deleteMany({ phone });
+    await client
+      .db(dbName)
+      .collection('users')
+      .deleteMany({ phone: { $in: [phone, `+${phone}`] } });
   } finally {
     await client.close();
   }
-}
-
-async function postInbound(
-  request: APIRequestContext,
-  payload: unknown
-): Promise<number> {
-  // Use a known-bad signature; the route skips verification when
-  // WHATSAPP_APP_SECRET is unset in test env.
-  const response = await request.post('/api/webhooks/whatsapp', {
-    headers: {
-      'content-type': 'application/json',
-      'x-hub-signature-256':
-        'sha256=0000000000000000000000000000000000000000000000000000000000000000',
-    },
-    data: payload,
-  });
-  return response.status();
 }
 
 function guard(skip: (cond: boolean, reason: string) => void, ok: boolean) {
@@ -208,7 +165,7 @@ csrTest.describe('REQ-064 WhatsApp inbound → support ticket bridge', () => {
         'Hi, I think the delivery I got an hour ago was missing the sides, can someone check please?';
       const messageId = `wamid.E2E-${Date.now()}`;
 
-      const status = await postInbound(
+      const status = await postSignedWebhook(
         request,
         metaInboundPayload({ from: phone, body, id: messageId })
       );

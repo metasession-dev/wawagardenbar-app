@@ -20,6 +20,7 @@
  */
 import { connectDB } from '@/lib/mongodb';
 import NotificationLogModel, {
+  type INotificationLog,
   NOTIFICATION_LOG_STATUS_ORDER,
   type NotificationLogChannel,
   type NotificationLogStatus,
@@ -32,6 +33,8 @@ export interface RecordAttemptInput {
   success: boolean;
   messageId?: string | null;
   failureReason?: string | null;
+  errorCode?: string | null;
+  templateParams?: INotificationLog['templateParams'];
   durationMs?: number | null;
 }
 
@@ -59,6 +62,8 @@ export class NotificationLogService {
         // and 'read' for the WhatsApp channel.
         status: input.success ? 'sent' : 'failed',
         failureReason: input.failureReason ?? null,
+        errorCode: input.errorCode ?? null,
+        templateParams: input.templateParams ?? null,
         durationMs: input.durationMs ?? null,
       });
       return doc._id.toString();

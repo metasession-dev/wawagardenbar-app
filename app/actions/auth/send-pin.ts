@@ -7,6 +7,7 @@ import {
   generatePin,
   getPinExpirationTime,
   sanitizePhone,
+  phoneLookupVariants,
   validatePhone,
 } from '@/lib/auth-utils';
 
@@ -33,7 +34,7 @@ export async function sendPinAction(phone: string): Promise<SendPinResult> {
     await connectDB();
 
     let user = await UserModel.findOne({
-      phone: sanitizedPhone,
+      phone: { $in: phoneLookupVariants(sanitizedPhone) },
       accountStatus: { $ne: 'deleted' },
     });
     const isNewUser = !user;

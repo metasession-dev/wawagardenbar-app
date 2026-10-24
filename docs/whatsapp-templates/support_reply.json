@@ -1,0 +1,21 @@
+{
+  "name": "support_reply",
+  "language": "en",
+  "category": "UTILITY",
+  "builder": "supportReplyParams",
+  "header": {
+    "format": "TEXT",
+    "text": "Support ticket {{1}}",
+    "example": ["TKT-1234"]
+  },
+  "body": {
+    "text": "Hi {{1}}, here's an update from the Wawa Garden Bar team on \"{{2}}\":\n\n{{3}}\n\nReply to this message and we'll get back to you.",
+    "example": [
+      "Adaeze",
+      "Missing item in order",
+      "We've added a replacement to your account — pickup any time today."
+    ]
+  },
+  "footer": null,
+  "buttons": []
+}

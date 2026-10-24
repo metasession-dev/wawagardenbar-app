@@ -7,6 +7,7 @@ import {
   generatePin,
   getPinExpirationTime,
   sanitizePhone,
+  phoneLookupVariants,
   validatePhone,
 } from '@/lib/auth-utils';
 
@@ -35,7 +36,7 @@ export async function sendWhatsAppPinAction(
     await connectDB();
 
     let user = await UserModel.findOne({
-      phone: sanitizedPhone,
+      phone: { $in: phoneLookupVariants(sanitizedPhone) },
       accountStatus: { $ne: 'deleted' },
     });
     const isNewUser = !user;
@@ -92,6 +93,11 @@ export async function sendWhatsAppPinAction(
           'The phone number format is invalid. Please check and try again.';
         canRetryWithSMS = false;
         canRetryWithEmail = false;
+      } else if (whatsappResult.errorCode === 'SEND_FAILED') {
+        // REQ-115 (D17) — Meta rejected the send for a reason that is not
+        // the phone number (e.g. PIN/template parameters). Do not blame
+        // the number; keep the retry options open.
+        userMessage = 'We could not send your PIN. Please try again.';
       } else if (whatsappResult.errorCode === 'SERVICE_DISABLED') {
         userMessage = 'WhatsApp service is currently unavailable.';
       } else if (whatsappResult.errorCode === 'QUOTA_EXCEEDED') {

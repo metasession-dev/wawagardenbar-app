@@ -1,0 +1,26 @@
+{
+  "name": "account_recovery",
+  "language": "en",
+  "category": "UTILITY",
+  "builder": "accountRecoveryParams",
+  "header": {
+    "format": "TEXT",
+    "text": "New number detected",
+    "example": []
+  },
+  "body": {
+    "text": "Hi, it looks like you're messaging us from a new number. Your existing Wawa Garden Bar account is registered to a phone ending in {{1}}. Reply YES to add this number to that account, or NEW to start a fresh account.",
+    "example": ["4567"]
+  },
+  "footer": null,
+  "buttons": [
+    {
+      "type": "QUICK_REPLY",
+      "text": "✅ YES, link to existing"
+    },
+    {
+      "type": "QUICK_REPLY",
+      "text": "🆕 NEW account"
+    }
+  ]
+}

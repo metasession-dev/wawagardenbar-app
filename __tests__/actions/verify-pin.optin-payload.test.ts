@@ -39,6 +39,8 @@ vi.mock('next/headers', () => ({
 }));
 
 vi.mock('@/lib/auth-utils', () => ({
+  phoneLookupVariants: (p: string) => [p],
+  isValidPinFormat: (p: unknown) => typeof p === 'string' && /^\d{6}$/.test(p),
   generateSessionToken: vi.fn().mockReturnValue('token-xyz'),
   isPinExpired: vi.fn().mockReturnValue(false),
   sanitizePhone: (p: string) => p,
@@ -58,7 +60,7 @@ function mockUser(overrides: Record<string, unknown> = {}) {
     phone: '+2348011112222',
     phoneVerified: false,
     emailVerified: false,
-    verificationPin: '1234',
+    verificationPin: '123456',
     pinExpiresAt: new Date(Date.now() + 60_000),
     role: 'customer',
     set: vi.fn((path: string, value: unknown) => {
@@ -86,7 +88,7 @@ describe('REQ-063 verifyPinAction — three-checkbox optIn payload', () => {
 
     const { verifyPinAction } = await import('@/app/actions/auth/verify-pin');
 
-    const result = await verifyPinAction('+2348011112222', '1234', {
+    const result = await verifyPinAction('+2348011112222', '123456', {
       whatsappTransactional: true,
       whatsappMarketing: false,
       emailMarketing: false,
@@ -128,7 +130,7 @@ describe('REQ-063 verifyPinAction — three-checkbox optIn payload', () => {
 
     const { verifyPinAction } = await import('@/app/actions/auth/verify-pin');
 
-    const result = await verifyPinAction('+2348011112222', '1234', {
+    const result = await verifyPinAction('+2348011112222', '123456', {
       whatsappTransactional: false,
       whatsappMarketing: true,
       emailMarketing: true,

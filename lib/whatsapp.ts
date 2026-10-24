@@ -6,6 +6,80 @@ export interface WhatsAppResult {
   details?: any;
 }
 
+/**
+ * REQ-115 — template parameters by component. `bodyParams` fill the body
+ * `{{n}}` variables, `headerParams` the header's, and each `buttonParams`
+ * entry fills the dynamic-URL variable of the button at `index`.
+ */
+export interface WhatsAppTemplateParams {
+  headerParams?: string[];
+  bodyParams: string[];
+  buttonParams?: { index: number; params: string[] }[];
+}
+
+/** Legacy callers pass a plain `string[]`, treated as body params. */
+export function toTemplateParams(
+  parameters: string[] | WhatsAppTemplateParams
+): WhatsAppTemplateParams {
+  return Array.isArray(parameters) ? { bodyParams: parameters } : parameters;
+}
+
+export function buildTemplateComponents(
+  parameters: string[] | WhatsAppTemplateParams
+) {
+  const { headerParams, bodyParams, buttonParams } =
+    toTemplateParams(parameters);
+  const asText = (params: string[]) =>
+    params.map((param) => ({ type: 'text', text: param }));
+  const components: Array<Record<string, unknown>> = [];
+  if (headerParams && headerParams.length > 0) {
+    components.push({ type: 'header', parameters: asText(headerParams) });
+  }
+  // Body component kept even when empty so existing sends are unchanged.
+  components.push({ type: 'body', parameters: asText(bodyParams) });
+  for (const button of buttonParams ?? []) {
+    components.push({
+      type: 'button',
+      sub_type: 'url',
+      index: String(button.index),
+      parameters: asText(button.params),
+    });
+  }
+  return components;
+}
+
+const PHONE_ERROR_HINT = /recipient|phone number|wa_id/i;
+
+/**
+ * REQ-115 (D17) — Meta uses code 100 for any invalid parameter. Report
+ * INVALID_PHONE only when Meta's detail names the recipient; anything else
+ * (PIN format, template component) is a SEND_FAILED so the user is not told
+ * their number is wrong.
+ */
+export function classifyInvalidParameterError(
+  errorData: WhatsAppErrorResponse
+): {
+  errorCode: 'INVALID_PHONE' | 'SEND_FAILED';
+  message: string;
+} {
+  const detail = errorData.error.error_data?.details ?? '';
+  if (PHONE_ERROR_HINT.test(detail)) {
+    return {
+      errorCode: 'INVALID_PHONE',
+      message: 'Invalid phone number format',
+    };
+  }
+  console.error('WhatsApp invalid-parameter error (not phone related):', {
+    details: detail,
+    message: errorData.error.message,
+    fbtrace_id: errorData.error.fbtrace_id,
+  });
+  return {
+    errorCode: 'SEND_FAILED',
+    message: 'Failed to send WhatsApp message',
+  };
+}
+
 interface WhatsAppMessageResponse {
   messaging_product: string;
   contacts: Array<{
@@ -30,6 +104,8 @@ interface WhatsAppErrorResponse {
   };
 }
 
+export const DEFAULT_API_VERSION = 'v23.0';
+
 /**
  * WhatsApp Cloud API Service
  * Handles sending verification PINs and other messages via WhatsApp Business API
@@ -44,7 +120,7 @@ export class WhatsAppService {
   }
 
   private static get apiVersion(): string {
-    return process.env.WHATSAPP_API_VERSION || 'v18.0';
+    return process.env.WHATSAPP_API_VERSION || DEFAULT_API_VERSION;
   }
 
   private static get apiUrl(): string {
@@ -67,7 +143,7 @@ export class WhatsAppService {
   static async sendMessage(
     to: string,
     templateName: string,
-    parameters: string[]
+    parameters: string[] | WhatsAppTemplateParams
   ): Promise<WhatsAppResult> {
     if (!this.isEnabled) {
       console.warn('WhatsApp service is disabled');
@@ -100,15 +176,7 @@ export class WhatsAppService {
           language: {
             code: 'en',
           },
-          components: [
-            {
-              type: 'body',
-              parameters: parameters.map((param) => ({
-                type: 'text',
-                text: param,
-              })),
-            },
-          ],
+          components: buildTemplateComponents(parameters),
         },
       };
 
@@ -165,10 +233,11 @@ export class WhatsAppService {
         }
 
         if (errorData.error.code === 100) {
+          const classified = classifyInvalidParameterError(errorData);
           return {
             success: false,
-            message: 'Invalid phone number format',
-            errorCode: 'INVALID_PHONE',
+            message: classified.message,
+            errorCode: classified.errorCode,
             details: errorData,
           };
         }

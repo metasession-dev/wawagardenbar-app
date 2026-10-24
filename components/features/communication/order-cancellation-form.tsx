@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 import { XCircle, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,7 +28,9 @@ import { cancelOrderWithRefundAction } from '@/app/actions/communication/communi
 import { useRouter } from 'next/navigation';
 
 const cancellationSchema = z.object({
-  reason: z.string().min(10, 'Please provide a reason (at least 10 characters)'),
+  reason: z
+    .string()
+    .min(10, 'Please provide a reason (at least 10 characters)'),
 });
 
 type CancellationFormData = z.infer<typeof cancellationSchema>;
@@ -120,7 +122,9 @@ export function OrderCancellationForm({
   }
 
   // Check if order can be cancelled
-  const canCancel = !['delivered', 'completed', 'cancelled'].includes(orderStatus);
+  const canCancel = !['delivered', 'completed', 'cancelled'].includes(
+    orderStatus
+  );
 
   if (!canCancel) {
     return null;
@@ -185,11 +189,7 @@ export function OrderCancellationForm({
               >
                 Keep Order
               </Button>
-              <Button
-                type="submit"
-                variant="destructive"
-                disabled={loading}
-              >
+              <Button type="submit" variant="destructive" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Cancel Order
               </Button>

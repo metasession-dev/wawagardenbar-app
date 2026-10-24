@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 
 /**
  * @requirement REQ-057 — Instagram handle zod pipe (IG-2).

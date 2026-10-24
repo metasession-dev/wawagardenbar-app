@@ -869,3 +869,47 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 **Framework cross-references:** ISO 27001 A.8.25 (secure development life cycle — information disclosure via a new messaging surface); SOC 2 CC3.2 (risk identification — documented acceptance rather than silent exposure).
 
 **Cross-links:** [REQ-111 implementation plan](plans/REQ-111/implementation-plan.md); [#933](https://github.com/metasession-dev/wawagardenbar-app/issues/933); SRS REQ-WA-007.
+
+### R-038 — `zod@3.25.76` memory-exhaustion advisory GHSA-mrhx-c7xc-m3w5 (REQ-114)
+
+**Status:** OPEN — becomes MITIGATED when REQ-114 merges to `develop` with the dependency-audit gate green
+**Opened:** 2026-10-23 (REQ-114, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-11-23 (monthly while OPEN)
+
+**The risk:** GHSA-mrhx-c7xc-m3w5 (high), published 2026-10-23: _"Zod can exhaust memory while validating oversized constrained collections"_, affecting every `zod <4.6.6`. The app runs zod server-side in server actions (`app/actions/profile/profile-actions.ts`, `app/actions/admin/{menu,reward-rules}-actions.ts`), so a crafted oversized payload could tie up memory on the Node process. Inherent likelihood low-medium (most zod use is client-side form validation; server-side schemas sit behind authentication, and Next.js caps server-action bodies); inherent impact medium (process memory pressure → degraded or restarted app). The CI dependency-audit gate fails closed on it, blocking every PR into `develop` until it is resolved.
+
+**Mitigations applied in REQ-114:**
+
+1. Upgrade `zod` to `^4.6.7` (first patched release 4.6.6) and `@hookform/resolvers` to `^5.9.2` (required for zod 4).
+2. Operator chose to fix rather than risk-accept (2026-10-23), so no `accepted-vulnerabilities.json` exception is added.
+
+**Residual likelihood × impact:** low × low once merged (patched release; gate re-run green).
+
+**Framework cross-references:** ISO 27001 A.8.8 (management of technical vulnerabilities); ISO 27001 A.8.25 (secure development life cycle); SOC 2 CC7.1 (vulnerability identification).
+
+**Cross-links:** [REQ-114 implementation plan](plans/REQ-114/implementation-plan.md); [#956](https://github.com/metasession-dev/wawagardenbar-app/issues/956); R-039 (regression risk introduced by the fix); unblocks REQ-113 (#954).
+
+### R-039 — Validation behaviour change from the zod 3 → 4 major upgrade (REQ-114)
+
+**Status:** OPEN — operator to move to MITIGATED at Stage 3 if the controls below are demonstrated
+**Opened:** 2026-10-23 (REQ-114, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-11-23 (monthly while OPEN)
+
+**The risk:** Fixing R-038 swaps the validation library under 41 files, including login, guest checkout, customer and tab checkout, payment settings, profile and address forms, and three server actions. zod 4 changes behaviour that still compiles: default error-message text, stricter `.email()`/`.url()` parsing, `.default()` inside `.optional()`, and `z.number()` rejecting `Infinity`. Two failure directions: (a) **invalid input accepted**, where a rule silently loosens and bad data reaches the database or a payment/checkout path; (b) **valid input rejected**, where a stricter check blocks a real customer from logging in or checking out. Two major-version bumps also widen the supply-chain surface slightly, though both are the same maintained packages already in the tree. Inherent likelihood medium (major-version semantics changes are common); inherent impact medium-high (checkout and login are revenue and access paths).
+
+**Mitigations planned in REQ-114:**
+
+1. Type-check catches every removed/renamed API (34 errors in 19 files found by a trial install).
+2. Error customisations migrated semantics-preservingly: v3 `required_error` becomes a v4 `error` callback that fires only for `undefined` input with the same message.
+3. Default-message and behaviour audit of every validator without a custom message, plus every `.email()`/`.url()` use; v3 messages pinned where v4's differ.
+4. New unit tests asserting accept/reject and exact messages for the server-action schemas and audited validators; full existing unit suite, unweakened.
+5. Full E2E regression (login, checkout, profile, expenses, settings flows) compared against `develop`.
+6. Lockfile pins the exact versions.
+
+**Residual likelihood × impact:** low × medium if controls 1–5 pass (to be confirmed by the operator at Stage 3).
+
+**Framework cross-references:** ISO 27001 A.8.25 (secure development life cycle); ISO 27001 A.8.29 (security testing in development and acceptance); SOC 2 CC8.1 (change management).
+
+**Cross-links:** [REQ-114 implementation plan](plans/REQ-114/implementation-plan.md); [#956](https://github.com/metasession-dev/wawagardenbar-app/issues/956); R-038.

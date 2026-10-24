@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-113",
+  "ac": 3,
+  "slug": "title-defaults-to-price-type",
+  "specFile": "e2e/admin/menu-print.spec.ts",
+  "capturedAt": "2026-10-23T23:11:25.568Z"
+}

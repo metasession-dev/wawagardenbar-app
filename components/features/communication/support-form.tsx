@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 import { MessageSquare, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -144,9 +144,15 @@ export function SupportForm({ orderId, triggerButton }: SupportFormProps) {
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="order-issue">Order Issue</SelectItem>
-                      <SelectItem value="payment-issue">Payment Issue</SelectItem>
-                      <SelectItem value="delivery-issue">Delivery Issue</SelectItem>
-                      <SelectItem value="account-issue">Account Issue</SelectItem>
+                      <SelectItem value="payment-issue">
+                        Payment Issue
+                      </SelectItem>
+                      <SelectItem value="delivery-issue">
+                        Delivery Issue
+                      </SelectItem>
+                      <SelectItem value="account-issue">
+                        Account Issue
+                      </SelectItem>
                       <SelectItem value="feedback">Feedback</SelectItem>
                       <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
@@ -163,7 +169,10 @@ export function SupportForm({ orderId, triggerButton }: SupportFormProps) {
                 <FormItem>
                   <FormLabel>Subject</FormLabel>
                   <FormControl>
-                    <Input placeholder="Brief description of your issue" {...field} />
+                    <Input
+                      placeholder="Brief description of your issue"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

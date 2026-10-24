@@ -167,6 +167,11 @@ jobs:
           fetch-depth: 0
           # See ci.yml.template's checkout step for why (devaudit-installer#676/#815).
           clean: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'true' || 'false' }}
+
+      - name: Clean stale build and test output (self-hosted only)
+        # See ci.yml.template's step of the same name (devaudit-installer#816/#1054).
+        if: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') != 'github-ci' }}
+        run: rm -rf .next test-results playwright-report e2e-results.json e2e-auth-results.json e2e-regression-results*.json e2e-regression-metadata.json e2e-server.log .e2e-server.pid test-results-shard-* playwright-report-shard-*
       - uses: actions/setup-node@v6
         with:
           node-version: 20
@@ -369,20 +374,12 @@ jobs:
           SHOTS=("${SHOT_DIR}"/*.png)
           shopt -u nullglob
           if [ "${#SHOTS[@]}" -eq 0 ]; then
-            # Stopgap hand-edit pending DevAudit-Installer#1067: the gate has
-            # no built-in exemption for REQs whose only e2e coverage is a
-            # transport-layer spec (no `page` object — nothing to screenshot).
-            # sdlc-config.json:e2e_screenshot_exempt_reqs lists such REQs
-            # explicitly; remove this block once #1067 lands upstream and
-            # `devaudit update` regenerates this file.
-            SCREENSHOT_EXEMPT="false"
-            if [ -f "$GITHUB_WORKSPACE/sdlc-config.json" ]; then
-              SCREENSHOT_EXEMPT=$(jq -r --arg req "$REQ_ID" \
-                '(.e2e_screenshot_exempt_reqs // []) | index($req) != null' \
-                "$GITHUB_WORKSPACE/sdlc-config.json" 2>/dev/null || echo false)
-            fi
-            if [ "$SCREENSHOT_EXEMPT" = "true" ]; then
-              echo "::warning::No evidenceShot screenshots for ${REQ_ID} — exempted via sdlc-config.json:e2e_screenshot_exempt_reqs (transport-layer-only e2e coverage; see DevAudit-Installer#1067)."
+            # devaudit-installer#1067 — a REQ whose tagged specs are all
+            # transport-layer (no Playwright `page`) has nothing to screenshot;
+            # its evidence is the JSON report and test-execution-summary.md
+            # (e2e-test-engineer skill, "Specs with no page object").
+            if bash "$GITHUB_WORKSPACE/scripts/is-transport-layer-req.sh" "$REQ_ID"; then
+              echo "::notice::No screenshots for ${REQ_ID}: every spec tagged with it is transport-layer (no page fixture), so there is nothing to capture. Evidence is the e2e JSON report and test-execution-summary.md."
             else
               echo "::error::No evidenceShot screenshots were captured for ${REQ_ID}."
               exit 1

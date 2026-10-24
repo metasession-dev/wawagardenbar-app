@@ -1,5 +1,6 @@
 /**
  * @requirement REQ-081 - Menu management category cascade
+ * @requirement REQ-113 - Printable A4 menu ("Print New Menu" entry point)
  */
 import { Suspense } from 'react';
 import Link from 'next/link';
@@ -11,7 +12,7 @@ import { Plus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MenuItemsClient } from '@/components/features/admin/menu-items-client';
 import { CategoryService } from '@/services/category-service';
-import { Pencil, Clock } from 'lucide-react';
+import { Pencil, Clock, Printer } from 'lucide-react';
 
 /**
  * Get all menu items (customer-facing only — kind:'menu-item').
@@ -207,6 +208,12 @@ export default async function MenuPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link href="/dashboard/menu/print">
+              <Printer className="mr-2 h-4 w-4" />
+              Print New Menu
+            </Link>
+          </Button>
           <Button asChild variant="outline">
             <Link href="/dashboard/menu/edit-all">
               <Pencil className="mr-2 h-4 w-4" />

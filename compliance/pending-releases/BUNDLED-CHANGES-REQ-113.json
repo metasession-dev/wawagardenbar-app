@@ -1,0 +1,58 @@
+{
+  "approvalRelease": {
+    "version": "REQ-113"
+  },
+  "coreRelease": {
+    "version": "REQ-113"
+  },
+  "generator": {
+    "generatedAt": "2026-10-23T23:37:33Z",
+    "name": "devaudit-installer",
+    "repository": "metasession-dev/wawagardenbar-app",
+    "version": "0.0.0"
+  },
+  "manifestHash": "sha256:2960d76a28856529e4ff11dafa3aefa421870d39b4c4bccc5b01fa1edd93fd02",
+  "members": [
+    {
+      "commitFrom": "e6a835a",
+      "commitTo": "8179c14",
+      "evidenceInheritancePolicy": {
+        "includeCycles": true,
+        "mode": "all_eligible",
+        "reason": "Explicit predecessor release absorbed into approval envelope REQ-113.",
+        "scopes": ["release", "stage", "cycle"]
+      },
+      "originalTitle": "�� Upgrade zod 3 → 4 to clear GHSA-mrhx-c7xc-m3w5",
+      "prNumber": null,
+      "prUrl": null,
+      "reason": "Explicit predecessor release absorbed into approval envelope REQ-113.",
+      "relationship": "superseded",
+      "role": "predecessor",
+      "scopeSummary": "`npm audit` began reporting a high advisory against zod on 2026-10-23, GHSA-mrhx-c7xc-m3w5 (_\"Zod can exhaust memory while validating oversized constrained collections\"_, every `zod <4.6.6`), which made CI's dependency-audit gate fail closed for every PR into `develop`. There is no patched 3.x, so this REQ upgrades `zod` 3.25.76 → 4.6.7 and `@hookform/resolvers` 3.10.0 → 5.9.2 (its 3.x supports zod 3 only). The operator chose fixing over risk-acceptance. The upgrade is behaviour-preserving: same accept/reject rules and the same error messages users see, verified against zod 3.25.76 itself.",
+      "version": "REQ-114"
+    }
+  ],
+  "nonReleaseWorkItems": [
+    {
+      "kind": "housekeeping_commit",
+      "reference": "ff2171b",
+      "title": "chore: sync SDLC templates from DevAudit"
+    },
+    {
+      "kind": "housekeeping_commit",
+      "reference": "208f3da",
+      "title": "chore(deps): bump next to 16.4.2 and dompurify to 3.4.17 (audit gate)"
+    },
+    {
+      "kind": "housekeeping_commit",
+      "reference": "4ee226e",
+      "title": "chore: ignore playwright-report-shard-* artifacts"
+    },
+    {
+      "kind": "housekeeping_commit",
+      "reference": "055ddb4",
+      "title": "docs(compliance): close out REQ-112 (+ REQ-111) — sync main + reconcile (RELEASED)"
+    }
+  ],
+  "schemaVersion": 2
+}

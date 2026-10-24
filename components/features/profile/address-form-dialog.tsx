@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 import { Loader2 } from 'lucide-react';
 import {
   Dialog,
@@ -64,7 +64,7 @@ export function AddressFormDialog({
     watch,
     setValue,
     formState: { errors },
-  } = useForm<AddressFormData>({
+  } = useForm<z.input<typeof addressSchema>, unknown, AddressFormData>({
     resolver: zodResolver(addressSchema),
     defaultValues: address
       ? {
@@ -138,7 +138,9 @@ export function AddressFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Edit Address' : 'Add New Address'}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? 'Edit Address' : 'Add New Address'}
+          </DialogTitle>
           <DialogDescription>
             {isEditing
               ? 'Update your delivery address details'
@@ -187,7 +189,9 @@ export function AddressFormDialog({
               </Label>
               <Input id="city" {...register('city')} placeholder="Lagos" />
               {errors.city && (
-                <p className="text-sm text-destructive">{errors.city.message}</p>
+                <p className="text-sm text-destructive">
+                  {errors.city.message}
+                </p>
               )}
             </div>
 
@@ -197,7 +201,9 @@ export function AddressFormDialog({
               </Label>
               <Input id="state" {...register('state')} placeholder="Lagos" />
               {errors.state && (
-                <p className="text-sm text-destructive">{errors.state.message}</p>
+                <p className="text-sm text-destructive">
+                  {errors.state.message}
+                </p>
               )}
             </div>
 
@@ -223,9 +229,15 @@ export function AddressFormDialog({
             <Label htmlFor="country">
               Country <span className="text-destructive">*</span>
             </Label>
-            <Input id="country" {...register('country')} placeholder="Nigeria" />
+            <Input
+              id="country"
+              {...register('country')}
+              placeholder="Nigeria"
+            />
             {errors.country && (
-              <p className="text-sm text-destructive">{errors.country.message}</p>
+              <p className="text-sm text-destructive">
+                {errors.country.message}
+              </p>
             )}
           </div>
 
@@ -252,7 +264,9 @@ export function AddressFormDialog({
             <Checkbox
               id="isDefault"
               checked={isDefault}
-              onCheckedChange={(checked) => setValue('isDefault', checked as boolean)}
+              onCheckedChange={(checked) =>
+                setValue('isDefault', checked as boolean)
+              }
             />
             <Label
               htmlFor="isDefault"

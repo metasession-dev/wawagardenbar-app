@@ -11,6 +11,7 @@
 /.auth
 /test-results
 /playwright-report
+/playwright-report-shard-*/
 /blob-report
 
 # next.js

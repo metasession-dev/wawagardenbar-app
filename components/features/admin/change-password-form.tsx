@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { z } from '@/lib/zod';
 import { changePasswordAction } from '@/app/actions/admin/admin-management-actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

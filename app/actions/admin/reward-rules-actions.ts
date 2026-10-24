@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 import { RewardsService } from '@/services/rewards-service';
 import { requireAdmin } from '@/lib/auth-middleware';
 import { IRewardRule } from '@/interfaces';
@@ -30,62 +30,88 @@ interface PaginatedResult<T> {
 /**
  * Validation schema for creating/updating reward rules
  */
-const rewardRuleSchema = z.object({
-  name: z.string().min(3, 'Name must be at least 3 characters').max(100, 'Name must be less than 100 characters'),
-  description: z.string().min(10, 'Description must be at least 10 characters').max(500, 'Description must be less than 500 characters'),
-  isActive: z.boolean().default(true),
-  spendThreshold: z.number().min(0, 'Spend threshold must be 0 or greater'),
-  // REQ-046 D2 fix: the social-rule fields (triggerType, socialConfig,
-  // campaignDates) were silently stripped here by Zod's default-strip
-  // behaviour, so even a fully-filled social_instagram form created a
-  // transaction rule with no socialConfig. Add them so they persist.
-  triggerType: z.enum(['transaction', 'social_instagram']).optional(),
-  socialConfig: z.object({
-    platform: z.enum(['instagram']),
-    hashtag: z.string().min(2, 'Hashtag required'),
-    minViews: z.number().min(0),
-    maxPostsPerPeriod: z.number().min(1),
-    periodType: z.enum(['weekly', 'monthly', 'campaign_duration']),
-    pointsAwarded: z.number().min(1),
-    postsRequired: z.number().int().min(1).optional(),
-    windowDays: z.number().int().min(1).optional(),
-    requireMention: z.boolean().optional(),
-  }).optional(),
-  rewardType: z.enum(['discount-percentage', 'discount-fixed', 'free-item', 'loyalty-points']),
-  rewardValue: z.number().positive('Reward value must be positive'),
-  freeItemId: z.string().nullable().optional(),
-  probability: z.number().min(0, 'Probability must be between 0 and 1').max(1, 'Probability must be between 0 and 1'),
-  maxRedemptionsPerUser: z.number().int().positive().optional(),
-  validityDays: z.number().int().positive('Validity days must be positive'),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
-  campaignDates: z.array(z.object({
-    from: z.string(),
-    to: z.string(),
-  })).optional(),
-}).refine(
-  (data) => {
-    // If free-item, freeItemId is required
-    if (data.rewardType === 'free-item' && !data.freeItemId) {
-      return false;
-    }
-    return true;
-  },
-  { message: 'Free item must be selected for free-item reward type', path: ['freeItemId'] }
-).refine(
-  (data) => {
-    // End date must be after start date
-    if (data.startDate && data.endDate) {
-      const start = new Date(data.startDate);
-      const end = new Date(data.endDate);
-      if (end <= start) {
+const rewardRuleSchema = z
+  .object({
+    name: z
+      .string()
+      .min(3, 'Name must be at least 3 characters')
+      .max(100, 'Name must be less than 100 characters'),
+    description: z
+      .string()
+      .min(10, 'Description must be at least 10 characters')
+      .max(500, 'Description must be less than 500 characters'),
+    isActive: z.boolean().default(true),
+    spendThreshold: z.number().min(0, 'Spend threshold must be 0 or greater'),
+    // REQ-046 D2 fix: the social-rule fields (triggerType, socialConfig,
+    // campaignDates) were silently stripped here by Zod's default-strip
+    // behaviour, so even a fully-filled social_instagram form created a
+    // transaction rule with no socialConfig. Add them so they persist.
+    triggerType: z.enum(['transaction', 'social_instagram']).optional(),
+    socialConfig: z
+      .object({
+        platform: z.enum(['instagram']),
+        hashtag: z.string().min(2, 'Hashtag required'),
+        minViews: z.number().min(0),
+        maxPostsPerPeriod: z.number().min(1),
+        periodType: z.enum(['weekly', 'monthly', 'campaign_duration']),
+        pointsAwarded: z.number().min(1),
+        postsRequired: z.number().int().min(1).optional(),
+        windowDays: z.number().int().min(1).optional(),
+        requireMention: z.boolean().optional(),
+      })
+      .optional(),
+    rewardType: z.enum([
+      'discount-percentage',
+      'discount-fixed',
+      'free-item',
+      'loyalty-points',
+    ]),
+    rewardValue: z.number().positive('Reward value must be positive'),
+    freeItemId: z.string().nullable().optional(),
+    probability: z
+      .number()
+      .min(0, 'Probability must be between 0 and 1')
+      .max(1, 'Probability must be between 0 and 1'),
+    maxRedemptionsPerUser: z.number().int().positive().optional(),
+    validityDays: z.number().int().positive('Validity days must be positive'),
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
+    campaignDates: z
+      .array(
+        z.object({
+          from: z.string(),
+          to: z.string(),
+        })
+      )
+      .optional(),
+  })
+  .refine(
+    (data) => {
+      // If free-item, freeItemId is required
+      if (data.rewardType === 'free-item' && !data.freeItemId) {
         return false;
       }
+      return true;
+    },
+    {
+      message: 'Free item must be selected for free-item reward type',
+      path: ['freeItemId'],
     }
-    return true;
-  },
-  { message: 'End date must be after start date', path: ['endDate'] }
-);
+  )
+  .refine(
+    (data) => {
+      // End date must be after start date
+      if (data.startDate && data.endDate) {
+        const start = new Date(data.startDate);
+        const end = new Date(data.endDate);
+        if (end <= start) {
+          return false;
+        }
+      }
+      return true;
+    },
+    { message: 'End date must be after start date', path: ['endDate'] }
+  );
 
 type RewardRuleInput = z.infer<typeof rewardRuleSchema>;
 
@@ -105,8 +131,12 @@ export async function createRewardRuleAction(
     // Prepare data for service
     const ruleData: any = {
       ...validatedData,
-      startDate: validatedData.startDate ? new Date(validatedData.startDate) : undefined,
-      endDate: validatedData.endDate ? new Date(validatedData.endDate) : undefined,
+      startDate: validatedData.startDate
+        ? new Date(validatedData.startDate)
+        : undefined,
+      endDate: validatedData.endDate
+        ? new Date(validatedData.endDate)
+        : undefined,
     };
 
     // Convert freeItemId string to ObjectId if provided
@@ -132,17 +162,18 @@ export async function createRewardRuleAction(
     };
   } catch (error) {
     console.error('Error creating reward rule:', error);
-    
+
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: error.errors[0].message,
+        error: error.issues[0].message,
       };
     }
 
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to create reward rule',
+      error:
+        error instanceof Error ? error.message : 'Failed to create reward rule',
     };
   }
 }
@@ -167,18 +198,27 @@ export async function updateRewardRuleAction(
       isActive: z.boolean().optional(),
       spendThreshold: z.number().min(0).optional(),
       triggerType: z.enum(['transaction', 'social_instagram']).optional(),
-      socialConfig: z.object({
-        platform: z.enum(['instagram']),
-        hashtag: z.string().min(2),
-        minViews: z.number().min(0),
-        maxPostsPerPeriod: z.number().min(1),
-        periodType: z.enum(['weekly', 'monthly', 'campaign_duration']),
-        pointsAwarded: z.number().min(1),
-        postsRequired: z.number().int().min(1).optional(),
-        windowDays: z.number().int().min(1).optional(),
-        requireMention: z.boolean().optional(),
-      }).optional(),
-      rewardType: z.enum(['discount-percentage', 'discount-fixed', 'free-item', 'loyalty-points']).optional(),
+      socialConfig: z
+        .object({
+          platform: z.enum(['instagram']),
+          hashtag: z.string().min(2),
+          minViews: z.number().min(0),
+          maxPostsPerPeriod: z.number().min(1),
+          periodType: z.enum(['weekly', 'monthly', 'campaign_duration']),
+          pointsAwarded: z.number().min(1),
+          postsRequired: z.number().int().min(1).optional(),
+          windowDays: z.number().int().min(1).optional(),
+          requireMention: z.boolean().optional(),
+        })
+        .optional(),
+      rewardType: z
+        .enum([
+          'discount-percentage',
+          'discount-fixed',
+          'free-item',
+          'loyalty-points',
+        ])
+        .optional(),
       rewardValue: z.number().positive().optional(),
       freeItemId: z.string().nullable().optional(),
       probability: z.number().min(0).max(1).optional(),
@@ -186,18 +226,26 @@ export async function updateRewardRuleAction(
       validityDays: z.number().int().positive().optional(),
       startDate: z.string().optional(),
       endDate: z.string().optional(),
-      campaignDates: z.array(z.object({
-        from: z.string(),
-        to: z.string(),
-      })).optional(),
+      campaignDates: z
+        .array(
+          z.object({
+            from: z.string(),
+            to: z.string(),
+          })
+        )
+        .optional(),
     });
     const validatedData = baseSchema.parse(input);
 
     // Prepare data for service
     const updates: any = {
       ...validatedData,
-      startDate: validatedData.startDate ? new Date(validatedData.startDate) : undefined,
-      endDate: validatedData.endDate ? new Date(validatedData.endDate) : undefined,
+      startDate: validatedData.startDate
+        ? new Date(validatedData.startDate)
+        : undefined,
+      endDate: validatedData.endDate
+        ? new Date(validatedData.endDate)
+        : undefined,
     };
 
     // Convert freeItemId string to ObjectId if provided
@@ -231,17 +279,18 @@ export async function updateRewardRuleAction(
     };
   } catch (error) {
     console.error('Error updating reward rule:', error);
-    
+
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: error.errors[0].message,
+        error: error.issues[0].message,
       };
     }
 
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update reward rule',
+      error:
+        error instanceof Error ? error.message : 'Failed to update reward rule',
     };
   }
 }
@@ -278,7 +327,8 @@ export async function deleteRewardRuleAction(
     console.error('Error deleting reward rule:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to delete reward rule',
+      error:
+        error instanceof Error ? error.message : 'Failed to delete reward rule',
     };
   }
 }
@@ -368,9 +418,10 @@ export async function getRewardRulesAction(
 
     if (filters?.search) {
       const searchLower = filters.search.toLowerCase();
-      rules = rules.filter((rule) =>
-        rule.name.toLowerCase().includes(searchLower) ||
-        rule.description.toLowerCase().includes(searchLower)
+      rules = rules.filter(
+        (rule) =>
+          rule.name.toLowerCase().includes(searchLower) ||
+          rule.description.toLowerCase().includes(searchLower)
       );
     }
 
@@ -382,7 +433,9 @@ export async function getRewardRulesAction(
     const paginatedRules = rules.slice(startIndex, endIndex);
 
     // Serialize Mongoose documents to plain objects
-    const serializedRules = paginatedRules.map((rule) => JSON.parse(JSON.stringify(rule)));
+    const serializedRules = paginatedRules.map((rule) =>
+      JSON.parse(JSON.stringify(rule))
+    );
 
     return {
       success: true,
@@ -398,7 +451,8 @@ export async function getRewardRulesAction(
     console.error('Error getting reward rules:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get reward rules',
+      error:
+        error instanceof Error ? error.message : 'Failed to get reward rules',
     };
   }
 }
@@ -435,7 +489,8 @@ export async function getRewardRuleByIdAction(
     console.error('Error getting reward rule:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get reward rule',
+      error:
+        error instanceof Error ? error.message : 'Failed to get reward rule',
     };
   }
 }
@@ -496,7 +551,10 @@ export async function duplicateRewardRuleAction(
     console.error('Error duplicating reward rule:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to duplicate reward rule',
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to duplicate reward rule',
     };
   }
 }
@@ -535,7 +593,10 @@ export async function bulkUpdateRewardRulesAction(
     console.error('Error bulk updating reward rules:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to bulk update reward rules',
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to bulk update reward rules',
     };
   }
 }

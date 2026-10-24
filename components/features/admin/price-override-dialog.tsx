@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 import {
   Dialog,
   DialogContent,
@@ -21,7 +21,10 @@ import { DollarSign, AlertTriangle } from 'lucide-react';
 
 const priceOverrideSchema = z.object({
   newPrice: z.number().min(0, 'Price cannot be negative'),
-  reason: z.string().min(1, 'Reason is required').min(10, 'Reason must be at least 10 characters'),
+  reason: z
+    .string()
+    .min(1, 'Reason is required')
+    .min(10, 'Reason must be at least 10 characters'),
 });
 
 type PriceOverrideFormData = z.infer<typeof priceOverrideSchema>;
@@ -61,7 +64,10 @@ export function PriceOverrideDialog({
 
   const newPrice = watch('newPrice');
   const priceDifference = newPrice - originalPrice;
-  const percentageChange = originalPrice > 0 ? ((priceDifference / originalPrice) * 100).toFixed(1) : '0';
+  const percentageChange =
+    originalPrice > 0
+      ? ((priceDifference / originalPrice) * 100).toFixed(1)
+      : '0';
   const isSignificantChange = Math.abs(parseFloat(percentageChange)) > 50;
 
   const onSubmit = (data: PriceOverrideFormData) => {
@@ -96,8 +102,12 @@ export function PriceOverrideDialog({
           {/* Original Price Display */}
           <div className="bg-muted p-3 rounded-lg">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Original Price:</span>
-              <span className="font-semibold">₦{originalPrice.toLocaleString()}</span>
+              <span className="text-sm text-muted-foreground">
+                Original Price:
+              </span>
+              <span className="font-semibold">
+                ₦{originalPrice.toLocaleString()}
+              </span>
             </div>
           </div>
 
@@ -115,23 +125,33 @@ export function PriceOverrideDialog({
               />
             </div>
             {errors.newPrice && (
-              <p className="text-sm text-destructive">{errors.newPrice.message}</p>
+              <p className="text-sm text-destructive">
+                {errors.newPrice.message}
+              </p>
             )}
           </div>
 
           {/* Price Difference Display */}
           {newPrice !== originalPrice && !isNaN(newPrice) && (
-            <div className={`p-3 rounded-lg ${
-              priceDifference > 0 ? 'bg-orange-50 border border-orange-200' : 'bg-green-50 border border-green-200'
-            }`}>
+            <div
+              className={`p-3 rounded-lg ${
+                priceDifference > 0
+                  ? 'bg-orange-50 border border-orange-200'
+                  : 'bg-green-50 border border-green-200'
+              }`}
+            >
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">
                   {priceDifference > 0 ? 'Markup' : 'Discount'}:
                 </span>
-                <span className={`font-semibold ${
-                  priceDifference > 0 ? 'text-orange-700' : 'text-green-700'
-                }`}>
-                  {priceDifference > 0 ? '+' : ''}₦{Math.abs(priceDifference).toLocaleString()} ({percentageChange}%)
+                <span
+                  className={`font-semibold ${
+                    priceDifference > 0 ? 'text-orange-700' : 'text-green-700'
+                  }`}
+                >
+                  {priceDifference > 0 ? '+' : ''}₦
+                  {Math.abs(priceDifference).toLocaleString()} (
+                  {percentageChange}%)
                 </span>
               </div>
             </div>
@@ -142,14 +162,17 @@ export function PriceOverrideDialog({
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                This is a significant price change ({percentageChange}%). Please confirm this is intentional.
+                This is a significant price change ({percentageChange}%). Please
+                confirm this is intentional.
               </AlertDescription>
             </Alert>
           )}
 
           {/* Reason Input */}
           <div className="space-y-2">
-            <Label htmlFor="reason">Reason <span className="text-destructive">*</span></Label>
+            <Label htmlFor="reason">
+              Reason <span className="text-destructive">*</span>
+            </Label>
             <Textarea
               id="reason"
               placeholder="e.g., Special discount for loyal customer, damaged item, promotion..."
@@ -157,9 +180,13 @@ export function PriceOverrideDialog({
               {...register('reason')}
             />
             {errors.reason && (
-              <p className="text-sm text-destructive">{errors.reason.message}</p>
+              <p className="text-sm text-destructive">
+                {errors.reason.message}
+              </p>
             )}
-            <p className="text-xs text-muted-foreground">Minimum 10 characters required</p>
+            <p className="text-xs text-muted-foreground">
+              Minimum 10 characters required
+            </p>
           </div>
 
           <DialogFooter>

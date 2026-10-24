@@ -4,7 +4,8 @@ import { use, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { z } from '@/lib/zod';
+import { requiredError } from '@/lib/validation/zod-errors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
@@ -18,14 +19,20 @@ import { initializeTabPayment } from '@/app/actions/payment/payment-actions';
 import { redeemRewardAction } from '@/app/actions/rewards/rewards-actions';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import {
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { IReward } from '@/interfaces';
 
 const checkoutSchema = z.object({
   tipAmount: z.number().min(0).optional(),
   paymentMethod: z.enum(['CARD', 'ACCOUNT_TRANSFER', 'USSD', 'PHONE_NUMBER'], {
-    required_error: 'Please select a payment method',
+    error: requiredError('Please select a payment method'),
   }),
   customerName: z.string().min(2),
   customerEmail: z.string().email(),
@@ -62,12 +69,12 @@ export default function TabCheckoutPage({ params }: TabCheckoutPageProps) {
       const result = await getTabDetailsAction(resolvedParams.tabId);
       if (result.success && result.data) {
         setTabDetails(result.data);
-        
+
         // Prepopulate form with customer data from tab or user profile
         const { tab } = result.data;
         const customerName = tab.customerName || user?.name || '';
         const customerEmail = tab.customerEmail || user?.email || '';
-        
+
         form.setValue('customerName', customerName);
         form.setValue('customerEmail', customerEmail);
       } else {
@@ -94,7 +101,7 @@ export default function TabCheckoutPage({ params }: TabCheckoutPageProps) {
             reward._id.toString(),
             resolvedParams.tabId
           );
-          
+
           if (!redeemResult.success) {
             toast({
               title: 'Warning',
@@ -198,7 +205,11 @@ export default function TabCheckoutPage({ params }: TabCheckoutPageProps) {
                       <FormItem>
                         <FormLabel>Email</FormLabel>
                         <FormControl>
-                          <Input type="email" placeholder="Enter your email" {...field} />
+                          <Input
+                            type="email"
+                            placeholder="Enter your email"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -213,7 +224,7 @@ export default function TabCheckoutPage({ params }: TabCheckoutPageProps) {
                   setSelectedRewards(rewards);
                   setRewardDiscount(discount);
                 }}
-                selectedRewardIds={selectedRewards.map(r => r._id.toString())}
+                selectedRewardIds={selectedRewards.map((r) => r._id.toString())}
               />
 
               <Card>
@@ -234,8 +245,15 @@ export default function TabCheckoutPage({ params }: TabCheckoutPageProps) {
                 </CardContent>
               </Card>
 
-              <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? 'Processing...' : `Pay ₦${finalTotal.toLocaleString()}`}
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full"
+                disabled={isSubmitting}
+              >
+                {isSubmitting
+                  ? 'Processing...'
+                  : `Pay ₦${finalTotal.toLocaleString()}`}
               </Button>
             </div>
 
@@ -252,7 +270,9 @@ export default function TabCheckoutPage({ params }: TabCheckoutPageProps) {
                       <span>₦{tab.subtotal.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Service Fee:</span>
+                      <span className="text-muted-foreground">
+                        Service Fee:
+                      </span>
                       <span>₦{tab.serviceFee.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-sm">

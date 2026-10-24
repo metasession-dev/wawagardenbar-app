@@ -10,7 +10,8 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { z } from '@/lib/zod';
+import { requiredError } from '@/lib/validation/zod-errors';
 import { format } from 'date-fns';
 import { CalendarIcon, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -74,7 +75,7 @@ import {
 import { TagCombobox, type TagOption } from '@/components/ui/tag-combobox';
 
 const editExpenseSchema = z.object({
-  date: z.date({ required_error: 'Date is required' }),
+  date: z.date({ error: requiredError('Date is required') }),
   expenseType: z.enum(['direct-cost', 'operating-expense']),
   category: z.string().min(1, 'Category is required'),
   description: z.string().min(3, 'Description must be at least 3 characters'),

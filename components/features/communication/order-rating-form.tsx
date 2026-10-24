@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 import { Star, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -233,9 +233,7 @@ export function RatingDisplay({ rating }: { rating: number }) {
           key={star}
           className={cn(
             'h-4 w-4',
-            star <= rating
-              ? 'fill-yellow-400 text-yellow-400'
-              : 'text-gray-300'
+            star <= rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
           )}
         />
       ))}

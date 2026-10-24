@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-109",
+  "ac": 2,
+  "slug": "csr-sees-admin-order-management",
+  "specFile": "e2e/authenticated.spec.ts",
+  "capturedAt": "2026-10-24T02:10:41.861Z"
+}

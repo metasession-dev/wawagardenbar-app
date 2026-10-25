@@ -12,6 +12,14 @@ Submission usually takes 24–48 hours per template. Submit all 12 in one sessio
 
 ---
 
+## Source of truth and environments
+
+- The machine-readable definition of each template is `docs/whatsapp-templates/<name>.json` (name, category, header, body, footer, buttons, example values and the parameter builder in `lib/whatsapp-template-params.ts`). This document is the human-readable companion. `__tests__/lib/whatsapp-template-contract.test.ts` fails if a builder, a JSON file and `TEMPLATE_CATEGORIES` disagree.
+- Templates belong to a WhatsApp Business Account, not an app, so **every template is submitted twice** with the same name and body: to the UAT account (WGB DEV, URL buttons use `https://wawagardenbar-uat.ostendo.io`) and to the production account (WGB, URL buttons use `https://app.wawagardenbar.com`). The URLs in this document are the production ones; never use the apex `wawagardenbar.com`, which does not resolve.
+- `welcome_new_user` and `welcome_back` are held until the `/book` page ships (WA-13).
+
+---
+
 ## Conversation architecture (Option A — WhatsApp triggers, browser completes)
 
 The strategic frame for this doc: **templates aren't a script the bar reads to every customer.** They're canned messages WA-3's webhook handler picks from based on user state.
@@ -144,15 +152,15 @@ params = [orderNumber, itemsList, total, paymentMethod, pointsEarned]
 // itemsList: pre-formatted "2× Goat Stew, 1× Jollof Rice" string (kept under Meta's 1024-char body limit)
 ```
 
-| Field    | Value                                                                                                                 |
-| -------- | --------------------------------------------------------------------------------------------------------------------- |
-| Name     | `receipt`                                                                                                             |
-| Category | **UTILITY**                                                                                                           |
-| Language | `en`                                                                                                                  |
-| Header   | TEXT: `Receipt for Order #{{1}}`                                                                                      |
-| Body     | `Items: {{2}}\n\nTotal: {{3}}\nPaid via: {{4}}\nPoints earned: {{5}}\n\nThanks for choosing Wawa Garden Bar!`         |
-| Footer   | `Show this to staff for in-person service`                                                                            |
-| Buttons  | URL: `View Full Receipt` → `https://wawagardenbar.com/orders/{{1}}` (set the variable in the URL field per Meta's UI) |
+| Field    | Value                                                                                                                    |
+| -------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Name     | `receipt`                                                                                                                |
+| Category | **UTILITY**                                                                                                              |
+| Language | `en`                                                                                                                     |
+| Header   | TEXT: `Receipt for Order #{{1}}`                                                                                         |
+| Body     | `Items: {{2}}\n\nTotal: {{3}}\nPaid via: {{4}}\nPoints earned: {{5}}\n\nThanks for choosing Wawa Garden Bar!`            |
+| Footer   | `Show this to staff for in-person service`                                                                               |
+| Buttons  | URL: `View Full Receipt` → `https://app.wawagardenbar.com/menus/{{1}}` (set the variable in the URL field per Meta's UI) |
 
 **Examples:**
 
@@ -160,7 +168,7 @@ params = [orderNumber, itemsList, total, paymentMethod, pointsEarned]
 | ------- | ------------------------------ | -------- | ------------ | ------- |
 | `1234`  | `2× Goat Stew, 1× Jollof Rice` | `₦5,500` | `POS / Card` | `55`    |
 
-**Note on URL button:** Meta requires the dynamic URL to be added with `{{1}}` as a placeholder. In the UI: Buttons → Add → URL → Type "Dynamic" → URL = `https://wawagardenbar.com/orders/` and add `{{1}}` (Meta auto-numbers it).
+**Note on URL button:** Meta requires the dynamic URL to be added with `{{1}}` as a placeholder. In the UI: Buttons → Add → URL → Type "Dynamic" → URL = `https://app.wawagardenbar.com/menus/` and add `{{1}}` (Meta auto-numbers it).
 
 ---
 
@@ -210,7 +218,7 @@ params = [customerFirstName, expiringPoints, daysRemaining, naireEquivalent]
 | Header   | TEXT: `Don't lose your points ⏰`                                                                                                                       |
 | Body     | `Hi {{1}}, {{2}} of your loyalty points (worth {{4}}) expire in {{3}} days. Visit Wawa Garden Bar or order online to redeem them — every plate counts.` |
 | Footer   | `Wawa Garden Bar Rewards`                                                                                                                               |
-| Buttons  | URL: `Order Now` → `https://wawagardenbar.com/menu`                                                                                                     |
+| Buttons  | URL: `Order Now` → `https://app.wawagardenbar.com/menu`                                                                                                 |
 
 **Examples:**
 
@@ -227,7 +235,8 @@ params = [customerFirstName, expiringPoints, daysRemaining, naireEquivalent]
 **Code mapping** (expected):
 
 ```
-params = [customerFirstName, amount, paymentUrl, expiresInHours]
+body   = [customerFirstName, amount, expiresInHours]
+button = [paymentUrl]   // the URL button's own {{1}}
 ```
 
 | Field    | Value                                                                                                                           |
@@ -236,15 +245,15 @@ params = [customerFirstName, amount, paymentUrl, expiresInHours]
 | Category | **UTILITY**                                                                                                                     |
 | Language | `en`                                                                                                                            |
 | Header   | TEXT: `Payment requested`                                                                                                       |
-| Body     | `Hi {{1}}, please complete your Wawa Garden Bar payment of {{2}}. The link expires in {{4}} hours — tap below to pay securely.` |
+| Body     | `Hi {{1}}, please complete your Wawa Garden Bar payment of {{2}}. The link expires in {{3}} hours — tap below to pay securely.` |
 | Footer   | `Wawa Garden Bar`                                                                                                               |
-| Buttons  | URL: `Pay Now` → `{{3}}` (Dynamic URL — set `{{3}}` as the URL placeholder)                                                     |
+| Buttons  | URL: `Pay Now` → `{{1}}` (Dynamic URL — the button's own variable, filled with the payment URL)                                 |
 
 **Examples:**
 
-| `{{1}}`  | `{{2}}`   | `{{3}}`                                 | `{{4}}` |
-| -------- | --------- | --------------------------------------- | ------- |
-| `Adaeze` | `₦12,500` | `https://paystack.com/pay/wgb-1234abcd` | `24`    |
+| `{{1}}`  | `{{2}}`   | `{{3}}` | Button `{{1}}` (URL)                    |
+| -------- | --------- | ------- | --------------------------------------- |
+| `Adaeze` | `₦12,500` | `24`    | `https://paystack.com/pay/wgb-1234abcd` |
 
 ---
 
@@ -255,19 +264,21 @@ params = [customerFirstName, amount, paymentUrl, expiresInHours]
 **Code mapping** (expected):
 
 ```
-params = [customerFirstName, ticketSubject, replyBody]
+header = [ticketNumber]
+body   = [customerFirstName, ticketSubject, replyBody]
 // replyBody trimmed to ~700 chars to leave room for surrounding template body
+// (builder: supportReplyParams in lib/whatsapp-template-params.ts)
 ```
 
-| Field    | Value                                                                                                                    |
-| -------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Name     | `support_reply`                                                                                                          |
-| Category | **UTILITY**                                                                                                              |
-| Language | `en`                                                                                                                     |
-| Header   | TEXT: `Re: {{2}}`                                                                                                        |
-| Body     | `Hi {{1}}, here's an update from the Wawa Garden Bar team:\n\n{{3}}\n\nReply to this message and we'll get back to you.` |
-| Footer   | (none)                                                                                                                   |
-| Buttons  | (none — the user replies in-thread, handled by WA-3)                                                                     |
+| Field    | Value                                                                                                                               |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Name     | `support_reply`                                                                                                                     |
+| Category | **UTILITY**                                                                                                                         |
+| Language | `en`                                                                                                                                |
+| Header   | TEXT: `Support ticket {{1}}`                                                                                                        |
+| Body     | `Hi {{1}}, here's an update from the Wawa Garden Bar team on "{{2}}":\n\n{{3}}\n\nReply to this message and we'll get back to you.` |
+| Footer   | (none)                                                                                                                              |
+| Buttons  | (none — the user replies in-thread, handled by WA-3)                                                                                |
 
 **Examples:**
 
@@ -351,24 +362,24 @@ params = [amount, accountNumber, accountName, bankName, expiresInHours]
 
 ```
 params = [openTime, closeTime]
-// e.g. ['11am', '11pm'] — read from system settings business hours
+// e.g. ['11:00 AM', '11:00 PM'] — today's hours from system settings (h:mm a)
 ```
 
-| Field    | Value                                                                                                                                                                                            |
-| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Name     | `welcome_new_user`                                                                                                                                                                               |
-| Category | **UTILITY**                                                                                                                                                                                      |
-| Language | `en`                                                                                                                                                                                             |
-| Header   | TEXT: `Welcome to Wawa Garden Bar 🌿`                                                                                                                                                            |
-| Body     | `Hi 👋 thanks for reaching out. We're a garden bar + kitchen serving food, drinks and good times. Place an order, book a private event, or chat with our team — we're here from {{1}} to {{2}}.` |
-| Footer   | `Wawa Garden Bar`                                                                                                                                                                                |
-| Buttons  | URL `🛒 Order Now` → `https://wawagardenbar.com/order` · URL `🎉 Book an Event` → `https://wawagardenbar.com/events/book` · Quick reply `💬 Chat with Staff`                                     |
+| Field    | Value                                                                                                                                                                                                   |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Name     | `welcome_new_user`                                                                                                                                                                                      |
+| Category | **UTILITY**                                                                                                                                                                                             |
+| Language | `en`                                                                                                                                                                                                    |
+| Header   | TEXT: `Welcome to Wawa Garden Bar 🌿`                                                                                                                                                                   |
+| Body     | `Hi 👋 thanks for reaching out. We're a garden bar + kitchen serving food, drinks and good times. Place an order, book a private event, or chat with our team — we're here from {{1}} to {{2}}.`        |
+| Footer   | `Wawa Garden Bar`                                                                                                                                                                                       |
+| Buttons  | URL `🛒 Order Now` → `https://app.wawagardenbar.com/menu` · URL `🎉 Book an Event` (event/table booking page, ships in WA-13) → `https://app.wawagardenbar.com/book` · Quick reply `💬 Chat with Staff` |
 
 **Examples:**
 
-| `{{1}}` | `{{2}}` |
-| ------- | ------- |
-| `11am`  | `11pm`  |
+| `{{1}}`    | `{{2}}`    |
+| ---------- | ---------- |
+| `11:00 AM` | `11:00 PM` |
 
 ---
 
@@ -386,15 +397,15 @@ params = [customerFirstName]
 //   free-form message within the 24h window opened by the template send.
 ```
 
-| Field    | Value                                                                                                                                                        |
-| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Name     | `welcome_back`                                                                                                                                               |
-| Category | **UTILITY**                                                                                                                                                  |
-| Language | `en`                                                                                                                                                         |
-| Header   | TEXT: `Welcome back 👋`                                                                                                                                      |
-| Body     | `Hi {{1}}, we've missed you at Wawa Garden Bar. Place a quick order with your saved details, book your next celebration, or reach out to our team.`          |
-| Footer   | `Wawa Garden Bar`                                                                                                                                            |
-| Buttons  | URL `🛒 Order Now` → `https://wawagardenbar.com/order` · URL `🎉 Book an Event` → `https://wawagardenbar.com/events/book` · Quick reply `💬 Chat with Staff` |
+| Field    | Value                                                                                                                                                                                                   |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Name     | `welcome_back`                                                                                                                                                                                          |
+| Category | **UTILITY**                                                                                                                                                                                             |
+| Language | `en`                                                                                                                                                                                                    |
+| Header   | TEXT: `Welcome back 👋`                                                                                                                                                                                 |
+| Body     | `Hi {{1}}, we've missed you at Wawa Garden Bar. Place a quick order with your saved details, book your next celebration, or reach out to our team.`                                                     |
+| Footer   | `Wawa Garden Bar`                                                                                                                                                                                       |
+| Buttons  | URL `🛒 Order Now` → `https://app.wawagardenbar.com/menu` · URL `🎉 Book an Event` (event/table booking page, ships in WA-13) → `https://app.wawagardenbar.com/book` · Quick reply `💬 Chat with Staff` |
 
 **Examples:**
 
@@ -446,7 +457,7 @@ Once Meta approves each template (you'll see them flip from `IN REVIEW` to `APPR
 
 4. **Trigger WA-2** — `NotificationService.send` wrapper. It will gate sends on the consent state REQ-053 just added (`whatsappTransactional` for UTILITY templates, `whatsappMarketing` for MARKETING).
 
-5. **Confirm event-booking page exists.** `welcome_new_user` + `welcome_back` link to `https://wawagardenbar.com/events/book`. If the page isn't live, those buttons will 404. See the issue filed alongside this doc.
+5. **Confirm the booking page exists.** `welcome_new_user` + `welcome_back` link to `https://app.wawagardenbar.com/book`. Meta reviews button URLs with the template, so these two are **not submitted until `/book` is live** (WA-13, #975).
 
 ---
 

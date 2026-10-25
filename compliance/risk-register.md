@@ -913,3 +913,69 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 **Framework cross-references:** ISO 27001 A.8.25 (secure development life cycle); ISO 27001 A.8.29 (security testing in development and acceptance); SOC 2 CC8.1 (change management).
 
 **Cross-links:** [REQ-114 implementation plan](plans/REQ-114/implementation-plan.md); [#956](https://github.com/metasession-dev/wawagardenbar-app/issues/956); R-038.
+
+### R-040 — Weak customer sign-in PIN: 4 digits from a non-cryptographic RNG (REQ-115)
+
+**Status:** OPEN — operator to move to MITIGATED at Stage 3 once the controls below are demonstrated
+**Opened:** 2026-10-24 (REQ-115, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-11-24 (monthly while OPEN)
+
+**The risk:** Customer sign-in PINs are 4 digits (10^4 values) generated with `Math.random`, which is predictable. An attacker who knows a customer's phone number can guess a PIN within its 10-minute validity. Meta now also rejects authentication sends that are not exactly 6 digits, so the weakness cannot simply be left in place.
+
+**Mitigations planned in REQ-115:**
+
+1. PIN is 6 digits from `crypto.randomInt(0, 1_000_000)`, zero-padded.
+2. Verify actions and the login form reject anything that is not exactly 6 digits with the normal invalid-PIN message; 4-digit PINs already issued expire with `pinExpiresAt`.
+3. Unit tests for generation (length, charset, padding) and for rejection of 4-digit entries.
+4. Residual gap, tracked: no per-phone attempt limit on PIN verification. That is addressed in WA-04 (#966), which owns PIN hardening.
+
+**Residual likelihood × impact:** low × high until WA-04 adds attempt limiting; medium × high would apply without control 1 (to be confirmed by the operator at Stage 3).
+
+**Framework cross-references:** ISO 27001 A.8.5 (secure authentication); ISO 27001 A.8.25 (secure development life cycle); SOC 2 CC6.1 (logical access).
+
+**Cross-links:** [REQ-115 implementation plan](plans/REQ-115/implementation-plan.md); [#963](https://github.com/metasession-dev/wawagardenbar-app/issues/963); WA-04 [#966](https://github.com/metasession-dev/wawagardenbar-app/issues/966); R-037.
+
+### R-041 — Phone normalisation collides or mis-matches accounts (REQ-115, ADR-006)
+
+**Status:** OPEN — operator to move to MITIGATED once the migration dry-run report has been reviewed on UAT
+**Opened:** 2026-10-24 (REQ-115, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-11-24 (monthly while OPEN)
+
+**The risk:** Phone is the sign-in identity. Rewriting stored numbers to one format, and matching inbound WhatsApp senders by the same format, can make two existing accounts resolve to the same number, or route a sender to the wrong account. A careless merge of duplicates would hand one person's orders and data to another.
+
+**Mitigations planned in REQ-115:**
+
+1. The migration script never merges or deletes; it reports duplicates and leaves both accounts unchanged.
+2. Dry-run is the default; applying requires an explicit flag, and a before/after file is written so values can be restored.
+3. The same `normalizePhone` is applied to both the stored value and the lookup input.
+4. The operator runs the migration only after UAT approval and reviews the duplicate report first.
+5. Unit tests for the format cases and an e2e test that a `+234…` user is found from a `234…` sender with no second user created.
+
+**Residual likelihood × impact:** low × medium (to be confirmed by the operator at Stage 3).
+
+**Framework cross-references:** ISO 27001 A.8.25; ISO 27001 A.5.15 (access control); GDPR Art. 5(1)(d) (accuracy).
+
+**Cross-links:** [REQ-115 implementation plan](plans/REQ-115/implementation-plan.md); ADR-006; [#963](https://github.com/metasession-dev/wawagardenbar-app/issues/963).
+
+### R-042 — WhatsApp access token present in git history (REQ-115)
+
+**Status:** OPEN — closes when the operator confirms rotation (AC8) and records it in evidence
+**Opened:** 2026-10-24 (REQ-115, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-11-07 (two weeks; short because it is an exposed credential)
+
+**The risk:** A WhatsApp Cloud API access token is recoverable from repository history. Anyone with read access could send messages as the business or read its WhatsApp configuration.
+
+**Mitigations planned in REQ-115:**
+
+1. Operator rotates the token in Meta and updates Railway UAT and production secrets.
+2. The old token is confirmed revoked; the date is recorded in evidence (the token value is never written to evidence).
+3. No new secrets are added by this REQ; docs call out the `--from-env-file` trailing-comment trap.
+
+**Residual likelihood × impact:** low × medium once the old token is revoked (to be confirmed by the operator).
+
+**Framework cross-references:** ISO 27001 A.5.17 (authentication information); ISO 27001 A.8.24 (use of cryptography / key management); SOC 2 CC6.1.
+
+**Cross-links:** [REQ-115 implementation plan](plans/REQ-115/implementation-plan.md); [#963](https://github.com/metasession-dev/wawagardenbar-app/issues/963).

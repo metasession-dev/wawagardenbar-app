@@ -1,0 +1,13 @@
+{
+  "name": "order_status_update",
+  "language": "en",
+  "category": "UTILITY",
+  "builder": "orderStatusUpdateParams",
+  "header": null,
+  "body": {
+    "text": "Your Wawa Garden Bar order #{{1}} is now {{2}}.",
+    "example": ["1234", "ready for pickup"]
+  },
+  "footer": null,
+  "buttons": []
+}

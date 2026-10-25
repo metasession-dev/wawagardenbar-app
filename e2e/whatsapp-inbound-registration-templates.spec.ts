@@ -23,9 +23,13 @@
  * when set; local dev leaves it unset, so this spec only runs locally
  * (same convention as the sibling support-ticket spec).
  */
-import { test, expect, type APIRequestContext } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { MongoClient } from 'mongodb';
 import { tagTest } from './helpers/test-tags';
+import {
+  metaInboundPayload,
+  postSignedWebhook,
+} from './helpers/whatsapp-webhook';
 
 function mongoConn() {
   return {
@@ -40,64 +44,13 @@ function mongoConn() {
 let uniqueDigitsCounter = 0;
 function uniqueDigits(): string {
   uniqueDigitsCounter += 1;
+  // REQ-115 — a realistic Meta sender: Nigerian country code + 10 digits, no '+'.
   return (
+    '234' +
     String(Date.now()).slice(-8) +
     String(uniqueDigitsCounter % 10) +
     String(Math.floor(Math.random() * 10))
   );
-}
-
-function metaInboundPayload(opts: { from: string; body: string; id: string }) {
-  return {
-    object: 'whatsapp_business_account',
-    entry: [
-      {
-        id: '0',
-        changes: [
-          {
-            field: 'messages',
-            value: {
-              messaging_product: 'whatsapp',
-              metadata: {
-                display_phone_number: '15550100000',
-                phone_number_id: '0',
-              },
-              contacts: [
-                {
-                  profile: { name: 'E2E Customer' },
-                  wa_id: opts.from,
-                },
-              ],
-              messages: [
-                {
-                  from: opts.from,
-                  id: opts.id,
-                  timestamp: String(Math.floor(Date.now() / 1000)),
-                  type: 'text',
-                  text: { body: opts.body },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    ],
-  };
-}
-
-async function postInbound(
-  request: APIRequestContext,
-  payload: unknown
-): Promise<number> {
-  const response = await request.post('/api/webhooks/whatsapp', {
-    headers: {
-      'content-type': 'application/json',
-      'x-hub-signature-256':
-        'sha256=0000000000000000000000000000000000000000000000000000000000000000',
-    },
-    data: payload,
-  });
-  return response.status();
 }
 
 async function readIncomingMessageByBody(body: string) {
@@ -143,7 +96,11 @@ async function deleteUserByPhone(phone: string) {
   const client = new MongoClient(uri);
   try {
     await client.connect();
-    await client.db(dbName).collection('users').deleteMany({ phone });
+    await client
+      .db(dbName)
+      .collection('users')
+      // Users are stored in the canonical +E.164 form (REQ-115); seeded ones may not be.
+      .deleteMany({ phone: { $in: [phone, `+${phone}`] } });
   } finally {
     await client.close();
   }
@@ -175,7 +132,7 @@ test.describe('REQ-111 WhatsApp inbound → account-recovery routing', () => {
     seededIncomingFrom.length = 0;
   });
 
-  test('AC1 — unrecognized phone + old account email in body → phone_mismatch, sent_account_recovery, userId resolves to old account', async ({
+  test('AC1 — unrecognized phone + old account email in body → phone_mismatch, account_recovery_sent, userId resolves to old account', async ({
     request,
   }) => {
     tagTest('REQ-111', 1);
@@ -196,7 +153,7 @@ test.describe('REQ-111 WhatsApp inbound → account-recovery routing', () => {
     const body = `Hi it's ${email}, I lost my old phone, can you help?`;
     const messageId = `wamid.E2E-REQ111-AC1-${Date.now()}`;
 
-    const status = await postInbound(
+    const status = await postSignedWebhook(
       request,
       metaInboundPayload({ from: newPhone, body, id: messageId })
     );
@@ -205,12 +162,16 @@ test.describe('REQ-111 WhatsApp inbound → account-recovery routing', () => {
     const incoming = await readIncomingMessageByBody(body);
     expect(incoming).toBeTruthy();
     expect(incoming?.classifiedState).toBe('phone_mismatch');
-    expect(incoming?.actionTaken).toBe('sent_account_recovery');
+    // REQ-115 (D8): the outcome is real. With WhatsApp off in the e2e env the
+    // send is attempted but not delivered, so it is `_failed`, not `_sent`.
+    expect(incoming?.actionTaken).toMatch(
+      /^account_recovery_(sent|failed:SERVICE_DISABLED)$/
+    );
     expect(incoming?.userId).toBe(oldAccountId);
     expect(incoming?.from).toBe(newPhone);
   });
 
-  test('AC4 — brand-new phone, no identifying signal in body → unchanged "new" + sent_welcome_new_user (regression)', async ({
+  test('AC4 — brand-new phone, no identifying signal in body → unchanged "new" + welcome_new_user_sent (regression)', async ({
     request,
   }) => {
     tagTest('REQ-111', 4);
@@ -226,7 +187,7 @@ test.describe('REQ-111 WhatsApp inbound → account-recovery routing', () => {
     const body = 'hi';
     const messageId = `wamid.E2E-REQ111-AC4-${Date.now()}`;
 
-    const status = await postInbound(
+    const status = await postSignedWebhook(
       request,
       metaInboundPayload({ from: newPhone, body, id: messageId })
     );
@@ -235,7 +196,9 @@ test.describe('REQ-111 WhatsApp inbound → account-recovery routing', () => {
     const incoming = await readIncomingMessageByBody(body);
     expect(incoming).toBeTruthy();
     expect(incoming?.classifiedState).toBe('new');
-    expect(incoming?.actionTaken).toBe('sent_welcome_new_user');
+    expect(incoming?.actionTaken).toMatch(
+      /^welcome_new_user_(sent|failed:SERVICE_DISABLED)$/
+    );
 
     // This run auto-creates a User row for newPhone — clean it up too.
     seededPhones.push(newPhone);

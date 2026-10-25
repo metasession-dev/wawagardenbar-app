@@ -21,6 +21,8 @@ import { expect, type Page } from '@playwright/test';
 import { MongoClient, ObjectId } from 'mongodb';
 import { csrTest, isAuthenticated } from './kitchen/helpers';
 import { evidenceShot } from './helpers/evidence';
+import { tagTest } from './helpers/test-tags';
+import { pollForDoc } from './helpers/db-assertions';
 
 function mongoConn() {
   return {
@@ -190,6 +192,97 @@ csrTest.describe('REQ-064 staff flow — queue → detail → reply → status',
       expect(
         (persisted?.replies as Array<{ body: string }>)?.[0]?.body
       ).toContain('missing item shortly');
+    }
+  );
+
+  csrTest(
+    '[US-01.3] AC2 — a staff reply logs support_reply with header [ticket no.] and 3 body params',
+    async ({ page }: { page: Page }) => {
+      tagTest('REQ-115', 2);
+      guard(csrTest.skip, await isAuthenticated(page));
+
+      // A ticket that belongs to a customer, so the reply is notified.
+      // CI runs with ENABLE_WHATSAPP_NOTIFICATIONS=false: the WhatsApp send
+      // short-circuits, but NotificationService still records the template
+      // key and the exact parameters in NotificationLog (Level 1).
+      const { uri, dbName } = mongoConn();
+      const client = new MongoClient(uri);
+      let customerId: string | null = null;
+      const replyText = 'We have added a replacement to your account.';
+      try {
+        await client.connect();
+        const db = client.db(dbName);
+        const user = await db.collection('users').insertOne({
+          phone: `+234${String(Date.now()).slice(-9)}0`,
+          firstName: 'Ada',
+          phoneVerified: true,
+          isGuest: false,
+          accountStatus: 'active',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+        customerId = String(user.insertedId);
+
+        const ticketNumber = `TKT-E2E-${Date.now()}`;
+        const now = new Date();
+        const ticket = await db.collection('supporttickets').insertOne({
+          ticketNumber,
+          userId: customerId,
+          customerEmail: null,
+          customerPhone: null,
+          source: 'web',
+          category: 'order-issue',
+          subject: 'Missing item in order',
+          message: 'My order had a missing item.',
+          orderId: null,
+          status: 'open',
+          priority: 'normal',
+          assignedTo: null,
+          replies: [],
+          createdAt: now,
+          updatedAt: now,
+        });
+        ticketId = String(ticket.insertedId);
+
+        await page.goto(`/dashboard/support/${ticketId}`);
+        await page.getByPlaceholder(/type your reply/i).fill(replyText);
+        await page.getByRole('button', { name: /send reply/i }).click();
+        await expect(page.getByText(replyText)).toBeVisible({ timeout: 10000 });
+        await evidenceShot(page, 'REQ-115', 2, 'support-reply-sent');
+
+        const log = await pollForDoc<{
+          channel: string;
+          templateParams: { header: string[]; body: string[] };
+        }>(
+          'notificationlogs',
+          {
+            userId: customerId,
+            templateKey: 'support_reply',
+            channel: 'whatsapp',
+          },
+          { timeoutMs: 10000 }
+        );
+        expect(log, 'a support_reply NotificationLog row').toBeTruthy();
+        expect(log!.channel).toBe('whatsapp');
+        expect(log!.templateParams.header).toEqual([ticketNumber]);
+        expect(log!.templateParams.body).toEqual([
+          'Ada',
+          'Missing item in order',
+          replyText,
+        ]);
+      } finally {
+        if (customerId) {
+          await client
+            .db(dbName)
+            .collection('notificationlogs')
+            .deleteMany({ userId: customerId });
+          await client
+            .db(dbName)
+            .collection('users')
+            .deleteOne({ _id: new ObjectId(customerId) });
+        }
+        await client.close();
+      }
     }
   );
 });

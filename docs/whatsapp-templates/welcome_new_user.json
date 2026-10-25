@@ -1,0 +1,33 @@
+{
+  "name": "welcome_new_user",
+  "language": "en",
+  "category": "UTILITY",
+  "builder": "welcomeNewUserParams",
+  "header": {
+    "format": "TEXT",
+    "text": "Welcome to Wawa Garden Bar 🌿",
+    "example": []
+  },
+  "body": {
+    "text": "Hi 👋 thanks for reaching out. We're a garden bar + kitchen serving food, drinks and good times. Place an order, book a private event, or chat with our team — we're here from {{1}} to {{2}}.",
+    "example": ["11:00 AM", "11:00 PM"]
+  },
+  "footer": "Wawa Garden Bar",
+  "buttons": [
+    {
+      "type": "URL",
+      "text": "🛒 Order Now",
+      "url": "https://app.wawagardenbar.com/menu"
+    },
+    {
+      "type": "URL",
+      "text": "🎉 Book an Event",
+      "url": "https://app.wawagardenbar.com/book"
+    },
+    {
+      "type": "QUICK_REPLY",
+      "text": "💬 Chat with Staff"
+    }
+  ],
+  "holdUntil": "WA-13: submit only once /book is live"
+}

@@ -1,6 +1,6 @@
 # Release Ticket: REQ-114 — Upgrade zod 3 → 4 to clear GHSA-mrhx-c7xc-m3w5
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** SUPERSEDED
 **Date:** 2026-10-23
 **Requirement ID:** REQ-114
 **Risk Level:** MEDIUM

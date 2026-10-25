@@ -5,7 +5,7 @@ import { getIronSession } from 'iron-session';
 import { connectDB } from '@/lib/mongodb';
 import { UserModel } from '@/models';
 import { sessionOptions, SessionData } from '@/lib/session';
-import { validateEmail } from '@/lib/auth-utils';
+import { isValidPinFormat, validateEmail } from '@/lib/auth-utils';
 
 interface VerifyEmailPinResult {
   success: boolean;
@@ -36,7 +36,7 @@ export async function verifyEmailPinAction(
       };
     }
 
-    if (!pin || pin.length !== 4) {
+    if (!isValidPinFormat(pin)) {
       return {
         success: false,
         message: 'Invalid PIN',

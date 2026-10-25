@@ -107,7 +107,7 @@ test.describe('REQ-074 — Customer PIN-flow happy path (REQ-AUTHC-001)', () => 
 
     // ── Step 4: read PIN from Mongo + verify ──────────────────────────────
     const { pin, expiresAt } = await waitForPin(conn, phone);
-    expect(pin).toMatch(/^\d{4}$/);
+    expect(pin).toMatch(/^\d{6}$/);
     expect(expiresAt.getTime()).toBeGreaterThan(Date.now());
 
     await page.locator('#pin').fill(pin);

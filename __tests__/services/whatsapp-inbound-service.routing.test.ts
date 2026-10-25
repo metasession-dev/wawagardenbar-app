@@ -65,6 +65,23 @@ vi.mock('@/services/support-ticket-service', () => ({
   },
 }));
 
+const OPEN_ALL_DAY = { open: '09:00', close: '22:00', closed: false };
+vi.mock('@/services/settings-service', () => ({
+  SettingsService: {
+    getSettings: vi.fn().mockResolvedValue({
+      businessHours: {
+        monday: OPEN_ALL_DAY,
+        tuesday: OPEN_ALL_DAY,
+        wednesday: OPEN_ALL_DAY,
+        thursday: OPEN_ALL_DAY,
+        friday: OPEN_ALL_DAY,
+        saturday: OPEN_ALL_DAY,
+        sunday: OPEN_ALL_DAY,
+      },
+    }),
+  },
+}));
+
 const PHONE = '+2348012345678';
 
 const ACTIVE_USER = {
@@ -167,7 +184,7 @@ describe('REQ-056 WhatsAppInboundService.handle — routing matrix', () => {
     expect(mockNotificationSend.mock.calls[0][0]).toMatchObject({
       templateKey: 'welcome_new_user',
     });
-    expect(result).toBe('sent_welcome_new_user');
+    expect(result).toBe('welcome_new_user_sent');
   });
 
   it('AC4 — signing_up + support_text → no auto-create, sends welcome_new_user', async () => {
@@ -322,9 +339,9 @@ describe('REQ-111 WhatsAppInboundService.handle — account_recovery routing', (
     expect(mockSendMessage).toHaveBeenCalledWith(
       '2348012345678',
       'account_recovery',
-      ['8888']
+      { bodyParams: ['8888'] }
     );
-    expect(result).toBe('sent_account_recovery');
+    expect(result).toBe('account_recovery_sent');
     const persisted = mockIncomingMessageCreate.mock.calls[0][0] as Record<
       string,
       unknown
@@ -345,20 +362,19 @@ describe('REQ-111 WhatsAppInboundService.handle — account_recovery routing', (
       inboundText('My order WG2610200001 never arrived'),
       {}
     );
-    expect(result).toBe('sent_account_recovery');
+    expect(result).toBe('account_recovery_sent');
     expect(mockSendMessage).toHaveBeenCalledWith(
       '2348012345678',
       'account_recovery',
-      ['8888']
+      { bodyParams: ['8888'] }
     );
   });
 
   it('AC3 — resolved account has the SAME phone as the sender → not a mismatch, falls through to ordinary new-customer handling', async () => {
     const SAME_PHONE_ACCOUNT = {
       ...MISMATCHED_ACCOUNT,
-      // sanitizePhone() only re-adds '+' when the input already had one;
-      // inboundText()'s `from` has no '+', so match that exact shape here
-      // rather than PHONE (which does) to get a true sanitized-equal value.
+      // REQ-115 — normalizePhone() canonicalises both sides to +234…, so a
+      // stored number without the '+' is still recognised as the sender.
       phone: '2348012345678',
     };
     mockFindOne.mockReset();
@@ -376,7 +392,7 @@ describe('REQ-111 WhatsAppInboundService.handle — account_recovery routing', (
     expect(mockNotificationSend.mock.calls[0][0]).toMatchObject({
       templateKey: 'welcome_new_user',
     });
-    expect(result).toBe('sent_welcome_new_user');
+    expect(result).toBe('welcome_new_user_sent');
     const persisted = mockIncomingMessageCreate.mock.calls[0][0] as Record<
       string,
       unknown
@@ -392,7 +408,7 @@ describe('REQ-111 WhatsAppInboundService.handle — account_recovery routing', (
     const result = await WhatsAppInboundService.handle(inboundText('hi'), {});
     expect(mockSendMessage).not.toHaveBeenCalled();
     expect(mockCreate).toHaveBeenCalledTimes(1);
-    expect(result).toBe('sent_welcome_new_user');
+    expect(result).toBe('welcome_new_user_sent');
   });
 
   it('phone_mismatch send is skipped when the matched account has opted out of transactional WhatsApp', async () => {
@@ -416,7 +432,7 @@ describe('REQ-111 WhatsAppInboundService.handle — account_recovery routing', (
     expect(result).toBe('noop');
   });
 
-  it('a resolved (non-throwing) sendMessage failure is still tagged sent_account_recovery — matches the attempted-not-delivered convention the welcome branches already use', async () => {
+  it('REQ-115 D8 — a resolved sendMessage failure is tagged account_recovery_failed:<errorCode>, not _sent', async () => {
     mockFindOne.mockReset();
     mockFindOne.mockResolvedValueOnce(null);
     mockFindOne.mockResolvedValueOnce(MISMATCHED_ACCOUNT);
@@ -431,10 +447,10 @@ describe('REQ-111 WhatsAppInboundService.handle — account_recovery routing', (
       inboundText("Hi it's customer@example.com"),
       {}
     );
-    expect(result).toBe('sent_account_recovery');
+    expect(result).toBe('account_recovery_failed:SERVICE_DISABLED');
   });
 
-  it('WhatsAppService.sendMessage throwing is tagged send_failed, does not throw out of handle()', async () => {
+  it('WhatsAppService.sendMessage throwing is tagged account_recovery_failed:EXCEPTION, does not throw out of handle()', async () => {
     mockFindOne.mockReset();
     mockFindOne.mockResolvedValueOnce(null);
     mockFindOne.mockResolvedValueOnce(MISMATCHED_ACCOUNT);
@@ -447,7 +463,130 @@ describe('REQ-111 WhatsAppInboundService.handle — account_recovery routing', (
       inboundText("Hi it's customer@example.com"),
       {}
     );
-    expect(result).toBe('send_failed');
+    expect(result).toBe('account_recovery_failed:EXCEPTION');
     spy.mockRestore();
+  });
+});
+
+describe('REQ-115 WhatsAppInboundService.handle — template params, outcomes, phone format', () => {
+  it('[US-01.4] a failed welcome send ends actionTaken in _failed:<errorCode>', async () => {
+    mockFindOne.mockResolvedValue(null);
+    mockNotificationSend.mockResolvedValue({
+      sentVia: 'none',
+      success: false,
+      attempts: [
+        {
+          channel: 'whatsapp',
+          success: false,
+          error: 'Template parameter count mismatch',
+          errorCode: 'TEMPLATE_PARAM_ERROR',
+        },
+      ],
+    });
+    const { WhatsAppInboundService } = await import(
+      '@/services/whatsapp-inbound-service'
+    );
+    const result = await WhatsAppInboundService.handle(
+      inboundText('hello'),
+      {}
+    );
+    expect(result).toBe('welcome_new_user_failed:TEMPLATE_PARAM_ERROR');
+    expect(mockIncomingMessageCreate.mock.calls[0][0]).toMatchObject({
+      actionTaken: 'welcome_new_user_failed:TEMPLATE_PARAM_ERROR',
+    });
+  });
+
+  it('[US-01.4] a send that never reached WhatsApp (no consent / no phone) is _failed:NOT_SENT', async () => {
+    mockFindOne.mockResolvedValue(null);
+    mockNotificationSend.mockResolvedValue({
+      sentVia: 'none',
+      success: false,
+      attempts: [],
+    });
+    const { WhatsAppInboundService } = await import(
+      '@/services/whatsapp-inbound-service'
+    );
+    const result = await WhatsAppInboundService.handle(
+      inboundText('hello'),
+      {}
+    );
+    expect(result).toBe('welcome_new_user_failed:NOT_SENT');
+  });
+
+  it('[US-01.4] a throwing send is tagged _failed:EXCEPTION', async () => {
+    mockFindOne.mockResolvedValue(null);
+    mockNotificationSend.mockRejectedValue(new Error('boom'));
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { WhatsAppInboundService } = await import(
+      '@/services/whatsapp-inbound-service'
+    );
+    const result = await WhatsAppInboundService.handle(
+      inboundText('hello'),
+      {}
+    );
+    expect(result).toBe('welcome_new_user_failed:EXCEPTION');
+    spy.mockRestore();
+  });
+
+  it('AC1 — welcome_new_user is sent with [opening time, closing time]', async () => {
+    mockFindOne.mockResolvedValue(null);
+    const { WhatsAppInboundService } = await import(
+      '@/services/whatsapp-inbound-service'
+    );
+    await WhatsAppInboundService.handle(inboundText('hello'), {});
+    expect(mockNotificationSend.mock.calls[0][0].whatsapp).toEqual({
+      params: ['9:00 AM', '10:00 PM'],
+    });
+  });
+
+  it('AC1 — welcome_back is sent with [first name]', async () => {
+    mockFindOne.mockResolvedValue({ ...DORMANT_USER, firstName: 'Ada' });
+    const { WhatsAppInboundService } = await import(
+      '@/services/whatsapp-inbound-service'
+    );
+    await WhatsAppInboundService.handle(inboundText('hello'), {});
+    expect(mockNotificationSend.mock.calls[0][0]).toMatchObject({
+      templateKey: 'welcome_back',
+      whatsapp: { params: ['Ada'] },
+    });
+  });
+
+  it('AC1 — welcome_back falls back to "there" when the customer has no name', async () => {
+    mockFindOne.mockResolvedValue(DORMANT_USER);
+    const { WhatsAppInboundService } = await import(
+      '@/services/whatsapp-inbound-service'
+    );
+    await WhatsAppInboundService.handle(inboundText('hello'), {});
+    expect(mockNotificationSend.mock.calls[0][0].whatsapp).toEqual({
+      params: ['there'],
+    });
+  });
+
+  it('[US-01.5] the lookup matches the sender in every stored phone format', async () => {
+    mockFindOne.mockResolvedValue(ACTIVE_USER);
+    mockTicketFromInbound.mockResolvedValue({
+      _id: 't-1',
+      ticketNumber: 'TKT-1',
+    });
+    const { WhatsAppInboundService } = await import(
+      '@/services/whatsapp-inbound-service'
+    );
+    await WhatsAppInboundService.handle(inboundText('hi'), {});
+    const filter = mockFindOne.mock.calls[0][0];
+    expect(filter.phone.$in).toEqual(
+      expect.arrayContaining(['+2348012345678', '2348012345678', '08012345678'])
+    );
+    expect(mockCreate).not.toHaveBeenCalled(); // existing user, no duplicate
+  });
+
+  it('[US-01.5] an auto-created user is stored with the canonical phone', async () => {
+    mockFindOne.mockResolvedValue(null);
+    const { WhatsAppInboundService } = await import(
+      '@/services/whatsapp-inbound-service'
+    );
+    await WhatsAppInboundService.handle(inboundText('hello'), {});
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ phone: '+2348012345678' })
+    );
   });
 });

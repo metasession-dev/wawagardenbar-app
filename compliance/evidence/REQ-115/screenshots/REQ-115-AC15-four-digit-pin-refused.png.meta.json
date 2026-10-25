@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-115",
+  "ac": 15,
+  "slug": "four-digit-pin-refused",
+  "specFile": "e2e/critical/customer-pin-six-digits.spec.ts",
+  "capturedAt": "2026-10-24T16:42:57.383Z"
+}

@@ -1,0 +1,13 @@
+{
+  "name": "order_confirmation",
+  "language": "en",
+  "category": "UTILITY",
+  "builder": "orderConfirmationParams",
+  "header": null,
+  "body": {
+    "text": "Order #{{1}} confirmed — thanks for ordering with Wawa Garden Bar! Total: {{2}}. Estimated time: {{3}}. We'll text again with updates.",
+    "example": ["1234", "₦5,500", "25 minutes"]
+  },
+  "footer": "Wawa Garden Bar",
+  "buttons": []
+}

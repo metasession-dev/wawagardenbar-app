@@ -44,6 +44,14 @@ export interface INotificationLog extends Document {
   messageId: string | null;
   status: NotificationLogStatus;
   failureReason: string | null;
+  /** REQ-115 — Meta error code of a failed WhatsApp send (e.g. TEMPLATE_PARAM_ERROR). */
+  errorCode: string | null;
+  /** REQ-115 — template variables sent, by component (WhatsApp only). */
+  templateParams: {
+    header: string[];
+    body: string[];
+    buttons: { index: number; params: string[] }[];
+  } | null;
   durationMs: number | null;
   attemptedAt: Date;
   createdAt: Date;
@@ -70,6 +78,8 @@ const notificationLogSchema = new Schema<INotificationLog>(
       default: 'queued',
     },
     failureReason: { type: String, default: null },
+    errorCode: { type: String, default: null },
+    templateParams: { type: Schema.Types.Mixed, default: null },
     durationMs: { type: Number, default: null },
     attemptedAt: { type: Date, default: () => new Date() },
   },

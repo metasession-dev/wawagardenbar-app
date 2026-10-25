@@ -155,12 +155,12 @@ export async function runDailyIncidentSummaryJob(): Promise<void> {
     const adminUsers = await UserModel.find({
       role: { $in: ['admin', 'super-admin'] },
     })
-      .select('email phone communicationPreferences')
+      .select('_id email phone preferences.communicationPreferences')
       .lean<
         Array<{
+          _id?: { toString(): string };
           email: string;
           phone?: string;
-          communicationPreferences?: { whatsapp?: boolean; email?: boolean };
         }>
       >();
     if (adminUsers.length === 0) {
@@ -171,9 +171,20 @@ export async function runDailyIncidentSummaryJob(): Promise<void> {
     }
     for (const admin of adminUsers) {
       try {
+        // REQ-115 (D3) — NotificationService resolves the recipient by user
+        // `_id` (consent preferences + phone); the email used to be passed as
+        // the id, so the lookup never matched and WhatsApp was never tried.
+        // With no matching user, skip WhatsApp and say so.
+        const userId = admin._id ? admin._id.toString() : null;
+        if (!userId) {
+          console.warn(
+            `[scheduled-jobs] incident-summary: no user id for ${admin.email}, skipping WhatsApp`
+          );
+        }
         await NotificationService.send({
           templateKey: 'incident_summary',
-          userId: admin.email,
+          userId,
+          ...(userId ? { whatsapp: { params: [String(summary.total)] } } : {}),
           email: async () => {
             console.log(
               `[scheduled-jobs] incident-summary email sent to ${admin.email}: ${summary.total} incidents`

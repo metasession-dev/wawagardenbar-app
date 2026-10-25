@@ -1,6 +1,6 @@
 # Release Ticket: REQ-113 — Printable A4 menu ("Print New Menu")
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-10-23
 **Requirement ID:** REQ-113
 **Risk Level:** LOW

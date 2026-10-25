@@ -1,0 +1,24 @@
+{
+  "name": "payment_link",
+  "language": "en",
+  "category": "UTILITY",
+  "builder": "paymentLinkParams",
+  "header": {
+    "format": "TEXT",
+    "text": "Payment requested",
+    "example": []
+  },
+  "body": {
+    "text": "Hi {{1}}, please complete your Wawa Garden Bar payment of {{2}}. The link expires in {{3}} hours — tap below to pay securely.",
+    "example": ["Adaeze", "₦12,500", "24"]
+  },
+  "footer": "Wawa Garden Bar",
+  "buttons": [
+    {
+      "type": "URL",
+      "text": "Pay Now",
+      "url": "{{1}}",
+      "example": ["https://paystack.com/pay/wgb-1234abcd"]
+    }
+  ]
+}

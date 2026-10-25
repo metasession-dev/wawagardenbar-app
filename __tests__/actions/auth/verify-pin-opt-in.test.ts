@@ -40,6 +40,8 @@ vi.mock('@/lib/mongodb', () => ({
 }));
 
 vi.mock('@/lib/auth-utils', () => ({
+  phoneLookupVariants: (p: string) => [p],
+  isValidPinFormat: (p: unknown) => typeof p === 'string' && /^\d{6}$/.test(p),
   generateSessionToken: vi.fn(() => 'session-token-stub'),
   isPinExpired: vi.fn(() => false),
   sanitizePhone: vi.fn((p: string) => p),
@@ -61,7 +63,7 @@ function buildUser(overrides: Record<string, unknown> = {}) {
     email: 'opt-in@example.com',
     role: 'customer',
     phoneVerified: false,
-    verificationPin: '1234',
+    verificationPin: '123456',
     pinExpiresAt: new Date(Date.now() + 60_000),
     sessionToken: undefined,
     lastLoginAt: undefined,
@@ -136,7 +138,7 @@ describe('REQ-053 AC4: verifyPinAction persists optIn on FIRST verify only', () 
     });
 
     const { verifyPinAction } = await import('@/app/actions/auth/verify-pin');
-    const result = await verifyPinAction('+2347000000010', '1234', {
+    const result = await verifyPinAction('+2347000000010', '123456', {
       whatsappTransactional: true,
       whatsappMarketing: true,
       emailMarketing: false,
@@ -155,7 +157,7 @@ describe('REQ-053 AC4: verifyPinAction persists optIn on FIRST verify only', () 
     });
 
     const { verifyPinAction } = await import('@/app/actions/auth/verify-pin');
-    await verifyPinAction('+2347000000010', '1234', {
+    await verifyPinAction('+2347000000010', '123456', {
       whatsappTransactional: true,
       whatsappMarketing: false,
       emailMarketing: false,
@@ -185,7 +187,7 @@ describe('REQ-053 AC4: verifyPinAction persists optIn on FIRST verify only', () 
 
     const { verifyPinAction } = await import('@/app/actions/auth/verify-pin');
     // Client sends stale opt-in payload trying to flip marketing back on.
-    await verifyPinAction('+2347000000010', '1234', {
+    await verifyPinAction('+2347000000010', '123456', {
       whatsappTransactional: true,
       whatsappMarketing: true,
       emailMarketing: true,
@@ -202,7 +204,7 @@ describe('REQ-053 AC4: verifyPinAction persists optIn on FIRST verify only', () 
     });
 
     const { verifyPinAction } = await import('@/app/actions/auth/verify-pin');
-    const result = await verifyPinAction('+2347000000010', '1234');
+    const result = await verifyPinAction('+2347000000010', '123456');
 
     expect(result.success).toBe(true);
     // Preferences untouched at defaults.

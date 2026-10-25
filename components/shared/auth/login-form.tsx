@@ -45,7 +45,7 @@ const emailSchema = z.object({
 const pinSchema = z.object({
   pin: z
     .string()
-    .length(4, 'PIN must be 4 digits')
+    .length(6, 'PIN must be 6 digits')
     .regex(/^\d+$/, 'PIN must contain only numbers'),
 });
 
@@ -477,7 +477,7 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
         </Button>
 
         <p className="text-center text-sm text-muted-foreground">
-          We'll send a 4-digit PIN via{' '}
+          We'll send a 6-digit PIN via{' '}
           {authMethod === 'whatsapp' ? 'WhatsApp' : 'SMS'}
         </p>
 
@@ -558,8 +558,8 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
           id="pin"
           type="text"
           inputMode="numeric"
-          maxLength={4}
-          placeholder="0000"
+          maxLength={6}
+          placeholder="000000"
           className="text-center text-2xl tracking-widest"
           {...pinForm.register('pin')}
           disabled={isLoading}
@@ -571,7 +571,7 @@ export function LoginForm({ redirectTo = '/', onSuccess }: LoginFormProps) {
           </p>
         )}
         <p className="text-sm text-muted-foreground">
-          Enter the 4-digit PIN sent via{' '}
+          Enter the 6-digit PIN sent via{' '}
           {authMethod === 'whatsapp'
             ? 'WhatsApp'
             : authMethod === 'sms'

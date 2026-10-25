@@ -61,65 +61,63 @@ async function requestSmsPinForNewUser(page: Page, phone: string) {
 }
 
 test.describe('REQ-063 PIN-entry consent split @smoke', () => {
-  test(
-    'AC1 — new-user PIN entry renders 3 labelled consent checkboxes with correct defaults',
-    async ({ page }) => {
-      const { phone } = uniquePhone();
-      await requestSmsPinForNewUser(page, phone);
+  test('AC1 — new-user PIN entry renders 3 labelled consent checkboxes with correct defaults', async ({
+    page,
+  }) => {
+    const { phone } = uniquePhone();
+    await requestSmsPinForNewUser(page, phone);
 
-      // Three distinct checkbox rows, each with its own id + label.
-      const waTransactional = page.locator('#wa-transactional');
-      const waMarketing = page.locator('#wa-marketing');
-      const emailMarketing = page.locator('#email-marketing');
+    // Three distinct checkbox rows, each with its own id + label.
+    const waTransactional = page.locator('#wa-transactional');
+    const waMarketing = page.locator('#wa-marketing');
+    const emailMarketing = page.locator('#email-marketing');
 
-      await expect(waTransactional).toBeVisible();
-      await expect(waMarketing).toBeVisible();
-      await expect(emailMarketing).toBeVisible();
+    await expect(waTransactional).toBeVisible();
+    await expect(waMarketing).toBeVisible();
+    await expect(emailMarketing).toBeVisible();
 
-      // Defaults: WA transactional ON, the two marketing OFF.
-      await expect(waTransactional).toBeChecked();
-      await expect(waMarketing).not.toBeChecked();
-      await expect(emailMarketing).not.toBeChecked();
+    // Defaults: WA transactional ON, the two marketing OFF.
+    await expect(waTransactional).toBeChecked();
+    await expect(waMarketing).not.toBeChecked();
+    await expect(emailMarketing).not.toBeChecked();
 
-      // Labels are present and distinct (no collapsed shared text).
-      await expect(page.getByText(/Order updates via WhatsApp/i)).toBeVisible();
-      await expect(
-        page.getByText(/Offers and promotions via WhatsApp/i)
-      ).toBeVisible();
-      await expect(
-        page.getByText(/Offers and promotions by email/i)
-      ).toBeVisible();
+    // Labels are present and distinct (no collapsed shared text).
+    await expect(page.getByText(/Order updates via WhatsApp/i)).toBeVisible();
+    await expect(
+      page.getByText(/Offers and promotions via WhatsApp/i)
+    ).toBeVisible();
+    await expect(
+      page.getByText(/Offers and promotions by email/i)
+    ).toBeVisible();
 
-      await evidenceShot(page, 'REQ-063', 1, 'pin-entry-three-checkboxes');
-    }
-  );
+    await evidenceShot(page, 'REQ-063', 1, 'pin-entry-three-checkboxes');
+  });
 
-  test(
-    'AC1+AC3 — opting into all three persists each independently and stamps audit timestamp',
-    async ({ page }) => {
-      const { phone, digits } = uniquePhone();
-      await requestSmsPinForNewUser(page, phone);
+  test('AC1+AC3 — opting into all three persists each independently and stamps audit timestamp', async ({
+    page,
+  }) => {
+    const { phone, digits } = uniquePhone();
+    await requestSmsPinForNewUser(page, phone);
 
-      // User opts in to email marketing as well — flips the third checkbox.
-      await page.locator('#wa-marketing').check();
-      await page.locator('#email-marketing').check();
+    // User opts in to email marketing as well — flips the third checkbox.
+    await page.locator('#wa-marketing').check();
+    await page.locator('#email-marketing').check();
 
-      const pin = await getVerificationPinByPhone(digits);
-      expect(pin).toMatch(/^\d{4}$/);
-      await page.fill('#pin', pin as string);
-      await page.getByRole('button', { name: /verify & login/i }).click();
-      await expect(page).not.toHaveURL(/\/login(\?|$)/, { timeout: 15000 });
+    const pin = await getVerificationPinByPhone(digits);
+    expect(pin).toMatch(/^\d{6}$/);
+    await page.fill('#pin', pin as string);
+    await page.getByRole('button', { name: /verify & login/i }).click();
+    await expect(page).not.toHaveURL(/\/login(\?|$)/, { timeout: 15000 });
 
-      // Three independent persisted booleans + a server-stamped timestamp.
-      const prefs = await readUserPrefs(digits);
-      const cp =
-        (prefs?.communicationPreferences as Record<string, unknown>) ?? {};
-      expect(cp.whatsappTransactional).toBe(true);
-      expect(cp.whatsappMarketing).toBe(true);
-      expect(cp.emailMarketing).toBe(true);
-      expect(prefs?.communicationPreferencesUpdatedAt).toBeTruthy();
+    // Three independent persisted booleans + a server-stamped timestamp.
+    const prefs = await readUserPrefs(digits);
+    const cp =
+      (prefs?.communicationPreferences as Record<string, unknown>) ?? {};
+    expect(cp.whatsappTransactional).toBe(true);
+    expect(cp.whatsappMarketing).toBe(true);
+    expect(cp.emailMarketing).toBe(true);
+    expect(prefs?.communicationPreferencesUpdatedAt).toBeTruthy();
 
-      await evidenceShot(page, 'REQ-063', 3, 'audit-timestamp-stamped');
-    }
-  );
+    await evidenceShot(page, 'REQ-063', 3, 'audit-timestamp-stamped');
+  });
 });

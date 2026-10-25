@@ -21,7 +21,9 @@ vi.mock('@/lib/mongodb', () => ({
 }));
 
 vi.mock('@/lib/auth-utils', () => ({
-  generatePin: vi.fn(() => '4321'),
+  phoneLookupVariants: (p: string) => [p],
+  isValidPinFormat: (p: unknown) => typeof p === 'string' && /^\d{6}$/.test(p),
+  generatePin: vi.fn(() => '432100'),
   getPinExpirationTime: vi.fn(() => new Date(Date.now() + 10 * 60_000)),
   sanitizePhone: vi.fn((p: string) => p),
   validatePhone: vi.fn(() => true),
@@ -101,7 +103,7 @@ describe('REQ-074 — ENABLE_E2E_PIN_INTERCEPT bypass on send-PIN actions', () =
 
       expect(result.success).toBe(true);
       expect(result.message).toMatch(/E2E intercept/i);
-      expect(user.verificationPin).toBe('4321');
+      expect(user.verificationPin).toBe('432100');
       expect(user.save).toHaveBeenCalledOnce();
       expect(mockSendSMS).not.toHaveBeenCalled();
     });
@@ -116,7 +118,7 @@ describe('REQ-074 — ENABLE_E2E_PIN_INTERCEPT bypass on send-PIN actions', () =
 
       expect(result.success).toBe(true);
       expect(mockSendSMS).toHaveBeenCalledOnce();
-      expect(mockSendSMS).toHaveBeenCalledWith('+2347000000010', '4321');
+      expect(mockSendSMS).toHaveBeenCalledWith('+2347000000010', '432100');
     });
   });
 
@@ -133,7 +135,7 @@ describe('REQ-074 — ENABLE_E2E_PIN_INTERCEPT bypass on send-PIN actions', () =
 
       expect(result.success).toBe(true);
       expect(result.message).toMatch(/E2E intercept/i);
-      expect(user.verificationPin).toBe('4321');
+      expect(user.verificationPin).toBe('432100');
       expect(user.save).toHaveBeenCalledOnce();
       expect(mockSendWhatsApp).not.toHaveBeenCalled();
     });
@@ -168,7 +170,7 @@ describe('REQ-074 — ENABLE_E2E_PIN_INTERCEPT bypass on send-PIN actions', () =
 
       expect(result.success).toBe(true);
       expect(result.message).toMatch(/E2E intercept/i);
-      expect(userByEmail.verificationPin).toBe('4321');
+      expect(userByEmail.verificationPin).toBe('432100');
       expect(userByEmail.save).toHaveBeenCalledOnce();
       expect(mockSendEmail).not.toHaveBeenCalled();
     });

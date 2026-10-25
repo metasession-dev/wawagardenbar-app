@@ -1,0 +1,26 @@
+{
+  "name": "payment_confirmation",
+  "language": "en",
+  "category": "UTILITY",
+  "builder": "paymentConfirmationParams",
+  "header": {
+    "format": "TEXT",
+    "text": "Confirm payment",
+    "example": []
+  },
+  "body": {
+    "text": "You're about to be charged {{1}} via your card ending in {{2}}. Reply YES to confirm or NO to cancel. Link expires in 1 hour.",
+    "example": ["₦12,500", "1234"]
+  },
+  "footer": "Wawa Garden Bar",
+  "buttons": [
+    {
+      "type": "QUICK_REPLY",
+      "text": "✅ YES, charge me"
+    },
+    {
+      "type": "QUICK_REPLY",
+      "text": "❌ NO, cancel"
+    }
+  ]
+}

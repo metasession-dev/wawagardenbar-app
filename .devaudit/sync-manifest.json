@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "cli_version": "1.10.0",
+  "cli_version": "1.11.0",
   "files": {
     ".claude/skills/adr-author/SKILL.md": {
       "sha256": "ca1a50b08294ff0f707cec593fe53e781860c4328f4e84ab448e793d37ffe3c0",
       "section": "2e-ii"
     },
     ".claude/skills/devaudit-configure/SKILL.md": {
-      "sha256": "fa3340e2455aa77c57a1c268e3f89cac49673c9ac599719dd58122577c8ac60c",
+      "sha256": "3e877f421b01d96e411f351ecf54b0cee6a69d9fdbcab863b53fd3057fae2cfd",
       "section": "2e-ii"
     },
     ".claude/skills/e2e-ci-reliability/SKILL.md": {
@@ -23,7 +23,7 @@
       "section": "2e-ii"
     },
     ".claude/skills/e2e-test-engineer/SKILL.md": {
-      "sha256": "6bf25b594eae1309d0fba84fc1eae57d59a491ee24b598d1d2b157008fbed704",
+      "sha256": "b2476cc078a1d84917cf5a7d69a79ecd2ee5603bbdd802fa8cc77b650252d334",
       "section": "2e-ii"
     },
     ".claude/skills/e2e-test-engineer/references/bidirectional-cross-feature-example.md": {
@@ -75,19 +75,19 @@
       "section": "2e-ii"
     },
     ".claude/skills/sdlc-implementer/SKILL.md": {
-      "sha256": "03204714970a882c6ae6751a4d78e8ed6242f063461c97908d128e96fb38c38f",
+      "sha256": "86324a0276e07dc770d1fac4e2d2739713b95e4475d2a2bff9d5c6c8624b187a",
       "section": "2e-ii"
     },
     ".claude/skills/sdlc-implementer/references/call-graph.md": {
-      "sha256": "1399bc774f0fe1399f0f9ab4dccffd1e7df3e04a24323d92afcf56fe377e1763",
+      "sha256": "7ac7e135c69d2c60219849fd41301120ffdd686e913393b8deafd7c09e5e4ed0",
       "section": "2e-ii"
     },
     ".claude/skills/sdlc-implementer/references/change-request-loop.md": {
-      "sha256": "1fbd95b85bb5bb903e5c9f882c9defe74baafc9a9865dec61939b2a0f4fda769",
+      "sha256": "be17368f001996134eb34cfb4589b8cf8cb16ad456ddcb01b2d4d40df9c98a9a",
       "section": "2e-ii"
     },
     ".claude/skills/sdlc-implementer/references/compliance-constraints.md": {
-      "sha256": "e728fcc8660de8a87503c7ccc9b8d98676b25a604a60becff34e0c6bb859f8dd",
+      "sha256": "e008a22545556782ceddb7a877d05ea87285447d05f1b47d5b9b3db9ca2a1da6",
       "section": "2e-ii"
     },
     ".claude/skills/sdlc-implementer/references/dependency-risk-acceptance.md.template": {
@@ -103,7 +103,7 @@
       "section": "2b"
     },
     ".devin/workflows/devaudit-update-install.md": {
-      "sha256": "d64694dc8d8e6f6d96cee5227a4f3cbe80487330819adebe07a9d2167f8148dc",
+      "sha256": "093023e22af3dd22cca26da9ae98edc90ebb836a8c965b9e61756aa1c97f12e6",
       "section": "2i"
     },
     ".github/ISSUE_TEMPLATE/bug.yml": {
@@ -223,7 +223,7 @@
       "section": "2b"
     },
     "SDLC/0-project-setup.md": {
-      "sha256": "5bb5fde708f850182735dadfeb899f989256f9e62f2159774308c09d8471eccc",
+      "sha256": "8edb362ab129308ebdac5ee64e8ea859d4819b2f4a8714b1cc23c4e18fe3e6d6",
       "section": "2a"
     },
     "SDLC/1-plan-requirement.md": {
@@ -291,7 +291,7 @@
       "section": "2h"
     },
     "SDLC/blueprints/3-compile-evidence.raw.md": {
-      "sha256": "8ef31911696385d4e19732aa74f862292b5be30a5ce75c4906958912776d2630",
+      "sha256": "52424d3157040a5a77819e1985d04cec635037b9dce2e77892e42a31c6138729",
       "section": "2h"
     },
     "SDLC/blueprints/4-submit-for-review.raw.md": {
@@ -303,7 +303,7 @@
       "section": "2h"
     },
     "SDLC/blueprints/implementing-an-sdlc-issue.raw.md": {
-      "sha256": "365792f63ccd7a83d88aa64f29d899b55c8a5f8f3e96bc1b16c06d34c98738c2",
+      "sha256": "0a9f9d6936b98cd067a447917d727c4e75a516983d3eb4fecbd16873664a1791",
       "section": "2h"
     },
     "SDLC/implementing-an-sdlc-issue.md": {
@@ -311,7 +311,7 @@
       "section": "2a"
     },
     "SDLC/joining-an-existing-project.md": {
-      "sha256": "71291176bf8c7f1ff47b762eda483c8eb3c574e6de6758a9079e0d5279008310",
+      "sha256": "c75c4d1daaeca5658c526c2442b6c720e5c486695de01f8eab2e790d30e0159e",
       "section": "2a"
     },
     "commitlint.config.mjs": {
@@ -344,6 +344,10 @@
     },
     "scripts/check-release-pr-scope.sh": {
       "sha256": "438b97f0ed113a399dab70da36241796aa3c0eb64f9c961b2a0200ce631326b3",
+      "section": "2d"
+    },
+    "scripts/check-req-title-tags.sh": {
+      "sha256": "aa22c10b6832e0c25dd6d8ee299b77522f29752a443b0e49df74826d07f79eec",
       "section": "2d"
     },
     "scripts/check-requirement-jsdoc.sh": {
@@ -446,10 +450,6 @@
       "sha256": "806d76c3594ff4678620e9eb24a46dc90e8a847ea1f7f6d874037e4d475cfac7",
       "section": "2d"
     },
-    "scripts/record-uat-execution.sh": {
-      "sha256": "f0caa3369a0ef6c834c0155a0c5c2b5bb3bd9dd660753350bc13413cf3be2d4f",
-      "section": "2d"
-    },
     "scripts/render-test-executions.sh": {
       "sha256": "7f4994d4d4146dd44f7ab2f8765422f21a31e617e3ef41aaa8a497568d2fce1b",
       "section": "2d"
@@ -480,10 +480,6 @@
     },
     "scripts/submit-bundle-manifest.sh": {
       "sha256": "d5c7247e46d8ff7bac2296828a27a6a0680db4d5a4f0eed666c0d2de45c99332",
-      "section": "2d"
-    },
-    "scripts/submit-for-uat-review.sh": {
-      "sha256": "1ba4725cf1a15ea2f240f16583eb442c6b9e51b7b1fd2a170b41807667cdba6c",
       "section": "2d"
     },
     "scripts/update-sdlc-status.sh": {

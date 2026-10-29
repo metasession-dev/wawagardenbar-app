@@ -237,6 +237,8 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-WA-006       | Consent model: transactional default on, marketing default off                                | Must     | regression | `services/notification-service.ts`; `lib/notification-templates.ts`; REQ-053/063                                            |
 | REQ-WA-007       | Account-recovery detection for inbound WhatsApp messages (phone-mismatch via email/order no.) | Should   | regression | `services/whatsapp-inbound-service.ts`; `models/incoming-message-model.ts`; `lib/whatsapp-inbound-templates.ts`; REQ-WA-005 |
 | REQ-WA-008       | Canonical E.164 phone format for WhatsApp identity lookups                                    | Must     | regression | `lib/auth-utils.ts` (`normalizePhone`); `services/whatsapp-inbound-service.ts`; REQ-115                                     |
+| REQ-WA-009       | Webhook authenticity: fail closed, safe signature compare, no secret logging                  | Must     | regression | `app/api/webhooks/whatsapp/route.ts`; REQ-116                                                                               |
+| REQ-WA-010       | WhatsApp marketing opt-in (START) and marketing-only opt-out (STOP)                           | Must     | regression | `services/whatsapp-inbound-service.ts`; REQ-116                                                                             |
 
 ---
 
@@ -1536,10 +1538,11 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 #### REQ-WA-001 — OTP delivery via WhatsApp · **Must** · regression
 
 **Source:** `lib/notification-templates.ts` (`verification_pin` → `authentication`), `services/notification-service.ts`; cross-ref REQ-053/054.
-**Behaviour:** The `verification_pin` template is categorized as `authentication` in `TEMPLATE_CATEGORIES`. The `NotificationService.send()` orchestrator skips the consent check entirely for `authentication`-category templates (Meta exempts AUTHENTICATION templates from consent). When a PIN is issued, the WhatsApp attempt is made without gating on `whatsappTransactional` or `whatsappMarketing`.
+**Behaviour:** The `verification_pin` template is categorized as `authentication` in `TEMPLATE_CATEGORIES`. The `NotificationService.send()` orchestrator skips the consent check entirely for `authentication`-category templates (Meta exempts AUTHENTICATION templates from consent). When a PIN is issued, the WhatsApp attempt is made without gating on `whatsappTransactional` or `whatsappMarketing`. The `verification_pin` template is an AUTHENTICATION template with a Copy-code URL button, so the code is sent both as the body parameter and as the button parameter (`sub_type: url`, `index: "0"`); omitting the button parameter makes Meta reject the send with `#131008` (REQ-116).
 
 - **Given** a user requests a PIN, **When** `NotificationService.send` dispatches the `verification_pin` template, **Then** the WhatsApp attempt is made without checking any consent flag (authentication category is exempt).
 - **Given** a user with `whatsappTransactional: false`, **When** a PIN is issued, **Then** the WhatsApp OTP attempt still fires because authentication templates bypass the consent gate.
+- **Given** a user requests a WhatsApp PIN, **When** `verification_pin` is sent, **Then** the payload has one body parameter and one URL-button parameter at index 0, both carrying the code.
 
 #### REQ-WA-002 — Transactional WhatsApp templates · **Should** · regression
 
@@ -1570,7 +1573,7 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 #### REQ-WA-005 — Inbound WhatsApp message handling · **Should** · regression
 
 **Source:** `services/whatsapp-inbound-service.ts`, `app/api/webhooks/whatsapp/route.ts`, `lib/whatsapp.ts`; cross-ref REQ-056.
-**Behaviour:** Inbound WhatsApp messages are received via the webhook at `/api/webhooks/whatsapp` and routed through `WhatsAppInboundService.handle`. The service classifies the sender's customer state (`new`, `signing_up`, `active`, `dormant`) and the message intent (`opt_out`, `chat_with_staff`, `support_text`). STOP/opt-out messages matching `/^\s*(stop|unsubscribe|opt[-\s]?out)\s*$/i` clear both `whatsappTransactional` and `whatsappMarketing` regardless of customer state (Meta WABA policy). New/signing-up users receive a `welcome_new_user` template with parameters [today's opening time, closing time] (`h:mm a`, from business-hours settings); dormant users receive `welcome_back` with [first name, fallback `there`]. `actionTaken` records `<template>_sent` only when the send succeeded, otherwise `<template>_failed:<errorCode>`. Sender phones are matched using the canonical format (REQ-WA-008); a recovery-detected mismatch is classified `phone_mismatch` (REQ-WA-007). Active users are queued for staff. Support-text intents create a `SupportTicket` with `source: whatsapp`. An `IncomingMessage` audit record is persisted for every inbound message.
+**Behaviour:** Inbound WhatsApp messages are received via the webhook at `/api/webhooks/whatsapp` and routed through `WhatsAppInboundService.handle`. The service classifies the sender's customer state (`new`, `signing_up`, `active`, `dormant`) and the message intent (`opt_out`, `chat_with_staff`, `support_text`). STOP/opt-out messages matching `/^\s*(stop|unsubscribe|opt[-\s]?out)\s*$/i` clear `whatsappMarketing` only; `whatsappTransactional` stays on because order messages are part of the service (REQ-116, REQ-WA-010). Each inbound message is stored in `IncomingMessage` (unique `messageId`) before any classification or side effect; a duplicate-key error stops processing, so Meta retries produce one welcome and one ticket. Every `entry[]` and `changes[]` of a payload is processed. More than 20 inbound messages from one phone in 10 minutes are stored but create no further side effects. A failed outbound reply with a retryable error is retried up to 3 times (1 s, 5 s, 30 s) and then raises an `Incident`. New/signing-up users receive a `welcome_new_user` template with parameters [today's opening time, closing time] (`h:mm a`, from business-hours settings); dormant users receive `welcome_back` with [first name, fallback `there`]. `actionTaken` records `<template>_sent` only when the send succeeded, otherwise `<template>_failed:<errorCode>`. Sender phones are matched using the canonical format (REQ-WA-008); a recovery-detected mismatch is classified `phone_mismatch` (REQ-WA-007). Active users are queued for staff. Support-text intents create a `SupportTicket` with `source: whatsapp`. An `IncomingMessage` audit record is persisted for every inbound message.
 
 - **Given** an inbound WhatsApp message from an unknown phone number, **When** `WhatsAppInboundService.handle` processes it, **Then** a new `User` row is auto-created and a `welcome_new_user` template is sent.
 - **Given** an inbound message matching the STOP opt-out pattern, **When** the service processes it, **Then** both `whatsappTransactional` and `whatsappMarketing` are set to false and a free-form STOP confirmation is sent within the 24h customer-service window.
@@ -1580,7 +1583,7 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 #### REQ-WA-006 — Consent model: transactional default on, marketing default off · **Must** · regression
 
 **Source:** `services/notification-service.ts`, `lib/notification-templates.ts`; cross-ref REQ-053/063.
-**Behaviour:** The WhatsApp consent model has two independent flags: `whatsappTransactional` (default `true`, captured at first PIN verification per REQ-053) and `whatsappMarketing` (default `false`, requires explicit opt-in per REQ-063). `NotificationService.send()` reads the template's category from `TEMPLATE_CATEGORIES` and checks the corresponding consent flag before attempting the WhatsApp send. Authentication-category templates bypass the consent check entirely. The `communicationPreferencesUpdatedAt` timestamp is stamped on any consent change.
+**Behaviour:** The WhatsApp consent model has two independent flags: `whatsappTransactional` (default `true`, captured at first PIN verification per REQ-053) and `whatsappMarketing` (default `false`, requires explicit opt-in per REQ-063). `NotificationService.send()` reads the template's category from `TEMPLATE_CATEGORIES` and checks the corresponding consent flag before attempting the WhatsApp send. Authentication-category templates bypass the consent check entirely. The `communicationPreferencesUpdatedAt` timestamp is stamped on any consent change. STOP and START replies change `whatsappMarketing` only (REQ-WA-010).
 
 - **Given** a new user completing first PIN verification, **When** the consent flags are persisted, **Then** `whatsappTransactional` defaults to `true` and `whatsappMarketing` defaults to `false`.
 - **Given** a `transactional`-category template, **When** `NotificationService.send` is called, **Then** the `whatsappTransactional` flag is checked; if false, the WhatsApp attempt is skipped.
@@ -1607,6 +1610,23 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 - **Given** a user saved as `+2348012345678`, **When** an inbound WhatsApp message arrives from `2348012345678`, **Then** the sender is classified as an existing customer and no second `User` is created.
 - **Given** the numbers `08012345678`, `2348012345678` and `+2348012345678`, **When** `normalizePhone` runs, **Then** each returns `+2348012345678`.
 - **Given** two stored users whose phones normalise to the same value, **When** the migration script runs, **Then** it lists them in a duplicate report and changes neither account.
+
+#### REQ-WA-009 — Webhook authenticity: fail closed, safe signature compare, no secret logging · **Must** · regression
+
+**Source:** `app/api/webhooks/whatsapp/route.ts`; cross-ref REQ-WA-005, REQ-116.
+**Behaviour:** The WhatsApp webhook validates Meta's `x-hub-signature-256` HMAC-SHA256 over the raw request body. If `WHATSAPP_APP_SECRET` is not configured the endpoint fails closed and processes nothing. A missing, malformed, wrong-prefix or wrong-length signature is rejected with 403 without throwing. The verify token and signature values are never logged.
+
+- **Given** `WHATSAPP_APP_SECRET` is unset, **When** Meta posts an event, **Then** the response is 503, one error is logged and no `IncomingMessage` is stored.
+- **Given** a signature that is missing, lacks the `sha256=` prefix or has the wrong length, **When** Meta posts an event, **Then** the response is 403 and the process does not crash.
+- **Given** any GET verification or POST, **When** the handler logs, **Then** neither the verify token nor a signature value appears in the log output.
+
+#### REQ-WA-010 — WhatsApp marketing opt-in (START) and marketing-only opt-out (STOP) · **Must** · regression
+
+**Source:** `services/whatsapp-inbound-service.ts`; cross-ref REQ-WA-005, REQ-WA-006, REQ-116.
+**Behaviour:** An inbound STOP message sets `whatsappMarketing=false` and leaves `whatsappTransactional` unchanged, and the customer is told they will still receive messages about orders and bookings. An inbound START message (`/^\s*(start|subscribe|opt[-\s]?in)\s*$/i`) sets `whatsappMarketing=true`, stamps `communicationPreferencesUpdatedAt`, records the consent source as `whatsapp_inbound`, and confirms the subscription.
+
+- **Given** a customer opted in to marketing, **When** they send STOP, **Then** marketing is off, transactional is unchanged and the confirmation text is sent.
+- **Given** an opted-out customer, **When** they send START, **Then** marketing is on with source `whatsapp_inbound` and the subscription confirmation is sent.
 
 ## Feature Area 28 — Contact / Support (CONTACT)
 

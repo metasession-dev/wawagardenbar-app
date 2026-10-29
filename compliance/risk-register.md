@@ -961,7 +961,7 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 
 ### R-042 — WhatsApp access token present in git history (REQ-115)
 
-**Status:** OPEN — closes when the operator confirms rotation (AC8) and records it in evidence
+**Status:** MITIGATED — operator reported the old token revoked in Meta on 2026-10-29 (AC8). Not independently verified by the agent; the token value is not recorded anywhere. Operator sign-off of the residual rating is still required before CLOSED.
 **Opened:** 2026-10-24 (REQ-115, plan Stage 1)
 **Owner:** WGB maintainer
 **Review due:** 2026-11-07 (two weeks; short because it is an exposed credential)

@@ -471,173 +471,170 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
 // Admin express create order — requires super-admin auth
 // ---------------------------------------------------------------------------
 
-superAdminTest.describe(
-  'REQ-084 — Express create order order type selector',
-  () => {
-    superAdminTest.describe.configure({ timeout: 90_000 });
+test.describe('REQ-084 — Express create order order type selector', () => {
+  superAdminTest.describe.configure({ timeout: 90_000 });
 
-    superAdminTest.beforeEach(async ({ page }, testInfo) => {
-      if (!(await isAuthenticated(page))) {
-        if (process.env.CI)
-          throw new Error(
-            'Expected an authenticated session in CI but none was present'
-          );
-        testInfo.skip(true, 'super-admin auth missing (local only)');
+  superAdminTest.beforeEach(async ({ page }, testInfo) => {
+    if (!(await isAuthenticated(page))) {
+      if (process.env.CI)
+        throw new Error(
+          'Expected an authenticated session in CI but none was present'
+        );
+      testInfo.skip(true, 'super-admin auth missing (local only)');
+    }
+  });
+
+  superAdminTest(
+    'AC4: Pickup time field appears when Pickup selected',
+    async ({ page }) => {
+      tagTest('REQ-084', 4);
+
+      if (!(await gotoExpressCheckoutStep(page))) {
+        superAdminTest.skip(true, 'No in-stock express items seeded');
       }
-    });
 
-    superAdminTest(
-      'AC4: Pickup time field appears when Pickup selected',
-      async ({ page }) => {
-        tagTest('REQ-084', 4);
+      await page.getByRole('button', { name: /pickup/i }).click();
+      await page.waitForTimeout(300);
 
-        if (!(await gotoExpressCheckoutStep(page))) {
-          superAdminTest.skip(true, 'No in-stock express items seeded');
-        }
+      await expect(page.locator('#pickupTime')).toBeVisible({
+        timeout: 10000,
+      });
+      await evidenceShot(page, 'REQ-084', 4, 'pickup-time-field');
+    }
+  );
 
-        await page.getByRole('button', { name: /pickup/i }).click();
-        await page.waitForTimeout(300);
+  superAdminTest(
+    'AC5: Delivery address fields appear when Delivery selected',
+    async ({ page }) => {
+      tagTest('REQ-084', 5);
 
-        await expect(page.locator('#pickupTime')).toBeVisible({
-          timeout: 10000,
-        });
-        await evidenceShot(page, 'REQ-084', 4, 'pickup-time-field');
+      if (!(await gotoExpressCheckoutStep(page))) {
+        superAdminTest.skip(true, 'No in-stock express items seeded');
       }
-    );
 
-    superAdminTest(
-      'AC5: Delivery address fields appear when Delivery selected',
-      async ({ page }) => {
-        tagTest('REQ-084', 5);
+      await page.getByRole('button', { name: /delivery/i }).click();
+      await page.waitForTimeout(300);
 
-        if (!(await gotoExpressCheckoutStep(page))) {
-          superAdminTest.skip(true, 'No in-stock express items seeded');
-        }
+      await expect(page.locator('#deliveryStreet')).toBeVisible({
+        timeout: 10000,
+      });
+      await expect(page.locator('#deliveryCity')).toBeVisible();
+      await evidenceShot(page, 'REQ-084', 5, 'delivery-address-fields');
+    }
+  );
 
-        await page.getByRole('button', { name: /delivery/i }).click();
-        await page.waitForTimeout(300);
+  superAdminTest(
+    '[REQ-084][AC10] Customer info fields appear for pickup/delivery',
+    async ({ page }) => {
+      tagTest('REQ-084', 10);
 
-        await expect(page.locator('#deliveryStreet')).toBeVisible({
-          timeout: 10000,
-        });
-        await expect(page.locator('#deliveryCity')).toBeVisible();
-        await evidenceShot(page, 'REQ-084', 5, 'delivery-address-fields');
+      if (!(await gotoExpressCheckoutStep(page))) {
+        superAdminTest.skip(true, 'No in-stock express items seeded');
       }
-    );
 
-    superAdminTest(
-      'AC10: Customer info fields appear for pickup/delivery',
-      async ({ page }) => {
-        tagTest('REQ-084', 10);
+      await page.getByRole('button', { name: /pickup/i }).click();
+      await page.waitForTimeout(300);
 
-        if (!(await gotoExpressCheckoutStep(page))) {
-          superAdminTest.skip(true, 'No in-stock express items seeded');
-        }
+      await expect(page.locator('#customerName')).toBeVisible({
+        timeout: 10000,
+      });
+      await expect(page.locator('#customerPhone')).toBeVisible();
+      await evidenceShot(page, 'REQ-084', 10, 'customer-info-pickup');
+    }
+  );
 
-        await page.getByRole('button', { name: /pickup/i }).click();
-        await page.waitForTimeout(300);
+  superAdminTest(
+    'AC4: Pickup time is required before submission',
+    async ({ page }) => {
+      tagTest('REQ-084', 4);
 
-        await expect(page.locator('#customerName')).toBeVisible({
-          timeout: 10000,
-        });
-        await expect(page.locator('#customerPhone')).toBeVisible();
-        await evidenceShot(page, 'REQ-084', 10, 'customer-info-pickup');
+      if (!(await gotoExpressCheckoutStep(page))) {
+        superAdminTest.skip(true, 'No in-stock express items seeded');
       }
-    );
 
-    superAdminTest(
-      'AC4: Pickup time is required before submission',
-      async ({ page }) => {
-        tagTest('REQ-084', 4);
+      await page.getByRole('button', { name: /pickup/i }).click();
+      await expect(page.locator('#pickupTime')).toBeVisible({
+        timeout: 10000,
+      });
 
-        if (!(await gotoExpressCheckoutStep(page))) {
-          superAdminTest.skip(true, 'No in-stock express items seeded');
-        }
+      // Leave pickup time empty — submit button must be disabled.
+      const submitBtn = page.getByRole('button', { name: /Create Order/i });
+      await expect(submitBtn).toBeDisabled();
 
-        await page.getByRole('button', { name: /pickup/i }).click();
-        await expect(page.locator('#pickupTime')).toBeVisible({
-          timeout: 10000,
-        });
+      // Fill the pickup time, customer name, and phone to enable the button.
+      await page.locator('#pickupTime').fill('2026-01-01T12:00');
+      await page.locator('#customerName').fill('Pickup E2E');
+      await page.locator('#customerPhone').fill('08011223344');
+      await page.waitForTimeout(500);
+      await expect(submitBtn).toBeEnabled({ timeout: 10000 });
+      await evidenceShot(page, 'REQ-084', 4, 'pickup-time-required');
+    }
+  );
 
-        // Leave pickup time empty — submit button must be disabled.
-        const submitBtn = page.getByRole('button', { name: /Create Order/i });
-        await expect(submitBtn).toBeDisabled();
+  superAdminTest(
+    'AC5: Delivery address fields are required before submission',
+    async ({ page }) => {
+      tagTest('REQ-084', 5);
 
-        // Fill the pickup time, customer name, and phone to enable the button.
-        await page.locator('#pickupTime').fill('2026-01-01T12:00');
-        await page.locator('#customerName').fill('Pickup E2E');
-        await page.locator('#customerPhone').fill('08011223344');
-        await page.waitForTimeout(500);
-        await expect(submitBtn).toBeEnabled({ timeout: 10000 });
-        await evidenceShot(page, 'REQ-084', 4, 'pickup-time-required');
+      if (!(await gotoExpressCheckoutStep(page))) {
+        superAdminTest.skip(true, 'No in-stock express items seeded');
       }
-    );
 
-    superAdminTest(
-      'AC5: Delivery address fields are required before submission',
-      async ({ page }) => {
-        tagTest('REQ-084', 5);
+      await page.getByRole('button', { name: /delivery/i }).click();
+      await expect(page.locator('#deliveryStreet')).toBeVisible({
+        timeout: 10000,
+      });
 
-        if (!(await gotoExpressCheckoutStep(page))) {
-          superAdminTest.skip(true, 'No in-stock express items seeded');
-        }
+      // Submit button is disabled while required delivery/customer fields are empty.
+      const submitBtn = page.getByRole('button', { name: /Create Order/i });
+      await expect(submitBtn).toBeDisabled();
 
-        await page.getByRole('button', { name: /delivery/i }).click();
-        await expect(page.locator('#deliveryStreet')).toBeVisible({
-          timeout: 10000,
-        });
+      // Fill the required fields and assert the button becomes enabled.
+      await page.locator('#deliveryStreet').fill('123 Main St');
+      await page.locator('#deliveryCity').fill('Lagos');
+      await page.locator('#deliveryState').fill('Lagos State');
+      await page.locator('#customerName').fill('Delivery E2E');
+      await page.locator('#customerPhone').fill('08011223344');
+      await page.waitForTimeout(500);
+      await expect(submitBtn).toBeEnabled({ timeout: 10000 });
+      await evidenceShot(page, 'REQ-084', 5, 'delivery-fields-required');
+    }
+  );
 
-        // Submit button is disabled while required delivery/customer fields are empty.
-        const submitBtn = page.getByRole('button', { name: /Create Order/i });
-        await expect(submitBtn).toBeDisabled();
+  superAdminTest(
+    'AC10: Customer info fields are required before submission',
+    async ({ page }) => {
+      tagTest('REQ-084', 10);
 
-        // Fill the required fields and assert the button becomes enabled.
-        await page.locator('#deliveryStreet').fill('123 Main St');
-        await page.locator('#deliveryCity').fill('Lagos');
-        await page.locator('#deliveryState').fill('Lagos State');
-        await page.locator('#customerName').fill('Delivery E2E');
-        await page.locator('#customerPhone').fill('08011223344');
-        await page.waitForTimeout(500);
-        await expect(submitBtn).toBeEnabled({ timeout: 10000 });
-        await evidenceShot(page, 'REQ-084', 5, 'delivery-fields-required');
+      if (!(await gotoExpressCheckoutStep(page))) {
+        superAdminTest.skip(true, 'No in-stock express items seeded');
       }
-    );
 
-    superAdminTest(
-      'AC10: Customer info fields are required before submission',
-      async ({ page }) => {
-        tagTest('REQ-084', 10);
+      await page.getByRole('button', { name: /pickup/i }).click();
+      await expect(page.locator('#pickupTime')).toBeVisible({
+        timeout: 10000,
+      });
+      await page.locator('#pickupTime').fill('2026-01-01T12:00');
 
-        if (!(await gotoExpressCheckoutStep(page))) {
-          superAdminTest.skip(true, 'No in-stock express items seeded');
-        }
+      // Leave customer name and phone empty — submit button must be disabled.
+      const submitBtn = page.getByRole('button', { name: /Create Order/i });
+      await expect(submitBtn).toBeDisabled();
 
-        await page.getByRole('button', { name: /pickup/i }).click();
-        await expect(page.locator('#pickupTime')).toBeVisible({
-          timeout: 10000,
-        });
-        await page.locator('#pickupTime').fill('2026-01-01T12:00');
-
-        // Leave customer name and phone empty — submit button must be disabled.
-        const submitBtn = page.getByRole('button', { name: /Create Order/i });
-        await expect(submitBtn).toBeDisabled();
-
-        // Fill the required customer info and assert the button becomes enabled.
-        await page.locator('#customerName').fill('Pickup E2E');
-        await page.locator('#customerPhone').fill('08011223344');
-        await page.waitForTimeout(500);
-        await expect(submitBtn).toBeEnabled({ timeout: 10000 });
-        await evidenceShot(page, 'REQ-084', 10, 'customer-info-required');
-      }
-    );
-  }
-);
+      // Fill the required customer info and assert the button becomes enabled.
+      await page.locator('#customerName').fill('Pickup E2E');
+      await page.locator('#customerPhone').fill('08011223344');
+      await page.waitForTimeout(500);
+      await expect(submitBtn).toBeEnabled({ timeout: 10000 });
+      await evidenceShot(page, 'REQ-084', 10, 'customer-info-required');
+    }
+  );
+});
 
 // ---------------------------------------------------------------------------
 // Admin tab checkout — requires super-admin auth
 // ---------------------------------------------------------------------------
 
-superAdminTest.describe('REQ-084 — Admin tab checkout (manual payment)', () => {
+test.describe('REQ-084 — Admin tab checkout (manual payment)', () => {
   let tabId: string;
 
   superAdminTest.beforeAll(async () => {
@@ -649,7 +646,7 @@ superAdminTest.describe('REQ-084 — Admin tab checkout (manual payment)', () =>
   });
 
   superAdminTest(
-    'AC7: AdminTabCheckoutForm renders — no redirect',
+    '[REQ-084][AC7] AdminTabCheckoutForm renders — no redirect',
     async ({ page }) => {
       tagTest('REQ-084', 7);
       guard(superAdminTest.skip, await isAuthenticated(page));
@@ -668,7 +665,7 @@ superAdminTest.describe('REQ-084 — Admin tab checkout (manual payment)', () =>
   );
 
   superAdminTest(
-    'AC11: No Monnify checkout URL — manual payment only',
+    '[REQ-084][AC11] No Monnify checkout URL — manual payment only',
     async ({ page }) => {
       tagTest('REQ-084', 11);
       guard(superAdminTest.skip, await isAuthenticated(page));

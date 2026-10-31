@@ -357,7 +357,13 @@ export class WhatsAppService {
   ): Promise<WhatsAppResult> {
     const templateName =
       process.env.WHATSAPP_PIN_TEMPLATE_NAME || 'verification_pin';
-    return this.sendMessage(phone, templateName, [pin]);
+    // REQ-116 (AC9) — verification_pin is an AUTHENTICATION template: the code
+    // goes in the body AND the Copy-code URL button (index 0). Omitting the
+    // button parameter makes Meta reject the send with #131008.
+    return this.sendMessage(phone, templateName, {
+      bodyParams: [pin],
+      buttonParams: [{ index: 0, params: [pin] }],
+    });
   }
 
   /**

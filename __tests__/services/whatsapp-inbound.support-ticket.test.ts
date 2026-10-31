@@ -47,6 +47,7 @@ vi.mock('@/models', () => ({
 }));
 
 const mockIncomingCreate = vi.fn();
+const mockIncomingUpdate = vi.fn();
 vi.mock('@/models/incoming-message-model', async () => {
   // Re-export the type union for the handler's import surface.
   const actual: typeof import('@/models/incoming-message-model') =
@@ -55,6 +56,7 @@ vi.mock('@/models/incoming-message-model', async () => {
     ...actual,
     default: {
       create: (...a: unknown[]) => mockIncomingCreate(...a),
+      updateOne: (...a: unknown[]) => mockIncomingUpdate(...a),
     },
   };
 });
@@ -66,6 +68,7 @@ beforeEach(() => {
   mockUserFindOne.mockReset();
   mockUserCreate.mockReset();
   mockIncomingCreate.mockReset();
+  mockIncomingUpdate.mockReset().mockResolvedValue({});
 });
 
 describe('REQ-064 WhatsApp inbound → support ticket bridge (AC3)', () => {
@@ -107,8 +110,10 @@ describe('REQ-064 WhatsApp inbound → support ticket bridge (AC3)', () => {
     // IncomingMessage row tagged 'ticketed'.
     expect(mockIncomingCreate).toHaveBeenCalledTimes(1);
     expect(mockIncomingCreate.mock.calls[0][0]).toMatchObject({
-      actionTaken: 'ticketed',
       classifiedIntent: 'support_text',
+    });
+    expect(mockIncomingUpdate.mock.calls[0][1].$set).toMatchObject({
+      actionTaken: 'ticketed',
     });
   });
 
@@ -136,7 +141,7 @@ describe('REQ-064 WhatsApp inbound → support ticket bridge (AC3)', () => {
     );
 
     expect(mockIncomingCreate).toHaveBeenCalledTimes(1);
-    expect(mockIncomingCreate.mock.calls[0][0]).toMatchObject({
+    expect(mockIncomingUpdate.mock.calls[0][1].$set).toMatchObject({
       actionTaken: 'queued_for_staff',
     });
   });

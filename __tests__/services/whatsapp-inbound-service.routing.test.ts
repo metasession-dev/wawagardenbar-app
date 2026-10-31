@@ -30,12 +30,21 @@ vi.mock('@/models', () => ({
 }));
 
 const mockIncomingMessageCreate = vi.fn();
+const mockIncomingMessageUpdate = vi.fn();
 
 vi.mock('@/models/incoming-message-model', () => ({
   default: {
     create: (...args: unknown[]) => mockIncomingMessageCreate(...args),
+    updateOne: (...args: unknown[]) => mockIncomingMessageUpdate(...args),
   },
 }));
+
+// REQ-116 — the final routing outcome is written by the update that follows
+// the insert-first row.
+function finalRow(): Record<string, unknown> {
+  const calls = mockIncomingMessageUpdate.mock.calls;
+  return (calls[calls.length - 1][1] as { $set: Record<string, unknown> }).$set;
+}
 
 const mockNotificationSend = vi.fn();
 
@@ -142,11 +151,13 @@ const MISMATCHED_ACCOUNT = {
   accountStatus: 'active',
 };
 
-beforeEach(() => {
+beforeEach(async () => {
   mockFindOne.mockReset();
   mockCreate.mockReset();
   mockUpdateOne.mockReset();
   mockIncomingMessageCreate.mockReset();
+  mockIncomingMessageUpdate.mockReset().mockResolvedValue({});
+  (await import('@/services/whatsapp-inbound-service')).resetRateLimits();
   mockNotificationSend.mockReset();
   mockSendTextMessage.mockReset();
   mockSendMessage.mockReset();
@@ -231,7 +242,7 @@ describe('REQ-056 WhatsAppInboundService.handle — routing matrix', () => {
     });
   });
 
-  it('AC5 — active + opt_out → persists both whatsapp flags = false; sends free-form confirm', async () => {
+  it('AC6 — active + opt_out → clears marketing only, transactional untouched; sends free-form confirm', async () => {
     mockFindOne.mockResolvedValue(ACTIVE_USER);
     const { WhatsAppInboundService } = await import(
       '@/services/whatsapp-inbound-service'
@@ -244,7 +255,8 @@ describe('REQ-056 WhatsAppInboundService.handle — routing matrix', () => {
     };
     expect(filter._id).toBe(ACTIVE_USER._id);
     expect(
-      update.$set['preferences.communicationPreferences.whatsappTransactional']
+      'preferences.communicationPreferences.whatsappTransactional' in
+        update.$set
     ).toBe(false);
     expect(
       update.$set['preferences.communicationPreferences.whatsappMarketing']
@@ -342,10 +354,7 @@ describe('REQ-111 WhatsAppInboundService.handle — account_recovery routing', (
       { bodyParams: ['8888'] }
     );
     expect(result).toBe('account_recovery_sent');
-    const persisted = mockIncomingMessageCreate.mock.calls[0][0] as Record<
-      string,
-      unknown
-    >;
+    const persisted = finalRow();
     expect(persisted.classifiedState).toBe('phone_mismatch');
     expect(persisted.userId).toBe(MISMATCHED_ACCOUNT._id.toString());
   });
@@ -393,10 +402,7 @@ describe('REQ-111 WhatsAppInboundService.handle — account_recovery routing', (
       templateKey: 'welcome_new_user',
     });
     expect(result).toBe('welcome_new_user_sent');
-    const persisted = mockIncomingMessageCreate.mock.calls[0][0] as Record<
-      string,
-      unknown
-    >;
+    const persisted = finalRow();
     expect(persisted.classifiedState).toBe('new');
   });
 
@@ -491,7 +497,7 @@ describe('REQ-115 WhatsAppInboundService.handle — template params, outcomes, p
       {}
     );
     expect(result).toBe('welcome_new_user_failed:TEMPLATE_PARAM_ERROR');
-    expect(mockIncomingMessageCreate.mock.calls[0][0]).toMatchObject({
+    expect(finalRow()).toMatchObject({
       actionTaken: 'welcome_new_user_failed:TEMPLATE_PARAM_ERROR',
     });
   });

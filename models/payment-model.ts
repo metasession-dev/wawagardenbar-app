@@ -1,5 +1,10 @@
 import mongoose, { Schema, Model } from 'mongoose';
-import { IPayment, IMonnifyResponse, PaymentMethod, PaymentStatus } from '../interfaces';
+import {
+  IPayment,
+  IMonnifyResponse,
+  PaymentMethod,
+  PaymentStatus,
+} from '../interfaces';
 
 const monnifyResponseSchema = new Schema<IMonnifyResponse>(
   {
@@ -92,7 +97,6 @@ paymentSchema.index({ status: 1, createdAt: -1 });
 paymentSchema.index({ 'metadata.customerEmail': 1 });
 
 const PaymentModel: Model<IPayment> =
-  mongoose.models.Payment ||
-  mongoose.model<IPayment>('Payment', paymentSchema);
+  mongoose.models.Payment || mongoose.model<IPayment>('Payment', paymentSchema);
 
 export default PaymentModel;

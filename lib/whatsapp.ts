@@ -390,114 +390,124 @@ export class WhatsAppService {
    */
   static async handleWebhook(payload: any): Promise<void> {
     try {
-      console.log(
-        'WhatsApp webhook received:',
-        JSON.stringify(payload, null, 2)
-      );
+      // REQ-116 (AC3/AC5) — log a summary only (the payload carries phone
+      // numbers and message bodies) and process every entry[] / changes[].
+      const values: any[] = (payload?.entry ?? [])
+        .flatMap((entry: any) => entry?.changes ?? [])
+        .map((change: any) => change?.value)
+        .filter(Boolean);
+      console.log('WhatsApp webhook received:', {
+        entries: payload?.entry?.length ?? 0,
+        changes: values.length,
+      });
 
-      // Check if this is a status update
-      if (payload.entry?.[0]?.changes?.[0]?.value?.statuses) {
-        const statuses = payload.entry[0].changes[0].value.statuses;
+      for (const value of values) {
+        // Check if this is a status update
+        if (value.statuses) {
+          const statuses = value.statuses;
 
-        for (const status of statuses) {
-          const messageId = status.id;
-          const statusType = status.status; // sent, delivered, read, failed
-          const timestamp = status.timestamp;
-          const recipientId = status.recipient_id;
+          for (const status of statuses) {
+            const messageId = status.id;
+            const statusType = status.status; // sent, delivered, read, failed
+            const timestamp = status.timestamp;
+            const recipientId = status.recipient_id;
 
-          console.log('Message status update:', {
-            messageId,
-            statusType,
-            timestamp,
-            recipientId,
-          });
-
-          // Handle failed messages
-          if (statusType === 'failed') {
-            const errorCode = status.errors?.[0]?.code;
-            const errorTitle = status.errors?.[0]?.title;
-            console.error('WhatsApp message failed:', {
-              messageId,
-              errorCode,
-              errorTitle,
-            });
-
-            // TODO: Implement retry logic or notification to admin
-          }
-
-          // Handle delivered messages
-          if (statusType === 'delivered') {
-            console.log('WhatsApp message delivered successfully:', messageId);
-          }
-
-          // Handle read messages
-          if (statusType === 'read') {
-            console.log('WhatsApp message read by user:', messageId);
-          }
-
-          // REQ-055 — reconcile NotificationLog row by messageId.
-          // Lazy import avoids a circular: lib/whatsapp ↔ services depend
-          // on each other through NotificationService. The lazy load also
-          // means the WA module remains importable in test contexts
-          // without the model boundary mocked.
-          try {
-            const { NotificationLogService } = await import(
-              '@/services/notification-log-service'
-            );
-            const failureReason =
-              statusType === 'failed'
-                ? (status.errors?.[0]?.title ?? null)
-                : null;
-            await NotificationLogService.updateStatus(
+            console.log('Message status update:', {
               messageId,
               statusType,
-              failureReason
-            );
-          } catch (error) {
-            // Persistence failures are already swallowed inside
-            // NotificationLogService; this outer catch protects against
-            // import errors in misconfigured environments.
-            console.warn(
-              '[WhatsApp] NotificationLog status update skipped:',
-              error instanceof Error ? error.message : String(error)
-            );
+              timestamp,
+              recipientId,
+            });
+
+            // Handle failed messages
+            if (statusType === 'failed') {
+              const errorCode = status.errors?.[0]?.code;
+              const errorTitle = status.errors?.[0]?.title;
+              console.error('WhatsApp message failed:', {
+                messageId,
+                errorCode,
+                errorTitle,
+              });
+
+              // TODO: Implement retry logic or notification to admin
+            }
+
+            // Handle delivered messages
+            if (statusType === 'delivered') {
+              console.log(
+                'WhatsApp message delivered successfully:',
+                messageId
+              );
+            }
+
+            // Handle read messages
+            if (statusType === 'read') {
+              console.log('WhatsApp message read by user:', messageId);
+            }
+
+            // REQ-055 — reconcile NotificationLog row by messageId.
+            // Lazy import avoids a circular: lib/whatsapp ↔ services depend
+            // on each other through NotificationService. The lazy load also
+            // means the WA module remains importable in test contexts
+            // without the model boundary mocked.
+            try {
+              const { NotificationLogService } = await import(
+                '@/services/notification-log-service'
+              );
+              const failureReason =
+                statusType === 'failed'
+                  ? (status.errors?.[0]?.title ?? null)
+                  : null;
+              await NotificationLogService.updateStatus(
+                messageId,
+                statusType,
+                failureReason
+              );
+            } catch (error) {
+              // Persistence failures are already swallowed inside
+              // NotificationLogService; this outer catch protects against
+              // import errors in misconfigured environments.
+              console.warn(
+                '[WhatsApp] NotificationLog status update skipped:',
+                error instanceof Error ? error.message : String(error)
+              );
+            }
           }
         }
-      }
 
-      // Check if this is an incoming message (user reply)
-      if (payload.entry?.[0]?.changes?.[0]?.value?.messages) {
-        const value = payload.entry[0].changes[0].value;
-        const messages = value.messages;
+        // Check if this is an incoming message (user reply)
+        if (value.messages) {
+          const messages = value.messages;
 
-        for (const message of messages) {
-          const from = message.from;
-          const messageId = message.id;
-          const messageType = message.type;
-          const timestamp = message.timestamp;
+          for (const message of messages) {
+            const from = message.from;
+            const messageId = message.id;
+            const messageType = message.type;
+            const timestamp = message.timestamp;
 
-          console.log('Incoming WhatsApp message:', {
-            from,
-            messageId,
-            messageType,
-            timestamp,
-          });
+            console.log('Incoming WhatsApp message:', {
+              from,
+              messageId,
+              messageType,
+              timestamp,
+            });
 
-          // REQ-056 — route inbound through the state-machine. Lazy
-          // import avoids the lib/whatsapp ↔ services circular (the
-          // inbound service depends on NotificationService, which
-          // depends back on this module). Same pattern REQ-055 uses
-          // for NotificationLog status updates above.
-          try {
-            const { WhatsAppInboundService } = await import(
-              '@/services/whatsapp-inbound-service'
-            );
-            await WhatsAppInboundService.handle(message, value);
-          } catch (error) {
-            console.warn(
-              '[WhatsApp] inbound routing skipped:',
-              error instanceof Error ? error.message : String(error)
-            );
+            // REQ-056 — route inbound through the state-machine. Lazy
+            // import avoids the lib/whatsapp ↔ services circular (the
+            // inbound service depends on NotificationService, which
+            // depends back on this module). Same pattern REQ-055 uses
+            // for NotificationLog status updates above.
+            try {
+              const { WhatsAppInboundService } = await import(
+                '@/services/whatsapp-inbound-service'
+              );
+              await WhatsAppInboundService.handle(message, value);
+            } catch (error) {
+              console.warn(
+                '[WhatsApp] inbound routing skipped:',
+                error instanceof Error ? error.message : String(error)
+              );
+            }
           }
         }
       }

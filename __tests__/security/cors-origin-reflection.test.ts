@@ -53,7 +53,9 @@ describe('applyCors origin reflection', () => {
   it('always sets the static CORS headers regardless of origin', () => {
     const res = callApplyCors(OTHER);
     expect(res.headers.get('Access-Control-Allow-Methods')).toContain('GET');
-    expect(res.headers.get('Access-Control-Allow-Headers')).toContain('Content-Type');
+    expect(res.headers.get('Access-Control-Allow-Headers')).toContain(
+      'Content-Type'
+    );
     expect(res.headers.get('Access-Control-Max-Age')).toBe('86400');
     expect(res.headers.get('Access-Control-Allow-Credentials')).toBe('true');
   });

@@ -46,6 +46,8 @@ export interface IPreferences {
   // log — proves "consent was actively captured at <time>" which is what
   // GDPR explicit-consent posture asks for.
   communicationPreferencesUpdatedAt?: Date;
+  // REQ-116 — where the last consent change came from (e.g. 'whatsapp_inbound').
+  communicationPreferencesSource?: string;
   language: string;
 }
 

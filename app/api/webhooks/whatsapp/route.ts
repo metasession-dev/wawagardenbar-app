@@ -3,23 +3,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { WhatsAppService } from '@/lib/whatsapp';
 
 /**
- * Validate Meta's x-hub-signature-256 header for incoming webhook events.
+ * REQ-116 (AC2) — validate Meta's x-hub-signature-256 header against an HMAC
+ * of the raw body. Length is checked before `timingSafeEqual`, which throws on
+ * unequal-length buffers.
  */
-function validateWhatsAppSignature(rawBody: string, signatureHeader: string): boolean {
-  const appSecret = process.env.WHATSAPP_APP_SECRET;
-  if (!appSecret) {
-    console.warn('[WhatsApp] WHATSAPP_APP_SECRET not set — skipping signature validation');
-    return true;
-  }
+function validateWhatsAppSignature(
+  rawBody: string,
+  signatureHeader: string,
+  appSecret: string
+): boolean {
   if (!signatureHeader?.startsWith('sha256=')) return false;
-  const expected = `sha256=${crypto
-    .createHmac('sha256', appSecret)
-    .update(rawBody, 'utf8')
-    .digest('hex')}`;
-  return crypto.timingSafeEqual(
-    Buffer.from(signatureHeader),
-    Buffer.from(expected)
+  const expected = Buffer.from(
+    `sha256=${crypto
+      .createHmac('sha256', appSecret)
+      .update(rawBody, 'utf8')
+      .digest('hex')}`
   );
+  const received = Buffer.from(signatureHeader);
+  if (received.length !== expected.length) return false;
+  return crypto.timingSafeEqual(received, expected);
 }
 
 /**
@@ -33,7 +35,8 @@ export async function GET(request: NextRequest) {
     const token = searchParams.get('hub.verify_token');
     const challenge = searchParams.get('hub.challenge');
 
-    console.log('WhatsApp webhook verification request:', { mode, token, challenge });
+    // REQ-116 (AC3) — never log the verify token.
+    console.log('WhatsApp webhook verification request:', { mode });
 
     if (mode && token && challenge) {
       const isValid = WhatsAppService.verifyWebhook(mode, token, challenge);
@@ -66,7 +69,17 @@ export async function POST(request: NextRequest) {
     const rawBody = await request.text();
     const signatureHeader = request.headers.get('x-hub-signature-256') ?? '';
 
-    if (!validateWhatsAppSignature(rawBody, signatureHeader)) {
+    // REQ-116 (AC1) — fail closed: without the app secret nothing can be
+    // authenticated, so process nothing.
+    const appSecret = process.env.WHATSAPP_APP_SECRET;
+    if (!appSecret) {
+      console.error(
+        '[WhatsApp] WHATSAPP_APP_SECRET is not set — webhook events rejected'
+      );
+      return new NextResponse('Service Unavailable', { status: 503 });
+    }
+
+    if (!validateWhatsAppSignature(rawBody, signatureHeader, appSecret)) {
       console.warn('[WhatsApp] Invalid webhook signature — request rejected');
       return new NextResponse('Forbidden', { status: 403 });
     }

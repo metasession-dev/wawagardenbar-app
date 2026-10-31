@@ -75,7 +75,7 @@ Ordering: AC9 is the first implementation commit; AC1–AC8 follow; AC11–AC15 
 
 ## 3. Architecture decisions
 
-- **ADR-007 — Insert-first idempotency on `wamid` and an in-memory per-phone rate limit** — Proposed by `adr-author`. Draft at `docs/ADR/ADR-007-webhook-insert-first-idempotency-and-phone-rate-limit.md`. Operator flips status to _Accepted_ at plan approval. Triggered by: HIGH risk class and a change spanning more than 3 files.
+- **ADR-007 — Insert-first idempotency on `wamid` and an in-memory per-phone rate limit** — Proposed by `adr-author`; Accepted by the operator. Draft at `docs/ADR/ADR-007-webhook-insert-first-idempotency-and-phone-rate-limit.md`. Status: Accepted. Triggered by: HIGH risk class and a change spanning more than 3 files.
 - **No separate ADR for the PIN button parameter (AC9)** — a one-function fix using the existing `buildTemplateComponents` `buttonParams` support; no structural change.
 
 ## 4. E2E test coverage

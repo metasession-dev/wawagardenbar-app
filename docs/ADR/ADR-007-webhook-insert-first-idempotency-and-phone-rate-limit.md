@@ -1,6 +1,6 @@
 ---
 adr_id: 'ADR-007'
-status: 'Proposed'
+status: 'Accepted'
 date: '2026-10-29'
 authored_by: 'sdlc-implementer (AI-assisted)'
 related_reqs: ['REQ-116']
@@ -12,7 +12,7 @@ superseded_by: null
 
 ## Status
 
-**Proposed** (DRAFT — operator to flip to _Accepted_ on plan approval)
+**Accepted** (operator-confirmed at REQ-116 plan approval)
 
 ## Context
 

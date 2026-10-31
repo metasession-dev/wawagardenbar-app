@@ -1,5 +1,7 @@
 import { test as base, expect, Page } from '@playwright/test';
 import path from 'path';
+import { ObjectId } from 'mongodb';
+import { withMongo } from '../helpers/db-assertions';
 
 /**
  * @requirement REQ-012 - Partial payment E2E tests
@@ -25,13 +27,52 @@ async function isAuthenticated(page: Page): Promise<boolean> {
   }
 }
 
-adminTest.beforeEach(async ({ page }, testInfo) => {
-  if (!(await isAuthenticated(page))) {
-    testInfo.skip(
-      true,
-      'Admin login failed or credentials not configured — skipping'
-    );
-  }
+// REQ-116 (AC13) — the tests below need an open tab and a closed tab. They
+// used to `skip()` when the shared database had none, so they silently proved
+// nothing on a clean CI database. Seed both here and fail, never skip.
+const seededTabIds: ObjectId[] = [];
+
+function tabDoc(status: 'open' | 'closed', tableNumber: string) {
+  return {
+    tabNumber: `E2E-012-${status}-${Date.now()}`,
+    tableNumber,
+    status,
+    paymentStatus: status === 'closed' ? 'paid' : 'pending',
+    orders: [],
+    total: 4500,
+    subtotal: 4500,
+    serviceFee: 0,
+    tax: 0,
+    deliveryFee: 0,
+    discountTotal: 0,
+    tipAmount: 0,
+    openedAt: new Date(),
+    ...(status === 'closed' ? { closedAt: new Date() } : {}),
+    customerEmail: 'e2e-012@test.com',
+    partialPayments: [],
+  };
+}
+
+adminTest.beforeAll(async () => {
+  await withMongo(async (db) => {
+    const result = await db
+      .collection('tabs')
+      .insertMany([tabDoc('open', 'T-012-O'), tabDoc('closed', 'T-012-C')]);
+    seededTabIds.push(...(Object.values(result.insertedIds) as ObjectId[]));
+  });
+});
+
+adminTest.afterAll(async () => {
+  await withMongo(async (db) => {
+    await db.collection('tabs').deleteMany({ _id: { $in: seededTabIds } });
+  });
+});
+
+adminTest.beforeEach(async ({ page }) => {
+  expect(
+    await isAuthenticated(page),
+    'admin session unavailable (auth-setup failed or credentials missing)'
+  ).toBe(true);
 });
 
 // ===========================================================================
@@ -62,10 +103,7 @@ adminTest.describe('REQ-012: Tabs Page — Partial Payment UI', () => {
       });
 
       const count = await openTabCards.count();
-      if (count === 0) {
-        adminTest.skip();
-        return;
-      }
+      expect(count, 'seeded tab missing').toBeGreaterThan(0);
 
       // First open tab should have the "Customer Wants to Pay" button
       const payButton = openTabCards
@@ -86,10 +124,7 @@ adminTest.describe('REQ-012: Tabs Page — Partial Payment UI', () => {
     });
 
     const count = await openTabCards.count();
-    if (count === 0) {
-      adminTest.skip();
-      return;
-    }
+    expect(count, 'seeded tab missing').toBeGreaterThan(0);
 
     // Click "Customer Wants to Pay" on first open tab
     await openTabCards
@@ -125,10 +160,7 @@ adminTest.describe('REQ-012: Tabs Page — Partial Payment UI', () => {
     });
 
     const count = await openTabCards.count();
-    if (count === 0) {
-      adminTest.skip();
-      return;
-    }
+    expect(count, 'seeded tab missing').toBeGreaterThan(0);
 
     // Open payment dialog
     await openTabCards
@@ -173,6 +205,19 @@ adminTest.describe('REQ-012: Tabs Page — Partial Payment UI', () => {
   adminTest(
     'closed tabs do NOT show partial payment option',
     async ({ page }) => {
+      // The tabs list defaults to open tabs only; persist the closed filter
+      // (same key the filter component reads) before loading the page.
+      await page.goto('/dashboard/orders/tabs');
+      await page.evaluate(() =>
+        window.localStorage.setItem(
+          'wawagardenbar.tabs-filter',
+          JSON.stringify({
+            statuses: ['closed'],
+            reconciled: 'all',
+            writtenOffOnly: false,
+          })
+        )
+      );
       await page.goto('/dashboard/orders/tabs');
       await page.waitForLoadState('networkidle');
 
@@ -181,10 +226,7 @@ adminTest.describe('REQ-012: Tabs Page — Partial Payment UI', () => {
       });
 
       const count = await closedTabCards.count();
-      if (count === 0) {
-        adminTest.skip();
-        return;
-      }
+      expect(count, 'seeded tab missing').toBeGreaterThan(0);
 
       // Closed tabs should show "Tab Paid" button, not "Customer Wants to Pay"
       const firstClosed = closedTabCards.first();
@@ -213,18 +255,12 @@ adminTest.describe(
         .getByRole('link', { name: /View Details/i })
         .first();
       const count = await viewDetailsLink.count();
-      if (count === 0) {
-        adminTest.skip();
-        return;
-      }
+      expect(count, 'seeded tab missing').toBeGreaterThan(0);
 
       const href = await viewDetailsLink.getAttribute('href');
-      if (!href) {
-        adminTest.skip();
-        return;
-      }
+      expect(href).toBeTruthy();
 
-      await page.goto(href);
+      await page.goto(href!);
       await page.waitForLoadState('networkidle');
 
       expect(page.url()).toContain('/dashboard/orders/tabs/');
@@ -246,18 +282,12 @@ adminTest.describe(
           .getByRole('link', { name: /View Details/i })
           .first();
         const count = await viewDetailsLink.count();
-        if (count === 0) {
-          adminTest.skip();
-          return;
-        }
+        expect(count, 'seeded tab missing').toBeGreaterThan(0);
 
         const href = await viewDetailsLink.getAttribute('href');
-        if (!href) {
-          adminTest.skip();
-          return;
-        }
+        expect(href).toBeTruthy();
 
-        await page.goto(href);
+        await page.goto(href!);
         await page.waitForLoadState('networkidle');
 
         // Check if this tab has partial payments

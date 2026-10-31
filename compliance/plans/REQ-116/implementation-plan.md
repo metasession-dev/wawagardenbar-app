@@ -148,6 +148,6 @@ Unit tests per AC; three new critical-tier transport specs; `critical` tier gree
 
 ## 11. Sign-off
 
-- **Plan approved by operator:** pending (HIGH-risk checkpoint).
+- **Plan approved by operator:** approved 2026-10-31 (HIGH-risk checkpoint). Marketing-only STOP (R-045) approved; R-043 to R-046 signed off; ADR-007 Accepted.
 
 SRS drift (table vs headings): none found for REQ-WA-\*.

@@ -146,10 +146,6 @@ csrTest.describe('REQ-064 WhatsApp inbound → support ticket bridge', () => {
       // means this E2E only runs against a target whose secret is unset
       // (local dev). The bridge logic itself is covered by the unit test
       // in `__tests__/services/whatsapp-inbound.support-ticket.test.ts`.
-      csrTest.skip(
-        !!process.env.BASE_URL,
-        'WhatsApp webhook signature requires server-secret knowledge; only runs against local dev where the secret is unset.'
-      );
 
       guard(csrTest.skip, await isAuthenticated(page));
 

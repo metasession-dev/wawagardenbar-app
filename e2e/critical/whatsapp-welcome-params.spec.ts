@@ -83,11 +83,6 @@ async function cleanup(digits: string, userIds: string[]) {
 }
 
 test.describe('REQ-115 WhatsApp welcome templates carry their parameters', () => {
-  test.skip(
-    !!process.env.BASE_URL && !process.env.WHATSAPP_APP_SECRET,
-    'WhatsApp webhook signature needs WHATSAPP_APP_SECRET when targeting a remote server.'
-  );
-
   test('[US-01.1] an unknown number gets welcome_new_user with opening and closing time', async ({
     request,
   }) => {

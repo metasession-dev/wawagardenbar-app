@@ -4,8 +4,10 @@
  *
  * `postSignedWebhook` HMAC-SHA256-signs the exact request body with
  * `WHATSAPP_APP_SECRET` (header `x-hub-signature-256`), the same scheme the
- * route verifies. When the secret is not set in the spec's environment the
- * route skips verification (local dev), so a placeholder signature is sent.
+ * route verifies. REQ-116 (AC1): the route fails closed (503) without the
+ * secret, so the spec environment MUST set `WHATSAPP_APP_SECRET` to the same
+ * value as the server. A missing secret throws here instead of silently
+ * sending an unsigned request.
  *
  * Transport-layer helper: no `page` object needed.
  */
@@ -149,19 +151,28 @@ export function signWebhookBody(rawBody: string, secret: string): string {
   return `sha256=${createHmac('sha256', secret).update(rawBody).digest('hex')}`;
 }
 
+/** The shared webhook secret; throws when the spec environment lacks it. */
+export function requireAppSecret(): string {
+  const secret = process.env.WHATSAPP_APP_SECRET;
+  if (!secret) {
+    throw new Error(
+      'WHATSAPP_APP_SECRET must be set for the e2e process and the server (REQ-116 fail-closed webhook).'
+    );
+  }
+  return secret;
+}
+
 /**
  * POST a payload to `/api/webhooks/whatsapp`, signed with
- * `WHATSAPP_APP_SECRET` when it is set. Returns the HTTP status.
+ * `WHATSAPP_APP_SECRET`. Returns the HTTP status.
  */
 export async function postSignedWebhook(
   request: APIRequestContext,
   payload: unknown
 ): Promise<number> {
   const rawBody = JSON.stringify(payload);
-  const secret = process.env.WHATSAPP_APP_SECRET;
-  const signature = secret
-    ? signWebhookBody(rawBody, secret)
-    : 'sha256=0000000000000000000000000000000000000000000000000000000000000000';
+  const secret = requireAppSecret();
+  const signature = signWebhookBody(rawBody, secret);
   const response = await request.post('/api/webhooks/whatsapp', {
     headers: {
       'content-type': 'application/json',

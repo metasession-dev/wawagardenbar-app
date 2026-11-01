@@ -4,7 +4,7 @@
 **Implementation branch:** `feat/WA-02-webhook-hardening`, merged to `develop` as PR #991 (merge commit `4170091`)
 **Risk class:** HIGH
 
-CI as of: 41296977175/1 @ 4aaff5b — PR #991: Run in-scope E2E pass (4m39s), Quality Gates pass (7m25s), Detect REQ pass. The `develop` push `4170091` then failed in Register Release (see _E2E failures & triage_); this evidence PR adds the release ticket that job needs.
+**CI as of:** none yet for the release PR — regenerate after its CI reaches a terminal state. Integration PR #991 on `4aaff5b`: Run in-scope E2E pass (4m39s), Quality Gates pass (7m25s), Detect REQ pass. The `develop` push `4170091` then failed in Register Release because the release ticket did not exist yet; this evidence PR adds it.
 
 ## Test design
 

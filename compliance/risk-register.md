@@ -979,3 +979,86 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 **Framework cross-references:** ISO 27001 A.5.17 (authentication information); ISO 27001 A.8.24 (use of cryptography / key management); SOC 2 CC6.1.
 
 **Cross-links:** [REQ-115 implementation plan](plans/REQ-115/implementation-plan.md); [#963](https://github.com/metasession-dev/wawagardenbar-app/issues/963).
+
+### R-043 — WhatsApp webhook accepts unsigned events when the app secret is missing (REQ-116)
+
+**Status:** OPEN
+**Opened:** 2026-10-29 (REQ-116, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-11-29
+
+**The risk:** Today an unset `WHATSAPP_APP_SECRET` makes signature validation return true, so anyone who finds the URL can post forged messages (fake STOP/START, spoofed support text, ticket spam). Inherent: medium × high.
+
+**Mitigations planned in REQ-116:**
+
+1. Fail closed with 503 when the secret is unset (AC1).
+2. Length check then `timingSafeEqual` on the raw-body HMAC; 403 on any malformed signature (AC2).
+3. Operator confirms `WHATSAPP_APP_SECRET` is set in UAT and production before deploy; otherwise the webhook returns 503 and inbound processing stops.
+
+**Residual likelihood × impact:** low × medium (operational: a missing secret now stops inbound handling rather than weakening security).
+
+**Framework cross-references:** ISO 27001 A.8.25 (secure development), A.8.26 (application security requirements); SOC 2 CC6.1.
+
+**Cross-links:** [REQ-116 implementation plan](plans/REQ-116/implementation-plan.md); [#964](https://github.com/metasession-dev/wawagardenbar-app/issues/964).
+
+### R-044 — Per-phone rate limit is in memory, per instance, and resets on restart (REQ-116)
+
+**Status:** OPEN → ACCEPTED at operator sign-off
+**Opened:** 2026-10-29 (REQ-116, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-11-29
+
+**The risk:** The 20-per-10-minutes limit lives in process memory (ADR-007), so a sender can exceed it across instances or after a restart and still trigger ticket or notification side effects. Inherent: medium × low.
+
+**Mitigations planned in REQ-116:**
+
+1. Messages over the limit are still stored, so abuse is visible (AC7).
+2. Meta applies its own sender limits upstream.
+3. Revisit with a persisted counter if abuse is observed (ADR-007 alternative 2).
+
+**Residual likelihood × impact:** medium × low (accepted).
+
+**Framework cross-references:** ISO 27001 A.8.6 (capacity management), A.8.16 (monitoring); SOC 2 CC7.2.
+
+**Cross-links:** [REQ-116 implementation plan](plans/REQ-116/implementation-plan.md); [#964](https://github.com/metasession-dev/wawagardenbar-app/issues/964).
+
+### R-045 — STOP now clears marketing consent only; transactional messages continue after STOP (REQ-116)
+
+**Status:** OPEN
+**Opened:** 2026-10-29 (REQ-116, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-11-29
+
+**The risk:** REQ-WA-005 previously cleared both consent flags on STOP citing Meta WABA policy. REQ-116 (programme decision in #953) keeps order and booking messages on after STOP. If Meta policy or local law reads STOP as covering all business messages, the business could send messages a customer believes they stopped. Inherent: low × medium.
+
+**Mitigations planned in REQ-116:**
+
+1. The STOP confirmation says explicitly that order and booking messages continue and how to opt back in (AC6).
+2. Only transactional-category templates are sent while `whatsappTransactional` is on; marketing is gated on `whatsappMarketing`.
+3. Operator confirms the policy position before plan approval (plan §10).
+
+**Residual likelihood × impact:** low × low once the operator confirms the position.
+
+**Framework cross-references:** GDPR Art. 7 (conditions for consent), Art. 21 (right to object); ISO 27001 A.5.34 (privacy and protection of PII).
+
+**Cross-links:** [REQ-116 implementation plan](plans/REQ-116/implementation-plan.md); [#964](https://github.com/metasession-dev/wawagardenbar-app/issues/964).
+
+### R-046 — Customer sign-in PIN not delivered on WhatsApp (`#131008`) (REQ-116)
+
+**Status:** OPEN
+**Opened:** 2026-10-29 (REQ-116, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-11-29
+
+**The risk:** The `verification_pin` template is an AUTHENTICATION template with a Copy-code URL button, but the code only sends the body parameter, so Meta rejects the send with `#131008` on UAT and production and customers cannot sign in by WhatsApp. Inherent: high × high (already occurring).
+
+**Mitigations planned in REQ-116:**
+
+1. Send the code in both the body and the button parameter (AC9), with an exact-payload unit test and an extension of the template contract test.
+2. Live UAT round-trip recorded as evidence (AC10).
+
+**Residual likelihood × impact:** low × medium after the live round-trip passes.
+
+**Framework cross-references:** ISO 27001 A.5.15 (access control), A.8.5 (secure authentication); SOC 2 CC6.1, A1.2 (availability).
+
+**Cross-links:** [REQ-116 implementation plan](plans/REQ-116/implementation-plan.md); [#964](https://github.com/metasession-dev/wawagardenbar-app/issues/964).

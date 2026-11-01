@@ -25,6 +25,41 @@ config({ path: path.resolve(__dirname, '.env.local'), override: false });
  *
  * @requirement REQ-007 — Comprehensive Requirements Document verification
  */
+/**
+ * REQ-116 (AC12, #979) — specs that only pass when nothing else touches the
+ * same shared rows: (a) assertions on GLOBAL aggregates (daily report /
+ * dashboard totals) between a baseline and a later read, which other specs
+ * creating, cancelling or deleting orders move; (b) the REQ-066 inventory
+ * specs, which both mutate the first eligible shared inventory row. Each runs
+ * as its own project chained
+ * through `dependencies`: Playwright runs a project's dependencies to
+ * completion first, so they never overlap each other or the parallel specs.
+ * `critical` and `regression` depend on the last link, so `--project=critical`
+ * still runs them and a worker count above 1 stays safe.
+ */
+const AGGREGATE_SPECS = [
+  'admin-order-inventory-delta.over-sell',
+  'admin-order-inventory-delta.sale-point',
+  'dashboard-revenue',
+  'express-order-report',
+  'daily-report-payments',
+];
+const aggregateProjects = AGGREGATE_SPECS.map((name, i) => ({
+  name: `critical-aggregate-${name}`,
+  use: { ...devices['Desktop Chrome'] },
+  testMatch: new RegExp(
+    `e2e/critical/${name.replace(/\./g, '\\.')}\\.spec\\.ts$`
+  ),
+  retries: 0,
+  dependencies:
+    i === 0 ? ['auth-setup'] : [`critical-aggregate-${AGGREGATE_SPECS[i - 1]}`],
+}));
+const AGGREGATE_LAST = aggregateProjects[aggregateProjects.length - 1].name;
+const AGGREGATE_IGNORE = AGGREGATE_SPECS.map(
+  (name) =>
+    new RegExp(`e2e/critical/${name.replace(/\./g, '\\.')}\\.spec\\.ts$`)
+);
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
@@ -50,6 +85,7 @@ export default defineConfig({
       testMatch: /auth\.setup\.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
+    ...aggregateProjects,
     // Smoke — fast critical-path subset. CI per-push gate.
     {
       name: 'smoke',
@@ -87,8 +123,9 @@ export default defineConfig({
         /e2e\/invariants\/inventory-deduction-checkout\.spec\.ts$/,
         /requirements-verification\.spec\.ts$/,
       ],
+      testIgnore: AGGREGATE_IGNORE,
       retries: 0,
-      dependencies: ['auth-setup'],
+      dependencies: ['auth-setup', AGGREGATE_LAST],
     },
     // Regression — the full suite (smoke + critical + every authenticated
     // feature spec). Runs nightly + on push-to-main (auto-issues on failure
@@ -97,7 +134,8 @@ export default defineConfig({
       name: 'regression',
       use: { ...devices['Desktop Chrome'] },
       testMatch: /\.spec\.ts$/,
-      dependencies: ['auth-setup'],
+      testIgnore: AGGREGATE_IGNORE,
+      dependencies: ['auth-setup', AGGREGATE_LAST],
     },
   ],
   /* Start dev server before tests (skipped when BASE_URL is set) */

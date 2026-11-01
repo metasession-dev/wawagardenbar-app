@@ -91,6 +91,7 @@ jobs:
       MONNIFY_SECRET_KEY: ${{ secrets.MONNIFY_SECRET_KEY }}
       PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
       ENABLE_E2E_PIN_INTERCEPT: true
+      WHATSAPP_APP_SECRET: e2e-whatsapp-app-secret
 
     steps:
       - uses: actions/checkout@v6
@@ -137,6 +138,7 @@ jobs:
           MONNIFY_SECRET_KEY: ${{ secrets.MONNIFY_SECRET_KEY }}
           PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
           ENABLE_E2E_PIN_INTERCEPT: true
+          WHATSAPP_APP_SECRET: e2e-whatsapp-app-secret
         run: |
           npx tsx scripts/seed-e2e-admins.ts
           npx tsx scripts/seed-food-menu.ts

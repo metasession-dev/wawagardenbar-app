@@ -17,7 +17,7 @@
  *
  * @requirement REQ-064
  */
-import { expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { MongoClient, ObjectId } from 'mongodb';
 import { csrTest, isAuthenticated } from './kitchen/helpers';
 import { evidenceShot } from './helpers/evidence';
@@ -109,7 +109,7 @@ function guard(skip: (cond: boolean, reason: string) => void, ok: boolean) {
   );
 }
 
-csrTest.describe('REQ-064 staff flow — queue → detail → reply → status', () => {
+test.describe('[REQ-064][REQ-115] staff flow — queue → detail → reply → status', () => {
   let ticketId: string | null = null;
 
   csrTest.afterEach(async () => {

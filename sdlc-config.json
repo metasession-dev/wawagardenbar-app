@@ -34,7 +34,8 @@
     "INTERNAL_API_SECRET": "${{ secrets.INTERNAL_API_SECRET }}",
     "MONNIFY_SECRET_KEY": "${{ secrets.MONNIFY_SECRET_KEY }}",
     "PAYSTACK_SECRET_KEY": "${{ secrets.PAYSTACK_SECRET_KEY }}",
-    "ENABLE_E2E_PIN_INTERCEPT": "true"
+    "ENABLE_E2E_PIN_INTERCEPT": "true",
+    "WHATSAPP_APP_SECRET": "e2e-whatsapp-app-secret"
   },
   "paths_ignore": [
     "SDLC/**",

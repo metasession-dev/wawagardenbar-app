@@ -38,16 +38,28 @@ function validateTabFields(input: TabValidationInput): TabValidationResult {
   const { orderType, tabId, useTab, dineInDetails } = input;
 
   if (useTab && !['new', 'existing'].includes(useTab)) {
-    return { valid: false, error: 'useTab must be "new" or "existing"', statusCode: 400 };
+    return {
+      valid: false,
+      error: 'useTab must be "new" or "existing"',
+      statusCode: 400,
+    };
   }
 
   if ((useTab || tabId) && orderType !== 'dine-in') {
-    return { valid: false, error: 'Tab support is only available for dine-in orders', statusCode: 400 };
+    return {
+      valid: false,
+      error: 'Tab support is only available for dine-in orders',
+      statusCode: 400,
+    };
   }
 
   const tableNumber = dineInDetails?.tableNumber?.trim();
   if (useTab && !tableNumber) {
-    return { valid: false, error: 'dineInDetails.tableNumber is required when using useTab', statusCode: 400 };
+    return {
+      valid: false,
+      error: 'dineInDetails.tableNumber is required when using useTab',
+      statusCode: 400,
+    };
   }
 
   return { valid: true };
@@ -135,7 +147,9 @@ describe('REQ-005: Public API Tab Support — Validation', () => {
         dineInDetails: { tableNumber: 'T5' },
       });
       expect(result.valid).toBe(false);
-      expect(result.error).toBe('Tab support is only available for dine-in orders');
+      expect(result.error).toBe(
+        'Tab support is only available for dine-in orders'
+      );
       expect(result.statusCode).toBe(400);
     });
 
@@ -145,7 +159,9 @@ describe('REQ-005: Public API Tab Support — Validation', () => {
         tabId: 'abc123',
       });
       expect(result.valid).toBe(false);
-      expect(result.error).toBe('Tab support is only available for dine-in orders');
+      expect(result.error).toBe(
+        'Tab support is only available for dine-in orders'
+      );
       expect(result.statusCode).toBe(400);
     });
 
@@ -155,7 +171,9 @@ describe('REQ-005: Public API Tab Support — Validation', () => {
         useTab: 'new',
       });
       expect(result.valid).toBe(false);
-      expect(result.error).toBe('dineInDetails.tableNumber is required when using useTab');
+      expect(result.error).toBe(
+        'dineInDetails.tableNumber is required when using useTab'
+      );
       expect(result.statusCode).toBe(400);
     });
 
@@ -166,7 +184,9 @@ describe('REQ-005: Public API Tab Support — Validation', () => {
         dineInDetails: { tableNumber: '   ' },
       });
       expect(result.valid).toBe(false);
-      expect(result.error).toBe('dineInDetails.tableNumber is required when using useTab');
+      expect(result.error).toBe(
+        'dineInDetails.tableNumber is required when using useTab'
+      );
       expect(result.statusCode).toBe(400);
     });
 
@@ -177,7 +197,9 @@ describe('REQ-005: Public API Tab Support — Validation', () => {
         dineInDetails: { tableNumber: 'T5' },
       });
       expect(result.valid).toBe(false);
-      expect(result.error).toBe('Tab support is only available for dine-in orders');
+      expect(result.error).toBe(
+        'Tab support is only available for dine-in orders'
+      );
     });
 
     it('should allow no-tab orders for any valid orderType', () => {
@@ -203,17 +225,23 @@ describe('REQ-005: Public API Tab Support — Validation', () => {
     });
 
     it('should return "useTab-existing" when useTab is "existing"', () => {
-      expect(determineTabBranch({ useTab: 'existing' })).toBe('useTab-existing');
+      expect(determineTabBranch({ useTab: 'existing' })).toBe(
+        'useTab-existing'
+      );
     });
 
     it('should prioritize tabId over useTab', () => {
-      expect(determineTabBranch({ tabId: 'abc123', useTab: 'new' })).toBe('tabId');
+      expect(determineTabBranch({ tabId: 'abc123', useTab: 'new' })).toBe(
+        'tabId'
+      );
     });
   });
 
   describe('resolveCustomerName', () => {
     it('should use customerName when provided', () => {
-      expect(resolveCustomerName({ customerName: 'John Doe', guestName: 'Jane' })).toBe('John Doe');
+      expect(
+        resolveCustomerName({ customerName: 'John Doe', guestName: 'Jane' })
+      ).toBe('John Doe');
     });
 
     it('should fall back to guestName when customerName is not provided', () => {
@@ -225,11 +253,15 @@ describe('REQ-005: Public API Tab Support — Validation', () => {
     });
 
     it('should fall back to guestName when customerName is empty string', () => {
-      expect(resolveCustomerName({ customerName: '', guestName: 'Jane' })).toBe('Jane');
+      expect(resolveCustomerName({ customerName: '', guestName: 'Jane' })).toBe(
+        'Jane'
+      );
     });
 
     it('should return "Walk-in Customer" when both are empty strings', () => {
-      expect(resolveCustomerName({ customerName: '', guestName: '' })).toBe('Walk-in Customer');
+      expect(resolveCustomerName({ customerName: '', guestName: '' })).toBe(
+        'Walk-in Customer'
+      );
     });
   });
 });
@@ -240,7 +272,11 @@ describe('REQ-005: Public API Tab Support — Response Shape', () => {
     const order = { _id: 'order1', orderNumber: 'WGB-123', status: 'pending' };
     // Mirrors route.ts line 396: return apiSuccess(serialize(order), 201)
     const responseData = tab ? { order, tab } : order;
-    expect(responseData).toEqual({ _id: 'order1', orderNumber: 'WGB-123', status: 'pending' });
+    expect(responseData).toEqual({
+      _id: 'order1',
+      orderNumber: 'WGB-123',
+      status: 'pending',
+    });
     expect(responseData).not.toHaveProperty('order');
     expect(responseData).not.toHaveProperty('tab');
   });
@@ -262,7 +298,15 @@ describe('REQ-005: Public API Tab Support — CreateOrderBody Interface', () => 
   it('should accept body without tab fields (backward compatible)', () => {
     const body = {
       orderType: 'dine-in' as const,
-      items: [{ menuItemId: 'x', name: 'Beer', price: 800, quantity: 1, subtotal: 800 }],
+      items: [
+        {
+          menuItemId: 'x',
+          name: 'Beer',
+          price: 800,
+          quantity: 1,
+          subtotal: 800,
+        },
+      ],
       subtotal: 800,
       tax: 0,
       deliveryFee: 0,
@@ -279,7 +323,15 @@ describe('REQ-005: Public API Tab Support — CreateOrderBody Interface', () => 
   it('should accept body with tabId field', () => {
     const body = {
       orderType: 'dine-in' as const,
-      items: [{ menuItemId: 'x', name: 'Beer', price: 800, quantity: 1, subtotal: 800 }],
+      items: [
+        {
+          menuItemId: 'x',
+          name: 'Beer',
+          price: 800,
+          quantity: 1,
+          subtotal: 800,
+        },
+      ],
       subtotal: 800,
       tax: 0,
       deliveryFee: 0,
@@ -294,7 +346,15 @@ describe('REQ-005: Public API Tab Support — CreateOrderBody Interface', () => 
   it('should accept body with useTab and customerName fields', () => {
     const body = {
       orderType: 'dine-in' as const,
-      items: [{ menuItemId: 'x', name: 'Beer', price: 800, quantity: 1, subtotal: 800 }],
+      items: [
+        {
+          menuItemId: 'x',
+          name: 'Beer',
+          price: 800,
+          quantity: 1,
+          subtotal: 800,
+        },
+      ],
       subtotal: 800,
       tax: 0,
       deliveryFee: 0,

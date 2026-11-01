@@ -835,3 +835,4 @@ REQ-008 ──references────> REQ-001 (SOP format), REQ-007 (requirement
 - Classification: Internal
 - Retention Period: Permanent
 - Review Frequency: Quarterly
+  | REQ-116 | [#964](https://github.com/metasession-dev/wawagardenbar-app/issues/964) | HIGH | compliance/evidence/REQ-116/ | PLANNED | -- | WA-02 (tracker #953): WhatsApp webhook hardening (fail closed, safe signature compare, dedup before side effects, all entries, STOP marketing-only / START, per-phone rate limit, retry with incident), verification_pin delivery fix (code in body and Copy-code button, Meta #131008), and regression-pack fixes for #979 and #932 plus e2e tag gaps. SRS: REQ-WA-005/006/001 (updated), REQ-WA-009, REQ-WA-010 (new). | sdlc-implementer@1.11.0 |

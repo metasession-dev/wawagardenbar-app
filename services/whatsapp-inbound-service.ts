@@ -27,8 +27,10 @@
  *   active         | opt-out + free-form ack    | queued_for_staff      | queued_for_staff
  *   dormant        | opt-out + free-form ack    | welcome_back          | welcome_back
  *
- * STOP compliance: opt_out always sets both `whatsappTransactional` and
- * `whatsappMarketing` to false on the user doc, regardless of state.
+ * STOP compliance (REQ-116): opt_out sets `whatsappMarketing` to false
+ * regardless of state; `whatsappTransactional` is left unchanged (order and
+ * booking messages are part of the service). START (opt_in) restores
+ * marketing with consent source `whatsapp_inbound`.
  *
  * Safety: every path is try/catch-wrapped at the orchestrator boundary;
  * persistence errors are console.error'd; outbound send errors are
@@ -54,6 +56,7 @@ import {
 const DORMANT_THRESHOLD_MS = 30 * 24 * 60 * 60 * 1000;
 
 const STOP_REGEX = /^\s*(stop|unsubscribe|opt[-\s]?out)\s*$/i;
+const START_REGEX = /^\s*(start|subscribe|opt[-\s]?in)\s*$/i;
 const CHAT_WITH_STAFF_LABEL = '💬 Chat with Staff';
 const CHAT_WITH_STAFF_ID = 'chat_with_staff';
 
@@ -66,8 +69,77 @@ const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
 const ORDER_NUMBER_REGEX = /\bWG\d{10}\b/;
 
 const OPT_OUT_CONFIRMATION_TEXT =
-  "You've been unsubscribed from WhatsApp messages. " +
-  'Order updates will go via email/SMS. Reply START to resubscribe.';
+  "You've been unsubscribed from WhatsApp offers and promotions. " +
+  "You'll still receive messages about your orders and bookings. " +
+  'Reply START to resubscribe.';
+const OPT_IN_CONFIRMATION_TEXT =
+  "You're subscribed to WhatsApp offers and promotions. " +
+  'Reply STOP at any time to unsubscribe.';
+
+// REQ-116 (AC7) — per-phone sliding-window limit. In memory, per instance,
+// reset on restart (ADR-007, R-044).
+export const RATE_LIMIT_MAX = 20;
+export const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const recentByPhone = new Map<string, number[]>();
+
+/** Records a message and returns true when the phone is over its limit. */
+export function isRateLimited(phone: string, now = Date.now()): boolean {
+  const cutoff = now - RATE_LIMIT_WINDOW_MS;
+  const hits = (recentByPhone.get(phone) ?? []).filter((t) => t > cutoff);
+  hits.push(now);
+  recentByPhone.set(phone, hits);
+  return hits.length > RATE_LIMIT_MAX;
+}
+
+export function resetRateLimits(): void {
+  recentByPhone.clear();
+}
+
+// REQ-116 (AC8) — retry transient outbound failures, then raise an Incident.
+export const RETRY_DELAYS_MS = [1000, 5000, 30000];
+const RETRYABLE_CODES = new Set([
+  'API_ERROR',
+  'QUOTA_EXCEEDED',
+  'SEND_FAILED',
+  'UNKNOWN_ERROR',
+]);
+export const retryConfig = {
+  delays: RETRY_DELAYS_MS,
+  sleep: (ms: number) => new Promise<void>((r) => setTimeout(r, ms)),
+};
+
+async function sendWithRetry(
+  to: string,
+  send: () => Promise<{ success: boolean; errorCode?: string }>
+): Promise<{ success: boolean; errorCode?: string }> {
+  let result = await send();
+  for (const delay of retryConfig.delays) {
+    if (result.success || !RETRYABLE_CODES.has(result.errorCode ?? '')) {
+      return result;
+    }
+    await retryConfig.sleep(delay);
+    result = await send();
+  }
+  if (!result.success && RETRYABLE_CODES.has(result.errorCode ?? '')) {
+    try {
+      const { IncidentEventService } = await import(
+        '@/services/incident-event-service'
+      );
+      await IncidentEventService.recordIncident({
+        kind: 'notification_delivery_failed',
+        entityId: to,
+        summary: 'WhatsApp inbound reply failed after retries',
+        errorDetails: { errorCode: result.errorCode ?? null },
+      });
+    } catch (error) {
+      console.error(
+        '[WhatsAppInbound] incident record failed:',
+        error instanceof Error ? error.message : String(error)
+      );
+    }
+  }
+  return result;
+}
 
 export interface MetaInboundMessage {
   from?: string;
@@ -185,6 +257,7 @@ export class WhatsAppInboundService {
   ): IncomingMessageIntent {
     const body = extractBody(message);
     if (body && STOP_REGEX.test(body)) return 'opt_out';
+    if (body && START_REGEX.test(body)) return 'opt_in';
 
     if (message.type === 'interactive') {
       const reply = message.interactive?.button_reply;
@@ -215,6 +288,39 @@ export class WhatsAppInboundService {
     let state: IncomingCustomerState = 'new';
     let userId: string | null = null;
     let actionTaken = 'noop';
+
+    // REQ-116 (AC4) — insert-first idempotency (ADR-007). The unique index on
+    // `messageId` is the single dedup mechanism: a duplicate delivery fails
+    // the insert and produces no side effect.
+    try {
+      await IncomingMessageModel.create({
+        from,
+        body,
+        messageType,
+        messageId,
+        classifiedState: state,
+        classifiedIntent: intent,
+        actionTaken: 'processing',
+        userId,
+      });
+    } catch (error) {
+      if ((error as { code?: number })?.code === 11000) {
+        return 'duplicate';
+      }
+      console.error(
+        '[WhatsAppInbound] IncomingMessage insert failed:',
+        error instanceof Error ? error.message : String(error)
+      );
+      return 'persistence_failed';
+    }
+
+    // REQ-116 (AC7) — STOP/START are exempt so consent changes are always
+    // honoured; everything else over the limit is stored with no side effect.
+    const limited = isRateLimited(from);
+    if (limited && intent !== 'opt_out' && intent !== 'opt_in') {
+      await this.finalise(messageId, state, userId, 'rate_limited');
+      return 'rate_limited';
+    }
 
     try {
       const classified = await this.classifyCustomerState(from);
@@ -268,37 +374,44 @@ export class WhatsAppInboundService {
       }
 
       // Opt-out always wins; STOP must be honoured regardless of state.
-      if (intent === 'opt_out') {
+      // REQ-116 (AC6) — STOP clears marketing only.
+      if (intent === 'opt_out' || intent === 'opt_in') {
+        const optIn = intent === 'opt_in';
         if (user?._id) {
           try {
             await UserModel.updateOne(
               { _id: user._id },
               {
                 $set: {
-                  'preferences.communicationPreferences.whatsappTransactional': false,
-                  'preferences.communicationPreferences.whatsappMarketing': false,
+                  'preferences.communicationPreferences.whatsappMarketing':
+                    optIn,
+                  'preferences.communicationPreferencesUpdatedAt': new Date(),
+                  'preferences.communicationPreferencesSource':
+                    'whatsapp_inbound',
                 },
               }
             );
           } catch (error) {
             console.error(
-              '[WhatsAppInbound] opt-out persistence failed:',
+              '[WhatsAppInbound] consent persistence failed:',
               error instanceof Error ? error.message : String(error)
             );
           }
         }
         try {
-          await WhatsAppService.sendTextMessage(
-            from,
-            OPT_OUT_CONFIRMATION_TEXT
+          await sendWithRetry(from, () =>
+            WhatsAppService.sendTextMessage(
+              from,
+              optIn ? OPT_IN_CONFIRMATION_TEXT : OPT_OUT_CONFIRMATION_TEXT
+            )
           );
         } catch (error) {
           console.error(
-            '[WhatsAppInbound] opt-out confirmation send failed:',
+            '[WhatsAppInbound] consent confirmation send failed:',
             error instanceof Error ? error.message : String(error)
           );
         }
-        actionTaken = 'persisted_opt_out';
+        actionTaken = optIn ? 'persisted_opt_in' : 'persisted_opt_out';
       } else if (state === 'phone_mismatch' && user) {
         // REQ-111 — reply directly to the inbound sender, not via
         // NotificationService: that service resolves the recipient phone
@@ -312,10 +425,12 @@ export class WhatsAppInboundService {
           false; // default true, same as shouldSendWhatsApp()
         if (consented) {
           try {
-            const result = await WhatsAppService.sendMessage(
-              from,
-              'account_recovery',
-              accountRecoveryParams(user.phone ?? '')
+            const result = await sendWithRetry(from, () =>
+              WhatsAppService.sendMessage(
+                from,
+                'account_recovery',
+                accountRecoveryParams(user?.phone ?? '')
+              )
             );
             actionTaken = outcomeTag('account_recovery', result);
           } catch (error) {
@@ -395,24 +510,28 @@ export class WhatsAppInboundService {
       );
     }
 
+    await this.finalise(messageId, state, userId, actionTaken);
+
+    return actionTaken;
+  }
+
+  /** Writes the routing outcome onto the row inserted at the start of handle(). */
+  private static async finalise(
+    messageId: string,
+    state: IncomingCustomerState,
+    userId: string | null,
+    actionTaken: string
+  ): Promise<void> {
     try {
-      await IncomingMessageModel.create({
-        from,
-        body,
-        messageType,
-        messageId,
-        classifiedState: state,
-        classifiedIntent: intent,
-        actionTaken,
-        userId,
-      });
+      await IncomingMessageModel.updateOne(
+        { messageId },
+        { $set: { classifiedState: state, userId, actionTaken } }
+      );
     } catch (error) {
       console.error(
-        '[WhatsAppInbound] IncomingMessage persistence failed:',
+        '[WhatsAppInbound] IncomingMessage update failed:',
         error instanceof Error ? error.message : String(error)
       );
     }
-
-    return actionTaken;
   }
 }

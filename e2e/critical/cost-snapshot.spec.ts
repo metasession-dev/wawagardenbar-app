@@ -8,6 +8,7 @@
  */
 import { test as base, expect, Page } from '@playwright/test';
 import path from 'path';
+import { withMongo } from '../helpers/db-assertions';
 
 const SUPER_ADMIN_FILE = path.join(__dirname, '../../.auth/super-admin.json');
 
@@ -25,14 +26,29 @@ async function isAuthenticated(page: Page): Promise<boolean> {
   }
 }
 
+async function openSeededMenuItemEditor(page: Page): Promise<void> {
+  const itemId = await withMongo(async (db) => {
+    const item = await db
+      .collection('menuitems')
+      .findOne({ kind: 'menu-item' }, { projection: { _id: 1 } });
+    return item ? String(item._id) : null;
+  });
+  expect(
+    itemId,
+    'seeded menu item missing — run the e2e seed scripts (sdlc-config e2e_setup_command)'
+  ).toBeTruthy();
+  await page.goto(`/dashboard/menu/${itemId}/edit`);
+  await page.waitForLoadState('networkidle');
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Menu Item Edit Form — Cost Per Unit field removal
 // ═══════════════════════════════════════════════════════════════════════════
 test.describe('REQ-022: Cost Per Unit field removed from inventory section', () => {
-  test.beforeEach(async ({ page }, testInfo) => {
-    if (!(await isAuthenticated(page))) {
-      testInfo.skip(true, 'Super-admin login failed');
-    }
+  test.beforeEach(async ({ page }) => {
+    expect(await isAuthenticated(page), 'super-admin session unavailable').toBe(
+      true
+    );
   });
 
   test('menu item edit form does not have Cost Per Unit in inventory section', async ({
@@ -88,52 +104,30 @@ test.describe('REQ-022: Cost Per Unit field removed from inventory section', () 
   });
 
   test('Price Management section still has cost field', async ({ page }) => {
-    await page.goto('/dashboard/menu');
-    await page.waitForLoadState('networkidle');
-
-    // REQ-102: `$=` (ends-with), not `*=` (contains) — the new "Edit All"
-    // link at /dashboard/menu/edit-all otherwise also matches `*="/edit"`
-    // and, being first in DOM order, shadows every real item edit link.
-    const editLink = page.locator('a[href*="/menu/"][href$="/edit"]').first();
-    const editExists = await editLink.count();
-
-    if (editExists === 0) {
-      test.skip(true, 'No menu items to edit');
-      return;
-    }
-
-    await editLink.click();
-    await page.waitForLoadState('networkidle');
+    // REQ-116 (AC13) — the menu table opens the editor from a dropdown
+    // action (router.push), not an <a href>, so the old link selector matched
+    // nothing and these tests silently self-skipped. Navigate to the editor
+    // of a seeded item directly; a missing seed is a failure, not a skip.
+    await openSeededMenuItemEditor(page);
 
     // Price Management section should exist with its own cost field
-    const priceSection = page.getByText('Price Management');
-    if (await priceSection.count()) {
-      // The Price Management form has New Cost Per Unit field
-      const body = await page.textContent('body');
-      expect(body).toMatch(/New Cost Per Unit|Cost Per Unit.*₦|Update Price/i);
-    }
+    await expect(page.getByText('Price Management').first()).toBeVisible();
+    // The Price Management form has New Cost Per Unit field
+    const body = await page.textContent('body');
+    expect(body).toMatch(/New Cost Per Unit|Cost Per Unit.*₦|Update Price/i);
   });
 
   test('price field in Basic Information is read-only', async ({ page }) => {
-    await page.goto('/dashboard/menu');
-    await page.waitForLoadState('networkidle');
-
-    // REQ-102: `$=` (ends-with), not `*=` (contains) — the new "Edit All"
-    // link at /dashboard/menu/edit-all otherwise also matches `*="/edit"`
-    // and, being first in DOM order, shadows every real item edit link.
-    const editLink = page.locator('a[href*="/menu/"][href$="/edit"]').first();
-    const editExists = await editLink.count();
-
-    if (editExists === 0) {
-      test.skip(true, 'No menu items to edit');
-      return;
-    }
-
-    await editLink.click();
-    await page.waitForLoadState('networkidle');
+    // REQ-116 (AC13) — the menu table opens the editor from a dropdown
+    // action (router.push), not an <a href>, so the old link selector matched
+    // nothing and these tests silently self-skipped. Navigate to the editor
+    // of a seeded item directly; a missing seed is a failure, not a skip.
+    await openSeededMenuItemEditor(page);
 
     // Price field should be read-only in the edit form
-    const priceInput = page.locator('#price');
+    // The page also renders the Price Management form, which reuses id="price";
+    // Basic Information comes first in the DOM.
+    const priceInput = page.locator('#price').first();
     await expect(priceInput).toHaveAttribute('readonly', '');
 
     // Should show helper text pointing to Price Management
@@ -146,10 +140,10 @@ test.describe('REQ-022: Cost Per Unit field removed from inventory section', () 
 // Daily Report — Cost data rendered from order snapshots
 // ═══════════════════════════════════════════════════════════════════════════
 test.describe('REQ-022: Daily report cost data integrity', () => {
-  test.beforeEach(async ({ page }, testInfo) => {
-    if (!(await isAuthenticated(page))) {
-      testInfo.skip(true, 'Super-admin login failed');
-    }
+  test.beforeEach(async ({ page }) => {
+    expect(await isAuthenticated(page), 'super-admin session unavailable').toBe(
+      true
+    );
   });
 
   test('daily report loads with cost breakdown section', async ({ page }) => {

@@ -19,11 +19,10 @@
  * __tests__/actions/admin/express-actions-portion-pricing-req097.test.ts —
  * not re-proven here.
  *
- * Fixture: no seeded menu item ships with portionOptions configured, so this
- * spec force-mutates the seeded "Ogbono" item's portionOptions (via direct
- * Mongo access, matching the project's established precise-fixture pattern —
- * see e2e/critical/admin-order-inventory-delta.sale-point.spec.ts) and
- * restores the original values in afterAll.
+ * Fixture (REQ-116 AC11, #979): the spec creates its OWN menu item — a clone
+ * of a seeded one with a unique name and portionOptions configured — and
+ * deletes it in afterAll. It never mutates a shared seeded item, so it is
+ * safe at the default worker count on a shared database.
  */
 import { test as base, expect, Page } from '@playwright/test';
 import path from 'path';
@@ -52,7 +51,8 @@ async function isAuthenticated(page: Page): Promise<boolean> {
   }
 }
 
-const ITEM_NAME = 'Ogbono';
+const SEED_SOURCE_NAME = 'Ogbono';
+const ITEM_NAME = `E2E REQ-097 Portion ${Date.now()}`;
 // Fixture surcharges — deliberately non-tied to the base price so a
 // regression back to the pre-fix formula (basePrice + surcharge, no
 // discount applied) produces a visibly different, wrong number.
@@ -62,7 +62,6 @@ const QUARTER_SURCHARGE = 150;
 interface OriginalPortionOptions {
   itemId: any;
   basePrice: number;
-  portionOptions: Record<string, unknown> | undefined;
 }
 
 let original: OriginalPortionOptions | null = null;
@@ -71,52 +70,44 @@ let createdOrderId: string | null = null;
 test.describe('REQ-097: Express Create Order — portion pricing correctness', () => {
   test.beforeAll(async () => {
     original = await withMongo(async (db) => {
-      const item = await db
+      const source = await db
         .collection('menuitems')
-        .findOne({ name: ITEM_NAME, kind: 'menu-item' });
-      if (!item) {
+        .findOne({ name: SEED_SOURCE_NAME, kind: 'menu-item' });
+      if (!source) {
         throw new Error(
-          `Fixture item "${ITEM_NAME}" not found — cannot set up REQ-097 portion-pricing test`
+          `Seed source "${SEED_SOURCE_NAME}" not found — cannot clone the REQ-097 fixture item`
         );
       }
-      await db.collection('menuitems').updateOne(
-        { _id: item._id },
-        {
-          $set: {
-            portionOptions: {
-              halfPortionEnabled: true,
-              halfPortionSurcharge: HALF_SURCHARGE,
-              quarterPortionEnabled: true,
-              quarterPortionSurcharge: QUARTER_SURCHARGE,
-            },
-          },
-        }
-      );
-      return {
-        itemId: item._id,
-        basePrice: item.price,
-        portionOptions: item.portionOptions,
-      };
+      const { _id: _ignored, slug: _slug, ...rest } = source;
+      const result = await db.collection('menuitems').insertOne({
+        ...rest,
+        name: ITEM_NAME,
+        portionOptions: {
+          halfPortionEnabled: true,
+          halfPortionSurcharge: HALF_SURCHARGE,
+          quarterPortionEnabled: true,
+          quarterPortionSurcharge: QUARTER_SURCHARGE,
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      return { itemId: result.insertedId, basePrice: source.price };
     });
   });
 
   test.afterAll(async () => {
     if (original) {
       await withMongo(async (db) => {
-        await db
-          .collection('menuitems')
-          .updateOne(
-            { _id: original!.itemId },
-            { $set: { portionOptions: original!.portionOptions } }
-          );
+        await db.collection('menuitems').deleteOne({ _id: original!.itemId });
       });
     }
   });
 
-  test.beforeEach(async ({ page }, testInfo) => {
-    if (!(await isAuthenticated(page))) {
-      testInfo.skip(true, 'Admin login failed — skipping');
-    }
+  test.beforeEach(async ({ page }) => {
+    expect(
+      await isAuthenticated(page),
+      'admin session unavailable (auth-setup failed or credentials missing)'
+    ).toBe(true);
   });
 
   test.afterEach(async () => {

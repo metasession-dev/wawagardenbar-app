@@ -54,6 +54,9 @@ inventoryItemCostHistorySchema.index({ inventoryItemId: 1, effectiveTo: 1 });
 
 const InventoryItemCostHistory =
   models.InventoryItemCostHistory ||
-  model<IInventoryItemCostHistory>('InventoryItemCostHistory', inventoryItemCostHistorySchema);
+  model<IInventoryItemCostHistory>(
+    'InventoryItemCostHistory',
+    inventoryItemCostHistorySchema
+  );
 
 export default InventoryItemCostHistory;

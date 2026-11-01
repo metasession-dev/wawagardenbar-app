@@ -48,7 +48,10 @@ function validatePartialPayment(
   input: PartialPaymentInput
 ): ValidationResult {
   if (tab.status === 'closed') {
-    return { valid: false, error: 'Cannot make a partial payment on a closed tab' };
+    return {
+      valid: false,
+      error: 'Cannot make a partial payment on a closed tab',
+    };
   }
 
   if (tab.paymentStatus === 'paid') {
@@ -58,7 +61,10 @@ function validatePartialPayment(
   const outstandingBalance = calculateOutstandingBalance(tab);
 
   if (input.amount <= 0) {
-    return { valid: false, error: 'Partial payment amount must be greater than zero' };
+    return {
+      valid: false,
+      error: 'Partial payment amount must be greater than zero',
+    };
   }
 
   if (input.amount >= outstandingBalance) {
@@ -96,7 +102,12 @@ describe('REQ-012: Outstanding Balance Calculation', () => {
       status: 'open',
       paymentStatus: 'pending',
       partialPayments: [
-        { amount: 3000, note: 'Cash for drinks', paymentType: 'cash', paidAt: new Date() },
+        {
+          amount: 3000,
+          note: 'Cash for drinks',
+          paymentType: 'cash',
+          paidAt: new Date(),
+        },
       ],
     };
     expect(calculateOutstandingBalance(tab)).toBe(7000);
@@ -108,9 +119,24 @@ describe('REQ-012: Outstanding Balance Calculation', () => {
       status: 'open',
       paymentStatus: 'pending',
       partialPayments: [
-        { amount: 3000, note: 'First payment', paymentType: 'cash', paidAt: new Date() },
-        { amount: 2000, note: 'Second payment', paymentType: 'transfer', paidAt: new Date() },
-        { amount: 1500, note: 'Third payment', paymentType: 'card', paidAt: new Date() },
+        {
+          amount: 3000,
+          note: 'First payment',
+          paymentType: 'cash',
+          paidAt: new Date(),
+        },
+        {
+          amount: 2000,
+          note: 'Second payment',
+          paymentType: 'transfer',
+          paidAt: new Date(),
+        },
+        {
+          amount: 1500,
+          note: 'Third payment',
+          paymentType: 'card',
+          paidAt: new Date(),
+        },
       ],
     };
     expect(calculateOutstandingBalance(tab)).toBe(3500);
@@ -254,7 +280,12 @@ describe('REQ-012: Partial Payment — Amount Validation', () => {
       status: 'open',
       paymentStatus: 'pending',
       partialPayments: [
-        { amount: 7000, note: 'First payment', paymentType: 'cash', paidAt: new Date() },
+        {
+          amount: 7000,
+          note: 'First payment',
+          paymentType: 'cash',
+          paidAt: new Date(),
+        },
       ],
     };
     // Outstanding is 3000, trying to pay exactly 3000 should be rejected
@@ -273,7 +304,12 @@ describe('REQ-012: Partial Payment — Amount Validation', () => {
       status: 'open',
       paymentStatus: 'pending',
       partialPayments: [
-        { amount: 7000, note: 'First payment', paymentType: 'cash', paidAt: new Date() },
+        {
+          amount: 7000,
+          note: 'First payment',
+          paymentType: 'cash',
+          paidAt: new Date(),
+        },
       ],
     };
     // Outstanding is 3000, paying 2000 should be valid
@@ -331,9 +367,24 @@ describe('REQ-012: Partial Payment — Multiple Sequential Payments', () => {
       status: 'open',
       paymentStatus: 'pending',
       partialPayments: [
-        { amount: 2000, note: 'Round 1', paymentType: 'cash', paidAt: new Date() },
-        { amount: 3000, note: 'Round 2', paymentType: 'transfer', paidAt: new Date() },
-        { amount: 1000, note: 'Round 3', paymentType: 'card', paidAt: new Date() },
+        {
+          amount: 2000,
+          note: 'Round 1',
+          paymentType: 'cash',
+          paidAt: new Date(),
+        },
+        {
+          amount: 3000,
+          note: 'Round 2',
+          paymentType: 'transfer',
+          paidAt: new Date(),
+        },
+        {
+          amount: 1000,
+          note: 'Round 3',
+          paymentType: 'card',
+          paidAt: new Date(),
+        },
       ],
     };
 

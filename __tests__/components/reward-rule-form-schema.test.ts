@@ -120,16 +120,21 @@ describe('reward-rule-form formSchema — periodType default (REQ-046 D4)', () =
       },
     });
     expect(result.success).toBe(true);
-    if (result.success) expect(result.data.socialConfig?.periodType).toBe('weekly');
+    if (result.success)
+      expect(result.data.socialConfig?.periodType).toBe('weekly');
   });
 
   it('preserves an explicitly chosen periodType (does not clobber on edit)', () => {
     const result = formSchema.safeParse({
       ...baseSocialRule,
-      socialConfig: { ...baseSocialRule.socialConfig, periodType: 'monthly' as const },
+      socialConfig: {
+        ...baseSocialRule.socialConfig,
+        periodType: 'monthly' as const,
+      },
     });
     expect(result.success).toBe(true);
-    if (result.success) expect(result.data.socialConfig?.periodType).toBe('monthly');
+    if (result.success)
+      expect(result.data.socialConfig?.periodType).toBe('monthly');
   });
 
   it('still rejects an invalid periodType value', () => {
@@ -147,7 +152,10 @@ describe('reward-rule-form formSchema — maxRedemptionsPerUser optional (REQ-04
   // number. These assert the schema accepts the "unlimited" representations
   // and still rejects an invalid concrete value.
   it('accepts null maxRedemptionsPerUser as unlimited', () => {
-    const result = formSchema.safeParse({ ...baseSocialRule, maxRedemptionsPerUser: null });
+    const result = formSchema.safeParse({
+      ...baseSocialRule,
+      maxRedemptionsPerUser: null,
+    });
     expect(result.success).toBe(true);
     if (result.success) expect(result.data.maxRedemptionsPerUser).toBeNull();
   });
@@ -155,14 +163,21 @@ describe('reward-rule-form formSchema — maxRedemptionsPerUser optional (REQ-04
   it('accepts an omitted maxRedemptionsPerUser as unlimited (undefined)', () => {
     const result = formSchema.safeParse({ ...baseSocialRule });
     expect(result.success).toBe(true);
-    if (result.success) expect(result.data.maxRedemptionsPerUser).toBeUndefined();
+    if (result.success)
+      expect(result.data.maxRedemptionsPerUser).toBeUndefined();
   });
 
   it('coerces a numeric string limit and still rejects 0', () => {
-    const ok = formSchema.safeParse({ ...baseSocialRule, maxRedemptionsPerUser: '5' });
+    const ok = formSchema.safeParse({
+      ...baseSocialRule,
+      maxRedemptionsPerUser: '5',
+    });
     expect(ok.success).toBe(true);
     if (ok.success) expect(ok.data.maxRedemptionsPerUser).toBe(5);
-    const zero = formSchema.safeParse({ ...baseSocialRule, maxRedemptionsPerUser: '0' });
+    const zero = formSchema.safeParse({
+      ...baseSocialRule,
+      maxRedemptionsPerUser: '0',
+    });
     expect(zero.success).toBe(false);
   });
 });

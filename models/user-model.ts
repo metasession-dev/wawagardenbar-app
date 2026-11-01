@@ -67,6 +67,8 @@ const preferencesSchema = new Schema<IPreferences>(
     // REQ-063 — server-stamped audit timestamp; optional so existing docs
     // remain valid and only the next save populates it.
     communicationPreferencesUpdatedAt: { type: Date },
+    // REQ-116 — provenance of the last consent change (Art. 7 demonstrable).
+    communicationPreferencesSource: { type: String },
     language: { type: String, default: 'en' },
   },
   { _id: false }

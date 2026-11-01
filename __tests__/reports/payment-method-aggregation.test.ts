@@ -32,7 +32,15 @@ interface OrderEntry {
 }
 
 function createEmptyBreakdown(): PaymentBreakdown {
-  return { cash: 0, card: 0, transfer: 0, ussd: 0, phone: 0, unspecified: 0, total: 0 };
+  return {
+    cash: 0,
+    card: 0,
+    transfer: 0,
+    ussd: 0,
+    phone: 0,
+    unspecified: 0,
+    total: 0,
+  };
 }
 
 const VALID_METHODS = ['cash', 'card', 'transfer', 'ussd', 'phone'];
@@ -62,7 +70,10 @@ function aggregatePartialPayments(
           breakdown.unspecified += amount;
         }
         breakdown.total += amount;
-        tabPartialTotals.set(tabId, (tabPartialTotals.get(tabId) || 0) + amount);
+        tabPartialTotals.set(
+          tabId,
+          (tabPartialTotals.get(tabId) || 0) + amount
+        );
       }
     }
   }
@@ -123,8 +134,16 @@ describe('REQ-013: Partial Payment Aggregation', () => {
       {
         tabId: 'tab1',
         entries: [
-          { amount: 3000, paymentType: 'cash', paidAt: new Date('2026-03-26T10:00:00Z') },
-          { amount: 2000, paymentType: 'transfer', paidAt: new Date('2026-03-26T14:00:00Z') },
+          {
+            amount: 3000,
+            paymentType: 'cash',
+            paidAt: new Date('2026-03-26T10:00:00Z'),
+          },
+          {
+            amount: 2000,
+            paymentType: 'transfer',
+            paidAt: new Date('2026-03-26T14:00:00Z'),
+          },
         ],
       },
     ];
@@ -143,7 +162,11 @@ describe('REQ-013: Partial Payment Aggregation', () => {
         tabId: 'tab1',
         entries: [
           { amount: 3000, paymentType: 'cash', paidAt: yesterday },
-          { amount: 2000, paymentType: 'transfer', paidAt: new Date('2026-03-26T14:00:00Z') },
+          {
+            amount: 2000,
+            paymentType: 'transfer',
+            paidAt: new Date('2026-03-26T14:00:00Z'),
+          },
         ],
       },
     ];
@@ -161,18 +184,31 @@ describe('REQ-013: Partial Payment Aggregation', () => {
       {
         tabId: 'tab1',
         entries: [
-          { amount: 3000, paymentType: 'cash', paidAt: new Date('2026-03-26T10:00:00Z') },
+          {
+            amount: 3000,
+            paymentType: 'cash',
+            paidAt: new Date('2026-03-26T10:00:00Z'),
+          },
         ],
       },
       {
         tabId: 'tab2',
         entries: [
-          { amount: 1500, paymentType: 'card', paidAt: new Date('2026-03-26T11:00:00Z') },
+          {
+            amount: 1500,
+            paymentType: 'card',
+            paidAt: new Date('2026-03-26T11:00:00Z'),
+          },
         ],
       },
     ];
 
-    const tabTotals = aggregatePartialPayments(partials, today, todayEnd, breakdown);
+    const tabTotals = aggregatePartialPayments(
+      partials,
+      today,
+      todayEnd,
+      breakdown
+    );
 
     expect(tabTotals.get('tab1')).toBe(3000);
     expect(tabTotals.get('tab2')).toBe(1500);
@@ -184,7 +220,11 @@ describe('REQ-013: Partial Payment Aggregation', () => {
       {
         tabId: 'tab1',
         entries: [
-          { amount: 1000, paymentType: 'bitcoin', paidAt: new Date('2026-03-26T10:00:00Z') },
+          {
+            amount: 1000,
+            paymentType: 'bitcoin',
+            paidAt: new Date('2026-03-26T10:00:00Z'),
+          },
         ],
       },
     ];
@@ -299,7 +339,11 @@ describe('REQ-013: Full Report Scenario — Partial + Final Payment', () => {
       {
         tabId: 'tab1',
         entries: [
-          { amount: 3000, paymentType: 'cash', paidAt: new Date('2026-03-23T12:00:00Z') },
+          {
+            amount: 3000,
+            paymentType: 'cash',
+            paidAt: new Date('2026-03-23T12:00:00Z'),
+          },
         ],
       },
     ];

@@ -2,6 +2,9 @@ import { test as base, expect, Page } from '@playwright/test';
 import path from 'path';
 
 /**
+ * @requirement REQ-007 — Comprehensive requirements verification
+ * @requirement SRS REQ-AUTHA-004 — RBAC route gating (CSR role)
+ *
  * UAT Tests — CSR (Customer Service Representative) Role
  *
  * Validates that the CSR role has correct access controls:
@@ -54,7 +57,7 @@ superAdminTest.beforeEach(async ({ page }, testInfo) => {
 // ===========================================================================
 // UAT: CSR Login & Redirect
 // ===========================================================================
-csrTest.describe('UAT: CSR Login & Redirect', () => {
+csrTest.describe('[REQ-007] UAT: CSR Login & Redirect', () => {
   csrTest(
     'CSR is redirected from /dashboard to /dashboard/orders',
     async ({ page }) => {
@@ -77,7 +80,7 @@ csrTest.describe('UAT: CSR Login & Redirect', () => {
 // ===========================================================================
 // UAT: CSR Navigation — Permitted Items
 // ===========================================================================
-csrTest.describe('UAT: CSR Navigation — Permitted Items', () => {
+csrTest.describe('[REQ-007] UAT: CSR Navigation — Permitted Items', () => {
   csrTest('CSR sidebar shows Orders link', async ({ page }) => {
     await page.goto('/dashboard/orders');
     await page.waitForLoadState('networkidle');
@@ -107,77 +110,80 @@ csrTest.describe('UAT: CSR Navigation — Permitted Items', () => {
 // ===========================================================================
 // UAT: CSR Navigation — Restricted Items Hidden
 // ===========================================================================
-csrTest.describe('UAT: CSR Navigation — Restricted Items Hidden', () => {
-  csrTest('CSR sidebar does NOT show Overview link', async ({ page }) => {
-    await page.goto('/dashboard/orders');
-    await page.waitForLoadState('networkidle');
-    // Overview link goes to /dashboard (exact), but CSR has Orders link too
-    // Check that the "Overview" text nav item is not present
-    const overviewLink = page.locator('nav a', { hasText: 'Overview' });
-    await expect(overviewLink).toHaveCount(0);
-  });
-
-  csrTest('CSR sidebar does NOT show Menu link', async ({ page }) => {
-    await page.goto('/dashboard/orders');
-    await page.waitForLoadState('networkidle');
-    const menuLink = page.locator('nav a[href="/dashboard/menu"]');
-    await expect(menuLink).toHaveCount(0);
-  });
-
-  csrTest('CSR sidebar does NOT show Inventory link', async ({ page }) => {
-    await page.goto('/dashboard/orders');
-    await page.waitForLoadState('networkidle');
-    const inventoryLink = page.locator('nav a[href="/dashboard/inventory"]');
-    await expect(inventoryLink).toHaveCount(0);
-  });
-
-  csrTest('CSR sidebar does NOT show Settings link', async ({ page }) => {
-    await page.goto('/dashboard/orders');
-    await page.waitForLoadState('networkidle');
-    const settingsLink = page.locator('nav a[href="/dashboard/settings"]');
-    await expect(settingsLink).toHaveCount(0);
-  });
-
-  csrTest('CSR sidebar does NOT show Reports link', async ({ page }) => {
-    await page.goto('/dashboard/orders');
-    await page.waitForLoadState('networkidle');
-    const reportsLink = page.locator('nav a[href="/dashboard/reports"]');
-    await expect(reportsLink).toHaveCount(0);
-  });
-
-  csrTest('CSR sidebar does NOT show Audit Logs link', async ({ page }) => {
-    await page.goto('/dashboard/orders');
-    await page.waitForLoadState('networkidle');
-    const auditLink = page.locator('nav a[href="/dashboard/audit-logs"]');
-    await expect(auditLink).toHaveCount(0);
-  });
-
-  csrTest('CSR sidebar does NOT show Expenses link', async ({ page }) => {
-    await page.goto('/dashboard/orders');
-    await page.waitForLoadState('networkidle');
-    const expensesLink = page.locator(
-      'nav a[href="/dashboard/finance/expenses"]'
-    );
-    await expect(expensesLink).toHaveCount(0);
-  });
-
-  csrTest(
-    'CSR sidebar does NOT show Pending Expenses link',
-    async ({ page }) => {
+csrTest.describe(
+  '[REQ-007] UAT: CSR Navigation — Restricted Items Hidden',
+  () => {
+    csrTest('CSR sidebar does NOT show Overview link', async ({ page }) => {
       await page.goto('/dashboard/orders');
       await page.waitForLoadState('networkidle');
-      const pendingLink = page.locator(
-        'nav a[href="/dashboard/finance/expenses/pending"]'
+      // Overview link goes to /dashboard (exact), but CSR has Orders link too
+      // Check that the "Overview" text nav item is not present
+      const overviewLink = page.locator('nav a', { hasText: 'Overview' });
+      await expect(overviewLink).toHaveCount(0);
+    });
+
+    csrTest('CSR sidebar does NOT show Menu link', async ({ page }) => {
+      await page.goto('/dashboard/orders');
+      await page.waitForLoadState('networkidle');
+      const menuLink = page.locator('nav a[href="/dashboard/menu"]');
+      await expect(menuLink).toHaveCount(0);
+    });
+
+    csrTest('CSR sidebar does NOT show Inventory link', async ({ page }) => {
+      await page.goto('/dashboard/orders');
+      await page.waitForLoadState('networkidle');
+      const inventoryLink = page.locator('nav a[href="/dashboard/inventory"]');
+      await expect(inventoryLink).toHaveCount(0);
+    });
+
+    csrTest('CSR sidebar does NOT show Settings link', async ({ page }) => {
+      await page.goto('/dashboard/orders');
+      await page.waitForLoadState('networkidle');
+      const settingsLink = page.locator('nav a[href="/dashboard/settings"]');
+      await expect(settingsLink).toHaveCount(0);
+    });
+
+    csrTest('CSR sidebar does NOT show Reports link', async ({ page }) => {
+      await page.goto('/dashboard/orders');
+      await page.waitForLoadState('networkidle');
+      const reportsLink = page.locator('nav a[href="/dashboard/reports"]');
+      await expect(reportsLink).toHaveCount(0);
+    });
+
+    csrTest('CSR sidebar does NOT show Audit Logs link', async ({ page }) => {
+      await page.goto('/dashboard/orders');
+      await page.waitForLoadState('networkidle');
+      const auditLink = page.locator('nav a[href="/dashboard/audit-logs"]');
+      await expect(auditLink).toHaveCount(0);
+    });
+
+    csrTest('CSR sidebar does NOT show Expenses link', async ({ page }) => {
+      await page.goto('/dashboard/orders');
+      await page.waitForLoadState('networkidle');
+      const expensesLink = page.locator(
+        'nav a[href="/dashboard/finance/expenses"]'
       );
-      await expect(pendingLink).toHaveCount(0);
-    }
-  );
-});
+      await expect(expensesLink).toHaveCount(0);
+    });
+
+    csrTest(
+      'CSR sidebar does NOT show Pending Expenses link',
+      async ({ page }) => {
+        await page.goto('/dashboard/orders');
+        await page.waitForLoadState('networkidle');
+        const pendingLink = page.locator(
+          'nav a[href="/dashboard/finance/expenses/pending"]'
+        );
+        await expect(pendingLink).toHaveCount(0);
+      }
+    );
+  }
+);
 
 // ===========================================================================
 // UAT: CSR Access — Permitted Pages
 // ===========================================================================
-csrTest.describe('UAT: CSR Access — Permitted Pages', () => {
+csrTest.describe('[REQ-007] UAT: CSR Access — Permitted Pages', () => {
   csrTest('CSR can access customers page', async ({ page }) => {
     await page.goto('/dashboard/customers');
     await page.waitForLoadState('networkidle');
@@ -206,7 +212,7 @@ csrTest.describe('UAT: CSR Access — Permitted Pages', () => {
 // ===========================================================================
 // UAT: CSR Access — Restricted Pages (should redirect to forbidden)
 // ===========================================================================
-csrTest.describe('UAT: CSR Access — Restricted Pages', () => {
+csrTest.describe('[REQ-007] UAT: CSR Access — Restricted Pages', () => {
   csrTest('CSR cannot access settings page', async ({ page }) => {
     await page.goto('/dashboard/settings');
     await page.waitForLoadState('networkidle');

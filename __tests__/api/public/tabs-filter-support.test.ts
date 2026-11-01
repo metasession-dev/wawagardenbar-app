@@ -29,7 +29,15 @@ interface TabFilter {
 
 function buildTabFilter(params: TabFilterParams): TabFilter {
   const filter: TabFilter = {};
-  const { status, tableNumber, tabNumber, customerId, paymentStatus, startDate, endDate } = params;
+  const {
+    status,
+    tableNumber,
+    tabNumber,
+    customerId,
+    paymentStatus,
+    startDate,
+    endDate,
+  } = params;
   if (status && ['open', 'settling', 'closed'].includes(status)) {
     filter.status = status;
   }
@@ -86,7 +94,9 @@ interface ResolvedMenuItem {
 
 function resolveMenuItem(results: MenuSearchResult[]): ResolvedMenuItem | null {
   if (!results || results.length === 0) return null;
-  const item = results.find(i => i.isAvailable && i.stockStatus !== 'out-of-stock');
+  const item = results.find(
+    (i) => i.isAvailable && i.stockStatus !== 'out-of-stock'
+  );
   if (!item) return null;
   return {
     menuItemId: item._id,
@@ -118,7 +128,10 @@ describe('REQ-006: Tab Filter Building — tabNumber support', () => {
   });
 
   it('should include both tableNumber and tabNumber when both provided', () => {
-    const filter = buildTabFilter({ tableNumber: '5', tabNumber: 'TAB-5-123456' });
+    const filter = buildTabFilter({
+      tableNumber: '5',
+      tabNumber: 'TAB-5-123456',
+    });
     expect(filter.tableNumber).toBe('5');
     expect(filter.tabNumber).toBe('TAB-5-123456');
   });
@@ -171,7 +184,10 @@ describe('REQ-006: Tab Filter Building — combined filters', () => {
   });
 
   it('should build filter with status + tabNumber', () => {
-    const filter = buildTabFilter({ status: 'open', tabNumber: 'TAB-5-123456' });
+    const filter = buildTabFilter({
+      status: 'open',
+      tabNumber: 'TAB-5-123456',
+    });
     expect(filter.status).toBe('open');
     expect(filter.tabNumber).toBe('TAB-5-123456');
   });
@@ -192,7 +208,10 @@ describe('REQ-006: Tab Filter Building — combined filters', () => {
   });
 
   it('should include date range filter', () => {
-    const filter = buildTabFilter({ startDate: '2026-03-01', endDate: '2026-03-05' });
+    const filter = buildTabFilter({
+      startDate: '2026-03-01',
+      endDate: '2026-03-05',
+    });
     expect(filter.openedAt).toBeDefined();
     expect(filter.openedAt!.$gte).toBeInstanceOf(Date);
     expect(filter.openedAt!.$lte).toBeInstanceOf(Date);
@@ -227,8 +246,20 @@ describe('REQ-006: Tab Sort Resolution', () => {
 describe('REQ-006: Menu Item Name Resolution', () => {
   it('should return first available item from search results', () => {
     const results: MenuSearchResult[] = [
-      { _id: 'item1', name: 'Star Lager Beer', price: 800, isAvailable: true, stockStatus: 'in-stock' },
-      { _id: 'item2', name: 'Star Radler', price: 900, isAvailable: true, stockStatus: 'in-stock' },
+      {
+        _id: 'item1',
+        name: 'Star Lager Beer',
+        price: 800,
+        isAvailable: true,
+        stockStatus: 'in-stock',
+      },
+      {
+        _id: 'item2',
+        name: 'Star Radler',
+        price: 900,
+        isAvailable: true,
+        stockStatus: 'in-stock',
+      },
     ];
     const resolved = resolveMenuItem(results);
     expect(resolved).not.toBeNull();
@@ -239,8 +270,20 @@ describe('REQ-006: Menu Item Name Resolution', () => {
 
   it('should skip unavailable items', () => {
     const results: MenuSearchResult[] = [
-      { _id: 'item1', name: 'Star Lager Beer', price: 800, isAvailable: false, stockStatus: 'in-stock' },
-      { _id: 'item2', name: 'Star Radler', price: 900, isAvailable: true, stockStatus: 'in-stock' },
+      {
+        _id: 'item1',
+        name: 'Star Lager Beer',
+        price: 800,
+        isAvailable: false,
+        stockStatus: 'in-stock',
+      },
+      {
+        _id: 'item2',
+        name: 'Star Radler',
+        price: 900,
+        isAvailable: true,
+        stockStatus: 'in-stock',
+      },
     ];
     const resolved = resolveMenuItem(results);
     expect(resolved!.menuItemId).toBe('item2');
@@ -248,8 +291,20 @@ describe('REQ-006: Menu Item Name Resolution', () => {
 
   it('should skip out-of-stock items', () => {
     const results: MenuSearchResult[] = [
-      { _id: 'item1', name: 'Star Lager Beer', price: 800, isAvailable: true, stockStatus: 'out-of-stock' },
-      { _id: 'item2', name: 'Star Radler', price: 900, isAvailable: true, stockStatus: 'low-stock' },
+      {
+        _id: 'item1',
+        name: 'Star Lager Beer',
+        price: 800,
+        isAvailable: true,
+        stockStatus: 'out-of-stock',
+      },
+      {
+        _id: 'item2',
+        name: 'Star Radler',
+        price: 900,
+        isAvailable: true,
+        stockStatus: 'low-stock',
+      },
     ];
     const resolved = resolveMenuItem(results);
     expect(resolved!.menuItemId).toBe('item2');
@@ -261,7 +316,13 @@ describe('REQ-006: Menu Item Name Resolution', () => {
 
   it('should return null when all items are unavailable', () => {
     const results: MenuSearchResult[] = [
-      { _id: 'item1', name: 'Beer', price: 800, isAvailable: false, stockStatus: 'out-of-stock' },
+      {
+        _id: 'item1',
+        name: 'Beer',
+        price: 800,
+        isAvailable: false,
+        stockStatus: 'out-of-stock',
+      },
     ];
     expect(resolveMenuItem(results)).toBeNull();
   });
@@ -279,7 +340,10 @@ describe('REQ-006: Menu Item Name Resolution', () => {
       },
     ];
     const resolved = resolveMenuItem(results);
-    expect(resolved!.portionOptions).toEqual({ allowHalf: true, allowQuarter: false });
+    expect(resolved!.portionOptions).toEqual({
+      allowHalf: true,
+      allowQuarter: false,
+    });
     expect(resolved!.customizationOptions).toHaveLength(1);
   });
 });

@@ -20,6 +20,7 @@ export type IncomingCustomerState =
 
 export type IncomingMessageIntent =
   | 'opt_out'
+  | 'opt_in'
   | 'chat_with_staff'
   | 'support_text';
 
@@ -51,7 +52,7 @@ const incomingMessageSchema = new Schema<IIncomingMessage>(
     classifiedIntent: {
       type: String,
       required: true,
-      enum: ['opt_out', 'chat_with_staff', 'support_text'],
+      enum: ['opt_out', 'opt_in', 'chat_with_staff', 'support_text'],
     },
     actionTaken: { type: String, required: true },
     userId: { type: String, default: null },

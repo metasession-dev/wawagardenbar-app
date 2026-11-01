@@ -9,6 +9,7 @@
  */
 import { test as base, expect, Page } from '@playwright/test';
 import path from 'path';
+import { waitForHydration } from './helpers/hydration';
 
 const ADMIN_FILE = path.join(__dirname, '../.auth/admin.json');
 const SUPER_ADMIN_FILE = path.join(__dirname, '../.auth/super-admin.json');
@@ -226,7 +227,8 @@ superAdminTest.describe('REQ-015: Staff Pot — Configuration', () => {
     await page.goto('/dashboard/settings');
     await page.waitForLoadState('networkidle');
 
-    // Set a specific target value
+    // Set a specific target value (after hydration — see #932)
+    await waitForHydration(page, '#dailyTarget');
     const targetInput = page.getByLabel('Daily Revenue Target');
     await targetInput.clear();
     await targetInput.fill('75000');
@@ -248,6 +250,7 @@ superAdminTest.describe('REQ-015: Staff Pot — Configuration', () => {
     expect(value).toBe('75000');
 
     // Restore default
+    await waitForHydration(page, '#dailyTarget');
     await page.getByLabel('Daily Revenue Target').clear();
     await page.getByLabel('Daily Revenue Target').fill('50000');
     await page.locator('button', { hasText: 'Save Configuration' }).click();
@@ -401,9 +404,12 @@ superAdminTest.describe('REQ-015: Staff Pot — Start Date', () => {
     await page.goto('/dashboard/settings');
     await page.waitForLoadState('networkidle');
 
-    // Set start date
+    // REQ-116 (AC14, #932) — fill only after the form has hydrated, otherwise
+    // React resets the controlled input and the save posts no startDate.
+    await waitForHydration(page, '#startDate');
     const startDateInput = page.getByLabel('Incentive Start Date');
     await startDateInput.fill('2026-03-15');
+    await expect(startDateInput).toHaveValue('2026-03-15');
 
     await page.locator('button', { hasText: 'Save Configuration' }).click();
     await expect(
@@ -418,6 +424,7 @@ superAdminTest.describe('REQ-015: Staff Pot — Start Date', () => {
     expect(value).toBe('2026-03-15');
 
     // Clear start date to restore default
+    await waitForHydration(page, '#startDate');
     await page.getByLabel('Incentive Start Date').fill('');
     await page.locator('button', { hasText: 'Save Configuration' }).click();
     await expect(

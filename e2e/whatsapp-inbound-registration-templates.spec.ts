@@ -137,11 +137,6 @@ test.describe('REQ-111 WhatsApp inbound → account-recovery routing', () => {
   }) => {
     tagTest('REQ-111', 1);
 
-    test.skip(
-      !!process.env.BASE_URL,
-      'WhatsApp webhook signature requires server-secret knowledge; only runs against local dev where the secret is unset.'
-    );
-
     const oldPhone = uniqueDigits();
     const newPhone = uniqueDigits();
     const email = `e2e-recovery-${Date.now()}@example.com`;
@@ -175,11 +170,6 @@ test.describe('REQ-111 WhatsApp inbound → account-recovery routing', () => {
     request,
   }) => {
     tagTest('REQ-111', 4);
-
-    test.skip(
-      !!process.env.BASE_URL,
-      'WhatsApp webhook signature requires server-secret knowledge; only runs against local dev where the secret is unset.'
-    );
 
     const newPhone = uniqueDigits();
     seededIncomingFrom.push(newPhone);

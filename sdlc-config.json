@@ -34,7 +34,8 @@
     "INTERNAL_API_SECRET": "${{ secrets.INTERNAL_API_SECRET }}",
     "MONNIFY_SECRET_KEY": "${{ secrets.MONNIFY_SECRET_KEY }}",
     "PAYSTACK_SECRET_KEY": "${{ secrets.PAYSTACK_SECRET_KEY }}",
-    "ENABLE_E2E_PIN_INTERCEPT": "true"
+    "ENABLE_E2E_PIN_INTERCEPT": "true",
+    "WHATSAPP_APP_SECRET": "e2e-whatsapp-app-secret"
   },
   "paths_ignore": [
     "SDLC/**",
@@ -75,7 +76,7 @@
   },
   "integration_branch": "develop",
   "release_branch": "main",
-  "devaudit_synced_version": "1.10.0",
+  "devaudit_synced_version": "1.11.0",
   "e2e_regression_enabled": true,
   "e2e_screenshot_exempt_reqs": ["REQ-111"]
 }

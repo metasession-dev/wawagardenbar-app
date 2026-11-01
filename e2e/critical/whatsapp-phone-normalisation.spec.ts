@@ -82,11 +82,6 @@ async function cleanup(national: string, from: string) {
 }
 
 test.describe('REQ-115 inbound WhatsApp phone matching', () => {
-  test.skip(
-    !!process.env.BASE_URL && !process.env.WHATSAPP_APP_SECRET,
-    'WhatsApp webhook signature needs WHATSAPP_APP_SECRET when targeting a remote server.'
-  );
-
   test('[US-01.5] a user saved as +234… is found when the message arrives from 234… (no +)', async ({
     request,
   }) => {

@@ -20,7 +20,12 @@ const pointsTransactionSchema = new Schema<IPointsTransaction>(
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     type: {
       type: String,
-      enum: ['earned', 'spent', 'expired', 'adjusted'] as PointsTransactionType[],
+      enum: [
+        'earned',
+        'spent',
+        'expired',
+        'adjusted',
+      ] as PointsTransactionType[],
       required: true,
     },
     amount: { type: Number, required: true },
@@ -43,6 +48,9 @@ pointsTransactionSchema.index({ rewardId: 1 });
 
 const PointsTransactionModel: Model<IPointsTransaction> =
   mongoose.models.PointsTransaction ||
-  mongoose.model<IPointsTransaction>('PointsTransaction', pointsTransactionSchema);
+  mongoose.model<IPointsTransaction>(
+    'PointsTransaction',
+    pointsTransactionSchema
+  );
 
 export default PointsTransactionModel;

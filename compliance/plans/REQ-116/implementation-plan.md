@@ -144,7 +144,8 @@ Unit tests per AC; three new critical-tier transport specs; `critical` tier gree
 1. Confirm `WHATSAPP_APP_SECRET` is set in UAT and production before deploying (AC1 fails closed).
 2. Live UAT PIN sign-in after deploy (AC10).
 3. Confirm the marketing-only STOP position (AC6).
-4. REQ-115 carry-overs still open: AC14 `account_recovery` live check, production account IDs, R-042 sign-off, phone migration run.
+4. Included in this release: `devaudit update` regenerated the CI workflows (`ci.yml`, `feature-e2e.yml`, `e2e-regression.yml`) so `e2e_env` carries the test-only `WHATSAPP_APP_SECRET` (no DevAudit version change, still 1.11.0). Operator confirmed 2026-11-01 that the real `WHATSAPP_APP_SECRET` is set in the Railway production variables and `.env.uat.local`.
+5. REQ-115 carry-overs still open: AC14 `account_recovery` live check, production account IDs, R-042 sign-off, phone migration run.
 
 ## 11. Sign-off
 

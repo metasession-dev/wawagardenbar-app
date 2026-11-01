@@ -135,7 +135,7 @@
       "section": "2f"
     },
     ".github/workflows/ci.yml": {
-      "sha256": "1a1efdc5355546649fad5c9206ec06d989421b2ed703d2b0071e6a05a2c8076b",
+      "sha256": "f8cca028d02c68e50096c4f02d3dac14be1331afa71cb551bd3c304d6c72f1ca",
       "section": "2f"
     },
     ".github/workflows/close-out-completion.yml": {
@@ -159,11 +159,11 @@
       "section": "2f"
     },
     ".github/workflows/e2e-regression.yml": {
-      "sha256": "f2d5f079b61787900a28777b854efd080ecbb10aa5cbc8827ef5ba5c4cf739d3",
+      "sha256": "26299e0656fb17c6ab971a66add1a10d76373728894d52ee01e0f41787c4a448",
       "section": "2f"
     },
     ".github/workflows/feature-e2e.yml": {
-      "sha256": "318a98770b9942b14b6645d3461f480350ccd15a5f5f911dfa17e7d7d811a3c3",
+      "sha256": "02ce63dc120f17c9338ee01ba3a7104ee28c534fa610552601e42da38571db11",
       "section": "2f"
     },
     ".github/workflows/incident-export.yml": {

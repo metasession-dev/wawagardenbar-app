@@ -247,20 +247,10 @@ adminTest.describe(
   'REQ-012: Tab Details Page — Partial Payment Display',
   () => {
     adminTest('tab details page loads with tab summary', async ({ page }) => {
-      await page.goto('/dashboard/orders/tabs');
-      await page.waitForLoadState('networkidle');
-
-      // Find any tab and navigate to its details via the link href
-      const viewDetailsLink = page
-        .getByRole('link', { name: /View Details/i })
-        .first();
-      const count = await viewDetailsLink.count();
-      expect(count, 'seeded tab missing').toBeGreaterThan(0);
-
-      const href = await viewDetailsLink.getAttribute('href');
-      expect(href).toBeTruthy();
-
-      await page.goto(href!);
+      // Open the tab this spec seeded — "the first tab in the list" is
+      // whichever tab another parallel spec happens to be creating or
+      // deleting (REQ-116 AC12).
+      await page.goto(`/dashboard/orders/tabs/${seededTabIds[0]}`);
       await page.waitForLoadState('networkidle');
 
       expect(page.url()).toContain('/dashboard/orders/tabs/');
@@ -274,20 +264,7 @@ adminTest.describe(
     adminTest(
       'tab details page shows partial payments section when present',
       async ({ page }) => {
-        await page.goto('/dashboard/orders/tabs');
-        await page.waitForLoadState('networkidle');
-
-        // Navigate to first tab details via href
-        const viewDetailsLink = page
-          .getByRole('link', { name: /View Details/i })
-          .first();
-        const count = await viewDetailsLink.count();
-        expect(count, 'seeded tab missing').toBeGreaterThan(0);
-
-        const href = await viewDetailsLink.getAttribute('href');
-        expect(href).toBeTruthy();
-
-        await page.goto(href!);
+        await page.goto(`/dashboard/orders/tabs/${seededTabIds[0]}`);
         await page.waitForLoadState('networkidle');
 
         // Check if this tab has partial payments

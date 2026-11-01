@@ -1,22 +1,22 @@
 # Test plan — REQ-116
 
-| Test file                                                      | Type            | ACs           |
-| -------------------------------------------------------------- | --------------- | ------------- |
-| `__tests__/lib/whatsapp.verification-pin.test.ts`              | unit            | AC9           |
-| `__tests__/lib/whatsapp-template-contract.test.ts`             | unit (update)   | AC9           |
-| `__tests__/api/whatsapp-webhook-route.test.ts`                 | unit            | AC1, AC2, AC3 |
-| `__tests__/lib/whatsapp.handle-webhook.test.ts`                | unit            | AC5           |
-| `__tests__/services/whatsapp-inbound-service.routing.test.ts`  | unit (update)   | AC4, AC6, AC7 |
-| `__tests__/services/whatsapp-inbound-service.classify.test.ts` | unit (update)   | AC6           |
-| `__tests__/lib/whatsapp.retry.test.ts`                         | unit            | AC8           |
-| `e2e/critical/whatsapp-webhook-security.spec.ts`               | e2e (transport) | AC1, AC2      |
-| `e2e/critical/whatsapp-inbound-idempotency.spec.ts`            | e2e (transport) | AC4, AC5      |
-| `e2e/critical/whatsapp-optout-optin.spec.ts`                   | e2e (transport) | AC6           |
-| `e2e/critical/express-order-portion-pricing-req097.spec.ts`    | e2e (update)    | AC11          |
-| `e2e/helpers/express-menu.ts`                                  | e2e infra       | AC11          |
-| `e2e/critical/webhook-idempotency-replay.spec.ts`              | e2e (update)    | AC12          |
-| `e2e/critical/cost-snapshot.spec.ts`                           | e2e (update)    | AC13          |
-| `e2e/critical/partial-payments.spec.ts`                        | e2e (update)    | AC13          |
-| `e2e/staff-pot.spec.ts`                                        | e2e (update)    | AC14          |
-| `e2e/csr-uat.spec.ts`                                          | e2e (update)    | AC15          |
-| `e2e/support-ticket-staff-flow.spec.ts`                        | e2e (update)    | AC15          |
+| Test file                                                                                                                                                                                                 | Type            | ACs                                                       |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | --------------------------------------------------------- |
+| `__tests__/lib/whatsapp.verification-pin.test.ts`                                                                                                                                                         | unit            | AC9                                                       |
+| `__tests__/api/whatsapp-webhook-route.test.ts`                                                                                                                                                            | unit            | AC1, AC2, AC3                                             |
+| `__tests__/lib/whatsapp.handle-webhook.test.ts`                                                                                                                                                           | unit            | AC5                                                       |
+| `__tests__/services/whatsapp-inbound-service.routing.test.ts`                                                                                                                                             | unit (update)   | AC4, AC6 (STOP marketing-only), existing routing matrix   |
+| `__tests__/services/whatsapp-inbound.hardening.test.ts`                                                                                                                                                   | unit            | AC4, AC6 (START), AC7, AC8                                |
+| `e2e/critical/whatsapp-webhook-security.spec.ts`                                                                                                                                                          | e2e (transport) | AC2 (AC1 is unit-only: needs a server without the secret) |
+| `e2e/critical/whatsapp-inbound-idempotency.spec.ts`                                                                                                                                                       | e2e (transport) | AC4, AC5                                                  |
+| `e2e/critical/whatsapp-optout-optin.spec.ts`                                                                                                                                                              | e2e (transport) | AC6                                                       |
+| `e2e/critical/express-order-portion-pricing-req097.spec.ts`                                                                                                                                               | e2e (update)    | AC11 (own cloned fixture item)                            |
+| `e2e/helpers/whatsapp-webhook.ts`, `e2e/helpers/hydration.ts`                                                                                                                                             | e2e infra       | AC1, AC14                                                 |
+| `playwright.config.ts` (chained `critical-aggregate-*` projects)                                                                                                                                          | e2e infra       | AC12                                                      |
+| `e2e/critical/cost-snapshot.spec.ts`                                                                                                                                                                      | e2e (update)    | AC13                                                      |
+| `e2e/critical/partial-payments.spec.ts`                                                                                                                                                                   | e2e (update)    | AC12, AC13                                                |
+| `e2e/staff-pot.spec.ts`                                                                                                                                                                                   | e2e (update)    | AC14                                                      |
+| `e2e/csr-uat.spec.ts`                                                                                                                                                                                     | e2e (update)    | AC15                                                      |
+| `e2e/support-ticket-staff-flow.spec.ts`                                                                                                                                                                   | e2e (update)    | AC15                                                      |
+| `e2e/smoke/req-084-checkout-separation.spec.ts`                                                                                                                                                           | e2e (update)    | AC15 (title-tag check)                                    |
+| `e2e/support-ticket-whatsapp-inbound.spec.ts`, `e2e/whatsapp-inbound-registration-templates.spec.ts`, `e2e/critical/whatsapp-welcome-params.spec.ts`, `e2e/critical/whatsapp-phone-normalisation.spec.ts` | e2e (update)    | AC1 (BASE_URL skip guards removed; secret now mandatory)  |

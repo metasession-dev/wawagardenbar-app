@@ -359,7 +359,9 @@ export class WhatsAppService {
       process.env.WHATSAPP_PIN_TEMPLATE_NAME || 'verification_pin';
     // REQ-116 (AC9) — verification_pin is an AUTHENTICATION template: the code
     // goes in the body AND the Copy-code URL button (index 0). Omitting the
-    // button parameter makes Meta reject the send with #131008.
+    // button parameter makes Meta reject the send with #131008. The Graph API
+    // checks the button parameter against the template's URL button, so keep
+    // index 0 aligned with the template definition.
     return this.sendMessage(phone, templateName, {
       bodyParams: [pin],
       buttonParams: [{ index: 0, params: [pin] }],

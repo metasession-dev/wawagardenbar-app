@@ -1,6 +1,6 @@
 # Release Ticket: REQ-116 — WhatsApp webhook hardening, STOP/START, PIN delivery fix and regression-pack fixes (WA-02)
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-11-01
 **Requirement ID:** REQ-116
 **Risk Level:** HIGH

@@ -98,7 +98,8 @@ fi
 
 # Sharded full-regression path.
 SHARD_COUNT="${SHARD_COUNT:-4}"
-SHARD_TIMEOUT_MINUTES="${SHARD_TIMEOUT_MINUTES:-12}"
+# 15 (was 12, #996): the 2026-10-29 run already used 11.3 of 12 minutes in shard 1.
+SHARD_TIMEOUT_MINUTES="${SHARD_TIMEOUT_MINUTES:-15}"
 
 echo "::notice::Sharding full regression run into $SHARD_COUNT shards (~${SHARD_TIMEOUT_MINUTES}min/shard, dev server restarted between shards)"
 

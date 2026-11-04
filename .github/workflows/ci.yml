@@ -299,6 +299,13 @@ jobs:
             fi
           fi
 
+      - name: Check configuration values
+        env:
+          PR_WITHOUT_SECRETS: ${{ github.actor == 'dependabot[bot]' || github.event.pull_request.head.repo.fork == true }}
+          INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
+          MONNIFY_SECRET_KEY: ${{ secrets.MONNIFY_SECRET_KEY }}
+          PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
+        run: bash "$GITHUB_WORKSPACE/scripts/check-config-values.sh" 'e2e_env.INTERNAL_API_SECRET=secrets.INTERNAL_API_SECRET' 'e2e_env.MONNIFY_SECRET_KEY=secrets.MONNIFY_SECRET_KEY' 'e2e_env.PAYSTACK_SECRET_KEY=secrets.PAYSTACK_SECRET_KEY'
       - name: Start dev server
         env:
           MONGODB_URI: mongodb://localhost:27017

@@ -158,6 +158,10 @@ jobs:
             fi
           fi
 
+      - name: Check configuration values
+        env:
+          PR_WITHOUT_SECRETS: ${{ github.actor == 'dependabot[bot]' || github.event.pull_request.head.repo.fork == true }}
+        run: bash "$GITHUB_WORKSPACE/scripts/check-config-values.sh" 'e2e_env.INTERNAL_API_SECRET=secrets.INTERNAL_API_SECRET' 'e2e_env.MONNIFY_SECRET_KEY=secrets.MONNIFY_SECRET_KEY' 'e2e_env.PAYSTACK_SECRET_KEY=secrets.PAYSTACK_SECRET_KEY'
       - name: Start dev server
         # Backgrounded with `set -m` so the job runs in its own process
         # group — `kill "$PID"` alone (the prior shape) only ever signals
@@ -172,8 +176,8 @@ jobs:
           set -euo pipefail
           set -m
           npm run dev > e2e-server.log 2>&1 &
-          echo "$!" > .e2e-server.pid
           set +m
+          echo "$!" > .e2e-server.pid
           echo "Started E2E server pid $(cat .e2e-server.pid)"
 
       - name: Wait for dev server

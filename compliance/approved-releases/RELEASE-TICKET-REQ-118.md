@@ -1,6 +1,6 @@
 # Release Ticket: REQ-118 — Threaded WhatsApp support with window-aware replies (WA-10)
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-11-05
 **Requirement ID:** REQ-118
 **Risk Level:** MEDIUM (bundle ceremony HIGH)
@@ -69,3 +69,5 @@ This is a HIGH-risk bundle on a solo-operator team, so the "reviewer ≠ submitt
 - **Submitter (implementation):** Claude Code (Sonnet 5.5)
 - **UAT reviewer / approver:** operator, on the DevAudit portal
 - **Operator approvals on record:** plan approval, HMAC PIN-hash deviation, ADR-008 Accepted and R-047 to R-051 sign-off (2026-11-05); `support_reply` submission to UAT and production (2026-11-05).
+  **Release PR:** #1006
+  **Released with bundle:** REQ-117 (closed out 2026-11-05)

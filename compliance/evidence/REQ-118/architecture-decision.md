@@ -19,8 +19,8 @@ generated_at: 2026-11-05T12:00:00Z
 
 I have reviewed the ADR-worthiness verdict above and confirm:
 
-- [ ] The verdict (no-ADR) matches the actual scope of this REQ.
-- [ ] The rationale is specific enough that an auditor reading this in 12 months would agree.
+- [x] The verdict (no-ADR) matches the actual scope of this REQ.
+- [x] The rationale is specific enough that an auditor reading this in 12 months would agree.
 
-**Reviewer:** REPLACE — operator name
-**Date:** REPLACE — YYYY-MM-DD
+**Reviewer:** William Thompson
+**Date:** 2026-11-05

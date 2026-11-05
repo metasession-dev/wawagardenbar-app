@@ -27,9 +27,9 @@ This REQ opened the following entries in `compliance/risk-register.md` (the regi
 
 I have reviewed the risk register entries above and confirm:
 
-- [ ] Each entry's residual rating is defensible given the controls landing in this REQ.
-- [ ] No risk was downgraded without evidence (control demonstrated effective via tests).
-- [ ] OPEN entries have follow-up tracking (issue / deadline / next-review-due).
+- [x] Each entry's residual rating is defensible given the controls landing in this REQ.
+- [x] No risk was downgraded without evidence (control demonstrated effective via tests).
+- [x] OPEN entries have follow-up tracking (issue / deadline / next-review-due).
 
-**Reviewer:** REPLACE — operator name
-**Date:** REPLACE — YYYY-MM-DD
+**Reviewer:** William Thompson
+**Date:** 2026-11-05

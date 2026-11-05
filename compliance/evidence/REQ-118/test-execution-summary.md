@@ -57,9 +57,9 @@ The portal's first-class execution read model was not queried (no `DEVAUDIT_API_
 
 ## E2E failures & triage
 
-| Spec / check                                                                       | Source        | Classification | Evidence                                                                                                     | Disposition                                                                | Reference                                                        |
-| ---------------------------------------------------------------------------------- | ------------- | -------------- | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `daily-report-business-date-selection` (REQ-095, pinned-clock Today and Yesterday) | local exec #3 | flake          | Passes in isolation and in the second full run (exec #4); nothing in the daily report changed on this branch | Accepted exception — operator to confirm; tracked in #1003 (umbrella #997) | https://github.com/metasession-dev/wawagardenbar-app/issues/1003 |
+| Spec / check                                                                       | Source        | Classification | Evidence                                                                                                     | Disposition                                                                                      | Reference                                                        |
+| ---------------------------------------------------------------------------------- | ------------- | -------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------- |
+| `daily-report-business-date-selection` (REQ-095, pinned-clock Today and Yesterday) | local exec #3 | flake          | Passes in isolation and in the second full run (exec #4); nothing in the daily report changed on this branch | Accepted exception — confirmed by William Thompson, 2026-11-05; tracked in #1003 (umbrella #997) | https://github.com/metasession-dev/wawagardenbar-app/issues/1003 |
 
 ## Test plan coverage
 
@@ -72,9 +72,9 @@ AC1 to AC3 are covered as described in `compliance/evidence/REQ-118/test-plan.md
 
 ## Accepted skips
 
-| Spec                                         | Reason                                                                                                                                             | Approved by                         |
-| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| `e2e/critical/close-tab-tip-capture.spec.ts` | Skips itself with "No open tabs to close": a pre-existing precondition gap in a spec this change does not touch; the critical run reports 0 failed | REPLACE — operator approval pending |
+| Spec                                         | Reason                                                                                                                                                                                                                                                                                                         | Approved by                                          |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `e2e/critical/close-tab-tip-capture.spec.ts` | Skipped itself with "No open tabs to close": a pre-existing precondition gap (the spec relied on an open tab already being in the shared database). Not accepted: the operator chose to fix it. The follow-up change makes the spec seed and remove its own open tab; it passed twice with no rows left behind | William Thompson, 2026-11-05 (fix instead of accept) |
 
 ## Evidence locations
 

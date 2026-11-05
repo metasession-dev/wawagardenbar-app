@@ -23,9 +23,9 @@ Table/heading drift check: none found for REQ-WA-011 to REQ-WA-013.
 
 I have reviewed the traces above and confirm:
 
-- [ ] Each AC has a defensible SRS item.
-- [ ] New SRS items have been edited from stubs to canonical Given/When/Then prose.
-- [ ] Stale items have been brought current.
+- [x] Each AC has a defensible SRS item.
+- [x] New SRS items have been edited from stubs to canonical Given/When/Then prose.
+- [x] Stale items have been brought current.
 
-**Reviewer:** REPLACE — operator name
-**Date:** REPLACE — YYYY-MM-DD
+**Reviewer:** William Thompson
+**Date:** 2026-11-05

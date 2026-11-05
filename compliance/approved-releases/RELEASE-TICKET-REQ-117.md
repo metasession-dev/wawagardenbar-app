@@ -1,6 +1,6 @@
 # Release Ticket: REQ-117 — WhatsApp-only customer sign-in (WA-04)
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-11-05
 **Requirement ID:** REQ-117
 **Risk Level:** HIGH

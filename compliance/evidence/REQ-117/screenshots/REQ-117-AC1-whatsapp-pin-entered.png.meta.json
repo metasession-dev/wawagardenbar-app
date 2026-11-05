@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-117",
+  "ac": 1,
+  "slug": "whatsapp-pin-entered",
+  "specFile": "e2e/smoke/customer-auth.spec.ts",
+  "capturedAt": "2026-11-05T19:44:09.811Z"
+}

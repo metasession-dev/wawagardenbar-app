@@ -5,7 +5,9 @@
  * closing partial-payment row, and that the resulting Tab persists the
  * tip on the row (with the row's paymentType serving as the tip method).
  *
- * Skips if no open tabs exist on the test environment.
+ * Seeds its own open tab (unique table number) and removes it afterwards, so it
+ * no longer depends on an open tab already existing in the shared database
+ * (it used to skip with "No open tabs to close").
  *
  * Retry-safe assertion model (#352): instead of asserting on a daily-
  * report aggregate delta (which retry-doubles when describe.serial
@@ -15,15 +17,19 @@
  * paymentType) row. The aggregation correctness is unit-tested at
  * `__tests__/services/financial-report-service.tip.test.ts`.
  *
- * Cleanup: the tab is RESTORED to `open` status (not deleted) so the
- * subsequent run has the same open tab to exercise. This is the
- * idempotent equivalent of "leave the test fixture as you found it".
+ * Cleanup: the seeded tab is deleted in afterEach, whether or not the test
+ * closed it.
  *
  * See SDLC/test-isolation.md for the contract.
  */
 import { test as base, expect, Page } from '@playwright/test';
 import path from 'path';
-import { findRecentTabWithTip, withMongo } from '../helpers/db-assertions';
+import { randomUUID } from 'crypto';
+import {
+  deleteTabById,
+  findRecentTabWithTip,
+  withMongo,
+} from '../helpers/db-assertions';
 
 const ADMIN_FILE = path.join(__dirname, '../../.auth/admin.json');
 
@@ -43,47 +49,44 @@ async function isAuthenticated(page: Page): Promise<boolean> {
 
 test.describe('REQ-035: close-tab tip capture', () => {
   const TIP = 250;
-  let closedTabId: string | null = null;
-  let closingRowAddedIndex: number | null = null;
+  let seededTabId: string | null = null;
+  let seededTableNumber = '';
 
   test.beforeEach(async ({ page }, testInfo) => {
     if (!(await isAuthenticated(page))) {
       testInfo.skip(true, 'Admin login failed — skipping');
     }
+    // Seed this spec's own open tab; the table number is unique so the UI
+    // can pick out exactly this tab among whatever else is open.
+    seededTableNumber = `T-035-${randomUUID().slice(0, 8)}`;
+    seededTabId = await withMongo(async (db) => {
+      const result = await db.collection('tabs').insertOne({
+        tabNumber: `E2E-035-${randomUUID().slice(0, 8)}`,
+        tableNumber: seededTableNumber,
+        status: 'open',
+        paymentStatus: 'pending',
+        orders: [],
+        total: 4500,
+        subtotal: 4500,
+        serviceFee: 0,
+        tax: 0,
+        deliveryFee: 0,
+        discountTotal: 0,
+        tipAmount: 0,
+        openedAt: new Date(),
+        customerEmail: 'e2e-035@test.com',
+        partialPayments: [],
+      });
+      return String(result.insertedId);
+    });
   });
 
   test.afterEach(async () => {
-    // Restore the tab to `open` status + remove the closing partial-
-    // payment row this test added. Keeps the seeded open-tab fixture
-    // available for subsequent runs (retry / schedule / dispatch).
-    if (closedTabId && closingRowAddedIndex !== null) {
-      const tabId = closedTabId;
-      const addedIndex = closingRowAddedIndex;
-      await withMongo(async (db) => {
-        const { ObjectId } = await import('mongodb');
-        const tab = await db
-          .collection('tabs')
-          .findOne({ _id: new ObjectId(tabId) });
-        if (!tab) return;
-        const updatedPartials = (tab.partialPayments || []).filter(
-          (_: unknown, i: number) => i !== addedIndex
-        );
-        await db.collection('tabs').updateOne(
-          { _id: new ObjectId(tabId) },
-          {
-            $set: {
-              status: 'open',
-              paymentStatus: 'unpaid',
-              partialPayments: updatedPartials,
-            },
-            $unset: { paidAt: '', closedAt: '', paymentReference: '' },
-          }
-        );
-      }).catch(() => {
+    if (seededTabId) {
+      await deleteTabById(seededTabId).catch(() => {
         /* idempotent — best-effort */
       });
-      closedTabId = null;
-      closingRowAddedIndex = null;
+      seededTabId = null;
     }
   });
 
@@ -95,16 +98,19 @@ test.describe('REQ-035: close-tab tip capture', () => {
     await page.goto('/dashboard/orders/tabs');
     await page.waitForLoadState('networkidle');
 
-    const payButton = page
-      .getByRole('button', { name: /Customer Wants to Pay/i })
-      .first();
-    if (!(await payButton.isVisible().catch(() => false))) {
-      test.skip(
-        true,
-        'No open tabs to close — seed an open tab to exercise this spec'
-      );
-      return;
-    }
+    const card = page
+      .locator('div')
+      .filter({
+        has: page.getByRole('heading', { name: `Table ${seededTableNumber}` }),
+      })
+      .filter({
+        has: page.getByRole('button', { name: /Customer Wants to Pay/i }),
+      })
+      .last();
+    const payButton = card.getByRole('button', {
+      name: /Customer Wants to Pay/i,
+    });
+    await expect(payButton).toBeVisible({ timeout: 10000 });
     await payButton.click();
 
     // Manual full-payment radio is the default. Choose Cash.
@@ -137,17 +143,14 @@ test.describe('REQ-035: close-tab tip capture', () => {
     expect(tab.status).toBe('closed');
     expect(tab.paymentStatus).toBe('paid');
 
-    // Record the closing-row index for afterEach cleanup. The closing
-    // row was the LAST partialPayment added.
+    expect(String(tab._id)).toBe(seededTabId);
+
     const partials = tab.partialPayments as Array<{
       tipAmount?: number;
       paymentType: string;
     }>;
-    const closingRowIndex = partials.findIndex(
-      (p) => p.tipAmount === TIP && p.paymentType === 'cash'
-    );
-    expect(closingRowIndex).toBeGreaterThanOrEqual(0);
-    closedTabId = String(tab._id);
-    closingRowAddedIndex = closingRowIndex;
+    expect(
+      partials.some((p) => p.tipAmount === TIP && p.paymentType === 'cash')
+    ).toBe(true);
   });
 });

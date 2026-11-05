@@ -108,9 +108,13 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-PROFILE-002  | Address CRUD + default address                                                                | Could    | extended   | `addresses-tab.tsx`                                                                                                         |
 | REQ-REWARDC-001  | Rewards page shows active rewards, codes, expiry                                              | Should   | regression | `app/(customer)/profile/rewards/page.tsx`                                                                                   |
 | REQ-REWARDC-002  | Points balance + ₦ equivalent + history                                                       | Could    | extended   | `profile/rewards/page.tsx:89`                                                                                               |
-| REQ-AUTHC-001    | Passwordless PIN login (email/SMS/WhatsApp)                                                   | Must     | smoke      | `components/shared/auth/login-form.tsx`, `app/actions/auth/verify-pin.ts`                                                   |
-| REQ-AUTHC-002    | PIN expiry / invalid-PIN error handling                                                       | Should   | regression | `app/actions/auth/verify-pin.ts:62,69`                                                                                      |
-| REQ-AUTHC-003    | Guest checkout (no PIN)                                                                       | Should   | regression | `app/actions/auth/guest-checkout.ts`                                                                                        |
+| REQ-AUTHC-001    | Passwordless PIN login (WhatsApp only, 90-day session)                                        | Must     | smoke      | `components/shared/auth/login-form.tsx`, `app/actions/auth/verify-pin.ts`                                                   |
+| REQ-AUTHC-002    | PIN expiry / invalid-PIN error handling (5 attempts)                                          | Should   | regression | `app/actions/auth/verify-pin.ts:62,69`                                                                                      |
+| REQ-AUTHC-003    | Guest checkout (removed from the customer flow, REQ-117)                                      | Should   | regression | `app/actions/auth/guest-checkout.ts`                                                                                        |
+| REQ-AUTHC-004    | Sign-in consent display and not-on-WhatsApp terminal message                                  | Must     | smoke      | `components/shared/auth/login-form.tsx`; REQ-117                                                                            |
+| REQ-AUTHC-005    | PIN hardening: hashed storage, attempt and request limits, unverified-user purge              | Must     | regression | `app/actions/auth/send-whatsapp-pin.ts`, `verify-whatsapp-pin.ts`, `lib/scheduled-jobs.ts`; REQ-117                         |
+| REQ-AUTHC-006    | Customer session lifetime, legacy re-verification, inbound never mints a session              | Must     | regression | `lib/session.ts`, `app/actions/auth/verify-whatsapp-pin.ts`, `app/api/webhooks/whatsapp/route.ts`; REQ-117                  |
+| REQ-AUTHC-007    | WhatsApp-unavailable notice and incident for customer sign-in                                 | Must     | regression | `components/shared/auth/login-form.tsx`, `app/actions/auth/send-whatsapp-pin.ts`; REQ-117                                   |
 | REQ-AUTHA-001    | Admin login (username + bcrypt)                                                               | Must     | smoke      | `app/actions/auth/admin-login.ts`, `services/admin-service.ts:478`                                                          |
 | REQ-AUTHA-002    | Failed-login lockout (5 attempts / 15 min)                                                    | Should   | regression | `services/admin-service.ts:13,499`                                                                                          |
 | REQ-AUTHA-003    | Force password change flag                                                                    | Could    | extended   | `admin-login.ts:78`                                                                                                         |
@@ -239,6 +243,9 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-WA-008       | Canonical E.164 phone format for WhatsApp identity lookups                                    | Must     | regression | `lib/auth-utils.ts` (`normalizePhone`); `services/whatsapp-inbound-service.ts`; REQ-115                                     |
 | REQ-WA-009       | Webhook authenticity: fail closed, safe signature compare, no secret logging                  | Must     | regression | `app/api/webhooks/whatsapp/route.ts`; REQ-116                                                                               |
 | REQ-WA-010       | WhatsApp marketing opt-in (START) and marketing-only opt-out (STOP)                           | Must     | regression | `services/whatsapp-inbound-service.ts`; REQ-116                                                                             |
+| REQ-WA-011       | Support conversation threading: one open ticket per customer, 72-hour reopen                  | Should   | regression | `services/support-ticket-service.ts`, `services/whatsapp-inbound-service.ts`; REQ-118                                       |
+| REQ-WA-012       | Window-aware support reply: free-form inside 24 hours, template outside, mode shown           | Should   | regression | `services/support-ticket-service.ts`, `app/dashboard/support/*`; REQ-118                                                    |
+| REQ-WA-013       | Human handoff: urgent ticket, 15-minute SLA, queue ordering and overdue highlight             | Should   | regression | `services/support-ticket-service.ts`, `app/dashboard/support/*`; REQ-118                                                    |
 
 ---
 
@@ -504,25 +511,59 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 
 #### REQ-AUTHC-001 — Passwordless PIN login · **Must** · smoke
 
-**Source:** `components/shared/auth/login-form.tsx`, `app/actions/auth/send-pin.ts:22`, `verify-pin.ts:20`
-**Behaviour:** Choose method (SMS/Email/WhatsApp) → enter phone/email → a 6-digit PIN (generated with a cryptographically secure RNG) is sent → enter PIN → session created (7-day iron-session cookie), `phoneVerified=true`, redirect to `?redirect=` (default `/`). Resend has a 60s countdown.
+**Source:** `components/shared/auth/login-form.tsx`, `app/actions/auth/send-whatsapp-pin.ts`, `verify-whatsapp-pin.ts`; cross-ref REQ-117.
+**Behaviour:** The customer enters a phone number only; a 6-digit PIN (generated with a cryptographically secure RNG) is sent over WhatsApp; the customer enters it and a session is created, `phoneVerified=true`, and they are redirected to `?redirect=` (default `/`). There is no method step: SMS and email PIN delivery do not exist for customers. Browsing the menu and building a cart need no sign-in; pressing Checkout without a session opens this form and returns to `/checkout` with the cart intact. Resend has a 60s countdown.
 
-- **Given** the login page, **When** the customer requests and enters the correct PIN, **Then** a session is created and they are redirected.
+- **Given** a visitor with a cart and no session, **When** they press Checkout, **Then** only a phone field is shown and, after the correct WhatsApp PIN, they land on `/checkout` with the same cart.
 - **Given** a customer enters a 4-digit (or any non-6-digit) PIN, **When** they submit, **Then** the normal "Invalid PIN" error shows and no session is created.
 
 #### REQ-AUTHC-002 — PIN error handling · **Should** · regression
 
-**Source:** `verify-pin.ts:57,62,69`
+**Source:** `app/actions/auth/verify-whatsapp-pin.ts`; cross-ref REQ-117.
 
-- **Given** an expired PIN, **When** the customer submits it, **Then** "PIN has expired" shows.
+- **Given** an expired PIN (older than ten minutes), **When** the customer submits it, **Then** "PIN has expired" shows.
 - **Given** a wrong PIN, **When** submitted, **Then** "Invalid PIN" shows and no session is created.
-- **Given** SMS delivery failure (DND/invalid), **When** sending, **Then** a retry-with-email fallback is offered.
+- **Given** five wrong attempts on one PIN, **When** the fifth fails, **Then** that PIN is invalidated and a new one must be requested.
 
 #### REQ-AUTHC-003 — Guest checkout · **Should** · regression
 
-**Source:** `app/actions/auth/guest-checkout.ts`
+**Source:** `app/actions/auth/guest-checkout.ts` (removed by REQ-117)
+**Status:** Deprecated for customers. Guest checkout, the guest banner and the email-as-guest path no longer exist; checkout and booking require the WhatsApp PIN sign-in (REQ-AUTHC-001).
 
-- **Given** a visitor, **When** they choose guest checkout (optional email/name), **Then** a guest session with a `guestId` is created and they can reach `/checkout` and view their orders without a PIN.
+- **Given** the guest checkout URL or flow, **When** a visitor looks for it, **Then** it no longer exists.
+
+#### REQ-AUTHC-004 — Sign-in consent display and not-on-WhatsApp message · **Must** · smoke
+
+**Source:** `components/shared/auth/login-form.tsx`; cross-ref REQ-117, REQ-WA-006.
+**Behaviour:** For a new number, the PIN step shows "WhatsApp messages about my orders and bookings" checked and disabled as part of the service; marketing options are unchecked by default. A number that is not on WhatsApp gets a terminal message with no retry through another channel.
+
+- **Given** a new number at the PIN step, **When** the consent choices show, **Then** order messages are required and marketing is unchecked.
+- **Given** a number not on WhatsApp, **When** the send fails with `NOT_ON_WHATSAPP`, **Then** "This number isn't on WhatsApp. To order, please use the counter or call us." shows with no retry option.
+
+#### REQ-AUTHC-005 — PIN hardening · **Must** · regression
+
+**Source:** `app/actions/auth/send-whatsapp-pin.ts`, `verify-whatsapp-pin.ts`, `lib/auth-utils.ts`, `lib/scheduled-jobs.ts`; cross-ref REQ-117, R-040, R-047.
+**Behaviour:** Only a keyed hash (HMAC-SHA-256) of the PIN is stored, never the PIN itself. A PIN is invalidated after five wrong attempts, at most five PIN requests per phone are honoured per hour, and a PIN expires after ten minutes. A user created by a PIN request who never verifies is deleted after 24 hours.
+
+- **Given** a stored PIN, **When** the user document is read, **Then** only its hash is present.
+- **Given** a phone that has requested five PINs in an hour, **When** it requests a sixth, **Then** the request is refused.
+- **Given** an unverified user created 24 hours ago, **When** the scheduled job runs, **Then** the user is deleted.
+
+#### REQ-AUTHC-006 — Customer session, legacy accounts, inbound isolation · **Must** · regression
+
+**Source:** `lib/session.ts`, `app/actions/auth/verify-whatsapp-pin.ts`, `app/api/webhooks/whatsapp/route.ts`; cross-ref REQ-117, R-049, R-050.
+**Behaviour:** A verified customer session lasts 90 days and is refreshed on activity; staff sessions keep their existing lifetime. An existing account with no verified phone re-verifies by WhatsApp on first sign-in and the phone is attached (no merge, no delete). An inbound WhatsApp message may create or identify a user but never creates a session.
+
+- **Given** a customer who signed in 60 days ago, **When** they return, **Then** they are still signed in.
+- **Given** an email-only account, **When** it first signs in, **Then** it re-verifies by WhatsApp and the phone is attached to that account.
+- **Given** an inbound WhatsApp message, **When** the webhook handles it, **Then** no session cookie is set.
+
+#### REQ-AUTHC-007 — WhatsApp-unavailable notice and incident · **Must** · regression
+
+**Source:** `components/shared/auth/login-form.tsx`, `app/actions/auth/send-whatsapp-pin.ts`; cross-ref REQ-117, R-048.
+**Behaviour:** When the PIN send fails with `SERVICE_DISABLED`, `MISSING_CREDENTIALS`, `TEMPLATE_NOT_FOUND` or a Meta outage code, the customer sees "Online ordering is temporarily unavailable. Please order at the counter or call us." (also on `/checkout` and `/book`) and an Incident is created for the admin alert.
+
+- **Given** WhatsApp is disabled, **When** a customer tries to sign in, **Then** the unavailable notice shows and an Incident exists.
 
 ---
 
@@ -1558,7 +1599,7 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 **Source:** `lib/notification-templates.ts` (`support_reply` → `transactional`), `services/notification-service.ts`; cross-ref REQ-064.
 **Behaviour:** The `support_reply` template is categorized as `transactional`. When staff reply to a support ticket, `NotificationService.send` attempts the WhatsApp `support_reply` template gated on `whatsappTransactional`. Outbound `support_reply` WhatsApp sends fall through to email until Meta approves the template (WA-1 thread). The ticket is the source of truth regardless of delivery channel.
 
-- **Given** a staff reply to a support ticket, **When** `NotificationService.send` dispatches `support_reply`, **Then** the `whatsappTransactional` consent flag is checked and the WhatsApp attempt is made if opted in.
+- **Given** a staff reply to a support ticket, **When** the customer's last inbound message is within 24 hours, **Then** a free-form text is sent (REQ-WA-012); otherwise `NotificationService.send` dispatches `support_reply`, the `whatsappTransactional` consent flag is checked and the WhatsApp attempt is made if opted in.
 - **Given** Meta has not yet approved the `support_reply` template, **When** the WhatsApp attempt fails, **Then** the notification falls through to email and the ticket reply is still recorded.
 
 #### REQ-WA-004 — Marketing WhatsApp templates with consent gate · **Should** · regression
@@ -1576,8 +1617,8 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 **Behaviour:** Inbound WhatsApp messages are received via the webhook at `/api/webhooks/whatsapp` and routed through `WhatsAppInboundService.handle`. The service classifies the sender's customer state (`new`, `signing_up`, `active`, `dormant`) and the message intent (`opt_out`, `chat_with_staff`, `support_text`). STOP/opt-out messages matching `/^\s*(stop|unsubscribe|opt[-\s]?out)\s*$/i` clear `whatsappMarketing` only; `whatsappTransactional` stays on because order messages are part of the service (REQ-116, REQ-WA-010). Each inbound message is stored in `IncomingMessage` (unique `messageId`) before any classification or side effect; a duplicate-key error stops processing, so Meta retries produce one welcome and one ticket. Every `entry[]` and `changes[]` of a payload is processed. More than 20 inbound messages from one phone in 10 minutes are stored but create no further side effects. A failed outbound reply with a retryable error is retried up to 3 times (1 s, 5 s, 30 s) and then raises an `Incident`. New/signing-up users receive a `welcome_new_user` template with parameters [today's opening time, closing time] (`h:mm a`, from business-hours settings); dormant users receive `welcome_back` with [first name, fallback `there`]. `actionTaken` records `<template>_sent` only when the send succeeded, otherwise `<template>_failed:<errorCode>`. Sender phones are matched using the canonical format (REQ-WA-008); a recovery-detected mismatch is classified `phone_mismatch` (REQ-WA-007). Active users are queued for staff. Support-text intents create a `SupportTicket` with `source: whatsapp`. An `IncomingMessage` audit record is persisted for every inbound message.
 
 - **Given** an inbound WhatsApp message from an unknown phone number, **When** `WhatsAppInboundService.handle` processes it, **Then** a new `User` row is auto-created and a `welcome_new_user` template is sent.
-- **Given** an inbound message matching the STOP opt-out pattern, **When** the service processes it, **Then** both `whatsappTransactional` and `whatsappMarketing` are set to false and a free-form STOP confirmation is sent within the 24h customer-service window.
-- **Given** an inbound support-text message from an active user, **When** the service processes it, **Then** a `SupportTicket` is created with `source: whatsapp` and the message body as the ticket subject.
+- **Given** an inbound message matching the STOP opt-out pattern, **When** the service processes it, **Then** `whatsappMarketing` is set to false, `whatsappTransactional` is unchanged and a free-form STOP confirmation is sent within the 24h customer-service window (REQ-WA-010).
+- **Given** an inbound support-text message from an active user with no open ticket, **When** the service processes it, **Then** a `SupportTicket` is created with `source: whatsapp` and the message body as the ticket subject; **Given** the user already has an open ticket, **Then** the message is appended to it as a customer reply (REQ-WA-011).
 - **Given** any inbound message, **When** the service processes it, **Then** an `IncomingMessage` audit record is persisted.
 
 #### REQ-WA-006 — Consent model: transactional default on, marketing default off · **Must** · regression
@@ -1627,6 +1668,31 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 
 - **Given** a customer opted in to marketing, **When** they send STOP, **Then** marketing is off, transactional is unchanged and the confirmation text is sent.
 - **Given** an opted-out customer, **When** they send START, **Then** marketing is on with source `whatsapp_inbound` and the subscription confirmation is sent.
+
+#### REQ-WA-011 — Support conversation threading · **Should** · regression
+
+**Source:** `services/support-ticket-service.ts`, `services/whatsapp-inbound-service.ts`; cross-ref REQ-118, REQ-WA-005.
+**Behaviour:** An inbound WhatsApp message from a phone with an open ticket (status not resolved or closed) is appended to that ticket as a customer reply. A new ticket is created only when none is open. A resolved ticket is reopened if the customer replies within 72 hours.
+
+- **Given** an open ticket, **When** the customer sends two more messages, **Then** the same ticket holds three customer messages.
+- **Given** a ticket resolved 48 hours ago, **When** the customer replies, **Then** the ticket is reopened.
+- **Given** a ticket resolved 5 days ago, **When** the customer replies, **Then** a new ticket is created.
+
+#### REQ-WA-012 — Window-aware support reply · **Should** · regression
+
+**Source:** `services/support-ticket-service.ts`, `app/dashboard/support/*`; cross-ref REQ-118, REQ-WA-003.
+**Behaviour:** When staff reply, the server computes the time since the customer's last inbound message. Within 24 hours the reply is a free-form text; otherwise it is sent with the `support_reply` template (header: ticket number; body: first name, subject, reply). The reply box shows "Free message" or "Template message: the customer hasn't messaged in 24h".
+
+- **Given** the customer messaged one hour ago, **When** staff reply, **Then** a free-form text is sent.
+- **Given** the customer last messaged two days ago, **When** staff reply, **Then** `support_reply` is sent with the correct parameters.
+
+#### REQ-WA-013 — Human handoff SLA · **Should** · regression
+
+**Source:** `services/support-ticket-service.ts`, `app/dashboard/support/*`, `services/whatsapp-inbound-service.ts`; cross-ref REQ-118.
+**Behaviour:** The `chat_with_staff` quick reply marks the customer's ticket `urgent` with `slaDueAt` fifteen minutes ahead. The support queue sorts by SLA and highlights overdue tickets.
+
+- **Given** the customer taps "Chat with staff", **When** the message is processed, **Then** the ticket is urgent with an SLA fifteen minutes ahead and appears first in the queue.
+- **Given** an urgent ticket past its SLA, **When** staff open the queue, **Then** it is highlighted as overdue.
 
 ## Feature Area 28 — Contact / Support (CONTACT)
 

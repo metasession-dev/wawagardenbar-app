@@ -5,8 +5,10 @@
  * data by using a freshly seeded in-stock menu item.
  *
  * Covers E2E-testable acceptance criteria:
- *   AC1  — "Continuing as Guest" banner visible for unauthenticated users
- *   AC2  — Guest checkout submission creates an order without authentication
+ *   AC1  — Unauthenticated visitors are sent to the WhatsApp sign-in at checkout
+ *          (REQ-117 retired the "Continuing as Guest" banner)
+ *   AC2  — Customer checkout submission creates an order (signed-in customer;
+ *          REQ-117 retired guest checkout)
  *   AC3  — Only Monnify gateway options on customer checkout (no manual)
  *   AC4  — Express create order: pickup time field appears when Pickup selected
  *   AC5  — Express create order: delivery address fields appear when Delivery selected
@@ -28,6 +30,11 @@ import { superAdminTest, isAuthenticated } from '../kitchen/helpers';
 import { tagTest } from '../helpers/test-tags';
 import { evidenceShot } from '../helpers/evidence';
 import { MongoClient, ObjectId } from 'mongodb';
+import {
+  seedVerifiedCustomer,
+  attachCustomerSessionToContext,
+  cleanupSeededCustomer,
+} from '../helpers/customer-auth';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
@@ -225,31 +232,24 @@ async function gotoExpressCheckoutStep(page: Page): Promise<boolean> {
 // Customer checkout — unauthenticated
 // ---------------------------------------------------------------------------
 
-test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
-  test('AC1: Continuing as Guest banner visible for unauthenticated users', async ({
+test.describe('REQ-084 — Customer checkout (sign-in required, REQ-117)', () => {
+  test('AC1: Unauthenticated visitor is sent to the WhatsApp sign-in at checkout (REQ-117 retired the guest banner)', async ({
     page,
   }) => {
     tagTest('REQ-084', 1);
 
     await injectCart(page);
     await page.goto(`${BASE_URL}/checkout`);
-    await page.waitForLoadState('networkidle');
-
-    if (page.url().includes('/menu')) {
-      test.skip(true, 'Cart injection failed — checkout redirected to /menu.');
-    }
-
-    await expect(page.getByText(/continuing as guest/i)).toBeVisible({
+    await page.waitForURL(/\/login\?redirect=(%2F|\/)checkout/, {
       timeout: 15000,
     });
-    // Two "Sign in" links exist (navbar + guest banner) — assert the first.
-    await expect(
-      page.getByRole('link', { name: /sign in/i }).first()
-    ).toBeVisible();
-    await evidenceShot(page, 'REQ-084', 1, 'guest-banner-visible');
+
+    await expect(page.locator('#phone')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(/continuing as guest/i)).toHaveCount(0);
+    await evidenceShot(page, 'REQ-084', 1, 'checkout-requires-signin');
   });
 
-  test('AC12: Anonymous user can add item to cart and reach checkout without login redirect', async ({
+  test('AC12: Anonymous user can add item to cart; checkout then asks for the WhatsApp sign-in', async ({
     page,
   }) => {
     tagTest('REQ-084', 12);
@@ -286,30 +286,28 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
         { timeout: 10000 }
       );
 
-      // Navigate to checkout — should NOT redirect to /login.
+      // Navigate to checkout — REQ-117: checkout needs a WhatsApp sign-in, so
+      // the visitor is sent to /login and returns to /checkout afterwards.
       await page.goto('/checkout');
-      await page.waitForLoadState('networkidle');
-
-      // Verify we're on /checkout, not redirected to /login or /menu.
-      expect(page.url()).not.toContain('/login');
-      expect(page.url()).not.toContain('/menu');
-
-      // Verify the "Continue as Guest" banner is visible.
-      await expect(page.getByText(/continuing as guest/i)).toBeVisible({
+      await page.waitForURL(/\/login\?redirect=(%2F|\/)checkout/, {
         timeout: 15000,
       });
-      await evidenceShot(page, 'REQ-084', 12, 'anonymous-menu-to-checkout');
+      await expect(page.locator('#phone')).toBeVisible({ timeout: 15000 });
+      await expect(page.getByText(/continuing as guest/i)).toHaveCount(0);
+      await evidenceShot(page, 'REQ-084', 12, 'anonymous-menu-to-signin');
     } finally {
       await cleanupMenuItem(itemId);
     }
   });
 
-  test('AC2: Guest checkout submission creates an order without auth', async ({
+  test('AC2: Customer checkout submission creates an order (signed-in; guest checkout retired)', async ({
     page,
   }) => {
     tagTest('REQ-084', 2);
 
     const menuItemId = await seedMenuItem();
+    const customer = await seedVerifiedCustomer();
+    await attachCustomerSessionToContext(page.context(), customer, BASE_URL);
     try {
       await injectCart(page, menuItemId);
       // Seed cart on /menu so Zustand rehydrates before checkout; going directly
@@ -366,13 +364,14 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
       await page.waitForTimeout(500);
       await page.getByRole('button', { name: /Add to Tab/i }).click();
 
-      // Order created without authentication; success dialog appears.
+      // Order created for the signed-in customer; success dialog appears.
       await expect(page.getByText(/Order Added to Tab/i).first()).toBeVisible({
         timeout: 15000,
       });
-      await evidenceShot(page, 'REQ-084', 2, 'guest-checkout-submitted');
+      await evidenceShot(page, 'REQ-084', 2, 'customer-checkout-submitted');
     } finally {
       await cleanupMenuItem(menuItemId);
+      await cleanupSeededCustomer(customer);
     }
   });
 
@@ -382,6 +381,8 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
     tagTest('REQ-084', 3);
 
     const menuItemId = await seedMenuItem();
+    const customer = await seedVerifiedCustomer();
+    await attachCustomerSessionToContext(page.context(), customer, BASE_URL);
     try {
       await injectCart(page, menuItemId);
       await page.goto('/menu');
@@ -463,6 +464,7 @@ test.describe('REQ-084 — Customer checkout (unauthenticated)', () => {
       await evidenceShot(page, 'REQ-084', 3, 'monnify-only-options');
     } finally {
       await cleanupMenuItem(menuItemId);
+      await cleanupSeededCustomer(customer);
     }
   });
 });

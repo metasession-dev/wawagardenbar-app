@@ -130,6 +130,31 @@ export function isInterceptLikelyEnabled(): boolean {
 }
 
 /**
+ * REQ-117 (AC3, AC9) — the not-on-WhatsApp and WhatsApp-unavailable notices
+ * come from a real send failing, which the `ENABLE_E2E_PIN_INTERCEPT` server
+ * short-circuits before Meta is reached. The action's own result shapes are
+ * unit-tested; this lets a UI spec drive the form's rendering of them.
+ *
+ * The real server action still runs (so the PIN is persisted as usual); only
+ * the result line in its Flight response is replaced by `result`.
+ */
+export async function mockSendPinResult(
+  page: Page,
+  result: Record<string, unknown>
+): Promise<void> {
+  await page.route('**/login*', async (route) => {
+    if (route.request().method() !== 'POST') return route.continue();
+    const response = await route.fetch();
+    const body = await response.text();
+    const replaced = body.replace(
+      /\n1:\{[^\n]*\}\n/,
+      `\n1:${JSON.stringify(result)}\n`
+    );
+    await route.fulfill({ response, body: replaced });
+  });
+}
+
+/**
  * Deletes a User by _id. Used when the seeded user's phone might collide
  * across reruns and a hard-reset by id is more robust than by phone.
  */

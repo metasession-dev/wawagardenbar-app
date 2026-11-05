@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
-import { sessionOptions, SessionData, defaultSession } from '@/lib/session';
+import {
+  sessionOptions,
+  SessionData,
+  defaultSession,
+  applyCustomerSessionLifetime,
+  shouldRefreshCustomerSession,
+} from '@/lib/session';
 import { connectDB } from '@/lib/mongodb';
 import { UserModel } from '@/models';
 
@@ -17,6 +23,14 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
       return NextResponse.json(defaultSession);
     }
 
+    // REQ-117 (AC7) — extend an active customer's 90-day session at most
+    // once a day.
+    if (shouldRefreshCustomerSession(session)) {
+      session.refreshedAt = Date.now();
+      applyCustomerSessionLifetime(session);
+      await session.save();
+    }
+
     if (session.userId && !session.isGuest) {
       try {
         await connectDB();
@@ -27,7 +41,10 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
         if (!user) {
           // User not found in database, but session exists
           // This might be an admin user - return session data
-          console.warn('[Session API] User not found in DB, returning session data:', session.userId);
+          console.warn(
+            '[Session API] User not found in DB, returning session data:',
+            session.userId
+          );
           return NextResponse.json({
             isLoggedIn: session.isLoggedIn,
             userId: session.userId,
@@ -39,9 +56,10 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
         }
 
         // Compute full name from firstName and lastName
-        const fullName = user.firstName && user.lastName
-          ? `${user.firstName} ${user.lastName}`
-          : user.name || user.email?.split('@')[0];
+        const fullName =
+          user.firstName && user.lastName
+            ? `${user.firstName} ${user.lastName}`
+            : user.name || user.email?.split('@')[0];
 
         return NextResponse.json({
           isLoggedIn: true,
@@ -57,7 +75,10 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
         });
       } catch (dbError) {
         // Database error - return session data anyway for admin users
-        console.error('[Session API] Database error, returning session data:', dbError);
+        console.error(
+          '[Session API] Database error, returning session data:',
+          dbError
+        );
         return NextResponse.json({
           isLoggedIn: session.isLoggedIn,
           userId: session.userId,

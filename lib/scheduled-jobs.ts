@@ -4,6 +4,7 @@
  * @requirement REQ-066 — In-process inventory-deduction reconciliation + stale-paid-order visibility scan (#277)
  * @requirement REQ-078 — Env-var kill-switch for the inventory reconciliation job
  * @requirement REQ-088 — Daily admin incident summary cron
+ * @requirement REQ-117 — Purge of customers created by a PIN request who never verified (AC6)
  *
  * In-process scheduled jobs for the persistent Railway server. The app runs as
  * a long-lived custom Node server (`server.ts`), not serverless, so a simple
@@ -25,6 +26,7 @@ import { SystemSettingsService } from '@/services/system-settings-service';
 import { IncidentEventService } from '@/services/incident-event-service';
 import { NotificationService } from '@/services/notification-service';
 import UserModel from '@/models/user-model';
+import OrderModel from '@/models/order-model';
 
 /**
  * REQ-066 — Hours a paid order may sit outside completed/cancelled before
@@ -206,6 +208,57 @@ export async function runDailyIncidentSummaryJob(): Promise<void> {
   }
 }
 
+/** REQ-117 (AC6) — hours an unverified PIN-request account may exist. */
+const UNVERIFIED_USER_MAX_AGE_HOURS = 24;
+
+/**
+ * REQ-117 (AC6) — delete customers created by a PIN request who never
+ * verified. Deliberately narrow so it can never remove a real account: only
+ * `customer` accounts that never verified a phone or email, never signed in,
+ * have no email on file, are older than 24 hours AND have no orders. Idempotent;
+ * errors are logged, never thrown.
+ */
+export async function runUnverifiedUserPurgeJob(): Promise<number> {
+  try {
+    const cutoff = new Date(
+      Date.now() - UNVERIFIED_USER_MAX_AGE_HOURS * HOUR_MS
+    );
+    const candidates = await UserModel.find({
+      role: 'customer',
+      phoneVerified: { $ne: true },
+      emailVerified: { $ne: true },
+      lastLoginAt: { $exists: false },
+      email: { $in: [null, ''] },
+      isGuest: { $ne: true },
+      createdAt: { $lt: cutoff },
+    })
+      .select('_id')
+      .lean();
+    if (candidates.length === 0) return 0;
+
+    const ids = candidates.map((user) => user._id);
+    const withOrders = new Set(
+      (await OrderModel.distinct('userId', { userId: { $in: ids } })).map(
+        (id: unknown) => String(id)
+      )
+    );
+    const deletable = ids.filter((id) => !withOrders.has(String(id)));
+    if (deletable.length === 0) return 0;
+
+    const result = await UserModel.deleteMany({ _id: { $in: deletable } });
+    const deleted = result.deletedCount ?? 0;
+    if (deleted > 0) {
+      console.warn(
+        `[scheduled-jobs] unverified-user-purge: deleted ${deleted} unverified account(s)`
+      );
+    }
+    return deleted;
+  } catch (error) {
+    console.error('[scheduled-jobs] unverified-user-purge job failed:', error);
+    return 0;
+  }
+}
+
 /**
  * Start all in-process scheduled jobs. Idempotent: guarded so repeated calls
  * (or dev hot-reloads) don't stack intervals.
@@ -243,8 +296,12 @@ export function startScheduledJobs(): void {
   setTimeout(() => void runDailyIncidentSummaryJob(), INITIAL_DELAY_MS);
   setInterval(() => void runDailyIncidentSummaryJob(), TWENTY_FOUR_HOURS_MS);
 
+  // REQ-117 — purge never-verified PIN-request accounts, hourly.
+  setTimeout(() => void runUnverifiedUserPurgeJob(), INITIAL_DELAY_MS);
+  setInterval(() => void runUnverifiedUserPurgeJob(), HOUR_MS);
+
   console.warn(
-    `[scheduled-jobs] started (reward-expiry: hourly, instagram-rewards: hourly, inventory-reconcile: ${
+    `[scheduled-jobs] started (reward-expiry: hourly, unverified-user-purge: hourly, instagram-rewards: hourly, inventory-reconcile: ${
       inventoryReconcileDisabled ? 'DISABLED' : '15min'
     }, incident-summary: 24h)`
   );

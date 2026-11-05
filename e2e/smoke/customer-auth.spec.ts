@@ -24,9 +24,10 @@ test.describe('Customer auth — passwordless WhatsApp PIN @smoke', () => {
     await expect(page.locator('#pin')).toBeVisible({ timeout: 15000 });
   }
 
-  test('REQ-AUTHC-001: WhatsApp PIN login creates a session', async ({
+  test('[REQ-117][AC1] REQ-AUTHC-001: WhatsApp PIN login creates a session', async ({
     page,
   }) => {
+    tagTest('REQ-117', 1);
     const { phone, digits } = uniquePhone();
     await requestPin(page, phone);
 

@@ -23,6 +23,9 @@ vi.mock('@/lib/email', () => ({
 }));
 
 const mockCreate = vi.fn();
+const mockFindOne = vi.fn();
+const mockUpdateOne = vi.fn();
+const mockAggregate = vi.fn();
 const mockFind = vi.fn();
 const mockCount = vi.fn();
 const mockFindByIdAndUpdate = vi.fn();
@@ -31,11 +34,20 @@ const mockFindById = vi.fn();
 vi.mock('@/models/support-ticket-model', () => ({
   default: {
     create: (...a: unknown[]) => mockCreate(...a),
+    findOne: (...a: unknown[]) => mockFindOne(...a),
+    updateOne: (...a: unknown[]) => mockUpdateOne(...a),
+    aggregate: (...a: unknown[]) => mockAggregate(...a),
     find: (...a: unknown[]) => mockFind(...a),
     countDocuments: (...a: unknown[]) => mockCount(...a),
     findByIdAndUpdate: (...a: unknown[]) => mockFindByIdAndUpdate(...a),
     findById: (...a: unknown[]) => mockFindById(...a),
   },
+}));
+
+// REQ-118 — the reply mode reads the customer's last inbound message.
+const mockIncomingFindOne = vi.fn();
+vi.mock('@/models/incoming-message-model', () => ({
+  default: { findOne: (...a: unknown[]) => mockIncomingFindOne(...a) },
 }));
 
 const mockUserFindById = vi.fn();
@@ -51,6 +63,17 @@ beforeEach(() => {
     lean: vi.fn().mockResolvedValue({ firstName: 'Ada' }),
   });
   mockCreate.mockReset();
+  mockFindOne.mockReset().mockReturnValue({
+    sort: vi.fn().mockReturnThis(),
+    lean: vi.fn().mockResolvedValue(null),
+  });
+  mockUpdateOne.mockReset().mockResolvedValue({});
+  mockAggregate.mockReset().mockResolvedValue([]);
+  mockIncomingFindOne.mockReset().mockReturnValue({
+    sort: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(),
+    lean: vi.fn().mockResolvedValue(null),
+  });
   mockFind.mockReset();
   mockCount.mockReset();
   mockFindByIdAndUpdate.mockReset();
@@ -215,16 +238,6 @@ describe('REQ-064 SupportTicketService.addReply', () => {
 
 describe('REQ-064 SupportTicketService.listTickets', () => {
   it('AC4 — applies status filter to query', async () => {
-    let capturedQuery: Record<string, unknown> | undefined;
-    mockFind.mockImplementation((q) => {
-      capturedQuery = q;
-      return {
-        sort: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnThis(),
-        skip: vi.fn().mockReturnThis(),
-        lean: vi.fn().mockResolvedValue([]),
-      };
-    });
     mockCount.mockResolvedValue(0);
 
     const { SupportTicketService } = await import(
@@ -232,20 +245,11 @@ describe('REQ-064 SupportTicketService.listTickets', () => {
     );
     await SupportTicketService.listTickets({ status: 'in_progress' });
 
-    expect(capturedQuery?.status).toBe('in_progress');
+    const match = mockAggregate.mock.calls[0][0][0].$match;
+    expect(match.status).toBe('in_progress');
   });
 
   it('AC4 — status="all" omits the status clause entirely', async () => {
-    let capturedQuery: Record<string, unknown> | undefined;
-    mockFind.mockImplementation((q) => {
-      capturedQuery = q;
-      return {
-        sort: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnThis(),
-        skip: vi.fn().mockReturnThis(),
-        lean: vi.fn().mockResolvedValue([]),
-      };
-    });
     mockCount.mockResolvedValue(0);
 
     const { SupportTicketService } = await import(
@@ -253,6 +257,7 @@ describe('REQ-064 SupportTicketService.listTickets', () => {
     );
     await SupportTicketService.listTickets({ status: 'all' });
 
-    expect(capturedQuery?.status).toBeUndefined();
+    const match = mockAggregate.mock.calls[0][0][0].$match;
+    expect(match.status).toBeUndefined();
   });
 });

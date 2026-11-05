@@ -51,6 +51,8 @@ export interface INotificationLog extends Document {
     header: string[];
     body: string[];
     buttons: { index: number; params: string[] }[];
+    /** REQ-118 — `text` for a free-form message inside the 24h window. */
+    mode?: 'template' | 'text';
   } | null;
   durationMs: number | null;
   attemptedAt: Date;

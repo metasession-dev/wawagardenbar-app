@@ -457,6 +457,12 @@ export class WhatsAppInboundService {
                 : welcomeNewUserParams(
                     (await SettingsService.getSettings()).businessHours
                   );
+            // REQ-118 (AC3) — "Chat with staff" always reaches a human: an
+            // urgent ticket is opened (or the open one escalated) alongside
+            // the welcome message.
+            if (intent === 'chat_with_staff') {
+              await this.openSupportTicket(from, body, userId, true);
+            }
             const result = await NotificationService.send({
               userId,
               templateKey,
@@ -483,24 +489,16 @@ export class WhatsAppInboundService {
           // REQ-064 — `support_text` intent (or any non-welcome path)
           // auto-creates a SupportTicket from the inbound message. Best-
           // effort: a ticket-create failure is logged but doesn't block
-          // the IncomingMessage audit row.
-          try {
-            const { SupportTicketService } = await import(
-              '@/services/support-ticket-service'
-            );
-            await SupportTicketService.createFromWhatsAppInbound({
-              from,
-              body: body ?? '',
-              userId,
-            });
-            actionTaken = 'ticketed';
-          } catch (error) {
-            console.error(
-              '[WhatsAppInbound] support-ticket auto-create failed:',
-              error instanceof Error ? error.message : String(error)
-            );
-            actionTaken = 'queued_for_staff';
-          }
+          // the IncomingMessage audit row. REQ-118 — it appends to the
+          // customer's open ticket instead, and "Chat with staff" marks it
+          // urgent.
+          const ticketed = await this.openSupportTicket(
+            from,
+            body,
+            userId,
+            intent === 'chat_with_staff'
+          );
+          actionTaken = ticketed ? 'ticketed' : 'queued_for_staff';
         }
       }
     } catch (error) {
@@ -513,6 +511,37 @@ export class WhatsAppInboundService {
     await this.finalise(messageId, state, userId, actionTaken);
 
     return actionTaken;
+  }
+
+  /**
+   * REQ-064 / REQ-118 — thread the inbound message into the customer's support
+   * ticket. Returns false (after logging) instead of throwing so a ticket
+   * failure never blocks the audit row or the welcome reply.
+   */
+  private static async openSupportTicket(
+    from: string,
+    body: string | null,
+    userId: string | null,
+    urgent: boolean
+  ): Promise<boolean> {
+    try {
+      const { SupportTicketService } = await import(
+        '@/services/support-ticket-service'
+      );
+      await SupportTicketService.createFromWhatsAppInbound({
+        from,
+        body: body ?? '',
+        userId,
+        urgent,
+      });
+      return true;
+    } catch (error) {
+      console.error(
+        '[WhatsAppInbound] support-ticket auto-create failed:',
+        error instanceof Error ? error.message : String(error)
+      );
+      return false;
+    }
   }
 
   /** Writes the routing outcome onto the row inserted at the start of handle(). */

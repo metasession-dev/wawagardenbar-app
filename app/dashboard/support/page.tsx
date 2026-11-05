@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { SupportTicketService } from '@/services/support-ticket-service';
+import { isSlaOverdue } from '@/lib/support-reply-mode';
 import type {
   SupportTicketStatus,
   SupportTicketSource,
@@ -41,6 +42,12 @@ const SOURCE_LABELS: Record<SupportTicketSource, string> = {
   whatsapp: 'WhatsApp',
 };
 
+/** REQ-118 (AC3) — "due in 12m" / "overdue 5m" for a running SLA. */
+function slaLabel(slaDueAt: Date, now: number): string {
+  const diffMin = Math.round((new Date(slaDueAt).getTime() - now) / 60_000);
+  return diffMin >= 0 ? `due in ${diffMin}m` : `overdue ${Math.abs(diffMin)}m`;
+}
+
 function timeSince(when: Date): string {
   const ms = Date.now() - new Date(when).getTime();
   const minutes = Math.floor(ms / 60_000);
@@ -71,6 +78,9 @@ export default async function SupportQueuePage({
     source: sourceFilter,
     limit: 100,
   });
+
+  const firstNames = await SupportTicketService.customerFirstNames(tickets);
+  const now = Date.now();
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-6">
@@ -129,40 +139,78 @@ export default async function SupportQueuePage({
                   <TableHead>Subject</TableHead>
                   <TableHead>Customer</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>SLA</TableHead>
                   <TableHead>Age</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {tickets.map((t) => (
-                  <TableRow key={String(t._id)}>
-                    <TableCell className="font-mono text-xs">
-                      <Link
-                        href={`/dashboard/support/${String(t._id)}`}
-                        className="hover:underline"
+                {tickets.map((t) => {
+                  const overdue = isSlaOverdue(t, now);
+                  const firstName = t.userId
+                    ? firstNames.get(String(t.userId))
+                    : undefined;
+                  return (
+                    <TableRow
+                      key={String(t._id)}
+                      data-testid="support-ticket-row"
+                      data-priority={t.priority}
+                      data-overdue={overdue ? 'true' : 'false'}
+                      className={
+                        overdue
+                          ? 'bg-destructive/10'
+                          : t.priority === 'urgent'
+                            ? 'bg-amber-50 dark:bg-amber-950/20'
+                            : undefined
+                      }
+                    >
+                      <TableCell className="font-mono text-xs">
+                        <Link
+                          href={`/dashboard/support/${String(t._id)}`}
+                          className="hover:underline"
+                        >
+                          {t.ticketNumber}
+                        </Link>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {SOURCE_LABELS[t.source]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs">{t.category}</TableCell>
+                      <TableCell className="max-w-xs truncate">
+                        {t.priority === 'urgent' && (
+                          <Badge variant="destructive" className="mr-2">
+                            Urgent
+                          </Badge>
+                        )}
+                        {t.subject}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {firstName && (
+                          <span className="font-medium">{firstName} </span>
+                        )}
+                        {t.customerEmail || t.customerPhone || '—'}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={STATUS_VARIANTS[t.status]}>
+                          {STATUS_LABELS[t.status]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell
+                        className={`text-xs ${
+                          overdue
+                            ? 'font-semibold text-destructive'
+                            : 'text-muted-foreground'
+                        }`}
                       >
-                        {t.ticketNumber}
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{SOURCE_LABELS[t.source]}</Badge>
-                    </TableCell>
-                    <TableCell className="text-xs">{t.category}</TableCell>
-                    <TableCell className="max-w-xs truncate">
-                      {t.subject}
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      {t.customerEmail || t.customerPhone || '—'}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={STATUS_VARIANTS[t.status]}>
-                        {STATUS_LABELS[t.status]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {timeSince(t.createdAt)}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                        {t.slaDueAt ? slaLabel(t.slaDueAt, now) : '—'}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {timeSince(t.createdAt)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}

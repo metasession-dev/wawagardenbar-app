@@ -21,6 +21,13 @@ export default async function SupportTicketDetailPage({
   const ticket = await SupportTicketService.getTicketById(ticketId);
   if (!ticket) notFound();
 
+  // REQ-118 (AC2) — the same server-side rule the reply uses decides the mode
+  // shown in the reply box.
+  const { mode: replyMode } = await SupportTicketService.getReplyMode(ticket);
+  const firstName = (
+    await SupportTicketService.customerFirstNames([ticket])
+  ).get(String(ticket.userId));
+
   return (
     <div className="container mx-auto px-4 py-8 space-y-6 max-w-3xl">
       <div className="flex items-center justify-between">
@@ -49,7 +56,7 @@ export default async function SupportTicketDetailPage({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="text-sm text-muted-foreground">
-            <strong>From:</strong>{' '}
+            <strong>From:</strong> {firstName ? `${firstName} · ` : ''}
             {ticket.customerEmail || ticket.customerPhone || '—'}
           </div>
           <div className="rounded-md border bg-muted/30 p-3 whitespace-pre-wrap text-sm">
@@ -73,7 +80,7 @@ export default async function SupportTicketDetailPage({
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
-              Conversation ({ticket.replies.length})
+              Conversation (oldest first, {ticket.replies.length})
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -107,6 +114,7 @@ export default async function SupportTicketDetailPage({
           <ReplyThread
             ticketId={String(ticket._id)}
             currentStatus={ticket.status}
+            replyMode={replyMode}
           />
         </CardContent>
       </Card>

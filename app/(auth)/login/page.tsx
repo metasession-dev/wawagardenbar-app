@@ -1,7 +1,13 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { LoginForm } from '@/components/shared/auth/login-form';
 
 export const metadata: Metadata = {
@@ -9,13 +15,30 @@ export const metadata: Metadata = {
   description: 'Log in or sign up to your account',
 };
 
-export default function LoginPage() {
+/** Only same-site paths are allowed as a post-sign-in destination. */
+function safeRedirect(value: string | string[] | undefined): string {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  if (candidate && candidate.startsWith('/') && !candidate.startsWith('//')) {
+    return candidate;
+  }
+  return '/menu';
+}
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ redirect?: string | string[] }>;
+}) {
+  const { redirect } = await searchParams;
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         {/* Logo and Header */}
         <div className="text-center">
-          <Link href="/" className="inline-flex flex-col items-center space-y-2">
+          <Link
+            href="/"
+            className="inline-flex flex-col items-center space-y-2"
+          >
             <Image
               src="/logo.png"
               alt="Wawa Garden Bar"
@@ -39,7 +62,7 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <LoginForm redirectTo="/menu" />
+            <LoginForm redirectTo={safeRedirect(redirect)} />
           </CardContent>
         </Card>
 

@@ -22,7 +22,8 @@ export type SupportTicketStatus =
 
 export type SupportTicketSource = 'web' | 'whatsapp';
 
-export type SupportTicketPriority = 'low' | 'normal' | 'high';
+// REQ-118 (AC3) — `urgent` is set by the WhatsApp "Chat with staff" handoff.
+export type SupportTicketPriority = 'low' | 'normal' | 'high' | 'urgent';
 
 export type SupportTicketCategory =
   | 'order-issue'
@@ -55,6 +56,12 @@ export interface ISupportTicket extends Document {
   status: SupportTicketStatus;
   priority: SupportTicketPriority;
   assignedTo: string | null;
+  /** REQ-118 (AC1/AC2) — when the customer last wrote to this ticket. */
+  lastCustomerMessageAt: Date | null;
+  /** REQ-118 (AC3) — staff must respond by this time; cleared on a staff reply or resolution. */
+  slaDueAt: Date | null;
+  /** REQ-118 (AC1) — when the ticket was last resolved; the 72h reopen window counts from here. */
+  resolvedAt: Date | null;
   replies: ISupportReply[];
   createdAt: Date;
   updatedAt: Date;
@@ -108,10 +115,13 @@ const supportTicketSchema = new Schema<ISupportTicket>(
     },
     priority: {
       type: String,
-      enum: ['low', 'normal', 'high'],
+      enum: ['low', 'normal', 'high', 'urgent'],
       default: 'normal',
     },
     assignedTo: { type: String, default: null },
+    lastCustomerMessageAt: { type: Date, default: null },
+    slaDueAt: { type: Date, default: null },
+    resolvedAt: { type: Date, default: null },
     replies: { type: [replySchema], default: [] },
   },
   { timestamps: true }
@@ -121,6 +131,9 @@ const supportTicketSchema = new Schema<ISupportTicket>(
 supportTicketSchema.index({ status: 1, createdAt: -1 });
 supportTicketSchema.index({ userId: 1, createdAt: -1 });
 supportTicketSchema.index({ source: 1, createdAt: -1 });
+// REQ-118 — find a customer's open ticket and order the queue by SLA.
+supportTicketSchema.index({ customerPhone: 1, status: 1, updatedAt: -1 });
+supportTicketSchema.index({ slaDueAt: 1 });
 
 const SupportTicketModel: Model<ISupportTicket> =
   (models.SupportTicket as Model<ISupportTicket>) ||

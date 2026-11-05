@@ -928,7 +928,7 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 1. PIN is 6 digits from `crypto.randomInt(0, 1_000_000)`, zero-padded.
 2. Verify actions and the login form reject anything that is not exactly 6 digits with the normal invalid-PIN message; 4-digit PINs already issued expire with `pinExpiresAt`.
 3. Unit tests for generation (length, charset, padding) and for rejection of 4-digit entries.
-4. Residual gap, tracked: no per-phone attempt limit on PIN verification. That is addressed in WA-04 (#966), which owns PIN hardening.
+4. Residual gap, tracked: no per-phone attempt limit on PIN verification. That is addressed in WA-04 (#966), which owns PIN hardening. Taken on by REQ-117 and tracked as R-047.
 
 **Residual likelihood × impact:** low × high until WA-04 adds attempt limiting; medium × high would apply without control 1 (to be confirmed by the operator at Stage 3).
 
@@ -1062,3 +1062,108 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 **Framework cross-references:** ISO 27001 A.5.15 (access control), A.8.5 (secure authentication); SOC 2 CC6.1, A1.2 (availability).
 
 **Cross-links:** [REQ-116 implementation plan](plans/REQ-116/implementation-plan.md); [#964](https://github.com/metasession-dev/wawagardenbar-app/issues/964).
+
+### R-047 — Customer PIN brute force and PIN stored in plaintext (REQ-117)
+
+**Status:** OPEN
+**Opened:** 2026-11-05 (REQ-117, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-05
+
+**The risk:** Customer sign-in PINs are stored as plaintext on the user document and there is no per-PIN attempt limit or per-phone request limit, so a database copy reveals live PINs and an attacker who knows a phone number can guess a six-digit PIN repeatedly within its window. This closes the residual gap recorded in R-040.
+
+**Mitigations planned in REQ-117:**
+
+1. Store only a keyed hash (HMAC-SHA-256, key derived from `SESSION_PASSWORD`) and compare with `timingSafeEqual` (AC5, ADR-008).
+2. Invalidate the PIN after five wrong attempts and allow at most five PIN requests per phone per hour, counted on the user document so the limit survives restarts and works across instances (AC5).
+3. Ten-minute expiry kept; unit tests for hashing, attempts, request limit and expiry; live UAT sign-in recorded as evidence.
+
+**Residual likelihood × impact:** low × medium after the live UAT sign-in passes.
+
+**Framework cross-references:** ISO 27001 A.5.17 (authentication information), A.8.5 (secure authentication); SOC 2 CC6.1; GDPR Art. 32.
+
+**Cross-links:** [REQ-117 implementation plan](plans/REQ-117/implementation-plan.md); ADR-008; R-040; [#966](https://github.com/metasession-dev/wawagardenbar-app/issues/966).
+
+### R-048 — Customer sign-in and checkout unavailable when WhatsApp is down (REQ-117)
+
+**Status:** ACCEPTED
+**Opened:** 2026-11-05 (REQ-117, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-05
+
+**The risk:** With WhatsApp as the only customer identity channel, an outage, an expired token or a rejected template stops all customer sign-in, checkout and booking. This is a programme decision recorded in tracker #953, accepted here with compensating controls.
+
+**Mitigations planned in REQ-117:**
+
+1. Show "Online ordering is temporarily unavailable. Please order at the counter or call us." on sign-in, `/checkout` and `/book` (AC9).
+2. Create an Incident so staff are alerted (AC9, kind `notification_delivery_failed`).
+3. Counter and phone ordering remain available.
+
+**Residual likelihood × impact:** medium × medium (accepted; availability is a business decision).
+
+**Framework cross-references:** ISO 27001 A.8.14 (redundancy), A.5.30 (ICT readiness); SOC 2 A1.2.
+
+**Cross-links:** [REQ-117 implementation plan](plans/REQ-117/implementation-plan.md); [#953](https://github.com/metasession-dev/wawagardenbar-app/issues/953).
+
+### R-049 — 90-day customer session lifetime (REQ-117)
+
+**Status:** ACCEPTED
+**Opened:** 2026-11-05 (REQ-117, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-05
+
+**The risk:** Customer sessions last 90 days and are refreshed on activity (staff stay at 7 days). A stolen or shared device keeps a signed-in customer session for much longer than before.
+
+**Mitigations planned in REQ-117:**
+
+1. Cookie stays httpOnly, secure in production and sameSite lax; customers can sign out (existing logout action).
+2. Customer sessions carry no staff capability (AC10, REQ-AUTHC-006); checkout and booking still need the session and prepayment protects order value.
+3. The session lifetime is set in one place and covered by a seal/unseal test (AC7).
+
+**Residual likelihood × impact:** low × medium.
+
+**Framework cross-references:** ISO 27001 A.8.5; SOC 2 CC6.1.
+
+**Cross-links:** [REQ-117 implementation plan](plans/REQ-117/implementation-plan.md); ADR-008.
+
+### R-050 — Legacy account phone attachment on first WhatsApp sign-in (REQ-117)
+
+**Status:** OPEN
+**Opened:** 2026-11-05 (REQ-117, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-05
+
+**The risk:** An existing account with no verified phone (email-only or SMS-only) re-verifies by WhatsApp on first sign-in and the phone is attached. A wrong attachment would give one person access to another person's account or split one customer across two accounts.
+
+**Mitigations planned in REQ-117:**
+
+1. The phone is attached only after the WhatsApp PIN round-trip proves control of that number (AC8).
+2. No merge and no delete of any account; duplicates found are reported, not resolved automatically (ADR-006 rule).
+3. Unit and e2e tests for the legacy path.
+
+**Residual likelihood × impact:** low × medium.
+
+**Framework cross-references:** ISO 27001 A.5.16 (identity management); GDPR Art. 5(1)(d) accuracy.
+
+**Cross-links:** [REQ-117 implementation plan](plans/REQ-117/implementation-plan.md); ADR-006; R-041.
+
+### R-051 — Support reply sent in the wrong mode or outside the 24-hour window (REQ-118)
+
+**Status:** OPEN
+**Opened:** 2026-11-05 (REQ-118, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-05
+
+**The risk:** Staff replies go out as a free-form text inside the 24-hour customer-service window and as the `support_reply` template outside it. A wrong mode makes the send fail or reach the customer in an unapproved form, and until Meta approves the template on both accounts replies outside the window fall through to email.
+
+**Mitigations planned in REQ-118:**
+
+1. Compute the mode on the server from the last inbound message time, never from the client (AC2).
+2. Show the mode to staff in the reply box (AC2).
+3. Submit `support_reply` to both WhatsApp accounts at plan approval (AC4, operator task) and record a live UAT round-trip once approved.
+
+**Residual likelihood × impact:** low × low after the live round-trip.
+
+**Framework cross-references:** ISO 27001 A.5.14 (information transfer); GDPR Art. 5(1)(f).
+
+**Cross-links:** [REQ-118 implementation plan](plans/REQ-118/implementation-plan.md); [#972](https://github.com/metasession-dev/wawagardenbar-app/issues/972).

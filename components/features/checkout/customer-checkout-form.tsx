@@ -1,7 +1,7 @@
 /**
  * @requirement REQ-084 - Separate customer and admin checkout paths
  * @requirement REQ-CHECKOUT-001 - Multi-step checkout renders & validates per step
- * @requirement REQ-AUTHC-003 - Guest checkout (no PIN)
+ * @requirement REQ-AUTHC-001 - Checkout requires the WhatsApp PIN sign-in (REQ-117)
  */
 'use client';
 
@@ -32,11 +32,10 @@ import {
   getOpenTabForTableAction,
 } from '@/app/actions/tabs/tab-actions';
 import { checkUserTabRestrictionsAction } from '@/app/actions/tabs/tab-restriction-actions';
-import { ArrowLeft, ArrowRight, Loader2, UserCircle2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
 import { ITab } from '@/interfaces';
 import { useAuth } from '@/hooks/use-auth';
 import { Skeleton } from '@/components/ui/skeleton';
-import Link from 'next/link';
 
 const checkoutSchema = z
   .object({
@@ -521,25 +520,6 @@ export function CustomerCheckoutForm() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      {/* Guest Banner */}
-      {!isAuthenticated && (
-        <div className="mb-6 flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950">
-          <UserCircle2 className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />
-          <div className="flex-1">
-            <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-              Continuing as Guest
-            </p>
-            <p className="text-sm text-blue-700 dark:text-blue-300">
-              You can order without signing in.{' '}
-              <Link href="/login" className="underline font-medium">
-                Sign in
-              </Link>{' '}
-              to save your details and track orders.
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* Progress Steps */}
       <div className="mb-8">
         <div className="flex items-center justify-between overflow-x-auto pb-2">

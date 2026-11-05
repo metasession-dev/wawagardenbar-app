@@ -14,6 +14,37 @@ export function generatePin(): string {
     .padStart(PIN_LENGTH, '0');
 }
 
+// REQ-117 (AC5) — PIN limits.
+export const PIN_MAX_ATTEMPTS = 5;
+export const PIN_MAX_REQUESTS_PER_HOUR = 5;
+export const PIN_REQUEST_WINDOW_MS = 60 * 60 * 1000;
+export const PIN_TTL_MINUTES = 10;
+
+/**
+ * REQ-117 (AC5, ADR-008) — keyed hash of a PIN. A plain hash of a 6-digit
+ * value can be reversed from a database copy in milliseconds, so the hash is
+ * an HMAC-SHA-256 keyed with a secret derived from `SESSION_PASSWORD` (no new
+ * environment variable). Never store or log the PIN itself.
+ */
+function pinHashKey(): Buffer {
+  const secret = process.env.SESSION_PASSWORD;
+  if (!secret) throw new Error('SESSION_PASSWORD is not set');
+  return crypto.createHmac('sha256', secret).update('wgb:pin-hash:v1').digest();
+}
+
+export function hashPin(pin: string): string {
+  return crypto.createHmac('sha256', pinHashKey()).update(pin).digest('hex');
+}
+
+export function verifyPinHash(pin: string, storedHash: string): boolean {
+  const candidate = Buffer.from(hashPin(pin), 'hex');
+  const stored = Buffer.from(storedHash, 'hex');
+  return (
+    candidate.length === stored.length &&
+    crypto.timingSafeEqual(candidate, stored)
+  );
+}
+
 export function isValidPinFormat(pin: unknown): pin is string {
   return typeof pin === 'string' && /^\d{6}$/.test(pin);
 }
@@ -24,7 +55,7 @@ export function generateSessionToken(): string {
 
 export function getPinExpirationTime(): Date {
   const expirationTime = new Date();
-  expirationTime.setMinutes(expirationTime.getMinutes() + 10);
+  expirationTime.setMinutes(expirationTime.getMinutes() + PIN_TTL_MINUTES);
   return expirationTime;
 }
 

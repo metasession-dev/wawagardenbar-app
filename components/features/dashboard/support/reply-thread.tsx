@@ -16,10 +16,13 @@ import {
   updateSupportStatusAction,
 } from '@/app/actions/dashboard/support-actions';
 import type { SupportTicketStatus } from '@/models/support-ticket-model';
+import { REPLY_MODE_LABEL, type ReplyMode } from '@/lib/support-reply-mode';
 
 interface ReplyThreadProps {
   ticketId: string;
   currentStatus: SupportTicketStatus;
+  /** REQ-118 (AC2) — how the reply will be sent, decided on the server. */
+  replyMode: ReplyMode;
 }
 
 const STATUS_OPTIONS: { value: SupportTicketStatus; label: string }[] = [
@@ -38,7 +41,11 @@ const STATUS_OPTIONS: { value: SupportTicketStatus; label: string }[] = [
  * commits independently — a failed notification on a reply doesn't
  * block the status update.
  */
-export function ReplyThread({ ticketId, currentStatus }: ReplyThreadProps) {
+export function ReplyThread({
+  ticketId,
+  currentStatus,
+  replyMode,
+}: ReplyThreadProps) {
   const { toast } = useToast();
   const [body, setBody] = useState('');
   const [status, setStatus] = useState<SupportTicketStatus>(currentStatus);
@@ -108,6 +115,14 @@ export function ReplyThread({ ticketId, currentStatus }: ReplyThreadProps) {
           </SelectContent>
         </Select>
       </div>
+
+      <p
+        className="text-xs text-muted-foreground"
+        data-testid="reply-mode"
+        data-mode={replyMode}
+      >
+        {REPLY_MODE_LABEL[replyMode]}
+      </p>
 
       <Textarea
         placeholder="Type your reply…"

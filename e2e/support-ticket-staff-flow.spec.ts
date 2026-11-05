@@ -109,7 +109,7 @@ function guard(skip: (cond: boolean, reason: string) => void, ok: boolean) {
   );
 }
 
-test.describe('[REQ-064][REQ-115] staff flow — queue → detail → reply → status', () => {
+test.describe('[REQ-064][REQ-115][REQ-118] staff flow — queue → detail → reply → status', () => {
   let ticketId: string | null = null;
 
   csrTest.afterEach(async () => {
@@ -196,9 +196,10 @@ test.describe('[REQ-064][REQ-115] staff flow — queue → detail → reply → 
   );
 
   csrTest(
-    '[US-01.3] AC2 — a staff reply logs support_reply with header [ticket no.] and 3 body params',
+    '[REQ-118][US-01.3] AC2 — a staff reply logs support_reply with header [ticket no.] and 3 body params',
     async ({ page }: { page: Page }) => {
       tagTest('REQ-115', 2);
+      tagTest('REQ-118', 2);
       guard(csrTest.skip, await isAuthenticated(page));
 
       // A ticket that belongs to a customer, so the reply is notified.
@@ -245,6 +246,12 @@ test.describe('[REQ-064][REQ-115] staff flow — queue → detail → reply → 
         ticketId = String(ticket.insertedId);
 
         await page.goto(`/dashboard/support/${ticketId}`);
+        // REQ-118 (AC2) — this customer has never messaged on WhatsApp, so the
+        // reply box says it will go out as the template.
+        await expect(page.getByTestId('reply-mode')).toHaveAttribute(
+          'data-mode',
+          'template'
+        );
         await page.getByPlaceholder(/type your reply/i).fill(replyText);
         await page.getByRole('button', { name: /send reply/i }).click();
         await expect(page.getByText(replyText)).toBeVisible({ timeout: 10000 });
@@ -252,7 +259,7 @@ test.describe('[REQ-064][REQ-115] staff flow — queue → detail → reply → 
 
         const log = await pollForDoc<{
           channel: string;
-          templateParams: { header: string[]; body: string[] };
+          templateParams: { header: string[]; body: string[]; mode?: string };
         }>(
           'notificationlogs',
           {
@@ -265,6 +272,7 @@ test.describe('[REQ-064][REQ-115] staff flow — queue → detail → reply → 
         expect(log, 'a support_reply NotificationLog row').toBeTruthy();
         expect(log!.channel).toBe('whatsapp');
         expect(log!.templateParams.header).toEqual([ticketNumber]);
+        expect(log!.templateParams.mode).toBe('template');
         expect(log!.templateParams.body).toEqual([
           'Ada',
           'Missing item in order',

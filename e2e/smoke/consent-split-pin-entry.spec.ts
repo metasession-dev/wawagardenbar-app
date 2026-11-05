@@ -52,9 +52,8 @@ async function readUserPrefs(
   }
 }
 
-async function requestSmsPinForNewUser(page: Page, phone: string) {
+async function requestPinForNewUser(page: Page, phone: string) {
   await page.goto('/login');
-  await page.getByText('Traditional text message to your phone').click();
   await page.fill('#phone', phone);
   await page.getByRole('button', { name: /^continue$/i }).click();
   await expect(page.locator('#pin')).toBeVisible({ timeout: 15000 });
@@ -65,7 +64,7 @@ test.describe('REQ-063 PIN-entry consent split @smoke', () => {
     page,
   }) => {
     const { phone } = uniquePhone();
-    await requestSmsPinForNewUser(page, phone);
+    await requestPinForNewUser(page, phone);
 
     // Three distinct checkbox rows, each with its own id + label.
     const waTransactional = page.locator('#wa-transactional');
@@ -76,13 +75,17 @@ test.describe('REQ-063 PIN-entry consent split @smoke', () => {
     await expect(waMarketing).toBeVisible();
     await expect(emailMarketing).toBeVisible();
 
-    // Defaults: WA transactional ON, the two marketing OFF.
+    // Defaults: WA transactional ON and locked (REQ-117 AC2), the two
+    // marketing boxes OFF.
     await expect(waTransactional).toBeChecked();
+    await expect(waTransactional).toBeDisabled();
     await expect(waMarketing).not.toBeChecked();
     await expect(emailMarketing).not.toBeChecked();
 
     // Labels are present and distinct (no collapsed shared text).
-    await expect(page.getByText(/Order updates via WhatsApp/i)).toBeVisible();
+    await expect(
+      page.getByText(/WhatsApp messages about my orders and bookings/i)
+    ).toBeVisible();
     await expect(
       page.getByText(/Offers and promotions via WhatsApp/i)
     ).toBeVisible();
@@ -97,7 +100,7 @@ test.describe('REQ-063 PIN-entry consent split @smoke', () => {
     page,
   }) => {
     const { phone, digits } = uniquePhone();
-    await requestSmsPinForNewUser(page, phone);
+    await requestPinForNewUser(page, phone);
 
     // User opts in to email marketing as well — flips the third checkbox.
     await page.locator('#wa-marketing').check();

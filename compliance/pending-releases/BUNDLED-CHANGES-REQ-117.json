@@ -1,0 +1,53 @@
+{
+  "approvalRelease": {
+    "version": "REQ-117"
+  },
+  "coreRelease": {
+    "version": "REQ-117"
+  },
+  "generator": {
+    "generatedAt": "2026-11-05T00:10:14Z",
+    "name": "devaudit-installer",
+    "repository": "metasession-dev/wawagardenbar-app",
+    "version": "0.0.0"
+  },
+  "manifestHash": "sha256:92ab82dbce45db5e73b19822f3b262b8603036820788f5935090afe257f898cf",
+  "members": [
+    {
+      "commitFrom": null,
+      "commitTo": null,
+      "evidenceInheritancePolicy": {
+        "includeCycles": false,
+        "mode": "none",
+        "reason": "Co-tracked bundle members keep fully isolated per-REQ evidence — nothing is inherited between them.",
+        "scopes": []
+      },
+      "originalTitle": "Threaded WhatsApp support with window-aware replies (WA-10)",
+      "prNumber": null,
+      "prUrl": null,
+      "reason": "Declared co-primary REQ, bundled onto one shared branch/PR/release at Phase 1 planning time.",
+      "relationship": "bundled",
+      "role": "co_tracked",
+      "scopeSummary": "A customer has one ongoing support conversation: inbound WhatsApp messages append to their open ticket (a resolved ticket reopens within 72 hours), staff replies go out free-form inside the 24-hour window and as the `support_reply` template outside it, and \"Chat with staff\" raises an urgent ticket with a 15-minute SLA that sorts first. Details, acceptance criteria and risks: `compliance/plans/REQ-118/implementation-plan.md`.\n\nThis ticket is a skeleton written at Stage 1; Stage 3 completes it.",
+      "version": "REQ-118"
+    }
+  ],
+  "nonReleaseWorkItems": [
+    {
+      "kind": "housekeeping_commit",
+      "reference": "3ee0802",
+      "title": "chore: sync SDLC templates from DevAudit 1.12.0"
+    },
+    {
+      "kind": "housekeeping_commit",
+      "reference": "3793f0f",
+      "title": "ci: stop the sharded regression re-running the aggregate chain and widen the shard budget"
+    },
+    {
+      "kind": "housekeeping_commit",
+      "reference": "71b0af2",
+      "title": "docs(compliance): add REQ-116 accepted E2E failure record"
+    }
+  ],
+  "schemaVersion": 2
+}

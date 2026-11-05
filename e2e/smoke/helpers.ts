@@ -1,3 +1,4 @@
+import { randomInt } from 'crypto';
 import { MongoClient } from 'mongodb';
 import { expect, type Page } from '@playwright/test';
 
@@ -49,17 +50,19 @@ export async function getVerificationPinByPhone(
  * number to type and the unique digit-substring to look the user up by.
  */
 export function uniquePhone(): { phone: string; digits: string } {
-  const digits =
-    String(Date.now()).slice(-8) + String(Math.floor(Math.random() * 10));
+  // Random, not clock-derived: parallel workers can start in the same
+  // millisecond, and two specs must never share a phone.
+  const digits = String(randomInt(0, 1e9)).padStart(9, '0');
   return { phone: `+2348${digits}`, digits };
 }
 
 /**
- * Log in a fresh customer via the passwordless SMS-PIN flow and leave the page
+ * Log in a fresh customer via the passwordless WhatsApp-PIN flow (REQ-117: the only customer sign-in) and leave the page
  * on an authenticated session (off /login).
  *
- * Relies on ENABLE_E2E_PIN_INTERCEPT=true on the server: sendPinAction then
- * persists the PIN to Mongo and returns success without dispatching real SMS,
+ * Relies on ENABLE_E2E_PIN_INTERCEPT=true on the server: sendWhatsAppPinAction then
+ * stores the hashed PIN, writes the test-only plaintext copy, and returns
+ * success without dispatching to WhatsApp,
  * so the form advances to the PIN-entry step. We read the PIN back from Mongo
  * and submit it. Returns the unique phone digit-substring so callers can look
  * the user up in Mongo afterwards.
@@ -86,7 +89,6 @@ export async function loginAsCustomer(
   });
 
   await page.goto('/login');
-  await page.getByText('Traditional text message to your phone').click();
   await page.fill('#phone', phone);
   await page.getByRole('button', { name: /^continue$/i }).click();
   await expect(page.locator('#pin')).toBeVisible({ timeout: 15000 });

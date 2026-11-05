@@ -1,4 +1,11 @@
 import { test, expect, Page } from '@playwright/test';
+import { tagTest } from './helpers/test-tags';
+import {
+  seedVerifiedCustomer,
+  attachCustomerSessionToContext,
+  cleanupSeededCustomer,
+  type SeededCustomerForSession,
+} from './helpers/customer-auth';
 
 /**
  * E2E Tests — REQ-007: Comprehensive Requirements Document Verification
@@ -14,8 +21,28 @@ import { test, expect, Page } from '@playwright/test';
 // Helpers
 // ---------------------------------------------------------------------------
 
+const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
+const seededCustomers: SeededCustomerForSession[] = [];
+
+/**
+ * REQ-117 — checkout needs a customer sign-in (no guest checkout). Bake a
+ * real customer session for specs that reach /checkout; cleaned up afterAll.
+ */
+async function signInCustomer(page: Page) {
+  const customer = await seedVerifiedCustomer();
+  seededCustomers.push(customer);
+  await attachCustomerSessionToContext(page.context(), customer, BASE_URL);
+}
+
+test.afterAll(async () => {
+  while (seededCustomers.length) {
+    await cleanupSeededCustomer(seededCustomers.pop()!);
+  }
+});
+
 /** Seed the Zustand cart via localStorage so checkout/cart tests start with items */
 async function seedCart(page: Page) {
+  await signInCustomer(page);
   await page.addInitScript(() => {
     const cart = {
       state: {
@@ -125,24 +152,18 @@ test.describe('Section 4: Customer Authentication', () => {
     expect(body).toContain('phone number');
   });
 
-  test('login page shows PIN delivery method options (WhatsApp, SMS, Email)', async ({
+  test('[REQ-117][AC1] login page asks for a phone number only and says the PIN comes on WhatsApp', async ({
     page,
   }) => {
+    tagTest('REQ-117', 1);
     await page.goto('/login');
     await page.waitForLoadState('networkidle');
+    await expect(page.locator('#phone')).toBeVisible();
     const body = await page.textContent('body');
-    expect(body).toContain('WhatsApp');
-    expect(body).toContain('SMS');
-    expect(body).toContain('Email');
-  });
-
-  test('login page displays delivery method descriptions', async ({ page }) => {
-    await page.goto('/login');
-    await page.waitForLoadState('networkidle');
-    const body = await page.textContent('body');
-    expect(body).toContain('Instant delivery via WhatsApp');
-    expect(body).toContain('Traditional text message');
-    expect(body).toContain('PIN sent to your email');
+    expect(body).toContain('PIN on WhatsApp');
+    expect(body).not.toContain('Traditional text message');
+    expect(body).not.toContain('PIN sent to your email');
+    expect(body).not.toMatch(/choose delivery method/i);
   });
 
   test('login page links to privacy policy and terms', async ({ page }) => {
@@ -433,6 +454,7 @@ test.describe('Section 5.7/10: Rewards', () => {
 // ===========================================================================
 test.describe('Section 9: Checkout & Payment', () => {
   test('checkout page renders with form', async ({ page }) => {
+    await signInCustomer(page);
     await page.goto('/checkout');
     await expect(page).toHaveTitle(/Checkout.*Wawa/i);
     await page.waitForLoadState('networkidle');
@@ -999,6 +1021,7 @@ test.describe('Section 27: Non-Functional Requirements', () => {
   });
 
   test('checkout page has descriptive metadata', async ({ page }) => {
+    await signInCustomer(page);
     await page.goto('/checkout');
     const title = await page.title();
     expect(title).toContain('Checkout');
@@ -1233,6 +1256,7 @@ test.describe('Section 4: Session Security', () => {
 // ===========================================================================
 test.describe('Cross-Cutting: Navigation Flows', () => {
   test('home → menu → checkout flow', async ({ page }) => {
+    await signInCustomer(page);
     await page.goto('/');
     await page.click('a[href="/menu"]');
     await page.waitForURL(/\/menu/);

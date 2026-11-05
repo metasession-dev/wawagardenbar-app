@@ -2,26 +2,29 @@
  * @requirement REQ-074 — Customer journey E2E coverage (sub-issue #292)
  * @requirement SRS REQ-AUTHC-001 — PIN-based passwordless login happy path
  *
- * Foundation spec — exercises the env-gated bypass added to `sendPinAction`
- * (and siblings) by REQ-074. With ENABLE_E2E_PIN_INTERCEPT=true on the
- * server, the action persists the PIN to MongoDB and returns success WITHOUT
- * dispatching SMS. The spec reads the PIN via `readPinFromMongo`, submits
- * it through the verify form, and asserts session creation.
+ * @requirement REQ-117 — WhatsApp is the only customer sign-in (no method
+ * step); the PIN is stored as a keyed hash.
+ *
+ * Foundation spec — exercises the env-gated bypass in `sendWhatsAppPinAction`
+ * (REQ-074). With ENABLE_E2E_PIN_INTERCEPT=true on the server, the action
+ * stores the hashed PIN, also writes the plaintext to the test-only
+ * `verificationPin` field, and returns success WITHOUT dispatching to
+ * WhatsApp. The spec reads the PIN via `readPinFromMongo`, submits it
+ * through the verify form, and asserts session creation.
  *
  * What this pins:
- *   ✓ Login form renders the phone-entry step
- *   ✓ "Send PIN" submission triggers sendPinAction
- *   ✓ With bypass active, the PIN-entry step appears (no SMS error toast)
+ *   ✓ Login form renders the phone-entry step (no method step)
+ *   ✓ "Continue" submission triggers sendWhatsAppPinAction
+ *   ✓ With bypass active, the PIN-entry step appears
  *   ✓ Reading User.verificationPin from Mongo returns the persisted PIN
  *   ✓ Verifying with that PIN creates a session + redirects post-login
  *
- * What this does NOT pin (deferred):
- *   ✗ Real SMS dispatch — covered by integration tests on lib/sms.ts
- *   ✗ Email PIN channel — V2 (auth-pin-channel-choice.spec.ts)
- *   ✗ Rate-limit + expiry error states — V2 (auth-pin-errors.spec.ts)
+ * What this does NOT pin (see e2e/critical/customer-signin-whatsapp-only.spec.ts):
+ *   ✗ Hashing, attempt limits, consent, notices and the 90-day session
  */
 import { test, expect } from '@playwright/test';
 import { evidenceShot } from '../helpers/evidence';
+import { tagTest } from '../helpers/test-tags';
 import {
   mongoConn,
   syntheticPhone,
@@ -34,7 +37,7 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
 test.describe.configure({ mode: 'serial' });
 
-test.describe('REQ-074 — Customer PIN-flow happy path (REQ-AUTHC-001)', () => {
+test.describe('[REQ-074][REQ-117] Customer PIN-flow happy path (REQ-AUTHC-001)', () => {
   const phone = syntheticPhone();
   const conn = mongoConn();
 
@@ -53,35 +56,34 @@ test.describe('REQ-074 — Customer PIN-flow happy path (REQ-AUTHC-001)', () => 
     await cleanupTestUser(conn, phone);
   });
 
-  test('AC1: phone → PIN persists → PIN entry → verify → session created', async ({
+  test('[REQ-117][AC1] phone → PIN persists → PIN entry → verify → session created', async ({
     page,
   }) => {
-    // ── Step 1: navigate to login + pick the SMS channel ──────────────────
-    // The login form first asks the visitor to pick a PIN-delivery channel
-    // (WhatsApp / SMS / Email). The phone input appears only after that
-    // choice. SMS is the simplest channel for this happy-path spec.
+    tagTest('REQ-117', 1);
+    // ── Step 1: navigate to login ─────────────────────────────────────────
+    // REQ-117: the form asks for the phone number only; the PIN always goes
+    // over WhatsApp, so there is no delivery-method step.
     await page.goto(`${BASE_URL}/login`);
     await expect(
       page.getByRole('heading', { name: /choose delivery method/i })
-    ).toBeVisible();
-    await page.getByRole('heading', { name: /^SMS$/i }).click();
+    ).toHaveCount(0);
 
     // ── Step 2: enter phone + request PIN ─────────────────────────────────
     await expect(page.locator('#phone')).toBeVisible({ timeout: 10_000 });
     await page.locator('#phone').fill(phone);
     // Form's submit button is labelled "Continue" (the action behind it
-    // is sendPinAction / sendWhatsAppPinAction / sendEmailPinAction).
+    // is sendWhatsAppPinAction).
     await page.getByRole('button', { name: /^continue$/i }).click();
 
     // ── Step 3: PIN-entry step appears (bypass returned success) ─────────
-    // Without the server-side bypass we'd see "SMS service is currently
-    // unavailable." instead. Race the two outcomes — whichever appears
+    // Without the server-side bypass we'd see the WhatsApp-unavailable
+    // notice instead. Race the two outcomes — whichever appears
     // first determines whether we proceed or skip with a clear message
     // (distinguishes "intercept not configured on server" from "real bug").
     const pinField = page.locator('#pin');
     const providerErrorAlert = page
       .getByText(
-        /sms service is currently unavailable|whatsapp service is currently unavailable|failed to send verification|service is currently unavailable/i
+        /online ordering is temporarily unavailable|failed to send verification|could not send your pin/i
       )
       .first();
 
@@ -95,7 +97,7 @@ test.describe('REQ-074 — Customer PIN-flow happy path (REQ-AUTHC-001)', () => 
     if (await providerErrorAlert.isVisible().catch(() => false)) {
       test.skip(
         true,
-        'Server returned a provider error (SMS / WhatsApp / Email). ' +
+        'Server returned a provider error (WhatsApp). ' +
           'ENABLE_E2E_PIN_INTERCEPT=true must be set on the target server ' +
           '(Railway UAT env var), not just on the Playwright runner. ' +
           'Once set + Railway redeploys, this spec will pass.'
@@ -104,6 +106,7 @@ test.describe('REQ-074 — Customer PIN-flow happy path (REQ-AUTHC-001)', () => 
 
     await expect(pinField).toBeVisible();
     await evidenceShot(page, 'REQ-074', 4, 'pin-entry-step-after-intercept');
+    await evidenceShot(page, 'REQ-117', 1, 'whatsapp-only-pin-entry');
 
     // ── Step 4: read PIN from Mongo + verify ──────────────────────────────
     const { pin, expiresAt } = await waitForPin(conn, phone);

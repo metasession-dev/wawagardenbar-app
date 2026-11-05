@@ -1,4 +1,4 @@
-import { SessionOptions } from 'iron-session';
+import { SessionOptions, IronSession } from 'iron-session';
 import { UserRole } from '@/interfaces/user.interface';
 import { IAdminPermissions } from '@/interfaces';
 
@@ -13,6 +13,8 @@ export interface SessionData {
   guestId?: string;
   isLoggedIn: boolean;
   createdAt?: number;
+  /** REQ-117 (AC7) — last time a customer session's lifetime was extended. */
+  refreshedAt?: number;
 }
 
 export const sessionOptions: SessionOptions = {
@@ -35,6 +37,39 @@ export const sessionOptions: SessionOptions = {
     path: '/',
   },
 };
+
+/**
+ * REQ-117 (AC7, ADR-008) — customers stay signed in for 90 days, extended on
+ * activity; staff sessions keep the 7-day `sessionOptions` default. The seal
+ * carries its own expiry, so the lifetime is set when the cookie is written.
+ */
+export const CUSTOMER_SESSION_TTL_SECONDS = 60 * 60 * 24 * 90;
+export const CUSTOMER_SESSION_REFRESH_AFTER_MS = 24 * 60 * 60 * 1000;
+
+export function applyCustomerSessionLifetime(
+  session: IronSession<SessionData>
+): void {
+  session.updateConfig({
+    ...sessionOptions,
+    ttl: CUSTOMER_SESSION_TTL_SECONDS,
+    cookieOptions: {
+      ...sessionOptions.cookieOptions,
+      maxAge: CUSTOMER_SESSION_TTL_SECONDS,
+    },
+  });
+}
+
+/** True for a signed-in customer (not staff, not guest) whose lifetime is due an extension. */
+export function shouldRefreshCustomerSession(
+  session: SessionData,
+  now: number = Date.now()
+): boolean {
+  if (!session.isLoggedIn || session.isGuest || session.role !== 'customer') {
+    return false;
+  }
+  const last = session.refreshedAt ?? session.createdAt ?? 0;
+  return now - last >= CUSTOMER_SESSION_REFRESH_AFTER_MS;
+}
 
 export const defaultSession: SessionData = {
   isLoggedIn: false,

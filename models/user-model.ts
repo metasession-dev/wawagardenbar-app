@@ -119,8 +119,15 @@ const userSchema = new Schema<IUser>(
       enum: ['customer', 'csr', 'admin', 'super-admin'],
       default: 'customer',
     },
+    // REQ-117 (ADR-008) — keyed hash only; `verificationPin` is the test-only
+    // plaintext written under ENABLE_E2E_PIN_INTERCEPT.
+    verificationPinHash: { type: String, select: false },
     verificationPin: { type: String, select: false },
     pinExpiresAt: { type: Date, select: false },
+    pinAttempts: { type: Number, default: 0, select: false },
+    pinRequestWindowStart: { type: Date, select: false },
+    pinRequestCount: { type: Number, default: 0, select: false },
+    whatsappVerifiedAt: { type: Date },
     sessionToken: { type: String, select: false },
 
     // Admin Authentication

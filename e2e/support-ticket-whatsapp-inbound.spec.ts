@@ -17,10 +17,13 @@
  * Regression — exercises a cross-system path that's only fully proven end-to-end.
  *
  * @requirement REQ-064
+ * @requirement REQ-118 — a second message from the same customer joins the
+ * open ticket instead of creating another (AC1).
  */
-import { expect } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { MongoClient } from 'mongodb';
 import { csrTest, isAuthenticated } from './kitchen/helpers';
+import { tagTest } from './helpers/test-tags';
 import {
   metaInboundPayload,
   postSignedWebhook,
@@ -54,6 +57,20 @@ async function readTicketByMessage(message: string) {
       .db(dbName)
       .collection('supporttickets')
       .findOne({ message });
+  } finally {
+    await client.close();
+  }
+}
+
+async function countTicketsByPhone(phone: string): Promise<number> {
+  const { uri, dbName } = mongoConn();
+  const client = new MongoClient(uri);
+  try {
+    await client.connect();
+    return await client
+      .db(dbName)
+      .collection('supporttickets')
+      .countDocuments({ customerPhone: phone });
   } finally {
     await client.close();
   }
@@ -125,7 +142,7 @@ function guard(skip: (cond: boolean, reason: string) => void, ok: boolean) {
   skip(true, 'CSR session unavailable (local only)');
 }
 
-csrTest.describe('REQ-064 WhatsApp inbound → support ticket bridge', () => {
+test.describe('REQ-064 [REQ-118] WhatsApp inbound → support ticket bridge', () => {
   let phone: string | null = null;
 
   csrTest.afterEach(async () => {
@@ -137,8 +154,10 @@ csrTest.describe('REQ-064 WhatsApp inbound → support ticket bridge', () => {
   });
 
   csrTest(
-    'AC3 — inbound support_text creates a SupportTicket and surfaces in the staff queue',
+    '[REQ-118][AC1] AC3 — inbound support_text creates a SupportTicket, surfaces in the staff queue, and a second message joins it',
     async ({ page, request }) => {
+      tagTest('REQ-064', 3);
+      tagTest('REQ-118', 1);
       // The webhook validates `x-hub-signature-256` server-side using
       // `WHATSAPP_APP_SECRET` — when set (the prod-shape configuration that
       // UAT mirrors), the test can't fake a valid signature without knowing
@@ -188,6 +207,25 @@ csrTest.describe('REQ-064 WhatsApp inbound → support ticket bridge', () => {
       });
       await expect(row).toBeVisible({ timeout: 10000 });
       await expect(row).toContainText(/WhatsApp/);
+
+      // REQ-118 (AC1) — a second message from the same customer is added to
+      // this ticket, not a new one.
+      const followUp = 'Also the drink was warm';
+      expect(
+        await postSignedWebhook(
+          request,
+          metaInboundPayload({
+            from: phone,
+            body: followUp,
+            id: `wamid.E2E-${Date.now()}-2`,
+          })
+        )
+      ).toBe(200);
+      const joined = await readTicketByMessage(body);
+      expect(
+        (joined?.replies as Array<{ body: string }>).map((r) => r.body)
+      ).toEqual([followUp]);
+      expect(await countTicketsByPhone(phone)).toBe(1);
     }
   );
 });

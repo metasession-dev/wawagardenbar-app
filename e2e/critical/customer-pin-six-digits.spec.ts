@@ -57,7 +57,6 @@ test.describe('REQ-115 customer sign-in PIN is 6 digits', () => {
 
     try {
       await page.goto('/login');
-      await page.getByText('Traditional text message to your phone').click();
       await page.fill('#phone', phone);
       await page.getByRole('button', { name: /^continue$/i }).click();
       await expect(page.locator('#pin')).toBeVisible({ timeout: 15000 });

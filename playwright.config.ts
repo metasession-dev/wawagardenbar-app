@@ -34,8 +34,14 @@ config({ path: path.resolve(__dirname, '.env.local'), override: false });
  * as its own project chained
  * through `dependencies`: Playwright runs a project's dependencies to
  * completion first, so they never overlap each other or the parallel specs.
- * `critical` and `regression` depend on the last link, so `--project=critical`
- * still runs them and a worker count above 1 stays safe.
+ * `critical` depends on the last link, so `--project=critical` still runs them
+ * and a worker count above 1 stays safe.
+ *
+ * `regression` deliberately does NOT depend on the chain (#996): the sharded
+ * full run (e2e/ci-reliability/regression-run.sh) re-ran the whole chain in
+ * every shard, about 46 extra tests each, and shards 1 and 2 exceeded their
+ * per-shard time budget. CI runs with one worker, so the specs already run
+ * one at a time there and the regression project includes them directly.
  */
 const AGGREGATE_SPECS = [
   'admin-order-inventory-delta.over-sell',
@@ -134,8 +140,7 @@ export default defineConfig({
       name: 'regression',
       use: { ...devices['Desktop Chrome'] },
       testMatch: /\.spec\.ts$/,
-      testIgnore: AGGREGATE_IGNORE,
-      dependencies: ['auth-setup', AGGREGATE_LAST],
+      dependencies: ['auth-setup'],
     },
   ],
   /* Start dev server before tests (skipped when BASE_URL is set) */

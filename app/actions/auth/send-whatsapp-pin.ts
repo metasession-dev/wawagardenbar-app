@@ -6,18 +6,76 @@ import { WhatsAppService } from '@/lib/whatsapp';
 import {
   generatePin,
   getPinExpirationTime,
+  hashPin,
   sanitizePhone,
   phoneLookupVariants,
   validatePhone,
+  PIN_MAX_REQUESTS_PER_HOUR,
+  PIN_REQUEST_WINDOW_MS,
 } from '@/lib/auth-utils';
+import {
+  NOT_ON_WHATSAPP_MESSAGE,
+  WHATSAPP_UNAVAILABLE_MESSAGE,
+} from '@/lib/auth-messages';
+
+// A send that fails for any of these means WhatsApp itself (credentials,
+// template, Meta outage) is the problem, not this customer's number.
+const UNAVAILABLE_ERROR_CODES = new Set([
+  'SERVICE_DISABLED',
+  'MISSING_CREDENTIALS',
+  'TEMPLATE_NOT_FOUND',
+  'API_ERROR',
+  'UNKNOWN_ERROR',
+  'QUOTA_EXCEEDED',
+]);
 
 interface SendWhatsAppPinResult {
   success: boolean;
   message: string;
   isNewUser?: boolean;
   errorCode?: string;
-  canRetryWithSMS?: boolean;
-  canRetryWithEmail?: boolean;
+  /** REQ-117 AC3 — terminal: no retry through another channel. */
+  notOnWhatsApp?: boolean;
+  /** REQ-117 AC9 — WhatsApp is unavailable; show the notice. */
+  serviceUnavailable?: boolean;
+}
+
+async function recordUnavailableIncident(
+  phone: string,
+  errorCode: string | undefined
+): Promise<void> {
+  try {
+    const { IncidentEventService } = await import(
+      '@/services/incident-event-service'
+    );
+    // One incident per hour is enough to alert admins; every sign-in attempt
+    // during an outage would otherwise flood the incidents page.
+    const entityId = 'whatsapp-signin-unavailable';
+    if (
+      await IncidentEventService.dedupRecent({
+        kind: 'notification_delivery_failed',
+        entityId,
+        withinHours: 1,
+      })
+    ) {
+      return;
+    }
+    await IncidentEventService.recordIncident({
+      kind: 'notification_delivery_failed',
+      entityId,
+      summary:
+        'Customer sign-in is unavailable: the WhatsApp PIN could not be sent',
+      errorDetails: {
+        errorCode: errorCode ?? null,
+        lastPhoneSuffix: phone.slice(-4),
+      },
+    });
+  } catch (error) {
+    console.error(
+      '[REQ-117] could not record the WhatsApp-unavailable incident:',
+      error instanceof Error ? error.message : String(error)
+    );
+  }
 }
 
 export async function sendWhatsAppPinAction(
@@ -35,10 +93,13 @@ export async function sendWhatsAppPinAction(
 
     await connectDB();
 
+    // REQ-117 (AC8) — an existing account is found in any legacy phone form
+    // and reused (never duplicated); the WhatsApp round-trip below is what
+    // verifies it.
     let user = await UserModel.findOne({
       phone: { $in: phoneLookupVariants(sanitizedPhone) },
       accountStatus: { $ne: 'deleted' },
-    });
+    }).select('+pinRequestWindowStart +pinRequestCount');
     const isNewUser = !user;
 
     if (!user) {
@@ -49,18 +110,39 @@ export async function sendWhatsAppPinAction(
       });
     }
 
-    const pin = generatePin();
-    const pinExpiresAt = getPinExpirationTime();
+    // REQ-117 (AC5) — at most five PIN requests per phone per hour, counted on
+    // the user document so the limit survives restarts and works across
+    // instances.
+    const now = Date.now();
+    const windowStart = user.pinRequestWindowStart?.getTime();
+    if (windowStart && now - windowStart < PIN_REQUEST_WINDOW_MS) {
+      if ((user.pinRequestCount ?? 0) >= PIN_MAX_REQUESTS_PER_HOUR) {
+        return {
+          success: false,
+          message: 'Too many PIN requests. Please try again later.',
+          errorCode: 'RATE_LIMITED',
+        };
+      }
+      user.pinRequestCount = (user.pinRequestCount ?? 0) + 1;
+    } else {
+      user.pinRequestWindowStart = new Date(now);
+      user.pinRequestCount = 1;
+    }
 
-    user.verificationPin = pin;
-    user.pinExpiresAt = pinExpiresAt;
+    const pin = generatePin();
+    user.verificationPinHash = hashPin(pin);
+    user.pinExpiresAt = getPinExpirationTime();
+    user.pinAttempts = 0;
+
+    // REQ-074 — E2E intercept. Only under this flag the plaintext PIN is also
+    // kept (test-only field read by `readPinFromMongo`); in every other
+    // environment only the keyed hash is stored. The flag also short-circuits
+    // the send so specs work without Meta.
+    const intercept = process.env.ENABLE_E2E_PIN_INTERCEPT === 'true';
+    user.verificationPin = intercept ? pin : undefined;
     await user.save();
 
-    // REQ-074 — E2E intercept. See app/actions/auth/send-pin.ts for the
-    // shared rationale; same env flag short-circuits all three send
-    // pathways (SMS, WhatsApp, Email) so any auth-touching spec works
-    // regardless of which channel the test picks.
-    if (process.env.ENABLE_E2E_PIN_INTERCEPT === 'true') {
+    if (intercept) {
       return {
         success: true,
         message: 'PIN persisted (E2E intercept mode)',
@@ -68,7 +150,6 @@ export async function sendWhatsAppPinAction(
       };
     }
 
-    // Send PIN via WhatsApp
     const whatsappResult = await WhatsAppService.sendVerificationPinWhatsApp(
       sanitizedPhone,
       pin
@@ -78,46 +159,46 @@ export async function sendWhatsAppPinAction(
       console.error(
         'Failed to send WhatsApp PIN to',
         sanitizedPhone,
-        whatsappResult
+        whatsappResult.errorCode
       );
 
-      // Provide specific error messages based on error code
-      let userMessage = 'Failed to send verification PIN via WhatsApp.';
-      let canRetryWithSMS = true;
-      let canRetryWithEmail = true;
-
       if (whatsappResult.errorCode === 'NOT_ON_WHATSAPP') {
-        userMessage = 'This phone number is not registered on WhatsApp.';
-      } else if (whatsappResult.errorCode === 'INVALID_PHONE') {
-        userMessage =
-          'The phone number format is invalid. Please check and try again.';
-        canRetryWithSMS = false;
-        canRetryWithEmail = false;
-      } else if (whatsappResult.errorCode === 'SEND_FAILED') {
-        // REQ-115 (D17) — Meta rejected the send for a reason that is not
-        // the phone number (e.g. PIN/template parameters). Do not blame
-        // the number; keep the retry options open.
-        userMessage = 'We could not send your PIN. Please try again.';
-      } else if (whatsappResult.errorCode === 'SERVICE_DISABLED') {
-        userMessage = 'WhatsApp service is currently unavailable.';
-      } else if (whatsappResult.errorCode === 'QUOTA_EXCEEDED') {
-        userMessage =
-          'WhatsApp service limit reached. Please try SMS or Email.';
-      } else if (whatsappResult.errorCode === 'TEMPLATE_NOT_FOUND') {
-        userMessage = 'WhatsApp messaging is temporarily unavailable.';
-      } else if (whatsappResult.errorCode === 'MISSING_CREDENTIALS') {
-        userMessage =
-          'WhatsApp service is not configured. Please use SMS or Email.';
-      } else if (whatsappResult.message) {
-        userMessage = whatsappResult.message;
+        return {
+          success: false,
+          message: NOT_ON_WHATSAPP_MESSAGE,
+          errorCode: whatsappResult.errorCode,
+          notOnWhatsApp: true,
+        };
       }
-
+      if (whatsappResult.errorCode === 'INVALID_PHONE') {
+        return {
+          success: false,
+          message:
+            'The phone number format is invalid. Please check and try again.',
+          errorCode: whatsappResult.errorCode,
+        };
+      }
+      if (
+        whatsappResult.errorCode &&
+        UNAVAILABLE_ERROR_CODES.has(whatsappResult.errorCode)
+      ) {
+        await recordUnavailableIncident(
+          sanitizedPhone,
+          whatsappResult.errorCode
+        );
+        return {
+          success: false,
+          message: WHATSAPP_UNAVAILABLE_MESSAGE,
+          errorCode: whatsappResult.errorCode,
+          serviceUnavailable: true,
+        };
+      }
+      // REQ-115 (D17) — Meta rejected the send for a reason that is not the
+      // phone number (e.g. template parameters). Do not blame the number.
       return {
         success: false,
-        message: userMessage,
+        message: 'We could not send your PIN. Please try again.',
         errorCode: whatsappResult.errorCode,
-        canRetryWithSMS,
-        canRetryWithEmail,
       };
     }
 
@@ -131,8 +212,6 @@ export async function sendWhatsAppPinAction(
     return {
       success: false,
       message: 'Failed to send verification PIN. Please try again.',
-      canRetryWithSMS: true,
-      canRetryWithEmail: true,
     };
   }
 }

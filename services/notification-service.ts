@@ -83,6 +83,10 @@ export interface SendOptions {
     params: string[];
     headerParams?: string[];
     buttonParams?: { index: number; params: string[] }[];
+    /** REQ-118 (AC2) — send this as a free-form text instead of the template.
+     *  Only valid inside the customer's 24-hour service window; the caller
+     *  decides. Consent gating and the email fallback are unchanged. */
+    freeFormText?: string;
   };
   /** Email closure — caller owns content shape; throws on failure. */
   email?: () => Promise<void>;
@@ -217,25 +221,35 @@ export class NotificationService {
       const phone = user?.phone ?? '';
       if (phone) {
         const t0 = Date.now();
-        const { params, headerParams, buttonParams } = opts.whatsapp;
+        const { params, headerParams, buttonParams, freeFormText } =
+          opts.whatsapp;
         // Plain body-param array when there is no header/button payload, so
         // existing callers' sendMessage calls are byte-identical.
         const hasExtra = Boolean(headerParams?.length || buttonParams?.length);
-        const result = await WhatsAppService.sendMessage(
-          phone,
-          opts.templateKey,
-          hasExtra ? { headerParams, bodyParams: params, buttonParams } : params
-        );
+        const result =
+          freeFormText !== undefined
+            ? await WhatsAppService.sendTextMessage(phone, freeFormText)
+            : await WhatsAppService.sendMessage(
+                phone,
+                opts.templateKey,
+                hasExtra
+                  ? { headerParams, bodyParams: params, buttonParams }
+                  : params
+              );
         const attempt: NotificationAttempt = {
           channel: 'whatsapp',
           success: result.success,
           error: result.success ? undefined : result.message,
           errorCode: result.success ? undefined : result.errorCode,
-          templateParams: {
-            header: headerParams ?? [],
-            body: params,
-            buttons: buttonParams ?? [],
-          },
+          templateParams:
+            freeFormText !== undefined
+              ? { header: [], body: [freeFormText], buttons: [], mode: 'text' }
+              : {
+                  header: headerParams ?? [],
+                  body: params,
+                  buttons: buttonParams ?? [],
+                  mode: 'template',
+                },
           durationMs: Date.now() - t0,
           // REQ-055 — capture Meta's wamid for delivery-status reconciliation.
           messageId: result.success ? (result.messageId ?? null) : null,

@@ -89,8 +89,16 @@ export interface IUser {
 
   // Authentication
   role: UserRole;
+  // REQ-117 (ADR-008) — only a keyed hash of the PIN is stored. `verificationPin`
+  // (plaintext) is written ONLY under ENABLE_E2E_PIN_INTERCEPT so e2e helpers
+  // can read it; it is never set in production.
+  verificationPinHash?: string;
   verificationPin?: string;
   pinExpiresAt?: Date;
+  pinAttempts?: number;
+  pinRequestWindowStart?: Date;
+  pinRequestCount?: number;
+  whatsappVerifiedAt?: Date;
   sessionToken?: string;
 
   // Admin Authentication Fields

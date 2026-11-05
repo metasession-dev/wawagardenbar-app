@@ -4,13 +4,19 @@ import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
 import { connectDB } from '@/lib/mongodb';
 import { UserModel } from '@/models';
-import { sessionOptions, SessionData } from '@/lib/session';
+import {
+  sessionOptions,
+  SessionData,
+  applyCustomerSessionLifetime,
+} from '@/lib/session';
 import {
   generateSessionToken,
   isPinExpired,
   sanitizePhone,
   isValidPinFormat,
   phoneLookupVariants,
+  verifyPinHash,
+  PIN_MAX_ATTEMPTS,
 } from '@/lib/auth-utils';
 
 interface VerifyWhatsAppPinResult {
@@ -57,7 +63,9 @@ export async function verifyWhatsAppPinAction(
     const user = await UserModel.findOne({
       phone: { $in: phoneLookupVariants(sanitizedPhone) },
       accountStatus: { $ne: 'deleted' },
-    }).select('+verificationPin +pinExpiresAt');
+    }).select(
+      '+verificationPinHash +verificationPin +pinExpiresAt +pinAttempts'
+    );
 
     if (!user) {
       return {
@@ -66,7 +74,7 @@ export async function verifyWhatsAppPinAction(
       };
     }
 
-    if (!user.verificationPin || !user.pinExpiresAt) {
+    if (!user.verificationPinHash || !user.pinExpiresAt) {
       return {
         success: false,
         message: 'No verification PIN found. Please request a new one.',
@@ -80,10 +88,32 @@ export async function verifyWhatsAppPinAction(
       };
     }
 
-    if (user.verificationPin !== pin) {
+    // REQ-117 (AC5) — five wrong attempts invalidate the PIN.
+    if ((user.pinAttempts ?? 0) >= PIN_MAX_ATTEMPTS) {
+      user.verificationPinHash = undefined;
+      user.verificationPin = undefined;
+      user.pinExpiresAt = undefined;
+      await user.save();
       return {
         success: false,
-        message: 'Invalid PIN',
+        message: 'Too many wrong attempts. Please request a new PIN.',
+      };
+    }
+
+    if (!verifyPinHash(pin, user.verificationPinHash)) {
+      user.pinAttempts = (user.pinAttempts ?? 0) + 1;
+      const exhausted = user.pinAttempts >= PIN_MAX_ATTEMPTS;
+      if (exhausted) {
+        user.verificationPinHash = undefined;
+        user.verificationPin = undefined;
+        user.pinExpiresAt = undefined;
+      }
+      await user.save();
+      return {
+        success: false,
+        message: exhausted
+          ? 'Too many wrong attempts. Please request a new PIN.'
+          : 'Invalid PIN',
       };
     }
 
@@ -115,8 +145,11 @@ export async function verifyWhatsAppPinAction(
     user.sessionToken = sessionToken;
     user.phoneVerified = true;
     user.lastLoginAt = new Date();
+    user.whatsappVerifiedAt = new Date();
+    user.verificationPinHash = undefined;
     user.verificationPin = undefined;
     user.pinExpiresAt = undefined;
+    user.pinAttempts = 0;
     await user.save();
 
     // Create session
@@ -133,6 +166,13 @@ export async function verifyWhatsAppPinAction(
     session.isGuest = false;
     session.isLoggedIn = true;
     session.createdAt = Date.now();
+    session.refreshedAt = session.createdAt;
+
+    // REQ-117 (AC7) — customers get the 90-day lifetime; staff sign in
+    // through admin-login and keep the 7-day default.
+    if (user.role === 'customer') {
+      applyCustomerSessionLifetime(session);
+    }
 
     await session.save();
 

@@ -23,8 +23,8 @@ generated_at: 2026-11-05T12:00:00Z
 
 I have reviewed the ADR-worthiness verdict above and confirm:
 
-- [ ] The verdict (ADR or no-ADR) matches the actual scope of this REQ.
-- [ ] The ADR file is edited from stub to canonical prose and status is Accepted.
+- [x] The verdict (ADR or no-ADR) matches the actual scope of this REQ.
+- [x] The ADR file is edited from stub to canonical prose and status is Accepted.
 
-**Reviewer:** REPLACE — operator name
-**Date:** REPLACE — YYYY-MM-DD
+**Reviewer:** William Thompson
+**Date:** 2026-11-05

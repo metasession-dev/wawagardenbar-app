@@ -28,5 +28,5 @@ spec_path: e2e/critical/customer-signin-whatsapp-only.spec.ts
 
 I have reviewed the e2e-scope verdict above and confirm it matches the actual scope of this REQ's diff.
 
-**Reviewer:** _pending_
-**Date:** _pending_
+**Reviewer:** William Thompson
+**Date:** 2026-11-05

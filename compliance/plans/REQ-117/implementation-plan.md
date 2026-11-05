@@ -119,4 +119,4 @@ Unit and integration tests per the AC table; critical-tier e2e at the default wo
 
 ## 11. Sign-off
 
-- **Plan approved by operator:** pending (HIGH-risk checkpoint).
+- **Plan approved by operator:** approved 2026-11-05 (HIGH-risk checkpoint): the operator said `continue` after the checklist (review the plans, confirm the HMAC PIN-hash deviation, ADR-008 Accepted, sign off R-047 to R-051, submit `support_reply`). `support_reply` submission status is not confirmed here; it stays an operator task.

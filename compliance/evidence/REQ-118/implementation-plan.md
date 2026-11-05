@@ -103,4 +103,4 @@ Unit tests per AC; the critical e2e spec; a live UAT round-trip after the UAT co
 
 ## 11. Sign-off
 
-- **Plan approved by operator:** pending (HIGH-risk checkpoint, bundle ceremony).
+- **Plan approved by operator:** approved 2026-11-05 (HIGH-risk checkpoint, bundle ceremony): the operator said `continue` after the checklist. `support_reply` submission status is not confirmed here; it stays an operator task.

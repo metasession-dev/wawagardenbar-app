@@ -63,3 +63,33 @@ describe('hasSessionPermission', () => {
     expect(hasSessionPermission(session, 'menuManagement')).toBe(false);
   });
 });
+
+describe('hasSessionPermission — several roles (REQ-119)', () => {
+  it('a member who also holds super-admin bypasses the permission check', () => {
+    const session = makeSession({
+      role: 'super-admin',
+      roles: ['csr', 'super-admin'],
+      permissions: { menuManagement: false } as any,
+    });
+    expect(hasSessionPermission(session, 'menuManagement')).toBe(true);
+  });
+
+  it('a csr + kitchen member is judged on the stored permission, not on a role', () => {
+    const session = makeSession({
+      role: 'csr',
+      roles: ['csr', 'kitchen'],
+      permissions: { orderManagement: true, menuManagement: false } as any,
+    });
+    expect(hasSessionPermission(session, 'orderManagement')).toBe(true);
+    expect(hasSessionPermission(session, 'menuManagement')).toBe(false);
+  });
+
+  it('a pre-release session with only role: super-admin still bypasses', () => {
+    const session = makeSession({
+      role: 'super-admin',
+      roles: undefined,
+      permissions: undefined,
+    });
+    expect(hasSessionPermission(session, 'menuManagement')).toBe(true);
+  });
+});

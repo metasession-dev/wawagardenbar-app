@@ -1,6 +1,13 @@
 import { Badge } from '@/components/ui/badge';
 import { UserRole } from '@/interfaces/user.interface';
-import { Headset, Shield, ShieldCheck, User } from 'lucide-react';
+import {
+  ChefHat,
+  Headset,
+  Shield,
+  ShieldCheck,
+  User,
+  UserCog,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface RoleBadgeProps {
@@ -12,7 +19,11 @@ interface RoleBadgeProps {
 /**
  * Display user role badge with appropriate styling
  */
-export function RoleBadge({ role, showIcon = true, className }: RoleBadgeProps) {
+export function RoleBadge({
+  role,
+  showIcon = true,
+  className,
+}: RoleBadgeProps) {
   const roleConfig = getRoleConfig(role);
 
   return (
@@ -35,7 +46,8 @@ function getRoleConfig(role: UserRole) {
       return {
         label: 'Super Admin',
         variant: 'default' as const,
-        className: 'bg-gradient-to-r from-purple-600 to-pink-600 text-white border-0',
+        className:
+          'bg-gradient-to-r from-purple-600 to-pink-600 text-white border-0',
         icon: ShieldCheck,
       };
     case 'csr':
@@ -52,11 +64,26 @@ function getRoleConfig(role: UserRole) {
         className: 'bg-blue-600 text-white border-0',
         icon: Shield,
       };
+    case 'kitchen':
+      return {
+        label: 'Kitchen',
+        variant: 'default' as const,
+        className: 'bg-orange-600 text-white border-0',
+        icon: ChefHat,
+      };
+    case 'manager':
+      return {
+        label: 'Manager',
+        variant: 'default' as const,
+        className: 'bg-emerald-600 text-white border-0',
+        icon: UserCog,
+      };
     case 'customer':
       return {
         label: 'Customer',
         variant: 'secondary' as const,
-        className: 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200',
+        className:
+          'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200',
         icon: User,
       };
     default:

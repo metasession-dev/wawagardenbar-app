@@ -1,7 +1,15 @@
+import { STAFF_ROLES, type StaffRole } from '@/interfaces/user.interface';
 import { NextRequest } from 'next/server';
 import { AdminService } from '@/services/admin-service';
 import { IAdminPermissions } from '@/interfaces';
-import { withApiAuth, apiSuccess, apiError, serialize, parsePagination, parseJsonBody } from '@/lib/api-response';
+import {
+  withApiAuth,
+  apiSuccess,
+  apiError,
+  serialize,
+  parsePagination,
+  parseJsonBody,
+} from '@/lib/api-response';
 
 /**
  * GET /api/public/admins
@@ -39,10 +47,18 @@ export async function GET(request: NextRequest): Promise<Response> {
         page,
         limit,
         search: searchParams.get('search') || undefined,
-        role: (searchParams.get('role') as 'csr' | 'admin' | 'super-admin') || undefined,
-        status: (searchParams.get('status') as 'active' | 'suspended' | 'deleted') || undefined,
-        sortBy: (searchParams.get('sortBy') as 'username' | 'role' | 'lastLoginAt' | 'createdAt') || undefined,
-        sortOrder: (searchParams.get('sortOrder') as 'asc' | 'desc') || undefined,
+        role: (searchParams.get('role') as StaffRole) || undefined,
+        status:
+          (searchParams.get('status') as 'active' | 'suspended' | 'deleted') ||
+          undefined,
+        sortBy:
+          (searchParams.get('sortBy') as
+            | 'username'
+            | 'role'
+            | 'lastLoginAt'
+            | 'createdAt') || undefined,
+        sortOrder:
+          (searchParams.get('sortOrder') as 'asc' | 'desc') || undefined,
       };
 
       const result = await AdminService.listAdmins(filters);
@@ -72,7 +88,8 @@ export async function GET(request: NextRequest): Promise<Response> {
  * @body {string}  [email]                - Email address
  * @body {string}  [firstName]            - First name
  * @body {string}  [lastName]             - Last name
- * @body {string}  role                   - Role: `csr` | `admin` | `super-admin` (required)
+ * @body {string}  [role]                 - Single role (legacy): `csr` | `kitchen` | `manager` | `admin` | `super-admin`
+ * @body {string[]} [roles]               - One or more roles (REQ-119); wins over `role` when both are sent. One of `role` / `roles` is required.
  * @body {Object}  [permissions]          - Custom permissions object
  *
  * @returns {Object}  response
@@ -94,7 +111,8 @@ export async function POST(request: NextRequest): Promise<Response> {
         email?: string;
         firstName?: string;
         lastName?: string;
-        role: 'csr' | 'admin' | 'super-admin';
+        role?: StaffRole;
+        roles?: StaffRole[];
         permissions?: IAdminPermissions;
       }>(request);
 
@@ -102,7 +120,14 @@ export async function POST(request: NextRequest): Promise<Response> {
         return apiError('Invalid JSON body', 400);
       }
 
-      const { username, password, role } = body;
+      const { username, password } = body;
+      // REQ-119 — `roles` wins over the legacy single `role`.
+      const requestedRoles: string[] =
+        Array.isArray(body.roles) && body.roles.length > 0
+          ? body.roles
+          : body.role
+            ? [body.role]
+            : [];
 
       if (!username || typeof username !== 'string') {
         return apiError('username is required', 400);
@@ -112,8 +137,11 @@ export async function POST(request: NextRequest): Promise<Response> {
         return apiError('password is required', 400);
       }
 
-      if (!role || !['csr', 'admin', 'super-admin'].includes(role)) {
-        return apiError('role must be one of: csr, admin, super-admin', 400);
+      if (
+        requestedRoles.length === 0 ||
+        !requestedRoles.every((r) => STAFF_ROLES.includes(r as StaffRole))
+      ) {
+        return apiError(`role(s) must be from: ${STAFF_ROLES.join(', ')}`, 400);
       }
 
       const admin = await AdminService.createAdmin({
@@ -122,13 +150,19 @@ export async function POST(request: NextRequest): Promise<Response> {
         email: body.email,
         firstName: body.firstName,
         lastName: body.lastName,
-        role: body.role,
+        roles: requestedRoles as StaffRole[],
         createdBy: '000000000000000000000000',
         permissions: body.permissions,
       });
 
       const adminObj = admin.toObject();
-      const { password: _pw, verificationPin: _vp, pinExpiresAt: _pe, sessionToken: _st, ...safeAdmin } = adminObj;
+      const {
+        password: _pw,
+        verificationPin: _vp,
+        pinExpiresAt: _pe,
+        sessionToken: _st,
+        ...safeAdmin
+      } = adminObj;
 
       return apiSuccess(serialize(safeAdmin), 201);
     } catch (error: any) {
@@ -136,7 +170,10 @@ export async function POST(request: NextRequest): Promise<Response> {
         return apiError('Username already exists', 409);
       }
 
-      if (error.message?.includes('Password must') || error.message?.includes('password must')) {
+      if (
+        error.message?.includes('Password must') ||
+        error.message?.includes('password must')
+      ) {
         return apiError(error.message, 422);
       }
 

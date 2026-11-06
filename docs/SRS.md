@@ -118,7 +118,10 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-AUTHA-001    | Admin login (username + bcrypt)                                                               | Must     | smoke      | `app/actions/auth/admin-login.ts`, `services/admin-service.ts:478`                                                          |
 | REQ-AUTHA-002    | Failed-login lockout (5 attempts / 15 min)                                                    | Should   | regression | `services/admin-service.ts:13,499`                                                                                          |
 | REQ-AUTHA-003    | Force password change flag                                                                    | Could    | extended   | `admin-login.ts:78`                                                                                                         |
-| REQ-AUTHA-004    | RBAC route gating (role + permission)                                                         | Must     | smoke      | `proxy.ts`, `lib/auth-middleware.ts:90`, `lib/permissions.ts:13`                                                            |
+| REQ-AUTHA-004    | RBAC route gating (any-of over staff roles + permission)                                      | Must     | smoke      | `proxy.ts`, `lib/auth-middleware.ts:90`, `lib/permissions.ts:13`; REQ-119                                                   |
+| REQ-AUTHA-005    | Multiple roles per staff account: union of access, permissions and navigation                 | Must     | regression | `lib/session.ts`, `lib/permissions.ts`, `proxy.ts`, `components/features/admin/dashboard-nav.tsx`; REQ-119                  |
+| REQ-AUTHA-006    | Role management: checkboxes, grant limits, self and last-super-admin guards, audit            | Must     | regression | `services/admin-service.ts`, `app/actions/admin/admin-management-actions.ts`, `create-admin-dialog.tsx`; REQ-119            |
+| REQ-AUTHA-007    | Staff role migration and backward compatibility (fallback, public API, pre-release sessions)  | Must     | regression | `scripts/migrate-staff-roles.ts`, `lib/session.ts`, `app/api/public/admins/route.ts`; REQ-119                               |
 | REQ-DASH-001     | Super-admin dashboard overview stats                                                          | Should   | regression | `app/dashboard/page.tsx:53`; REQ-007                                                                                        |
 | REQ-DASH-002     | Admin redirected from `/dashboard` to `/orders`                                               | Must     | smoke      | `app/dashboard/page.tsx:303`                                                                                                |
 | REQ-ORDMGT-001   | Order queue with filters + real-time                                                          | Must     | smoke      | `app/dashboard/orders/page.tsx`, `order-management-actions.ts:42`                                                           |
@@ -206,7 +209,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-REWMGT-003   | Issued rewards: filter, manual issue/expire, export                                           | Could    | extended   | `issued-rewards-actions.ts`                                                                                                 |
 | REQ-REWMGT-004   | Apply reward template (one-click)                                                             | Could    | extended   | `rewards/templates/page.tsx:111`                                                                                            |
 | REQ-SETTINGS-001 | Fees/delivery/hours config persists                                                           | Should   | regression | `app/dashboard/settings/page.tsx`                                                                                           |
-| REQ-SETTINGS-002 | Admin CRUD + permissions (super-admin)                                                        | Should   | regression | `admin-management-actions.ts:11`                                                                                            |
+| REQ-SETTINGS-002 | Admin CRUD + roles + permissions (super-admin; admins limited, see REQ-AUTHA-006)             | Should   | regression | `admin-management-actions.ts:11`; REQ-119                                                                                   |
 | REQ-SETTINGS-003 | API key create/revoke with scopes                                                             | Should   | regression | `settings/api-keys/page.tsx`, `services/api-key-service.ts:54`                                                              |
 | REQ-SETTINGS-004 | Process data-deletion requests                                                                | Could    | extended   | `settings/data-requests/`; REQ-027                                                                                          |
 | REQ-SETTINGS-005 | `incidentsAccess` admin permission                                                            | Should   | regression | `interfaces/admin-permissions.interface.ts`; REQ-066                                                                        |
@@ -592,11 +595,43 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 
 #### REQ-AUTHA-004 — RBAC route gating · **Must** · smoke
 
-**Source:** `proxy.ts`, `lib/auth-middleware.ts:90` (`requirePermission`), `lib/permissions.ts:13` (`routePermissions`), `interfaces/admin-permissions.interface.ts`
-**Behaviour:** `customer` → no dashboard; `admin` → Orders + Kitchen (per default permissions); `super-admin` → all. Granular `IAdminPermissions` gate menu/inventory/rewards/reports/expenses/settings/kitchen routes; missing permission redirects to `/dashboard/forbidden`. `/api/admin/*` requires an admin session; `/api/public/*` requires an API key.
+**Source:** `proxy.ts`, `lib/auth-middleware.ts:90` (`requirePermission`), `lib/permissions.ts:13` (`routePermissions`), `interfaces/admin-permissions.interface.ts`; REQ-119
+**Behaviour:** `customer` → no dashboard; `admin` → Orders + Kitchen (per default permissions); `super-admin` → all. Staff roles are `csr`, `kitchen`, `manager`, `admin`, `super-admin`, held as a list (REQ-AUTHA-005); every role check is an any-of check over that list through the helpers in `lib/session.ts`, and no code compares `session.role` directly. Granular `IAdminPermissions` gate menu/inventory/rewards/reports/expenses/settings/kitchen routes; missing permission redirects to `/dashboard/forbidden`. `/api/admin/*` requires an admin session; `/api/public/*` requires an API key.
 
 - **Given** a CSR session, **When** they navigate to `/dashboard/settings`, **Then** they are redirected (forbidden), while a super-admin reaches it.
 - **Given** no session, **When** calling `/api/admin/*`, **Then** the response is 401/redirect.
+- **Given** a customer or guest session, **When** it calls a staff route, server action or API, **Then** it is rejected, and `isAdmin`, `isStaff` and `hasAnyRole` are false for it.
+- **Given** the source tree, **When** the guard test runs, **Then** it fails if any file outside the helper module compares `session.role` directly.
+
+#### REQ-AUTHA-005 — Multiple roles per staff account · **Must** · regression
+
+**Source:** `lib/session.ts` (`getRoles`, `hasAnyRole`, `isStaff`, `isAdmin`), `lib/permissions.ts` (role defaults, `routePermissions`), `proxy.ts`, `components/features/admin/dashboard-nav.tsx`; REQ-119
+**Behaviour:** A staff account and its session carry `roles` (one or more of `csr`, `kitchen`, `manager`, `admin`, `super-admin`); `role` remains as the highest role for one release. Access is the union of the roles: routes, server actions, navigation items and feature permissions (the union of each role's defaults plus the user's per-user overrides). `isAdmin` means csr or above (`csr`, `manager`, `admin`, `super-admin`) and excludes `kitchen`; `isStaff` means any staff role. A `kitchen`-only member lands on the kitchen display.
+
+- **Given** a staff member with roles `csr` and `kitchen`, **When** they log in, **Then** the navigation shows the items of both roles and they can advance order status.
+- **Given** a staff member with only `kitchen`, **When** they open settings, menu or inventory, **Then** they are refused, while orders and kitchen display work.
+- **Given** a staff member with only `manager`, **When** they log in, **Then** they have csr access plus reports and incidents, and no settings, menu or inventory.
+- **Given** per-user permission overrides, **When** effective permissions are resolved for several roles, **Then** the override wins over the union of role defaults.
+
+#### REQ-AUTHA-006 — Role management · **Must** · regression
+
+**Source:** `services/admin-service.ts` (`createAdmin`, `updateRoles`), `app/actions/admin/admin-management-actions.ts`, `components/features/admin/create-admin-dialog.tsx` and the edit-roles dialog, `services/audit-log-service.ts` (`admin.roles-updated`); REQ-119
+**Behaviour:** Roles are chosen with checkboxes when creating or editing a staff member; at least one is required. Only a super-admin can grant or remove `admin` or `super-admin`, and only a super-admin can change the roles of an `admin` or `super-admin` holder. Nobody can change their own roles, and the last super-admin cannot lose that role. These rules are enforced in the server action, not only in the dialog. Every creation or change writes one audit row with actor, target, roles before and after, and the roles added and removed. A role change takes effect at the member's next sign-in (sessions last up to 7 days).
+
+- **Given** an admin who is not a super-admin, **When** they open the role checkboxes, **Then** `admin` and `super-admin` are disabled, and a direct call to grant them is rejected.
+- **Given** no role is ticked, **When** the form is submitted, **Then** nothing is saved and a message asks for at least one role.
+- **Given** a super-admin changes a member's roles, **When** the change is saved, **Then** one `admin.roles-updated` audit row records actor, target, before, after, added and removed.
+- **Given** the only super-admin, **When** anyone tries to remove that role, **Then** it is rejected.
+
+#### REQ-AUTHA-007 — Staff role migration and backward compatibility · **Must** · regression
+
+**Source:** `scripts/migrate-staff-roles.ts`, `lib/session.ts` (`getRoles` fallback), `app/api/public/admins/route.ts`, `scripts/seed-e2e-admins.ts`; REQ-119
+**Behaviour:** `scripts/migrate-staff-roles.ts` sets `roles = [role]` for every non-customer user whose `roles` is empty, never changes `role`, is idempotent, and has a dry-run mode. The application is correct before, during and after the migration because a session, user document or API record with only `role` is read as `[role]`. `POST /api/public/admins` accepts `role` or `roles` (`roles` wins if both are sent). Sessions issued before this release keep working until they expire.
+
+- **Given** a pre-migration csr, admin and super-admin, **When** the migration runs twice, **Then** each has `roles = [role]` after the first run and nothing changes on the second.
+- **Given** a dry run, **When** the script finishes, **Then** it reports the changes and writes nothing.
+- **Given** a session cookie that has only `role: 'csr'`, **When** the member uses the dashboard, **Then** access is the same as before the release.
+- **Given** a request to `POST /api/public/admins` with `role: 'csr'`, **When** it succeeds, **Then** the account has `roles = ['csr']`.
 
 ---
 
@@ -1375,9 +1410,10 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 
 #### REQ-SETTINGS-002 — Admin management · **Should** · regression
 
-**Source:** `app/actions/admin/admin-management-actions.ts:11` (create, `requireSuperAdmin` :21), `:79` (reset password)
+**Source:** `app/actions/admin/admin-management-actions.ts:11` (create, `requireSuperAdmin` :21), `:79` (reset password); roles are created and edited per REQ-AUTHA-006 (REQ-119)
 
 - **Given** the admins page, **When** a super-admin creates an admin with a role + permissions, **Then** that admin can log in; a duplicate username errors; password reset returns a one-time temp password.
+- **Given** the admins page, **When** a super-admin edits a member's roles, **Then** the change is saved with an audit row (REQ-AUTHA-006); an admin who is not a super-admin cannot grant `admin` or `super-admin`.
 
 #### REQ-SETTINGS-003 — API keys · **Should** · regression
 

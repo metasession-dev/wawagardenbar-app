@@ -54,7 +54,9 @@ export function OrderExport({ orders, filename = 'orders' }: OrderExportProps) {
         order.customer.name,
         order.customer.email || '',
         order.customer.phone || '',
-        order.items.map((item: any) => `${item.quantity}x ${item.name}`).join('; '),
+        order.items
+          .map((item: any) => `${item.quantity}x ${item.name}`)
+          .join('; '),
         order.total,
         order.paymentStatus || 'pending',
         order.tableNumber || '',
@@ -74,7 +76,10 @@ export function OrderExport({ orders, filename = 'orders' }: OrderExportProps) {
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       link.setAttribute('href', url);
-      link.setAttribute('download', `${filename}_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+      link.setAttribute(
+        'download',
+        `${filename}_${format(new Date(), 'yyyy-MM-dd')}.csv`
+      );
       link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();
@@ -106,7 +111,10 @@ export function OrderExport({ orders, filename = 'orders' }: OrderExportProps) {
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       link.setAttribute('href', url);
-      link.setAttribute('download', `${filename}_${format(new Date(), 'yyyy-MM-dd')}.json`);
+      link.setAttribute(
+        'download',
+        `${filename}_${format(new Date(), 'yyyy-MM-dd')}.json`
+      );
       link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();

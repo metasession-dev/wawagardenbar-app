@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
-import { requireAdmin } from '@/lib/auth-middleware';
+import { requireStaff } from '@/lib/auth-middleware';
+import { getRoles } from '@/lib/session';
 import { DashboardNav } from '@/components/features/admin/dashboard-nav';
 import { Breadcrumb } from '@/components/shared/breadcrumb';
 
@@ -19,8 +20,9 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Require admin authentication
-  const session = await requireAdmin();
+  // Any staff role may enter the dashboard; routes narrow it further
+  // (proxy.ts route allowlists, page and action gates).
+  const session = await requireStaff();
 
   if (!session.userId) {
     redirect('/login');
@@ -28,7 +30,7 @@ export default async function DashboardLayout({
 
   // Debug logging
   console.log(`[DashboardLayout] Access granted to user: ${session.email}`);
-  console.log(`[DashboardLayout] User Role: ${session.role}`);
+  console.log(`[DashboardLayout] User Roles: ${getRoles(session).join(',')}`);
   if (session.permissions) {
     console.log(
       `[DashboardLayout] Permissions:`,
@@ -41,7 +43,7 @@ export default async function DashboardLayout({
       {/* Sidebar */}
       <DashboardNav
         userEmail={session.email}
-        userRole={session.role}
+        userRoles={getRoles(session)}
         permissions={session.permissions}
       />
 

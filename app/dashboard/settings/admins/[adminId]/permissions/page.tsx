@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { notFound, redirect } from 'next/navigation';
 import { requireSuperAdmin } from '@/lib/auth-middleware';
+import { getRoles, isStaff } from '@/lib/session';
 import { connectDB } from '@/lib/mongodb';
 import { UserModel } from '@/models';
 import { PermissionsManagementClient } from '@/components/features/admin/permissions-management-client';
@@ -17,14 +18,16 @@ async function getAdminUser(adminId: string) {
   await connectDB();
 
   const admin = await UserModel.findById(adminId)
-    .select('username email firstName lastName role permissions accountStatus')
+    .select(
+      'username email firstName lastName role roles permissions accountStatus'
+    )
     .lean();
 
   if (!admin) {
     return null;
   }
 
-  if (admin.role === 'customer') {
+  if (!isStaff(admin)) {
     return null;
   }
 
@@ -35,6 +38,7 @@ async function getAdminUser(adminId: string) {
     firstName: admin.firstName || '',
     lastName: admin.lastName || '',
     role: admin.role,
+    roles: getRoles(admin),
     permissions: admin.permissions || null,
     accountStatus: admin.accountStatus,
   };
@@ -50,7 +54,7 @@ export default async function AdminPermissionsPage({ params }: PageProps) {
     notFound();
   }
 
-  if (admin.role === 'super-admin') {
+  if (admin.roles.includes('super-admin')) {
     redirect('/dashboard/settings/admins');
   }
 

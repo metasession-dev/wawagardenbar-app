@@ -6,7 +6,7 @@
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
 import { revalidatePath } from 'next/cache';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, hasAnyRole } from '@/lib/session';
 import { CashPositionService } from '@/services/cash-position-service';
 import { CashPositionAdjustmentType } from '@/interfaces/cash-position-adjustment.interface';
 
@@ -18,14 +18,14 @@ async function getSession(): Promise<SessionData> {
 /** Same gate as the Daily Report itself — a report-viewing concern. */
 function requireReportViewer(session: SessionData): void {
   if (!session.isLoggedIn || !session.userId) throw new Error('Unauthorized');
-  if (session.role !== 'super-admin' && session.role !== 'admin') {
+  if (!hasAnyRole(session, ['super-admin', 'admin'])) {
     throw new Error('Insufficient permissions');
   }
 }
 
 function requireSuperAdmin(session: SessionData): void {
   if (!session.isLoggedIn || !session.userId) throw new Error('Unauthorized');
-  if (session.role !== 'super-admin') {
+  if (!hasAnyRole(session, ['super-admin'])) {
     throw new Error('Insufficient permissions — super-admin required');
   }
 }

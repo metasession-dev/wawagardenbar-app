@@ -25,21 +25,36 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, Key, UserX, UserCheck, Trash2, Copy, Shield } from 'lucide-react';
+import {
+  MoreHorizontal,
+  Key,
+  UserX,
+  UserCheck,
+  Trash2,
+  Copy,
+  Shield,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+import { getRoles } from '@/lib/roles';
+import type { StaffRole } from '@/interfaces/user.interface';
+import { EditRolesDialog } from './edit-roles-dialog';
 
 interface AdminActionsDropdownProps {
   admin: any;
   onUpdate: () => void;
+  /** REQ-119 — true when the signed-in actor is a super-admin (this page is super-admin only). */
+  canGrantPrivileged?: boolean;
 }
 
 export function AdminActionsDropdown({
   admin,
   onUpdate,
+  canGrantPrivileged = true,
 }: AdminActionsDropdownProps) {
   const router = useRouter();
   const [showResetDialog, setShowResetDialog] = useState(false);
+  const [showRolesDialog, setShowRolesDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [tempPassword, setTempPassword] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -58,7 +73,9 @@ export function AdminActionsDropdown({
 
       if (!result.tempPassword) {
         console.error('No temp password in result:', result);
-        toast.error('Password reset succeeded but temporary password was not returned');
+        toast.error(
+          'Password reset succeeded but temporary password was not returned'
+        );
         return;
       }
 
@@ -134,14 +151,23 @@ export function AdminActionsDropdown({
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
           <DropdownMenuSeparator />
 
-          {(admin.role === 'csr' || admin.role === 'admin') && (
+          {!getRoles(admin).includes('super-admin') && (
             <DropdownMenuItem
-              onClick={() => router.push(`/dashboard/settings/admins/${admin._id}/permissions`)}
+              onClick={() =>
+                router.push(
+                  `/dashboard/settings/admins/${admin._id}/permissions`
+                )
+              }
             >
               <Shield className="mr-2 h-4 w-4" />
               Manage Permissions
             </DropdownMenuItem>
           )}
+
+          <DropdownMenuItem onClick={() => setShowRolesDialog(true)}>
+            <Shield className="mr-2 h-4 w-4" />
+            Edit Roles
+          </DropdownMenuItem>
 
           <DropdownMenuItem onClick={() => setShowResetDialog(true)}>
             <Key className="mr-2 h-4 w-4" />
@@ -175,6 +201,17 @@ export function AdminActionsDropdown({
       </DropdownMenu>
 
       {/* Reset Password Dialog */}
+      <EditRolesDialog
+        key={showRolesDialog ? 'open' : 'closed'}
+        open={showRolesDialog}
+        onOpenChange={setShowRolesDialog}
+        adminId={admin._id}
+        username={admin.username}
+        currentRoles={getRoles(admin) as StaffRole[]}
+        canGrantPrivileged={canGrantPrivileged}
+        onUpdated={onUpdate}
+      />
+
       <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -205,7 +242,8 @@ export function AdminActionsDropdown({
                 </div>
               ) : (
                 <span>
-                  This will generate a new temporary password for the admin. They will be required to change it on their next login.
+                  This will generate a new temporary password for the admin.
+                  They will be required to change it on their next login.
                 </span>
               )}
             </AlertDialogDescription>

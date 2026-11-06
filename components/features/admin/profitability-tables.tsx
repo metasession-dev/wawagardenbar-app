@@ -1,7 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
@@ -9,7 +15,10 @@ import {
   getTopProfitableItemsAction,
   getItemsWithDecliningMarginsAction,
 } from '@/app/actions/admin/profitability-analytics-actions';
-import type { ProfitabilityReport, ItemProfitability } from '@/services/profitability-analytics-service';
+import type {
+  ProfitabilityReport,
+  ItemProfitability,
+} from '@/services/profitability-analytics-service';
 
 interface ProfitabilityTablesProps {
   dateRange: { startDate: string; endDate: string };
@@ -17,7 +26,11 @@ interface ProfitabilityTablesProps {
   isLoading: boolean;
 }
 
-export function ProfitabilityTables({ dateRange, report, isLoading }: ProfitabilityTablesProps) {
+export function ProfitabilityTables({
+  dateRange,
+  report,
+  isLoading,
+}: ProfitabilityTablesProps) {
   const [topItems, setTopItems] = useState<ItemProfitability[]>([]);
   const [lowMarginItems, setLowMarginItems] = useState<ItemProfitability[]>([]);
   const [isLoadingTables, setIsLoadingTables] = useState(true);
@@ -28,7 +41,11 @@ export function ProfitabilityTables({ dateRange, report, isLoading }: Profitabil
 
       try {
         const [topResult, lowResult] = await Promise.all([
-          getTopProfitableItemsAction(dateRange.startDate, dateRange.endDate, 10),
+          getTopProfitableItemsAction(
+            dateRange.startDate,
+            dateRange.endDate,
+            10
+          ),
           getItemsWithDecliningMarginsAction(20),
         ]);
 
@@ -67,7 +84,9 @@ export function ProfitabilityTables({ dateRange, report, isLoading }: Profitabil
             <TrendingUp className="h-5 w-5 text-green-600" />
             Top 10 Profitable Items
           </CardTitle>
-          <CardDescription>Best performing menu items by gross profit</CardDescription>
+          <CardDescription>
+            Best performing menu items by gross profit
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -88,12 +107,15 @@ export function ProfitabilityTables({ dateRange, report, isLoading }: Profitabil
                     <div>
                       <p className="font-medium">{item.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {item.orderCount} orders · ₦{item.totalRevenue.toLocaleString()} revenue
+                        {item.orderCount} orders · ₦
+                        {item.totalRevenue.toLocaleString()} revenue
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-green-600">₦{item.grossProfit.toLocaleString()}</p>
+                    <p className="font-bold text-green-600">
+                      ₦{item.grossProfit.toLocaleString()}
+                    </p>
                     <Badge variant="secondary" className="text-xs">
                       {item.profitMargin.toFixed(1)}%
                     </Badge>
@@ -126,8 +148,8 @@ export function ProfitabilityTables({ dateRange, report, isLoading }: Profitabil
                   item.profitMargin < 10
                     ? 'text-red-600'
                     : item.profitMargin < 15
-                    ? 'text-orange-600'
-                    : 'text-yellow-600';
+                      ? 'text-orange-600'
+                      : 'text-yellow-600';
 
                 return (
                   <div
@@ -139,12 +161,15 @@ export function ProfitabilityTables({ dateRange, report, isLoading }: Profitabil
                       <div>
                         <p className="font-medium">{item.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {item.orderCount} orders · ₦{item.totalCost.toLocaleString()} cost
+                          {item.orderCount} orders · ₦
+                          {item.totalCost.toLocaleString()} cost
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className={`font-bold ${marginColor}`}>{item.profitMargin.toFixed(1)}%</p>
+                      <p className={`font-bold ${marginColor}`}>
+                        {item.profitMargin.toFixed(1)}%
+                      </p>
                       <p className="text-xs text-muted-foreground">
                         ₦{item.grossProfit.toLocaleString()}
                       </p>
@@ -162,7 +187,9 @@ export function ProfitabilityTables({ dateRange, report, isLoading }: Profitabil
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>All Items Performance</CardTitle>
-            <CardDescription>Complete breakdown of all menu items in the period</CardDescription>
+            <CardDescription>
+              Complete breakdown of all menu items in the period
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -179,17 +206,26 @@ export function ProfitabilityTables({ dateRange, report, isLoading }: Profitabil
                 </thead>
                 <tbody>
                   {report.byItem.slice(0, 20).map((item) => (
-                    <tr key={item.menuItemId} className="border-b hover:bg-accent/50">
+                    <tr
+                      key={item.menuItemId}
+                      className="border-b hover:bg-accent/50"
+                    >
                       <td className="p-2 font-medium">{item.name}</td>
                       <td className="text-right p-2">{item.orderCount}</td>
-                      <td className="text-right p-2">₦{item.totalRevenue.toLocaleString()}</td>
-                      <td className="text-right p-2">₦{item.totalCost.toLocaleString()}</td>
+                      <td className="text-right p-2">
+                        ₦{item.totalRevenue.toLocaleString()}
+                      </td>
+                      <td className="text-right p-2">
+                        ₦{item.totalCost.toLocaleString()}
+                      </td>
                       <td className="text-right p-2 text-green-600">
                         ₦{item.grossProfit.toLocaleString()}
                       </td>
                       <td className="text-right p-2">
                         <Badge
-                          variant={item.profitMargin < 20 ? 'destructive' : 'secondary'}
+                          variant={
+                            item.profitMargin < 20 ? 'destructive' : 'secondary'
+                          }
                           className="text-xs"
                         >
                           {item.profitMargin.toFixed(1)}%

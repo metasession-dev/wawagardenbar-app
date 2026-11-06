@@ -5,7 +5,7 @@ import { getIronSession } from 'iron-session';
 import { revalidatePath } from 'next/cache';
 import { z } from '@/lib/zod';
 import { ProfileService, OrderService, TabService } from '@/services';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, getPrimaryRole } from '@/lib/session';
 import { IUser, IAddress, IPreferences } from '@/interfaces';
 import { AuditLogService } from '@/services/audit-log-service';
 import { instagramHandleSchema } from '@/lib/validation/profile';
@@ -173,7 +173,7 @@ export async function updateProfileAction(
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: session.email || '',
-      userRole: session.role || 'customer',
+      userRole: getPrimaryRole(session) || 'customer',
       action: 'user.update',
       resource: 'user_profile',
       resourceId: session.userId,
@@ -332,7 +332,7 @@ export async function uploadProfilePictureAction(
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: session.email || '',
-      userRole: session.role || 'customer',
+      userRole: getPrimaryRole(session) || 'customer',
       action: 'user.update',
       resource: 'user_profile_picture',
       resourceId: session.userId,
@@ -393,7 +393,7 @@ export async function addAddressAction(
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: session.email || '',
-      userRole: session.role || 'customer',
+      userRole: getPrimaryRole(session) || 'customer',
       action: 'user.update',
       resource: 'user_address',
       resourceId: session.userId,
@@ -463,7 +463,7 @@ export async function updateAddressAction(
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: session.email || '',
-      userRole: session.role || 'customer',
+      userRole: getPrimaryRole(session) || 'customer',
       action: 'user.update',
       resource: 'user_address',
       resourceId: session.userId,
@@ -525,7 +525,7 @@ export async function deleteAddressAction(
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: session.email || '',
-      userRole: session.role || 'customer',
+      userRole: getPrimaryRole(session) || 'customer',
       action: 'user.update',
       resource: 'user_address',
       resourceId: session.userId,
@@ -672,7 +672,7 @@ export async function claimGuestOrdersAction(
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: session.email || '',
-      userRole: session.role || 'customer',
+      userRole: getPrimaryRole(session) || 'customer',
       action: 'user.update',
       resource: 'user_guest_conversion',
       resourceId: session.userId,
@@ -756,7 +756,7 @@ export async function requestDataDeletionAction(
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: email,
-      userRole: session.role || 'customer',
+      userRole: getPrimaryRole(session) || 'customer',
       action: 'user.delete_request',
       resource: 'user_data',
       resourceId: session.userId,

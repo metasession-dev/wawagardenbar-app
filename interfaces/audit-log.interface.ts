@@ -32,6 +32,7 @@ export type AuditAction =
   | 'admin.login-failed'
   | 'admin.account-locked'
   | 'admin.permissions-updated'
+  | 'admin.roles-updated'
   | 'expense.create'
   | 'expense.update'
   | 'expense.delete'

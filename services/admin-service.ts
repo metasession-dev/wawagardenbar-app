@@ -1,11 +1,26 @@
 import bcrypt from 'bcrypt';
 import { UserModel } from '../models';
 import { AuditLogService } from './audit-log-service';
+import { IAdminPermissions } from '../interfaces';
+import { StaffRole, STAFF_ROLES } from '../interfaces/user.interface';
+import { getRoles, getPrimaryRole, hasAnyRole } from '../lib/session';
 import {
-  IAdminPermissions,
-  DEFAULT_ADMIN_PERMISSIONS,
-  CSR_DEFAULT_PERMISSIONS,
-} from '../interfaces';
+  defaultPermissionsForRoles,
+  recomputePermissionsForRoleChange,
+} from '../lib/permissions';
+
+/** REQ-119 — roles only a super-admin may grant, remove, or edit on a holder. */
+const PRIVILEGED_ROLES: readonly StaffRole[] = ['admin', 'super-admin'];
+
+export interface RoleChangeActor {
+  userId: string;
+  roles: readonly string[];
+}
+
+/** Canonical order, no duplicates, staff roles only. */
+export function normalizeStaffRoles(input: readonly string[]): StaffRole[] {
+  return STAFF_ROLES.filter((role) => input.includes(role));
+}
 
 export class AdminService {
   private static readonly BCRYPT_ROUNDS = 12;
@@ -18,10 +33,10 @@ export class AdminService {
    * Get user details for audit log
    */
   private static async getUserForAudit(userId: string) {
-    const user = await UserModel.findById(userId).select('email role');
+    const user = await UserModel.findById(userId).select('email role roles');
     return {
       userEmail: user?.email || 'unknown',
-      userRole: user?.role || 'unknown',
+      userRole: getPrimaryRole(user) || 'unknown',
     };
   }
 
@@ -108,10 +123,23 @@ export class AdminService {
     email?: string;
     firstName?: string;
     lastName?: string;
-    role: 'csr' | 'admin' | 'super-admin';
+    /** REQ-119 — one or more staff roles. `role` (single) is still accepted. */
+    roles?: StaffRole[];
+    role?: StaffRole;
     createdBy: string;
     permissions?: IAdminPermissions;
   }) {
+    const roles = normalizeStaffRoles(
+      data.roles && data.roles.length > 0
+        ? data.roles
+        : data.role
+          ? [data.role]
+          : []
+    );
+    if (roles.length === 0) {
+      throw new Error('At least one role is required');
+    }
+
     // Validate username uniqueness (exclude soft-deleted users)
     const existingUser = await UserModel.findOne({
       username: data.username.toLowerCase(),
@@ -131,14 +159,13 @@ export class AdminService {
     // Hash password
     const hashedPassword = await this.hashPassword(data.password);
 
-    // Determine permissions based on role
-    let adminPermissions: IAdminPermissions | null = null;
-    if (data.role === 'csr') {
-      adminPermissions = data.permissions || CSR_DEFAULT_PERMISSIONS;
-    } else if (data.role === 'admin') {
-      adminPermissions = data.permissions || DEFAULT_ADMIN_PERMISSIONS;
-    }
-    // Super-admin has no restrictions (null)
+    // Permissions: the union of the roles' defaults unless explicit ones are
+    // given. A super-admin has no restrictions (null).
+    const adminPermissions: IAdminPermissions | null = roles.includes(
+      'super-admin'
+    )
+      ? null
+      : data.permissions || defaultPermissionsForRoles(roles);
 
     // Create user
     const admin = await UserModel.create({
@@ -147,7 +174,8 @@ export class AdminService {
       email: data.email,
       firstName: data.firstName,
       lastName: data.lastName,
-      role: data.role,
+      role: getPrimaryRole({ roles }),
+      roles,
       isAdmin: true,
       accountStatus: 'active',
       emailVerified: true, // Admin emails don't need verification
@@ -167,11 +195,163 @@ export class AdminService {
       resourceId: admin._id.toString(),
       details: {
         username: data.username,
-        role: data.role,
+        role: getPrimaryRole({ roles }),
+        roles,
       },
+    });
+    await this.logRolesUpdated({
+      actorId: data.createdBy,
+      targetId: admin._id.toString(),
+      targetName: data.username,
+      before: [],
+      after: roles,
     });
 
     return admin;
+  }
+
+  /**
+   * REQ-119 (AC5) — one audit row per creation or change of roles.
+   */
+  private static async logRolesUpdated(data: {
+    actorId: string;
+    targetId: string;
+    targetName?: string;
+    before: readonly StaffRole[];
+    after: readonly StaffRole[];
+  }) {
+    const auditUser = await this.getUserForAudit(data.actorId);
+    await AuditLogService.createLog({
+      userId: data.actorId,
+      userEmail: auditUser.userEmail,
+      userRole: auditUser.userRole,
+      action: 'admin.roles-updated',
+      resource: 'admin',
+      resourceId: data.targetId,
+      details: {
+        target: data.targetName,
+        before: [...data.before],
+        after: [...data.after],
+        added: data.after.filter((role) => !data.before.includes(role)),
+        removed: data.before.filter((role) => !data.after.includes(role)),
+      },
+    });
+  }
+
+  /** Active accounts holding super-admin, excluding one user id. */
+  private static async countOtherSuperAdmins(excludeUserId: string) {
+    return UserModel.countDocuments({
+      _id: { $ne: excludeUserId },
+      accountStatus: 'active',
+      $or: [{ roles: 'super-admin' }, { role: 'super-admin' }],
+    });
+  }
+
+  /**
+   * REQ-119 (AC3, AC5, AC7) — set the roles of a staff member (or, with an
+   * empty list, demote them to a plain customer account).
+   *
+   * Enforced here, not only in the dialogs: the actor must be an admin or
+   * super-admin; nobody changes their own roles; only a super-admin grants or
+   * removes `admin` or `super-admin` or touches a holder of them; the last
+   * super-admin cannot lose that role. Writes `roles`, the back-compat `role`
+   * (highest), the recomputed permissions, and one audit row.
+   */
+  static async updateRoles(data: {
+    actor: RoleChangeActor;
+    targetUserId: string;
+    roles: readonly string[];
+    /** The customers-page flow may demote to a customer (empty roles). */
+    allowEmpty?: boolean;
+  }) {
+    const after = normalizeStaffRoles(data.roles);
+    if (after.length !== new Set(data.roles).size) {
+      throw new Error('Unknown role');
+    }
+    if (after.length === 0 && !data.allowEmpty) {
+      throw new Error('At least one role is required');
+    }
+
+    const actorIsSuperAdmin = hasAnyRole({ roles: [...data.actor.roles] }, [
+      'super-admin',
+    ]);
+    const actorIsAdmin = hasAnyRole({ roles: [...data.actor.roles] }, [
+      'admin',
+      'super-admin',
+    ]);
+    if (!actorIsAdmin) {
+      throw new Error('Unauthorized');
+    }
+    if (data.targetUserId === data.actor.userId) {
+      throw new Error('Cannot change your own roles');
+    }
+
+    const target = await UserModel.findById(data.targetUserId);
+    if (!target) {
+      throw new Error('User not found');
+    }
+
+    const before = getRoles(target).filter((role): role is StaffRole =>
+      STAFF_ROLES.includes(role as StaffRole)
+    );
+    const changed = [
+      ...after.filter((role) => !before.includes(role)),
+      ...before.filter((role) => !after.includes(role)),
+    ];
+
+    if (!actorIsSuperAdmin) {
+      const holdsPrivileged = before.some((role) =>
+        PRIVILEGED_ROLES.includes(role)
+      );
+      const touchesPrivileged = changed.some((role) =>
+        PRIVILEGED_ROLES.includes(role)
+      );
+      if (holdsPrivileged || touchesPrivileged) {
+        throw new Error(
+          'Only a super-admin can grant or remove admin or super-admin, or change their holders'
+        );
+      }
+    }
+
+    if (changed.length === 0) {
+      return target;
+    }
+
+    if (
+      before.includes('super-admin') &&
+      !after.includes('super-admin') &&
+      (await this.countOtherSuperAdmins(data.targetUserId)) === 0
+    ) {
+      throw new Error('Cannot remove the last super-admin');
+    }
+
+    target.roles = after;
+    target.role =
+      after.length > 0 ? getPrimaryRole({ roles: after })! : 'customer';
+    if (after.length === 0) {
+      target.isAdmin = false;
+    } else {
+      target.isAdmin = true;
+      target.permissions = after.includes('super-admin')
+        ? (null as unknown as IAdminPermissions)
+        : recomputePermissionsForRoleChange(
+            target.permissions ?? undefined,
+            before,
+            after
+          );
+      target.markModified('permissions');
+    }
+    await target.save();
+
+    await this.logRolesUpdated({
+      actorId: data.actor.userId,
+      targetId: data.targetUserId,
+      targetName: target.username || target.email,
+      before,
+      after,
+    });
+
+    return target;
   }
 
   /**
@@ -179,7 +359,7 @@ export class AdminService {
    */
   static async listAdmins(filters?: {
     search?: string;
-    role?: 'csr' | 'admin' | 'super-admin';
+    role?: StaffRole;
     status?: 'active' | 'suspended' | 'deleted';
     sortBy?: 'username' | 'role' | 'lastLoginAt' | 'createdAt';
     sortOrder?: 'asc' | 'desc';
@@ -199,7 +379,9 @@ export class AdminService {
     }
 
     if (filters?.role) {
-      query.role = filters.role;
+      // REQ-119 — match `roles`, and `role` for records not yet migrated.
+      const roleMatch = [{ roles: filters.role }, { role: filters.role }];
+      query.$and = [...(query.$and || []), { $or: roleMatch }];
     }
 
     if (filters?.status) {
@@ -389,13 +571,8 @@ export class AdminService {
     }
 
     // Check if last super-admin
-    if (admin.role === 'super-admin') {
-      const superAdminCount = await UserModel.countDocuments({
-        role: 'super-admin',
-        accountStatus: 'active',
-      });
-
-      if (superAdminCount <= 1) {
+    if (hasAnyRole(admin, ['super-admin'])) {
+      if ((await this.countOtherSuperAdmins(data.adminId)) === 0) {
         throw new Error('Cannot delete the last super-admin');
       }
     }
@@ -422,6 +599,7 @@ export class AdminService {
       details: {
         username: admin.username,
         role: admin.role,
+        roles: getRoles(admin),
       },
     });
 
@@ -446,7 +624,7 @@ export class AdminService {
       throw new Error('User is not an admin');
     }
 
-    if (admin.role === 'super-admin') {
+    if (hasAnyRole(admin, ['super-admin'])) {
       throw new Error('Cannot modify super-admin permissions');
     }
 

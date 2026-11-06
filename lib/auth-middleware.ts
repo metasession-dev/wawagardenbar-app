@@ -1,7 +1,14 @@
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
 import { redirect } from 'next/navigation';
-import { sessionOptions, SessionData } from './session';
+import {
+  sessionOptions,
+  SessionData,
+  getRoles,
+  hasAnyRole,
+  isStaff,
+  ADMIN_SIDE_ROLES,
+} from './session';
 import { UserRole } from '@/interfaces/user.interface';
 import { IAdminPermissions } from '@/interfaces';
 
@@ -30,7 +37,7 @@ export async function requireRole(
 ): Promise<SessionData> {
   const session = await requireAuth();
 
-  if (!session.role || !allowedRoles.includes(session.role as UserRole)) {
+  if (!hasAnyRole(session, allowedRoles)) {
     redirect('/unauthorized');
   }
 
@@ -41,7 +48,21 @@ export async function requireRole(
  * Check if user is staff (admin-side surfaces).
  */
 export async function requireAdmin(): Promise<SessionData> {
-  return requireRole(['csr', 'admin', 'super-admin']);
+  return requireRole([...ADMIN_SIDE_ROLES]);
+}
+
+/**
+ * REQ-119 — dashboard entry gate: any staff role (including `kitchen`).
+ * Individual routes narrow it further (proxy route allowlists, page gates).
+ */
+export async function requireStaff(): Promise<SessionData> {
+  const session = await requireAuth();
+
+  if (!isStaff(session)) {
+    redirect('/unauthorized');
+  }
+
+  return session;
 }
 
 /**
@@ -96,7 +117,7 @@ export function hasSessionPermission(
   session: SessionData,
   permission: keyof IAdminPermissions
 ): boolean {
-  if (session.role === 'super-admin') {
+  if (hasAnyRole(session, ['super-admin'])) {
     return true;
   }
 
@@ -110,16 +131,18 @@ export function hasSessionPermission(
 export async function requirePermission(
   permission: keyof IAdminPermissions
 ): Promise<SessionData> {
-  const session = await requireAdmin();
+  // REQ-119: any staff role may reach a permission-gated page; the
+  // permission itself (a union of the role defaults plus overrides) is the gate.
+  const session = await requireStaff();
 
   // Super-admin has all permissions
-  if (session.role === 'super-admin') {
+  if (hasAnyRole(session, ['super-admin'])) {
     return session;
   }
 
   // Debug logging
   console.log(`[Auth] Checking permission: ${permission}`);
-  console.log(`[Auth] User Role: ${session.role}`);
+  console.log(`[Auth] User Roles: ${getRoles(session).join(',')}`);
   console.log(
     `[Auth] Permissions:`,
     JSON.stringify(session.permissions, null, 2)

@@ -8,7 +8,7 @@ import { RecipeService } from '@/services/recipe-service';
 import { ProductionService } from '@/services/production-service';
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, getPrimaryRole } from '@/lib/session';
 import { MakeBatchDialog } from '@/components/features/kitchen/make-batch-dialog';
 import { ProductionHistory } from '@/components/features/kitchen/production-history';
 
@@ -22,7 +22,7 @@ async function getRole() {
     await cookies(),
     sessionOptions
   );
-  return session.role;
+  return getPrimaryRole(session);
 }
 
 export default async function KitchenProductionPage() {

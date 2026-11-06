@@ -5,7 +5,12 @@
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
-import { sessionOptions, SessionData } from '@/lib/session';
+import {
+  sessionOptions,
+  SessionData,
+  hasAnyRole,
+  getPrimaryRole,
+} from '@/lib/session';
 import { CashPositionPageClient } from './cash-position-page-client';
 
 export const metadata = {
@@ -25,9 +30,11 @@ export default async function CashPositionPage() {
     redirect('/login');
   }
 
-  if (session.role !== 'super-admin' && session.role !== 'admin') {
+  if (!hasAnyRole(session, ['super-admin', 'admin'])) {
     redirect('/dashboard');
   }
 
-  return <CashPositionPageClient userRole={session.role ?? 'admin'} />;
+  return (
+    <CashPositionPageClient userRole={getPrimaryRole(session) ?? 'admin'} />
+  );
 }

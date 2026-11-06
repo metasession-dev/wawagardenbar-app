@@ -2,7 +2,14 @@
 
 import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, CheckCircle, Loader2, Package, XCircle, MessageSquare } from 'lucide-react';
+import {
+  Clock,
+  CheckCircle,
+  Loader2,
+  Package,
+  XCircle,
+  MessageSquare,
+} from 'lucide-react';
 
 interface OrderTimelineProps {
   order: any;
@@ -15,7 +22,7 @@ interface OrderTimelineProps {
 export function OrderTimeline({ order }: OrderTimelineProps) {
   const getStatusIcon = (status: string, isCurrent: boolean) => {
     const iconClass = isCurrent ? 'text-primary' : 'text-muted-foreground';
-    
+
     switch (status) {
       case 'pending':
         return <Clock className={`h-5 w-5 ${iconClass}`} />;
@@ -58,11 +65,13 @@ export function OrderTimeline({ order }: OrderTimelineProps) {
             return (
               <div key={index} className="relative flex gap-4">
                 {/* Icon */}
-                <div className={`relative z-10 flex h-9 w-9 items-center justify-center rounded-full border-2 ${
-                  isCurrent 
-                    ? 'border-primary bg-background' 
-                    : 'border-border bg-muted'
-                }`}>
+                <div
+                  className={`relative z-10 flex h-9 w-9 items-center justify-center rounded-full border-2 ${
+                    isCurrent
+                      ? 'border-primary bg-background'
+                      : 'border-border bg-muted'
+                  }`}
+                >
                   {getStatusIcon(entry.status, isCurrent)}
                 </div>
 
@@ -70,9 +79,13 @@ export function OrderTimeline({ order }: OrderTimelineProps) {
                 <div className={`flex-1 ${!isLast ? 'pb-6' : ''}`}>
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1">
-                      <p className={`font-medium capitalize ${
-                        isCurrent ? 'text-foreground' : 'text-muted-foreground'
-                      }`}>
+                      <p
+                        className={`font-medium capitalize ${
+                          isCurrent
+                            ? 'text-foreground'
+                            : 'text-muted-foreground'
+                        }`}
+                      >
                         {entry.status}
                       </p>
                       {entry.note && (

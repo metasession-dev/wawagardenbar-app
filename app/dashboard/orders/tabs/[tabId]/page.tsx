@@ -4,7 +4,7 @@
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, hasAnyRole } from '@/lib/session';
 import { TabService } from '@/services';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -51,9 +51,7 @@ async function getTabDetails(tabId: string) {
 
   if (
     !session.userId ||
-    (session.role !== 'csr' &&
-      session.role !== 'admin' &&
-      session.role !== 'super-admin')
+    !hasAnyRole(session, ['csr', 'manager', 'admin', 'super-admin'])
   ) {
     redirect('/dashboard');
   }
@@ -123,7 +121,7 @@ async function getTabDetails(tabId: string) {
   return {
     tab: serializedTab,
     orders: serializedOrders,
-    isSuperAdmin: session.role === 'super-admin',
+    isSuperAdmin: hasAnyRole(session, ['super-admin']),
   };
 }
 

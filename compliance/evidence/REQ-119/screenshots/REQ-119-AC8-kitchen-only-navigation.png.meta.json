@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-119",
+  "ac": 8,
+  "slug": "kitchen-only-navigation",
+  "specFile": "e2e/critical/staff-multi-role.spec.ts",
+  "capturedAt": "2026-11-06T15:35:23.698Z"
+}

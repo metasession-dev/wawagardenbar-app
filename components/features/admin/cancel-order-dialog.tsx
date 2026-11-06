@@ -87,16 +87,18 @@ export function CancelOrderDialog({
             Cancel Order
           </DialogTitle>
           <DialogDescription>
-            Are you sure you want to cancel this order? This action cannot be undone.
+            Are you sure you want to cancel this order? This action cannot be
+            undone.
           </DialogDescription>
         </DialogHeader>
 
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            Cancelling this order will notify the customer and deduct it from the tab total if applicable. 
-            Only unpaid orders can be cancelled. Orders from tabs in settling status cannot be cancelled. 
-            For paid orders, please process a refund instead.
+            Cancelling this order will notify the customer and deduct it from
+            the tab total if applicable. Only unpaid orders can be cancelled.
+            Orders from tabs in settling status cannot be cancelled. For paid
+            orders, please process a refund instead.
           </AlertDescription>
         </Alert>
 
@@ -122,9 +124,9 @@ export function CancelOrderDialog({
           >
             Keep Order
           </Button>
-          <Button 
-            variant="destructive" 
-            onClick={handleSubmit} 
+          <Button
+            variant="destructive"
+            onClick={handleSubmit}
             disabled={isSubmitting}
           >
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

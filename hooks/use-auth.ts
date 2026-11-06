@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { UserRole } from '@/interfaces/user.interface';
 
+import { getPrimaryRole } from '@/lib/session';
 interface User {
   id?: string;
   name?: string;
@@ -98,7 +99,7 @@ export function useAuth() {
     error,
     isAuthenticated: session?.isLoggedIn ?? false,
     isGuest: session?.isGuest ?? false,
-    role: session?.role || user?.role,
+    role: getPrimaryRole(session) || user?.role,
     logout: logoutMutation.mutate,
     refreshSession,
   };

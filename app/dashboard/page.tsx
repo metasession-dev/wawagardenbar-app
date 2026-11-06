@@ -21,6 +21,7 @@ import {
   ORDER_TYPE_DISPLAY_ORDER,
 } from '@/lib/order-type-labels';
 
+import { hasAnyRole } from '@/lib/session';
 export const dynamic = 'force-dynamic';
 
 /**
@@ -300,7 +301,11 @@ export default async function DashboardPage() {
   const session = await getCurrentSession();
 
   // Redirect CSR and regular admins to orders page since they don't have access to overview
-  if (session?.role === 'csr' || session?.role === 'admin') {
+  // (a member who also holds super-admin keeps the overview)
+  if (
+    hasAnyRole(session, ['csr', 'manager', 'admin']) &&
+    !hasAnyRole(session, ['super-admin'])
+  ) {
     redirect('/dashboard/orders');
   }
 

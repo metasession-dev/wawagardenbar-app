@@ -11,6 +11,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 
+import { hasAnyRole } from '@/lib/session';
 export const metadata = {
   title: 'Change Password | Wawa Garden Bar',
   description: 'Change your admin password',
@@ -20,7 +21,7 @@ export default async function ChangePasswordPage() {
   // Check if logged in
   const session = await getCurrentSession();
 
-  if (!session?.isLoggedIn || !session?.role || !['admin', 'super-admin'].includes(session.role)) {
+  if (!session?.isLoggedIn || !hasAnyRole(session, ['admin', 'super-admin'])) {
     redirect('/admin/login');
   }
 

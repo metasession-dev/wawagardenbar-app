@@ -3,7 +3,12 @@
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
 import { revalidatePath } from 'next/cache';
-import { sessionOptions, SessionData } from '@/lib/session';
+import {
+  sessionOptions,
+  SessionData,
+  hasAnyRole,
+  getPrimaryRole,
+} from '@/lib/session';
 import { connectDB } from '@/lib/mongodb';
 import InventoryModel from '@/models/inventory-model';
 import StockMovementModel from '@/models/stock-movement-model';
@@ -37,9 +42,12 @@ export async function addStockAction(
 ): Promise<ActionResult> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
-    if (!session.userId || !session.role || !['admin', 'super-admin'].includes(session.role)) {
+    if (!session.userId || !hasAnyRole(session, ['admin', 'super-admin'])) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -71,15 +79,18 @@ export async function addStockAction(
         // Update existing location
         inventory.locations[locationIndex].currentStock += data.quantity;
         inventory.locations[locationIndex].lastUpdated = new Date();
-        inventory.locations[locationIndex].updatedByName = session.email || 'Admin';
+        inventory.locations[locationIndex].updatedByName =
+          session.email || 'Admin';
       } else {
         // Resolve location name from system config
         let locationName = data.location;
         try {
           const locConfig = await SystemSettingsService.getInventoryLocations();
-          const cfg = locConfig.locations.find(c => c.id === data.location);
+          const cfg = locConfig.locations.find((c) => c.id === data.location);
           if (cfg) locationName = cfg.name;
-        } catch { /* fallback to ID */ }
+        } catch {
+          /* fallback to ID */
+        }
         // Add new location
         inventory.locations.push({
           location: data.location,
@@ -113,7 +124,9 @@ export async function addStockAction(
       timestamp: new Date(),
       supplier: data.supplier,
       costPerUnit: data.costPerUnit,
-      totalCost: data.costPerUnit ? data.costPerUnit * data.quantity : undefined,
+      totalCost: data.costPerUnit
+        ? data.costPerUnit * data.quantity
+        : undefined,
       invoiceNumber: data.invoiceNumber,
       notes: data.notes,
       location: data.location,
@@ -137,8 +150,10 @@ export async function addStockAction(
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: session.email || '',
-      userRole: session.role,
-      action: data.location ? 'inventory.stock_added_to_location' : 'inventory.update',
+      userRole: getPrimaryRole(session) ?? 'unknown',
+      action: data.location
+        ? 'inventory.stock_added_to_location'
+        : 'inventory.update',
       resource: 'inventory',
       resourceId: inventoryId,
       details: {
@@ -146,7 +161,7 @@ export async function addStockAction(
         quantity: data.quantity,
         reason: data.reason,
         newStock: inventory.currentStock,
-        ...(data.location && { location: data.location })
+        ...(data.location && { location: data.location }),
       },
     });
 
@@ -183,9 +198,12 @@ export async function deductStockAction(
 ): Promise<ActionResult> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
-    if (!session.userId || !session.role || !['admin', 'super-admin'].includes(session.role)) {
+    if (!session.userId || !hasAnyRole(session, ['admin', 'super-admin'])) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -224,7 +242,8 @@ export async function deductStockAction(
         // Deduct from location
         inventory.locations[locationIndex].currentStock -= data.quantity;
         inventory.locations[locationIndex].lastUpdated = new Date();
-        inventory.locations[locationIndex].updatedByName = session.email || 'Admin';
+        inventory.locations[locationIndex].updatedByName =
+          session.email || 'Admin';
       } else {
         return { success: false, error: 'Location not found' };
       }
@@ -235,7 +254,10 @@ export async function deductStockAction(
       );
     } else {
       // Standard stock deduction (no location tracking)
-      inventory.currentStock = Math.max(0, inventory.currentStock - data.quantity);
+      inventory.currentStock = Math.max(
+        0,
+        inventory.currentStock - data.quantity
+      );
     }
 
     const previousStock = inventory.currentStock + data.quantity;
@@ -270,7 +292,10 @@ export async function deductStockAction(
     await inventory.save();
 
     // Check for low stock and send alerts
-    if (inventory.status === 'low-stock' || inventory.status === 'out-of-stock') {
+    if (
+      inventory.status === 'low-stock' ||
+      inventory.status === 'out-of-stock'
+    ) {
       // Send alert asynchronously (don't wait)
       InventoryService.getLowStockItems().catch(console.error);
     }
@@ -279,8 +304,10 @@ export async function deductStockAction(
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: session.email || '',
-      userRole: session.role,
-      action: data.location ? 'inventory.stock_deducted_from_location' : 'inventory.update',
+      userRole: getPrimaryRole(session) ?? 'unknown',
+      action: data.location
+        ? 'inventory.stock_deducted_from_location'
+        : 'inventory.update',
       resource: 'inventory',
       resourceId: inventoryId,
       details: {
@@ -290,7 +317,7 @@ export async function deductStockAction(
         category: data.category,
         previousStock,
         newStock: inventory.currentStock,
-        ...(data.location && { location: data.location })
+        ...(data.location && { location: data.location }),
       },
     });
 
@@ -325,9 +352,12 @@ export async function adjustStockAction(
 ): Promise<ActionResult> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
-    if (!session.userId || !session.role || !['admin', 'super-admin'].includes(session.role)) {
+    if (!session.userId || !hasAnyRole(session, ['admin', 'super-admin'])) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -361,14 +391,18 @@ export async function adjustStockAction(
         (l: any) => l.location === data.location
       );
       if (locIndex === -1) {
-        return { success: false, error: 'Location not found on this inventory item' };
+        return {
+          success: false,
+          error: 'Location not found on this inventory item',
+        };
       }
       previousStock = inventory.locations[locIndex].currentStock;
       difference = data.newStock - previousStock;
       inventory.locations[locIndex].currentStock = data.newStock;
       inventory.locations[locIndex].lastUpdated = new Date();
       inventory.locations[locIndex].updatedByName = session.email || 'Admin';
-      locationDisplayName = inventory.locations[locIndex].locationName || data.location;
+      locationDisplayName =
+        inventory.locations[locIndex].locationName || data.location;
       // pre-save hook will sync inventory.currentStock from location totals
     } else {
       previousStock = inventory.currentStock;
@@ -398,7 +432,10 @@ export async function adjustStockAction(
     await inventory.save();
 
     // Check for low stock and send alerts
-    if (inventory.status === 'low-stock' || inventory.status === 'out-of-stock') {
+    if (
+      inventory.status === 'low-stock' ||
+      inventory.status === 'out-of-stock'
+    ) {
       // Send alert asynchronously (don't wait)
       InventoryService.getLowStockItems().catch(console.error);
     }
@@ -407,7 +444,7 @@ export async function adjustStockAction(
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: session.email || '',
-      userRole: session.role,
+      userRole: getPrimaryRole(session) ?? 'unknown',
       action: 'inventory.update',
       resource: 'inventory',
       resourceId: inventoryId,
@@ -446,9 +483,12 @@ export async function getInventoryDetailsAction(
 ): Promise<ActionResult> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
-    if (!session.userId || !session.role || !['admin', 'super-admin'].includes(session.role)) {
+    if (!session.userId || !hasAnyRole(session, ['admin', 'super-admin'])) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -463,7 +503,13 @@ export async function getInventoryDetailsAction(
     }
 
     // Fetch system location config for name resolution
-    let configLocations: Array<{ id: string; name: string; type: string; isActive: boolean; displayOrder: number }> = [];
+    let configLocations: Array<{
+      id: string;
+      name: string;
+      type: string;
+      isActive: boolean;
+      displayOrder: number;
+    }> = [];
     if (inventory.trackByLocation) {
       try {
         const locConfig = await SystemSettingsService.getInventoryLocations();
@@ -475,20 +521,22 @@ export async function getInventoryDetailsAction(
 
     // Helper to resolve location name from config
     const resolveLocationName = (locationId: string): string => {
-      const cfg = configLocations.find(c => c.id === locationId);
+      const cfg = configLocations.find((c) => c.id === locationId);
       return cfg?.name || locationId;
     };
 
     // Serialize for client
     const serialized = {
       _id: inventory._id.toString(),
-      menuItemId: inventory.menuItemId ? {
-        _id: (inventory.menuItemId as any)._id.toString(),
-        name: (inventory.menuItemId as any).name,
-        mainCategory: (inventory.menuItemId as any).mainCategory,
-        category: (inventory.menuItemId as any).category,
-        price: (inventory.menuItemId as any).price,
-      } : null,
+      menuItemId: inventory.menuItemId
+        ? {
+            _id: (inventory.menuItemId as any)._id.toString(),
+            name: (inventory.menuItemId as any).name,
+            mainCategory: (inventory.menuItemId as any).mainCategory,
+            category: (inventory.menuItemId as any).category,
+            price: (inventory.menuItemId as any).price,
+          }
+        : null,
       currentStock: inventory.currentStock,
       minimumStock: inventory.minimumStock,
       maximumStock: inventory.maximumStock,
@@ -506,36 +554,42 @@ export async function getInventoryDetailsAction(
         location: loc.location,
         locationName: loc.locationName || resolveLocationName(loc.location),
         currentStock: loc.currentStock,
-        lastUpdated: loc.lastUpdated ? new Date(loc.lastUpdated).toISOString() : null,
+        lastUpdated: loc.lastUpdated
+          ? new Date(loc.lastUpdated).toISOString()
+          : null,
         updatedByName: loc.updatedByName || null,
         notes: loc.notes || null,
       })),
-      configLocations: configLocations.map(c => ({
+      configLocations: configLocations.map((c) => ({
         id: c.id,
         name: c.name,
         type: c.type,
         isActive: c.isActive,
         displayOrder: c.displayOrder,
       })),
-      stockHistory: await StockMovementModel.find({ inventoryId: inventory._id })
+      stockHistory: await StockMovementModel.find({
+        inventoryId: inventory._id,
+      })
         .sort({ timestamp: -1 })
         .limit(100)
         .lean()
-        .then(movements => movements.map((h: any) => ({
-          quantity: h.quantity,
-          type: h.type,
-          reason: h.reason,
-          category: h.category,
-          timestamp: h.timestamp.toISOString(),
-          performedByName: h.performedByName,
-          notes: h.notes,
-          supplier: h.supplier,
-          invoiceNumber: h.invoiceNumber,
-          location: h.location,
-          fromLocation: h.fromLocation,
-          toLocation: h.toLocation,
-          transferReference: h.transferReference,
-        }))),
+        .then((movements) =>
+          movements.map((h: any) => ({
+            quantity: h.quantity,
+            type: h.type,
+            reason: h.reason,
+            category: h.category,
+            timestamp: h.timestamp.toISOString(),
+            performedByName: h.performedByName,
+            notes: h.notes,
+            supplier: h.supplier,
+            invoiceNumber: h.invoiceNumber,
+            location: h.location,
+            fromLocation: h.fromLocation,
+            toLocation: h.toLocation,
+            transferReference: h.transferReference,
+          }))
+        ),
     };
 
     return {

@@ -6,7 +6,7 @@
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
 import { revalidatePath } from 'next/cache';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, hasAnyRole } from '@/lib/session';
 import { SystemSettingsService } from '@/services/system-settings-service';
 import { StaffPotService, StaffPotConfig } from '@/services/staff-pot-service';
 import { InventorySnapshotModel } from '@/models/inventory-snapshot-model';
@@ -37,7 +37,7 @@ export async function getStaffPotConfigAction(): Promise<
       sessionOptions
     );
 
-    if (!session.userId || session.role !== 'super-admin') {
+    if (!session.userId || !hasAnyRole(session, ['super-admin'])) {
       return { success: false, error: 'Unauthorized — super-admin only' };
     }
 
@@ -61,7 +61,7 @@ export async function updateStaffPotConfigAction(
       sessionOptions
     );
 
-    if (!session.userId || session.role !== 'super-admin') {
+    if (!session.userId || !hasAnyRole(session, ['super-admin'])) {
       return { success: false, error: 'Unauthorized — super-admin only' };
     }
 
@@ -90,11 +90,7 @@ export async function getStaffPotDataAction(
       sessionOptions
     );
 
-    if (
-      !session.userId ||
-      !session.role ||
-      !['admin', 'super-admin'].includes(session.role)
-    ) {
+    if (!session.userId || !hasAnyRole(session, ['admin', 'super-admin'])) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -152,11 +148,7 @@ export async function getStaffPotChecklistAction(
       sessionOptions
     );
 
-    if (
-      !session.userId ||
-      !session.role ||
-      !['admin', 'super-admin'].includes(session.role)
-    ) {
+    if (!session.userId || !hasAnyRole(session, ['admin', 'super-admin'])) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -275,7 +267,7 @@ export async function finalizeStaffPotMonthAction(
       sessionOptions
     );
 
-    if (!session.userId || session.role !== 'super-admin') {
+    if (!session.userId || !hasAnyRole(session, ['super-admin'])) {
       return { success: false, error: 'Unauthorized — super-admin only' };
     }
 

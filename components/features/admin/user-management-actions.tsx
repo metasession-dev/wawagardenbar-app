@@ -27,12 +27,17 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { changeUserRoleAction, deleteUserAction } from '@/app/actions/admin/user-actions';
+import {
+  changeUserRoleAction,
+  deleteUserAction,
+} from '@/app/actions/admin/user-actions';
 import { useRouter } from 'next/navigation';
 
 interface UserManagementActionsProps {
   userId: string;
   userRole: string;
+  /** REQ-119 — how many roles the user holds; several roles are edited in Settings → Admins. */
+  roleCount?: number;
 }
 
 /**
@@ -41,6 +46,7 @@ interface UserManagementActionsProps {
 export function UserManagementActions({
   userId,
   userRole,
+  roleCount = 1,
 }: UserManagementActionsProps) {
   const { toast } = useToast();
   const router = useRouter();
@@ -125,9 +131,17 @@ export function UserManagementActions({
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setRoleDialogOpen(true)}>
+          <DropdownMenuItem
+            onClick={() => setRoleDialogOpen(true)}
+            disabled={roleCount > 1}
+            title={
+              roleCount > 1
+                ? 'This user holds several roles. Edit them in Settings → Admins.'
+                : undefined
+            }
+          >
             <Shield className="mr-2 h-4 w-4" />
-            Change Role
+            {roleCount > 1 ? 'Change Role (several roles)' : 'Change Role'}
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => setDeleteDialogOpen(true)}
@@ -156,6 +170,9 @@ export function UserManagementActions({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="customer">Customer</SelectItem>
+                <SelectItem value="csr">Customer Service Rep</SelectItem>
+                <SelectItem value="kitchen">Kitchen</SelectItem>
+                <SelectItem value="manager">Manager</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
                 <SelectItem value="super-admin">Super Admin</SelectItem>
               </SelectContent>
@@ -183,7 +200,8 @@ export function UserManagementActions({
           <DialogHeader>
             <DialogTitle>Delete User</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this user? This action cannot be undone.
+              Are you sure you want to delete this user? This action cannot be
+              undone.
             </DialogDescription>
           </DialogHeader>
 

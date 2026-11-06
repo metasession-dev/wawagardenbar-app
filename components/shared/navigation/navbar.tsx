@@ -1,5 +1,6 @@
 'use client';
 
+import { STAFF_ROLES } from '@/interfaces/user.interface';
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -42,7 +43,7 @@ export function Navbar() {
 
   // Add Dashboard link for admin and super-admin users
   const navLinks = [...baseNavLinks];
-  if (role === 'csr' || role === 'admin' || role === 'super-admin') {
+  if (role && (STAFF_ROLES as readonly string[]).includes(role)) {
     navLinks.push({ href: '/dashboard', label: 'Dashboard' });
   }
 
@@ -107,7 +108,10 @@ export function Navbar() {
             <div className="hidden md:block">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                  <Button
+                    variant="ghost"
+                    className="relative h-10 w-10 rounded-full"
+                  >
                     <Avatar>
                       <AvatarFallback>
                         {getInitials(user?.name, user?.email)}

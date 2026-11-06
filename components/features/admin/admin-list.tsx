@@ -1,5 +1,7 @@
 'use client';
 
+import { getRoles } from '@/lib/roles';
+import { RoleBadge } from './role-badge';
 import { useState, useEffect } from 'react';
 import { listAdminsAction } from '@/app/actions/admin/admin-management-actions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -121,13 +123,11 @@ export function AdminList() {
                   </TableCell>
                   <TableCell>{admin.email || '-'}</TableCell>
                   <TableCell>
-                    <Badge
-                      variant={
-                        admin.role === 'super-admin' ? 'default' : 'secondary'
-                      }
-                    >
-                      {admin.role}
-                    </Badge>
+                    <div className="flex flex-wrap gap-1">
+                      {getRoles(admin).map((role) => (
+                        <RoleBadge key={role} role={role} showIcon={false} />
+                      ))}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <Badge

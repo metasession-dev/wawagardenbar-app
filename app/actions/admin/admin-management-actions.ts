@@ -1,6 +1,13 @@
 'use server';
 
-import { requireSuperAdmin, getCurrentSession } from '@/lib/auth-middleware';
+import {
+  requireSuperAdmin,
+  requireRole,
+  getCurrentSession,
+} from '@/lib/auth-middleware';
+import { revalidatePath } from 'next/cache';
+import type { StaffRole } from '@/interfaces/user.interface';
+import { getRoles } from '@/lib/session';
 import { AdminService } from '@/services/admin-service';
 import { connectDB } from '@/lib/mongodb';
 import { IAdminPermissions } from '@/interfaces';
@@ -14,7 +21,9 @@ export async function createAdminAction(data: {
   email?: string;
   firstName?: string;
   lastName?: string;
-  role: 'csr' | 'admin' | 'super-admin';
+  /** REQ-119 — one or more staff roles; `role` (single) is still accepted. */
+  roles?: StaffRole[];
+  role?: StaffRole;
   permissions?: IAdminPermissions;
 }) {
   try {
@@ -45,7 +54,7 @@ export async function createAdminAction(data: {
  */
 export async function listAdminsAction(filters?: {
   search?: string;
-  role?: 'csr' | 'admin' | 'super-admin';
+  role?: StaffRole;
   status?: 'active' | 'suspended' | 'deleted';
   sortBy?: 'username' | 'role' | 'lastLoginAt' | 'createdAt';
   sortOrder?: 'asc' | 'desc';
@@ -235,6 +244,41 @@ export async function deleteAdminAction(adminId: string) {
     return {
       success: false,
       message: error.message || 'Failed to delete admin',
+    };
+  }
+}
+
+/**
+ * REQ-119 (AC3, AC5) — change the roles of a staff member. The rules (at
+ * least one role, no self-edit, super-admin-only for admin/super-admin, last
+ * super-admin protected) are enforced in `AdminService.updateRoles`.
+ */
+export async function updateAdminRolesAction(data: {
+  adminId: string;
+  roles: StaffRole[];
+}) {
+  try {
+    const session = await requireRole(['admin', 'super-admin']);
+    await connectDB();
+
+    await AdminService.updateRoles({
+      actor: { userId: session.userId!, roles: getRoles(session) },
+      targetUserId: data.adminId,
+      roles: data.roles,
+    });
+
+    revalidatePath('/dashboard/settings/admins');
+
+    return {
+      success: true,
+      message:
+        'Roles updated. The change takes effect at the member’s next sign-in (up to 7 days); suspend the account to cut access immediately.',
+    };
+  } catch (error: any) {
+    console.error('Update admin roles error:', error);
+    return {
+      success: false,
+      message: error.message || 'Failed to update roles',
     };
   }
 }

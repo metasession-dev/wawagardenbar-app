@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
-import { sessionOptions, SessionData } from '@/lib/session';
+import {
+  sessionOptions,
+  SessionData,
+  hasAnyRole,
+  getPrimaryRole,
+} from '@/lib/session';
 import { SettingsService } from '@/services';
 import { AuditLogService } from '@/services/audit-log-service';
 
@@ -62,7 +67,7 @@ export async function PUT(request: NextRequest) {
       sessionOptions
     );
 
-    if (!session.userId || session.role !== 'super-admin') {
+    if (!session.userId || !hasAnyRole(session, ['super-admin'])) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 403 }
@@ -82,7 +87,7 @@ export async function PUT(request: NextRequest) {
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: session.email || '',
-      userRole: session.role,
+      userRole: getPrimaryRole(session) ?? 'unknown',
       action: 'settings.update',
       resource: 'settings',
       resourceId: (settings._id as any).toString(),

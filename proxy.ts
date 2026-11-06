@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getIronSession } from 'iron-session';
-import { sessionOptions, SessionData } from '@/lib/session';
+import {
+  sessionOptions,
+  SessionData,
+  hasAnyRole,
+  hasAnyAssignedRole,
+  isCustomerSession,
+  isStaff,
+} from '@/lib/session';
 import { routePermissions } from '@/lib/permissions';
-import { UserRole } from '@/interfaces/user.interface';
 import { checkRateLimit, resolvePreset } from '@/lib/rate-limiter';
 import { applyCors, buildPreflightResponse } from '@/lib/cors';
 
@@ -81,7 +87,7 @@ export async function proxy(request: NextRequest) {
         return jsonError(request, 'Unauthorized', 401);
       }
 
-      if (session.role !== 'admin' && session.role !== 'super-admin') {
+      if (!hasAnyRole(session, ['admin', 'super-admin'])) {
         return jsonError(request, 'Forbidden', 403);
       }
     } catch {
@@ -115,12 +121,12 @@ export async function proxy(request: NextRequest) {
       }
 
       // Check if user has a role
-      if (!session.role) {
+      if (!hasAnyAssignedRole(session)) {
         return NextResponse.redirect(new URL('/unauthorized', request.url));
       }
 
       // Block customers from accessing dashboard
-      if (session.role === 'customer') {
+      if (isCustomerSession(session)) {
         return NextResponse.redirect(new URL('/', request.url));
       }
 
@@ -129,10 +135,23 @@ export async function proxy(request: NextRequest) {
       if (matchedRoute) {
         const allowedRoles = routePermissions[matchedRoute];
 
-        if (allowedRoles && !allowedRoles.includes(session.role as UserRole)) {
+        if (allowedRoles && !hasAnyRole(session, allowedRoles)) {
+          // REQ-119 — a kitchen-only member has no dashboard overview; send
+          // them to the kitchen display instead of a forbidden page.
+          if (
+            matchedRoute === '/dashboard' &&
+            pathname === '/dashboard' &&
+            hasAnyRole(session, ['kitchen'])
+          ) {
+            return NextResponse.redirect(
+              new URL('/dashboard/kitchen-display', request.url)
+            );
+          }
           // Staff trying to access higher-level route
-          if (session.role === 'csr' || session.role === 'admin') {
-            return NextResponse.redirect(new URL('/dashboard/forbidden', request.url));
+          if (isStaff(session)) {
+            return NextResponse.redirect(
+              new URL('/dashboard/forbidden', request.url)
+            );
           }
           // Other unauthorized access
           return NextResponse.redirect(new URL('/unauthorized', request.url));
@@ -160,7 +179,9 @@ function findMatchingRoute(pathname: string): string | null {
   }
 
   // Check for parent routes
-  const routes = Object.keys(routePermissions).sort((a, b) => b.length - a.length);
+  const routes = Object.keys(routePermissions).sort(
+    (a, b) => b.length - a.length
+  );
 
   for (const route of routes) {
     if (pathname.startsWith(route + '/') || pathname === route) {

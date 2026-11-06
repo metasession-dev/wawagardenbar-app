@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, hasAnyRole } from '@/lib/session';
 import { buttonVariants } from '@/components/ui/button';
 import { InventorySummaryClient } from '@/components/features/inventory/inventory-summary-client';
 
@@ -15,8 +15,7 @@ export default async function InventorySummaryPage() {
 
   if (
     !session.userId ||
-    !session.role ||
-    !['csr', 'admin', 'super-admin'].includes(session.role)
+    !hasAnyRole(session, ['csr', 'manager', 'admin', 'super-admin'])
   ) {
     redirect('/dashboard');
   }

@@ -9,7 +9,7 @@
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
 import { revalidatePath } from 'next/cache';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, hasAnyRole } from '@/lib/session';
 import { CashDepositService } from '@/services/cash-deposit-service';
 import {
   CreateCashDepositDTO,
@@ -23,14 +23,14 @@ async function getSession(): Promise<SessionData> {
 
 function requireAdminOrAbove(session: SessionData): void {
   if (!session.isLoggedIn || !session.userId) throw new Error('Unauthorized');
-  if (session.role !== 'admin' && session.role !== 'super-admin') {
+  if (!hasAnyRole(session, ['admin', 'super-admin'])) {
     throw new Error('Insufficient permissions');
   }
 }
 
 function requireSuperAdmin(session: SessionData): void {
   if (!session.isLoggedIn || !session.userId) throw new Error('Unauthorized');
-  if (session.role !== 'super-admin') {
+  if (!hasAnyRole(session, ['super-admin'])) {
     throw new Error('Insufficient permissions — super-admin required');
   }
 }

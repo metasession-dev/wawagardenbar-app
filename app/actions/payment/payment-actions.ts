@@ -2,7 +2,12 @@
 
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
-import { sessionOptions, SessionData } from '@/lib/session';
+import {
+  sessionOptions,
+  SessionData,
+  hasAnyRole,
+  getPrimaryRole,
+} from '@/lib/session';
 import { connectDB } from '@/lib/mongodb';
 import Order from '@/models/order-model';
 import TabModel from '@/models/tab-model';
@@ -165,7 +170,7 @@ export async function createOrder(input: CreateOrderInput): Promise<{
           }),
       // Track who created the order
       createdBy: userId,
-      createdByRole: session.role || 'customer',
+      createdByRole: getPrimaryRole(session) || 'customer',
       subtotal,
       serviceFee,
       tax,
@@ -357,10 +362,12 @@ export async function initializePayment(
     );
 
     // Determine redirect URL based on user role
-    const isStaff =
-      session.role === 'csr' ||
-      session.role === 'admin' ||
-      session.role === 'super-admin';
+    const isStaff = hasAnyRole(session, [
+      'csr',
+      'manager',
+      'admin',
+      'super-admin',
+    ]);
     const redirectUrl = isStaff
       ? `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/orders/${input.orderId}?payment=success`
       : `${process.env.NEXT_PUBLIC_APP_URL}/orders/${input.orderId}?payment=success`;
@@ -604,10 +611,12 @@ export async function initializeTabPayment(params: {
     );
 
     // Determine redirect URL based on user role
-    const isStaff =
-      session.role === 'csr' ||
-      session.role === 'admin' ||
-      session.role === 'super-admin';
+    const isStaff = hasAnyRole(session, [
+      'csr',
+      'manager',
+      'admin',
+      'super-admin',
+    ]);
     const redirectUrl = isStaff
       ? `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/orders/tabs/${params.tabId}?payment=success`
       : `${process.env.NEXT_PUBLIC_APP_URL}/orders/tabs/${params.tabId}?payment=success`;

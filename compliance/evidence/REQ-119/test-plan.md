@@ -1,6 +1,6 @@
 # Test plan — REQ-119
 
-Status: **DRAFT for operator review.** No spec has been written. Scenarios below are what `e2e-test-engineer` will implement in Phase 2 once you approve or amend them.
+Status: **APPROVED 2026-11-06** (operator `PROCEED`, no amendments). Open questions resolved by default: Q2 no stale-session assertion, Q3 no Support page in US-03.1. Scenarios below are what `e2e-test-engineer` implements in Phase 2.
 
 ## Files and AC coverage
 

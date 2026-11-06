@@ -144,4 +144,4 @@ Unit and integration tests per the AC table; the AC2 guard test; critical-tier e
 
 ## 11. Sign-off
 
-- **Plan approved by operator:** PENDING (HIGH-risk checkpoint). Waiting on the e2e test plan review and decisions D1 (defaults), D3, D4.
+- **Plan approved by operator:** approved 2026-11-06 (HIGH-risk checkpoint). The operator replied `PROCEED` after the review checklist, with no amendments to the test plan; recorded as acceptance of the recommended options: D1 defaults for `kitchen` and `manager` as proposed in Section 2, D3 option A (accept stale-session lag, show it in the dialog, follow-up issue), D4 all three guard rails, ADR-009 Accepted, R-052 to R-055 signed off at the stated residual ratings. Test-plan open questions resolved by default: no assertion of the stale-session behaviour (Q2), no Support page added to US-03.1 (Q3).

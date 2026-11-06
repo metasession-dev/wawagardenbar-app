@@ -111,7 +111,11 @@ export async function loginAsStaff(
   browser: Browser,
   staff: Pick<ThrowawayStaff, 'username' | 'password'>
 ): Promise<{ context: BrowserContext; page: Page }> {
-  const context = await browser.newContext();
+  // Explicitly empty: inside a test whose `use.storageState` is a saved login,
+  // browser.newContext() would otherwise inherit that login and skip the form.
+  const context = await browser.newContext({
+    storageState: { cookies: [], origins: [] },
+  });
   const page = await context.newPage();
   await page.goto('/admin/login');
   await page.waitForLoadState('networkidle');

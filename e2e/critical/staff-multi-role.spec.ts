@@ -75,7 +75,8 @@ async function seedOrder(
   status: string,
   paymentStatus: string
 ): Promise<{ orderId: string; orderNumber: string }> {
-  const orderNumber = `WGE2E119${Date.now()}`.slice(0, 14);
+  const orderNumber =
+    `WG119${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`.toUpperCase();
   const total = 2500;
   const now = new Date();
   return withMongo(async (db) => {
@@ -337,32 +338,44 @@ test.describe('[REQ-119] multiple roles per staff account', () => {
       '[REQ-119][AC3] [US-03.8] a removed role is gone at the member’s next sign-in',
       async ({ page, browser }) => {
         tagTest('REQ-119', 3);
+        superAdminTest.setTimeout(90_000);
         const staff = await newStaff('remove', ['csr', 'kitchen']);
 
         const dialog = await openEditRoles(page, staff.username);
         await dialog
-          .getByRole('checkbox', { name: ROLE_LABELS.kitchen, exact: true })
+          .getByRole('checkbox', { name: ROLE_LABELS.csr, exact: true })
           .click();
         await dialog.getByRole('button', { name: /Save roles/i }).click();
         await expect
           .poll(async () => (await readStaff(staff.id))?.roles, {
             timeout: 15000,
           })
-          .toEqual(['csr']);
+          .toEqual(['kitchen']);
+        expect((await readStaff(staff.id))?.role).toBe('kitchen');
 
-        // Next sign-in: Kitchen-only access is gone, csr access stays.
+        // Next sign-in: the csr-only areas are gone, kitchen access stays.
         const { context, page: memberPage } = await loginAsStaff(
           browser,
           staff
         );
         try {
+          await expect(memberPage).toHaveURL(/\/dashboard\/kitchen-display/);
           const nav = await visibleNavLinks(memberPage);
-          expect(nav).toContain('Customers');
-          // The kitchen display is still listed because csr also holds it;
-          // what is gone is the kitchen role itself.
-          const user = await readStaff(staff.id);
-          expect(user?.roles).toEqual(['csr']);
-          expect(user?.permissions?.incidentsAccess).toBe(true);
+          expect(nav).toEqual(
+            expect.arrayContaining(['Orders', 'Kitchen display'])
+          );
+          for (const name of ['Customers', 'Rewards', 'Incidents']) {
+            expect(nav, `nav should not show ${name}`).not.toContain(name);
+          }
+          expect(await isRefused(memberPage, '/dashboard/customers')).toBe(
+            true
+          );
+          await evidenceShot(
+            memberPage,
+            'REQ-119',
+            3,
+            'role-removed-next-signin'
+          );
         } finally {
           await context.close();
         }

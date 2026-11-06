@@ -39,6 +39,9 @@ export const routePermissions: Record<string, UserRole[]> = {
   // Each route lists the maximal role allowlist; the layout's
   // `requirePermission(...)` does the per-feature gate. Mismatches here
   // bounce users at `proxy.ts` middleware before the layout can run.
+  // The forbidden page is where proxy.ts sends a staff member who lacks a
+  // route; it must be reachable by every staff role or the redirect loops.
+  '/dashboard/forbidden': ['csr', 'kitchen', 'manager', 'admin', 'super-admin'],
   '/dashboard/menu': ['admin', 'super-admin'],
   '/dashboard/orders': ['csr', 'kitchen', 'manager', 'admin', 'super-admin'],
   // Staff-only order sub-areas that a kitchen-only member must not reach.

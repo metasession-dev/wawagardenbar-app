@@ -98,6 +98,20 @@ E2E authoring is delegated to `e2e-test-engineer`, and seed data to `e2e-test-da
 
 Three new seeded staff accounts in `scripts/seed-e2e-admins.ts` with saved logins by `e2e/auth.setup.ts`: `e2e-csr-kitchen` (`roles: [csr, kitchen]`), `e2e-kitchen` (`[kitchen]`), `e2e-manager` (`[manager]`). The role-editing scenarios create their own throwaway staff users inside the spec with unique usernames and delete them afterwards, so shared seeded accounts are never edited. One order fixture for the status-advance scenarios, created and removed in the spec.
 
+## Plan deviation (recorded during Phase 2, 2026-11-06)
+
+Implementation deviations (approach changed; ACs still correct):
+
+1. **A second role-change path exists.** `changeUserRoleAction` (customers page, `app/actions/admin/user-actions.ts`) already let an admin or super-admin set a user's `role`. It is now a thin wrapper over `AdminService.updateRoles` (same guards and audit row), sets exactly one role or none, and is disabled in the UI for a user holding several roles. It also gained the `csr`, `kitchen` and `manager` options. The old `user.role-change` audit row is replaced by `admin.roles-updated`.
+2. **Settings → Admins is super-admin only** (as are all actions in `admin-management-actions.ts` except the new `updateAdminRolesAction`). The issue's US-03.2 premise (an admin sees disabled checkboxes) cannot happen in the UI; the disabled state and the server refusal are unit-tested, and the e2e proves an admin is refused at the page. No access was widened.
+3. **Permissions on a role change.** AC7's "union plus per-user overrides" is implemented as: new users get the union of the roles' defaults; on a role change a permission is switched on if an added role grants it and off only if a removed role granted it and no remaining role does; values set in the permissions editor otherwise persist.
+4. **Nav and reports.** A "Kitchen display" nav item was added (it did not exist, and the kitchen-only member needs it). Manager's "reports" access was implemented on the three report pages, `report-actions.ts`, `/api/reports/inventory` and the Reports nav item. `requirePermission` now admits any staff role and relies on the stored permission as the gate (`requireAdmin` is unchanged and still excludes `kitchen`).
+5. **`/api/admin/*` in `proxy.ts`** keeps its existing `admin`/`super-admin` rule unchanged (csr and manager are not added).
+6. **`/dashboard/forbidden`** is on every staff role's allowlist (found by the first real e2e run: a kitchen-only member looped forever between a forbidden route and the forbidden page).
+7. **Audit-log model enum** gained `admin.roles-updated` (found by the same run; without it every role-change audit write throws).
+8. **Test data.** Throwaway per-spec staff accounts instead of three new seeded accounts (see the test plan's deviation notes).
+9. **Client-safe helpers.** The role helpers live in `lib/roles.ts` (no iron-session import) and are re-exported from `lib/session.ts`, so client components can use them.
+
 ## 5. Threat model + security considerations
 
 | Threat (STRIDE)                                            | Surface                | Mitigation                                                                                                                           |

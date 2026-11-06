@@ -57,3 +57,10 @@ Accounts: `e2e-csr-kitchen` = [csr, kitchen]; `e2e-kitchen` = [kitchen]; `e2e-ma
 ## Deviation recorded during Phase 2 (2026-11-06)
 
 US-03.2 as written assumed an admin who is not a super-admin can open the role checkboxes. They cannot: Settings → Admins (and every action in `admin-management-actions.ts` except `updateAdminRolesAction`) is super-admin only, and widening it would give admins new powers. The only other role-change path is the customers-page dialog (`changeUserRoleAction`), reachable by an admin through the action but not the page. So US-03.2 now proves (a) an admin is refused at the page, (b) the checkboxes mirror the rule (unit), and (c) the service enforces it (US-03.16). ACs are unchanged.
+
+## Deviations recorded during Phase 2 e2e authoring (2026-11-06)
+
+1. **Test data.** The plan listed three new seeded accounts (`e2e-csr-kitchen`, `e2e-kitchen`, `e2e-manager`) with saved logins in `e2e/auth.setup.ts`. Implemented instead as throwaway accounts created inside the spec and deleted afterwards (`e2e/helpers/staff-roles.ts`), logging in through the real `/admin/login` form. Reason: no change to the shared seed, to `auth.setup.ts` or to the CI environment variables, and no way for a role edit to leak into another spec. The shared `e2e-admin` and `e2e-superadmin` are used only as the acting admin and super-admin.
+2. **US-03.11** moved to unit level (see the table); an e2e for it would only repeat US-03.2's refusal.
+3. **US-03.8** now removes `csr` from a [csr, kitchen] member, so the next sign-in visibly loses Customers, Rewards and Incidents (a stronger check than removing `kitchen`, whose pages csr also holds).
+4. **Findings from the first real run** (both fixed, both now pinned by unit tests): the audit-log model's action enum lacked `admin.roles-updated` (every role-change audit write would have thrown), and `proxy.ts` redirected a kitchen-only member from a forbidden page back to the forbidden page forever (`ERR_TOO_MANY_REDIRECTS`) because `/dashboard/forbidden` was not on every staff role's allowlist.

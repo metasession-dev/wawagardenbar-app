@@ -167,6 +167,12 @@ describe('REQ-119 AC8 — route allowlists (any-of, least privilege for kitchen)
     }
   });
 
+  it('every staff role can reach the forbidden page, so the redirect to it cannot loop', () => {
+    for (const role of ['csr', 'kitchen', 'manager', 'admin', 'super-admin']) {
+      expect(routePermissions['/dashboard/forbidden']).toContain(role);
+    }
+  });
+
   it('manager has every route csr has, and none of the admin-only ones', () => {
     for (const [route, roles] of Object.entries(routePermissions)) {
       if (roles.includes('csr')) {

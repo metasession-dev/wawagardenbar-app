@@ -106,7 +106,7 @@ const navItems: NavItem[] = [
     title: 'Reports',
     href: '/dashboard/reports',
     icon: BarChart3,
-    roles: ['admin', 'super-admin'],
+    roles: ['manager', 'admin', 'super-admin'],
     permission: 'reportsAndAnalytics',
   },
   {

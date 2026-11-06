@@ -27,7 +27,7 @@ export default async function DailyReportPage() {
   }
 
   // Check authorization - only super-admin and admin can access
-  if (!hasAnyRole(session, ['super-admin', 'admin'])) {
+  if (!hasAnyRole(session, ['super-admin', 'admin', 'manager'])) {
     redirect('/dashboard');
   }
 

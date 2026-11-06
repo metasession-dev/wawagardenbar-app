@@ -47,7 +47,7 @@ export async function generateDailyReportAction(
     }
 
     // Only super-admin and admin can view reports
-    if (!hasAnyRole(session, ['super-admin', 'admin'])) {
+    if (!hasAnyRole(session, ['super-admin', 'admin', 'manager'])) {
       return { success: false, error: 'Insufficient permissions' };
     }
 
@@ -100,7 +100,7 @@ export async function generateDateRangeReportAction(
     }
 
     // Only super-admin and admin can view reports
-    if (!hasAnyRole(session, ['super-admin', 'admin'])) {
+    if (!hasAnyRole(session, ['super-admin', 'admin', 'manager'])) {
       return { success: false, error: 'Insufficient permissions' };
     }
 
@@ -181,7 +181,7 @@ export async function generateMainCategoryReportAction(
       return { success: false, error: 'Unauthorized' };
     }
 
-    if (!hasAnyRole(session, ['super-admin', 'admin'])) {
+    if (!hasAnyRole(session, ['super-admin', 'admin', 'manager'])) {
       return { success: false, error: 'Insufficient permissions' };
     }
 

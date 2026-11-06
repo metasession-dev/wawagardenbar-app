@@ -36,7 +36,7 @@ export default async function ByMainCategoryReportPage() {
     redirect('/login');
   }
 
-  if (!hasAnyRole(session, ['super-admin', 'admin'])) {
+  if (!hasAnyRole(session, ['super-admin', 'admin', 'manager'])) {
     redirect('/dashboard');
   }
 

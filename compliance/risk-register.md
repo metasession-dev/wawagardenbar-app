@@ -1167,3 +1167,88 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 **Framework cross-references:** ISO 27001 A.5.14 (information transfer); GDPR Art. 5(1)(f).
 
 **Cross-links:** [REQ-118 implementation plan](plans/REQ-118/implementation-plan.md); [#972](https://github.com/metasession-dev/wawagardenbar-app/issues/972).
+
+### R-052 — Access change from the role-check sweep (REQ-119)
+
+**Status:** OPEN
+**Opened:** 2026-11-06 (REQ-119, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-06
+
+**The risk:** About 261 direct comparisons of `session.role` in 74 files are replaced by any-of helpers, and two new roles (`kitchen`, `manager`) are added. A mistake in the sweep could silently give a role access it should not have (privilege escalation) or take access away from an existing role (outage for staff).
+
+**Mitigations planned in REQ-119:**
+
+1. Two-step sweep: first a list-for-list replacement that changes no one's access, then deliberate grants to the new roles only where the plan's defaults table says so (ADR-009).
+2. `isAdmin` keeps meaning "csr or above" and excludes `kitchen`; explicit allowlists for the new roles (AC2, AC8).
+3. A guard test fails the build if a direct role comparison is added outside the helper module (AC2).
+4. Existing single-role specs (`csr-order-tab-parity-req109`, `main-category-report-access-control`, `kitchen/permission-gating`) run unchanged; negative tests for `kitchen`, `manager` and customer sessions (AC6).
+
+**Residual likelihood × impact:** low × high until the unchanged regression specs and the negative tests pass; low × medium after.
+
+**Framework cross-references:** ISO 27001 A.5.15 (access control), A.8.3 (information access restriction); SOC 2 CC6.1, CC6.3.
+
+**Cross-links:** [REQ-119 implementation plan](plans/REQ-119/implementation-plan.md); ADR-009; SRS REQ-AUTHA-004, REQ-AUTHA-005; [#965](https://github.com/metasession-dev/wawagardenbar-app/issues/965).
+
+### R-053 — Stale staff sessions after a role change (REQ-119)
+
+**Status:** OPEN
+**Opened:** 2026-11-06 (REQ-119, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-06
+
+**The risk:** Staff sessions are sealed 7-day cookies that carry a snapshot of the roles, and nothing re-reads the user document per request. A role removed in the new role-management flow stays effective in that member's signed-in browser until the cookie expires (up to 7 days). This is a delay in removing access, which matters most when a member is demoted for cause.
+
+**Mitigations planned in REQ-119:**
+
+1. Plan decision D3, recommended option A: accept for this release; the dialog states that a change takes effect at the member's next sign-in (AC3).
+2. Compensating control: suspending an account (`updateStatus`) remains the immediate way to cut access; the operator is told this in the dialog help text.
+3. Follow-up issue for a session-version check (`rolesVersion` compared in `requireRole`, `requireAdmin` and the dashboard layout), filed at plan approval if the operator keeps option A.
+
+**Residual likelihood × impact:** medium × medium while accepted; low × low if the follow-up ships.
+
+**Framework cross-references:** ISO 27001 A.5.18 (access rights), A.8.2; SOC 2 CC6.2, CC6.3.
+
+**Cross-links:** [REQ-119 implementation plan](plans/REQ-119/implementation-plan.md) §3 (D3); ADR-009; SRS REQ-AUTHA-006.
+
+### R-054 — Staff role data migration (REQ-119)
+
+**Status:** OPEN
+**Opened:** 2026-11-06 (REQ-119, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-06
+
+**The risk:** `scripts/migrate-staff-roles.ts` writes `roles` on every staff user document on UAT and then production. A defect could leave a staff member with the wrong or empty roles and no access, or run twice with a different result.
+
+**Mitigations planned in REQ-119:**
+
+1. The code reads `[role]` when `roles` is missing, so the application is correct before, during and after the migration, and a rollback leaves `role` intact (AC4, AC9, ADR-009).
+2. The script is idempotent, only sets `roles` when it is empty, never modifies `role`, and has a dry-run mode; tested with before and after fixtures (AC4).
+3. Operator runs it as a dry run first on UAT, records the counts and a before and after access check as evidence, then repeats on production.
+
+**Residual likelihood × impact:** low × low.
+
+**Framework cross-references:** ISO 27001 A.8.32 (change management); SOC 2 CC8.1.
+
+**Cross-links:** [REQ-119 implementation plan](plans/REQ-119/implementation-plan.md); ADR-009; SRS REQ-AUTHA-007.
+
+### R-055 — Role-grant escalation through the new role-management flow (REQ-119)
+
+**Status:** OPEN
+**Opened:** 2026-11-06 (REQ-119, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-06
+
+**The risk:** The new create and edit-roles flow lets staff change roles. If its rules are enforced only in the dialog, an admin could grant themselves or someone else `admin` or `super-admin`, change a super-admin's roles, or demote the last super-admin and lock the system.
+
+**Mitigations planned in REQ-119:**
+
+1. Rules enforced in the server action and service, not only the dialog: at least one role; only a super-admin grants or removes `admin` or `super-admin` and changes the roles of an `admin` or `super-admin` holder; no self-edit; the last super-admin cannot be demoted (AC3, plan decision D4).
+2. Unit tests on the service for every rejection path, and an e2e test that a direct call from an admin is refused (AC3).
+3. Every creation and change writes an audit row with actor, target, before, after, added and removed (AC5).
+
+**Residual likelihood × impact:** low × medium.
+
+**Framework cross-references:** ISO 27001 A.5.15, A.5.18, A.8.2 (privileged access rights); SOC 2 CC6.1, CC6.3; segregation of duties.
+
+**Cross-links:** [REQ-119 implementation plan](plans/REQ-119/implementation-plan.md) §3 (D4); ADR-009; SRS REQ-AUTHA-006.

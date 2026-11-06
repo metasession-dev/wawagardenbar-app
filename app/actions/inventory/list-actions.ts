@@ -2,7 +2,7 @@
 
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, hasAnyRole } from '@/lib/session';
 import { connectDB } from '@/lib/mongodb';
 import InventoryModel from '@/models/inventory-model';
 
@@ -30,11 +30,7 @@ export async function listInventoryItemsAction(): Promise<ListInventoryItemsResu
       sessionOptions
     );
 
-    if (
-      !session.userId ||
-      !session.role ||
-      !['admin', 'super-admin'].includes(session.role)
-    ) {
+    if (!session.userId || !hasAnyRole(session, ['admin', 'super-admin'])) {
       return { success: false, error: 'Unauthorized' };
     }
 

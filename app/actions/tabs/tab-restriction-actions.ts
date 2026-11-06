@@ -2,7 +2,7 @@
 
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, isStaff } from '@/lib/session';
 import { TabService } from '@/services/tab-service';
 import { ITab } from '@/interfaces';
 
@@ -19,10 +19,12 @@ export interface TabRestrictionResult {
 export async function checkUserTabRestrictionsAction(): Promise<TabRestrictionResult> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
-    
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
+
     const userId = session.userId;
-    const role = session.role;
 
     if (!userId) {
       return {
@@ -32,7 +34,7 @@ export async function checkUserTabRestrictionsAction(): Promise<TabRestrictionRe
     }
 
     // Staff are never restricted
-    if (role === 'csr' || role === 'admin' || role === 'super-admin') {
+    if (isStaff(session)) {
       return {
         isRestricted: false,
         existingTab: null,

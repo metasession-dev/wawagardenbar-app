@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
 import { revalidatePath } from 'next/cache';
 import { RewardsService, UserService } from '@/services';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, hasAnyRole } from '@/lib/session';
 import { IReward, IUser } from '@/interfaces';
 
 export interface ActionResult<T = unknown> {
@@ -22,10 +22,13 @@ export async function searchUsersAction(
 ): Promise<ActionResult<{ users: IUser[] }>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     // Check if user is admin or super-admin
-    if (!session.isLoggedIn || !['admin', 'super-admin'].includes(session.role || '')) {
+    if (!session.isLoggedIn || !hasAnyRole(session, ['admin', 'super-admin'])) {
       return {
         success: false,
         error: 'Unauthorized. Admin access required.',
@@ -62,10 +65,13 @@ export async function issueManualRewardAction(data: {
 }): Promise<ActionResult<{ reward: IReward }>> {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     // Check if user is admin or super-admin
-    if (!session.isLoggedIn || !['admin', 'super-admin'].includes(session.role || '')) {
+    if (!session.isLoggedIn || !hasAnyRole(session, ['admin', 'super-admin'])) {
       return {
         success: false,
         error: 'Unauthorized. Admin access required.',
@@ -73,7 +79,12 @@ export async function issueManualRewardAction(data: {
     }
 
     // Validate input
-    if (!data.userId || !data.rewardType || !data.rewardValue || !data.validityDays) {
+    if (
+      !data.userId ||
+      !data.rewardType ||
+      !data.rewardValue ||
+      !data.validityDays
+    ) {
       return {
         success: false,
         error: 'Missing required fields',

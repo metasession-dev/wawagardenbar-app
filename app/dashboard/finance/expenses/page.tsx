@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { ExpensesPageClient } from '@/app/dashboard/finance/expenses/expenses-client';
 import { getCurrentSession } from '@/lib/auth-middleware';
 
+import { getPrimaryRole } from '@/lib/session';
 export const metadata = {
   title: 'Expenses | Wawa Garden Bar',
   description: 'Manage business expenses',
@@ -9,7 +10,7 @@ export const metadata = {
 
 export default async function ExpensesPage() {
   const session = await getCurrentSession();
-  const userRole = session?.role || 'admin';
+  const userRole = getPrimaryRole(session) || 'admin';
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">

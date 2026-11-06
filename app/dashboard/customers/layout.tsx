@@ -11,7 +11,7 @@ export default async function CustomersLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireRole(['csr', 'super-admin']);
+  await requireRole(['csr', 'manager', 'super-admin']);
 
   return <>{children}</>;
 }

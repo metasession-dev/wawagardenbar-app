@@ -81,3 +81,36 @@ export const SUPER_ADMIN_PERMISSIONS: IAdminPermissions = {
   kitchenManagement: true,
   incidentsAccess: true,
 };
+
+/**
+ * REQ-119 — defaults for the `kitchen` role: orders (view and advance status)
+ * and the kitchen display only. Not the recipes/production pages, which stay
+ * behind `kitchenManagement` on the admin roles.
+ */
+export const KITCHEN_DEFAULT_PERMISSIONS: IAdminPermissions = {
+  orderManagement: true,
+  menuManagement: false,
+  inventoryManagement: false,
+  rewardsAndLoyalty: false,
+  reportsAndAnalytics: false,
+  expensesManagement: false,
+  settingsAndConfiguration: false,
+  kitchenManagement: false,
+  incidentsAccess: false,
+};
+
+/**
+ * REQ-119 — defaults for the `manager` role: everything `csr` has plus
+ * reports and incidents. No settings, menu, inventory or finance.
+ */
+export const MANAGER_DEFAULT_PERMISSIONS: IAdminPermissions = {
+  orderManagement: true,
+  menuManagement: false,
+  inventoryManagement: false,
+  rewardsAndLoyalty: true,
+  reportsAndAnalytics: true,
+  expensesManagement: false,
+  settingsAndConfiguration: false,
+  kitchenManagement: false,
+  incidentsAccess: true,
+};

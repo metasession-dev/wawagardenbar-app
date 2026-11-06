@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getIronSession } from 'iron-session';
 import { cookies } from 'next/headers';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, hasAnyRole } from '@/lib/session';
 import { PriceHistoryService } from '@/services/price-history-service';
 import { PriceChangeReason } from '@/interfaces';
 import { connectDB } from '@/lib/mongodb';
@@ -24,7 +24,7 @@ export async function POST(
     }
 
     // Only super-admin can update prices
-    if (session.role !== 'super-admin') {
+    if (!hasAnyRole(session, ['super-admin'])) {
       return NextResponse.json(
         { error: 'Only super-admin can update prices' },
         { status: 403 }

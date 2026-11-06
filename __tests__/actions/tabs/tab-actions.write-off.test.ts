@@ -20,7 +20,9 @@ vi.mock('iron-session', () => ({
   getIronSession: mockGetIronSession,
 }));
 
-vi.mock('@/lib/session', () => ({
+vi.mock('@/lib/session', async () => ({
+  // REQ-119 — keep the real role helpers (any-of checks); stub only the cookie options.
+  ...(await import('@/lib/roles')),
   sessionOptions: {},
   SessionData: {},
 }));

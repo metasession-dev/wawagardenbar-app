@@ -51,7 +51,14 @@ const navItems: NavItem[] = [
     title: 'Orders',
     href: '/dashboard/orders',
     icon: ShoppingCart,
-    roles: ['csr', 'admin', 'super-admin'],
+    roles: ['csr', 'kitchen', 'manager', 'admin', 'super-admin'],
+    permission: 'orderManagement',
+  },
+  {
+    title: 'Kitchen display',
+    href: '/dashboard/kitchen-display',
+    icon: ChefHat,
+    roles: ['csr', 'kitchen', 'manager', 'admin', 'super-admin'],
     permission: 'orderManagement',
   },
   {
@@ -65,7 +72,7 @@ const navItems: NavItem[] = [
     title: 'Customers',
     href: '/dashboard/customers',
     icon: Users,
-    roles: ['csr', 'super-admin'],
+    roles: ['csr', 'manager', 'super-admin'],
   },
   {
     title: 'Inventory',
@@ -78,7 +85,7 @@ const navItems: NavItem[] = [
     title: 'Rewards',
     href: '/dashboard/rewards',
     icon: Gift,
-    roles: ['csr', 'admin', 'super-admin'],
+    roles: ['csr', 'manager', 'admin', 'super-admin'],
     permission: 'rewardsAndLoyalty',
   },
   {
@@ -137,7 +144,7 @@ const navItems: NavItem[] = [
     title: 'Incidents',
     href: '/dashboard/incidents',
     icon: AlertTriangle,
-    roles: ['csr', 'admin', 'super-admin'],
+    roles: ['csr', 'manager', 'admin', 'super-admin'],
     permission: 'incidentsAccess',
   },
   {
@@ -151,7 +158,8 @@ const navItems: NavItem[] = [
 
 interface DashboardNavProps {
   userEmail?: string;
-  userRole?: UserRole;
+  /** REQ-119 — every role the user holds; an item shows when any role grants it. */
+  userRoles?: UserRole[];
   permissions?: IAdminPermissions;
 }
 
@@ -161,7 +169,7 @@ interface DashboardNavProps {
  */
 export function DashboardNav({
   userEmail,
-  userRole,
+  userRoles = [],
   permissions,
 }: DashboardNavProps) {
   const pathname = usePathname();
@@ -169,13 +177,13 @@ export function DashboardNav({
 
   // Filter navigation items based on user role and permissions
   const filteredNavItems = navItems.filter((item) => {
-    if (!userRole) return false;
+    if (userRoles.length === 0) return false;
 
-    // Check role access
-    if (!item.roles.includes(userRole)) return false;
+    // Check role access (any of the user's roles)
+    if (!item.roles.some((role) => userRoles.includes(role))) return false;
 
     // Super-admin has access to everything
-    if (userRole === 'super-admin') return true;
+    if (userRoles.includes('super-admin')) return true;
 
     // For csr/admin role, check permissions if specified
     if (item.permission) {
@@ -287,9 +295,11 @@ export function DashboardNav({
             <p className="text-sm font-medium truncate">
               {userEmail || 'Admin User'}
             </p>
-            {userRole && (
-              <div className="mt-2">
-                <RoleBadge role={userRole} showIcon={true} />
+            {userRoles.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {userRoles.map((role) => (
+                  <RoleBadge key={role} role={role} showIcon={true} />
+                ))}
               </div>
             )}
           </div>

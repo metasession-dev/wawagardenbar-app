@@ -14,27 +14,23 @@ async function getTodayStats() {
   last24Hours.setHours(last24Hours.getHours() - 24);
 
   // Get all orders (not just last 24 hours) for accurate counts
-  const [
-    totalOrders,
-    pendingOrders,
-    preparingOrders,
-    completedOrders,
-  ] = await Promise.all([
-    // All orders (not just last 24h)
-    OrderModel.countDocuments(),
-    // Pending orders (current state, regardless of creation time)
-    OrderModel.countDocuments({
-      status: { $in: ['pending', 'confirmed'] },
-    }),
-    // Preparing orders (current state)
-    OrderModel.countDocuments({
-      status: 'preparing',
-    }),
-    // Completed orders (current state)
-    OrderModel.countDocuments({
-      status: 'completed',
-    }),
-  ]);
+  const [totalOrders, pendingOrders, preparingOrders, completedOrders] =
+    await Promise.all([
+      // All orders (not just last 24h)
+      OrderModel.countDocuments(),
+      // Pending orders (current state, regardless of creation time)
+      OrderModel.countDocuments({
+        status: { $in: ['pending', 'confirmed'] },
+      }),
+      // Preparing orders (current state)
+      OrderModel.countDocuments({
+        status: 'preparing',
+      }),
+      // Completed orders (current state)
+      OrderModel.countDocuments({
+        status: 'completed',
+      }),
+    ]);
 
   return {
     totalOrders,
@@ -94,15 +90,21 @@ export async function OrderStats() {
             data-testid="order-stats-card"
           >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                {card.title}
+              </CardTitle>
               <div className="flex items-center gap-2">
-                {card.alert && <AlertCircle className="h-4 w-4 text-yellow-600" />}
+                {card.alert && (
+                  <AlertCircle className="h-4 w-4 text-yellow-600" />
+                )}
                 <Icon className={`h-4 w-4 ${card.color}`} />
               </div>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{card.value}</div>
-              <p className="text-xs text-muted-foreground">{card.description}</p>
+              <p className="text-xs text-muted-foreground">
+                {card.description}
+              </p>
             </CardContent>
           </Card>
         );

@@ -16,22 +16,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PermissionsEditor } from './permissions-editor';
-import {
-  IAdminPermissions,
-  DEFAULT_ADMIN_PERMISSIONS,
-  CSR_DEFAULT_PERMISSIONS,
-} from '@/interfaces';
+import { IAdminPermissions } from '@/interfaces';
+import { STAFF_ROLES, type StaffRole } from '@/interfaces/user.interface';
+import { defaultPermissionsForRoles } from '@/lib/permissions';
+import { RoleCheckboxes } from './role-checkboxes';
 
 const createAdminSchema = z
   .object({
@@ -61,7 +53,9 @@ const createAdminSchema = z
       .or(z.literal('')),
     firstName: z.string().optional(),
     lastName: z.string().optional(),
-    role: z.enum(['csr', 'admin', 'super-admin']),
+    roles: z
+      .array(z.enum(STAFF_ROLES as [StaffRole, ...StaffRole[]]))
+      .min(1, 'Select at least one role'),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
@@ -72,14 +66,19 @@ type CreateAdminFormData = z.infer<typeof createAdminSchema>;
 
 interface CreateAdminDialogProps {
   children: React.ReactNode;
+  /** True when the signed-in actor is a super-admin (default: the page is super-admin only). */
+  canGrantPrivileged?: boolean;
 }
 
-export function CreateAdminDialog({ children }: CreateAdminDialogProps) {
+export function CreateAdminDialog({
+  children,
+  canGrantPrivileged = true,
+}: CreateAdminDialogProps) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [permissions, setPermissions] = useState<IAdminPermissions>(
-    DEFAULT_ADMIN_PERMISSIONS
+    defaultPermissionsForRoles(['admin'])
   );
 
   const {
@@ -92,11 +91,12 @@ export function CreateAdminDialog({ children }: CreateAdminDialogProps) {
   } = useForm<CreateAdminFormData>({
     resolver: zodResolver(createAdminSchema),
     defaultValues: {
-      role: 'admin',
+      roles: ['admin'],
     },
   });
 
-  const role = watch('role');
+  const roles = watch('roles') ?? [];
+  const hasPermissionRoles = roles.some((role) => role !== 'super-admin');
 
   const onSubmit = async (data: CreateAdminFormData) => {
     try {
@@ -109,11 +109,10 @@ export function CreateAdminDialog({ children }: CreateAdminDialogProps) {
         email: data.email || undefined,
         firstName: data.firstName || undefined,
         lastName: data.lastName || undefined,
-        role: data.role,
-        permissions:
-          data.role === 'admin' || data.role === 'csr'
-            ? permissions
-            : undefined,
+        roles: data.roles,
+        permissions: data.roles.includes('super-admin')
+          ? undefined
+          : permissions,
       });
 
       if (!result.success) {
@@ -255,45 +254,35 @@ export function CreateAdminDialog({ children }: CreateAdminDialogProps) {
             />
           </div>
 
-          {/* Role */}
+          {/* Roles (REQ-119: one or more) */}
           <div className="space-y-2">
-            <Label htmlFor="role">
-              Role <span className="text-destructive">*</span>
+            <Label>
+              Roles <span className="text-destructive">*</span>
             </Label>
-            <Select
-              value={role}
-              onValueChange={(value) => {
-                setValue('role', value as any);
-                if (value === 'csr') setPermissions(CSR_DEFAULT_PERMISSIONS);
-                else if (value === 'admin')
-                  setPermissions(DEFAULT_ADMIN_PERMISSIONS);
+            <RoleCheckboxes
+              value={roles}
+              onChange={(next) => {
+                setValue('roles', next, { shouldValidate: true });
+                setPermissions(defaultPermissionsForRoles(next));
               }}
+              canGrantPrivileged={canGrantPrivileged}
               disabled={isLoading}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="csr">Customer Service Rep</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="super-admin">Super Admin</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              {role === 'csr'
-                ? 'Order management, customer communication, and refund requests'
-                : role === 'admin'
-                  ? 'Customizable permissions for specific features'
-                  : 'Full access to all dashboard features'}
-            </p>
+              idPrefix="create-role"
+            />
+            {errors.roles && (
+              <p className="text-sm text-destructive">
+                {errors.roles.message as string}
+              </p>
+            )}
           </div>
 
-          {/* Permissions — for CSR and Admin roles (super-admin has full access). */}
-          {(role === 'csr' || role === 'admin') && (
+          {/* Permissions: everyone except a super-admin (full access). */}
+          {hasPermissionRoles && !roles.includes('super-admin') && (
             <div className="space-y-2">
               <Label>Permissions</Label>
               <p className="text-xs text-muted-foreground mb-4">
-                Configure what features this admin can access
+                Starts as the combination of the roles above; adjust per feature
+                if needed
               </p>
               <PermissionsEditor
                 permissions={permissions}

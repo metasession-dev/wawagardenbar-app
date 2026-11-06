@@ -10,7 +10,7 @@
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
 import { revalidatePath } from 'next/cache';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, hasAnyRole } from '@/lib/session';
 import { RecipeService } from '@/services/recipe-service';
 import { InventoryService } from '@/services';
 import MenuItemModel from '@/models/menu-item-model';
@@ -28,7 +28,7 @@ async function getSession(): Promise<SessionData> {
 function requireKitchenManagement(session: SessionData): void {
   if (!session.isLoggedIn || !session.userId) throw new Error('Unauthorized');
   // Super-admin has every permission unconditionally.
-  if (session.role === 'super-admin') return;
+  if (hasAnyRole(session, ['super-admin'])) return;
   if (!session.permissions?.kitchenManagement) {
     throw new Error('Insufficient permissions — kitchenManagement required');
   }
@@ -36,7 +36,7 @@ function requireKitchenManagement(session: SessionData): void {
 
 function requireSuperAdmin(session: SessionData): void {
   if (!session.isLoggedIn || !session.userId) throw new Error('Unauthorized');
-  if (session.role !== 'super-admin') {
+  if (!hasAnyRole(session, ['super-admin'])) {
     throw new Error('Only super-admin can perform this action');
   }
 }

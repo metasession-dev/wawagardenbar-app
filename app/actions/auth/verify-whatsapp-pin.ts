@@ -8,6 +8,9 @@ import {
   sessionOptions,
   SessionData,
   applyCustomerSessionLifetime,
+  applyRolesToSession,
+  getRoles,
+  isCustomerSession,
 } from '@/lib/session';
 import {
   generateSessionToken,
@@ -162,7 +165,7 @@ export async function verifyWhatsAppPinAction(
     session.userId = user._id.toString();
     session.email = user.email || undefined;
     session.phone = user.phone;
-    session.role = user.role;
+    applyRolesToSession(session, getRoles(user));
     session.isGuest = false;
     session.isLoggedIn = true;
     session.createdAt = Date.now();
@@ -170,7 +173,7 @@ export async function verifyWhatsAppPinAction(
 
     // REQ-117 (AC7) — customers get the 90-day lifetime; staff sign in
     // through admin-login and keep the 7-day default.
-    if (user.role === 'customer') {
+    if (isCustomerSession(user)) {
       applyCustomerSessionLifetime(session);
     }
 

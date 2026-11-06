@@ -210,14 +210,23 @@ export function ProfitabilityCharts({
           ) : (
             <div className="space-y-3">
               {byCategory.map((entry) => (
-                <div key={entry.category} className="flex items-center justify-between border-b pb-2 last:border-0">
+                <div
+                  key={entry.category}
+                  className="flex items-center justify-between border-b pb-2 last:border-0"
+                >
                   <div>
                     <p className="font-medium">{entry.category}</p>
-                    <p className="text-xs text-muted-foreground">{entry.orderCount} orders</p>
+                    <p className="text-xs text-muted-foreground">
+                      {entry.orderCount} orders
+                    </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium">₦{entry.totalRevenue.toLocaleString()}</p>
-                    <p className="text-xs text-green-600">{entry.profitMargin.toFixed(1)}% margin</p>
+                    <p className="font-medium">
+                      ₦{entry.totalRevenue.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-green-600">
+                      {entry.profitMargin.toFixed(1)}% margin
+                    </p>
                   </div>
                 </div>
               ))}

@@ -3,7 +3,7 @@
  * @requirement SRS REQ-MENUMGT-006
  *
  * Server component for /dashboard/reports/by-main-category. Two gates:
- *   1. session.role ∈ {'admin', 'super-admin'}
+ *   1. the session holds the 'admin' or 'super-admin' role
  *   2. getAllowedMainCategoriesForReports returns ≥1 slug
  *
  * Loads the registry + filters to the session's allowed enabled mains,
@@ -14,7 +14,7 @@
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, hasAnyRole } from '@/lib/session';
 import { SystemSettingsService } from '@/services/system-settings-service';
 import { getAllowedMainCategoriesForReports } from '@/lib/permissions';
 import { ByMainCategoryReportClient } from './by-main-category-report-client';
@@ -36,7 +36,7 @@ export default async function ByMainCategoryReportPage() {
     redirect('/login');
   }
 
-  if (session.role !== 'super-admin' && session.role !== 'admin') {
+  if (!hasAnyRole(session, ['super-admin', 'admin'])) {
     redirect('/dashboard');
   }
 

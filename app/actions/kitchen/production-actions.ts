@@ -10,7 +10,12 @@
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
 import { revalidatePath } from 'next/cache';
-import { sessionOptions, SessionData } from '@/lib/session';
+import {
+  sessionOptions,
+  SessionData,
+  hasAnyRole,
+  getPrimaryRole,
+} from '@/lib/session';
 import { ProductionService } from '@/services/production-service';
 
 async function getSession(): Promise<SessionData> {
@@ -20,7 +25,7 @@ async function getSession(): Promise<SessionData> {
 
 function requireKitchenManagement(session: SessionData): void {
   if (!session.isLoggedIn || !session.userId) throw new Error('Unauthorized');
-  if (session.role === 'super-admin') return;
+  if (hasAnyRole(session, ['super-admin'])) return;
   if (!session.permissions?.kitchenManagement) {
     throw new Error('Insufficient permissions — kitchenManagement required');
   }
@@ -66,7 +71,7 @@ export async function voidProductionAction(input: {
     if (!session.isLoggedIn || !session.userId) {
       return { success: false as const, error: 'Unauthorized' };
     }
-    if (session.role !== 'super-admin') {
+    if (!hasAnyRole(session, ['super-admin'])) {
       return {
         success: false as const,
         error: 'Only super-admin can void a production batch',
@@ -75,7 +80,7 @@ export async function voidProductionAction(input: {
     const production = await ProductionService.voidBatch({
       productionId: input.productionId,
       voidedBy: session.userId,
-      voidedByRole: session.role,
+      voidedByRole: getPrimaryRole(session) ?? 'super-admin',
       voidedByName: session.name ?? session.email,
       reasonNote: input.reasonNote,
     });

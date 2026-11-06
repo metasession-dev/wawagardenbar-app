@@ -3,7 +3,7 @@
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
 import { revalidatePath } from 'next/cache';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, hasAnyRole } from '@/lib/session';
 import { ExpenseService } from '@/services/expense-service';
 import {
   CreateExpenseDTO,
@@ -27,7 +27,7 @@ export async function createExpenseAction(
     }
 
     // Only super-admin and admin can create expenses
-    if (session.role !== 'super-admin' && session.role !== 'admin') {
+    if (!hasAnyRole(session, ['super-admin', 'admin'])) {
       return { success: false, error: 'Insufficient permissions' };
     }
 
@@ -70,7 +70,7 @@ export async function getExpensesAction(
     }
 
     // Only super-admin and admin can view expenses
-    if (session.role !== 'super-admin' && session.role !== 'admin') {
+    if (!hasAnyRole(session, ['super-admin', 'admin'])) {
       return { success: false, error: 'Insufficient permissions' };
     }
 
@@ -108,7 +108,7 @@ export async function getExpenseByIdAction(id: string) {
     }
 
     // Only super-admin and admin can view expenses
-    if (session.role !== 'super-admin' && session.role !== 'admin') {
+    if (!hasAnyRole(session, ['super-admin', 'admin'])) {
       return { success: false, error: 'Insufficient permissions' };
     }
 
@@ -145,7 +145,7 @@ export async function updateExpenseAction(id: string, data: UpdateExpenseDTO) {
     }
 
     // Only super-admin can update expenses
-    if (session.role !== 'super-admin') {
+    if (!hasAnyRole(session, ['super-admin'])) {
       return { success: false, error: 'Only super-admin can update expenses' };
     }
 
@@ -182,7 +182,7 @@ export async function deleteExpenseAction(id: string) {
     );
 
     // Only super-admin can delete expenses
-    if (session.role !== 'super-admin') {
+    if (!hasAnyRole(session, ['super-admin'])) {
       return { success: false, error: 'Only super-admin can delete expenses' };
     }
     if (!session.userId) {
@@ -218,7 +218,7 @@ export async function getUsedCategoriesAction() {
     }
 
     // Only super-admin and admin can view categories
-    if (session.role !== 'super-admin' && session.role !== 'admin') {
+    if (!hasAnyRole(session, ['super-admin', 'admin'])) {
       return { success: false, error: 'Insufficient permissions' };
     }
 

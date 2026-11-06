@@ -9,6 +9,7 @@ import { AuditLogService } from '@/services/audit-log-service';
 import { Types } from 'mongoose';
 import type { ActionResult } from './order-management-actions';
 
+import { getPrimaryRole } from '@/lib/session';
 /**
  * @requirement REQ-066 AC10 — operator-initiated retry of a stuck
  * inventory deduction. Bound to the per-row "Retry now" button on
@@ -62,7 +63,7 @@ export async function retryInventoryDeductionAction(
       await AuditLogService.createLog({
         userId: session.userId || '',
         userEmail: session.email || '',
-        userRole: session.role || '',
+        userRole: getPrimaryRole(session) || '',
         action: 'incidents.retry_deduction_failed',
         resource: 'order',
         resourceId: orderId,
@@ -113,7 +114,7 @@ export async function retryInventoryDeductionAction(
       await AuditLogService.createLog({
         userId: session.userId || '',
         userEmail: session.email || '',
-        userRole: session.role || '',
+        userRole: getPrimaryRole(session) || '',
         action: 'incidents.retry_deduction_partial',
         resource: 'order',
         resourceId: orderId,
@@ -134,7 +135,7 @@ export async function retryInventoryDeductionAction(
     await AuditLogService.createLog({
       userId: session.userId || '',
       userEmail: session.email || '',
-      userRole: session.role || '',
+      userRole: getPrimaryRole(session) || '',
       action: 'incidents.retry_deduction_succeeded',
       resource: 'order',
       resourceId: orderId,

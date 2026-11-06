@@ -4,7 +4,7 @@
 import { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, hasAnyRole } from '@/lib/session';
 import { StaffPotClient } from './staff-pot-client';
 
 export const metadata: Metadata = {
@@ -18,7 +18,7 @@ export default async function StaffPotPage() {
     cookieStore,
     sessionOptions
   );
-  const isSuperAdmin = session.role === 'super-admin';
+  const isSuperAdmin = hasAnyRole(session, ['super-admin']);
 
   return (
     <div className="space-y-6">

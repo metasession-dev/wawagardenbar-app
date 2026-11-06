@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, hasAnyRole } from '@/lib/session';
 import InventoryModel from '@/models/inventory-model';
 import { connectToDatabase } from '@/lib/mongodb';
 
@@ -15,18 +15,12 @@ export async function GET() {
 
     // Check authentication
     if (!session.isLoggedIn) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Check authorization - only super-admin and admin can access
-    if (session.role !== 'super-admin' && session.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      );
+    if (!hasAnyRole(session, ['super-admin', 'admin'])) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     await connectToDatabase();
@@ -61,12 +55,15 @@ export async function GET() {
     // Calculate statistics
     const stats = {
       totalItems: items.length,
-      inStock: items.filter(item => item.status === 'in-stock').length,
-      lowStock: items.filter(item => item.status === 'low-stock').length,
-      outOfStock: items.filter(item => item.status === 'out-of-stock').length,
-      totalValue: items.reduce((sum, item) => sum + (item.currentStock * item.costPerUnit), 0),
-      needsReorder: items.filter(item => 
-        item.status === 'low-stock' || item.status === 'out-of-stock'
+      inStock: items.filter((item) => item.status === 'in-stock').length,
+      lowStock: items.filter((item) => item.status === 'low-stock').length,
+      outOfStock: items.filter((item) => item.status === 'out-of-stock').length,
+      totalValue: items.reduce(
+        (sum, item) => sum + item.currentStock * item.costPerUnit,
+        0
+      ),
+      needsReorder: items.filter(
+        (item) => item.status === 'low-stock' || item.status === 'out-of-stock'
       ).length,
     };
 

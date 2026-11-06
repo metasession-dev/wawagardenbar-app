@@ -1,3 +1,4 @@
+import { getPrimaryRole, getRoles } from '@/lib/roles';
 import { Suspense } from 'react';
 import UserModel from '@/models/user-model';
 import { connectDB } from '@/lib/mongodb';
@@ -69,17 +70,22 @@ async function UsersTable() {
                   <TableCell className="font-medium">{user.email}</TableCell>
                   <TableCell>{user.name || '-'}</TableCell>
                   <TableCell>
-                    <Badge
-                      variant={
-                        user.role === 'super-admin'
-                          ? 'default'
-                          : user.role === 'admin'
-                            ? 'secondary'
-                            : 'outline'
-                      }
-                    >
-                      {user.role}
-                    </Badge>
+                    <div className="flex flex-wrap gap-1">
+                      {getRoles(user).map((role) => (
+                        <Badge
+                          key={role}
+                          variant={
+                            role === 'super-admin'
+                              ? 'default'
+                              : role === 'admin'
+                                ? 'secondary'
+                                : 'outline'
+                          }
+                        >
+                          {role}
+                        </Badge>
+                      ))}
+                    </div>
                   </TableCell>
                   <TableCell>{user.totalOrders}</TableCell>
                   <TableCell>₦{user.totalSpent.toLocaleString()}</TableCell>
@@ -93,7 +99,8 @@ async function UsersTable() {
                   <TableCell>
                     <UserManagementActions
                       userId={user._id.toString()}
-                      userRole={user.role}
+                      userRole={getPrimaryRole(user) ?? 'customer'}
+                      roleCount={getRoles(user).length}
                     />
                   </TableCell>
                 </TableRow>

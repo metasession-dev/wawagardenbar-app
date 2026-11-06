@@ -2,12 +2,19 @@
 
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
-import { sessionOptions, SessionData } from '@/lib/session';
+import {
+  sessionOptions,
+  SessionData,
+  hasAnyAssignedRole,
+  getPrimaryRole,
+  hasAnyRole,
+} from '@/lib/session';
 import InventoryService from '@/services/inventory-service';
 import { SystemSettingsService } from '@/services/system-settings-service';
 import { AuditLogService } from '@/services/audit-log-service';
 import { IInventoryLocationsSettings } from '@/interfaces';
 
+import type { UserRole } from '@/interfaces/user.interface';
 /**
  * Get session
  */
@@ -32,7 +39,7 @@ async function requireAuth() {
  */
 async function requireRole(allowedRoles: string[]) {
   const session = await requireAuth();
-  if (!session.role || !allowedRoles.includes(session.role)) {
+  if (!hasAnyRole(session, allowedRoles as UserRole[])) {
     throw new Error('Insufficient permissions');
   }
   return session;
@@ -51,21 +58,21 @@ export async function transferStockAction(params: {
 }) {
   try {
     const session = await requireRole(['admin', 'super-admin']);
-    
-    if (!session.userId || !session.email || !session.role) {
+
+    if (!session.userId || !session.email || !hasAnyAssignedRole(session)) {
       throw new Error('Invalid session data');
     }
-    
+
     await InventoryService.transferStock({
       ...params,
       performedBy: session.userId,
       performedByName: session.name || session.email,
     });
-    
+
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: session.email,
-      userRole: session.role,
+      userRole: getPrimaryRole(session) ?? 'unknown',
       action: 'inventory.stock_transferred',
       resource: 'inventory',
       resourceId: params.inventoryId,
@@ -76,7 +83,7 @@ export async function transferStockAction(params: {
         transferReference: params.transferReference,
       },
     });
-    
+
     return { success: true, message: 'Stock transferred successfully' };
   } catch (error: any) {
     console.error('Transfer stock error:', error);
@@ -96,21 +103,21 @@ export async function batchTransferStockAction(params: {
 }) {
   try {
     const session = await requireRole(['admin', 'super-admin']);
-    
-    if (!session.userId || !session.email || !session.role) {
+
+    if (!session.userId || !session.email || !hasAnyAssignedRole(session)) {
       throw new Error('Invalid session data');
     }
-    
+
     const result = await InventoryService.batchTransferStock({
       ...params,
       performedBy: session.userId,
       performedByName: session.name || session.email,
     });
-    
+
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: session.email,
-      userRole: session.role,
+      userRole: getPrimaryRole(session) ?? 'unknown',
       action: 'inventory.batch_transfer',
       resource: 'inventory',
       resourceId: 'batch',
@@ -122,7 +129,7 @@ export async function batchTransferStockAction(params: {
         failed: result.failed,
       },
     });
-    
+
     return { success: true, data: result };
   } catch (error: any) {
     console.error('Batch transfer error:', error);
@@ -136,9 +143,9 @@ export async function batchTransferStockAction(params: {
 export async function getLocationBreakdownAction(inventoryId: string) {
   try {
     await requireRole(['admin', 'super-admin']);
-    
+
     const breakdown = await InventoryService.getLocationBreakdown(inventoryId);
-    
+
     return { success: true, data: breakdown };
   } catch (error: any) {
     console.error('Get location breakdown error:', error);
@@ -156,13 +163,13 @@ export async function getTransferHistoryAction(
 ) {
   try {
     await requireRole(['admin', 'super-admin']);
-    
+
     const history = await InventoryService.getTransferHistory(
       inventoryId,
       startDate ? new Date(startDate) : undefined,
       endDate ? new Date(endDate) : undefined
     );
-    
+
     return { success: true, data: JSON.parse(JSON.stringify(history)) };
   } catch (error: any) {
     console.error('Get transfer history error:', error);
@@ -176,9 +183,9 @@ export async function getTransferHistoryAction(
 export async function getLowStockByLocationAction() {
   try {
     await requireRole(['admin', 'super-admin']);
-    
+
     const alerts = await InventoryService.getLowStockByLocation();
-    
+
     return { success: true, data: JSON.parse(JSON.stringify(alerts)) };
   } catch (error: any) {
     console.error('Get low stock by location error:', error);
@@ -195,22 +202,22 @@ export async function enableLocationTrackingAction(
 ) {
   try {
     const session = await requireRole(['super-admin']);
-    
-    if (!session.userId || !session.email || !session.role) {
+
+    if (!session.userId || !session.email || !hasAnyAssignedRole(session)) {
       throw new Error('Invalid session data');
     }
-    
+
     await InventoryService.enableLocationTracking(
       inventoryId,
       initialLocation,
       session.userId,
       session.name || session.email
     );
-    
+
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: session.email,
-      userRole: session.role,
+      userRole: getPrimaryRole(session) ?? 'unknown',
       action: 'inventory.location_tracking_enabled',
       resource: 'inventory',
       resourceId: inventoryId,
@@ -218,7 +225,7 @@ export async function enableLocationTrackingAction(
         initialLocation,
       },
     });
-    
+
     return { success: true, message: 'Location tracking enabled' };
   } catch (error: any) {
     console.error('Enable location tracking error:', error);
@@ -232,9 +239,9 @@ export async function enableLocationTrackingAction(
 export async function getInventoryLocationsConfigAction() {
   try {
     await requireRole(['admin', 'super-admin']);
-    
+
     const config = await SystemSettingsService.getInventoryLocations();
-    
+
     return { success: true, data: config };
   } catch (error: any) {
     console.error('Get locations config error:', error);
@@ -250,17 +257,20 @@ export async function updateInventoryLocationsConfigAction(
 ) {
   try {
     const session = await requireRole(['super-admin']);
-    
-    if (!session.userId || !session.email || !session.role) {
+
+    if (!session.userId || !session.email || !hasAnyAssignedRole(session)) {
       throw new Error('Invalid session data');
     }
-    
-    await SystemSettingsService.updateInventoryLocations(config, session.userId);
-    
+
+    await SystemSettingsService.updateInventoryLocations(
+      config,
+      session.userId
+    );
+
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: session.email,
-      userRole: session.role,
+      userRole: getPrimaryRole(session) ?? 'unknown',
       action: 'settings.inventory_locations_updated',
       resource: 'system-settings',
       resourceId: 'inventory-locations',
@@ -271,7 +281,7 @@ export async function updateInventoryLocationsConfigAction(
         defaultSalesLocation: config.defaultSalesLocation,
       },
     });
-    
+
     return { success: true, message: 'Locations configuration updated' };
   } catch (error: any) {
     console.error('Update locations config error:', error);
@@ -294,21 +304,21 @@ export async function addStockToLocationAction(params: {
 }) {
   try {
     const session = await requireRole(['admin', 'super-admin']);
-    
-    if (!session.userId || !session.email || !session.role) {
+
+    if (!session.userId || !session.email || !hasAnyAssignedRole(session)) {
       throw new Error('Invalid session data');
     }
-    
+
     await InventoryService.addStockToLocation({
       ...params,
       performedBy: session.userId,
       performedByName: session.name || session.email,
     });
-    
+
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: session.email,
-      userRole: session.role,
+      userRole: getPrimaryRole(session) ?? 'unknown',
       action: 'inventory.stock_added_to_location',
       resource: 'inventory',
       resourceId: params.inventoryId,
@@ -318,7 +328,7 @@ export async function addStockToLocationAction(params: {
         reason: params.reason,
       },
     });
-    
+
     return { success: true, message: 'Stock added successfully' };
   } catch (error: any) {
     console.error('Add stock to location error:', error);
@@ -339,21 +349,21 @@ export async function deductStockFromLocationAction(params: {
 }) {
   try {
     const session = await requireRole(['admin', 'super-admin']);
-    
-    if (!session.userId || !session.email || !session.role) {
+
+    if (!session.userId || !session.email || !hasAnyAssignedRole(session)) {
       throw new Error('Invalid session data');
     }
-    
+
     await InventoryService.deductStockFromLocation({
       ...params,
       performedBy: session.userId,
       performedByName: session.name || session.email,
     });
-    
+
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: session.email,
-      userRole: session.role,
+      userRole: getPrimaryRole(session) ?? 'unknown',
       action: 'inventory.stock_deducted_from_location',
       resource: 'inventory',
       resourceId: params.inventoryId,
@@ -364,7 +374,7 @@ export async function deductStockFromLocationAction(params: {
         category: params.category,
       },
     });
-    
+
     return { success: true, message: 'Stock deducted successfully' };
   } catch (error: any) {
     console.error('Deduct stock from location error:', error);

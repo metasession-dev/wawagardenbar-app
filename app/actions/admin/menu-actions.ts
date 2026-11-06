@@ -3,7 +3,12 @@
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
 import { revalidatePath } from 'next/cache';
-import { sessionOptions, SessionData } from '@/lib/session';
+import {
+  sessionOptions,
+  SessionData,
+  hasAnyRole,
+  getPrimaryRole,
+} from '@/lib/session';
 import { hasSessionPermission } from '@/lib/auth-middleware';
 import { connectDB } from '@/lib/mongodb';
 import MenuItemModel from '@/models/menu-item-model';
@@ -70,11 +75,7 @@ export async function createMenuItemAction(
       sessionOptions
     );
 
-    if (
-      !session.userId ||
-      !session.role ||
-      !['admin', 'super-admin'].includes(session.role)
-    ) {
+    if (!session.userId || !hasAnyRole(session, ['admin', 'super-admin'])) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -208,7 +209,7 @@ export async function createMenuItemAction(
       await AuditLogService.createLog({
         userId: session.userId,
         userEmail: session.email || '',
-        userRole: session.role,
+        userRole: getPrimaryRole(session) ?? 'unknown',
         action: 'inventory.update',
         resource: 'inventory',
         resourceId: inventory._id.toString(),
@@ -225,7 +226,7 @@ export async function createMenuItemAction(
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: session.email || '',
-      userRole: session.role,
+      userRole: getPrimaryRole(session) ?? 'unknown',
       action: 'menu.create',
       resource: 'menu-item',
       resourceId: menuItem._id.toString(),
@@ -265,11 +266,7 @@ export async function updateMenuItemAction(
       sessionOptions
     );
 
-    if (
-      !session.userId ||
-      !session.role ||
-      !['admin', 'super-admin'].includes(session.role)
-    ) {
+    if (!session.userId || !hasAnyRole(session, ['admin', 'super-admin'])) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -545,7 +542,7 @@ export async function updateMenuItemAction(
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: session.email || '',
-      userRole: session.role,
+      userRole: getPrimaryRole(session) ?? 'unknown',
       action: 'menu.update',
       resource: 'menu-item',
       resourceId: id,
@@ -579,11 +576,7 @@ export async function deleteMenuItemAction(id: string): Promise<ActionResult> {
       sessionOptions
     );
 
-    if (
-      !session.userId ||
-      !session.role ||
-      !['admin', 'super-admin'].includes(session.role)
-    ) {
+    if (!session.userId || !hasAnyRole(session, ['admin', 'super-admin'])) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -605,7 +598,7 @@ export async function deleteMenuItemAction(id: string): Promise<ActionResult> {
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: session.email || '',
-      userRole: session.role,
+      userRole: getPrimaryRole(session) ?? 'unknown',
       action: 'menu.delete',
       resource: 'menu-item',
       resourceId: id,
@@ -641,11 +634,7 @@ export async function uploadMenuImageAction(
       sessionOptions
     );
 
-    if (
-      !session.userId ||
-      !session.role ||
-      !['admin', 'super-admin'].includes(session.role)
-    ) {
+    if (!session.userId || !hasAnyRole(session, ['admin', 'super-admin'])) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -711,7 +700,7 @@ export async function uploadMenuImageAction(
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: session.email || '',
-      userRole: session.role,
+      userRole: getPrimaryRole(session) ?? 'unknown',
       action: 'menu.update',
       resource: 'menu-item',
       resourceId: menuItemId,
@@ -747,11 +736,7 @@ export async function toggleMenuItemAvailabilityAction(
       sessionOptions
     );
 
-    if (
-      !session.userId ||
-      !session.role ||
-      !['admin', 'super-admin'].includes(session.role)
-    ) {
+    if (!session.userId || !hasAnyRole(session, ['admin', 'super-admin'])) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -773,7 +758,7 @@ export async function toggleMenuItemAvailabilityAction(
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: session.email || '',
-      userRole: session.role,
+      userRole: getPrimaryRole(session) ?? 'unknown',
       action: 'menu.update',
       resource: 'menu-item',
       resourceId: id,
@@ -812,11 +797,7 @@ export async function deleteMenuItemImageAction(
       sessionOptions
     );
 
-    if (
-      !session.userId ||
-      !session.role ||
-      !['admin', 'super-admin'].includes(session.role)
-    ) {
+    if (!session.userId || !hasAnyRole(session, ['admin', 'super-admin'])) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -839,7 +820,7 @@ export async function deleteMenuItemImageAction(
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: session.email || '',
-      userRole: session.role,
+      userRole: getPrimaryRole(session) ?? 'unknown',
       action: 'menu.update',
       resource: 'menu-item',
       resourceId: menuItemId,
@@ -879,11 +860,7 @@ export async function duplicateMenuItemAction(
       sessionOptions
     );
 
-    if (
-      !session.userId ||
-      !session.role ||
-      !['admin', 'super-admin'].includes(session.role)
-    ) {
+    if (!session.userId || !hasAnyRole(session, ['admin', 'super-admin'])) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -942,7 +919,7 @@ export async function duplicateMenuItemAction(
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: session.email || '',
-      userRole: session.role,
+      userRole: getPrimaryRole(session) ?? 'unknown',
       action: 'menu.create',
       resource: 'menu-item',
       resourceId: newItem._id.toString(),

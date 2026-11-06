@@ -1,7 +1,12 @@
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
-import { sessionOptions, SessionData } from '@/lib/session';
+import {
+  sessionOptions,
+  SessionData,
+  hasAnyRole,
+  getPrimaryRole,
+} from '@/lib/session';
 import { DailyReportClient } from './daily-report-client';
 
 export const metadata = {
@@ -22,9 +27,9 @@ export default async function DailyReportPage() {
   }
 
   // Check authorization - only super-admin and admin can access
-  if (session.role !== 'super-admin' && session.role !== 'admin') {
+  if (!hasAnyRole(session, ['super-admin', 'admin'])) {
     redirect('/dashboard');
   }
 
-  return <DailyReportClient userRole={session.role} />;
+  return <DailyReportClient userRole={getPrimaryRole(session)} />;
 }

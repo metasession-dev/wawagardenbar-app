@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 
+import { hasAnyRole } from '@/lib/session';
 export const metadata = {
   title: 'Admin Login | Wawa Garden Bar',
   description: 'Admin login portal',
@@ -18,11 +19,7 @@ export default async function AdminLoginPage() {
   // Check if already logged in
   const session = await getCurrentSession();
 
-  if (
-    session?.isLoggedIn &&
-    session?.role &&
-    ['admin', 'super-admin'].includes(session.role)
-  ) {
+  if (session?.isLoggedIn && hasAnyRole(session, ['admin', 'super-admin'])) {
     redirect('/dashboard');
   }
 

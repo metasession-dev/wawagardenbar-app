@@ -10,7 +10,12 @@ import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
 import { revalidatePath } from 'next/cache';
 import { connectDB } from '@/lib/mongodb';
-import { sessionOptions, SessionData } from '@/lib/session';
+import {
+  sessionOptions,
+  SessionData,
+  hasAnyRole,
+  getPrimaryRole,
+} from '@/lib/session';
 import { TabService } from '@/services';
 import { OrderService } from '@/services/order-service';
 import TabModel from '@/models/tab-model';
@@ -42,7 +47,7 @@ async function requireAdminSession(): Promise<SessionData> {
 
   if (
     !session.userId ||
-    !['csr', 'admin', 'super-admin'].includes(session.role as string)
+    !hasAnyRole(session, ['csr', 'manager', 'admin', 'super-admin'])
   ) {
     throw new Error('Unauthorized');
   }
@@ -104,7 +109,7 @@ export async function expressCreateTabAction(params: {
       customerName: params.customerName || 'Walk-in Customer',
       openedByStaffId: session.userId,
       createdBy: session.userId,
-      createdByRole: session.role as 'admin' | 'super-admin',
+      createdByRole: getPrimaryRole(session) as 'admin' | 'super-admin',
     });
 
     revalidatePath('/dashboard/orders');
@@ -443,7 +448,7 @@ export async function expressCreateOrderAction(params: {
       discount: 0,
       total: totals.total,
       createdBy: session.userId,
-      createdByRole: session.role as 'admin' | 'super-admin',
+      createdByRole: getPrimaryRole(session) as 'admin' | 'super-admin',
       guestName: params.customerName || 'Walk-in Customer',
       guestPhone: params.customerPhone,
       guestEmail: params.customerEmail,

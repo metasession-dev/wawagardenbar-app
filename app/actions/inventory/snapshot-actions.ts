@@ -2,7 +2,7 @@
 
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, hasAnyRole } from '@/lib/session';
 import { connectDB } from '@/lib/mongodb';
 import { InventorySnapshotService } from '@/services/inventory-snapshot-service';
 import type {
@@ -33,8 +33,7 @@ export async function generateSnapshotDataAction(
 
     if (
       !session.userId ||
-      !session.role ||
-      !['csr', 'admin', 'super-admin'].includes(session.role)
+      !hasAnyRole(session, ['csr', 'manager', 'admin', 'super-admin'])
     ) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -74,8 +73,7 @@ export async function submitSnapshotAction(
 
     if (
       !session.userId ||
-      !session.role ||
-      !['csr', 'admin', 'super-admin'].includes(session.role)
+      !hasAnyRole(session, ['csr', 'manager', 'admin', 'super-admin'])
     ) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -115,7 +113,7 @@ export async function getPendingSnapshotsAction(): Promise<
       sessionOptions
     );
 
-    if (session.role !== 'super-admin') {
+    if (!hasAnyRole(session, ['super-admin'])) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -149,7 +147,7 @@ export async function getSnapshotDetailsAction(
       sessionOptions
     );
 
-    if (session.role !== 'super-admin') {
+    if (!hasAnyRole(session, ['super-admin'])) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -188,7 +186,7 @@ export async function approveSnapshotAction(
       sessionOptions
     );
 
-    if (session.role !== 'super-admin') {
+    if (!hasAnyRole(session, ['super-admin'])) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -228,7 +226,7 @@ export async function rejectSnapshotAction(
       sessionOptions
     );
 
-    if (session.role !== 'super-admin') {
+    if (!hasAnyRole(session, ['super-admin'])) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -278,10 +276,7 @@ export async function getSnapshotHistoryAction(
       sessionOptions
     );
 
-    if (
-      !session.role ||
-      !['csr', 'admin', 'super-admin'].includes(session.role)
-    ) {
+    if (!hasAnyRole(session, ['csr', 'manager', 'admin', 'super-admin'])) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -319,8 +314,7 @@ export async function checkExistingSnapshotAction(
 
     if (
       !session.userId ||
-      !session.role ||
-      !['csr', 'admin', 'super-admin'].includes(session.role)
+      !hasAnyRole(session, ['csr', 'manager', 'admin', 'super-admin'])
     ) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -363,7 +357,7 @@ export async function updateSnapshotItemsAction(
       sessionOptions
     );
 
-    if (session.role !== 'super-admin') {
+    if (!hasAnyRole(session, ['super-admin'])) {
       return {
         success: false,
         error: 'Unauthorized. Only super admins can edit snapshots.',
@@ -412,8 +406,7 @@ export async function resubmitSnapshotAction(
 
     if (
       !session.userId ||
-      !session.role ||
-      !['csr', 'admin', 'super-admin'].includes(session.role)
+      !hasAnyRole(session, ['csr', 'manager', 'admin', 'super-admin'])
     ) {
       return { success: false, error: 'Unauthorized' };
     }

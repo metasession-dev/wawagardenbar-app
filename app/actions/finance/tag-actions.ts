@@ -8,7 +8,7 @@
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
 import { revalidatePath } from 'next/cache';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, hasAnyRole } from '@/lib/session';
 import { TagService } from '@/services/tag-service';
 
 async function getSession(): Promise<SessionData> {
@@ -18,7 +18,7 @@ async function getSession(): Promise<SessionData> {
 
 function requireAdminOrAbove(session: SessionData): void {
   if (!session.isLoggedIn || !session.userId) throw new Error('Unauthorized');
-  if (session.role !== 'admin' && session.role !== 'super-admin') {
+  if (!hasAnyRole(session, ['admin', 'super-admin'])) {
     throw new Error('Insufficient permissions');
   }
 }

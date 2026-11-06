@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, hasAnyRole } from '@/lib/session';
 import { TabService } from '@/services';
 import { AdminTabCheckoutForm } from '@/components/features/tabs/admin-tab-checkout-form';
 
@@ -20,9 +20,7 @@ async function getTabForCheckout(tabId: string) {
 
   if (
     !session.userId ||
-    (session.role !== 'csr' &&
-      session.role !== 'admin' &&
-      session.role !== 'super-admin')
+    !hasAnyRole(session, ['csr', 'manager', 'admin', 'super-admin'])
   ) {
     redirect('/dashboard');
   }

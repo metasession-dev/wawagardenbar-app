@@ -307,7 +307,7 @@ describe('REQ-108: updateOrderStatusAction auto-mark-cash guard', () => {
     mockCookies.mockResolvedValue({});
     mockGetIronSession.mockResolvedValue({
       userId: 'kitchen-1',
-      role: 'kitchen-staff',
+      role: 'kitchen',
     });
     mockConnectDB.mockResolvedValue(undefined);
     mockTabExists.mockResolvedValue(null);

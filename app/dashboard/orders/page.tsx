@@ -23,6 +23,7 @@ import {
   XCircle,
 } from 'lucide-react';
 
+import { hasAnyRole } from '@/lib/session';
 /**
  * Loading skeletons
  */
@@ -68,7 +69,7 @@ function QueueSkeleton() {
  */
 export default async function OrdersPage() {
   const session = await getCurrentSession();
-  const isSuperAdmin = session?.role === 'super-admin';
+  const isSuperAdmin = hasAnyRole(session, ['super-admin']);
 
   const result = await getOrdersAction({}, 1, 50);
 

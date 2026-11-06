@@ -10,7 +10,10 @@ interface ProfitabilityOverviewCardsProps {
   isLoading: boolean;
 }
 
-export function ProfitabilityOverviewCards({ report, isLoading }: ProfitabilityOverviewCardsProps) {
+export function ProfitabilityOverviewCards({
+  report,
+  isLoading,
+}: ProfitabilityOverviewCardsProps) {
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -36,7 +39,9 @@ export function ProfitabilityOverviewCards({ report, isLoading }: ProfitabilityO
           <DollarSign className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">₦{summary.totalRevenue.toLocaleString()}</div>
+          <div className="text-2xl font-bold">
+            ₦{summary.totalRevenue.toLocaleString()}
+          </div>
           <p className="text-xs text-muted-foreground">
             {summary.orderCount} order{summary.orderCount !== 1 ? 's' : ''}
           </p>
@@ -50,9 +55,15 @@ export function ProfitabilityOverviewCards({ report, isLoading }: ProfitabilityO
           <TrendingDown className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">₦{summary.totalCosts.toLocaleString()}</div>
+          <div className="text-2xl font-bold">
+            ₦{summary.totalCosts.toLocaleString()}
+          </div>
           <p className="text-xs text-muted-foreground">
-            Avg: ₦{summary.orderCount > 0 ? (summary.totalCosts / summary.orderCount).toFixed(0) : 0}/order
+            Avg: ₦
+            {summary.orderCount > 0
+              ? (summary.totalCosts / summary.orderCount).toFixed(0)
+              : 0}
+            /order
           </p>
         </CardContent>
       </Card>
@@ -80,9 +91,15 @@ export function ProfitabilityOverviewCards({ report, isLoading }: ProfitabilityO
           <Percent className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{summary.profitMargin.toFixed(1)}%</div>
+          <div className="text-2xl font-bold">
+            {summary.profitMargin.toFixed(1)}%
+          </div>
           <p className="text-xs text-muted-foreground">
-            {summary.profitMargin >= 30 ? 'Excellent' : summary.profitMargin >= 20 ? 'Good' : 'Needs improvement'}
+            {summary.profitMargin >= 30
+              ? 'Excellent'
+              : summary.profitMargin >= 20
+                ? 'Good'
+                : 'Needs improvement'}
           </p>
         </CardContent>
       </Card>

@@ -10,7 +10,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, TrendingDown, Edit, ArrowRight, ArrowRightLeft } from 'lucide-react';
+import {
+  TrendingUp,
+  TrendingDown,
+  Edit,
+  ArrowRight,
+  ArrowRightLeft,
+} from 'lucide-react';
 
 interface StockHistoryEntry {
   quantity: number;
@@ -50,7 +56,7 @@ export function StockHistoryTable({ history, unit, locations = [] }: Props) {
   // Function to get location name by ID
   const getLocationName = (id?: string): string => {
     if (!id) return '';
-    const location = locations.find(loc => loc.id === id);
+    const location = locations.find((loc) => loc.id === id);
     return location?.name || id; // Return name if found, otherwise return the ID
   };
   if (!history || history.length === 0) {
@@ -106,7 +112,10 @@ export function StockHistoryTable({ history, unit, locations = [] }: Props) {
                   {entry.fromLocation && entry.toLocation && (
                     <>
                       <ArrowRightLeft className="h-4 w-4 text-purple-600" />
-                      <Badge variant="secondary" className="bg-purple-600 text-white">
+                      <Badge
+                        variant="secondary"
+                        className="bg-purple-600 text-white"
+                      >
                         Transfer
                       </Badge>
                     </>

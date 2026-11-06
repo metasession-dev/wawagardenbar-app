@@ -4,7 +4,12 @@
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
-import { sessionOptions, SessionData } from '@/lib/session';
+import {
+  sessionOptions,
+  SessionData,
+  hasAnyRole,
+  getPrimaryRole,
+} from '@/lib/session';
 import { DepositsClient } from './deposits-client';
 
 export const metadata = {
@@ -23,9 +28,9 @@ export default async function DepositsPage() {
     redirect('/login');
   }
 
-  if (session.role !== 'super-admin' && session.role !== 'admin') {
+  if (!hasAnyRole(session, ['super-admin', 'admin'])) {
     redirect('/dashboard');
   }
 
-  return <DepositsClient userRole={session.role ?? 'admin'} />;
+  return <DepositsClient userRole={getPrimaryRole(session) ?? 'admin'} />;
 }

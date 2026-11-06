@@ -7,7 +7,12 @@ import { TabService } from '@/services';
 import TabModel from '@/models/tab-model';
 import { connectDB } from '@/lib/mongodb';
 import { ITab, IOrder } from '@/interfaces';
-import { sessionOptions, SessionData } from '@/lib/session';
+import {
+  sessionOptions,
+  SessionData,
+  hasAnyRole,
+  getPrimaryRole,
+} from '@/lib/session';
 import { AuditLogService } from '@/services/audit-log-service';
 
 export interface ActionResult<T = unknown> {
@@ -55,7 +60,7 @@ export async function createTabAction(params: {
       tableNumber: params.tableNumber,
       userId,
       createdBy: userId,
-      createdByRole: session.role || 'customer',
+      createdByRole: getPrimaryRole(session) || 'customer',
       customerName: params.customerName,
       customerEmail: params.customerEmail,
       customerPhone: params.customerPhone,
@@ -212,9 +217,7 @@ export async function listOpenTabsAction(filters?: {
     // Check if user is staff/admin
     if (
       !session.userId ||
-      (session.role !== 'csr' &&
-        session.role !== 'admin' &&
-        session.role !== 'super-admin')
+      !hasAnyRole(session, ['csr', 'manager', 'admin', 'super-admin'])
     ) {
       return {
         success: false,
@@ -338,9 +341,7 @@ export async function getDashboardFilteredTabsAction(filters: {
 
     if (
       !session.userId ||
-      (session.role !== 'csr' &&
-        session.role !== 'admin' &&
-        session.role !== 'super-admin')
+      !hasAnyRole(session, ['csr', 'manager', 'admin', 'super-admin'])
     ) {
       return {
         success: false,
@@ -394,9 +395,7 @@ export async function recordPartialPaymentAction(params: {
 
     if (
       !session.userId ||
-      (session.role !== 'csr' &&
-        session.role !== 'admin' &&
-        session.role !== 'super-admin')
+      !hasAnyRole(session, ['csr', 'manager', 'admin', 'super-admin'])
     ) {
       return {
         success: false,
@@ -477,9 +476,7 @@ export async function completeTabPaymentManuallyAction(params: {
     // Check if user is staff/admin
     if (
       !session.userId ||
-      (session.role !== 'csr' &&
-        session.role !== 'admin' &&
-        session.role !== 'super-admin')
+      !hasAnyRole(session, ['csr', 'manager', 'admin', 'super-admin'])
     ) {
       return {
         success: false,
@@ -546,9 +543,7 @@ export async function closeTabAction(
     // Check if user is staff/admin
     if (
       !session.userId ||
-      (session.role !== 'csr' &&
-        session.role !== 'admin' &&
-        session.role !== 'super-admin')
+      !hasAnyRole(session, ['csr', 'manager', 'admin', 'super-admin'])
     ) {
       return {
         success: false,
@@ -598,9 +593,7 @@ export async function createAdminTabAction(params: {
     // Check if user is staff/admin
     if (
       !session.userId ||
-      (session.role !== 'csr' &&
-        session.role !== 'admin' &&
-        session.role !== 'super-admin')
+      !hasAnyRole(session, ['csr', 'manager', 'admin', 'super-admin'])
     ) {
       return {
         success: false,
@@ -655,7 +648,7 @@ export async function createAdminTabAction(params: {
  * linked orders must be cancelled (enforced inside `TabService.deleteTab`).
  *
  * Super-admin override (`opts.superAdminOverride === true`): bypasses
- * both guards. Requires `session.role === 'super-admin'` here — admin
+ * both guards. Requires `hasAnyRole(session, ['super-admin'])` here — admin
  * cannot override. `opts.revertItems === true` restocks inventory and
  * cancels each linked non-cancelled order. `opts.revertPayment === true`
  * (REQ-096) reverses payment on each linked paid order — refused inside
@@ -683,18 +676,14 @@ export async function deleteTabAction(
       };
     }
 
-    if (opts?.superAdminOverride && session.role !== 'super-admin') {
+    if (opts?.superAdminOverride && !hasAnyRole(session, ['super-admin'])) {
       return {
         success: false,
         error: 'Only super-admin can override tab-delete guards',
       };
     }
 
-    if (
-      session.role !== 'csr' &&
-      session.role !== 'admin' &&
-      session.role !== 'super-admin'
-    ) {
+    if (!hasAnyRole(session, ['csr', 'manager', 'admin', 'super-admin'])) {
       return {
         success: false,
         error: 'Insufficient permissions',
@@ -745,11 +734,7 @@ export async function writeOffTabAction(
       };
     }
 
-    if (
-      session.role !== 'csr' &&
-      session.role !== 'admin' &&
-      session.role !== 'super-admin'
-    ) {
+    if (!hasAnyRole(session, ['csr', 'manager', 'admin', 'super-admin'])) {
       return {
         success: false,
         error: 'Insufficient permissions',
@@ -806,11 +791,7 @@ export async function updateTabNameAction(
     }
 
     // Only admin and super-admin can update tab names
-    if (
-      session.role !== 'csr' &&
-      session.role !== 'admin' &&
-      session.role !== 'super-admin'
-    ) {
+    if (!hasAnyRole(session, ['csr', 'manager', 'admin', 'super-admin'])) {
       return {
         success: false,
         error: 'Insufficient permissions',
@@ -852,9 +833,7 @@ export async function toggleTabReconciliationAction(
     if (
       !session.isLoggedIn ||
       !session.userId ||
-      (session.role !== 'csr' &&
-        session.role !== 'admin' &&
-        session.role !== 'super-admin')
+      !hasAnyRole(session, ['csr', 'manager', 'admin', 'super-admin'])
     ) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -874,7 +853,7 @@ export async function toggleTabReconciliationAction(
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: session.email || '',
-      userRole: session.role || 'admin',
+      userRole: getPrimaryRole(session) || 'admin',
       action: 'tab.manual_payment' as any,
       resource: 'tab',
       resourceId: tabId,

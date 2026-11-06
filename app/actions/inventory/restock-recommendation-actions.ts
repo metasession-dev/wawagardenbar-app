@@ -6,7 +6,7 @@
 
 import { getIronSession } from 'iron-session';
 import { cookies } from 'next/headers';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, hasAnyRole } from '@/lib/session';
 import {
   RestockRecommendationService,
   type RestockRecommendationReport,
@@ -43,7 +43,7 @@ export async function getRestockRecommendationsAction(
       return { success: false, error: 'Unauthorized', data: null };
     }
 
-    if (session.role !== 'admin' && session.role !== 'super-admin') {
+    if (!hasAnyRole(session, ['admin', 'super-admin'])) {
       return { success: false, error: 'Forbidden', data: null };
     }
 
@@ -103,7 +103,7 @@ export async function getAvailableCategoriesAction(): Promise<{
       return { success: false, error: 'Unauthorized', data: null };
     }
 
-    if (session.role !== 'admin' && session.role !== 'super-admin') {
+    if (!hasAnyRole(session, ['admin', 'super-admin'])) {
       return { success: false, error: 'Forbidden', data: null };
     }
 

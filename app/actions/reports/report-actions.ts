@@ -2,7 +2,7 @@
 
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, hasAnyRole } from '@/lib/session';
 import { FinancialReportService } from '@/services/financial-report-service';
 import { SystemSettingsService } from '@/services/system-settings-service';
 import { getAllowedMainCategoriesForReports } from '@/lib/permissions';
@@ -47,7 +47,7 @@ export async function generateDailyReportAction(
     }
 
     // Only super-admin and admin can view reports
-    if (session.role !== 'super-admin' && session.role !== 'admin') {
+    if (!hasAnyRole(session, ['super-admin', 'admin'])) {
       return { success: false, error: 'Insufficient permissions' };
     }
 
@@ -100,7 +100,7 @@ export async function generateDateRangeReportAction(
     }
 
     // Only super-admin and admin can view reports
-    if (session.role !== 'super-admin' && session.role !== 'admin') {
+    if (!hasAnyRole(session, ['super-admin', 'admin'])) {
       return { success: false, error: 'Insufficient permissions' };
     }
 
@@ -181,7 +181,7 @@ export async function generateMainCategoryReportAction(
       return { success: false, error: 'Unauthorized' };
     }
 
-    if (session.role !== 'super-admin' && session.role !== 'admin') {
+    if (!hasAnyRole(session, ['super-admin', 'admin'])) {
       return { success: false, error: 'Insufficient permissions' };
     }
 

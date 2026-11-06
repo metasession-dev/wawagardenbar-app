@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "cli_version": "1.12.0",
+  "cli_version": "1.12.1",
   "files": {
     ".claude/skills/adr-author/SKILL.md": {
       "sha256": "ca1a50b08294ff0f707cec593fe53e781860c4328f4e84ab448e793d37ffe3c0",
@@ -19,7 +19,7 @@
       "section": "2e-ii"
     },
     ".claude/skills/e2e-ci-reliability/references/reliability-fixes.md": {
-      "sha256": "54264de0527c1d1657767857de7a703c37c5b84abf706594d7533936f479eb0b",
+      "sha256": "a94094b95a03ce3ed09c805ff1df85d71ae8ae0b51c92a16ae7c80ee1e7c033e",
       "section": "2e-ii"
     },
     ".claude/skills/e2e-test-data/SKILL.md": {
@@ -51,7 +51,7 @@
       "section": "2e-ii"
     },
     ".claude/skills/e2e-test-engineer/references/e2e-regression-3-tier.yml": {
-      "sha256": "ca5dcc2cb4beec7887305e5acb66c59d36d6f296d48a5ba118afd47382758400",
+      "sha256": "70f3de46eb28bc692b4115b41b5798f145df5b61bbdd58088278393736ce41f2",
       "section": "2e-ii"
     },
     ".claude/skills/e2e-test-engineer/references/evidence-shot-core.ts": {
@@ -87,7 +87,7 @@
       "section": "2e-ii"
     },
     ".claude/skills/sdlc-implementer/SKILL.md": {
-      "sha256": "e0a2d34d18c1068b1d741eb35990fe74b47b6bd41c4485edf94d754b259ca4b2",
+      "sha256": "9094cea6f51bac160d30e0770a86f2981bc78379e84d92f8930702b124d5668b",
       "section": "2e-ii"
     },
     ".claude/skills/sdlc-implementer/references/call-graph.md": {
@@ -171,7 +171,7 @@
       "section": "2f"
     },
     ".github/workflows/e2e-regression.yml": {
-      "sha256": "a16537914609aa4ae7bddd6047ec617641f3ba1179fa1fdf6f36eac8e357101d",
+      "sha256": "9ecfe45e49591a146daac52258dd7ae43aaeef7b40b2c323908c4762d368a33d",
       "section": "2f"
     },
     ".github/workflows/feature-e2e.yml": {
@@ -191,7 +191,7 @@
       "section": "2f"
     },
     ".github/workflows/post-deploy-prod.yml": {
-      "sha256": "e741b866e07a178e20fe85c9d7091bfa8c3dfd2bd3e132cab8327754e8c91015",
+      "sha256": "db5d684f6f2d830541d046281ee466f0b77083c47915b7917afc92d80b3182d1",
       "section": "2f"
     },
     ".github/workflows/quality-gates-provenance.yml": {

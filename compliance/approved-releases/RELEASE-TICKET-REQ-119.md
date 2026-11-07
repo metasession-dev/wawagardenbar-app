@@ -1,6 +1,6 @@
 # Release Ticket: REQ-119 — Multiple roles per staff account (WA-03)
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-11-06
 **Requirement ID:** REQ-119
 **Risk Level:** HIGH

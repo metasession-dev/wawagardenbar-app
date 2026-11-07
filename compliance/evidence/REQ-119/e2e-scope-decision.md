@@ -25,5 +25,5 @@ spec_path: e2e/critical/staff-multi-role.spec.ts
 
 I have reviewed the e2e-scope verdict above and confirm it matches the actual scope of this REQ's diff.
 
-**Reviewer:** PENDING (operator)
-**Date:** PENDING
+**Reviewer:** ostendo-io operator (project owner), approved in the Claude Code session on 2026-11-07 and recorded by the agent
+**Date:** 2026-11-07

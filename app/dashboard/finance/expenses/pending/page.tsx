@@ -9,6 +9,7 @@ import { getCurrentSession } from '@/lib/auth-middleware';
 import { redirect } from 'next/navigation';
 import { PendingExpenseGroupList } from '@/components/features/finance/pending-expense-group-list';
 
+import { hasAnyRole, getPrimaryRole } from '@/lib/session';
 export const metadata = {
   title: 'Pending Expenses | Wawa Garden Bar',
   description:
@@ -18,14 +19,11 @@ export const metadata = {
 export default async function PendingExpensesPage() {
   const session = await getCurrentSession();
 
-  if (
-    !session?.isLoggedIn ||
-    (session.role !== 'admin' && session.role !== 'super-admin')
-  ) {
+  if (!session?.isLoggedIn || !hasAnyRole(session, ['admin', 'super-admin'])) {
     redirect('/login');
   }
 
-  const userRole = session.role ?? 'admin';
+  const userRole = getPrimaryRole(session) ?? 'admin';
 
   return (
     <div className="space-y-6">

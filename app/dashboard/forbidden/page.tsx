@@ -1,9 +1,16 @@
 import Link from 'next/link';
 import { ShieldX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { getCurrentSession } from '@/lib/auth-middleware';
 
+import { getPrimaryRole } from '@/lib/session';
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
@@ -36,14 +43,23 @@ export default async function ForbiddenPage() {
             <p className="font-medium mb-2">Why am I seeing this?</p>
             <ul className="list-disc list-inside space-y-1 text-muted-foreground">
               <li>You don&apos;t have permission to access this feature</li>
-              <li>Your administrator has not enabled this feature for your account</li>
+              <li>
+                Your administrator has not enabled this feature for your account
+              </li>
             </ul>
           </div>
 
           {/* Debug Info */}
           <div className="rounded-lg border p-4 text-xs font-mono bg-slate-50 dark:bg-slate-950">
-            <p className="font-bold mb-2 text-muted-foreground">Debug Information:</p>
-            <p>Role: <span className="text-foreground">{session?.role || 'Unknown'}</span></p>
+            <p className="font-bold mb-2 text-muted-foreground">
+              Debug Information:
+            </p>
+            <p>
+              Role:{' '}
+              <span className="text-foreground">
+                {getPrimaryRole(session) || 'Unknown'}
+              </span>
+            </p>
             <div className="mt-2">
               <p className="mb-1 text-muted-foreground">Permissions:</p>
               <pre className="overflow-auto max-h-40 whitespace-pre-wrap">
@@ -54,7 +70,8 @@ export default async function ForbiddenPage() {
 
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground text-center">
-              Contact your super administrator if you need access to this section.
+              Contact your super administrator if you need access to this
+              section.
             </p>
           </div>
 

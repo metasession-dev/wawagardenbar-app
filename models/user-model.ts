@@ -116,8 +116,15 @@ const userSchema = new Schema<IUser>(
     // Authentication
     role: {
       type: String,
-      enum: ['customer', 'csr', 'admin', 'super-admin'],
+      enum: ['customer', 'csr', 'kitchen', 'manager', 'admin', 'super-admin'],
       default: 'customer',
+    },
+    // REQ-119 (ADR-009) — staff roles; empty for customers. `role` is kept
+    // as the highest of these for one release and as the read fallback.
+    roles: {
+      type: [String],
+      enum: ['csr', 'kitchen', 'manager', 'admin', 'super-admin'],
+      default: [],
     },
     // REQ-117 (ADR-008) — keyed hash only; `verificationPin` is the test-only
     // plaintext written under ENABLE_E2E_PIN_INTERCEPT.

@@ -13,6 +13,6 @@ export default async function SupportLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireRole(['csr', 'admin', 'super-admin']);
+  await requireRole(['csr', 'manager', 'admin', 'super-admin']);
   return <>{children}</>;
 }

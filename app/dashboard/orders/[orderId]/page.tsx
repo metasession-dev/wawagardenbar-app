@@ -4,7 +4,7 @@ import { getIronSession } from 'iron-session';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { OrderService } from '@/services';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, hasAnyRole } from '@/lib/session';
 import { OrderDetailsHeader } from '@/components/features/admin/order-details-header';
 import { OrderCustomerInfo } from '@/components/features/admin/order-customer-info';
 import { OrderItemsTable } from '@/components/features/admin/order-items-table';
@@ -45,7 +45,7 @@ export default async function OrderDetailsPage({
     cookieStore,
     sessionOptions
   );
-  const isSuperAdmin = session.role === 'super-admin';
+  const isSuperAdmin = hasAnyRole(session, ['super-admin']);
 
   // Serialize order for client components with proper customer data
   const populatedUser = orderData.userId as any;

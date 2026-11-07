@@ -4,7 +4,7 @@ import { getIronSession } from 'iron-session';
 import './globals.css';
 import { Providers } from '@/components/shared/providers';
 import { CookieConsentBanner } from '@/components/shared/cookie-consent-banner';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, hasAnyRole } from '@/lib/session';
 
 export const metadata: Metadata = {
   title: 'Wawa Garden Bar - Order Food & Drinks',
@@ -36,9 +36,7 @@ async function isAuthenticatedStaff(): Promise<boolean> {
     );
     return (
       session.isLoggedIn === true &&
-      (session.role === 'csr' ||
-        session.role === 'admin' ||
-        session.role === 'super-admin')
+      hasAnyRole(session, ['csr', 'manager', 'admin', 'super-admin'])
     );
   } catch {
     return false;

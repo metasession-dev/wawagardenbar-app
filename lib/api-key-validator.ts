@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, getPrimaryRole } from '@/lib/session';
 import { ApiKeyService } from '@/services/api-key-service';
 import { ApiKeyScope } from '@/interfaces/api-key.interface';
 
@@ -64,14 +64,17 @@ export async function authenticateRequest(
   // Fall back to session auth
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     if (session.isLoggedIn && session.userId) {
       return {
         authenticated: true,
         source: 'session',
         userId: session.userId,
-        role: session.role,
+        role: getPrimaryRole(session),
       };
     }
   } catch {
@@ -91,6 +94,8 @@ export function unauthorizedResponse(message = 'Unauthorized'): NextResponse {
 /**
  * Convenience: return a 403 JSON response.
  */
-export function forbiddenResponse(message = 'Forbidden — insufficient scope'): NextResponse {
+export function forbiddenResponse(
+  message = 'Forbidden — insufficient scope'
+): NextResponse {
   return NextResponse.json({ error: message }, { status: 403 });
 }

@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, hasAnyRole } from '@/lib/session';
 import { redirect } from 'next/navigation';
 import { connectDB } from '@/lib/mongodb';
 import InventoryModel from '@/models/inventory-model';
@@ -14,18 +14,18 @@ async function getSession() {
 
 async function getInventoryItems() {
   await connectDB();
-  
+
   const items = await InventoryModel.find({ trackByLocation: true })
     .populate('menuItemId', 'name')
     .lean();
-  
-  return items.map(item => ({
+
+  return items.map((item) => ({
     id: item._id.toString(),
     name: (item.menuItemId as any)?.name || 'Unknown Item',
     currentStock: item.currentStock,
     unit: item.unit,
     trackByLocation: item.trackByLocation,
-    locations: item.locations.map(loc => ({
+    locations: item.locations.map((loc) => ({
       location: loc.location,
       currentStock: loc.currentStock,
     })),
@@ -34,13 +34,13 @@ async function getInventoryItems() {
 
 export default async function StockTransferPage() {
   const session = await getSession();
-  
-  if (!session.isLoggedIn || !session.role || !['admin', 'super-admin'].includes(session.role)) {
+
+  if (!session.isLoggedIn || !hasAnyRole(session, ['admin', 'super-admin'])) {
     redirect('/dashboard');
   }
-  
+
   const inventoryItems = await getInventoryItems();
-  
+
   return (
     <div className="container mx-auto py-6">
       <div className="mb-6">
@@ -49,7 +49,7 @@ export default async function StockTransferPage() {
           Move inventory between storage locations
         </p>
       </div>
-      
+
       <Suspense fallback={<div>Loading...</div>}>
         <StockTransferClient inventoryItems={inventoryItems} />
       </Suspense>

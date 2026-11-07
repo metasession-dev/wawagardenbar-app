@@ -14,7 +14,7 @@
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
 import { revalidatePath } from 'next/cache';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, hasAnyRole } from '@/lib/session';
 import { connectDB } from '@/lib/mongodb';
 import MenuItemModel from '@/models/menu-item-model';
 import InventoryModel from '@/models/inventory-model';
@@ -37,7 +37,7 @@ async function getSession(): Promise<SessionData> {
 
 function requireInventoryManagement(session: SessionData): void {
   if (!session.isLoggedIn || !session.userId) throw new Error('Unauthorized');
-  if (session.role === 'super-admin') return;
+  if (hasAnyRole(session, ['super-admin'])) return;
   if (!session.permissions?.inventoryManagement) {
     throw new Error('Insufficient permissions — inventoryManagement required');
   }

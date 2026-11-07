@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, XCircle } from 'lucide-react';
 
+import { hasAnyRole, getPrimaryRole } from '@/lib/session';
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
@@ -56,21 +57,25 @@ export default async function DebugSessionPage() {
             <div className="grid grid-cols-[120px_1fr] gap-2 text-sm">
               <span className="font-semibold">User ID:</span>
               <span className="font-mono">{session.userId}</span>
-              
+
               <span className="font-semibold">Name:</span>
               <span>{session.name}</span>
-              
+
               <span className="font-semibold">Email:</span>
               <span>{session.email}</span>
-              
+
               <span className="font-semibold">Role:</span>
-              <Badge variant={session.role === 'super-admin' ? 'default' : 'secondary'}>
-                {session.role}
+              <Badge
+                variant={
+                  hasAnyRole(session, ['super-admin']) ? 'default' : 'secondary'
+                }
+              >
+                {getPrimaryRole(session)}
               </Badge>
-              
+
               <span className="font-semibold">Is Guest:</span>
               <span>{session.isGuest ? 'Yes' : 'No'}</span>
-              
+
               <span className="font-semibold">Is Logged In:</span>
               <span>{session.isLoggedIn ? 'Yes' : 'No'}</span>
             </div>
@@ -86,7 +91,10 @@ export default async function DebugSessionPage() {
               {permissionKeys.map((key) => {
                 const hasPermission = (permissions as any)[key] === true;
                 return (
-                  <div key={key} className="flex items-center justify-between border-b pb-2 last:border-0">
+                  <div
+                    key={key}
+                    className="flex items-center justify-between border-b pb-2 last:border-0"
+                  >
                     <span className="font-medium capitalize">
                       {key.replace(/([A-Z])/g, ' $1').trim()}
                     </span>
@@ -105,9 +113,11 @@ export default async function DebugSessionPage() {
                 );
               })}
             </div>
-            
+
             <div className="mt-6 rounded-md bg-muted p-4">
-              <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Raw Permissions Object:</p>
+              <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
+                Raw Permissions Object:
+              </p>
               <pre className="overflow-auto text-xs font-mono">
                 {JSON.stringify(permissions, null, 2)}
               </pre>

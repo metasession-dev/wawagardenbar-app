@@ -57,7 +57,22 @@ export interface IPaymentMethod {
   isDefault: boolean;
 }
 
-export type UserRole = 'customer' | 'csr' | 'admin' | 'super-admin';
+/**
+ * REQ-119 (ADR-009) — staff roles. A staff account holds one or more of
+ * these in `roles`; `role` stays one more release as the highest of them
+ * (and as the fallback for records written before `roles` existed).
+ */
+export type StaffRole = 'csr' | 'kitchen' | 'manager' | 'admin' | 'super-admin';
+
+export const STAFF_ROLES: readonly StaffRole[] = [
+  'csr',
+  'kitchen',
+  'manager',
+  'admin',
+  'super-admin',
+];
+
+export type UserRole = 'customer' | StaffRole;
 
 export interface ISocialProfile {
   handle: string;
@@ -89,6 +104,8 @@ export interface IUser {
 
   // Authentication
   role: UserRole;
+  /** REQ-119 — staff roles (empty for customers). `role` is the highest of these. */
+  roles?: StaffRole[];
   // REQ-117 (ADR-008) — only a keyed hash of the PIN is stored. `verificationPin`
   // (plaintext) is written ONLY under ENABLE_E2E_PIN_INTERCEPT so e2e helpers
   // can read it; it is never set in production.

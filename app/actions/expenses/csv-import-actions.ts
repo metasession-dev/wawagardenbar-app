@@ -2,7 +2,12 @@
 
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
-import { sessionOptions, SessionData } from '@/lib/session';
+import {
+  sessionOptions,
+  SessionData,
+  hasAnyRole,
+  getPrimaryRole,
+} from '@/lib/session';
 import { connectDB } from '@/lib/mongodb';
 import { XLSXParserService } from '@/services/xlsx-parser-service';
 import { UploadedExpenseService } from '@/services/uploaded-expense-service';
@@ -12,7 +17,10 @@ import { UploadedExpenseService } from '@/services/uploaded-expense-service';
  */
 async function getServerSession() {
   const cookieStore = await cookies();
-  const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+  const session = await getIronSession<SessionData>(
+    cookieStore,
+    sessionOptions
+  );
   return session;
 }
 
@@ -20,7 +28,7 @@ async function getServerSession() {
  * Require admin role
  */
 function requireAdmin(session: SessionData) {
-  if (!session.isLoggedIn || (session.role !== 'admin' && session.role !== 'super-admin')) {
+  if (!session.isLoggedIn || !hasAnyRole(session, ['admin', 'super-admin'])) {
     throw new Error('Unauthorized: Admin access required');
   }
 }
@@ -42,72 +50,108 @@ export async function importMoniepointCSVAction(formData: FormData) {
     try {
       const XLSX = await import('xlsx');
       console.log('[XLSX-IMPORT] XLSX module loaded:', typeof XLSX);
-      console.log('[XLSX-IMPORT] XLSX.read available:', typeof XLSX.read === 'function');
-      console.log('[XLSX-IMPORT] XLSX.utils available:', typeof XLSX.utils === 'object');
+      console.log(
+        '[XLSX-IMPORT] XLSX.read available:',
+        typeof XLSX.read === 'function'
+      );
+      console.log(
+        '[XLSX-IMPORT] XLSX.utils available:',
+        typeof XLSX.utils === 'object'
+      );
     } catch (xlsxErr) {
-      console.error('[XLSX-IMPORT] CRITICAL: XLSX module failed to load:', xlsxErr);
+      console.error(
+        '[XLSX-IMPORT] CRITICAL: XLSX module failed to load:',
+        xlsxErr
+      );
     }
 
     console.log('[XLSX-IMPORT] Step 1: Connecting to DB...');
     await connectDB();
     console.log('[XLSX-IMPORT] Step 1: DB connected');
-    
+
     console.log('[XLSX-IMPORT] Step 2: Getting session...');
     const session = await getServerSession();
-    console.log('[XLSX-IMPORT] Step 2: Session retrieved, isLoggedIn:', session.isLoggedIn, 'role:', session.role);
-    
+    console.log(
+      '[XLSX-IMPORT] Step 2: Session retrieved, isLoggedIn:',
+      session.isLoggedIn,
+      'role:',
+      getPrimaryRole(session)
+    );
+
     console.log('[XLSX-IMPORT] Step 3: Checking admin access...');
     requireAdmin(session);
     console.log('[XLSX-IMPORT] Step 3: Admin access confirmed');
 
     console.log('[XLSX-IMPORT] Step 4: Extracting file from FormData...');
     const file = formData.get('file') as File;
-    console.log('[XLSX-IMPORT] Step 4: File extracted:', file ? `${file.name} (${file.size} bytes, type: ${file.type})` : 'null');
-    
+    console.log(
+      '[XLSX-IMPORT] Step 4: File extracted:',
+      file ? `${file.name} (${file.size} bytes, type: ${file.type})` : 'null'
+    );
+
     if (!file) {
-      return JSON.parse(JSON.stringify({
-        success: false,
-        error: 'No file provided',
-      }));
+      return JSON.parse(
+        JSON.stringify({
+          success: false,
+          error: 'No file provided',
+        })
+      );
     }
 
     // Validate file type
     const fileName = file.name.toLowerCase();
     if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
-      return JSON.parse(JSON.stringify({
-        success: false,
-        error: 'Please upload an Excel file (.xlsx or .xls)',
-      }));
+      return JSON.parse(
+        JSON.stringify({
+          success: false,
+          error: 'Please upload an Excel file (.xlsx or .xls)',
+        })
+      );
     }
 
     // Validate file size (10 MB limit)
     if (file.size > 10 * 1024 * 1024) {
-      return JSON.parse(JSON.stringify({
-        success: false,
-        error: 'File size exceeds 10 MB limit',
-      }));
+      return JSON.parse(
+        JSON.stringify({
+          success: false,
+          error: 'File size exceeds 10 MB limit',
+        })
+      );
     }
 
     // Read file as ArrayBuffer
     console.log('[XLSX-IMPORT] Step 5: Reading file as ArrayBuffer...');
     const arrayBuffer = await file.arrayBuffer();
-    console.log('[XLSX-IMPORT] Step 5: ArrayBuffer created:', arrayBuffer.byteLength, 'bytes');
+    console.log(
+      '[XLSX-IMPORT] Step 5: ArrayBuffer created:',
+      arrayBuffer.byteLength,
+      'bytes'
+    );
 
     // Validate XLSX structure
     console.log('[XLSX-IMPORT] Step 6: Validating XLSX structure...');
     const validation = XLSXParserService.validateMoniepointXLSX(arrayBuffer);
-    console.log('[XLSX-IMPORT] Step 6: Validation result:', validation.valid ? 'valid' : `invalid - ${validation.error}`);
+    console.log(
+      '[XLSX-IMPORT] Step 6: Validation result:',
+      validation.valid ? 'valid' : `invalid - ${validation.error}`
+    );
     if (!validation.valid) {
-      return JSON.parse(JSON.stringify({
-        success: false,
-        error: validation.error || 'Invalid Excel file format',
-      }));
+      return JSON.parse(
+        JSON.stringify({
+          success: false,
+          error: validation.error || 'Invalid Excel file format',
+        })
+      );
     }
 
     // Get existing reference numbers to detect duplicates
     console.log('[XLSX-IMPORT] Step 7: Getting existing references...');
-    const existingReferences = await UploadedExpenseService.getExistingReferenceNumbers();
-    console.log('[XLSX-IMPORT] Step 7: Existing references count:', existingReferences.size);
+    const existingReferences =
+      await UploadedExpenseService.getExistingReferenceNumbers();
+    console.log(
+      '[XLSX-IMPORT] Step 7: Existing references count:',
+      existingReferences.size
+    );
 
     // Parse XLSX
     console.log('[XLSX-IMPORT] Step 8: Parsing XLSX...');
@@ -115,27 +159,34 @@ export async function importMoniepointCSVAction(formData: FormData) {
       arrayBuffer,
       existingReferences
     );
-    console.log('[XLSX-IMPORT] Step 8: Parse result:', parseResult.success ? 'success' : 'failed');
-    console.log('[XLSX-IMPORT] Step 8: Expenses extracted:', parseResult.expenses.length);
+    console.log(
+      '[XLSX-IMPORT] Step 8: Parse result:',
+      parseResult.success ? 'success' : 'failed'
+    );
+    console.log(
+      '[XLSX-IMPORT] Step 8: Expenses extracted:',
+      parseResult.expenses.length
+    );
 
     if (!parseResult.success) {
-      return JSON.parse(JSON.stringify({
-        success: false,
-        error: 'Failed to parse Excel file',
-        errors: parseResult.errors,
-      }));
+      return JSON.parse(
+        JSON.stringify({
+          success: false,
+          error: 'Failed to parse Excel file',
+          errors: parseResult.errors,
+        })
+      );
     }
 
     if (parseResult.expenses.length === 0) {
-      const { totalRows, duplicatesSkipped, invalidRows } =
-        parseResult.stats;
+      const { totalRows, duplicatesSkipped, invalidRows } = parseResult.stats;
 
       // Provide specific error message based on what happened
       let errorMessage = '';
-      
+
       if (duplicatesSkipped > 0 && invalidRows === 0) {
         // All transactions were duplicates
-        errorMessage = 
+        errorMessage =
           `All ${duplicatesSkipped} transactions in this file have already been imported. ` +
           `No new expenses to add. If you need to re-import, please delete the existing expenses first.`;
       } else if (invalidRows > 0) {
@@ -144,24 +195,26 @@ export async function importMoniepointCSVAction(formData: FormData) {
         const errorDetails = sampleErrors.length
           ? ` Sample errors: ${sampleErrors.join(' | ')}`
           : '';
-        errorMessage = 
+        errorMessage =
           `No valid expense transactions found. ` +
           `${invalidRows} rows had errors, ${duplicatesSkipped} duplicates skipped.` +
           errorDetails;
       } else {
         // No debit transactions found
-        errorMessage = 
+        errorMessage =
           `No debit transactions found in Excel file. ` +
           `The file appears to contain only credit transactions or non-expense items. ` +
           `Total rows: ${totalRows}`;
       }
 
-      return JSON.parse(JSON.stringify({
-        success: false,
-        error: errorMessage,
-        stats: parseResult.stats,
-        errors: parseResult.errors,
-      }));
+      return JSON.parse(
+        JSON.stringify({
+          success: false,
+          error: errorMessage,
+          stats: parseResult.stats,
+          errors: parseResult.errors,
+        })
+      );
     }
 
     // Create uploaded expenses
@@ -172,36 +225,57 @@ export async function importMoniepointCSVAction(formData: FormData) {
 
     await UploadedExpenseService.bulkCreateUploadedExpenses(expensesToCreate);
 
-    return JSON.parse(JSON.stringify({
-      success: true,
-      message: `Successfully imported ${parseResult.stats.expensesExtracted} expenses`,
-      stats: parseResult.stats,
-      errors: parseResult.errors,
-    }));
+    return JSON.parse(
+      JSON.stringify({
+        success: true,
+        message: `Successfully imported ${parseResult.stats.expensesExtracted} expenses`,
+        stats: parseResult.stats,
+        errors: parseResult.errors,
+      })
+    );
   } catch (error) {
     console.error('[XLSX-IMPORT] === UNHANDLED ERROR ===');
     console.error('[XLSX-IMPORT] Timestamp:', new Date().toISOString());
     console.error('[XLSX-IMPORT] Error type:', error?.constructor?.name);
-    console.error('[XLSX-IMPORT] Error message:', error instanceof Error ? error.message : String(error));
-    console.error('[XLSX-IMPORT] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error(
+      '[XLSX-IMPORT] Error message:',
+      error instanceof Error ? error.message : String(error)
+    );
+    console.error(
+      '[XLSX-IMPORT] Error stack:',
+      error instanceof Error ? error.stack : 'No stack trace'
+    );
 
     if (error instanceof Error) {
       if (error.name === 'ReferenceError') {
-        console.error('[XLSX-IMPORT] ReferenceError - likely missing/unbundled dependency:', error.message);
+        console.error(
+          '[XLSX-IMPORT] ReferenceError - likely missing/unbundled dependency:',
+          error.message
+        );
       } else if (error.name === 'TypeError') {
-        console.error('[XLSX-IMPORT] TypeError - data format or null reference issue:', error.message);
+        console.error(
+          '[XLSX-IMPORT] TypeError - data format or null reference issue:',
+          error.message
+        );
       } else if (error.message?.includes('Cannot find module')) {
-        console.error('[XLSX-IMPORT] Module not found - package missing from production bundle');
+        console.error(
+          '[XLSX-IMPORT] Module not found - package missing from production bundle'
+        );
       } else if (error.message?.includes('body exceeded')) {
-        console.error('[XLSX-IMPORT] Body size limit exceeded - file too large for server action');
+        console.error(
+          '[XLSX-IMPORT] Body size limit exceeded - file too large for server action'
+        );
       }
     }
 
-    const errorMessage = error instanceof Error ? error.message : 'Failed to import Excel file';
-    return JSON.parse(JSON.stringify({
-      success: false,
-      error: `${errorMessage} (${error?.constructor?.name ?? 'UnknownError'})`,
-    }));
+    const errorMessage =
+      error instanceof Error ? error.message : 'Failed to import Excel file';
+    return JSON.parse(
+      JSON.stringify({
+        success: false,
+        error: `${errorMessage} (${error?.constructor?.name ?? 'UnknownError'})`,
+      })
+    );
   }
 }
 
@@ -244,7 +318,8 @@ export async function listUploadedExpensesAction(
     console.error('List uploaded expenses error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch expenses',
+      error:
+        error instanceof Error ? error.message : 'Failed to fetch expenses',
     };
   }
 }
@@ -326,7 +401,8 @@ export async function updateUploadedExpenseAction(
     console.error('Update uploaded expense error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update expense',
+      error:
+        error instanceof Error ? error.message : 'Failed to update expense',
     };
   }
 }
@@ -354,7 +430,8 @@ export async function approveUploadedExpenseAction(id: string) {
     console.error('Approve uploaded expense error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to approve expense',
+      error:
+        error instanceof Error ? error.message : 'Failed to approve expense',
     };
   }
 }
@@ -382,7 +459,8 @@ export async function bulkApproveUploadedExpensesAction(ids: string[]) {
     console.error('Bulk approve error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to approve expenses',
+      error:
+        error instanceof Error ? error.message : 'Failed to approve expenses',
     };
   }
 }
@@ -406,7 +484,8 @@ export async function rejectUploadedExpenseAction(id: string) {
     console.error('Reject uploaded expense error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to reject expense',
+      error:
+        error instanceof Error ? error.message : 'Failed to reject expense',
     };
   }
 }
@@ -430,7 +509,8 @@ export async function deleteUploadedExpenseAction(id: string) {
     console.error('Delete uploaded expense error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to delete expense',
+      error:
+        error instanceof Error ? error.message : 'Failed to delete expense',
     };
   }
 }
@@ -458,7 +538,8 @@ export async function bulkDeleteUploadedExpensesAction(ids: string[]) {
     console.error('Bulk delete error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to delete expenses',
+      error:
+        error instanceof Error ? error.message : 'Failed to delete expenses',
     };
   }
 }
@@ -482,7 +563,8 @@ export async function getUploadedExpensesStatsAction() {
     console.error('Get stats error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch statistics',
+      error:
+        error instanceof Error ? error.message : 'Failed to fetch statistics',
     };
   }
 }

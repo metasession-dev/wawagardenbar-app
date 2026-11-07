@@ -61,7 +61,11 @@ async function seedTestUsers() {
 
     // Create test users
     for (const userData of testUsers) {
-      const user = await UserModel.create(userData);
+      const user = await UserModel.create({
+        ...userData,
+        // REQ-119 — staff users carry `roles` as well as the legacy `role`.
+        roles: userData.role === 'customer' ? [] : [userData.role],
+      });
       console.log(`✅ Created ${userData.role}: ${userData.email}`);
       console.log(`   User ID: ${user._id}`);
     }

@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-119",
+  "ac": 7,
+  "slug": "manager-daily-report",
+  "specFile": "e2e/critical/staff-multi-role.spec.ts",
+  "capturedAt": "2026-11-06T15:35:42.659Z"
+}

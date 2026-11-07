@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getIronSession } from 'iron-session';
 import { cookies } from 'next/headers';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, hasAnyRole } from '@/lib/session';
 import { PriceHistoryService } from '@/services/price-history-service';
 
 export async function GET(
@@ -10,7 +10,10 @@ export async function GET(
 ) {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     // Check authentication
     if (!session.userId) {
@@ -18,13 +21,15 @@ export async function GET(
     }
 
     // Check admin/super-admin role
-    if (session.role !== 'admin' && session.role !== 'super-admin') {
+    if (!hasAnyRole(session, ['admin', 'super-admin'])) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const { itemId } = await params;
     const { searchParams } = new URL(request.url);
-    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : undefined;
+    const limit = searchParams.get('limit')
+      ? parseInt(searchParams.get('limit')!)
+      : undefined;
 
     const history = await PriceHistoryService.getPriceHistory(itemId, limit);
 

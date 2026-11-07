@@ -8,7 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { uploadMenuImageAction, deleteMenuItemImageAction } from '@/app/actions/admin/menu-actions';
+import {
+  uploadMenuImageAction,
+  deleteMenuItemImageAction,
+} from '@/app/actions/admin/menu-actions';
 import { Upload, Trash2, Loader2 } from 'lucide-react';
 import {
   AlertDialog,
@@ -30,7 +33,10 @@ interface MenuImageUploadProps {
  * Menu image upload component
  * Handles image upload, preview, and deletion
  */
-export function MenuImageUpload({ menuItemId, currentImages }: MenuImageUploadProps) {
+export function MenuImageUpload({
+  menuItemId,
+  currentImages,
+}: MenuImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [imageToDelete, setImageToDelete] = useState<string | null>(null);
@@ -187,7 +193,9 @@ export function MenuImageUpload({ menuItemId, currentImages }: MenuImageUploadPr
           {currentImages.length === 0 && (
             <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed rounded-lg">
               <Upload className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-sm text-muted-foreground">No images uploaded yet</p>
+              <p className="text-sm text-muted-foreground">
+                No images uploaded yet
+              </p>
             </div>
           )}
         </CardContent>
@@ -199,12 +207,15 @@ export function MenuImageUpload({ menuItemId, currentImages }: MenuImageUploadPr
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Image</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this image? This action cannot be undone.
+              Are you sure you want to delete this image? This action cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteImage}>Delete</AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteImage}>
+              Delete
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

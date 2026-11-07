@@ -3,7 +3,7 @@ import { UploadedExpensesList } from '@/components/features/admin/expenses/uploa
 import { UploadedExpensesStats } from '@/components/features/admin/expenses/uploaded-expenses-stats';
 import { getIronSession } from 'iron-session';
 import { cookies } from 'next/headers';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, hasAnyRole } from '@/lib/session';
 import { redirect } from 'next/navigation';
 
 export const metadata = {
@@ -18,8 +18,8 @@ async function getSession() {
 
 export default async function UploadedExpensesPage() {
   const session = await getSession();
-  
-  if (!session.isLoggedIn || (session.role !== 'admin' && session.role !== 'super-admin')) {
+
+  if (!session.isLoggedIn || !hasAnyRole(session, ['admin', 'super-admin'])) {
     redirect('/admin/login');
   }
 

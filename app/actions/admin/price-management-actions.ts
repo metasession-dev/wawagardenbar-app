@@ -3,7 +3,7 @@
 import { getIronSession } from 'iron-session';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, hasAnyRole } from '@/lib/session';
 import { hasSessionPermission } from '@/lib/auth-middleware';
 import { PriceHistoryService } from '@/services/price-history-service';
 import { PriceChangeReason } from '@/interfaces';
@@ -139,7 +139,7 @@ export async function getPriceHistoryAction(
     }
 
     // Check admin/super-admin role
-    if (session.role !== 'admin' && session.role !== 'super-admin') {
+    if (!hasAnyRole(session, ['admin', 'super-admin'])) {
       return { success: false, error: 'Forbidden', data: null };
     }
 

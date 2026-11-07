@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, hasAnyRole } from '@/lib/session';
 import { InventoryReportClient } from './inventory-report-client';
 
 export const metadata = {
@@ -22,7 +22,7 @@ export default async function InventoryReportPage() {
   }
 
   // Check authorization - only super-admin and admin can access
-  if (session.role !== 'super-admin' && session.role !== 'admin') {
+  if (!hasAnyRole(session, ['super-admin', 'admin', 'manager'])) {
     redirect('/dashboard');
   }
 

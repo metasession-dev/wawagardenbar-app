@@ -3,7 +3,14 @@
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
 import { revalidatePath } from 'next/cache';
-import { sessionOptions, SessionData } from '@/lib/session';
+import {
+  sessionOptions,
+  SessionData,
+  hasAnyRole,
+  getPrimaryRole,
+  getRoles,
+} from '@/lib/session';
+import { AdminService } from '@/services/admin-service';
 import { UserRole } from '@/interfaces/user.interface';
 import UserModel from '@/models/user-model';
 import { connectDB } from '@/lib/mongodb';
@@ -32,27 +39,8 @@ export async function changeUserRoleAction(
     );
 
     // Check if user is admin
-    if (
-      !session.userId ||
-      !session.role ||
-      !['admin', 'super-admin'].includes(session.role)
-    ) {
+    if (!session.userId || !hasAnyRole(session, ['admin', 'super-admin'])) {
       return { success: false, error: 'Unauthorized' };
-    }
-
-    // Only super-admin can create other admins
-    if (newRole === 'super-admin' && session.role !== 'super-admin') {
-      return {
-        success: false,
-        error: 'Only super-admin can assign super-admin role',
-      };
-    }
-
-    if (newRole === 'admin' && session.role !== 'super-admin') {
-      return {
-        success: false,
-        error: 'Only super-admin can assign admin role',
-      };
     }
 
     await connectDB();
@@ -61,35 +49,22 @@ export async function changeUserRoleAction(
       return { success: false, error: 'Invalid user ID' };
     }
 
-    const user = await UserModel.findById(userId);
-
-    if (!user) {
-      return { success: false, error: 'User not found' };
+    // REQ-119 — the single-role dialog delegates to the same service as the
+    // multi-role flow, so the grant rules, the last-super-admin guard and the
+    // audit row are identical. It sets exactly one staff role, or none.
+    try {
+      await AdminService.updateRoles({
+        actor: { userId: session.userId, roles: getRoles(session) },
+        targetUserId: userId,
+        roles: newRole === 'customer' ? [] : [newRole],
+        allowEmpty: newRole === 'customer',
+      });
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to change user role',
+      };
     }
-
-    // Prevent changing own role
-    if (user._id.toString() === session.userId) {
-      return { success: false, error: 'Cannot change your own role' };
-    }
-
-    const oldRole = user.role;
-    user.role = newRole;
-    await user.save();
-
-    // Create audit log
-    await AuditLogService.createLog({
-      userId: session.userId,
-      userEmail: session.email || '',
-      userRole: session.role,
-      action: 'user.role-change',
-      resource: 'user',
-      resourceId: userId,
-      details: {
-        oldRole,
-        newRole,
-        targetUserEmail: user.email,
-      },
-    });
 
     revalidatePath('/dashboard/customers');
 
@@ -118,7 +93,7 @@ export async function deleteUserAction(userId: string): Promise<ActionResult> {
     );
 
     // Only super-admin can delete users
-    if (!session.userId || session.role !== 'super-admin') {
+    if (!session.userId || !hasAnyRole(session, ['super-admin'])) {
       return { success: false, error: 'Only super-admin can delete users' };
     }
 
@@ -140,7 +115,7 @@ export async function deleteUserAction(userId: string): Promise<ActionResult> {
     }
 
     // Prevent deleting other super-admins
-    if (user.role === 'super-admin') {
+    if (hasAnyRole(user, ['super-admin'])) {
       return { success: false, error: 'Cannot delete super-admin accounts' };
     }
 
@@ -161,7 +136,7 @@ export async function deleteUserAction(userId: string): Promise<ActionResult> {
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: session.email || '',
-      userRole: session.role,
+      userRole: getPrimaryRole(session) ?? 'unknown',
       action: 'user.delete',
       resource: 'user',
       resourceId: userId,
@@ -199,11 +174,7 @@ export async function getUserDetailsAction(
       sessionOptions
     );
 
-    if (
-      !session.userId ||
-      !session.role ||
-      !['admin', 'super-admin'].includes(session.role)
-    ) {
+    if (!session.userId || !hasAnyRole(session, ['admin', 'super-admin'])) {
       return { success: false, error: 'Unauthorized' };
     }
 

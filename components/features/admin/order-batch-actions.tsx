@@ -41,7 +41,9 @@ interface OrderBatchActionsProps {
  * Batch actions toolbar for selected orders
  * Shows when orders are selected
  */
-export function OrderBatchActions({ selectedOrderIds }: OrderBatchActionsProps) {
+export function OrderBatchActions({
+  selectedOrderIds,
+}: OrderBatchActionsProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
@@ -49,10 +51,17 @@ export function OrderBatchActions({ selectedOrderIds }: OrderBatchActionsProps) 
   const { clearSelection } = useOrderStore();
   const router = useRouter();
 
-  async function handleBatchUpdate(action: 'updateStatus' | 'cancel', data?: any) {
+  async function handleBatchUpdate(
+    action: 'updateStatus' | 'cancel',
+    data?: any
+  ) {
     setIsProcessing(true);
     try {
-      const result = await batchUpdateOrdersAction(selectedOrderIds, action, data);
+      const result = await batchUpdateOrdersAction(
+        selectedOrderIds,
+        action,
+        data
+      );
 
       if (result.success) {
         toast({
@@ -115,7 +124,8 @@ export function OrderBatchActions({ selectedOrderIds }: OrderBatchActionsProps) 
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
         <div className="bg-primary text-primary-foreground rounded-lg shadow-lg p-4 flex items-center gap-4">
           <span className="font-semibold">
-            {selectedOrderIds.length} {selectedOrderIds.length === 1 ? 'order' : 'orders'} selected
+            {selectedOrderIds.length}{' '}
+            {selectedOrderIds.length === 1 ? 'order' : 'orders'} selected
           </span>
 
           {/* Quick Actions */}
@@ -123,7 +133,9 @@ export function OrderBatchActions({ selectedOrderIds }: OrderBatchActionsProps) 
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => handleBatchUpdate('updateStatus', { status: 'preparing' })}
+              onClick={() =>
+                handleBatchUpdate('updateStatus', { status: 'preparing' })
+              }
               disabled={isProcessing}
             >
               {isProcessing ? (
@@ -139,7 +151,9 @@ export function OrderBatchActions({ selectedOrderIds }: OrderBatchActionsProps) 
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => handleBatchUpdate('updateStatus', { status: 'ready' })}
+              onClick={() =>
+                handleBatchUpdate('updateStatus', { status: 'ready' })
+              }
               disabled={isProcessing}
             >
               {isProcessing ? (
@@ -155,7 +169,9 @@ export function OrderBatchActions({ selectedOrderIds }: OrderBatchActionsProps) 
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => handleBatchUpdate('updateStatus', { status: 'completed' })}
+              onClick={() =>
+                handleBatchUpdate('updateStatus', { status: 'completed' })
+              }
               disabled={isProcessing}
             >
               {isProcessing ? (
@@ -210,7 +226,8 @@ export function OrderBatchActions({ selectedOrderIds }: OrderBatchActionsProps) 
             <DialogTitle>Cancel Orders</DialogTitle>
             <DialogDescription>
               You are about to cancel {selectedOrderIds.length}{' '}
-              {selectedOrderIds.length === 1 ? 'order' : 'orders'}. Please provide a reason.
+              {selectedOrderIds.length === 1 ? 'order' : 'orders'}. Please
+              provide a reason.
             </DialogDescription>
           </DialogHeader>
 

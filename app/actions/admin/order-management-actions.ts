@@ -3,7 +3,12 @@
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
 import { revalidatePath } from 'next/cache';
-import { sessionOptions, SessionData } from '@/lib/session';
+import {
+  sessionOptions,
+  SessionData,
+  hasAnyRole,
+  getPrimaryRole,
+} from '@/lib/session';
 import { connectDB } from '@/lib/mongodb';
 import OrderModel from '@/models/order-model';
 import TabModel from '@/models/tab-model';
@@ -61,8 +66,13 @@ export async function getOrdersAction(
 
     if (
       !session.userId ||
-      !session.role ||
-      !['csr', 'admin', 'super-admin', 'kitchen-staff'].includes(session.role)
+      !hasAnyRole(session, [
+        'csr',
+        'manager',
+        'admin',
+        'super-admin',
+        'kitchen',
+      ])
     ) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -205,8 +215,13 @@ export async function getOrderDetailsAction(
 
     if (
       !session.userId ||
-      !session.role ||
-      !['csr', 'admin', 'super-admin', 'kitchen-staff'].includes(session.role)
+      !hasAnyRole(session, [
+        'csr',
+        'manager',
+        'admin',
+        'super-admin',
+        'kitchen',
+      ])
     ) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -293,8 +308,13 @@ export async function updateOrderStatusAction(
 
     if (
       !session.userId ||
-      !session.role ||
-      !['csr', 'admin', 'super-admin', 'kitchen-staff'].includes(session.role)
+      !hasAnyRole(session, [
+        'csr',
+        'manager',
+        'admin',
+        'super-admin',
+        'kitchen',
+      ])
     ) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -336,7 +356,7 @@ export async function updateOrderStatusAction(
     order.statusHistory.push({
       status: newStatus as any,
       timestamp: new Date(),
-      note: note || `Updated by ${session.role}`,
+      note: note || `Updated by ${getPrimaryRole(session)}`,
     });
 
     // REQ-066 — On completion, route through the canonical chokepoint
@@ -358,7 +378,7 @@ export async function updateOrderStatusAction(
       const completeResult = await OrderService.completeOrder({
         orderId,
         actorUserId: session.userId,
-        actorRole: session.role,
+        actorRole: getPrimaryRole(session) ?? 'unknown',
         note,
       });
       if (completeResult.deductionFailed && completeResult.deductionError) {
@@ -405,7 +425,7 @@ export async function updateOrderStatusAction(
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: session.email || '',
-      userRole: session.role,
+      userRole: getPrimaryRole(session) ?? 'unknown',
       action: 'order.update',
       resource: 'order',
       resourceId: orderId,
@@ -421,7 +441,7 @@ export async function updateOrderStatusAction(
       order._id.toString(),
       { status: newStatus },
       'status_update',
-      session.email || session.role
+      session.email || getPrimaryRole(session)
     );
 
     revalidatePath('/dashboard/orders');
@@ -463,8 +483,7 @@ export async function batchUpdateOrdersAction(
 
     if (
       !session.userId ||
-      !session.role ||
-      !['csr', 'admin', 'super-admin'].includes(session.role)
+      !hasAnyRole(session, ['csr', 'manager', 'admin', 'super-admin'])
     ) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -517,7 +536,7 @@ export async function batchUpdateOrdersAction(
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: session.email || '',
-      userRole: session.role,
+      userRole: getPrimaryRole(session) ?? 'unknown',
       action: 'order.update',
       resource: 'order',
       resourceId: 'batch',
@@ -565,8 +584,7 @@ export async function cancelOrderAction(
 
     if (
       !session.userId ||
-      !session.role ||
-      !['csr', 'admin', 'super-admin'].includes(session.role)
+      !hasAnyRole(session, ['csr', 'manager', 'admin', 'super-admin'])
     ) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -641,7 +659,7 @@ export async function cancelOrderAction(
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: session.email || '',
-      userRole: session.role,
+      userRole: getPrimaryRole(session) ?? 'unknown',
       action: 'order.cancel',
       resource: 'order',
       resourceId: orderId,
@@ -698,18 +716,14 @@ export async function deleteOrderAction(
       return { success: false, error: 'Unauthorized' };
     }
 
-    if (opts?.superAdminOverride && session.role !== 'super-admin') {
+    if (opts?.superAdminOverride && !hasAnyRole(session, ['super-admin'])) {
       return {
         success: false,
         error: 'Only super-admin can override order-delete guards',
       };
     }
 
-    if (
-      session.role !== 'csr' &&
-      session.role !== 'admin' &&
-      session.role !== 'super-admin'
-    ) {
+    if (!hasAnyRole(session, ['csr', 'manager', 'admin', 'super-admin'])) {
       return {
         success: false,
         error: 'Insufficient permissions',
@@ -754,8 +768,13 @@ export async function addOrderNoteAction(
 
     if (
       !session.userId ||
-      !session.role ||
-      !['csr', 'admin', 'super-admin', 'kitchen-staff'].includes(session.role)
+      !hasAnyRole(session, [
+        'csr',
+        'manager',
+        'admin',
+        'super-admin',
+        'kitchen',
+      ])
     ) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -774,7 +793,7 @@ export async function addOrderNoteAction(
       order.statusHistory.push({
         status: order.status,
         timestamp: new Date(),
-        note: `Note by ${session.email || session.role}: ${note}`,
+        note: `Note by ${session.email || getPrimaryRole(session)}: ${note}`,
       });
     } else {
       // Get the last status history entry
@@ -784,14 +803,14 @@ export async function addOrderNoteAction(
       if (lastEntry.status === order.status) {
         const existingNote = lastEntry.note || '';
         const separator = existingNote ? '\n' : '';
-        lastEntry.note = `${existingNote}${separator}Note by ${session.email || session.role}: ${note}`;
+        lastEntry.note = `${existingNote}${separator}Note by ${session.email || getPrimaryRole(session)}: ${note}`;
         lastEntry.timestamp = new Date(); // Update timestamp
       } else {
         // If status has changed, create a new entry
         order.statusHistory.push({
           status: order.status,
           timestamp: new Date(),
-          note: `Note by ${session.email || session.role}: ${note}`,
+          note: `Note by ${session.email || getPrimaryRole(session)}: ${note}`,
         });
       }
     }
@@ -802,7 +821,7 @@ export async function addOrderNoteAction(
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: session.email || 'admin',
-      userRole: session.role || 'admin',
+      userRole: getPrimaryRole(session) || 'admin',
       action: 'order.update' as any,
       resource: 'order',
       resourceId: orderId,
@@ -842,8 +861,7 @@ export async function toggleOrderReconciliationAction(
 
     if (
       !session.userId ||
-      !session.role ||
-      !['csr', 'admin', 'super-admin'].includes(session.role)
+      !hasAnyRole(session, ['csr', 'manager', 'admin', 'super-admin'])
     ) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -865,7 +883,7 @@ export async function toggleOrderReconciliationAction(
     await AuditLogService.createLog({
       userId: session.userId,
       userEmail: session.email || '',
-      userRole: session.role || 'admin',
+      userRole: getPrimaryRole(session) || 'admin',
       action: 'order.update' as any,
       resource: 'order',
       resourceId: orderId,

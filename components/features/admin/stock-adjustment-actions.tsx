@@ -27,7 +27,10 @@ import {
   deductStockAction,
   adjustStockAction,
 } from '@/app/actions/admin/inventory-actions';
-import { getInventoryLocationsConfigAction, transferStockAction } from '@/app/actions/inventory/location-actions';
+import {
+  getInventoryLocationsConfigAction,
+  transferStockAction,
+} from '@/app/actions/inventory/location-actions';
 import { Plus, Minus, Edit, ArrowRightLeft, Loader2 } from 'lucide-react';
 import { IInventoryLocationConfig } from '@/interfaces';
 
@@ -41,10 +44,15 @@ interface Props {
  * Provides dialogs for adding, deducting, and adjusting stock
  */
 export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
-  const [dialogType, setDialogType] = useState<'add' | 'deduct' | 'adjust' | 'transfer' | null>(null);
+  const [dialogType, setDialogType] = useState<
+    'add' | 'deduct' | 'adjust' | 'transfer' | null
+  >(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [availableLocations, setAvailableLocations] = useState<IInventoryLocationConfig[]>([]);
-  const [defaultReceivingLocation, setDefaultReceivingLocation] = useState<string>('');
+  const [availableLocations, setAvailableLocations] = useState<
+    IInventoryLocationConfig[]
+  >([]);
+  const [defaultReceivingLocation, setDefaultReceivingLocation] =
+    useState<string>('');
   const [defaultSalesLocation, setDefaultSalesLocation] = useState<string>('');
   const router = useRouter();
   const { toast } = useToast();
@@ -56,7 +64,9 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
         try {
           const result = await getInventoryLocationsConfigAction();
           if (result.success && result.data) {
-            const activeLocations = result.data.locations.filter(l => l.isActive);
+            const activeLocations = result.data.locations.filter(
+              (l) => l.isActive
+            );
             setAvailableLocations(activeLocations);
             if (result.data.defaultReceivingLocation) {
               setDefaultReceivingLocation(result.data.defaultReceivingLocation);
@@ -87,7 +97,7 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
   // Set default location when it changes
   useEffect(() => {
     if (defaultReceivingLocation && !addData.location) {
-      setAddData(prev => ({ ...prev, location: defaultReceivingLocation }));
+      setAddData((prev) => ({ ...prev, location: defaultReceivingLocation }));
     }
   }, [defaultReceivingLocation]);
 
@@ -103,7 +113,7 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
   // Set default sales location for deductions
   useEffect(() => {
     if (defaultSalesLocation && !deductData.location) {
-      setDeductData(prev => ({ ...prev, location: defaultSalesLocation }));
+      setDeductData((prev) => ({ ...prev, location: defaultSalesLocation }));
     }
   }, [defaultSalesLocation]);
 
@@ -126,7 +136,7 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
   // Set default transfer locations when config loads
   useEffect(() => {
     if (defaultReceivingLocation && defaultSalesLocation) {
-      setTransferData(prev => ({
+      setTransferData((prev) => ({
         ...prev,
         fromLocation: prev.fromLocation || defaultReceivingLocation,
         toLocation: prev.toLocation || defaultSalesLocation,
@@ -137,14 +147,19 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
   // Derive available stock at the selected "from" location for transfer
   const transferFromStock = (() => {
     if (!transferData.fromLocation) return 0;
-    const loc = (inventory.locations || []).find((l: any) => l.location === transferData.fromLocation);
+    const loc = (inventory.locations || []).find(
+      (l: any) => l.location === transferData.fromLocation
+    );
     return loc ? loc.currentStock : 0;
   })();
 
   // Derive the current stock for the selected adjust location
   const adjustLocationStock = (() => {
-    if (!inventory.trackByLocation || !adjustData.location) return inventory.currentStock;
-    const loc = (inventory.locations || []).find((l: any) => l.location === adjustData.location);
+    if (!inventory.trackByLocation || !adjustData.location)
+      return inventory.currentStock;
+    const loc = (inventory.locations || []).find(
+      (l: any) => l.location === adjustData.location
+    );
     return loc ? loc.currentStock : inventory.currentStock;
   })();
 
@@ -279,7 +294,11 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
       return;
     }
 
-    if (inventory.trackByLocation && availableLocations.length > 0 && !adjustData.location) {
+    if (
+      inventory.trackByLocation &&
+      availableLocations.length > 0 &&
+      !adjustData.location
+    ) {
       toast({
         title: 'Error',
         description: 'Please select a location to adjust',
@@ -328,19 +347,35 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
 
   async function handleTransferStock() {
     if (!transferData.fromLocation) {
-      toast({ title: 'Error', description: 'Please select a source location', variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: 'Please select a source location',
+        variant: 'destructive',
+      });
       return;
     }
     if (!transferData.toLocation) {
-      toast({ title: 'Error', description: 'Please select a destination location', variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: 'Please select a destination location',
+        variant: 'destructive',
+      });
       return;
     }
     if (transferData.fromLocation === transferData.toLocation) {
-      toast({ title: 'Error', description: 'Source and destination must be different', variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: 'Source and destination must be different',
+        variant: 'destructive',
+      });
       return;
     }
     if (transferData.quantity <= 0) {
-      toast({ title: 'Error', description: 'Quantity must be greater than 0', variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: 'Quantity must be greater than 0',
+        variant: 'destructive',
+      });
       return;
     }
     if (transferData.quantity > transferFromStock) {
@@ -358,7 +393,9 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
         fromLocation: transferData.fromLocation,
         toLocation: transferData.toLocation,
         quantity: transferData.quantity,
-        ...(transferData.transferReference && { transferReference: transferData.transferReference }),
+        ...(transferData.transferReference && {
+          transferReference: transferData.transferReference,
+        }),
         ...(transferData.notes && { notes: transferData.notes }),
       });
       if (result.success) {
@@ -373,10 +410,18 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
         });
         router.refresh();
       } else {
-        toast({ title: 'Error', description: result.error, variant: 'destructive' });
+        toast({
+          title: 'Error',
+          description: result.error,
+          variant: 'destructive',
+        });
       }
     } catch (error) {
-      toast({ title: 'Error', description: 'Failed to transfer stock', variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: 'Failed to transfer stock',
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -406,7 +451,10 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
       </div>
 
       {/* Add Stock Dialog */}
-      <Dialog open={dialogType === 'add'} onOpenChange={() => setDialogType(null)}>
+      <Dialog
+        open={dialogType === 'add'}
+        onOpenChange={() => setDialogType(null)}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Add Stock (Restocking)</DialogTitle>
@@ -421,7 +469,12 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
                 type="number"
                 step="0.01"
                 value={addData.quantity || ''}
-                onChange={(e) => setAddData({ ...addData, quantity: parseFloat(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setAddData({
+                    ...addData,
+                    quantity: parseFloat(e.target.value) || 0,
+                  })
+                }
                 placeholder="50"
               />
             </div>
@@ -429,7 +482,9 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
               <Label>Reason *</Label>
               <Input
                 value={addData.reason}
-                onChange={(e) => setAddData({ ...addData, reason: e.target.value })}
+                onChange={(e) =>
+                  setAddData({ ...addData, reason: e.target.value })
+                }
                 placeholder="Weekly restock"
               />
             </div>
@@ -438,7 +493,9 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
                 <Label>Location *</Label>
                 <Select
                   value={addData.location}
-                  onValueChange={(value) => setAddData({ ...addData, location: value })}
+                  onValueChange={(value) =>
+                    setAddData({ ...addData, location: value })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select location" />
@@ -461,7 +518,9 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
                 <Label>Supplier</Label>
                 <Input
                   value={addData.supplier}
-                  onChange={(e) => setAddData({ ...addData, supplier: e.target.value })}
+                  onChange={(e) =>
+                    setAddData({ ...addData, supplier: e.target.value })
+                  }
                   placeholder="ABC Suppliers"
                 />
               </div>
@@ -469,7 +528,9 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
                 <Label>Invoice Number</Label>
                 <Input
                   value={addData.invoiceNumber}
-                  onChange={(e) => setAddData({ ...addData, invoiceNumber: e.target.value })}
+                  onChange={(e) =>
+                    setAddData({ ...addData, invoiceNumber: e.target.value })
+                  }
                   placeholder="INV-2024-001"
                 />
               </div>
@@ -480,7 +541,12 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
                 type="number"
                 step="0.01"
                 value={addData.costPerUnit || ''}
-                onChange={(e) => setAddData({ ...addData, costPerUnit: parseFloat(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setAddData({
+                    ...addData,
+                    costPerUnit: parseFloat(e.target.value) || 0,
+                  })
+                }
                 placeholder="0.00"
               />
             </div>
@@ -488,14 +554,20 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
               <Label>Notes</Label>
               <Textarea
                 value={addData.notes}
-                onChange={(e) => setAddData({ ...addData, notes: e.target.value })}
+                onChange={(e) =>
+                  setAddData({ ...addData, notes: e.target.value })
+                }
                 placeholder="Additional notes..."
                 rows={3}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogType(null)} disabled={isLoading}>
+            <Button
+              variant="outline"
+              onClick={() => setDialogType(null)}
+              disabled={isLoading}
+            >
               Cancel
             </Button>
             <Button onClick={handleAddStock} disabled={isLoading}>
@@ -507,7 +579,10 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
       </Dialog>
 
       {/* Deduct Stock Dialog */}
-      <Dialog open={dialogType === 'deduct'} onOpenChange={() => setDialogType(null)}>
+      <Dialog
+        open={dialogType === 'deduct'}
+        onOpenChange={() => setDialogType(null)}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Deduct Stock</DialogTitle>
@@ -522,7 +597,12 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
                 type="number"
                 step="0.01"
                 value={deductData.quantity || ''}
-                onChange={(e) => setDeductData({ ...deductData, quantity: parseFloat(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setDeductData({
+                    ...deductData,
+                    quantity: parseFloat(e.target.value) || 0,
+                  })
+                }
                 placeholder="5"
               />
             </div>
@@ -530,7 +610,9 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
               <Label>Category *</Label>
               <Select
                 value={deductData.category}
-                onValueChange={(value: any) => setDeductData({ ...deductData, category: value })}
+                onValueChange={(value: any) =>
+                  setDeductData({ ...deductData, category: value })
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -548,7 +630,9 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
                 <Label>Location *</Label>
                 <Select
                   value={deductData.location}
-                  onValueChange={(value) => setDeductData({ ...deductData, location: value })}
+                  onValueChange={(value) =>
+                    setDeductData({ ...deductData, location: value })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select location" />
@@ -570,7 +654,9 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
               <Label>Reason *</Label>
               <Input
                 value={deductData.reason}
-                onChange={(e) => setDeductData({ ...deductData, reason: e.target.value })}
+                onChange={(e) =>
+                  setDeductData({ ...deductData, reason: e.target.value })
+                }
                 placeholder="Items expired"
               />
             </div>
@@ -578,17 +664,27 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
               <Label>Notes</Label>
               <Textarea
                 value={deductData.notes}
-                onChange={(e) => setDeductData({ ...deductData, notes: e.target.value })}
+                onChange={(e) =>
+                  setDeductData({ ...deductData, notes: e.target.value })
+                }
                 placeholder="Additional details..."
                 rows={3}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogType(null)} disabled={isLoading}>
+            <Button
+              variant="outline"
+              onClick={() => setDialogType(null)}
+              disabled={isLoading}
+            >
               Cancel
             </Button>
-            <Button onClick={handleDeductStock} disabled={isLoading} variant="destructive">
+            <Button
+              onClick={handleDeductStock}
+              disabled={isLoading}
+              variant="destructive"
+            >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Deduct Stock
             </Button>
@@ -597,7 +693,10 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
       </Dialog>
 
       {/* Transfer Stock Dialog */}
-      <Dialog open={dialogType === 'transfer'} onOpenChange={() => setDialogType(null)}>
+      <Dialog
+        open={dialogType === 'transfer'}
+        onOpenChange={() => setDialogType(null)}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Transfer Stock</DialogTitle>
@@ -610,7 +709,9 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
               <Label>From Location *</Label>
               <Select
                 value={transferData.fromLocation}
-                onValueChange={(value) => setTransferData({ ...transferData, fromLocation: value })}
+                onValueChange={(value) =>
+                  setTransferData({ ...transferData, fromLocation: value })
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select source location" />
@@ -622,7 +723,8 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
                     );
                     return (
                       <SelectItem key={location.id} value={location.id}>
-                        {location.name} — {locData ? locData.currentStock : 0} {inventory.unit}
+                        {location.name} — {locData ? locData.currentStock : 0}{' '}
+                        {inventory.unit}
                       </SelectItem>
                     );
                   })}
@@ -638,21 +740,26 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
               <Label>To Location *</Label>
               <Select
                 value={transferData.toLocation}
-                onValueChange={(value) => setTransferData({ ...transferData, toLocation: value })}
+                onValueChange={(value) =>
+                  setTransferData({ ...transferData, toLocation: value })
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select destination location" />
                 </SelectTrigger>
                 <SelectContent>
                   {availableLocations
-                    .filter((location) => location.id !== transferData.fromLocation)
+                    .filter(
+                      (location) => location.id !== transferData.fromLocation
+                    )
                     .map((location) => {
                       const locData = (inventory.locations || []).find(
                         (l: any) => l.location === location.id
                       );
                       return (
                         <SelectItem key={location.id} value={location.id}>
-                          {location.name} — {locData ? locData.currentStock : 0} {inventory.unit}
+                          {location.name} — {locData ? locData.currentStock : 0}{' '}
+                          {inventory.unit}
                         </SelectItem>
                       );
                     })}
@@ -667,7 +774,12 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
                 min={0}
                 max={transferFromStock}
                 value={transferData.quantity || ''}
-                onChange={(e) => setTransferData({ ...transferData, quantity: parseFloat(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setTransferData({
+                    ...transferData,
+                    quantity: parseFloat(e.target.value) || 0,
+                  })
+                }
                 placeholder={`Max: ${transferFromStock}`}
               />
             </div>
@@ -675,7 +787,12 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
               <Label>Transfer Reference</Label>
               <Input
                 value={transferData.transferReference}
-                onChange={(e) => setTransferData({ ...transferData, transferReference: e.target.value })}
+                onChange={(e) =>
+                  setTransferData({
+                    ...transferData,
+                    transferReference: e.target.value,
+                  })
+                }
                 placeholder="TRF-2024-001"
               />
             </div>
@@ -683,14 +800,20 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
               <Label>Notes</Label>
               <Textarea
                 value={transferData.notes}
-                onChange={(e) => setTransferData({ ...transferData, notes: e.target.value })}
+                onChange={(e) =>
+                  setTransferData({ ...transferData, notes: e.target.value })
+                }
                 placeholder="Reason for transfer..."
                 rows={3}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogType(null)} disabled={isLoading}>
+            <Button
+              variant="outline"
+              onClick={() => setDialogType(null)}
+              disabled={isLoading}
+            >
               Cancel
             </Button>
             <Button onClick={handleTransferStock} disabled={isLoading}>
@@ -702,7 +825,10 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
       </Dialog>
 
       {/* Adjust Stock Dialog */}
-      <Dialog open={dialogType === 'adjust'} onOpenChange={() => setDialogType(null)}>
+      <Dialog
+        open={dialogType === 'adjust'}
+        onOpenChange={() => setDialogType(null)}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Adjust Stock</DialogTitle>
@@ -717,9 +843,17 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
                 <Select
                   value={adjustData.location}
                   onValueChange={(value) => {
-                    const loc = (inventory.locations || []).find((l: any) => l.location === value);
-                    const locStock = loc ? loc.currentStock : inventory.currentStock;
-                    setAdjustData({ ...adjustData, location: value, newStock: locStock });
+                    const loc = (inventory.locations || []).find(
+                      (l: any) => l.location === value
+                    );
+                    const locStock = loc
+                      ? loc.currentStock
+                      : inventory.currentStock;
+                    setAdjustData({
+                      ...adjustData,
+                      location: value,
+                      newStock: locStock,
+                    });
                   }}
                 >
                   <SelectTrigger>
@@ -732,7 +866,8 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
                       );
                       return (
                         <SelectItem key={location.id} value={location.id}>
-                          {location.name} — {locData ? locData.currentStock : 0} {inventory.unit}
+                          {location.name} — {locData ? locData.currentStock : 0}{' '}
+                          {inventory.unit}
                         </SelectItem>
                       );
                     })}
@@ -748,7 +883,7 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
               <Input
                 value={`${adjustLocationStock} ${inventory.unit}${
                   inventory.trackByLocation && adjustData.location
-                    ? ` (${availableLocations.find(l => l.id === adjustData.location)?.name ?? adjustData.location})`
+                    ? ` (${availableLocations.find((l) => l.id === adjustData.location)?.name ?? adjustData.location})`
                     : ''
                 }`}
                 disabled
@@ -760,11 +895,17 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
                 type="number"
                 step="0.01"
                 value={adjustData.newStock || ''}
-                onChange={(e) => setAdjustData({ ...adjustData, newStock: parseFloat(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setAdjustData({
+                    ...adjustData,
+                    newStock: parseFloat(e.target.value) || 0,
+                  })
+                }
                 placeholder="45"
               />
               <p className="text-sm text-muted-foreground">
-                Difference: {adjustData.newStock - adjustLocationStock > 0 ? '+' : ''}
+                Difference:{' '}
+                {adjustData.newStock - adjustLocationStock > 0 ? '+' : ''}
                 {(adjustData.newStock - adjustLocationStock).toFixed(2)}
               </p>
             </div>
@@ -772,13 +913,19 @@ export function StockAdjustmentActions({ inventoryId, inventory }: Props) {
               <Label>Reason *</Label>
               <Input
                 value={adjustData.reason}
-                onChange={(e) => setAdjustData({ ...adjustData, reason: e.target.value })}
+                onChange={(e) =>
+                  setAdjustData({ ...adjustData, reason: e.target.value })
+                }
                 placeholder="Physical inventory count"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogType(null)} disabled={isLoading}>
+            <Button
+              variant="outline"
+              onClick={() => setDialogType(null)}
+              disabled={isLoading}
+            >
               Cancel
             </Button>
             <Button onClick={handleAdjustStock} disabled={isLoading}>

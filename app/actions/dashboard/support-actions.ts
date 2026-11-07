@@ -3,11 +3,12 @@
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
 import { revalidatePath } from 'next/cache';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, hasAnyRole } from '@/lib/session';
+import type { UserRole } from '@/interfaces/user.interface';
 import { SupportTicketService } from '@/services/support-ticket-service';
 import type { SupportTicketStatus } from '@/models/support-ticket-model';
 
-const STAFF_ROLES = new Set(['csr', 'admin', 'super-admin']);
+const SUPPORT_ROLES: UserRole[] = ['csr', 'manager', 'admin', 'super-admin'];
 
 interface ActionResult {
   success: boolean;
@@ -33,7 +34,7 @@ async function requireStaffSession(): Promise<
   if (!session.isLoggedIn || !session.userId) {
     return { ok: false, error: 'Not authenticated' };
   }
-  if (!session.role || !STAFF_ROLES.has(session.role)) {
+  if (!hasAnyRole(session, SUPPORT_ROLES)) {
     return { ok: false, error: 'Forbidden' };
   }
   return { ok: true, userId: session.userId };

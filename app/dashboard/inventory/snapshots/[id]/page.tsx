@@ -1,7 +1,7 @@
 import { redirect, notFound } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, hasAnyRole } from '@/lib/session';
 import { getSnapshotDetailsAction } from '@/app/actions/inventory/snapshot-actions';
 import { SnapshotDetailsClient } from '@/components/features/inventory/snapshot-details-client';
 
@@ -11,9 +11,12 @@ export default async function SnapshotDetailsPage({
   params: Promise<{ id: string }>;
 }) {
   const cookieStore = await cookies();
-  const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+  const session = await getIronSession<SessionData>(
+    cookieStore,
+    sessionOptions
+  );
 
-  if (session.role !== 'super-admin') {
+  if (!hasAnyRole(session, ['super-admin'])) {
     redirect('/dashboard');
   }
 

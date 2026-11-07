@@ -4,7 +4,12 @@ import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
 import { connectDB } from '@/lib/mongodb';
 import { AdminService } from '@/services/admin-service';
-import { sessionOptions, SessionData } from '@/lib/session';
+import {
+  sessionOptions,
+  SessionData,
+  applyRolesToSession,
+  getRoles,
+} from '@/lib/session';
 import { buildSessionPermissions } from '@/lib/admin-login-helpers';
 
 interface AdminLoginResult {
@@ -42,7 +47,7 @@ export async function adminLoginAction(
     session.userId = admin._id.toString();
     session.email = admin.email || undefined;
     session.name = admin.name || admin.username;
-    session.role = admin.role;
+    applyRolesToSession(session, getRoles(admin));
 
     // Sanitize permissions — extracted to `lib/admin-login-helpers.ts`
     // so the field-by-field copy contract is unit-tested in isolation

@@ -40,7 +40,9 @@ export function OrderCustomerInfo({ order }: OrderCustomerInfoProps) {
           <User className="h-5 w-5 text-muted-foreground mt-0.5" />
           <div className="flex-1">
             <p className="text-sm font-medium">Name</p>
-            <p className="text-sm text-muted-foreground">{customer.name || 'N/A'}</p>
+            <p className="text-sm text-muted-foreground">
+              {customer.name || 'N/A'}
+            </p>
           </div>
         </div>
 
@@ -50,7 +52,7 @@ export function OrderCustomerInfo({ order }: OrderCustomerInfoProps) {
           <div className="flex-1">
             <p className="text-sm font-medium">Email</p>
             {customer.email ? (
-              <a 
+              <a
                 href={`mailto:${customer.email}`}
                 className="text-sm text-primary hover:underline"
               >
@@ -68,7 +70,7 @@ export function OrderCustomerInfo({ order }: OrderCustomerInfoProps) {
           <div className="flex-1">
             <p className="text-sm font-medium">Phone</p>
             {customer.phone ? (
-              <a 
+              <a
                 href={`tel:${customer.phone}`}
                 className="text-sm text-primary hover:underline"
               >
@@ -95,8 +97,10 @@ export function OrderCustomerInfo({ order }: OrderCustomerInfoProps) {
                   </>
                 )}
                 <br />
-                {order.deliveryDetails.address.city}, {order.deliveryDetails.address.state}
-                {order.deliveryDetails.address.postalCode && ` ${order.deliveryDetails.address.postalCode}`}
+                {order.deliveryDetails.address.city},{' '}
+                {order.deliveryDetails.address.state}
+                {order.deliveryDetails.address.postalCode &&
+                  ` ${order.deliveryDetails.address.postalCode}`}
                 <br />
                 {order.deliveryDetails.address.country}
               </p>

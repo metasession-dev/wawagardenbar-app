@@ -1,5 +1,25 @@
-import { UserRole } from '@/interfaces/user.interface';
-import { SessionData } from './session';
+import { UserRole, StaffRole } from '@/interfaces/user.interface';
+import {
+  IAdminPermissions,
+  CSR_DEFAULT_PERMISSIONS,
+  DEFAULT_ADMIN_PERMISSIONS,
+  KITCHEN_DEFAULT_PERMISSIONS,
+  MANAGER_DEFAULT_PERMISSIONS,
+  SUPER_ADMIN_PERMISSIONS,
+} from '@/interfaces/admin-permissions.interface';
+import type { SessionData } from './session';
+import {
+  RoleCarrier,
+  getRoles,
+  hasAnyRole,
+  getPrimaryRole,
+  isAdmin,
+  isSuperAdmin,
+} from './roles';
+
+// REQ-119: the role helpers live in `lib/session.ts`; re-exported here so
+// existing imports keep working.
+export { isAdmin, isSuperAdmin };
 
 /**
  * Route permissions configuration
@@ -11,15 +31,37 @@ import { SessionData } from './session';
  * reach those routes.
  */
 export const routePermissions: Record<string, UserRole[]> = {
-  '/dashboard': ['csr', 'admin', 'super-admin'],
+  // `kitchen` is deliberately absent from the `/dashboard` root and from every
+  // route not listed with it below: the longest matching prefix wins in
+  // `proxy.ts`, so a kitchen-only member reaches only the orders pages and the
+  // kitchen display (REQ-119, ADR-009).
+  '/dashboard': ['csr', 'manager', 'admin', 'super-admin'],
   // Each route lists the maximal role allowlist; the layout's
   // `requirePermission(...)` does the per-feature gate. Mismatches here
   // bounce users at `proxy.ts` middleware before the layout can run.
+  // The forbidden page is where proxy.ts sends a staff member who lacks a
+  // route; it must be reachable by every staff role or the redirect loops.
+  '/dashboard/forbidden': ['csr', 'kitchen', 'manager', 'admin', 'super-admin'],
   '/dashboard/menu': ['admin', 'super-admin'],
-  '/dashboard/orders': ['csr', 'admin', 'super-admin'],
-  '/dashboard/customers': ['csr', 'super-admin'],
+  '/dashboard/orders': ['csr', 'kitchen', 'manager', 'admin', 'super-admin'],
+  // Staff-only order sub-areas that a kitchen-only member must not reach.
+  '/dashboard/orders/express': ['csr', 'manager', 'admin', 'super-admin'],
+  '/dashboard/orders/tabs': ['csr', 'manager', 'admin', 'super-admin'],
+  '/dashboard/orders/inventory-summary': [
+    'csr',
+    'manager',
+    'admin',
+    'super-admin',
+  ],
+  '/dashboard/orders/inventory-updates': [
+    'csr',
+    'manager',
+    'admin',
+    'super-admin',
+  ],
+  '/dashboard/customers': ['csr', 'manager', 'super-admin'],
   '/dashboard/inventory': ['admin', 'super-admin'],
-  '/dashboard/rewards': ['csr', 'admin', 'super-admin'],
+  '/dashboard/rewards': ['csr', 'manager', 'admin', 'super-admin'],
   '/dashboard/analytics': ['super-admin'],
   '/dashboard/audit-logs': ['super-admin'],
   /**
@@ -28,12 +70,18 @@ export const routePermissions: Record<string, UserRole[]> = {
    * on top of this role allowlist for fine-grained control via Settings →
    * Admins → Permissions.
    */
-  '/dashboard/incidents': ['csr', 'admin', 'super-admin'],
+  '/dashboard/incidents': ['csr', 'manager', 'admin', 'super-admin'],
   '/dashboard/settings': ['admin', 'super-admin'],
   '/dashboard/kitchen': ['admin', 'super-admin'],
   '/dashboard/kitchen/recipes': ['admin', 'super-admin'],
   '/dashboard/kitchen/production': ['admin', 'super-admin'],
-  '/dashboard/kitchen-display': ['csr', 'admin', 'super-admin'],
+  '/dashboard/kitchen-display': [
+    'csr',
+    'kitchen',
+    'manager',
+    'admin',
+    'super-admin',
+  ],
 };
 
 /**
@@ -41,12 +89,14 @@ export const routePermissions: Record<string, UserRole[]> = {
  * Used for sidebar navigation filtering
  */
 export const dashboardSections = {
-  overview: { roles: ['admin', 'super-admin'] as UserRole[] },
+  overview: { roles: ['manager', 'admin', 'super-admin'] as UserRole[] },
   menu: { roles: ['super-admin'] as UserRole[] },
-  orders: { roles: ['csr', 'admin', 'super-admin'] as UserRole[] },
-  customers: { roles: ['csr', 'super-admin'] as UserRole[] },
+  orders: {
+    roles: ['csr', 'kitchen', 'manager', 'admin', 'super-admin'] as UserRole[],
+  },
+  customers: { roles: ['csr', 'manager', 'super-admin'] as UserRole[] },
   inventory: { roles: ['super-admin'] as UserRole[] },
-  rewards: { roles: ['csr', 'super-admin'] as UserRole[] },
+  rewards: { roles: ['csr', 'manager', 'super-admin'] as UserRole[] },
   analytics: { roles: ['super-admin'] as UserRole[] },
   auditLogs: { roles: ['super-admin'] as UserRole[] },
   settings: { roles: ['super-admin'] as UserRole[] },
@@ -56,65 +106,46 @@ export const dashboardSections = {
 };
 
 /**
- * Check if user is admin-side staff (csr or above).
- */
-export function isAdmin(session: SessionData | null): boolean {
-  if (!session?.role) return false;
-  return (
-    session.role === 'csr' ||
-    session.role === 'admin' ||
-    session.role === 'super-admin'
-  );
-}
-
-/**
- * Check if user is super admin
- */
-export function isSuperAdmin(session: SessionData | null): boolean {
-  if (!session?.role) return false;
-  return session.role === 'super-admin';
-}
-
-/**
  * Check if user has permission to access a specific route
  */
 export function hasPermission(
   session: SessionData | null,
   route: string
 ): boolean {
-  if (!session?.role) return false;
-
-  // Find matching route permission
   const allowedRoles = routePermissions[route];
   if (!allowedRoles) return false;
 
-  return allowedRoles.includes(session.role);
+  return hasAnyRole(session, allowedRoles);
 }
 
 /**
- * Check if user can access a dashboard section
+ * Check if user can access a dashboard section (any of their roles grants it).
  */
 export function canAccessDashboardSection(
-  role: UserRole | undefined,
+  roles: RoleCarrier | UserRole | undefined,
   section: keyof typeof dashboardSections
 ): boolean {
-  if (!role) return false;
-
   const sectionConfig = dashboardSections[section];
   if (!sectionConfig) return false;
 
-  return sectionConfig.roles.includes(role);
+  return hasAnyRole(asCarrier(roles), sectionConfig.roles);
 }
 
 /**
- * Get accessible routes for a user role
+ * Get accessible routes for a user's roles (union).
  */
-export function getAccessibleRoutes(role: UserRole | undefined): string[] {
-  if (!role) return [];
-
+export function getAccessibleRoutes(
+  roles: RoleCarrier | UserRole | undefined
+): string[] {
+  const carrier = asCarrier(roles);
   return Object.entries(routePermissions)
-    .filter(([, allowedRoles]) => allowedRoles.includes(role))
+    .filter(([, allowedRoles]) => hasAnyRole(carrier, allowedRoles))
     .map(([route]) => route);
+}
+
+function asCarrier(roles: RoleCarrier | UserRole | undefined): RoleCarrier {
+  if (!roles) return {};
+  return typeof roles === 'string' ? { role: roles } : roles;
 }
 
 /**
@@ -161,11 +192,11 @@ export function getAllowedMainCategoriesForReports(
   session: SessionData | null,
   allRegisteredMainSlugs: string[]
 ): string[] {
-  if (!session?.role) return [];
+  if (!session || getRoles(session).length === 0) return [];
 
   // Super-admin bypass: always sees everything, even if the field is
   // explicitly set to `[]`. Prevents accidental operator lockout.
-  if (session.role === 'super-admin') {
+  if (isSuperAdmin(session)) {
     return [...allRegisteredMainSlugs];
   }
 
@@ -195,19 +226,94 @@ export function getAllowedMainCategoriesForReports(
 }
 
 /**
- * Get user's highest permission level
+ * Get user's highest permission level (over all their roles).
  */
-export function getPermissionLevel(role: UserRole | undefined): number {
-  switch (role) {
+export function getPermissionLevel(
+  roles: RoleCarrier | UserRole | undefined
+): number {
+  switch (getPrimaryRole(asCarrier(roles))) {
     case 'super-admin':
-      return 4;
+      return 5;
     case 'admin':
+      return 4;
+    case 'manager':
       return 3;
     case 'csr':
       return 2;
+    case 'kitchen':
+      return 1.5;
     case 'customer':
       return 1;
     default:
       return 0;
   }
+}
+
+/**
+ * REQ-119 (AC7) — default feature permissions per staff role.
+ */
+export const ROLE_DEFAULT_PERMISSIONS: Record<StaffRole, IAdminPermissions> = {
+  csr: CSR_DEFAULT_PERMISSIONS,
+  kitchen: KITCHEN_DEFAULT_PERMISSIONS,
+  manager: MANAGER_DEFAULT_PERMISSIONS,
+  admin: DEFAULT_ADMIN_PERMISSIONS,
+  'super-admin': SUPER_ADMIN_PERMISSIONS,
+};
+
+const BOOLEAN_PERMISSION_KEYS = [
+  'orderManagement',
+  'menuManagement',
+  'inventoryManagement',
+  'rewardsAndLoyalty',
+  'reportsAndAnalytics',
+  'expensesManagement',
+  'settingsAndConfiguration',
+  'kitchenManagement',
+  'incidentsAccess',
+] as const satisfies readonly (keyof IAdminPermissions)[];
+
+/**
+ * REQ-119 (AC7) — the union of the default permissions of the given roles.
+ */
+export function defaultPermissionsForRoles(
+  roles: readonly StaffRole[]
+): IAdminPermissions {
+  const merged = Object.fromEntries(
+    BOOLEAN_PERMISSION_KEYS.map((key) => [
+      key,
+      roles.some((role) => ROLE_DEFAULT_PERMISSIONS[role]?.[key] === true),
+    ])
+  ) as unknown as IAdminPermissions;
+  return merged;
+}
+
+/**
+ * REQ-119 (AC7) — recompute a user's stored permissions after a role change.
+ *
+ * Per-user overrides (values set in the permissions editor) are kept: a
+ * permission is switched ON when an added role's defaults grant it, and
+ * switched OFF only when a removed role's defaults granted it and no
+ * remaining role's defaults do. Everything else is left as it was.
+ */
+export function recomputePermissionsForRoleChange(
+  current: IAdminPermissions | undefined,
+  before: readonly StaffRole[],
+  after: readonly StaffRole[]
+): IAdminPermissions {
+  const base = current ?? defaultPermissionsForRoles(before);
+  const added = after.filter((role) => !before.includes(role));
+  const removed = before.filter((role) => !after.includes(role));
+  const grantedByAdded = defaultPermissionsForRoles(added);
+  const grantedByRemoved = defaultPermissionsForRoles(removed);
+  const grantedByRemaining = defaultPermissionsForRoles(after);
+
+  const next: IAdminPermissions = { ...base };
+  for (const key of BOOLEAN_PERMISSION_KEYS) {
+    if (grantedByAdded[key]) {
+      next[key] = true;
+    } else if (grantedByRemoved[key] && !grantedByRemaining[key]) {
+      next[key] = false;
+    }
+  }
+  return next;
 }

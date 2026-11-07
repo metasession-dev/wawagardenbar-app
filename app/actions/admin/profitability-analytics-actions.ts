@@ -2,7 +2,7 @@
 
 import { getIronSession } from 'iron-session';
 import { cookies } from 'next/headers';
-import { sessionOptions, SessionData } from '@/lib/session';
+import { sessionOptions, SessionData, hasAnyRole } from '@/lib/session';
 import { ProfitabilityAnalyticsService } from '@/services/profitability-analytics-service';
 
 interface GetProfitabilityReportParams {
@@ -12,10 +12,15 @@ interface GetProfitabilityReportParams {
   category?: string;
 }
 
-export async function getProfitabilityReportAction(params: GetProfitabilityReportParams) {
+export async function getProfitabilityReportAction(
+  params: GetProfitabilityReportParams
+) {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     // Check authentication
     if (!session.userId) {
@@ -23,18 +28,19 @@ export async function getProfitabilityReportAction(params: GetProfitabilityRepor
     }
 
     // Check admin/super-admin role
-    if (session.role !== 'admin' && session.role !== 'super-admin') {
+    if (!hasAnyRole(session, ['admin', 'super-admin'])) {
       return { success: false, error: 'Forbidden', data: null };
     }
 
-    const report = await ProfitabilityAnalyticsService.generateProfitabilityReport(
-      new Date(params.startDate),
-      new Date(params.endDate),
-      {
-        orderType: params.orderType,
-        category: params.category,
-      }
-    );
+    const report =
+      await ProfitabilityAnalyticsService.generateProfitabilityReport(
+        new Date(params.startDate),
+        new Date(params.endDate),
+        {
+          orderType: params.orderType,
+          category: params.category,
+        }
+      );
 
     return {
       success: true,
@@ -44,7 +50,10 @@ export async function getProfitabilityReportAction(params: GetProfitabilityRepor
     console.error('Error fetching profitability report:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch profitability report',
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to fetch profitability report',
       data: null,
     };
   }
@@ -57,13 +66,16 @@ export async function getTopProfitableItemsAction(
 ) {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     if (!session.userId) {
       return { success: false, error: 'Unauthorized', data: null };
     }
 
-    if (session.role !== 'admin' && session.role !== 'super-admin') {
+    if (!hasAnyRole(session, ['admin', 'super-admin'])) {
       return { success: false, error: 'Forbidden', data: null };
     }
 
@@ -81,26 +93,37 @@ export async function getTopProfitableItemsAction(
     console.error('Error fetching top profitable items:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch top profitable items',
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to fetch top profitable items',
       data: null,
     };
   }
 }
 
-export async function getItemsWithDecliningMarginsAction(threshold: number = 20) {
+export async function getItemsWithDecliningMarginsAction(
+  threshold: number = 20
+) {
   try {
     const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
 
     if (!session.userId) {
       return { success: false, error: 'Unauthorized', data: null };
     }
 
-    if (session.role !== 'admin' && session.role !== 'super-admin') {
+    if (!hasAnyRole(session, ['admin', 'super-admin'])) {
       return { success: false, error: 'Forbidden', data: null };
     }
 
-    const items = await ProfitabilityAnalyticsService.getItemsWithDecliningMargins(threshold);
+    const items =
+      await ProfitabilityAnalyticsService.getItemsWithDecliningMargins(
+        threshold
+      );
 
     return {
       success: true,
@@ -111,7 +134,9 @@ export async function getItemsWithDecliningMarginsAction(threshold: number = 20)
     return {
       success: false,
       error:
-        error instanceof Error ? error.message : 'Failed to fetch items with declining margins',
+        error instanceof Error
+          ? error.message
+          : 'Failed to fetch items with declining margins',
       data: null,
     };
   }

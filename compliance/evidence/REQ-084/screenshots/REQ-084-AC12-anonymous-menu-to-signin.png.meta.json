@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-084",
+  "ac": 12,
+  "slug": "anonymous-menu-to-signin",
+  "specFile": "e2e/smoke/req-084-checkout-separation.spec.ts",
+  "capturedAt": "2026-11-05T19:44:29.553Z"
+}

@@ -1,6 +1,6 @@
 # Release Ticket: REQ-117 — WhatsApp-only customer sign-in (WA-04)
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-11-05
 **Requirement ID:** REQ-117
 **Risk Level:** HIGH
@@ -74,3 +74,9 @@ This is a HIGH-risk bundle on a solo-operator team, so the "reviewer ≠ submitt
 - **Submitter (implementation):** Claude Code (Sonnet 5.5)
 - **UAT reviewer / approver:** operator, on the DevAudit portal
 - **Operator approvals on record:** plan approval, HMAC PIN-hash deviation, ADR-008 Accepted and R-047 to R-051 sign-off (2026-11-05); `support_reply` submission to UAT and production (2026-11-05).
+
+## Post-release notes
+
+- **Production verification:** the operator verified the release on production on 2026-11-05 (WhatsApp sign-in and PIN delivery to a real number, confirmed in the production delivery logs). Production PIN delivery first failed with Meta error 131042 (billing eligibility on the production sender); the operator added a payment method and delivery succeeded.
+- **Post-deploy evidence gap:** the automated `Post-Deploy Production Evidence` run (42035790315) failed at "Start production deployment executions" because the synced workflow looks up a portal release for each bundle member, and the co-tracked member (REQ-118) has none by design (one portal release per declared bundle). The production health probe, read-only smoke and promotion steps did not run. The operator accepted the release on their own production verification; the workflow defect is raised upstream and was not patched locally.
+- **Open follow-ups:** `support_reply` template approval (UAT and production), then the live support round-trip.

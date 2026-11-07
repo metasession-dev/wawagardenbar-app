@@ -74,8 +74,8 @@ export function DeleteMenuItemDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Menu Item</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete "{menuItemName}"? This action cannot be undone.
-            {' '}This will also remove any associated inventory records.
+            Are you sure you want to delete "{menuItemName}"? This action cannot
+            be undone. This will also remove any associated inventory records.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

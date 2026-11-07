@@ -1,5 +1,6 @@
 import { SessionOptions, IronSession } from 'iron-session';
-import { UserRole } from '@/interfaces/user.interface';
+import { UserRole, StaffRole } from '@/interfaces/user.interface';
+import { getPrimaryRole, isCustomerSession, isStaffRole } from './roles';
 import { IAdminPermissions } from '@/interfaces';
 
 export interface SessionData {
@@ -7,7 +8,10 @@ export interface SessionData {
   email?: string;
   phone?: string;
   name?: string;
+  /** Highest role (back-compat for one release; REQ-119). Read it only through the helpers below. */
   role?: UserRole;
+  /** REQ-119 — staff roles held by the signed-in user. */
+  roles?: StaffRole[];
   permissions?: IAdminPermissions;
   isGuest?: boolean;
   guestId?: string;
@@ -64,7 +68,7 @@ export function shouldRefreshCustomerSession(
   session: SessionData,
   now: number = Date.now()
 ): boolean {
-  if (!session.isLoggedIn || session.isGuest || session.role !== 'customer') {
+  if (!session.isLoggedIn || session.isGuest || !isCustomerSession(session)) {
     return false;
   }
   const last = session.refreshedAt ?? session.createdAt ?? 0;
@@ -75,33 +79,17 @@ export const defaultSession: SessionData = {
   isLoggedIn: false,
 };
 
-/**
- * Check if session belongs to admin-side staff (csr or above).
- */
-export function isAdmin(session: SessionData | null): boolean {
-  if (!session?.role) return false;
-  return (
-    session.role === 'csr' ||
-    session.role === 'admin' ||
-    session.role === 'super-admin'
-  );
-}
+export * from './roles';
 
 /**
- * Check if session belongs to super-admin
+ * Write the roles onto a session: `roles` as given and `role` as the highest
+ * of them (back-compat for one release).
  */
-export function isSuperAdmin(session: SessionData | null): boolean {
-  if (!session?.role) return false;
-  return session.role === 'super-admin';
-}
-
-/**
- * Check if session has permission to access a route
- */
-export function hasPermission(
-  session: SessionData | null,
-  allowedRoles: UserRole[]
-): boolean {
-  if (!session?.role) return false;
-  return allowedRoles.includes(session.role);
+export function applyRolesToSession(
+  session: SessionData,
+  roles: readonly UserRole[]
+): void {
+  const staff = roles.filter(isStaffRole);
+  session.roles = staff;
+  session.role = getPrimaryRole({ roles: staff }) ?? roles[0];
 }

@@ -7,6 +7,8 @@ import {
   defaultSession,
   applyCustomerSessionLifetime,
   shouldRefreshCustomerSession,
+  getPrimaryRole,
+  getRoles,
 } from '@/lib/session';
 import { connectDB } from '@/lib/mongodb';
 import { UserModel } from '@/models';
@@ -50,7 +52,8 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
             userId: session.userId,
             email: session.email,
             name: session.name,
-            role: session.role,
+            role: getPrimaryRole(session),
+            roles: getRoles(session),
             isGuest: false,
           });
         }
@@ -67,7 +70,8 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
           email: user.email,
           name: fullName,
           emailVerified: user.emailVerified,
-          role: user.role,
+          role: getPrimaryRole(user),
+          roles: getRoles(user),
           totalSpent: user.totalSpent,
           rewardsEarned: user.rewardsEarned,
           orderCount: user.totalOrders,
@@ -84,7 +88,8 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
           userId: session.userId,
           email: session.email,
           name: session.name,
-          role: session.role,
+          role: getPrimaryRole(session),
+          roles: getRoles(session),
           isGuest: false,
         });
       }
@@ -96,7 +101,8 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
       userId: session.userId,
       email: session.email,
       name: session.name,
-      role: session.role,
+      role: getPrimaryRole(session),
+      roles: getRoles(session),
       isGuest: session.isGuest,
     });
   } catch (error) {

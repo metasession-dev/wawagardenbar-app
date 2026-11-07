@@ -1,0 +1,71 @@
+{
+  "appliedAt": "2026-11-07T10:04:20.043Z",
+  "updated": [
+    {
+      "id": "694541440042c70ca0fe8c35",
+      "role": "super-admin",
+      "roles": ["super-admin"]
+    },
+    {
+      "id": "694541440042c70ca0fe8c53",
+      "role": "super-admin",
+      "roles": ["super-admin"]
+    },
+    {
+      "id": "69454260a9788d2687498537",
+      "role": "super-admin",
+      "roles": ["super-admin"]
+    },
+    {
+      "id": "69454ed2a9788d268749856e",
+      "role": "admin",
+      "roles": ["admin"]
+    },
+    {
+      "id": "694a8a4be8e52bb3341bd7af",
+      "role": "admin",
+      "roles": ["admin"]
+    },
+    {
+      "id": "69528109ca9bd841cd0ae1a0",
+      "role": "admin",
+      "roles": ["admin"]
+    },
+    {
+      "id": "6966a2f46a4de5e95e17f953",
+      "role": "admin",
+      "roles": ["admin"]
+    },
+    {
+      "id": "6977ce936a4de5e95e19647d",
+      "role": "admin",
+      "roles": ["admin"]
+    },
+    {
+      "id": "6a2bd33c0269ab30516441a8",
+      "role": "admin",
+      "roles": ["admin"]
+    },
+    {
+      "id": "6a4c12f3708f96cd360dbadc",
+      "role": "admin",
+      "roles": ["admin"]
+    },
+    {
+      "id": "6a60b61978a7d0f1ee35ec98",
+      "role": "super-admin",
+      "roles": ["super-admin"]
+    },
+    {
+      "id": "6a7d757ea61e0a80eec81777",
+      "role": "admin",
+      "roles": ["admin"]
+    },
+    {
+      "id": "6aabca1ca81ed3512bf8db3e",
+      "role": "super-admin",
+      "roles": ["super-admin"]
+    }
+  ],
+  "unknown": []
+}

@@ -174,7 +174,11 @@ adminTest.describe('Section 12: Order Management', () => {
   adminTest('orders page shows Kitchen Display link', async ({ page }) => {
     await page.goto('/dashboard/orders');
     await page.waitForLoadState('networkidle');
-    await expect(page.locator('text=Kitchen Display')).toBeVisible();
+    // REQ-119 added a "Kitchen display" item to the left nav, so a text locator
+    // matches two elements. Scope to the page content link.
+    await expect(
+      page.locator('main a[href="/dashboard/kitchen-display"]')
+    ).toBeVisible();
   });
 
   adminTest(

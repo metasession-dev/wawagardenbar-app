@@ -57,7 +57,7 @@ None.
 2. After the UAT deploy: sign in as a multi-role account (for example csr + kitchen) and as a kitchen-only account; record the date in evidence, never the credentials.
 3. File the follow-up issue for a session version check (R-053), and sign off R-052 to R-055 residual ratings and ADR-009 in the evidence artefacts.
 4. Sign off the SRS alignment, architecture decision, risk assessment and e2e scope decision in `compliance/evidence/REQ-119/`.
-5. Independent UAT reviewer (not the operator, `dual_actor`) records UAT and approves in the portal; a person approves Production.
+5. Independent UAT reviewer (not the operator, `dual_actor`) executes the UAT pack in `compliance/evidence/REQ-119/uat/` (briefing, 17-step procedure, execution record), then records UAT and approves in the portal with the completed record attached; a person approves Production.
 
 ## Verification
 

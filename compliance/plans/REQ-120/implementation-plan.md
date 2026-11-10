@@ -143,4 +143,4 @@ Unit and integration tests per the AC table; the two critical e2e specs plus the
 
 ## 11. Sign-off
 
-- **Plan approved by operator:** pending (HIGH-risk checkpoint).
+- **Plan approved by operator:** approved 2026-11-10 (HIGH-risk checkpoint). The operator replied `PROCEED` with no amendments, recorded as acceptance of the recommended options for D1 to D4, ADR-010, the SRS stubs and risks R-056 to R-059.

@@ -22,17 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  UtensilsCrossed,
-  Package,
-  Truck,
-  MapPin,
-  Clock,
-  Zap,
-} from 'lucide-react';
+import { UtensilsCrossed, Package, Truck, MapPin, Clock } from 'lucide-react';
 import { BusinessHoursBanner } from './business-hours-banner';
-
-import { ITab } from '@/interfaces';
 
 // REQ-061 — pickup slot returned by /api/settings/pickup-slots
 interface PickupSlot {
@@ -43,25 +34,10 @@ interface PickupSlot {
 
 interface OrderDetailsStepProps {
   form: UseFormReturn<any>;
-  hasExistingTab?: boolean; // Deprecated, use isTableLocked instead
-  isTableLocked?: boolean;
-  existingTab?: ITab | null;
-  isTabOccupied?: boolean;
 }
 
-export function OrderDetailsStep({
-  form,
-  hasExistingTab,
-  isTableLocked,
-  existingTab,
-  isTabOccupied,
-}: OrderDetailsStepProps) {
+export function OrderDetailsStep({ form }: OrderDetailsStepProps) {
   const orderType = form.watch('orderType');
-  const tableNumber = form.watch('tableNumber');
-
-  // Backwards compatibility or default
-  const locked = isTableLocked ?? hasExistingTab ?? false;
-  const tabFound = !!existingTab;
 
   // REQ-061 — pickup slots fetched on mount. Empty array → fall back to
   // the legacy datetime-local input so customers can still pick a time.
@@ -132,23 +108,18 @@ export function OrderDetailsStep({
                   className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
                     field.value === 'pickup'
                       ? 'border-primary bg-primary/5'
-                      : tabFound || locked
-                        ? 'border-muted opacity-50 cursor-not-allowed bg-muted/10'
-                        : 'border-muted hover:border-primary/50'
+                      : 'border-muted hover:border-primary/50'
                   }`}
                 >
                   <RadioGroupItem
                     value="pickup"
                     id="pickup"
                     className="sr-only"
-                    disabled={tabFound || locked}
                   />
                   <Package className="h-6 w-6" />
                   <span className="font-medium">Pickup</span>
                   <span className="text-xs text-muted-foreground text-center">
-                    {tabFound || locked
-                      ? 'Close tab first'
-                      : 'Collect your order'}
+                    Collect your order
                   </span>
                 </Label>
 
@@ -157,48 +128,18 @@ export function OrderDetailsStep({
                   className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
                     field.value === 'delivery'
                       ? 'border-primary bg-primary/5'
-                      : tabFound || locked
-                        ? 'border-muted opacity-50 cursor-not-allowed bg-muted/10'
-                        : 'border-muted hover:border-primary/50'
+                      : 'border-muted hover:border-primary/50'
                   }`}
                 >
                   <RadioGroupItem
                     value="delivery"
                     id="delivery"
                     className="sr-only"
-                    disabled={tabFound || locked}
                   />
                   <Truck className="h-6 w-6" />
                   <span className="font-medium">Delivery</span>
                   <span className="text-xs text-muted-foreground text-center">
-                    {tabFound || locked
-                      ? 'Close tab first'
-                      : 'Delivered to you'}
-                  </span>
-                </Label>
-
-                <Label
-                  htmlFor="pay-now"
-                  className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
-                    field.value === 'pay-now'
-                      ? 'border-primary bg-primary/5'
-                      : tabFound || locked
-                        ? 'border-muted opacity-50 cursor-not-allowed bg-muted/10'
-                        : 'border-muted hover:border-primary/50'
-                  }`}
-                >
-                  <RadioGroupItem
-                    value="pay-now"
-                    id="pay-now"
-                    className="sr-only"
-                    disabled={tabFound || locked}
-                  />
-                  <Zap className="h-6 w-6" />
-                  <span className="font-medium">Pay Now</span>
-                  <span className="text-xs text-muted-foreground text-center">
-                    {tabFound || locked
-                      ? 'Close tab first'
-                      : 'Quick order & pay'}
+                    Delivered to you
                   </span>
                 </Label>
               </RadioGroup>
@@ -217,38 +158,11 @@ export function OrderDetailsStep({
             <FormItem>
               <FormLabel>Table Number</FormLabel>
               <FormControl>
-                <Input
-                  placeholder="e.g., T12"
-                  {...field}
-                  disabled={locked}
-                  className={`${locked ? 'bg-muted cursor-not-allowed' : ''} ${isTabOccupied ? 'border-destructive focus-visible:ring-destructive' : ''}`}
-                />
+                <Input placeholder="e.g., T12" {...field} />
               </FormControl>
               <FormDescription>
-                {locked
-                  ? 'Table number is set from your existing tab and cannot be changed'
-                  : 'Enter your table number or scan the QR code'}
+                Enter your table number or scan the QR code
               </FormDescription>
-
-              {/* Message about existing tab if not locked but found */}
-              {!locked && existingTab && (
-                <div className="text-sm font-medium text-amber-600 dark:text-amber-400 flex items-center mt-2 p-2 bg-amber-50 dark:bg-amber-950/30 rounded border border-amber-200 dark:border-amber-800">
-                  <span>
-                    Note: An open tab exists for this table. This order will be
-                    added to it.
-                  </span>
-                </div>
-              )}
-
-              {/* Message about occupied tab */}
-              {isTabOccupied && (
-                <div className="text-sm font-medium text-destructive flex items-center mt-2 p-2 bg-destructive/10 rounded border border-destructive/20">
-                  <span>
-                    Table {tableNumber} is currently occupied. Please select
-                    another table.
-                  </span>
-                </div>
-              )}
 
               <FormMessage />
             </FormItem>

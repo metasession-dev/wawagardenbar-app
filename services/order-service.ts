@@ -31,7 +31,7 @@ export class OrderService {
    * a date that already had orders created under the old count-based
    * scheme before this counter document existed for it).
    */
-  private static async generateOrderNumber(): Promise<string> {
+  static async generateOrderNumber(): Promise<string> {
     const date = new Date();
     const year = date.getFullYear().toString().slice(-2);
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -180,6 +180,13 @@ export class OrderService {
     deliveryFee: number;
     discount: number;
     total: number;
+    /** REQ-120 — defaults to 'staff'; the customer order service sets 'customer'. */
+    origin?: import('@/interfaces').OrderOrigin;
+    channel?: import('@/interfaces').OrderChannel;
+    idempotencyKey?: string;
+    serviceFee?: number;
+    tipAmount?: number;
+    tipPaymentMethod?: IOrder['tipPaymentMethod'];
     deliveryDetails?: IOrder['deliveryDetails'];
     pickupDetails?: IOrder['pickupDetails'];
     dineInDetails?: IOrder['dineInDetails'];
@@ -228,6 +235,7 @@ export class OrderService {
         ? new Types.ObjectId(orderData.createdBy)
         : undefined,
       createdByRole: orderData.createdByRole || 'customer',
+      origin: orderData.origin || 'staff',
       orderNumber,
       estimatedWaitTime,
       status: 'pending',

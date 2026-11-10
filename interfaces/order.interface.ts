@@ -7,6 +7,16 @@ import type { PaymentMethod } from './payment-method.interface';
 
 export type OrderType = 'dine-in' | 'pickup' | 'delivery' | 'pay-now';
 
+/** REQ-120 — who created the order: a customer (Process A) or staff (Process B). */
+export type OrderOrigin = 'customer' | 'staff';
+
+/** REQ-120 — entry point that created the order. */
+export type OrderChannel =
+  | 'web'
+  | 'whatsapp_link'
+  | 'public_api'
+  | 'staff_dashboard';
+
 export type PortionSize = 'full' | 'half' | 'quarter';
 
 export type OrderStatus =
@@ -117,6 +127,10 @@ export interface IOrder {
   userId?: Types.ObjectId;
   createdBy?: Types.ObjectId;
   createdByRole?: import('./user.interface').UserRole;
+  /** REQ-120 */
+  origin?: OrderOrigin;
+  /** REQ-120 */
+  channel?: OrderChannel;
   guestEmail?: string;
   guestName?: string;
   guestPhone?: string;

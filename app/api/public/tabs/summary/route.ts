@@ -1,7 +1,13 @@
 import { NextRequest } from 'next/server';
 import { eachDayOfInterval, format, startOfDay, endOfDay } from 'date-fns';
 import TabModel from '@/models/tab-model';
-import { withApiAuth, apiSuccess, apiError, serialize } from '@/lib/api-response';
+import {
+  withApiAuth,
+  apiSuccess,
+  apiError,
+  serialize,
+  rejectNonStaffTabAccess,
+} from '@/lib/api-response';
 import { parsePeriodParams } from '@/lib/date-periods';
 
 /**
@@ -26,7 +32,9 @@ import { parsePeriodParams } from '@/lib/date-periods';
  * @returns {Object[]} response.data.dailySeries - [{ date, tabsOpened, tabsClosed, revenue }]
  */
 export async function GET(request: NextRequest): Promise<Response> {
-  return withApiAuth(request, ['tabs:read'], async () => {
+  return withApiAuth(request, ['tabs:read'], async (auth) => {
+    const denied = rejectNonStaffTabAccess(auth, 'read');
+    if (denied) return denied;
     try {
       const { searchParams } = request.nextUrl;
       const dateRange = parsePeriodParams(searchParams);
@@ -55,7 +63,10 @@ export async function GET(request: NextRequest): Promise<Response> {
       }
 
       // ── Table usage ──
-      const tableMap = new Map<string, { tabCount: number; totalRevenue: number }>();
+      const tableMap = new Map<
+        string,
+        { tabCount: number; totalRevenue: number }
+      >();
       for (const tab of allTabs) {
         const tn = tab.tableNumber;
         const existing = tableMap.get(tn) || { tabCount: 0, totalRevenue: 0 };
@@ -94,23 +105,35 @@ export async function GET(request: NextRequest): Promise<Response> {
         };
       });
 
-      return apiSuccess(serialize({
-        period: { label, startDate: startDate.toISOString(), endDate: endDate.toISOString() },
-        totals: {
-          totalTabs: allTabs.length,
-          totalRevenue,
-          averageTabValue: paidTabs.length > 0 ? Math.round(totalRevenue / paidTabs.length) : 0,
-          openTabs,
-          closedTabs,
-          paidTabs: paidTabs.length,
-        },
-        byStatus,
-        byPayment,
-        tableUsage,
-        dailySeries,
-      }));
+      return apiSuccess(
+        serialize({
+          period: {
+            label,
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+          },
+          totals: {
+            totalTabs: allTabs.length,
+            totalRevenue,
+            averageTabValue:
+              paidTabs.length > 0
+                ? Math.round(totalRevenue / paidTabs.length)
+                : 0,
+            openTabs,
+            closedTabs,
+            paidTabs: paidTabs.length,
+          },
+          byStatus,
+          byPayment,
+          tableUsage,
+          dailySeries,
+        })
+      );
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Failed to generate tab summary';
+      const msg =
+        error instanceof Error
+          ? error.message
+          : 'Failed to generate tab summary';
       console.error('[PUBLIC API] GET /api/public/tabs/summary', error);
       return apiError(msg, 500);
     }

@@ -28,7 +28,6 @@ export const API_KEY_ROLE_SCOPES: Record<ApiKeyRole, ApiKeyScope[]> = {
     'payments:read',
     'payments:write',
     'rewards:read',
-    'tabs:read',
   ],
   csr: [
     'menu:read',

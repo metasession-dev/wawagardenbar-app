@@ -41,6 +41,10 @@ const apiKeySchema = new Schema<IApiKey>(
       type: String,
       enum: ['customer', 'csr', 'admin', 'super-admin'],
     },
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
     scopes: {
       type: [String],
       enum: API_KEY_SCOPES,

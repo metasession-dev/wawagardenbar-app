@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateRequest } from '@/lib/api-key-validator';
+import { authenticateRequest, type AuthResult } from '@/lib/api-key-validator';
 import { ApiKeyScope } from '@/interfaces/api-key.interface';
 import { connectDB } from '@/lib/mongodb';
+import { isAdmin, isCustomerSession } from '@/lib/roles';
 
 /**
  * Standard API envelope for all public API responses.
@@ -10,6 +11,8 @@ interface ApiEnvelope<T> {
   success: boolean;
   data?: T;
   error?: string;
+  /** Machine-readable error code (REQ-120 customer order errors). */
+  code?: string;
   meta?: {
     page?: number;
     limit?: number;
@@ -34,11 +37,17 @@ const DEFAULT_PAGE_SIZE = 25;
 /**
  * Parse pagination query params with sane defaults and caps.
  */
-export function parsePagination(searchParams: URLSearchParams): PaginationParams {
+export function parsePagination(
+  searchParams: URLSearchParams
+): PaginationParams {
   const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1);
   const limit = Math.min(
     MAX_PAGE_SIZE,
-    Math.max(1, parseInt(searchParams.get('limit') || String(DEFAULT_PAGE_SIZE), 10) || DEFAULT_PAGE_SIZE)
+    Math.max(
+      1,
+      parseInt(searchParams.get('limit') || String(DEFAULT_PAGE_SIZE), 10) ||
+        DEFAULT_PAGE_SIZE
+    )
   );
   return { page, limit, skip: (page - 1) * limit };
 }
@@ -64,9 +73,18 @@ export function apiSuccess<T>(
 /**
  * Build an error JSON response with the standard envelope.
  */
-export function apiError(message: string, status = 400): NextResponse<ApiEnvelope<null>> {
+export function apiError(
+  message: string,
+  status = 400,
+  code?: string
+): NextResponse<ApiEnvelope<null>> {
   return NextResponse.json(
-    { success: false, error: message, meta: { timestamp: new Date().toISOString() } },
+    {
+      success: false,
+      error: message,
+      ...(code ? { code } : {}),
+      meta: { timestamp: new Date().toISOString() },
+    },
     { status }
   );
 }
@@ -78,24 +96,28 @@ export function apiError(message: string, status = 400): NextResponse<ApiEnvelop
 export async function withApiAuth(
   request: NextRequest,
   requiredScopes: ApiKeyScope[],
-  handler: () => Promise<NextResponse>
+  handler: (auth: AuthResult) => Promise<NextResponse>
 ): Promise<NextResponse> {
   const auth = await authenticateRequest(request, requiredScopes);
   if (!auth.authenticated) {
     const missingScope = auth.source === 'api-key';
     return apiError(
-      missingScope ? 'Forbidden — insufficient API key scope' : 'Unauthorized — provide a valid API key',
+      missingScope
+        ? 'Forbidden — insufficient API key scope'
+        : 'Unauthorized — provide a valid API key',
       missingScope ? 403 : 401
     );
   }
   await connectDB();
-  return handler();
+  return handler(auth);
 }
 
 /**
  * Parse a JSON body safely, returning null on failure.
  */
-export async function parseJsonBody<T>(request: NextRequest): Promise<T | null> {
+export async function parseJsonBody<T>(
+  request: NextRequest
+): Promise<T | null> {
   try {
     return (await request.json()) as T;
   } catch {
@@ -117,4 +139,23 @@ export function parseDateParam(value: string | null): Date | undefined {
  */
 export function serialize<T>(doc: T): T {
   return JSON.parse(JSON.stringify(doc));
+}
+
+/**
+ * REQ-120 — tabs are staff-only. Returns an error response when the caller is
+ * not a staff key or staff session (writes), or is a customer key or session
+ * (reads); returns null when the call may proceed.
+ */
+export function rejectNonStaffTabAccess(
+  auth: AuthResult,
+  mode: 'read' | 'write'
+): NextResponse<ApiEnvelope<null>> | null {
+  const isStaffCaller = isAdmin({ role: auth.role });
+  if (mode === 'write' && !isStaffCaller) {
+    return apiError('Forbidden — tab writes need a staff-scoped key', 403);
+  }
+  if (mode === 'read' && isCustomerSession({ role: auth.role })) {
+    return apiError('Forbidden — tabs are managed by staff', 403);
+  }
+  return null;
 }

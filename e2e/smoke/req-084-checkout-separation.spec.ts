@@ -18,7 +18,7 @@
  *
  * NOTE on the express create-order flow:
  *   The page has TWO steps. It loads on the `menu` step (category cascade +
- *   item grid). The "Order Type" selector (Dine-in/Pickup/Delivery/Pay Now)
+ *   item grid). The "Order Type" selector (Dine-in/Pickup/Delivery/Pay Now — staff Express only)
  *   only renders on the `checkout` step, which is reached by (1) adding an
  *   item to the cart and (2) clicking the "Checkout (N)" button. Earlier
  *   versions of this spec waited for "Order Type" while still on the menu
@@ -30,6 +30,7 @@ import { superAdminTest, isAuthenticated } from '../kitchen/helpers';
 import { tagTest } from '../helpers/test-tags';
 import { evidenceShot } from '../helpers/evidence';
 import { MongoClient, ObjectId } from 'mongodb';
+import { pollForDoc, deleteOrderById } from '../helpers/db-assertions';
 import {
   seedVerifiedCustomer,
   attachCustomerSessionToContext,
@@ -107,7 +108,7 @@ async function cleanupTab(tabId: string) {
  * Seed a real menu item in the database so the order API accepts it.
  * Returns the ObjectId string to use in the cart.
  */
-async function seedMenuItem(): Promise<string> {
+async function seedMenuItem(price = 500): Promise<string> {
   const { uri, dbName } = mongoConn();
   const client = new MongoClient(uri);
   try {
@@ -119,7 +120,7 @@ async function seedMenuItem(): Promise<string> {
       kind: 'menu-item',
       name: 'E2E Test Item',
       description: 'Test item for E2E',
-      price: 500,
+      price,
       mainCategory: 'food',
       category: 'food',
       subcategory: 'starters',
@@ -305,8 +306,10 @@ test.describe('REQ-084 — Customer checkout (sign-in required, REQ-117)', () =>
   }) => {
     tagTest('REQ-084', 2);
 
-    const menuItemId = await seedMenuItem();
+    // REQ-120: the server now enforces the minimum order, so the item must clear it.
+    const menuItemId = await seedMenuItem(5000);
     const customer = await seedVerifiedCustomer();
+    let createdOrderId: string | undefined;
     await attachCustomerSessionToContext(page.context(), customer, BASE_URL);
     try {
       await injectCart(page, menuItemId);
@@ -351,25 +354,37 @@ test.describe('REQ-084 — Customer checkout (sign-in required, REQ-117)', () =>
       // Step 2 — Order details (dine-in default).
       const tableNumber = `E2E-${Date.now()}`;
       await page.locator('input[name="tableNumber"]').fill(tableNumber);
-      // Wait for the debounced tab-occupancy check to complete.
-      await page.waitForTimeout(2500);
       await page.waitForTimeout(500);
       await page.locator('button', { hasText: 'Next' }).click();
-      await expect(
-        page.getByRole('heading', { name: 'Payment Options' })
-      ).toBeVisible({ timeout: 10000 });
 
-      // Step 3 — Tab options: open a new tab, then submit.
-      await page.locator('label[for="new-tab"]').click();
+      // Step 3 — Tip (REQ-120: there is no tab step; customers always pay).
+      // The form ignores a second Next within 300ms of the first.
       await page.waitForTimeout(500);
-      await page.getByRole('button', { name: /Add to Tab/i }).click();
-
-      // Order created for the signed-in customer; success dialog appears.
-      await expect(page.getByText(/Order Added to Tab/i).first()).toBeVisible({
-        timeout: 15000,
+      await expect(page.getByText('Tip', { exact: true }).first()).toBeVisible({
+        timeout: 10000,
       });
+      await page.locator('button', { hasText: 'Next' }).click();
+
+      // Step 4 — Payment method, then submit.
+      await expect(page.getByText('Select Payment Method')).toBeVisible({
+        timeout: 10000,
+      });
+      await page.getByText('Card Payment').click();
+      await page.getByRole('button', { name: /Proceed to Payment/i }).click();
+
+      // The order is created for the signed-in customer before the gateway
+      // redirect (payment initialisation itself is out of scope here).
+      const order = await pollForDoc<{ _id: ObjectId; origin: string }>(
+        'orders',
+        { userId: new ObjectId(customer._id) },
+        { timeoutMs: 15000 }
+      );
+      expect(order).not.toBeNull();
+      expect(order?.origin).toBe('customer');
+      createdOrderId = String(order?._id);
       await evidenceShot(page, 'REQ-084', 2, 'customer-checkout-submitted');
     } finally {
+      if (createdOrderId) await deleteOrderById(createdOrderId);
       await cleanupMenuItem(menuItemId);
       await cleanupSeededCustomer(customer);
     }

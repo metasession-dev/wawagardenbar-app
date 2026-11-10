@@ -19,7 +19,6 @@ import { useToast } from '@/hooks/use-toast';
 import { CustomerInfoStep } from './customer-info-step';
 import { OrderDetailsStep } from './order-details-step';
 import { PaymentMethodStep } from './payment-method-step';
-import { TabOptionsStep } from './tab-options-step';
 import { TipInputStep } from './tip-input-step';
 import { OrderSummary } from './order-summary';
 import { OrderStatusDialog } from './order-status-dialog';
@@ -27,13 +26,7 @@ import {
   createOrder,
   initializePayment,
 } from '@/app/actions/payment/payment-actions';
-import {
-  createTabAction,
-  getOpenTabForTableAction,
-} from '@/app/actions/tabs/tab-actions';
-import { checkUserTabRestrictionsAction } from '@/app/actions/tabs/tab-restriction-actions';
 import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
-import { ITab } from '@/interfaces';
 import { useAuth } from '@/hooks/use-auth';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -44,7 +37,7 @@ const checkoutSchema = z
     customerPhone: z
       .string()
       .min(10, 'Phone number must be at least 10 digits'),
-    orderType: z.enum(['dine-in', 'pickup', 'delivery', 'pay-now']),
+    orderType: z.enum(['dine-in', 'pickup', 'delivery']),
     tableNumber: z.string().optional(),
     pickupTime: z.string().optional(),
     deliveryStreet: z.string().optional(),
@@ -56,7 +49,6 @@ const checkoutSchema = z
     deliveryLandmark: z.string().optional(),
     deliveryInstructions: z.string().optional(),
     specialInstructions: z.string().optional(),
-    useTab: z.enum(['pay-now', 'new-tab', 'existing-tab']).optional(),
     tipAmount: z.number().min(0).optional(),
     tipPaymentMethod: z.enum(['cash', 'transfer', 'card']).optional(),
     paymentMethod: z
@@ -137,12 +129,12 @@ const checkoutSchema = z
 
 type CheckoutFormData = z.infer<typeof checkoutSchema>;
 
-const baseSteps = [
+// REQ-120 — customers always pay at checkout; there is no tab step.
+const steps = [
   { id: 1, name: 'Customer Info', description: 'Your contact details' },
   { id: 2, name: 'Order Details', description: 'Delivery or pickup info' },
-  { id: 3, name: 'Payment Options', description: 'Tab or pay now' },
-  { id: 4, name: 'Tip', description: 'Add a tip (optional)' },
-  { id: 5, name: 'Payment', description: 'Choose payment method' },
+  { id: 3, name: 'Tip', description: 'Add a tip (optional)' },
+  { id: 4, name: 'Payment', description: 'Choose payment method' },
 ];
 
 export function CustomerCheckoutForm() {
@@ -159,10 +151,6 @@ export function CustomerCheckoutForm() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
-  const [existingTab, setExistingTab] = useState<ITab | null>(null);
-  const [isTableLocked, setIsTableLocked] = useState(false);
-  const [isTabOccupied, setIsTabOccupied] = useState(false);
-  const [steps, setSteps] = useState(baseSteps);
   const [isPreFilled, setIsPreFilled] = useState(false);
   const [idempotencyKey, setIdempotencyKey] = useState<string>('');
   const [isNavigating, setIsNavigating] = useState(false);
@@ -193,16 +181,11 @@ export function CustomerCheckoutForm() {
       deliveryLandmark: '',
       deliveryInstructions: '',
       specialInstructions: '',
-      useTab: 'pay-now',
       tipAmount: 0,
       savePhone: true,
       saveAddress: true,
     },
   });
-
-  const orderType = form.watch('orderType');
-  const useTab = form.watch('useTab');
-  const tableNumber = form.watch('tableNumber');
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -220,72 +203,8 @@ export function CustomerCheckoutForm() {
     if (storeTableNumber) {
       form.setValue('orderType', 'dine-in');
       form.setValue('tableNumber', storeTableNumber);
-      setIsTableLocked(false);
     }
   }, [storeTableNumber, form]);
-
-  useEffect(() => {
-    async function fetchExistingTab() {
-      if (orderType === 'dine-in') {
-        const restrictions = await checkUserTabRestrictionsAction();
-        if (restrictions.isRestricted && restrictions.existingTab) {
-          setExistingTab(restrictions.existingTab);
-          form.setValue('tableNumber', restrictions.existingTab.tableNumber);
-          form.setValue('useTab', 'existing-tab');
-          setIsTableLocked(true);
-        } else {
-          setIsTableLocked(false);
-          setExistingTab(null);
-        }
-      }
-    }
-    fetchExistingTab();
-  }, [orderType, storeTableNumber, form]);
-
-  useEffect(() => {
-    if (isTableLocked || !tableNumber) return;
-    setIsTabOccupied(false);
-    const timer = setTimeout(async () => {
-      if (tableNumber.length < 1) return;
-      try {
-        const result = await getOpenTabForTableAction(tableNumber);
-        if (result.success && result.data?.tab) {
-          const tab = result.data.tab;
-          const isMyTab = tab.userId
-            ? user?.id && tab.userId.toString() === user.id
-            : true;
-          if (isMyTab) {
-            setExistingTab(tab);
-            form.setValue('useTab', 'existing-tab');
-            setIsTabOccupied(false);
-          } else {
-            setExistingTab(null);
-            form.setValue('useTab', 'new-tab');
-            setIsTabOccupied(true);
-          }
-        } else {
-          setExistingTab(null);
-          form.setValue('useTab', 'new-tab');
-          setIsTabOccupied(false);
-        }
-      } catch (error) {
-        console.error('Error checking table:', error);
-      }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [tableNumber, isTableLocked, form, user]);
-
-  useEffect(() => {
-    if (orderType === 'dine-in') {
-      if (useTab === 'new-tab' || useTab === 'existing-tab') {
-        setSteps([baseSteps[0], baseSteps[1], baseSteps[2]]);
-      } else {
-        setSteps(baseSteps);
-      }
-    } else {
-      setSteps([baseSteps[0], baseSteps[1], baseSteps[3], baseSteps[4]]);
-    }
-  }, [orderType, useTab]);
 
   useEffect(() => {
     if (orderStatus?.status === 'success') return;
@@ -313,33 +232,6 @@ export function CustomerCheckoutForm() {
     setHasSubmitted(true);
 
     try {
-      let tabId: string | undefined;
-      if (data.orderType === 'dine-in' && data.useTab !== 'pay-now') {
-        if (data.useTab === 'new-tab') {
-          const tabResult = await createTabAction({
-            tableNumber: data.tableNumber || '',
-            customerName: data.customerName,
-            customerEmail: data.customerEmail,
-            customerPhone: data.customerPhone,
-          });
-          if (!tabResult.success || !tabResult.data) {
-            setOrderStatus({
-              status: 'error',
-              title: 'Tab Creation Failed',
-              message:
-                tabResult.error || 'Failed to create tab. Please try again.',
-            });
-            setShowStatusDialog(true);
-            setIsSubmitting(false);
-            setHasSubmitted(false);
-            return;
-          }
-          tabId = tabResult.data.tab._id.toString();
-        } else if (data.useTab === 'existing-tab' && existingTab) {
-          tabId = existingTab._id.toString();
-        }
-      }
-
       const orderResult = await createOrder({
         orderType: data.orderType,
         items,
@@ -364,7 +256,6 @@ export function CustomerCheckoutForm() {
         pickupTime: data.pickupTime,
         tableNumber: data.tableNumber,
         specialInstructions: data.specialInstructions,
-        tabId,
         tipAmount: data.tipAmount || 0,
         tipPaymentMethod: data.tipPaymentMethod,
         savePhone: data.savePhone,
@@ -386,21 +277,6 @@ export function CustomerCheckoutForm() {
       }
 
       const { orderId } = orderResult.data;
-
-      if (tabId) {
-        setOrderStatus({
-          status: 'success',
-          title: 'Order Added to Tab!',
-          message:
-            'Your order has been successfully added to your tab. You can add more orders or pay when ready.',
-          redirectUrl: `/orders/tabs/${tabId}`,
-          redirectLabel: 'View Tab',
-        });
-        setShowStatusDialog(true);
-        setIsSubmitting(false);
-        setHasSubmitted(false);
-        return;
-      }
 
       if (!data.paymentMethod) {
         setOrderStatus({
@@ -485,22 +361,11 @@ export function CustomerCheckoutForm() {
         fieldsToValidate.push('pickupTime');
       } else if (currentOrderType === 'dine-in') {
         fieldsToValidate.push('tableNumber');
-        if (isTabOccupied) {
-          setIsNavigating(false);
-          return;
-        }
       }
-    } else if (currentStep === 3 && orderType === 'dine-in') {
-      fieldsToValidate = ['useTab'];
-    } else if (currentStep === 4) {
+    } else if (currentStep === 3) {
       fieldsToValidate = [];
-    } else if (
-      currentStep === 5 ||
-      (currentStep === 4 && orderType !== 'dine-in')
-    ) {
-      if (useTab === 'pay-now' || orderType !== 'dine-in') {
-        fieldsToValidate = ['paymentMethod'];
-      }
+    } else if (currentStep === 4) {
+      fieldsToValidate = ['paymentMethod'];
     }
 
     const isValid =
@@ -592,33 +457,11 @@ export function CustomerCheckoutForm() {
                       <CustomerInfoStep form={form} isPreFilled={isPreFilled} />
                     )
                   )}
-                  {currentStep === 2 && (
-                    <OrderDetailsStep
-                      form={form}
-                      isTableLocked={isTableLocked}
-                      existingTab={existingTab}
-                      isTabOccupied={isTabOccupied}
-                    />
-                  )}
-                  {currentStep === 3 && orderType === 'dine-in' && (
-                    <TabOptionsStep
-                      form={form}
-                      existingTab={existingTab}
-                      tableNumber={tableNumber || ''}
-                    />
-                  )}
-                  {currentStep === 4 && orderType === 'dine-in' && (
+                  {currentStep === 2 && <OrderDetailsStep form={form} />}
+                  {currentStep === 3 && (
                     <TipInputStep form={form} subtotal={getTotalPrice()} />
                   )}
-                  {currentStep === 5 &&
-                    orderType === 'dine-in' &&
-                    useTab === 'pay-now' && <PaymentMethodStep form={form} />}
-                  {currentStep === 3 && orderType !== 'dine-in' && (
-                    <TipInputStep form={form} subtotal={getTotalPrice()} />
-                  )}
-                  {currentStep === 4 && orderType !== 'dine-in' && (
-                    <PaymentMethodStep form={form} />
-                  )}
+                  {currentStep === 4 && <PaymentMethodStep form={form} />}
 
                   {/* Navigation Buttons */}
                   <div className="flex justify-between pt-4">
@@ -633,11 +476,7 @@ export function CustomerCheckoutForm() {
                     </Button>
 
                     {currentStep < steps.length ? (
-                      <Button
-                        type="button"
-                        onClick={handleNext}
-                        disabled={isTabOccupied}
-                      >
+                      <Button type="button" onClick={handleNext}>
                         Next
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
@@ -646,11 +485,7 @@ export function CustomerCheckoutForm() {
                         {isSubmitting && (
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         )}
-                        {isSubmitting
-                          ? 'Processing...'
-                          : orderType === 'dine-in' && useTab !== 'pay-now'
-                            ? 'Add to Tab'
-                            : 'Proceed to Payment'}
+                        {isSubmitting ? 'Processing...' : 'Proceed to Payment'}
                       </Button>
                     )}
                   </div>

@@ -6,8 +6,13 @@ import {
   sessionOptions,
   SessionData,
   hasAnyRole,
-  getPrimaryRole,
+  isCustomerSession,
+  isStaff,
 } from '@/lib/session';
+import {
+  createCustomerOrder,
+  type CustomerOrderErrorCode,
+} from '@/services/customer-order-service';
 import { connectDB } from '@/lib/mongodb';
 import Order from '@/models/order-model';
 import TabModel from '@/models/tab-model';
@@ -23,7 +28,7 @@ import { emitNewOrder } from '@/lib/socket-server';
 import { revalidatePath } from 'next/cache';
 
 export interface CreateOrderInput {
-  orderType: 'dine-in' | 'pickup' | 'delivery' | 'pay-now';
+  orderType: 'dine-in' | 'pickup' | 'delivery';
   items: CartItem[];
   customerInfo: {
     name: string;
@@ -43,13 +48,8 @@ export interface CreateOrderInput {
   pickupTime?: string;
   tableNumber?: string;
   specialInstructions?: string;
-  tabId?: string;
   tipAmount?: number;
   // REQ-036 — independent tip payment method, persisted on Order.tipPaymentMethod.
-  // For gateway-driven customer payments this defaults to whatever the
-  // gateway returns, but the customer-checkout TipInputStep lets the
-  // user (or the staff using customer-checkout in admin mode) pick
-  // independently.
   tipPaymentMethod?: 'cash' | 'transfer' | 'card';
   savePhone?: boolean;
   saveAddress?: boolean;
@@ -65,171 +65,81 @@ export interface InitializePaymentInput {
 }
 
 /**
- * Create order and prepare for payment
+ * Create order and prepare for payment.
+ *
+ * REQ-120 — a thin wrapper over `createCustomerOrder` (channel `web`). All
+ * validation, pricing and idempotency live in the service; this only reads
+ * the customer session, maps the cart, and keeps the kitchen/profile side
+ * effects the checkout already had. Staff and guest sessions are refused.
  */
 export async function createOrder(input: CreateOrderInput): Promise<{
   success: boolean;
   message?: string;
+  code?: CustomerOrderErrorCode;
   data?: { orderId: string };
 }> {
-  console.log('🚀 createOrder called at:', new Date().toISOString(), {
-    orderType: input.orderType,
-    items: input.items.map((i) => `${i.quantity}x ${i.name}`),
-    customerEmail: input.customerInfo.email,
-    tabId: input.tabId,
-    idempotencyKey: input.idempotencyKey,
-  });
-
   try {
-    await connectDB();
-
-    // Check for existing order with same idempotency key
-    const existingOrder = await Order.findOne({
-      idempotencyKey: input.idempotencyKey,
-    });
-    if (existingOrder) {
-      console.log(
-        '🔄 Returning existing order for idempotency key:',
-        input.idempotencyKey
-      );
-      return {
-        success: true,
-        data: { orderId: existingOrder._id.toString() },
-      };
-    }
-
-    // Check if user is logged in
     const cookieStore = await cookies();
     const session = await getIronSession<SessionData>(
       cookieStore,
       sessionOptions
     );
     const userId = session.userId;
+    if (!session.isLoggedIn || !userId || !isCustomerSession(session)) {
+      return {
+        success: false,
+        code: 'NOT_ALLOWED',
+        message: 'Please sign in with your phone number to place an order.',
+      };
+    }
 
-    // REQ-031: surcharge-aware subtotal via the shared helper. Legacy items
-    // with no customizations sum to base × qty exactly as before (AC8).
-    const { computeCartTotal } = await import('@/lib/cart-store-helpers');
-    const subtotal = computeCartTotal(input.items);
-
-    const { SettingsService } = await import('@/services');
-    const totals = await SettingsService.calculateOrderTotals(
-      subtotal,
-      input.orderType
+    const result = await createCustomerOrder(
+      {
+        orderType: input.orderType,
+        idempotencyKey: input.idempotencyKey,
+        items: input.items.map((item) => ({
+          menuItemId: item.id,
+          quantity: item.quantity,
+          portionMultiplier: item.portionMultiplier,
+          specialInstructions: item.specialInstructions,
+          customizations: (item.customizations ?? []).map((c) => ({
+            name: c.name,
+            option: c.option,
+          })),
+        })),
+        tableNumber: input.tableNumber,
+        pickupTime: input.pickupTime,
+        deliveryAddress: input.deliveryInfo
+          ? {
+              street: input.deliveryInfo.street,
+              street2: input.deliveryInfo.street2,
+              city: input.deliveryInfo.city,
+              state: input.deliveryInfo.state,
+              postalCode: input.deliveryInfo.postalCode,
+              country: input.deliveryInfo.country,
+            }
+          : undefined,
+        deliveryInstructions: input.deliveryInfo?.instructions,
+        specialInstructions: input.specialInstructions,
+        tipAmount: input.tipAmount,
+        tipPaymentMethod: input.tipPaymentMethod,
+      },
+      { userId, channel: 'web' }
     );
 
-    const { serviceFee, deliveryFee, tax, total } = totals;
-
-    // Generate order number with timestamp
-    const timestamp = Date.now();
-    const orderNumber = `WGB${timestamp.toString().slice(-8)}`;
-
-    // Calculate estimated wait time (in minutes)
-    let estimatedWaitTime = 30; // Default 30 minutes
-    if (input.orderType === 'delivery') {
-      estimatedWaitTime = 45;
-    } else if (input.orderType === 'pickup') {
-      estimatedWaitTime = 20;
+    if (!result.success) {
+      return { success: false, code: result.code, message: result.message };
     }
-
-    // Prepare order data
-    const orderData: any = {
-      orderNumber,
-      orderType: input.orderType,
-      items: input.items.map((item) => {
-        // REQ-031: surcharge × portionMultiplier added to the per-line subtotal.
-        const multiplier = item.portionMultiplier || 1.0;
-        const surcharge = (item.customizations ?? []).reduce(
-          (s, c) => s + (typeof c.price === 'number' ? c.price : 0),
-          0
-        );
-        const itemSubtotal = Math.round(
-          (item.price + surcharge * multiplier) * item.quantity
-        );
-        return {
-          menuItemId: item.id,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          portionSize: item.portionSize || 'full',
-          portionMultiplier: multiplier,
-          specialInstructions: item.specialInstructions,
-          // REQ-031: persist selected customizations on the order line so
-          // REQ-030's deductStockForOrder can find the (group, option) pairs
-          // and run the linked-inventory deduction at fulfilment.
-          customizations: item.customizations ?? [],
-          subtotal: itemSubtotal,
-        };
-      }),
-      // If user is logged in, use userId; otherwise use guest info
-      ...(userId
-        ? { userId }
-        : {
-            guestName: input.customerInfo.name,
-            guestEmail: input.customerInfo.email,
-            guestPhone: input.customerInfo.phone,
-          }),
-      // Track who created the order
-      createdBy: userId,
-      createdByRole: getPrimaryRole(session) || 'customer',
-      subtotal,
-      serviceFee,
-      tax,
-      deliveryFee,
-      tipAmount: input.tipAmount || 0,
-      // REQ-036 — persist explicit tipPaymentMethod when provided, so
-      // the daily-report tipsBreakdown attributes the tip correctly.
-      ...(input.tipPaymentMethod
-        ? { tipPaymentMethod: input.tipPaymentMethod }
-        : {}),
-      total: total + (input.tipAmount || 0),
-      estimatedWaitTime,
-      specialInstructions: input.specialInstructions,
-      status: 'pending',
-      paymentStatus: 'pending',
-      idempotencyKey: input.idempotencyKey,
-      ...(input.tabId ? { tabId: input.tabId } : {}),
-    };
-
-    // Add order-type-specific details
-    if (input.orderType === 'delivery' && input.deliveryInfo) {
-      orderData.deliveryDetails = {
-        address: {
-          street: input.deliveryInfo.street,
-          street2: input.deliveryInfo.street2,
-          city: input.deliveryInfo.city,
-          state: input.deliveryInfo.state,
-          postalCode: input.deliveryInfo.postalCode,
-          country: input.deliveryInfo.country,
-        },
-        deliveryInstructions: input.deliveryInfo.instructions,
-      };
-    } else if (input.orderType === 'pickup' && input.pickupTime) {
-      orderData.pickupDetails = {
-        preferredPickupTime: new Date(input.pickupTime),
-      };
-    } else if (input.orderType === 'dine-in' && input.tableNumber) {
-      orderData.dineInDetails = {
-        tableNumber: input.tableNumber,
-        qrCodeScanned: false,
-      };
+    const order = result.order;
+    const orderId = order._id.toString();
+    if (result.reused) {
+      return { success: true, data: { orderId } };
     }
-
-    // Create order
-    const order = await Order.create(orderData);
-
-    console.log('✅ Order created successfully:', {
-      orderNumber: order.orderNumber,
-      orderId: order._id.toString(),
-      items: order.items.map(
-        (i) => `${i.quantity}x ${i.name} (${i.portionSize})`
-      ),
-      total: order.total,
-    });
 
     // Emit new order to kitchen via WebSocket
     try {
       emitNewOrder({
-        orderId: order._id.toString(),
+        orderId,
         orderNumber: order.orderNumber,
         orderType: order.orderType,
         itemCount: order.items.length,
@@ -249,32 +159,23 @@ export async function createOrder(input: CreateOrderInput): Promise<{
           phone: input.customerInfo.phone,
         },
         status: order.status,
-        createdAt: order.createdAt.toISOString(),
+        createdAt: new Date(order.createdAt).toISOString(),
       });
     } catch (socketError) {
       console.error('Error emitting new order socket event:', socketError);
-      // Don't fail the order creation if socket emission fails
     }
 
     // Revalidate kitchen display (full-screen order grid for kitchen staff).
     revalidatePath('/dashboard/kitchen-display');
 
-    // If tabId provided, add order to tab
-    if (input.tabId) {
-      await TabService.addOrderToTab(input.tabId, order._id.toString());
-    }
-
-    // Update user profile if logged in and save flags are set
-    if (userId && (input.savePhone || input.saveAddress)) {
+    // Update user profile if the customer asked to save details
+    if (input.savePhone || input.saveAddress) {
       try {
         const nameParts = input.customerInfo.name.split(' ');
-        const firstName = nameParts[0];
-        const lastName = nameParts.slice(1).join(' ');
-
         await UserService.updateProfileFromCheckout({
           userId,
-          firstName,
-          lastName,
+          firstName: nameParts[0],
+          lastName: nameParts.slice(1).join(' '),
           email: input.customerInfo.email,
           phone: input.customerInfo.phone,
           address: input.deliveryInfo
@@ -295,34 +196,8 @@ export async function createOrder(input: CreateOrderInput): Promise<{
       }
     }
 
-    return {
-      success: true,
-      data: { orderId: order._id.toString() },
-    };
-  } catch (error: any) {
-    // Handle duplicate idempotency key error specifically
-    if (error.code === 11000 && error.keyPattern?.idempotencyKey) {
-      console.log(
-        '⚠️ Duplicate idempotency key detected via DB constraint:',
-        input.idempotencyKey
-      );
-
-      // Try to find the existing order
-      try {
-        const existingOrder = await Order.findOne({
-          idempotencyKey: input.idempotencyKey,
-        });
-        if (existingOrder) {
-          return {
-            success: true,
-            data: { orderId: existingOrder._id.toString() },
-          };
-        }
-      } catch (findError) {
-        console.error('Error finding existing duplicate order:', findError);
-      }
-    }
-
+    return { success: true, data: { orderId } };
+  } catch (error) {
     console.error('Error creating order:', error);
     return {
       success: false,
@@ -566,6 +441,15 @@ export async function initializeTabPayment(params: {
   paymentMethods: PaymentMethod[];
 }): Promise<PaymentInitializationResult> {
   try {
+    // REQ-120 — tabs are staff-only: a customer session cannot pay or settle one.
+    const staffSession = await getIronSession<SessionData>(
+      await cookies(),
+      sessionOptions
+    );
+    if (!staffSession.userId || !isStaff(staffSession)) {
+      return { success: false, message: 'Tabs are managed by staff' };
+    }
+
     await connectDB();
 
     // Prepare tab for checkout
@@ -603,23 +487,7 @@ export async function initializeTabPayment(params: {
       params.tabId
     );
 
-    // Get session to check user role
-    const cookieStore = await cookies();
-    const session = await getIronSession<SessionData>(
-      cookieStore,
-      sessionOptions
-    );
-
-    // Determine redirect URL based on user role
-    const isStaff = hasAnyRole(session, [
-      'csr',
-      'manager',
-      'admin',
-      'super-admin',
-    ]);
-    const redirectUrl = isStaff
-      ? `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/orders/tabs/${params.tabId}?payment=success`
-      : `${process.env.NEXT_PUBLIC_APP_URL}/orders/tabs/${params.tabId}?payment=success`;
+    const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/orders/tabs/${params.tabId}?payment=success`;
 
     // Initialize payment (routes to active provider)
     const response = await PaymentService.initializePayment({

@@ -352,19 +352,20 @@ test.describe('Section 5.4: Order Tracking', () => {
 });
 
 // ===========================================================================
-// Section 5.5: Orders & Tabs Page
+// Section 5.5: Orders Page
 // ===========================================================================
-test.describe('Section 5.5: Orders & Tabs Page', () => {
+test.describe('Section 5.5: Orders Page', () => {
   test('orders page redirects unauthenticated users', async ({ page }) => {
     await page.goto('/orders');
     await page.waitForURL(/\/login/, { timeout: 10000 });
     expect(page.url()).toContain('/login');
   });
 
-  test('orders/tabs page redirects unauthenticated users', async ({ page }) => {
-    await page.goto('/orders/tabs');
-    await page.waitForURL(/\/login/, { timeout: 10000 });
-    expect(page.url()).toContain('/login');
+  test('REQ-120: customer orders/tabs page is gone (tabs are staff-only)', async ({
+    page,
+  }) => {
+    const response = await page.goto('/orders/tabs');
+    expect(response?.status()).toBe(404);
   });
 
   test('orders/history page redirects unauthenticated users', async ({
@@ -1108,10 +1109,9 @@ test.describe('Section 27: Mobile-First Responsive', () => {
 // Section 8: Tab System — Route Protection
 // ===========================================================================
 test.describe('Section 8: Tab System', () => {
-  test('customer tabs page requires authentication', async ({ page }) => {
-    await page.goto('/orders/tabs');
-    await page.waitForURL(/\/login/, { timeout: 10000 });
-    expect(page.url()).toContain('/login');
+  test('REQ-120: customer tabs page no longer exists', async ({ page }) => {
+    const response = await page.goto('/orders/tabs');
+    expect(response?.status()).toBe(404);
   });
 
   test('admin tabs management requires authentication', async ({ page }) => {

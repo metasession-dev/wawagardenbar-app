@@ -1,7 +1,14 @@
 /**
  * @requirement REQ-005 - Public API Tab Support for Orders
  */
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import type { AuthResult } from '@/lib/api-key-validator';
+import { isAdmin, isCustomerSession } from '@/lib/roles';
+import {
+  createCustomerOrder,
+  type CustomerOrderErrorCode,
+  type CustomerOrderType,
+} from '@/services/customer-order-service';
 import Order from '@/models/order-model';
 import MenuItemModel from '@/models/menu-item-model';
 import { OrderService } from '@/services/order-service';
@@ -156,6 +163,74 @@ export async function GET(request: NextRequest): Promise<Response> {
   });
 }
 
+const CUSTOMER_ERROR_STATUS: Record<CustomerOrderErrorCode, number> = {
+  INVALID_INPUT: 400,
+  IDEMPOTENCY_KEY_REQUIRED: 400,
+  NOT_ALLOWED: 403,
+  OUT_OF_HOURS: 422,
+  BELOW_MINIMUM: 422,
+  ITEM_UNAVAILABLE: 422,
+  OUT_OF_RADIUS: 422,
+  ORDER_TYPE_DISABLED: 422,
+  RATE_LIMITED: 429,
+};
+
+/**
+ * REQ-120 — customer path of POST /api/public/orders. The order's user comes
+ * from the key (or the customer session), never from the body.
+ */
+async function createCustomerApiOrder(
+  request: NextRequest,
+  body: CreateOrderBody,
+  auth: AuthResult
+): Promise<NextResponse> {
+  if (!auth.userId) {
+    return apiError(
+      'Forbidden — a customer key must be bound to a customer user',
+      403
+    );
+  }
+  if (body.tabId || body.useTab || body.orderType === 'pay-now') {
+    return apiError('Customers cannot create or use tabs', 403);
+  }
+
+  const result = await createCustomerOrder(
+    {
+      orderType: body.orderType as CustomerOrderType,
+      idempotencyKey:
+        body.idempotencyKey ?? request.headers.get('idempotency-key') ?? '',
+      items: (body.items ?? []).map((item) => ({
+        menuItemId: item.menuItemId,
+        quantity: item.quantity,
+        portionMultiplier: item.portionMultiplier,
+        specialInstructions: item.specialInstructions,
+        customizations: item.customizations?.map((c) => ({
+          name: c.name,
+          option: c.option,
+        })),
+      })),
+      tableNumber: body.dineInDetails?.tableNumber,
+      pickupTime: body.pickupDetails?.preferredPickupTime,
+      deliveryAddress: body.deliveryDetails?.address,
+      deliveryInstructions: body.deliveryDetails?.deliveryInstructions,
+      customerLat: body.customerLat,
+      customerLng: body.customerLng,
+      specialInstructions: body.specialInstructions,
+      tipAmount: body.tipAmount,
+    },
+    { userId: auth.userId, channel: 'public_api' }
+  );
+
+  if (!result.success) {
+    return apiError(
+      result.message,
+      CUSTOMER_ERROR_STATUS[result.code],
+      result.code
+    );
+  }
+  return apiSuccess(serialize(result.order), result.reused ? 200 : 201);
+}
+
 interface CreateOrderBody {
   orderType: OrderType;
   items: Array<{
@@ -194,12 +269,27 @@ interface CreateOrderBody {
   tabId?: string;
   useTab?: 'new' | 'existing';
   customerName?: string;
+  /** Customer path only (REQ-120). */
+  idempotencyKey?: string;
+  customerLat?: number;
+  customerLng?: number;
+  tipAmount?: number;
 }
 
 /**
  * POST /api/public/orders
  *
  * Create a new order. Each item must reference a valid menu item ID.
+ *
+ * REQ-120 — **Customer keys** (role `customer`, bound to a user) and customer
+ * sessions create orders through the single customer order service: the order
+ * is placed for the bound user, prices, fees and totals are computed by the
+ * server (client `subtotal`/`tax`/`total` are ignored), an `idempotencyKey`
+ * (body or `Idempotency-Key` header) is required, and tabs/`pay-now` are
+ * refused (403). Errors carry a `code`: `OUT_OF_HOURS`, `BELOW_MINIMUM`,
+ * `ITEM_UNAVAILABLE`, `OUT_OF_RADIUS`, `ORDER_TYPE_DISABLED` (422),
+ * `RATE_LIMITED` (429). **Staff keys** keep the staff path described below;
+ * keys with no role are refused (403).
  * The service enriches items with cost data, generates an order number,
  * calculates estimated wait time, and optionally deducts inventory.
  *
@@ -304,10 +394,23 @@ interface CreateOrderBody {
  * { "orderType": "dine-in", "tabId": "abc123", "items": [...], ... }
  */
 export async function POST(request: NextRequest): Promise<Response> {
-  return withApiAuth(request, ['orders:write'], async () => {
+  return withApiAuth(request, ['orders:write'], async (auth) => {
     const body = await parseJsonBody<CreateOrderBody>(request);
     if (!body) {
       return apiError('Invalid JSON body', 400);
+    }
+
+    // REQ-120 — customer keys and customer sessions create orders through the
+    // single customer order service; client totals are never read. Staff keys
+    // keep the staff path below. A key with no role is refused for order writes.
+    if (isCustomerSession({ role: auth.role })) {
+      return createCustomerApiOrder(request, body, auth);
+    }
+    if (!isAdmin({ role: auth.role })) {
+      return apiError(
+        'Forbidden — order writes need a customer key bound to a user or a staff key',
+        403
+      );
     }
 
     const { orderType, items, subtotal, tax, deliveryFee, discount, total } =
@@ -451,6 +554,8 @@ export async function POST(request: NextRequest): Promise<Response> {
         dineInDetails: body.dineInDetails as any,
         specialInstructions: body.specialInstructions,
         createdByRole: 'customer',
+        origin: 'staff',
+        channel: 'public_api',
       });
 
       // --- Tab handling (optional) ---

@@ -1252,3 +1252,87 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 **Framework cross-references:** ISO 27001 A.5.15, A.5.18, A.8.2 (privileged access rights); SOC 2 CC6.1, CC6.3; segregation of duties.
 
 **Cross-links:** [REQ-119 implementation plan](plans/REQ-119/implementation-plan.md) §3 (D4); ADR-009; SRS REQ-AUTHA-006.
+
+### R-56 — Order money path rewritten behind one service (REQ-120)
+
+**Status:** OPEN
+**Opened:** 2026-11-10 (REQ-120, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-10
+
+**The risk:** Moving every customer order through `createCustomerOrder` changes how totals, fees and order numbers are produced. A mistake could mis-price orders, reject valid orders (hours, minimum, radius, `maxOrdersPerHour`) or block checkout entirely.
+
+**Mitigations planned in REQ-120:**
+
+1. Reuse the existing reconciliation and `SettingsService.calculateOrderTotals`; no new price logic (AC2).
+2. Unit tests for every validation and typed error, including `maxOrdersPerHour` unset/zero meaning unlimited (decision D3).
+3. Critical e2e specs for out-of-hours, below-minimum, out-of-radius and idempotency, plus a happy-path checkout; operator places a live order on UAT before release.
+
+**Residual likelihood × impact:** low × high
+
+**Framework cross-references:** ISO 27001 A.8.25, A.8.28; SOC 2 CC8.1.
+
+**Cross-links:** [REQ-120 implementation plan](plans/REQ-120/implementation-plan.md); ADR-010; SRS REQ-CHECKOUT-012.
+
+### R-57 — Customer tab removal leaves legacy open tabs (REQ-120)
+
+**Status:** OPEN
+**Opened:** 2026-11-10 (REQ-120, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-10
+
+**The risk:** Customers with an open tab created before release lose the pages that showed and paid it. The tab and its debt remain, and staff must settle it.
+
+**Mitigations planned in REQ-120:**
+
+1. Staff tab flows are untouched, so `/dashboard/orders/tabs` can settle any legacy tab (AC6).
+2. Operator lists open customer-created tabs on production before release and tells those customers (plan D2).
+3. Tab actions reject customers on the server, so no half-working UI remains.
+
+**Residual likelihood × impact:** medium × low
+
+**Framework cross-references:** SOC 2 CC8.1; ISO 27001 A.8.32.
+
+**Cross-links:** [REQ-120 implementation plan](plans/REQ-120/implementation-plan.md); ADR-010; SRS REQ-TABMGT-011.
+
+### R-58 — API-key binding breaks existing integrations or mis-attributes orders (REQ-120)
+
+**Status:** OPEN
+**Opened:** 2026-11-10 (REQ-120, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-10
+
+**The risk:** Customer-role API keys must now be bound to a `userId`, and keys with no role are refused for order writes. An existing integration would start failing, and a wrongly bound key would attribute orders to the wrong customer.
+
+**Mitigations planned in REQ-120:**
+
+1. Order `userId` is taken from the key, never the body; unbound customer keys and role-less keys are refused with a clear error (AC8).
+2. Staff-role keys keep the staff path, so staff integrations are unaffected (decision D1).
+3. Operator identifies integrations using customer keys before release (plan task 3); unit tests for each key shape.
+
+**Residual likelihood × impact:** medium × medium
+
+**Framework cross-references:** ISO 27001 A.5.15, A.8.2; SOC 2 CC6.1.
+
+**Cross-links:** [REQ-120 implementation plan](plans/REQ-120/implementation-plan.md); ADR-010; SRS REQ-API-007.
+
+### R-59 — Order origin migration mislabels orders (REQ-120)
+
+**Status:** OPEN
+**Opened:** 2026-11-10 (REQ-120, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-10
+
+**The risk:** `origin` is derived from `createdByRole` for existing orders. A wrong mapping would mis-attribute customer versus staff orders in reports and later refund or notification rules.
+
+**Mitigations planned in REQ-120:**
+
+1. Idempotent script with dry run, sets `origin` only when missing, never changes other fields (AC5).
+2. `origin` defaults to `staff` in the schema so old writers stay valid and deploy order does not matter.
+3. Counts and a before and after sample recorded as evidence on UAT, then production.
+
+**Residual likelihood × impact:** low × low
+
+**Framework cross-references:** ISO 27001 A.8.32; SOC 2 CC8.1.
+
+**Cross-links:** [REQ-120 implementation plan](plans/REQ-120/implementation-plan.md); ADR-010; SRS REQ-ORDMGT-019.

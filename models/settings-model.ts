@@ -131,11 +131,12 @@ const SettingsSchema = new Schema<ISettings>(
       min: 5,
       max: 180,
     },
+    // REQ-120 — shop-wide cap on customer orders in a rolling hour; 0 = no limit.
     maxOrdersPerHour: {
       type: Number,
       required: true,
       default: 20,
-      min: 1,
+      min: 0,
     },
     allowGuestCheckout: {
       type: Boolean,

@@ -1,0 +1,74 @@
+# Test Execution Summary — REQ-120
+
+**Date:** 2026-11-10
+**Implementation branch:** `feat/REQ-120-single-customer-order-service` (solo release, no bundle; not yet merged when this was written)
+**Risk class:** HIGH (order money path, public API trust boundary, customer/staff separation, API-key binding, order data migration)
+
+## Test design
+
+**Layers planned:** unit, UI end-to-end (two new critical specs plus the existing staff tab specs as the regression proof), type-check, lint, production build, dependency gate. Visual regression is not configured.
+
+**Layers covered:** unit ✓; UI E2E ✓ (`customer-cannot-use-tabs`); transport-layer E2E ✓ (`customer-order-validation`); type-check ✓; lint ✓; build ✓; dependency gate ✗ (pre-existing advisory, see Gate results).
+
+**Exemptions:**
+
+- **AC5 (migration), AC7 (ordering options) and AC8 (API-key binding) are unit-only:** the migration is an operator script, the options action has no UI yet (WA-06 and WA-09 consume it), and key creation is a super-admin form whose server rules are proved in `api-key-service.customer-binding.test.ts`.
+- **`customer-order-validation` is a transport-layer spec** (it calls `POST /api/public/orders` as a signed-in customer; the web checkout and the API both call `createCustomerOrder`). It has no `page`, so its evidence is the per-spec entry here, not screenshots.
+- **Live check on UAT (operator evidence):** placing a customer order, an out-of-hours or below-minimum attempt, and confirming no tab options are operator steps in the UAT pack.
+- **Visual regression (`NOT_NEEDED`):** no visual-regression tooling is configured.
+
+**Skill invocation:** `e2e-test-engineer` was invoked in Phase 2 (2026-11-10, before any `e2e/**` file was edited) and authored `e2e/critical/customer-order-validation.spec.ts`, `e2e/critical/customer-cannot-use-tabs.spec.ts` and the helpers `settings-control.ts` and `customer-order-seed.ts`, and updated the stale specs listed below. `requirements-aligner`, `adr-author` and `risk-register-keeper` were invoked at Stage 1 and Stage 3.
+
+## Gate results
+
+| Gate                       | Result | Details                                                                                                                                                                                                                                                                                                                                           |
+| -------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dependency audit           | FAIL   | `scripts/evaluate-npm-audit.sh`: `0 accepted, 3 unresolved`, all `mongoose@8.24.1` (newly disclosed; GHSA-pcrw-h46h-c93h critical, GHSA-gg4r-jv3p-qx3c and GHSA-8332-j7wj-wjw4 high). Not caused by this REQ (`package.json` and the lockfile are unchanged); needs its own fix-or-accept decision before the release PR (see the release ticket) |
+| TypeScript                 | PASS   | `npx tsc --noEmit`: 0 errors                                                                                                                                                                                                                                                                                                                      |
+| ESLint                     | PASS   | 0 errors; pre-existing warnings only                                                                                                                                                                                                                                                                                                              |
+| Production build           | PASS   | `npm run build` completed                                                                                                                                                                                                                                                                                                                         |
+| Unit + integration         | PASS   | Full suite: 1987 passed, 4 skipped (209 files passed, 1 skipped); 74 new tests in 8 new files                                                                                                                                                                                                                                                     |
+| E2E (new critical specs)   | PASS   | `customer-order-validation` 6/6, `customer-cannot-use-tabs` 5/5 (plus 3 auth setup)                                                                                                                                                                                                                                                               |
+| E2E (staff tab regression) | PASS   | `csr-order-tab-parity-req109` and the other staff tab specs unchanged and passing                                                                                                                                                                                                                                                                 |
+| E2E (full `critical` tier) | PASS   | 358 passed, 1 failed, 0 skipped (8.1 min, default workers, Lagos timezone, project `server.ts` with Socket.IO, disposable `mongo:7`); the one failure passes when its file is run alone (see triage)                                                                                                                                              |
+
+## UI regression sweep
+
+Strings and selectors changed or removed by the diff were searched over all of `e2e/`: `Payment Options`, `#existing-tab`, `#new-tab`, `label[for="pay-now"]`, `Add to Tab`, `Order Added to Tab`, `Orders/Tabs`, `/orders/tabs`, `tab-options`. Hits and what was done:
+
+| Hit                                                                                                           | Action                                                                                                                             |
+| ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `e2e/smoke/req-084-checkout-separation.spec.ts` AC2 (checkout via the new-tab step)                           | Updated: submits through Tip and Payment, asserts the customer-origin order in Mongo; the seeded item now clears the minimum order |
+| `e2e/critical/daily-report-payments.spec.ts` (two blocks added orders to a tab through the customer checkout) | Updated: orders are added through staff Express (`?tabId=`), as `express-order-report` does                                        |
+| `e2e/requirements-verification.spec.ts` (two `/orders/tabs` redirect checks)                                  | Updated: the route is gone, so they assert 404                                                                                     |
+| `e2e/manual/REQ-084-failed-regression-tests.md`                                                               | Historical note, not executed; unchanged                                                                                           |
+
+The `regression` project was not run in full locally; the full `critical` tier (smoke + critical + the verification spec) was, which contains every spec above.
+
+## Test executions
+
+No first-class portal test-execution records exist yet for REQ-120 (the feature branch has not been pushed). CI executions will be rendered here with `render-test-executions.sh` once the feature-PR run completes.
+
+### Local executions (Stage 2, run in the isolated stack; not on the portal)
+
+| Source  | SDLC stage       | Execution | Kind                                                        | Outcome | Workflow / run                                                                                                                   |
+| ------- | ---------------- | --------- | ----------------------------------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| REQ-120 | 2 implement/test | #1        | unit                                                        | passed  | Local Vitest, full suite: 1987 passed, 4 skipped                                                                                 |
+| REQ-120 | 2 implement/test | #2        | e2e (first critical run, `next dev`)                        | failed  | 20 failed, 2 did not run: stale `daily-report-payments`, plus environment failures (no Socket.IO server, missing webhook secret) |
+| REQ-120 | 2 implement/test | #3        | e2e (full `critical`, project `server.ts`, GMT)             | failed  | 357 passed, 2 failed (REQ-095 date picker, timezone)                                                                             |
+| REQ-120 | 2 implement/test | #4        | e2e (`develop` baseline, REQ-095 spec, Lagos time)          | passed  | 59 passed                                                                                                                        |
+| REQ-120 | 2 implement/test | #5        | e2e (full `critical`, project `server.ts`, Lagos time)      | failed  | 358 passed, 1 failed (REQ-095 export period)                                                                                     |
+| REQ-120 | 2 implement/test | #6        | e2e (re-run of the failed spec file, with its dependencies) | passed  | 66 passed, 0 failed                                                                                                              |
+
+## E2E failures & triage
+
+| Spec / check                                                                                 | Source                            | Classification | Evidence                                                                                                                                                                                                                                                                                                 | Disposition | Reference                                                                             |
+| -------------------------------------------------------------------------------------------- | --------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------- |
+| `daily-report-payments` create tab and add order                                             | local exec #2                     | test bug       | Added orders through the customer checkout tab step, which this REQ removes (`#existing-tab` not found). Updated to staff Express; passes in exec #3                                                                                                                                                     | Fix         | #967 (commit e4fa843)                                                                 |
+| `req-084-checkout-separation` AC2                                                            | local exec #3                     | test bug       | Reached submit but no order: the seeded ₦500 item is below the minimum order that the server now enforces, and the spec's second Next click landed inside the form's 300 ms navigation guard. Seed price raised and a wait added                                                                         | Fix         | #967 (commit d61f54d)                                                                 |
+| WhatsApp webhook specs (`whatsapp-*`, `customer-signin-whatsapp-only` AC10)                  | local exec #2                     | seed-data gap  | Playwright process lacked `WHATSAPP_APP_SECRET`, so HMAC signatures did not match; pass with the secret set (focused rerun 84 passed). Not touched by this REQ                                                                                                                                           | Fix         | #967 (local invocation corrected; CI sets the secret in `sdlc-config.json` `e2e_env`) |
+| `order-status-broadcast`, `requirements-verification` Socket.IO endpoint                     | local exec #2                     | seed-data gap  | `next dev` has no Socket.IO server; pass under the project's `server.ts` (exec #3 onward)                                                                                                                                                                                                                | Fix         | #967 (local invocation corrected: project `server.ts`)                                |
+| `csr-order-tab-parity-req109` csr cancels an unpaid order                                    | local exec #2 and a focused rerun | flake          | The Next dev overlay opened on a `console.error` ("Socket connection error") from the missing Socket.IO server, adding a second `role="dialog"`; passes under `server.ts` (exec #3, #5). Staff tab code is unchanged by this REQ                                                                         | Fix         | #967 (local invocation corrected: project `server.ts`)                                |
+| `daily-report-business-date-selection` (REQ-095, Last 7 Days anchor, export period boundary) | local exec #3, #5                 | flake          | Date-anchor off by one day under a GMT server; with Lagos time on server and client it fails once in the full run (exec #5) and passes in isolation (exec #6: 66 passed) and on `develop` (exec #4); the same spec flaked in REQ-117's and REQ-119's runs; no report or date code is touched by this REQ | Deferral    | existing REQ-095 flake, see REQ-119 summary and issue #1015                           |
+
+**Final assessment:** all REQ-120 acceptance criteria are proved by passing tests; the staff tab regression specs pass unchanged. One gate is red for a reason outside this REQ (the `mongoose` advisory, see Gate results); it blocks the release PR's dependency step until a fix PR lands or the operator accepts the risk with a record.

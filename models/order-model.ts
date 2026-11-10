@@ -164,6 +164,20 @@ const orderSchema = new Schema<IOrder>(
       enum: ['customer', 'csr', 'admin', 'super-admin'],
       default: 'customer',
     },
+    // REQ-120 — customer vs staff creation, and the entry point. `origin`
+    // defaults to 'staff' so every staff writer stays valid; the customer
+    // order service sets 'customer' explicitly.
+    origin: {
+      type: String,
+      enum: ['customer', 'staff'],
+      required: true,
+      default: 'staff',
+      index: true,
+    },
+    channel: {
+      type: String,
+      enum: ['web', 'whatsapp_link', 'public_api', 'staff_dashboard'],
+    },
     guestEmail: { type: String, lowercase: true, trim: true },
     guestName: { type: String, trim: true },
     guestPhone: { type: String, trim: true },

@@ -98,6 +98,8 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-CHECKOUT-009 | Apply reward code / redeem points at checkout                                                 | Could    | extended   | `checkout/order-summary.tsx`                                                                                                |
 | REQ-CHECKOUT-010 | Customer checkout shows only Monnify gateway options (no manual cash/transfer/card)           | Must     | regression | `components/features/checkout/checkout-form.tsx`; REQ-084                                                                   |
 | REQ-CHECKOUT-011 | Anonymous user can add to cart and reach checkout without login redirect                      | Must     | smoke      | `app/menu/page.tsx`, `menu-item-detail-modal.tsx`, `app/checkout/page.tsx`; REQ-084                                         |
+| REQ-CHECKOUT-012 | Single customer order service (validation, typed errors, idempotency, one order number)       | Must     | regression | `services/customer-order-service.ts` @srs-stub                                                                              |
+| REQ-CHECKOUT-013 | Ordering options exposed read-only                                                            | Should   | regression | `app/actions/ordering/ordering-options-actions.ts` @srs-stub                                                                |
 | REQ-ORDER-001    | Order tracking page shows live status                                                         | Should   | regression | `app/(customer)/orders/[orderId]/page.tsx`, `real-time-order-tracker.tsx`                                                   |
 | REQ-ORDER-002    | Orders & Tabs page lists orders + tabs (auth)                                                 | Must     | smoke      | `app/(customer)/orders/page.tsx`                                                                                            |
 | REQ-ORDER-003    | Guest sees own open tabs by guestId/email                                                     | Should   | regression | `app/(customer)/orders/page.tsx:55`                                                                                         |
@@ -135,6 +137,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-ORDMGT-009   | Express create order: order type selector + customer info for pickup/delivery                 | Must     | regression | `app/dashboard/orders/express/create-order/page.tsx`; `app/actions/admin/express-actions.ts`; REQ-084                       |
 | REQ-ORDMGT-010   | Admin Order Management section on orders dashboard (no separate Quick Actions)                | Should   | smoke      | `app/dashboard/orders/page.tsx`; REQ-086, REQ-109                                                                           |
 | REQ-ORDMGT-018   | Order-management action parity for `csr`                                                      | Should   | regression | `order-management-actions.ts`, `express-actions.ts`; REQ-109                                                                |
+| REQ-ORDMGT-019   | Order `origin` and `channel` recorded and migrated                                            | Must     | regression | `models/order-model.ts`, `scripts/migrate-order-origin.ts` @srs-stub                                                        |
 | REQ-ORDMGT-013   | Delete order (soft-delete; super-admin override for live orders)                              | Could    | extended   | `order-service.ts` `deleteOrder()`; REQ-096                                                                                 |
 | REQ-ORDMGT-014   | Delete order: independent inventory/payment revert choices                                    | Could    | extended   | `order-service.ts` `deleteOrder()`; REQ-096                                                                                 |
 | REQ-ORDMGT-017   | Order completion auto-cash-mark is scoped to non-tab orders only, reliably                    | Must     | regression | `order-management-actions.ts:376-394`; `tab-service.ts` `addOrderToTab`; REQ-108                                            |
@@ -148,6 +151,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-TABMGT-008   | Dormant open-tab visibility (list flag)                                                       | Could    | extended   | `app/dashboard/orders/tabs/page.tsx`; REQ-098                                                                               |
 | REQ-TABMGT-009   | Written-off tab list badge + filter (distinct from generic closed/paid)                       | Should   | regression | `dashboard-tabs-list-client.tsx`, `dashboard-tabs-filter.tsx`; REQ-099                                                      |
 | REQ-TABMGT-010   | Tab-management action parity for `csr` (super-admin override unaffected)                      | Should   | regression | `app/actions/tabs/tab-actions.ts`; REQ-109                                                                                  |
+| REQ-TABMGT-011   | Tabs are staff-only on every server entry point                                               | Must     | regression | `app/actions/tabs/tab-actions.ts`, `app/api/public/tabs/**` @srs-stub                                                       |
 | REQ-KITCHEN-001  | Kitchen display shows active orders real-time                                                 | Should   | regression | `app/dashboard/kitchen-display/page.tsx`                                                                                    |
 | REQ-KITCHEN-002  | `kitchenManagement` gates kitchen routes                                                      | Must     | regression | `app/dashboard/kitchen/layout.tsx`; REQ-034                                                                                 |
 | REQ-KITCHEN-003  | Recipe CRUD + validation                                                                      | Should   | regression | `services/recipe-service.ts:41`; REQ-034                                                                                    |
@@ -220,6 +224,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-API-004      | Health endpoint is unauthenticated                                                            | Should   | smoke      | `app/api/public/health/route.ts`                                                                                            |
 | REQ-API-005      | Rate limit returns 429 + Retry-After                                                          | Should   | regression | `lib/rate-limiter.ts:82`                                                                                                    |
 | REQ-API-006      | Per-group contracts (menu/orders/inventory/…)                                                 | Should   | regression | `app/api/public/**`                                                                                                         |
+| REQ-API-007      | Customer-scoped keys bound to a user; server totals on order create                           | Must     | regression | `app/api/public/orders/route.ts`, `models/api-key-model.ts` @srs-stub                                                       |
 | REQ-RT-001       | Order status broadcast to subscribers                                                         | Could    | extended   | `lib/socket-server.ts:108`, `hooks/use-order-socket.ts`                                                                     |
 | REQ-RT-002       | New order broadcast to kitchen room                                                           | Could    | extended   | `lib/socket-server.ts:134`                                                                                                  |
 | REQ-RT-003       | Order-updated payload carries top-level status; terminal orders removed from store            | Must     | regression | `lib/socket-emit-helper.ts`, `kitchen-order-grid.tsx`, `order-queue.tsx`; REQ-083                                           |
@@ -413,6 +418,23 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 
 - **Given** an anonymous visitor on `/menu`, **When** they click an item and add it to the cart, **Then** the cart count updates and no login redirect occurs.
 - **Given** an anonymous visitor with items in the cart, **When** they navigate to `/checkout`, **Then** the checkout page renders with a "Continue as Guest" banner.
+
+#### REQ-CHECKOUT-012 — Single customer order service (validation, typed errors, idempotency, one order number) · **Must** · regression
+
+**Source:** `services/customer-order-service.ts`
+
+@srs-stub: operator to confirm prose (REQ-120).
+
+- **Given** a customer order from the web checkout or the public API, **When** it is submitted, **Then** it is created by `createCustomerOrder`, validated server-side (type enabled, hours, minimum, `maxOrdersPerHour`, table/pickup/delivery fields, radius, availability), totals are computed by the server and client totals are ignored, and a failure returns one of `OUT_OF_HOURS`, `BELOW_MINIMUM`, `ITEM_UNAVAILABLE`, `OUT_OF_RADIUS`, `ORDER_TYPE_DISABLED`, `RATE_LIMITED` with no order created.
+- **Given** the same idempotency key twice, **Then** one order exists; **Given** any new order, **Then** its number is `WG` + 10 digits from the single generator.
+
+#### REQ-CHECKOUT-013 — Ordering options exposed read-only · **Should** · regression
+
+**Source:** `app/actions/ordering/ordering-options-actions.ts`
+
+@srs-stub: operator to confirm prose (REQ-120).
+
+- **Given** any visitor, **When** `getOrderingOptionsAction` is called, **Then** it returns enabled order types, today's hours, pickup slots, delivery fee rule, minimum order and radius, and no staff data.
 
 ---
 
@@ -799,6 +821,14 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 - **Given** the same item ordered via the public checkout API, **When** the order is submitted, **Then** the server-recomputed subtotal used for the tamper-check, and the persisted line, both include the surcharge.
 - **Given** a Half Portion item with both a configured surcharge and an admin manual price override on the same line, **When** the order is created, **Then** the surcharge is added on top of the overridden base price.
 
+#### REQ-ORDMGT-019 — Order `origin` and `channel` recorded and migrated · **Must** · regression
+
+**Source:** `models/order-model.ts`, `scripts/migrate-order-origin.ts`
+
+@srs-stub: operator to confirm prose (REQ-120).
+
+- **Given** any new order, **Then** `origin` (`customer`|`staff`) and `channel` are stored; **Given** existing orders, **When** the migration runs (repeatedly), **Then** `createdByRole: customer` orders become `customer`, others `staff`, idempotently, with a dry-run mode.
+
 ---
 
 ## Feature Area 11 — Tab Management (TABMGT)
@@ -882,6 +912,14 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 - **Given** a `csr` user, **When** they create a tab via the Express flow (`/dashboard/orders/express/create-tab`) for a table with no existing open tab, **Then** the tab is created successfully, matching `admin`'s behaviour.
 - **Given** a `csr` user, **When** they close and pay an open tab via the Express flow (`/dashboard/orders/express/close-tab`), **Then** the tab closes and payment is recorded successfully.
 - **Given** a `csr` or `admin` user (not `super-admin`), **When** they call `deleteTabAction` with `superAdminOverride: true`, **Then** the action is rejected — only `super-admin` may use the override path, exactly as REQ-TABMGT-004 already specifies.
+
+#### REQ-TABMGT-011 — Tabs are staff-only on every server entry point · **Must** · regression
+
+**Source:** `app/actions/tabs/tab-actions.ts`, `app/api/public/tabs/**`
+
+@srs-stub: operator to confirm prose (REQ-120).
+
+- **Given** a customer session or customer API key, **When** it creates, reads for checkout, joins or adds to a tab (or sends `tabId`/`useTab`), **Then** the server rejects it; **Given** a staff session or staff key, **Then** tab flows behave as before.
 
 ---
 
@@ -1492,6 +1530,14 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 
 - **Given** `menu:read`, **When** calling `GET /api/public/menu?limit=10`, **Then** 200 with ≤10 items and pagination meta.
 - **Given** `menu:read` (REQ-075, BREAKING), **When** calling `GET /api/public/menu/categories`, **Then** 200 with envelope `{ success, data: { mainCategories: [{ slug, label, order, subCategories[] }] }, meta: { timestamp } }`. This supersedes the pre-REQ-075 envelope `{ success, data: { drinks: string[], food: string[] }, meta }` exposed under REQ-071 and is intentionally not back-compatible; clients pinned to the old shape must migrate when REQ-075 ships.
+
+#### REQ-API-007 — Customer-scoped keys bound to a user; server totals on order create · **Must** · regression
+
+**Source:** `app/api/public/orders/route.ts`, `models/api-key-model.ts`
+
+@srs-stub: operator to confirm prose (REQ-120).
+
+- **Given** a customer-role API key bound to a `userId`, **When** it posts an order, **Then** the order is created through `createCustomerOrder` for that user with channel `public_api` and client-supplied totals are ignored; **Given** a key with no role or an unbound customer key, **Then** order writes are refused; a staff-role key keeps the staff path.
 
 ---
 

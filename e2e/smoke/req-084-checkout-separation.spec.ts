@@ -108,7 +108,7 @@ async function cleanupTab(tabId: string) {
  * Seed a real menu item in the database so the order API accepts it.
  * Returns the ObjectId string to use in the cart.
  */
-async function seedMenuItem(): Promise<string> {
+async function seedMenuItem(price = 500): Promise<string> {
   const { uri, dbName } = mongoConn();
   const client = new MongoClient(uri);
   try {
@@ -120,7 +120,7 @@ async function seedMenuItem(): Promise<string> {
       kind: 'menu-item',
       name: 'E2E Test Item',
       description: 'Test item for E2E',
-      price: 500,
+      price,
       mainCategory: 'food',
       category: 'food',
       subcategory: 'starters',
@@ -306,7 +306,8 @@ test.describe('REQ-084 — Customer checkout (sign-in required, REQ-117)', () =>
   }) => {
     tagTest('REQ-084', 2);
 
-    const menuItemId = await seedMenuItem();
+    // REQ-120: the server now enforces the minimum order, so the item must clear it.
+    const menuItemId = await seedMenuItem(5000);
     const customer = await seedVerifiedCustomer();
     let createdOrderId: string | undefined;
     await attachCustomerSessionToContext(page.context(), customer, BASE_URL);
@@ -357,6 +358,8 @@ test.describe('REQ-084 — Customer checkout (sign-in required, REQ-117)', () =>
       await page.locator('button', { hasText: 'Next' }).click();
 
       // Step 3 — Tip (REQ-120: there is no tab step; customers always pay).
+      // The form ignores a second Next within 300ms of the first.
+      await page.waitForTimeout(500);
       await expect(page.getByText('Tip', { exact: true }).first()).toBeVisible({
         timeout: 10000,
       });

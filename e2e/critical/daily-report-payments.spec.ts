@@ -7,7 +7,7 @@
  */
 import { test as base, expect, Page } from '@playwright/test';
 import path from 'path';
-import { waitForAuthLoaded } from '../helpers/customer-auth';
+import { revealFirstExpressMenuCard } from '../helpers/express-menu';
 import { withMongo } from '../helpers/db-assertions';
 import { ObjectId } from 'mongodb';
 
@@ -77,6 +77,36 @@ async function expressCreateTabForTable(
 }
 
 /**
+ * Add the first in-stock menu item to an open tab through the staff Express
+ * create-order page (`?tabId=` pre-selects the tab). REQ-120 removed the
+ * customer-checkout tab path this spec used to drive.
+ */
+async function expressAddOrderToTab(
+  page: Page,
+  tabId: string,
+  tableNumber: string
+): Promise<void> {
+  await page.goto(
+    `/dashboard/orders/express/create-order?tabId=${tabId}&tableNumber=${tableNumber}`
+  );
+  await page.waitForLoadState('networkidle');
+
+  const menuCard = await revealFirstExpressMenuCard(page);
+  await menuCard.click();
+  await page.getByRole('button', { name: /Checkout/i }).click();
+
+  const submitBtn = page.getByRole('button', { name: /Add Order to Tab/i });
+  await expect(submitBtn).toBeVisible({ timeout: 5000 });
+  await expect(submitBtn).toBeEnabled({ timeout: 5000 });
+  await submitBtn.click();
+
+  await expect(page.getByText(/Order Added to Tab/i).first()).toBeVisible({
+    timeout: 15000,
+  });
+  await page.waitForURL(/\/dashboard\/orders/, { timeout: 15000 });
+}
+
+/**
  * Extract payment amounts from the daily report using in-browser DOM traversal.
  * Each metric/payment card has: CardTitle (.font-medium) + amount (.text-2xl.font-bold).
  */
@@ -143,70 +173,9 @@ test.describe
     tabId = await expressCreateTabForTable(page, TEST_TABLE);
     expect(tabId).toBeTruthy();
 
-    // ── Navigate to menu ──────────────────────────────────────
-    await page.goto(`/menu?tableNumber=${TEST_TABLE}`);
-    await page.waitForLoadState('networkidle');
-    // REQ-064 hardened the customer flow: `MenuItemDetailModal`'s
-    // Add-to-Cart handler reads `useAuth().session?.isLoggedIn` and
-    // redirects to `/login?redirect=/menu` when the session is still
-    // `undefined`. With admin storage state the iron-session IS
-    // logged-in once `/api/auth/session` resolves, but the click can
-    // beat the fetch. Wait for that response before adding to cart.
-    await waitForAuthLoaded(page);
-
-    // ── Add first in-stock menu item to cart ───────────────────
-    const menuItem = page
-      .locator('[data-testid^="menu-item-"]')
-      .filter({ hasNot: page.locator('text=Out of Stock') })
-      .first();
-    await expect(menuItem).toBeVisible({ timeout: 10000 });
-    await menuItem.click();
-
-    const modal = page.getByRole('dialog');
-    await expect(modal).toBeVisible();
-    await modal.getByRole('button', { name: /Add to Cart/i }).click();
-
-    // Cart sidebar opens — wait for "Proceed to Checkout" button
-    const checkoutBtn = page.getByRole('button', {
-      name: /Proceed to Checkout/i,
-    });
-    await expect(checkoutBtn).toBeVisible({ timeout: 5000 });
-    await checkoutBtn.click();
-    await page.waitForURL('/checkout');
-    await page.waitForLoadState('networkidle');
-
-    // ── Checkout Step 1: Customer info ────────────────────────
-    // Fields may be pre-filled from admin profile; fill only if empty
-    const nameInput = page.locator('input[name="customerName"]');
-    const emailInput = page.locator('input[name="customerEmail"]');
-    const phoneInput = page.locator('input[name="customerPhone"]');
-    await expect(nameInput).toBeVisible({ timeout: 5000 });
-
-    if (!(await nameInput.inputValue())) await nameInput.fill('E2E Test');
-    if (!(await emailInput.inputValue())) await emailInput.fill('e2e@test.com');
-    if (!(await phoneInput.inputValue())) await phoneInput.fill('08099887766');
-
-    // Navigate through checkout steps using the visible Next button
-    const nextBtn = page.getByRole('button', { name: /Next/i }).first();
-    await nextBtn.click();
-
-    // ── Step 2: Order type (dine-in + table pre-filled) ──────
-    await page.waitForTimeout(500);
-    await page.getByRole('button', { name: /Next/i }).first().click();
-
-    // ── Step 3: Tab options — select existing tab ─────────────
-    const existingTabRadio = page.locator('#existing-tab');
-    await expect(existingTabRadio).toBeVisible({ timeout: 5000 });
-    await existingTabRadio.click();
-    await page.waitForTimeout(300);
-
-    // Submit the form
-    await page.locator('button[type="submit"]').click();
-
-    // Wait for success confirmation
-    await expect(page.getByText(/Order Added to Tab/i).first()).toBeVisible({
-      timeout: 15000,
-    });
+    // ── Add an order to the tab (staff Express flow — REQ-120 removed the
+    //    customer checkout tab path this used to drive) ──
+    await expressAddOrderToTab(page, tabId, TEST_TABLE);
   });
 
   test('record partial payment (cash)', async ({ page }) => {
@@ -360,56 +329,8 @@ test.describe
     openTabId = await expressCreateTabForTable(page, TEST_TABLE_OPEN);
     expect(openTabId).toBeTruthy();
 
-    // ── Add order via menu ────────────────────────────────────
-    await page.goto(`/menu?tableNumber=${TEST_TABLE_OPEN}`);
-    await page.waitForLoadState('networkidle');
-    // Same race fix as the first test — wait for `/api/auth/session`
-    // before the `MenuItemDetailModal` Add-to-Cart click so the modal
-    // doesn't redirect to /login under REQ-064's auth gate.
-    await waitForAuthLoaded(page);
-
-    const menuItem = page
-      .locator('[data-testid^="menu-item-"]')
-      .filter({ hasNot: page.locator('text=Out of Stock') })
-      .first();
-    await expect(menuItem).toBeVisible({ timeout: 10000 });
-    await menuItem.click();
-
-    const modal = page.getByRole('dialog');
-    await expect(modal).toBeVisible();
-    await modal.getByRole('button', { name: /Add to Cart/i }).click();
-
-    const checkoutBtn = page.getByRole('button', {
-      name: /Proceed to Checkout/i,
-    });
-    await expect(checkoutBtn).toBeVisible({ timeout: 5000 });
-    await checkoutBtn.click();
-    await page.waitForURL('/checkout');
-    await page.waitForLoadState('networkidle');
-
-    // Checkout: customer info (fill if empty)
-    const nameInput = page.locator('input[name="customerName"]');
-    const emailInput = page.locator('input[name="customerEmail"]');
-    const phoneInput = page.locator('input[name="customerPhone"]');
-    await expect(nameInput).toBeVisible({ timeout: 5000 });
-    if (!(await nameInput.inputValue())) await nameInput.fill('E2E Test');
-    if (!(await emailInput.inputValue())) await emailInput.fill('e2e@test.com');
-    if (!(await phoneInput.inputValue())) await phoneInput.fill('08099887766');
-    await page.getByRole('button', { name: /Next/i }).first().click();
-
-    // Step 2: dine-in + table pre-filled
-    await page.waitForTimeout(500);
-    await page.getByRole('button', { name: /Next/i }).first().click();
-
-    // Step 3: select existing tab and submit
-    const existingTabRadio = page.locator('#existing-tab');
-    await expect(existingTabRadio).toBeVisible({ timeout: 5000 });
-    await existingTabRadio.click();
-    await page.waitForTimeout(300);
-    await page.locator('button[type="submit"]').click();
-    await expect(page.getByText(/Order Added to Tab/i).first()).toBeVisible({
-      timeout: 15000,
-    });
+    // ── Add an order to the tab (staff Express flow — REQ-120) ──
+    await expressAddOrderToTab(page, openTabId, TEST_TABLE_OPEN);
 
     // ── Record partial payment (cash) — leave tab OPEN ────────
     await page.goto(`/dashboard/orders/tabs/${openTabId}`);

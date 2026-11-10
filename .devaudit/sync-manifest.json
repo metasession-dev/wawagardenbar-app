@@ -1,9 +1,9 @@
 {
   "version": 1,
-  "cli_version": "1.12.1",
+  "cli_version": "1.13.0",
   "files": {
     ".claude/skills/adr-author/SKILL.md": {
-      "sha256": "ca1a50b08294ff0f707cec593fe53e781860c4328f4e84ab448e793d37ffe3c0",
+      "sha256": "dcf28d8126daa6485fa5d174d9ef09531fa9a05c7adeb69611c92f228dbcceb7",
       "section": "2e-ii"
     },
     ".claude/skills/devaudit-configure/SKILL.md": {
@@ -35,7 +35,7 @@
       "section": "2e-ii"
     },
     ".claude/skills/e2e-test-engineer/SKILL.md": {
-      "sha256": "6924517ef9f6d3ece2ff429a5b1faec187c8a5022bad991669be865e311c73b4",
+      "sha256": "8ec1dae08ae3496b0b46164434b4aa70f9f1baf4dce3601ba2a9e333cd180fc1",
       "section": "2e-ii"
     },
     ".claude/skills/e2e-test-engineer/references/bidirectional-cross-feature-example.md": {
@@ -79,15 +79,15 @@
       "section": "2e-ii"
     },
     ".claude/skills/requirements-aligner/SKILL.md": {
-      "sha256": "2705d40d755716f7a89316db2b55505a4946a95931db9b2eb450a088887eb680",
+      "sha256": "2d7d7569fae8e86a656eee98c2a50cff3a66244bfbb9c95a319073570e830744",
       "section": "2e-ii"
     },
     ".claude/skills/risk-register-keeper/SKILL.md": {
-      "sha256": "ccd2335c3216313a70d19ed31f651de1125e28fb94e01ab25ef08317a8723ae6",
+      "sha256": "5c8008138001c254e6e7a7e24a77a06a1673197d6d642cf7d30542a1765b7d9c",
       "section": "2e-ii"
     },
     ".claude/skills/sdlc-implementer/SKILL.md": {
-      "sha256": "9094cea6f51bac160d30e0770a86f2981bc78379e84d92f8930702b124d5668b",
+      "sha256": "745574a50e1dba61ecdb07e59fc64a0a00b5a8c38467df7cee69c90aa04f108b",
       "section": "2e-ii"
     },
     ".claude/skills/sdlc-implementer/references/call-graph.md": {
@@ -108,6 +108,26 @@
     },
     ".claude/skills/sdlc-implementer/references/e2e-accepted-failure.md.template": {
       "sha256": "0c6863cf0526a5ebfa2f0f09ea4b4888b1e029a04d4e4578b438e976db9d2c4d",
+      "section": "2e-ii"
+    },
+    ".claude/skills/sdlc-implementer/references/phase5-triage-decision-table.md": {
+      "sha256": "aac645b6650d6987cfa4677414f7940ee78f49f660d2a3dfedb7fcd905652538",
+      "section": "2e-ii"
+    },
+    ".claude/skills/sdlc-implementer/references/phase5-triage-handoff.md.template": {
+      "sha256": "7d8515f6643288bb8dd2c47754c779d5d716a1cc8460cb991e3c9c6ec871250b",
+      "section": "2e-ii"
+    },
+    ".claude/skills/sdlc-implementer/references/uat-briefing.md.template": {
+      "sha256": "439307d8f1bf882bf4468733b1240edb2cfeaffebf8c5150e27eccf0d7700e65",
+      "section": "2e-ii"
+    },
+    ".claude/skills/sdlc-implementer/references/uat-execution-record.md.template": {
+      "sha256": "39260b9f8758687254f61f896ca0d14c311c1a17b0f0d80073e60a934166d85e",
+      "section": "2e-ii"
+    },
+    ".claude/skills/sdlc-implementer/references/uat-test-procedure.md.template": {
+      "sha256": "325966725df47d24369fadf6fa4ab9a260d14d163e5fe3786e8a774bc157a30b",
       "section": "2e-ii"
     },
     ".cursorrules": {
@@ -147,7 +167,7 @@
       "section": "2f"
     },
     ".github/workflows/ci.yml": {
-      "sha256": "1d9ee5f52eade98f78520be40c5f43d0094c06905f62dcfc4f2dde7c19bac6c6",
+      "sha256": "ac1a3b178f35972d113cd6f76944ff001b2c594ed220e9e1630aeb218b307edd",
       "section": "2f"
     },
     ".github/workflows/close-out-completion.yml": {
@@ -163,7 +183,7 @@
       "section": "2f"
     },
     ".github/workflows/compliance-evidence.yml": {
-      "sha256": "2544b37566ee52df008f4fb4a617c431d092b7595686348cb611a1127983d2c6",
+      "sha256": "552a57324eff270891ee55b2603d079a7aeb6066d6c3c04fd573215c41fe1337",
       "section": "2f"
     },
     ".github/workflows/compliance-validation.yml": {
@@ -299,19 +319,19 @@
       "section": "2h"
     },
     "SDLC/blueprints/2-implement-and-test.raw.md": {
-      "sha256": "9409b1960a9d5700f9b26f2ce5a42a33918e7f208d91e28fe5da08a4f78c85e8",
+      "sha256": "d20d0211b616fe50de7fc65bbc75f11f113c218658c5aa0e00347b022cf7444c",
       "section": "2h"
     },
     "SDLC/blueprints/3-compile-evidence.raw.md": {
-      "sha256": "f8802af462e842791cf8ab105c6bf1e87c2fcd80c55f810a47d77195c55f5eb1",
+      "sha256": "d667b8ae52dfa691b6dbfff663e5f824ae492639dfbae066c5bcc0efcfb75db0",
       "section": "2h"
     },
     "SDLC/blueprints/4-submit-for-review.raw.md": {
-      "sha256": "396e866c23aefce9a64c914fde6e706ceef65e17e7912c57598fec8b67ea88e4",
+      "sha256": "d0417df8dd711edea1d7a30c0699237ac69eaf02c5f6465275f160bff4c62d28",
       "section": "2h"
     },
     "SDLC/blueprints/5-deploy-main.raw.md": {
-      "sha256": "ede31c030d77ba9ea79456f99d5dca7fad3e37d1bed6b33236377395e57ce4d0",
+      "sha256": "57ae8ae1930cbeecbf78254e772a4b0a411ab9b3645578d80e0d4ba730946ba2",
       "section": "2h"
     },
     "SDLC/blueprints/implementing-an-sdlc-issue.raw.md": {
@@ -358,6 +378,10 @@
       "sha256": "a9867c5085805f971b59d45d885034f4c0071ae73bd3383a99e4956350293167",
       "section": "2d"
     },
+    "scripts/check-operator-signoffs.sh": {
+      "sha256": "3f3ee8b02c19468fb0170ffa8ad41149bd5a1ae6cc0fd01133b7ebc039a63b72",
+      "section": "2d"
+    },
     "scripts/check-release-pr-scope.sh": {
       "sha256": "438b97f0ed113a399dab70da36241796aa3c0eb64f9c961b2a0200ce631326b3",
       "section": "2d"
@@ -398,12 +422,20 @@
       "sha256": "8efd46087e3528a44bb5942d536cba3f8fcc342623405b53b36ec444c5083353",
       "section": "2d"
     },
+    "scripts/e2e-json-tags-req.sh": {
+      "sha256": "9ec96a779c65e5b9009e44a9d9c958f456d721fa582a9c09f93eb676a690199b",
+      "section": "2d"
+    },
     "scripts/e2e-release-gate.sh": {
       "sha256": "5357db51a4aca18a5a148d19fd02248095d5dc300f7928986c9b6c25bd4001b9",
       "section": "2d"
     },
     "scripts/evaluate-npm-audit.sh": {
       "sha256": "c3ffecf77808bbf4a632aaa96e114e24ef30f64ba85bed0ff1a4f679cf08557f",
+      "section": "2d"
+    },
+    "scripts/extract-e2e-reqs.sh": {
+      "sha256": "21f013a2322fe5a0cd5bb5cb5ac6af77a91b9f2127b9e7e1b52cf5a18d95c42c",
       "section": "2d"
     },
     "scripts/extract-release-metadata.sh": {
@@ -459,7 +491,7 @@
       "section": "2d"
     },
     "scripts/reconcile-deployment.sh": {
-      "sha256": "4f135e2ba9d39f3a295f4c4c59403ef9890ee17e168133f49e3f91849dc63695",
+      "sha256": "7a31ac16a346c0235a3be983cbaba0b72aabc6977b332e71a624684ff8a4e984",
       "section": "2d"
     },
     "scripts/reconcile-e2e-summary.sh": {
@@ -470,8 +502,12 @@
       "sha256": "806d76c3594ff4678620e9eb24a46dc90e8a847ea1f7f6d874037e4d475cfac7",
       "section": "2d"
     },
+    "scripts/release-declared-requirements.sh": {
+      "sha256": "3a14c16967db71b6fc1763ca1e87a67a9ea134eda65b2bedeced6bc09d915e53",
+      "section": "2d"
+    },
     "scripts/render-test-executions.sh": {
-      "sha256": "7f4994d4d4146dd44f7ab2f8765422f21a31e617e3ef41aaa8a497568d2fce1b",
+      "sha256": "2ab3048b7d71b85b57e7885bce096345df9bba4be9c56fca7dcc4ad1a5fa2091",
       "section": "2d"
     },
     "scripts/report-release-check.sh": {
@@ -486,8 +522,16 @@
       "sha256": "ded0e48997e21d1af44b1a7e63dcd75eaad4b559e2665a558620d0b12b3df07a",
       "section": "2d"
     },
+    "scripts/resolve-e2e-upload-targets.sh": {
+      "sha256": "9f026404cde5d4ad09c72ea463c94b4e6c2cb6b81e5ef3c3bbf9e9f40114e87d",
+      "section": "2d"
+    },
     "scripts/run-test-tier.sh": {
       "sha256": "3f755e407da47ba5132a0101de1b1c83adced49fb07f33da7bb891a55f188af5",
+      "section": "2d"
+    },
+    "scripts/scope-e2e-reqs-to-release.sh": {
+      "sha256": "55434bb63818522855926e256bd363de4cdd31e3807622dcff2e6b117a5e1e1e",
       "section": "2d"
     },
     "scripts/sdlc-guard.sh": {
@@ -507,11 +551,11 @@
       "section": "2d"
     },
     "scripts/upload-compliance-documents.sh": {
-      "sha256": "b93c38c06d3f8aa630e4574debd3c8a9fc82cc01fc44d8aae6a6067caaa8ca44",
+      "sha256": "6eba8b6cd281cce8761ad91e3059491b10b2a3b8e16d588222f8bb8b26924651",
       "section": "2d"
     },
     "scripts/upload-evidence.sh": {
-      "sha256": "2168e5aa9d09b9fd90bec8790ba63f2e41271c9ef085c7e949db68c197bb12fb",
+      "sha256": "4839eb4a389815170f6032b333a4d70e84d7d74f46b16850855391217d7de00c",
       "section": "2d"
     },
     "scripts/validate-commits.sh": {
@@ -519,7 +563,7 @@
       "section": "2d"
     },
     "scripts/validate-compliance-artifacts.sh": {
-      "sha256": "83a36518d308a400963aa387a72c7d68a832336d417713f7a06ba576248ac188",
+      "sha256": "bfbafae6ab70790e937e71fbb9484700842c9d1c85806ae3aeae60ea4672cc39",
       "section": "2d"
     },
     "scripts/validate-risk-acceptance-record.sh": {

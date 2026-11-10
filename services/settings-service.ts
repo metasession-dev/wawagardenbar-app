@@ -52,9 +52,13 @@ class SettingsService {
   static async getSettings(): Promise<ISettings> {
     await connectDB();
 
-    // Check cache
+    // Check cache. E2E runs (the same flag that turns on the PIN intercept)
+    // write settings straight to Mongo to drive hours, minimum-order and
+    // radius scenarios, so they must not be served a stale copy (REQ-120).
     const now = Date.now();
-    if (this.cachedSettings && now - this.cacheTimestamp < this.CACHE_TTL) {
+    const ttl =
+      process.env.ENABLE_E2E_PIN_INTERCEPT === 'true' ? 0 : this.CACHE_TTL;
+    if (this.cachedSettings && now - this.cacheTimestamp < ttl) {
       return this.cachedSettings;
     }
 

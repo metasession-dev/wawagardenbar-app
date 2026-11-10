@@ -17,6 +17,7 @@ Every customer order, from the web checkout or the public API (and later WhatsAp
 - **Order data:** `origin` (`customer` or `staff`) and `channel` on every order; one order-number format (`WG` + 10 digits); idempotent migration `scripts/migrate-order-origin.ts`.
 - **Tabs staff-only:** six tab server actions and `initializeTabPayment` refuse non-staff; public tab routes refuse customers; the checkout tab step, `/orders/tabs` pages and customer tab links are gone; checkout is four steps.
 - **API keys:** a customer-role key is bound to a customer (`ApiKey.userId`); the order's user comes from the key.
+- **Hourly cap setting:** the existing "Max orders per hour" setting now accepts 0 (no limit).
 - **Ordering options:** read-only `getOrderingOptionsAction` for the checkout and WhatsApp.
 - **Fixed on the way:** customization option prices were taken from the client; an unused third order-creation path (`createOrderAction`) was removed.
 
@@ -53,7 +54,7 @@ None.
 ## Operator tasks (not code)
 
 1. **Before the release PR can pass Quality Gates:** decide the `mongoose` advisory (3 unresolved, newly disclosed, not caused by this REQ): a patch bump PR (8.24.7 or later) or an accepted-risk record. Land the bump first; it re-runs checks on the release PR.
-2. Confirm production `maxOrdersPerHour` (schema default 20, now enforced shop-wide on customer orders) and the dine-in business-hours exemption (kept from REQ-061).
+2. Set production "Max orders per hour" in Dashboard → Settings → Order configuration (now enforced shop-wide on customer orders; 0 = no limit; an existing settings document keeps its stored value) and confirm the dine-in business-hours exemption (kept from REQ-061).
 3. Before release: list open tabs created by customers (staff settle them from `/dashboard/orders/tabs`) and identify integrations that post orders with customer keys (they need a customer key bound to a user, or a staff key).
 4. After the UAT deploy: run `npx tsx scripts/migrate-order-origin.ts` (dry run), then `--apply`; keep the output as evidence. Repeat on production after release.
 5. Sign off the SRS alignment, architecture decision, risk assessment and e2e scope decision in `compliance/evidence/REQ-120/`.

@@ -106,7 +106,7 @@ Implementation deviations (approach changed; ACs still correct):
 5. **`createOrderAction` removed.** `app/actions/order/order-actions.ts` held a third, unused customer creation path (guest fields, client totals). Nothing imported it.
 6. **Customer tab payment is staff-only.** `initializeTabPayment` (payment-actions) refuses non-staff, and its customer redirect URL is gone.
 7. **Test support.** `SettingsService` reads uncached when `ENABLE_E2E_PIN_INTERCEPT=true` (the existing e2e flag) so e2e can set hours, minimum and radius in Mongo. `customer-order-validation` runs as its own chained Playwright project (`AGGREGATE_SPECS`) because it changes shop-wide settings.
-8. **`maxOrdersPerHour` default is 20** (schema minimum is 1, so "unlimited" cannot be stored; the service treats `0` or unset as unlimited). It now caps customer orders shop-wide at 20 per rolling hour. Operator to confirm that 20 is the intended production cap before release.
+8. **`maxOrdersPerHour` is configurable in Dashboard → Settings → Order configuration** (it already was, but the form could not store 0 and showed 20 for it). The schema and form now accept 0 meaning no limit; the default for a new settings document stays 20. It now caps customer orders shop-wide per rolling hour. Operator sets the production value before release.
 
 Requirements deviation: none.
 

@@ -67,7 +67,7 @@
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.451.0",
-    "mongoose": "^8.24.1",
+    "mongoose": "^8.24.8",
     "next": "^16.4.2",
     "nodemailer": "^10.1.2",
     "nuqs": "^2.2.0",

@@ -52,6 +52,7 @@ const AGGREGATE_SPECS = [
   // REQ-120: rewrites shop-wide settings (hours, minimum, radius, hourly cap)
   // for the duration of each test, so nothing else may create orders then.
   'customer-order-validation',
+  'customer-order-journey',
 ];
 const aggregateProjects = AGGREGATE_SPECS.map((name, i) => ({
   name: `critical-aggregate-${name}`,

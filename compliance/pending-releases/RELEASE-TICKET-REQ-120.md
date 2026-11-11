@@ -48,7 +48,7 @@ None.
 - **Callers:** `app/actions/payment/payment-actions.ts`, `app/api/public/orders/route.ts`, `lib/api-key-validator.ts`, `lib/api-response.ts` (`rejectNonStaffTabAccess`), `models/api-key-model.ts`, `services/api-key-service.ts`, `components/features/admin/api-keys/create-api-key-dialog.tsx`.
 - **Tabs removed from customers:** `app/actions/tabs/tab-actions.ts`, `app/api/public/tabs/**`, `components/features/checkout/{customer-checkout-form,order-details-step}.tsx`, deleted `tab-options-step.tsx`, `app/(customer)/orders/tabs/**`, `components/features/tabs/tabs-list-client.tsx`, `app/actions/tabs/tab-restriction-actions.ts`; `app/(customer)/orders/page.tsx`, navbar label.
 - **New:** `app/actions/ordering/ordering-options-actions.ts`, `lib/order-origin-migration.ts`, `scripts/migrate-order-origin.ts`.
-- **Tests:** eight new unit files; two new critical specs (11 tests) and two helpers; three existing specs updated.
+- **Tests:** eight new unit files; four new critical specs (17 tests: validation 7, cannot-use-tabs 5, customer journey 3, tab-refusal UI 2) and four helpers; three existing specs updated.
 - **Design:** ADR-010. **SRS:** REQ-CHECKOUT-012, REQ-CHECKOUT-013, REQ-TABMGT-011, REQ-ORDMGT-019, REQ-API-007 new; REQ-CHECKOUT-005, REQ-ORDER-003, REQ-ORDER-004 retired; REQ-CHECKOUT-007, REQ-CHECKOUT-008 updated. **Risk register:** R-056 to R-059.
 
 ## Operator tasks (not code)
@@ -68,7 +68,7 @@ None.
 
 - TypeScript: 0 errors. ESLint: 0 errors (pre-existing warnings only). `npm run build`: green.
 - Unit/integration: 1987 passed, 4 skipped (full suite).
-- E2E: new critical specs 11/11; staff tab specs unchanged and passing; full `critical` tier 358 passed, 1 failed, 0 skipped, the one failure being a known REQ-095 flake that passes in isolation. Isolated server and disposable MongoDB.
+- E2E: new critical specs 17/17; staff tab specs unchanged and passing; full `critical` tier 358 passed, 1 failed, 0 skipped, the one failure being a known REQ-095 flake that passes in isolation. Isolated server and disposable MongoDB.
 - Dependency audit: FAIL, pre-existing `mongoose@8.24.1` advisories (see task 1).
 - Full detail: `compliance/evidence/REQ-120/test-execution-summary.md` and `security-summary.md`.
 - Not yet done (operator): the migration runs and the live UAT.

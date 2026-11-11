@@ -4,6 +4,8 @@
 **Implementation branch:** `feat/REQ-120-single-customer-order-service` (solo release, no bundle; not yet merged when this was written)
 **Risk class:** HIGH (order money path, public API trust boundary, customer/staff separation, API-key binding, order data migration)
 
+CI as of: 42940955426/1 @ d60e9331818d1d6361a511f3ea7a4e74cb312722 (Quality Gates on `develop`, regenerated 2026-11-11 after #1025 merged). Feature In-Scope E2E on the last feature commit: run 42939028359, passed.
+
 ## Test design
 
 **Layers planned:** unit, UI end-to-end (two new critical specs plus the existing staff tab specs as the regression proof), type-check, lint, production build, dependency gate. Visual regression is not configured.
@@ -47,7 +49,21 @@ The `regression` project was not run in full locally; the full `critical` tier (
 
 ## Test executions
 
-No first-class portal test-execution records exist yet for REQ-120 (the feature branch has not been pushed). CI executions will be rendered here with `render-test-executions.sh` once the feature-PR run completes.
+Portal executions for this release (`devaudit release status REQ-120 --json`, 2026-11-11):
+
+<!-- generated-by: render-test-executions.sh journey-at 2026-11-11T01:56:04Z -->
+
+| Source Release | SDLC Stage       | Execution | Suite        | Outcome | Workflow / Run                                                                                                                     | Related Evidence | Incident / Remediation | Date                |
+| -------------- | ---------------- | --------- | ------------ | ------- | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------- | ---------------------- | ------------------- |
+| REQ-120        | 2 implement_test | #1        | e2e          | passed  | [Feature In-Scope E2E](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/42915912961) (run 42915912961, attempt 1) | None             | None                   | 2026-11-10 23:02:02 |
+| REQ-120        | 2 implement_test | #2        | e2e          | passed  | [Feature In-Scope E2E](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/42922649358) (run 42922649358, attempt 1) | None             | None                   | 2026-11-10 23:42:58 |
+| REQ-120        | 2 implement_test | #3        | quality_gate | passed  | [Quality Gates](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/42926806641) (run 42926806641, attempt 1)        | None             | None                   | 2026-11-11 00:07:19 |
+| REQ-120        | 2 implement_test | #4        | e2e          | failed  | [Feature In-Scope E2E](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/42933299998) (run 42933299998, attempt 1) | None             | resolved: retry_passed | 2026-11-11 00:56:58 |
+| REQ-120        | 2 implement_test | #5        | quality_gate | passed  | [Quality Gates](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/42934689169) (run 42934689169, attempt 1)        | None             | None                   | 2026-11-11 01:09:56 |
+| REQ-120        | 2 implement_test | #6        | e2e          | passed  | [Feature In-Scope E2E](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/42939028359) (run 42939028359, attempt 1) | None             | None                   | 2026-11-11 01:42:23 |
+| REQ-120        | 2 implement_test | #7        | quality_gate | passed  | [Quality Gates](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/42940955426) (run 42940955426, attempt 1)        | None             | None                   | 2026-11-11 01:55:07 |
+
+**Final assessment:** Stage-scoped execution numbering is authoritative from first-class portal test execution records.
 
 ### Local executions (Stage 2, run in the isolated stack; not on the portal)
 

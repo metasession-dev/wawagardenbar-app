@@ -173,6 +173,9 @@ export async function completeCheckout(
     timeout: 10000,
   });
   await page.getByText('Card Payment').click();
+  // The form silently ignores a submit within 300 ms of the last Next click
+  // (its navigation guard); a fast run raced it and no order was created.
+  await page.waitForTimeout(600);
   await page.getByRole('button', { name: /Proceed to Payment/i }).click();
 }
 

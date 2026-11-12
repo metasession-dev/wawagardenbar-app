@@ -107,6 +107,7 @@ Implementation deviations (approach changed; ACs still correct):
 6. **Customer tab payment is staff-only.** `initializeTabPayment` (payment-actions) refuses non-staff, and its customer redirect URL is gone.
 7. **Test support.** `SettingsService` reads uncached when `ENABLE_E2E_PIN_INTERCEPT=true` (the existing e2e flag) so e2e can set hours, minimum and radius in Mongo. `customer-order-validation` runs as its own chained Playwright project (`AGGREGATE_SPECS`) because it changes shop-wide settings.
 8. **`maxOrdersPerHour` is configurable in Dashboard → Settings → Order configuration** (it already was, but the form could not store 0 and showed 20 for it). The schema and form now accept 0 meaning no limit; the default for a new settings document stays 20. It now caps customer orders shop-wide per rolling hour. Operator sets the production value before release.
+9. **Checkout offers only the enabled order types** (found in UAT step 10). The Order Details step always listed Dine In, Pickup and Delivery; the server refused a disabled type only after Proceed to Payment. The step now reads `getOrderingOptionsAction` and hides a disabled type, and moves the selection to an enabled one. The server rule is unchanged. Covered by `e2e/critical/customer-ordering-options-ui.spec.ts`.
 
 Requirements deviation: none.
 

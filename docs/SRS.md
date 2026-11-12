@@ -432,6 +432,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 **Source:** `app/actions/ordering/ordering-options-actions.ts`
 
 - **Given** any visitor, **When** `getOrderingOptionsAction` is called, **Then** it returns enabled order types, today's hours, pickup slots, delivery fee rule, minimum order and radius, and no staff data.
+- **Given** the checkout Order Details step, **When** it loads, **Then** it offers only the order types enabled in Settings, and a type that is not enabled is not shown (found in UAT step 10).
 
 ---
 

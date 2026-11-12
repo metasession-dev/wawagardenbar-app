@@ -53,6 +53,7 @@ const AGGREGATE_SPECS = [
   // for the duration of each test, so nothing else may create orders then.
   'customer-order-validation',
   'customer-order-journey',
+  'customer-ordering-options-ui',
 ];
 const aggregateProjects = AGGREGATE_SPECS.map((name, i) => ({
   name: `critical-aggregate-${name}`,

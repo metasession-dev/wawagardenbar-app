@@ -14,6 +14,7 @@
 | `e2e/critical/customer-cannot-use-tabs.spec.ts`                          | e2e              | AC6                | US-B2.4                          |
 | `e2e/critical/customer-order-journey.spec.ts`                            | e2e (UI journey) | AC1, AC2, AC4      | US-A2.1, A2.2, A2.3              |
 | `e2e/critical/customer-tab-refusal-ui.spec.ts`                           | e2e (UI)         | AC6                | US-B2.4                          |
+| `e2e/critical/customer-ordering-options-ui.spec.ts`                      | e2e (UI)         | AC7                | US-A2.3                          |
 | `e2e/critical/csr-order-tab-parity-req109.spec.ts` (existing, unchanged) | e2e              | AC6                | US-B2.1                          |
 
 Paths reconciled with the files on disk in Phase 2 (step 4b). Existing specs updated because the customer tab path was removed: `e2e/smoke/req-084-checkout-separation.spec.ts`, `e2e/critical/daily-report-payments.spec.ts`, `e2e/requirements-verification.spec.ts`.

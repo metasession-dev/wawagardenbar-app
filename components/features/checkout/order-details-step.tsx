@@ -24,6 +24,9 @@ import {
 } from '@/components/ui/select';
 import { UtensilsCrossed, Package, Truck, MapPin, Clock } from 'lucide-react';
 import { BusinessHoursBanner } from './business-hours-banner';
+import { getOrderingOptionsAction } from '@/app/actions/ordering/ordering-options-actions';
+
+type OrderType = 'dine-in' | 'pickup' | 'delivery';
 
 // REQ-061 — pickup slot returned by /api/settings/pickup-slots
 interface PickupSlot {
@@ -43,6 +46,33 @@ export function OrderDetailsStep({ form }: OrderDetailsStepProps) {
   // the legacy datetime-local input so customers can still pick a time.
   const [pickupSlots, setPickupSlots] = useState<PickupSlot[]>([]);
   const [slotsLoaded, setSlotsLoaded] = useState(false);
+
+  // REQ-120 (AC7) — offer only the order types enabled in Settings. Until the
+  // options load every type shows; the service still refuses a disabled one.
+  const [enabledTypes, setEnabledTypes] = useState<OrderType[] | null>(null);
+  const offers = (type: OrderType) =>
+    enabledTypes === null || enabledTypes.includes(type);
+
+  useEffect(() => {
+    let cancelled = false;
+    getOrderingOptionsAction()
+      .then((res) => {
+        if (cancelled || !res.success || !res.data) return;
+        setEnabledTypes(res.data.orderTypes);
+        const current = form.getValues('orderType');
+        if (
+          res.data.orderTypes.length &&
+          !res.data.orderTypes.includes(current)
+        ) {
+          form.setValue('orderType', res.data.orderTypes[0]);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,65 +113,71 @@ export function OrderDetailsStep({ form }: OrderDetailsStepProps) {
                 value={field.value}
                 className="grid gap-4 sm:grid-cols-2 md:grid-cols-4"
               >
-                <Label
-                  htmlFor="dine-in"
-                  className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
-                    field.value === 'dine-in'
-                      ? 'border-primary bg-primary/5'
-                      : 'border-muted hover:border-primary/50'
-                  }`}
-                >
-                  <RadioGroupItem
-                    value="dine-in"
-                    id="dine-in"
-                    className="sr-only"
-                  />
-                  <UtensilsCrossed className="h-6 w-6" />
-                  <span className="font-medium">Dine In</span>
-                  <span className="text-xs text-muted-foreground text-center">
-                    Eat at the restaurant
-                  </span>
-                </Label>
+                {offers('dine-in') && (
+                  <Label
+                    htmlFor="dine-in"
+                    className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
+                      field.value === 'dine-in'
+                        ? 'border-primary bg-primary/5'
+                        : 'border-muted hover:border-primary/50'
+                    }`}
+                  >
+                    <RadioGroupItem
+                      value="dine-in"
+                      id="dine-in"
+                      className="sr-only"
+                    />
+                    <UtensilsCrossed className="h-6 w-6" />
+                    <span className="font-medium">Dine In</span>
+                    <span className="text-xs text-muted-foreground text-center">
+                      Eat at the restaurant
+                    </span>
+                  </Label>
+                )}
 
-                <Label
-                  htmlFor="pickup"
-                  className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
-                    field.value === 'pickup'
-                      ? 'border-primary bg-primary/5'
-                      : 'border-muted hover:border-primary/50'
-                  }`}
-                >
-                  <RadioGroupItem
-                    value="pickup"
-                    id="pickup"
-                    className="sr-only"
-                  />
-                  <Package className="h-6 w-6" />
-                  <span className="font-medium">Pickup</span>
-                  <span className="text-xs text-muted-foreground text-center">
-                    Collect your order
-                  </span>
-                </Label>
+                {offers('pickup') && (
+                  <Label
+                    htmlFor="pickup"
+                    className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
+                      field.value === 'pickup'
+                        ? 'border-primary bg-primary/5'
+                        : 'border-muted hover:border-primary/50'
+                    }`}
+                  >
+                    <RadioGroupItem
+                      value="pickup"
+                      id="pickup"
+                      className="sr-only"
+                    />
+                    <Package className="h-6 w-6" />
+                    <span className="font-medium">Pickup</span>
+                    <span className="text-xs text-muted-foreground text-center">
+                      Collect your order
+                    </span>
+                  </Label>
+                )}
 
-                <Label
-                  htmlFor="delivery"
-                  className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
-                    field.value === 'delivery'
-                      ? 'border-primary bg-primary/5'
-                      : 'border-muted hover:border-primary/50'
-                  }`}
-                >
-                  <RadioGroupItem
-                    value="delivery"
-                    id="delivery"
-                    className="sr-only"
-                  />
-                  <Truck className="h-6 w-6" />
-                  <span className="font-medium">Delivery</span>
-                  <span className="text-xs text-muted-foreground text-center">
-                    Delivered to you
-                  </span>
-                </Label>
+                {offers('delivery') && (
+                  <Label
+                    htmlFor="delivery"
+                    className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
+                      field.value === 'delivery'
+                        ? 'border-primary bg-primary/5'
+                        : 'border-muted hover:border-primary/50'
+                    }`}
+                  >
+                    <RadioGroupItem
+                      value="delivery"
+                      id="delivery"
+                      className="sr-only"
+                    />
+                    <Truck className="h-6 w-6" />
+                    <span className="font-medium">Delivery</span>
+                    <span className="text-xs text-muted-foreground text-center">
+                      Delivered to you
+                    </span>
+                  </Label>
+                )}
               </RadioGroup>
             </FormControl>
             <FormMessage />

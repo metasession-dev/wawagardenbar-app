@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-120",
+  "ac": 2,
+  "slug": "journey-dine-in-order-created",
+  "specFile": "e2e/critical/customer-order-journey.spec.ts",
+  "capturedAt": "2026-11-13T06:43:00.378Z"
+}

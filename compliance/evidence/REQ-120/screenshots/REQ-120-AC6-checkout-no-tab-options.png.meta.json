@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-120",
+  "ac": 6,
+  "slug": "checkout-no-tab-options",
+  "specFile": "e2e/critical/customer-cannot-use-tabs.spec.ts",
+  "capturedAt": "2026-11-13T06:42:44.755Z"
+}

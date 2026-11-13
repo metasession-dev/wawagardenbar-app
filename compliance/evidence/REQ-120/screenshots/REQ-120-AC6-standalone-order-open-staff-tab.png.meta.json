@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-120",
+  "ac": 6,
+  "slug": "standalone-order-open-staff-tab",
+  "specFile": "e2e/critical/customer-tab-refusal-ui.spec.ts",
+  "capturedAt": "2026-11-13T06:44:36.219Z"
+}

@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-117",
+  "ac": 3,
+  "slug": "not-on-whatsapp-terminal",
+  "specFile": "e2e/critical/customer-signin-whatsapp-only.spec.ts",
+  "capturedAt": "2026-11-13T06:44:02.896Z"
+}

@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-120",
+  "ac": 6,
+  "slug": "orders-page-no-tabs",
+  "specFile": "e2e/critical/customer-cannot-use-tabs.spec.ts",
+  "capturedAt": "2026-11-13T06:42:40.148Z"
+}

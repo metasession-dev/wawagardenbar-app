@@ -1,6 +1,6 @@
 # Release Ticket: REQ-120 — Single customer order service; tabs staff-only (WA-05)
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-11-10
 **Requirement ID:** REQ-120
 **Risk Level:** HIGH

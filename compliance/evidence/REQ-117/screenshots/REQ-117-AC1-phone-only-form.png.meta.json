@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-117",
+  "ac": 1,
+  "slug": "phone-only-form",
+  "specFile": "e2e/critical/customer-signin-whatsapp-only.spec.ts",
+  "capturedAt": "2026-11-13T06:43:58.316Z"
+}

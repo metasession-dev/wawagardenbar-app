@@ -7,6 +7,7 @@ import {
   apiError,
   parseJsonBody,
   serialize,
+  rejectNonStaffTabAccess,
 } from '@/lib/api-response';
 
 interface RouteContext {
@@ -22,8 +23,13 @@ interface RouteContext {
  * @ratelimit      30 requests / minute (moderate)
  * @pathParam {string} tabId - MongoDB ObjectId of the tab
  */
-export async function GET(request: NextRequest, context: RouteContext): Promise<Response> {
-  return withApiAuth(request, ['tabs:read'], async () => {
+export async function GET(
+  request: NextRequest,
+  context: RouteContext
+): Promise<Response> {
+  return withApiAuth(request, ['tabs:read'], async (auth) => {
+    const denied = rejectNonStaffTabAccess(auth, 'read');
+    if (denied) return denied;
     try {
       const { tabId } = await context.params;
       if (!Types.ObjectId.isValid(tabId)) {
@@ -54,8 +60,13 @@ export async function GET(request: NextRequest, context: RouteContext): Promise<
  * @body {string} [customName]  - Rename the tab / table label
  * @body {number} [tipAmount]   - Set tip amount (recalculates total)
  */
-export async function PATCH(request: NextRequest, context: RouteContext): Promise<Response> {
-  return withApiAuth(request, ['tabs:write'], async () => {
+export async function PATCH(
+  request: NextRequest,
+  context: RouteContext
+): Promise<Response> {
+  return withApiAuth(request, ['tabs:write'], async (auth) => {
+    const denied = rejectNonStaffTabAccess(auth, 'write');
+    if (denied) return denied;
     try {
       const { tabId } = await context.params;
       if (!Types.ObjectId.isValid(tabId)) {
@@ -90,9 +101,13 @@ export async function PATCH(request: NextRequest, context: RouteContext): Promis
         return apiSuccess(serialize(result.tab));
       }
 
-      return apiError('Provide action ("close"), customName, or tipAmount', 400);
+      return apiError(
+        'Provide action ("close"), customName, or tipAmount',
+        400
+      );
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Failed to update tab';
+      const msg =
+        error instanceof Error ? error.message : 'Failed to update tab';
       if (msg.includes('not found')) return apiError(msg, 404);
       console.error('[PUBLIC API] PATCH /api/public/tabs/[tabId]', error);
       return apiError(msg, 500);
@@ -109,8 +124,13 @@ export async function PATCH(request: NextRequest, context: RouteContext): Promis
  * @ratelimit      30 requests / minute (moderate)
  * @pathParam {string} tabId - MongoDB ObjectId of the tab
  */
-export async function DELETE(request: NextRequest, context: RouteContext): Promise<Response> {
-  return withApiAuth(request, ['tabs:write'], async () => {
+export async function DELETE(
+  request: NextRequest,
+  context: RouteContext
+): Promise<Response> {
+  return withApiAuth(request, ['tabs:write'], async (auth) => {
+    const denied = rejectNonStaffTabAccess(auth, 'write');
+    if (denied) return denied;
     try {
       const { tabId } = await context.params;
       if (!Types.ObjectId.isValid(tabId)) {
@@ -121,7 +141,8 @@ export async function DELETE(request: NextRequest, context: RouteContext): Promi
       await TabService.deleteTab(tabId, 'api-system');
       return apiSuccess({ deleted: true, tabId });
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Failed to delete tab';
+      const msg =
+        error instanceof Error ? error.message : 'Failed to delete tab';
       if (msg.includes('not found')) return apiError(msg, 404);
       if (msg.includes('Cannot delete')) return apiError(msg, 422);
       console.error('[PUBLIC API] DELETE /api/public/tabs/[tabId]', error);

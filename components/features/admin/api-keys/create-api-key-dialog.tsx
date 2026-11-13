@@ -32,6 +32,7 @@ const ALL_ROLES = Object.keys(API_KEY_ROLE_LABELS) as ApiKeyRole[];
 const schema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
   role: z.string().optional(),
+  userId: z.string().optional(),
   scopes: z.array(z.string()).min(1, 'At least one scope is required'),
   expiresAt: z.string().optional(),
   rateLimit: z.coerce.number().min(1).max(1000).default(60),
@@ -76,6 +77,7 @@ export function CreateApiKeyDialog({ onCreated }: CreateApiKeyDialogProps) {
       const result = await createApiKeyAction({
         name: values.name,
         role: role || undefined,
+        userId: role === 'customer' ? values.userId?.trim() : undefined,
         scopes: values.scopes as ApiKeyScope[],
         expiresAt: values.expiresAt ? new Date(values.expiresAt) : undefined,
         rateLimit: values.rateLimit,
@@ -223,6 +225,20 @@ export function CreateApiKeyDialog({ onCreated }: CreateApiKeyDialogProps) {
                 </p>
               )}
             </div>
+
+            {selectedRole === 'customer' && (
+              <div className="space-y-1">
+                <Label htmlFor="userId">Customer user id</Label>
+                <Input
+                  id="userId"
+                  placeholder="The customer this key orders for"
+                  {...form.register('userId')}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Orders created with this key are placed for this customer.
+                </p>
+              </div>
+            )}
 
             {showCustomScopes && (
               <div className="space-y-2">

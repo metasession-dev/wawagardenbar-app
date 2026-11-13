@@ -23,6 +23,28 @@ export interface ActionResult<T = unknown> {
 }
 
 /**
+ * REQ-120 — tabs are staff-only. Resolves the staff session, or null when the
+ * caller is a customer, a guest, or signed out. Staff roles match
+ * `createAdminTabAction` and the other dashboard tab actions.
+ */
+async function getStaffTabSession(): Promise<SessionData | null> {
+  const cookieStore = await cookies();
+  const session = await getIronSession<SessionData>(
+    cookieStore,
+    sessionOptions
+  );
+  if (
+    !session.userId ||
+    !hasAnyRole(session, ['csr', 'manager', 'admin', 'super-admin'])
+  ) {
+    return null;
+  }
+  return session;
+}
+
+const STAFF_ONLY_ERROR = 'Tabs are managed by staff';
+
+/**
  * Create a new tab
  */
 export async function createTabAction(params: {
@@ -32,6 +54,10 @@ export async function createTabAction(params: {
   customerPhone?: string;
 }): Promise<ActionResult<{ tab: ITab }>> {
   try {
+    if (!(await getStaffTabSession())) {
+      return { success: false, error: STAFF_ONLY_ERROR };
+    }
+
     const cookieStore = await cookies();
     const session = await getIronSession<SessionData>(
       cookieStore,
@@ -91,6 +117,10 @@ export async function getOpenTabForUserAction(): Promise<
   ActionResult<{ tab: ITab | null }>
 > {
   try {
+    if (!(await getStaffTabSession())) {
+      return { success: false, error: STAFF_ONLY_ERROR };
+    }
+
     const cookieStore = await cookies();
     const session = await getIronSession<SessionData>(
       cookieStore,
@@ -146,6 +176,10 @@ export async function getOpenTabForTableAction(
   tableNumber: string
 ): Promise<ActionResult<{ tab: ITab | null }>> {
   try {
+    if (!(await getStaffTabSession())) {
+      return { success: false, error: STAFF_ONLY_ERROR };
+    }
+
     if (!tableNumber) {
       return {
         success: false,
@@ -178,6 +212,10 @@ export async function getTabDetailsAction(
   tabId: string
 ): Promise<ActionResult<{ tab: ITab; orders: IOrder[] }>> {
   try {
+    if (!(await getStaffTabSession())) {
+      return { success: false, error: STAFF_ONLY_ERROR };
+    }
+
     if (!tabId) {
       return {
         success: false,
@@ -249,6 +287,10 @@ export async function prepareTabForCheckoutAction(params: {
   tipAmount?: number;
 }): Promise<ActionResult<{ tab: ITab; eligibleRewards: any[] }>> {
   try {
+    if (!(await getStaffTabSession())) {
+      return { success: false, error: STAFF_ONLY_ERROR };
+    }
+
     if (!params.tabId) {
       return {
         success: false,
@@ -286,6 +328,10 @@ export async function getFilteredTabsAction(filters: {
   endDate?: string;
 }): Promise<ActionResult<{ tabs: ITab[] }>> {
   try {
+    if (!(await getStaffTabSession())) {
+      return { success: false, error: STAFF_ONLY_ERROR };
+    }
+
     const cookieStore = await cookies();
     const session = await getIronSession<SessionData>(
       cookieStore,

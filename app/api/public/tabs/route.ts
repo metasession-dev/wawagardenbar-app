@@ -12,6 +12,7 @@ import {
   parsePagination,
   parseJsonBody,
   serialize,
+  rejectNonStaffTabAccess,
 } from '@/lib/api-response';
 
 /**
@@ -34,7 +35,9 @@ import {
  * @queryParam {number}  [limit=25]     - max 100
  */
 export async function GET(request: NextRequest): Promise<Response> {
-  return withApiAuth(request, ['tabs:read'], async () => {
+  return withApiAuth(request, ['tabs:read'], async (auth) => {
+    const denied = rejectNonStaffTabAccess(auth, 'read');
+    if (denied) return denied;
     try {
       const { searchParams } = request.nextUrl;
       const { page, limit, skip } = parsePagination(searchParams);
@@ -54,7 +57,10 @@ export async function GET(request: NextRequest): Promise<Response> {
         filter.userId = new Types.ObjectId(customerId);
       }
       const paymentStatus = searchParams.get('paymentStatus');
-      if (paymentStatus && ['pending', 'paid', 'failed'].includes(paymentStatus)) {
+      if (
+        paymentStatus &&
+        ['pending', 'paid', 'failed'].includes(paymentStatus)
+      ) {
         filter.paymentStatus = paymentStatus;
       }
       const startDate = searchParams.get('startDate');
@@ -75,7 +81,9 @@ export async function GET(request: NextRequest): Promise<Response> {
       const sortDir = sortParam.startsWith('-') ? -1 : 1;
       const sortField = sortParam.replace(/^-/, '');
       const allowedSortFields = ['openedAt', 'total', 'createdAt'];
-      const sortKey = allowedSortFields.includes(sortField) ? sortField : 'openedAt';
+      const sortKey = allowedSortFields.includes(sortField)
+        ? sortField
+        : 'openedAt';
 
       const [tabs, total] = await Promise.all([
         TabModel.find(filter)
@@ -110,18 +118,28 @@ export async function GET(request: NextRequest): Promise<Response> {
  * @body {string}  [userId]       - Link to registered user ObjectId.
  */
 export async function POST(request: NextRequest): Promise<Response> {
-  return withApiAuth(request, ['tabs:write'], async () => {
+  return withApiAuth(request, ['tabs:write'], async (auth) => {
+    const denied = rejectNonStaffTabAccess(auth, 'write');
+    if (denied) return denied;
     try {
       const body = await parseJsonBody<Record<string, unknown>>(request);
       if (!body) return apiError('Invalid JSON body', 400);
 
-      const { tableNumber, customerName, customerEmail, customerPhone, userId } = body as Record<string, string>;
+      const {
+        tableNumber,
+        customerName,
+        customerEmail,
+        customerPhone,
+        userId,
+      } = body as Record<string, string>;
       if (!tableNumber || typeof tableNumber !== 'string') {
         return apiError('tableNumber is required', 400);
       }
 
       // Check for existing open tab on this table
-      const existingTab = await TabService.getOpenTabForTable(tableNumber.trim());
+      const existingTab = await TabService.getOpenTabForTable(
+        tableNumber.trim()
+      );
       if (existingTab) {
         return apiError('There is already an open tab for this table', 409);
       }
@@ -136,7 +154,8 @@ export async function POST(request: NextRequest): Promise<Response> {
 
       return apiSuccess(serialize(tab), 201);
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Failed to create tab';
+      const msg =
+        error instanceof Error ? error.message : 'Failed to create tab';
       console.error('[PUBLIC API] POST /api/public/tabs', error);
       return apiError(msg, 500);
     }

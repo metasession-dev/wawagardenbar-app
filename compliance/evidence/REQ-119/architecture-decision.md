@@ -24,9 +24,9 @@ generated_at: 2026-11-06T16:35:00Z
 
 I have reviewed the ADR-worthiness verdict above and confirm:
 
-- [ ] The verdict (ADR or no-ADR) matches the actual scope of this REQ.
-- [ ] If ADR: the file at `docs/ADR/ADR-009-staff-authorization-any-of-roles-array.md` is edited from stub to canonical prose and status is Accepted.
-- [ ] If no-ADR: the rationale is specific enough that an auditor reading this in 12 months would agree.
+- [x] The verdict (ADR or no-ADR) matches the actual scope of this REQ.
+- [x] If ADR: the file at `docs/ADR/ADR-009-staff-authorization-any-of-roles-array.md` is edited from stub to canonical prose and status is Accepted.
+- [x] If no-ADR: N/A, this REQ produced ADR-009. The rationale is specific enough that an auditor reading this in 12 months would agree.
 
-**Reviewer:** PENDING (operator)
-**Date:** PENDING
+**Reviewer:** ostendo-io operator (project owner), approved in the Claude Code session on 2026-11-07 and recorded by the agent
+**Date:** 2026-11-07

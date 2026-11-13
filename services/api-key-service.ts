@@ -1,7 +1,10 @@
 import crypto from 'crypto';
+import { Types } from 'mongoose';
 import bcrypt from 'bcrypt';
 import { connectDB } from '@/lib/mongodb';
 import ApiKeyModel from '@/models/api-key-model';
+import UserModel from '@/models/user-model';
+import { isCustomerSession } from '@/lib/roles';
 import {
   IApiKey,
   IApiKeyPublic,
@@ -41,6 +44,7 @@ function serializeKey(doc: IApiKey): IApiKeyPublic {
     name: doc.name,
     keyPrefix: doc.keyPrefix,
     role: doc.role,
+    userId: doc.userId?.toString(),
     scopes: doc.scopes,
     createdBy: doc.createdBy.toString(),
     lastUsedAt: doc.lastUsedAt?.toISOString(),
@@ -61,6 +65,23 @@ export const ApiKeyService = {
   ): Promise<GenerateKeyResult> {
     await connectDB();
 
+    // REQ-120 — a customer key orders on behalf of exactly one customer; any
+    // other role must not carry a user binding.
+    const isCustomerKey = isCustomerSession({ role: input.role });
+    if (isCustomerKey) {
+      if (!input.userId || !Types.ObjectId.isValid(input.userId)) {
+        throw new Error(
+          'A customer-role key must be bound to a customer user id'
+        );
+      }
+      const customer = await UserModel.findById(input.userId).select('role');
+      if (!customer || !isCustomerSession(customer)) {
+        throw new Error('The bound user must be an existing customer');
+      }
+    } else if (input.userId) {
+      throw new Error('Only customer-role keys can be bound to a user');
+    }
+
     const { plainKey, prefix } = generateRawKey();
     const keyHash = await bcrypt.hash(plainKey, BCRYPT_ROUNDS);
 
@@ -69,6 +90,7 @@ export const ApiKeyService = {
       keyHash,
       keyPrefix: prefix,
       role: input.role,
+      ...(isCustomerKey ? { userId: input.userId } : {}),
       scopes: input.scopes,
       createdBy: createdByUserId,
       expiresAt: input.expiresAt,

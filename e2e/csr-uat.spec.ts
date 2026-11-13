@@ -297,18 +297,16 @@ superAdminTest.describe('UAT: Admin List — CSR Role Visible', () => {
       // (the dialog we just opened).
       const dialog = page.locator('[role="dialog"]').first();
       await expect(dialog).toBeVisible();
-      // Open role selector. There is exactly one Radix Select in the dialog
-      // (the Role one — Permissions below it are Switches, not Selects), so
-      // the first `role="combobox"` is unambiguously the role trigger.
-      // `getByRole('combobox', { name: /Role/i })` should also work but
-      // Playwright's accessible-name computation for shadcn's FormLabel-
-      // linked Select renders as the *value* ('Admin') rather than the label
-      // ('Role'), so the name-match misses. Direct DOM locator is robust.
-      await dialog.locator('button[role="combobox"]').first().click();
-      // CSR option should be visible
+      // REQ-119: roles are checkboxes (one or more), not a single dropdown.
+      const roles = dialog.getByRole('group', { name: 'Roles' });
       await expect(
-        page.getByRole('option', { name: 'Customer Service Rep' })
+        roles.getByRole('checkbox', { name: 'Customer Service Rep' })
       ).toBeVisible();
+      for (const label of ['Kitchen', 'Manager', 'Admin', 'Super Admin']) {
+        await expect(
+          roles.getByRole('checkbox', { name: label, exact: true })
+        ).toBeVisible();
+      }
     }
   );
 });

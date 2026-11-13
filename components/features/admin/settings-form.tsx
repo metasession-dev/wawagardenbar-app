@@ -42,7 +42,7 @@ const settingsSchema = z.object({
 
   // Order Configuration
   estimatedPreparationTime: z.number().min(5).max(180),
-  maxOrdersPerHour: z.number().min(1),
+  maxOrdersPerHour: z.number().min(0),
   allowGuestCheckout: z.boolean(),
 
   // Delivery Configuration
@@ -439,9 +439,9 @@ export function SettingsForm({
                     <FormControl>
                       <Input
                         type="number"
-                        min="1"
+                        min="0"
                         {...field}
-                        value={field.value || 20}
+                        value={field.value ?? 20}
                         onChange={(e) => {
                           const value = parseFloat(e.target.value);
                           field.onChange(isNaN(value) ? 20 : value);
@@ -449,7 +449,9 @@ export function SettingsForm({
                       />
                     </FormControl>
                     <FormDescription>
-                      Maximum number of orders that can be accepted per hour
+                      Most customer orders accepted in any rolling hour, across
+                      the whole shop. Further orders are refused until the hour
+                      passes. Set 0 for no limit.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

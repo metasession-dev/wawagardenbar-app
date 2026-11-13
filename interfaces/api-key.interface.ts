@@ -27,6 +27,8 @@ export interface IApiKey {
   keyHash: string;
   keyPrefix: string;
   role?: ApiKeyRole;
+  /** REQ-120 — a customer-role key is bound to the customer it orders for. */
+  userId?: Types.ObjectId;
   scopes: ApiKeyScope[];
   createdBy: Types.ObjectId;
   lastUsedAt?: Date;
@@ -42,6 +44,7 @@ export interface IApiKeyPublic {
   name: string;
   keyPrefix: string;
   role?: ApiKeyRole;
+  userId?: string;
   scopes: ApiKeyScope[];
   createdBy: string;
   lastUsedAt?: string;
@@ -54,6 +57,8 @@ export interface IApiKeyPublic {
 export interface ICreateApiKeyInput {
   name: string;
   role?: ApiKeyRole;
+  /** Required for (and only allowed with) the customer role. */
+  userId?: string;
   scopes: ApiKeyScope[];
   expiresAt?: Date;
   rateLimit?: number;

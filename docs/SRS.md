@@ -91,17 +91,19 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-CHECKOUT-002 | Order-type-specific required fields enforced                                                  | Must     | regression | `checkout/order-details-step.tsx:79`                                                                                        |
 | REQ-CHECKOUT-003 | Fees computed (service %, delivery tiers, VAT)                                                | Must     | regression | `services/settings-service.ts:82`                                                                                           |
 | REQ-CHECKOUT-004 | Minimum-order threshold blocks checkout                                                       | Should   | regression | `services/settings-service.ts:145`                                                                                          |
-| REQ-CHECKOUT-005 | Dine-in tab options (pay-now / new / existing)                                                | Should   | regression | `checkout/tab-options-step.tsx`                                                                                             |
+| REQ-CHECKOUT-005 | RETIRED (REQ-120): dine-in tab options removed from customer checkout                         | Should   | regression | `checkout/tab-options-step.tsx`                                                                                             |
 | REQ-CHECKOUT-006 | Independent tip amount + tip payment method                                                   | Should   | regression | `checkout/tip-input-step.tsx`; REQ-035/036                                                                                  |
 | REQ-CHECKOUT-007 | Submit creates order (happy path) + clears cart                                               | Must     | smoke      | `app/actions/payment/payment-actions.ts:65`                                                                                 |
 | REQ-CHECKOUT-008 | Idempotency key prevents duplicate orders                                                     | Must     | regression | `payment-actions.ts:82`                                                                                                     |
 | REQ-CHECKOUT-009 | Apply reward code / redeem points at checkout                                                 | Could    | extended   | `checkout/order-summary.tsx`                                                                                                |
 | REQ-CHECKOUT-010 | Customer checkout shows only Monnify gateway options (no manual cash/transfer/card)           | Must     | regression | `components/features/checkout/checkout-form.tsx`; REQ-084                                                                   |
 | REQ-CHECKOUT-011 | Anonymous user can add to cart and reach checkout without login redirect                      | Must     | smoke      | `app/menu/page.tsx`, `menu-item-detail-modal.tsx`, `app/checkout/page.tsx`; REQ-084                                         |
+| REQ-CHECKOUT-012 | Single customer order service (validation, typed errors, idempotency, one order number)       | Must     | regression | `services/customer-order-service.ts`                                                                                        |
+| REQ-CHECKOUT-013 | Ordering options exposed read-only                                                            | Should   | regression | `app/actions/ordering/ordering-options-actions.ts`                                                                          |
 | REQ-ORDER-001    | Order tracking page shows live status                                                         | Should   | regression | `app/(customer)/orders/[orderId]/page.tsx`, `real-time-order-tracker.tsx`                                                   |
 | REQ-ORDER-002    | Orders & Tabs page lists orders + tabs (auth)                                                 | Must     | smoke      | `app/(customer)/orders/page.tsx`                                                                                            |
-| REQ-ORDER-003    | Guest sees own open tabs by guestId/email                                                     | Should   | regression | `app/(customer)/orders/page.tsx:55`                                                                                         |
-| REQ-ORDER-004    | Pay & close tab from customer side                                                            | Should   | regression | `app/(customer)/orders/tabs/[tabId]/checkout/`                                                                              |
+| REQ-ORDER-003    | RETIRED (REQ-120): guest tab access (tabs are staff-only)                                     | Should   | regression | `app/(customer)/orders/page.tsx:55`                                                                                         |
+| REQ-ORDER-004    | RETIRED (REQ-120): customer pay & close tab (tabs are staff-only)                             | Should   | regression | `app/(customer)/orders/tabs/[tabId]/checkout/`                                                                              |
 | REQ-ORDER-005    | Labeled kitchen/payment status badges on order surfaces                                       | Must     | regression | `order-details-header.tsx`, `order-card.tsx`, `orders/page.tsx`; REQ-085                                                    |
 | REQ-ORDER-006    | Time-window price resolution at order creation (happy-hour > show > default; override wins)   | Must     | regression | `lib/order-line-totals.ts`; `services/settings-service.ts`; REQ-102                                                         |
 | REQ-PROFILE-001  | View/edit personal info                                                                       | Should   | regression | `app/(customer)/profile/page.tsx`, `personal-info-tab.tsx`                                                                  |
@@ -135,6 +137,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-ORDMGT-009   | Express create order: order type selector + customer info for pickup/delivery                 | Must     | regression | `app/dashboard/orders/express/create-order/page.tsx`; `app/actions/admin/express-actions.ts`; REQ-084                       |
 | REQ-ORDMGT-010   | Admin Order Management section on orders dashboard (no separate Quick Actions)                | Should   | smoke      | `app/dashboard/orders/page.tsx`; REQ-086, REQ-109                                                                           |
 | REQ-ORDMGT-018   | Order-management action parity for `csr`                                                      | Should   | regression | `order-management-actions.ts`, `express-actions.ts`; REQ-109                                                                |
+| REQ-ORDMGT-019   | Order `origin` and `channel` recorded and migrated                                            | Must     | regression | `models/order-model.ts`, `scripts/migrate-order-origin.ts`                                                                  |
 | REQ-ORDMGT-013   | Delete order (soft-delete; super-admin override for live orders)                              | Could    | extended   | `order-service.ts` `deleteOrder()`; REQ-096                                                                                 |
 | REQ-ORDMGT-014   | Delete order: independent inventory/payment revert choices                                    | Could    | extended   | `order-service.ts` `deleteOrder()`; REQ-096                                                                                 |
 | REQ-ORDMGT-017   | Order completion auto-cash-mark is scoped to non-tab orders only, reliably                    | Must     | regression | `order-management-actions.ts:376-394`; `tab-service.ts` `addOrderToTab`; REQ-108                                            |
@@ -148,6 +151,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-TABMGT-008   | Dormant open-tab visibility (list flag)                                                       | Could    | extended   | `app/dashboard/orders/tabs/page.tsx`; REQ-098                                                                               |
 | REQ-TABMGT-009   | Written-off tab list badge + filter (distinct from generic closed/paid)                       | Should   | regression | `dashboard-tabs-list-client.tsx`, `dashboard-tabs-filter.tsx`; REQ-099                                                      |
 | REQ-TABMGT-010   | Tab-management action parity for `csr` (super-admin override unaffected)                      | Should   | regression | `app/actions/tabs/tab-actions.ts`; REQ-109                                                                                  |
+| REQ-TABMGT-011   | Tabs are staff-only on every server entry point                                               | Must     | regression | `app/actions/tabs/tab-actions.ts`, `app/api/public/tabs/**`                                                                 |
 | REQ-KITCHEN-001  | Kitchen display shows active orders real-time                                                 | Should   | regression | `app/dashboard/kitchen-display/page.tsx`                                                                                    |
 | REQ-KITCHEN-002  | `kitchenManagement` gates kitchen routes                                                      | Must     | regression | `app/dashboard/kitchen/layout.tsx`; REQ-034                                                                                 |
 | REQ-KITCHEN-003  | Recipe CRUD + validation                                                                      | Should   | regression | `services/recipe-service.ts:41`; REQ-034                                                                                    |
@@ -220,6 +224,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-API-004      | Health endpoint is unauthenticated                                                            | Should   | smoke      | `app/api/public/health/route.ts`                                                                                            |
 | REQ-API-005      | Rate limit returns 429 + Retry-After                                                          | Should   | regression | `lib/rate-limiter.ts:82`                                                                                                    |
 | REQ-API-006      | Per-group contracts (menu/orders/inventory/…)                                                 | Should   | regression | `app/api/public/**`                                                                                                         |
+| REQ-API-007      | Customer-scoped keys bound to a user; server totals on order create                           | Must     | regression | `app/api/public/orders/route.ts`, `models/api-key-model.ts`                                                                 |
 | REQ-RT-001       | Order status broadcast to subscribers                                                         | Could    | extended   | `lib/socket-server.ts:108`, `hooks/use-order-socket.ts`                                                                     |
 | REQ-RT-002       | New order broadcast to kitchen room                                                           | Could    | extended   | `lib/socket-server.ts:134`                                                                                                  |
 | REQ-RT-003       | Order-updated payload carries top-level status; terminal orders removed from store            | Must     | regression | `lib/socket-emit-helper.ts`, `kitchen-order-grid.tsx`, `order-queue.tsx`; REQ-083                                           |
@@ -363,11 +368,11 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 
 - **Given** a subtotal below the configured minimum, **When** the visitor tries to pay, **Then** checkout is blocked with a minimum-order message.
 
-#### REQ-CHECKOUT-005 — Dine-in tab options · **Should** · regression
+#### REQ-CHECKOUT-005 — Dine-in tab options · **Should** · RETIRED (REQ-120)
 
-**Source:** `checkout/tab-options-step.tsx`
+**Status:** retired. Tabs are staff-only (REQ-TABMGT-011); `checkout/tab-options-step.tsx` was deleted and customer checkout is four steps (Customer Info, Order Details, Tip, Payment).
 
-- **Given** a dine-in order, **When** the visitor chooses "new tab" vs "pay now" vs "existing tab", **Then** the flow routes accordingly and an existing open tab is selectable.
+- **Given** a customer on the checkout, **Then** no tab option is offered and every order is paid at checkout.
 
 #### REQ-CHECKOUT-006 — Independent tip · **Should** · regression
 
@@ -378,7 +383,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 
 #### REQ-CHECKOUT-007 — Create order (happy path) · **Must** · smoke
 
-**Source:** `app/actions/payment/payment-actions.ts:65` (`createOrder`)
+**Source:** `app/actions/payment/payment-actions.ts` (`createOrder`, a wrapper over `createCustomerOrder`, REQ-CHECKOUT-012)
 **Behaviour:** On submit, an Order is created with a unique `orderNumber`, computed totals, `paymentStatus:'pending'`, estimated wait time; the cart is cleared and the kitchen is notified. **Inventory is NOT deducted at order creation** — deduction happens on transition to `status === 'completed'` via `OrderService.completeOrder` (see **REQ-ORDMGT-007**). Pre-REQ-066 the create/payment path called `deductStockForOrder` inline; those six call sites were removed by AC2.
 
 - **Given** a valid checkout, **When** the visitor submits, **Then** an order is created and they reach the order/payment confirmation; the cart empties.
@@ -386,9 +391,10 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 
 #### REQ-CHECKOUT-008 — Idempotency · **Must** · regression
 
-**Source:** `payment-actions.ts:82`
+**Source:** `services/customer-order-service.ts` (`createCustomerOrder`)
 
 - **Given** a submission carrying an idempotency key, **When** the same key is submitted twice, **Then** the second returns the existing order rather than creating a duplicate.
+- **Given** a customer submission with no idempotency key, **Then** it is refused (`IDEMPOTENCY_KEY_REQUIRED`).
 
 #### REQ-CHECKOUT-009 — Rewards/points at checkout · **Could** · extended
 
@@ -414,6 +420,20 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 - **Given** an anonymous visitor on `/menu`, **When** they click an item and add it to the cart, **Then** the cart count updates and no login redirect occurs.
 - **Given** an anonymous visitor with items in the cart, **When** they navigate to `/checkout`, **Then** the checkout page renders with a "Continue as Guest" banner.
 
+#### REQ-CHECKOUT-012 — Single customer order service (validation, typed errors, idempotency, one order number) · **Must** · regression
+
+**Source:** `services/customer-order-service.ts`
+
+- **Given** a customer order from the web checkout or the public API, **When** it is submitted, **Then** it is created by `createCustomerOrder`, validated server-side (type enabled, hours, minimum, `maxOrdersPerHour`, table/pickup/delivery fields, radius, availability), totals are computed by the server and client totals are ignored, and a failure returns one of `OUT_OF_HOURS`, `BELOW_MINIMUM`, `ITEM_UNAVAILABLE`, `OUT_OF_RADIUS`, `ORDER_TYPE_DISABLED`, `RATE_LIMITED` with no order created.
+- **Given** the same idempotency key twice, **Then** one order exists; **Given** any new order, **Then** its number is `WG` + 10 digits from the single generator.
+
+#### REQ-CHECKOUT-013 — Ordering options exposed read-only · **Should** · regression
+
+**Source:** `app/actions/ordering/ordering-options-actions.ts`
+
+- **Given** any visitor, **When** `getOrderingOptionsAction` is called, **Then** it returns enabled order types, today's hours, pickup slots, delivery fee rule, minimum order and radius, and no staff data.
+- **Given** the checkout Order Details step, **When** it loads, **Then** it offers only the order types enabled in Settings, and a type that is not enabled is not shown (found in UAT step 10).
+
 ---
 
 ## Feature Area 4 — Order Tracking & Customer Tabs (ORDER)
@@ -437,19 +457,13 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 - **Given** an unauthenticated visitor, **When** they open `/orders`, **Then** they are redirected to login.
 - **Given** a registered user with orders, **When** they open `/orders`, **Then** their orders and tabs list with statuses.
 
-#### REQ-ORDER-003 — Guest tab access · **Should** · regression
+#### REQ-ORDER-003 — Guest tab access · **Should** · RETIRED (REQ-120)
 
-**Source:** `app/(customer)/orders/page.tsx:55`
+**Status:** retired with guest checkout (REQ-117) and customer tabs (REQ-TABMGT-011). `/orders` lists a signed-in customer's own orders only.
 
-- **Given** a guest session with a guestId/email, **When** they open `/orders`, **Then** only their own open tabs are shown.
+#### REQ-ORDER-004 — Pay & close tab (customer) · **Should** · RETIRED (REQ-120)
 
-#### REQ-ORDER-004 — Pay & close tab (customer) · **Should** · regression
-
-**Source:** `app/(customer)/orders/tabs/[tabId]/checkout/`
-
-- **Given** an open tab owned by the customer, **When** they choose "Pay & Close Tab" and complete payment, **Then** the tab moves to settling→closed and the orders are marked paid.
-
-> ⚠ **Known gap (#117 P0#4):** rewards cannot be applied on this tab path — eligible rewards come back empty (see REQ-CHECKOUT-009). Test the close-tab/payment flow without expecting a rewards step.
+**Status:** retired. `/orders/tabs` and its checkout were removed; a tab is settled by staff from `/dashboard/orders/tabs` (REQ-TABMGT-005). `initializeTabPayment` refuses non-staff sessions.
 
 #### REQ-ORDER-005 — Labeled kitchen/payment status badges on order surfaces · **Must** · regression
 
@@ -799,6 +813,12 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 - **Given** the same item ordered via the public checkout API, **When** the order is submitted, **Then** the server-recomputed subtotal used for the tamper-check, and the persisted line, both include the surcharge.
 - **Given** a Half Portion item with both a configured surcharge and an admin manual price override on the same line, **When** the order is created, **Then** the surcharge is added on top of the overridden base price.
 
+#### REQ-ORDMGT-019 — Order `origin` and `channel` recorded and migrated · **Must** · regression
+
+**Source:** `models/order-model.ts`, `scripts/migrate-order-origin.ts`
+
+- **Given** any new order, **Then** `origin` (`customer`|`staff`) and `channel` are stored; **Given** existing orders, **When** the migration runs (repeatedly), **Then** `createdByRole: customer` orders become `customer`, others `staff`, idempotently, with a dry-run mode.
+
 ---
 
 ## Feature Area 11 — Tab Management (TABMGT)
@@ -882,6 +902,12 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 - **Given** a `csr` user, **When** they create a tab via the Express flow (`/dashboard/orders/express/create-tab`) for a table with no existing open tab, **Then** the tab is created successfully, matching `admin`'s behaviour.
 - **Given** a `csr` user, **When** they close and pay an open tab via the Express flow (`/dashboard/orders/express/close-tab`), **Then** the tab closes and payment is recorded successfully.
 - **Given** a `csr` or `admin` user (not `super-admin`), **When** they call `deleteTabAction` with `superAdminOverride: true`, **Then** the action is rejected — only `super-admin` may use the override path, exactly as REQ-TABMGT-004 already specifies.
+
+#### REQ-TABMGT-011 — Tabs are staff-only on every server entry point · **Must** · regression
+
+**Source:** `app/actions/tabs/tab-actions.ts`, `app/api/public/tabs/**`
+
+- **Given** a customer session or customer API key, **When** it creates, reads for checkout, joins or adds to a tab (or sends `tabId`/`useTab`), **Then** the server rejects it; **Given** a staff session or staff key, **Then** tab flows behave as before.
 
 ---
 
@@ -1492,6 +1518,12 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 
 - **Given** `menu:read`, **When** calling `GET /api/public/menu?limit=10`, **Then** 200 with ≤10 items and pagination meta.
 - **Given** `menu:read` (REQ-075, BREAKING), **When** calling `GET /api/public/menu/categories`, **Then** 200 with envelope `{ success, data: { mainCategories: [{ slug, label, order, subCategories[] }] }, meta: { timestamp } }`. This supersedes the pre-REQ-075 envelope `{ success, data: { drinks: string[], food: string[] }, meta }` exposed under REQ-071 and is intentionally not back-compatible; clients pinned to the old shape must migrate when REQ-075 ships.
+
+#### REQ-API-007 — Customer-scoped keys bound to a user; server totals on order create · **Must** · regression
+
+**Source:** `app/api/public/orders/route.ts`, `models/api-key-model.ts`
+
+- **Given** a customer-role API key bound to a `userId`, **When** it posts an order, **Then** the order is created through `createCustomerOrder` for that user with channel `public_api` and client-supplied totals are ignored; **Given** a key with no role or an unbound customer key, **Then** order writes are refused; a staff-role key keeps the staff path.
 
 ---
 

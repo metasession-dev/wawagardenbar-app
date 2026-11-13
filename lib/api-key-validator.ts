@@ -5,7 +5,7 @@ import { sessionOptions, SessionData, getPrimaryRole } from '@/lib/session';
 import { ApiKeyService } from '@/services/api-key-service';
 import { ApiKeyScope } from '@/interfaces/api-key.interface';
 
-interface AuthResult {
+export interface AuthResult {
   authenticated: boolean;
   source: 'session' | 'api-key' | 'none';
   userId?: string;
@@ -44,7 +44,7 @@ export async function authenticateRequest(
   const rawKey = extractApiKey(request);
 
   if (rawKey) {
-    const { valid, scopes } = await ApiKeyService.validateKey(rawKey);
+    const { valid, scopes, apiKey } = await ApiKeyService.validateKey(rawKey);
 
     if (!valid || !scopes) {
       return { authenticated: false, source: 'none' };
@@ -58,7 +58,14 @@ export async function authenticateRequest(
       }
     }
 
-    return { authenticated: true, source: 'api-key', scopes };
+    return {
+      authenticated: true,
+      source: 'api-key',
+      scopes,
+      role: apiKey?.role,
+      // REQ-120 — customer-role keys are bound to the customer they act for.
+      userId: apiKey?.userId?.toString(),
+    };
   }
 
   // Fall back to session auth

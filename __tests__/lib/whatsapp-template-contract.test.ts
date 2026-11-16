@@ -113,6 +113,13 @@ const SAMPLE_CALLS: Record<string, () => WhatsAppTemplateParams> = {
   welcomeNewUserParams: () => builders.welcomeNewUserParams(WEEK),
   welcomeBackParams: () => builders.welcomeBackParams({ firstName: 'Ada' }),
   accountRecoveryParams: () => builders.accountRecoveryParams('+2348099994567'),
+  staffAlertParams: () =>
+    builders.staffAlertParams({
+      label: 'New booking request',
+      reference: 'BK-0042',
+      minutesWaiting: 12,
+      path: 'bookings/665a1b2c3d4e5f6a7b8c9d0e',
+    }),
 };
 
 /** Number of distinct `{{n}}` variables in a template string. */
@@ -128,7 +135,7 @@ const templates: TemplateJson[] = files.map((f) =>
 
 describe('REQ-115 WhatsApp template contract', () => {
   it('[US-01.6] there is a JSON definition for every template in the doc', () => {
-    expect(templates.length).toBe(12);
+    expect(templates.length).toBe(13);
     const doc = readFileSync(
       join(process.cwd(), 'docs', 'whatsapp-templates.md'),
       'utf8'

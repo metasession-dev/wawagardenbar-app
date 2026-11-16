@@ -18,6 +18,10 @@ vi.mock('@/services/notification-service', () => ({
   },
 }));
 
+const raiseForSupportTicket = vi.hoisted(() => vi.fn());
+vi.mock('@/services/staff-notification-service', () => ({
+  StaffNotificationService: { raiseForSupportTicket },
+}));
 vi.mock('@/lib/email', () => ({
   sendSupportTicketEmail: vi.fn().mockResolvedValue(undefined),
 }));
@@ -259,5 +263,59 @@ describe('REQ-064 SupportTicketService.listTickets', () => {
 
     const match = mockAggregate.mock.calls[0][0][0].$match;
     expect(match.status).toBeUndefined();
+  });
+});
+
+describe('REQ-122 AC1: support tickets raise a staff alert', () => {
+  beforeEach(() => raiseForSupportTicket.mockReset());
+
+  it('a new ticket raises one alert', async () => {
+    mockCreate.mockImplementation((input) =>
+      Promise.resolve({ ...input, _id: 'ticket-1' })
+    );
+    const { SupportTicketService } = await import(
+      '@/services/support-ticket-service'
+    );
+    const ticket = await SupportTicketService.createTicket({
+      source: 'web',
+      category: 'order-issue',
+      subject: 'subj',
+      message: 'msg',
+    });
+    expect(raiseForSupportTicket).toHaveBeenCalledOnce();
+    expect(raiseForSupportTicket).toHaveBeenCalledWith(ticket);
+  });
+
+  it('a customer reply raises an alert and a staff reply does not', async () => {
+    const updated = {
+      _id: 'ticket-4',
+      ticketNumber: 'TKT-99',
+      userId: null,
+      subject: 's',
+      replies: [],
+    };
+    mockFindByIdAndUpdate.mockReturnValue({
+      lean: vi.fn().mockResolvedValue(updated),
+    });
+    const { SupportTicketService } = await import(
+      '@/services/support-ticket-service'
+    );
+    await SupportTicketService.addReply({
+      ticketId: 'ticket-4',
+      body: 'Still waiting',
+      authorRole: 'customer',
+      authorUserId: null,
+    });
+    expect(raiseForSupportTicket).toHaveBeenCalledTimes(1);
+    expect(raiseForSupportTicket).toHaveBeenCalledWith(updated);
+
+    raiseForSupportTicket.mockClear();
+    await SupportTicketService.addReply({
+      ticketId: 'ticket-4',
+      body: 'On it',
+      authorRole: 'staff',
+      authorUserId: 'staff-1',
+    });
+    expect(raiseForSupportTicket).not.toHaveBeenCalled();
   });
 });

@@ -13,3 +13,4 @@ export { default as StockMovementModel } from './stock-movement-model';
 export { TagModel } from './tag-model';
 export { CashPositionAdjustmentModel } from './cash-position-adjustment-model';
 export { CashDepositModel } from './cash-deposit-model';
+export { default as StaffNotificationModel } from './staff-notification-model';

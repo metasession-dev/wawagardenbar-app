@@ -83,6 +83,17 @@ export function initSocketServer(httpServer: HTTPServer): SocketIOServer {
       console.log(`Client ${socket.id} left kitchen-display room`);
     });
 
+    // REQ-122 (ADR-011) — the dashboard bell listens here. The event carries no
+    // content (only an id and a type); the client refetches through an
+    // authenticated, role-scoped action, so the open room leaks nothing.
+    socket.on('staff-notifications:subscribe', () => {
+      socket.join('staff-notifications');
+    });
+
+    socket.on('staff-notifications:unsubscribe', () => {
+      socket.leave('staff-notifications');
+    });
+
     socket.on('disconnect', () => {
       console.log('Client disconnected:', socket.id);
     });
@@ -242,7 +253,14 @@ export function emitOrderUpdated({
     return;
   }
 
-  const data = { orderId, updates, action, status, updatedBy, timestamp: new Date().toISOString() };
+  const data = {
+    orderId,
+    updates,
+    action,
+    status,
+    updatedBy,
+    timestamp: new Date().toISOString(),
+  };
 
   socketServer.to('orders').emit('order:updated', data);
   socketServer.to('kitchen-display').emit('order:updated', data);
@@ -291,10 +309,31 @@ export function emitBatchUpdate({
     return;
   }
 
-  console.log(`📡 Emitting batch update to kitchen: ${orderIds.length} orders, action: ${action}`);
+  console.log(
+    `📡 Emitting batch update to kitchen: ${orderIds.length} orders, action: ${action}`
+  );
   socketServer.to('kitchen').emit('batch-update', {
     orderIds,
     action,
     timestamp: new Date().toISOString(),
+  });
+}
+
+/**
+ * REQ-122 — signal that a staff notification was raised. Content-free on
+ * purpose: see the subscribe handler above.
+ */
+export function emitStaffNotification({
+  id,
+  type,
+}: {
+  id: string;
+  type: string;
+}): void {
+  const socketServer = getSocketServer();
+  if (!socketServer) return;
+  socketServer.to('staff-notifications').emit('staff-notification', {
+    id,
+    type,
   });
 }

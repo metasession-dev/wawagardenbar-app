@@ -33,12 +33,14 @@ import {
   Trash2,
   Copy,
   Shield,
+  Bell,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { getRoles } from '@/lib/roles';
 import type { StaffRole } from '@/interfaces/user.interface';
 import { EditRolesDialog } from './edit-roles-dialog';
+import { EditAlertNumberDialog } from './edit-alert-number-dialog';
 
 interface AdminActionsDropdownProps {
   admin: any;
@@ -55,6 +57,7 @@ export function AdminActionsDropdown({
   const router = useRouter();
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [showRolesDialog, setShowRolesDialog] = useState(false);
+  const [showAlertDialog, setShowAlertDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [tempPassword, setTempPassword] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -169,6 +172,11 @@ export function AdminActionsDropdown({
             Edit Roles
           </DropdownMenuItem>
 
+          <DropdownMenuItem onClick={() => setShowAlertDialog(true)}>
+            <Bell className="mr-2 h-4 w-4" />
+            WhatsApp Alert Number
+          </DropdownMenuItem>
+
           <DropdownMenuItem onClick={() => setShowResetDialog(true)}>
             <Key className="mr-2 h-4 w-4" />
             Reset Password
@@ -209,6 +217,17 @@ export function AdminActionsDropdown({
         username={admin.username}
         currentRoles={getRoles(admin) as StaffRole[]}
         canGrantPrivileged={canGrantPrivileged}
+        onUpdated={onUpdate}
+      />
+
+      {/* REQ-122 — alert number, saved unverified */}
+      <EditAlertNumberDialog
+        key={showAlertDialog ? 'open' : 'closed'}
+        open={showAlertDialog}
+        onOpenChange={setShowAlertDialog}
+        adminId={admin._id}
+        username={admin.username}
+        currentPhone={admin.alertPhone}
         onUpdated={onUpdate}
       />
 

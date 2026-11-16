@@ -118,6 +118,20 @@ export interface IUser {
   whatsappVerifiedAt?: Date;
   sessionToken?: string;
 
+  // REQ-122 (ADR-011) — staff alert number, separate from the customer `phone`.
+  alertPhone?: string;
+  alertPhoneVerified?: boolean;
+  /** Consent for staff alerts, set when the alert number is verified. */
+  alertConsentAt?: Date;
+  alertsEnabled?: boolean;
+  onShift?: boolean;
+  // Keyed hash of the alert-number PIN and its limits (never the PIN itself).
+  alertPinHash?: string;
+  alertPinExpiresAt?: Date;
+  alertPinAttempts?: number;
+  alertPinRequestWindowStart?: Date;
+  alertPinRequestCount?: number;
+
   // Admin Authentication Fields
   username?: string; // Unique username for admin login
   password?: string; // Hashed password (bcrypt)

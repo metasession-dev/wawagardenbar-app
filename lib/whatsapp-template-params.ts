@@ -197,3 +197,25 @@ export function bankTransferDetailsParams(input: {
     ],
   };
 }
+
+/**
+ * REQ-122 — `staff_alert` = body [label, reference, minutes waiting], URL button
+ * [dashboard path after `/dashboard/`]. The label and reference are single
+ * lines: Meta rejects newlines and tabs inside a variable.
+ */
+export function staffAlertParams(input: {
+  label: string;
+  reference: string;
+  minutesWaiting: number;
+  path: string;
+}): WhatsAppTemplateParams {
+  const oneLine = (text: string) => text.replace(/[\r\n\t]+/g, ' ').trim();
+  return {
+    bodyParams: [
+      oneLine(input.label),
+      oneLine(input.reference),
+      String(Math.max(0, Math.floor(input.minutesWaiting))),
+    ],
+    buttonParams: [{ index: 0, params: [input.path] }],
+  };
+}

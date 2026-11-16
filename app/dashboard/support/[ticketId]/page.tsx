@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { SupportTicketService } from '@/services/support-ticket-service';
 import { ReplyThread } from '@/components/features/dashboard/support/reply-thread';
+import { AcknowledgeOnOpen } from '@/components/features/admin/acknowledge-on-open';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,6 +31,8 @@ export default async function SupportTicketDetailPage({
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-6 max-w-3xl">
+      {/* REQ-122 — opening the ticket acknowledges its staff alert */}
+      <AcknowledgeOnOpen refId={ticketId} />
       <div className="flex items-center justify-between">
         <Link href="/dashboard/support">
           <Button variant="ghost" size="sm">

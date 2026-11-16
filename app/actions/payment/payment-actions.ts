@@ -27,6 +27,7 @@ import { CartItem } from '@/stores/cart-store';
 import { emitNewOrder } from '@/lib/socket-server';
 import { revalidatePath } from 'next/cache';
 import { paymentEmailFor } from '@/lib/checkout/checkout-rules';
+import { StaffNotificationService } from '@/services/staff-notification-service';
 
 export interface CreateOrderInput {
   orderType: 'dine-in' | 'pickup' | 'delivery';
@@ -375,6 +376,11 @@ export async function verifyPayment(
       }
 
       await order.save();
+
+      // REQ-122 — a paid customer order raises a staff alert (never throws).
+      if (order.paymentStatus === 'paid') {
+        await StaffNotificationService.raiseForPaidOrder(order);
+      }
     } else if (tab) {
       // Handle tab payment
       if (PaymentService.isPaymentSuccessful(response.status)) {

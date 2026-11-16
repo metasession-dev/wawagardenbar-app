@@ -137,6 +137,19 @@ const userSchema = new Schema<IUser>(
     whatsappVerifiedAt: { type: Date },
     sessionToken: { type: String, select: false },
 
+    // REQ-122 (ADR-011) — staff alert number, separate from the customer
+    // `phone`. Only a verified number ever receives a staff alert.
+    alertPhone: { type: String, trim: true },
+    alertPhoneVerified: { type: Boolean, default: false },
+    alertConsentAt: { type: Date },
+    alertsEnabled: { type: Boolean, default: true },
+    onShift: { type: Boolean, default: false },
+    alertPinHash: { type: String, select: false },
+    alertPinExpiresAt: { type: Date, select: false },
+    alertPinAttempts: { type: Number, default: 0, select: false },
+    alertPinRequestWindowStart: { type: Date, select: false },
+    alertPinRequestCount: { type: Number, default: 0, select: false },
+
     // Admin Authentication
     username: {
       type: String,
@@ -219,6 +232,8 @@ userSchema.index({ createdAt: -1 });
 // phone index is already created via unique: true in schema definition
 // username index is already created via unique: true in schema definition
 userSchema.index({ 'addresses.isDefault': 1 });
+// REQ-122 — inbound routing looks a staff number up by its verified alert phone.
+userSchema.index({ alertPhone: 1 }, { sparse: true });
 userSchema.index({ isAdmin: 1, accountStatus: 1 });
 
 // Instance Methods

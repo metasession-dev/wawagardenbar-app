@@ -34,13 +34,11 @@ on:
       runner_label:
         description: 'Optional one-run runner label override. Blank uses repository CI_RUNNER_LABEL.'
         required: false
-  # PR-to-main runs the critical tier (smoke + e2e/critical/). Successful
-  # production deployment runs the full regression safety net; manual
-  # dispatch supports intentional operator-triggered full or scoped runs.
+  # Triggers follow sdlc-config.json: release_gate_tier runs on the PR into the
+  # release branch, post_deploy_full_regression after a successful production
+  # deployment, scheduled_full_regression on a schedule; manual dispatch always.
   pull_request:
     branches: [main]
-  deployment_status:
-    types: [created]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -147,6 +145,23 @@ jobs:
           npx tsx scripts/seed-inventory.ts
           npx tsx scripts/seed-e2e-fixtures.ts
 
+      - name: E2E data lifecycle (reset, seed, preflight)
+        env:
+          MONGODB_URI: mongodb://localhost:27017
+          MONGODB_DB_NAME: wawagardenbar_test
+          E2E_ADMIN_USERNAME: e2e-admin
+          E2E_ADMIN_PASSWORD: E2eTest@2026!
+          E2E_SUPER_ADMIN_USERNAME: e2e-superadmin
+          E2E_SUPER_ADMIN_PASSWORD: E2eTest@2026!
+          E2E_CSR_USERNAME: e2e-csr
+          E2E_CSR_PASSWORD: E2eTest@2026!
+          INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
+          MONNIFY_SECRET_KEY: ${{ secrets.MONNIFY_SECRET_KEY }}
+          PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
+          ENABLE_E2E_PIN_INTERCEPT: true
+          WHATSAPP_APP_SECRET: e2e-whatsapp-app-secret
+        run: bash scripts/e2e-data-lifecycle.sh before
+
       - name: Kill stale dev server
         # See ci.yml.template's "Kill stale dev server" step for why (devaudit-installer#820/#1054).
         run: |
@@ -232,17 +247,14 @@ jobs:
           EVENT="${{ github.event_name }}"
           case "$EVENT" in
             pull_request)
-              if grep -qE "name:\s*['\"]critical['\"]" playwright.config.ts 2>/dev/null; then
-                echo "project=critical" >> "$GITHUB_OUTPUT"
-                echo "Using critical-tier project (smoke + e2e/critical/)"
-              else
-                echo "project=smoke" >> "$GITHUB_OUTPUT"
-                echo "::warning::No 'critical' Playwright project defined; falling back to smoke."
-              fi
+              echo "project=regression" >> "$GITHUB_OUTPUT"
+              echo "Using the full tier"
+              echo "tier=full" >> "$GITHUB_OUTPUT"
               echo "specs=" >> "$GITHUB_OUTPUT"
               ;;
-            deployment_status)
+            deployment_status|schedule)
               echo "project=regression" >> "$GITHUB_OUTPUT"
+              echo "tier=full" >> "$GITHUB_OUTPUT"
               echo "specs=" >> "$GITHUB_OUTPUT"
               echo "Running full regression project"
               ;;
@@ -272,12 +284,13 @@ jobs:
           jq -n \
             --arg targetUrl "http://localhost:3000" \
             --arg project "${{ steps.select.outputs.project }}" \
+            --arg tier "${{ steps.select.outputs.tier || 'full' }}" \
             --arg specs "${{ steps.select.outputs.specs }}" \
             --arg serverStart "start command (pid ${SERVER_PID:-unknown})" \
             --arg serverStop "kill process group ${SERVER_PID:-unknown}" \
             --arg startedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             --argjson timeoutMinutes "$TIMEOUT_MINUTES_VALUE" \
-            '{target_url: $targetUrl, project: $project, selected_specs: $specs, test_server_start: $serverStart, test_server_stop: $serverStop, timeout_minutes: $timeoutMinutes, started_at: $startedAt, outcome: "running"}' \
+            '{target_url: $targetUrl, project: $project, tier: $tier, selected_specs: $specs, test_server_start: $serverStart, test_server_stop: $serverStop, timeout_minutes: $timeoutMinutes, started_at: $startedAt, outcome: "running"}' \
             > e2e-regression-metadata.json
 
       # Extension point (devaudit-installer#928): if the consumer or a
@@ -310,7 +323,7 @@ jobs:
             timeout --signal=TERM --kill-after=60s 40m npx playwright test --project="$PROJECT" --reporter=json,html $SPECS || STATUS=$?
           else
             echo "::notice::Running project=$PROJECT"
-            timeout --signal=TERM --kill-after=60s 40m npx playwright test --project="$PROJECT" --reporter=json,html || STATUS=$?
+            timeout --signal=TERM --kill-after=60s 40m bash "$GITHUB_WORKSPACE/scripts/run-test-tier.sh" "$([ "$PROJECT" = regression ] && echo full || echo critical)" || STATUS=$?
           fi
           if [ "$STATUS" -eq 124 ]; then
             OUTCOME="timed_out"
@@ -325,6 +338,24 @@ jobs:
             e2e-regression-metadata.json > e2e-regression-metadata.tmp
           mv e2e-regression-metadata.tmp e2e-regression-metadata.json
           exit "$STATUS"
+
+      - name: E2E data lifecycle (teardown, leak check, skip budget)
+        if: always()
+        env:
+          MONGODB_URI: mongodb://localhost:27017
+          MONGODB_DB_NAME: wawagardenbar_test
+          E2E_ADMIN_USERNAME: e2e-admin
+          E2E_ADMIN_PASSWORD: E2eTest@2026!
+          E2E_SUPER_ADMIN_USERNAME: e2e-superadmin
+          E2E_SUPER_ADMIN_PASSWORD: E2eTest@2026!
+          E2E_CSR_USERNAME: e2e-csr
+          E2E_CSR_PASSWORD: E2eTest@2026!
+          INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
+          MONNIFY_SECRET_KEY: ${{ secrets.MONNIFY_SECRET_KEY }}
+          PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
+          ENABLE_E2E_PIN_INTERCEPT: true
+          WHATSAPP_APP_SECRET: e2e-whatsapp-app-secret
+        run: bash scripts/e2e-data-lifecycle.sh after --results e2e-regression-results.json --metadata e2e-regression-metadata.json
 
       - name: Stop dev server
         if: always()

@@ -60,7 +60,7 @@
   },
   "production_review": {
     "enabled": true,
-    "terminal_status": "prod_review"
+    "terminal_status": "released"
   },
   "stack": "node",
   "host": "railway",
@@ -78,5 +78,28 @@
   "release_branch": "main",
   "devaudit_synced_version": "1.14.0",
   "e2e_regression_enabled": true,
-  "e2e_screenshot_exempt_reqs": ["REQ-111"]
+  "e2e_screenshot_exempt_reqs": ["REQ-111"],
+  "test_tier_full": "yes",
+  "release_gate_tier": "full",
+  "post_deploy_full_regression": false,
+  "e2e_data_isolation": "ephemeral",
+  "release_branch_required_reviews": 1,
+  "e2e_port": 3000,
+  "e2e_seed_command": "npx tsx scripts/seed-e2e-admins.ts && npx tsx scripts/seed-food-menu.ts && npx tsx scripts/seed-drinks-menu.ts && npx tsx scripts/seed-inventory.ts && npx tsx scripts/seed-e2e-fixtures.ts",
+  "e2e_seed_paths": [
+    "scripts/seed-e2e-admins.ts",
+    "scripts/seed-food-menu.ts",
+    "scripts/seed-drinks-menu.ts",
+    "scripts/seed-inventory.ts",
+    "scripts/seed-e2e-fixtures.ts"
+  ],
+  "e2e_projects": ["smoke", "critical", "regression"],
+  "onboarding_preset": "custom",
+  "compliance_frameworks": [
+    "soc-2",
+    "iso-29119",
+    "iso-27001",
+    "gdpr",
+    "eu-ai-act"
+  ]
 }

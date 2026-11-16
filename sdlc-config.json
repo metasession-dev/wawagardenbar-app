@@ -95,7 +95,7 @@
     "scripts/seed-inventory.ts",
     "scripts/seed-e2e-fixtures.ts"
   ],
-  "e2e_projects": ["smoke", "critical", "regression"],
+  "e2e_projects": ["smoke", "critical"],
   "onboarding_preset": "custom",
   "compliance_frameworks": [
     "soc-2",

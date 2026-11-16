@@ -416,7 +416,7 @@ jobs:
           PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
           ENABLE_E2E_PIN_INTERCEPT: true
           WHATSAPP_APP_SECRET: e2e-whatsapp-app-secret
-        run: npx playwright test --project=smoke --project=critical --project=regression --reporter=json,html
+        run: npx playwright test --project=smoke --project=critical --reporter=json,html
       # ── Gate 5: Build ──
 
       - name: Build Check

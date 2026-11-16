@@ -167,7 +167,7 @@
       "section": "2f"
     },
     ".github/workflows/ci.yml": {
-      "sha256": "e966ddb8adf02dffa369cf317dbc6c07e09fa57a75d73189cff75765240a8b4b",
+      "sha256": "48af3bfb87eab66b773bf63774f0a468c1cac3725ccb759783565a3f9322dcd7",
       "section": "2f"
     },
     ".github/workflows/close-out-completion.yml": {

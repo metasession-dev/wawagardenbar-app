@@ -52,7 +52,8 @@
   "uat": {
     "enabled": true,
     "url": "https://wawagardenbar-app-uat.up.railway.app/",
-    "required_risk_classes": ["*"]
+    "required_risk_classes": ["*"],
+    "mode": "auto"
   },
   "approval": {
     "mode": "dual_actor",

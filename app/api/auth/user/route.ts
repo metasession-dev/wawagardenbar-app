@@ -36,6 +36,12 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
       user: {
         id: user._id.toString(),
         name: fullName,
+        // REQ-121 (REQ-CHECKOUT-015): `name` falls back to the email prefix, so
+        // it cannot say whether the account really has a name. Checkout asks
+        // for a first name only when this is false.
+        hasName: Boolean(
+          user.firstName?.trim() || user.lastName?.trim() || user.name?.trim()
+        ),
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,

@@ -319,7 +319,8 @@ csrTest.describe('REQ-109: csr order/tab management actions (AC6)', () => {
     await expect(cancelButton).toBeVisible({ timeout: 10000 });
     await cancelButton.click();
 
-    const dialog = page.locator('[role="dialog"]');
+    // Named, so the Next.js dev-tools indicator (also role=dialog) cannot match.
+    const dialog = page.getByRole('dialog', { name: 'Cancel Order' });
     await expect(dialog).toBeVisible();
     await dialog
       .locator('#reason')

@@ -105,8 +105,14 @@ export function CustomerCheckoutForm() {
   const [useSavedAddress, setUseSavedAddress] = useState(true);
   const preselected = useRef(false);
 
-  // REQ-CHECKOUT-015: the name is asked once, and only when the account has none.
-  const needsName = isAuthenticated && !isLoadingUser && !user?.name?.trim();
+  // REQ-CHECKOUT-015: the name is asked once, and only when the account has
+  // none. Wait for the profile to load first (it arrives in its own request),
+  // and use `hasName`: `name` falls back to the email prefix.
+  const needsName =
+    isAuthenticated &&
+    !isLoadingUser &&
+    Boolean(user) &&
+    user?.hasName === false;
   const schema = useMemo(() => buildCheckoutSchema({ needsName }), [needsName]);
   const savedAddress = useMemo(
     () =>

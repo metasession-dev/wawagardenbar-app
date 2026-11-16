@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-121",
+  "ac": 2,
+  "slug": "first-name-required",
+  "specFile": "e2e/critical/checkout-single-page.spec.ts",
+  "capturedAt": "2026-11-16T22:42:59.267Z"
+}

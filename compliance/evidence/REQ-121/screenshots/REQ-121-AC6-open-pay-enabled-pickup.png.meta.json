@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-121",
+  "ac": 6,
+  "slug": "open-pay-enabled-pickup",
+  "specFile": "e2e/critical/checkout-closed-hours.spec.ts",
+  "capturedAt": "2026-11-16T23:00:29.496Z"
+}

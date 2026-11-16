@@ -396,9 +396,14 @@ export async function createCustomerOrder(
       deliveryFee: totals.deliveryFee,
       discount: 0,
       tipAmount,
+      // REQ-121: a customer's tip is charged online with the order and they no
+      // longer choose a method, but the order model requires one whenever
+      // tipAmount > 0 (REQ-035), so it is recorded as the online payment (card).
       ...(input.tipPaymentMethod
         ? { tipPaymentMethod: input.tipPaymentMethod }
-        : {}),
+        : tipAmount > 0
+          ? { tipPaymentMethod: 'card' as const }
+          : {}),
       total: totals.total + tipAmount,
       specialInstructions: input.specialInstructions,
       ...(input.orderType === 'delivery' && input.deliveryAddress

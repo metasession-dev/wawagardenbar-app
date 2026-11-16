@@ -1,10 +1,9 @@
 /**
  * @requirement REQ-120 (AC7) - the checkout offers only the enabled order types
  *
- * Found in UAT (step 10): with only dine-in enabled the Order Details step
- * still showed Pickup and Delivery, and the customer learned they were
- * disabled only after Proceed to Payment. The step now reads
- * `getOrderingOptionsAction`. Rewrites shop-wide settings, so it runs alone
+ * Found in UAT (step 10): with only dine-in enabled the checkout still showed
+ * Pickup and Delivery, and the customer learned they were disabled only after
+ * paying. The page reads `getOrderingOptionsAction` (REQ-121: one page). Rewrites shop-wide settings, so it runs alone
  * (see `AGGREGATE_SPECS`, playwright.config.ts).
  */
 import { test, expect } from '@playwright/test';
@@ -29,6 +28,7 @@ import {
   blockGatewayNavigation,
   dismissCookieBanner,
 } from '../helpers/customer-journey';
+import { giveOwnClientIp } from '../helpers/checkout-page';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const KEYS = ['dineInEnabled', 'pickupEnabled', 'deliveryEnabled'];
@@ -56,6 +56,7 @@ async function openOrderDetails(
   context: import('@playwright/test').BrowserContext
 ) {
   await dismissCookieBanner(page);
+  await giveOwnClientIp(context);
   await blockGatewayNavigation(context);
   await attachCustomerSessionToContext(context, customer, BASE_URL);
   await page.addInitScript((id: string) => {
@@ -89,20 +90,14 @@ async function openOrderDetails(
   await page.goto('/menu');
   await page.waitForLoadState('networkidle');
   await page.goto('/checkout');
-  await page.waitForSelector('input[name="customerName"]', { timeout: 20000 });
-  for (const [field, value] of [
-    ['customerName', 'E2E Options'],
-    ['customerEmail', customer.email],
-    ['customerPhone', customer.phone],
-  ]) {
-    const input = page.locator(`input[name="${field}"]`);
-    if (!(await input.inputValue())) await input.fill(value);
-  }
-  await page.waitForTimeout(450);
-  await page.locator('button', { hasText: 'Next' }).click();
-  await expect(page.locator('form').getByText('Order Details')).toBeVisible({
-    timeout: 10000,
+  // REQ-121: one page; the order type selector is the first thing on it.
+  await expect(page.locator('label[for^="order-type-"]').first()).toBeVisible({
+    timeout: 25000,
   });
+  await expect(page.getByText('Sign In', { exact: true })).toHaveCount(0, {
+    timeout: 45000,
+  });
+  await page.waitForLoadState('networkidle');
 }
 
 test.describe('[REQ-120] checkout offers only enabled order types', () => {
@@ -117,9 +112,11 @@ test.describe('[REQ-120] checkout offers only enabled order types', () => {
       deliveryEnabled: false,
     });
     await openOrderDetails(page, context);
-    await expect(page.locator('label[for="dine-in"]')).toBeVisible();
-    await expect(page.locator('label[for="pickup"]')).toHaveCount(0);
-    await expect(page.locator('label[for="delivery"]')).toHaveCount(0);
+    await expect(page.locator('label[for="order-type-dine-in"]')).toBeVisible();
+    await expect(page.locator('label[for="order-type-pickup"]')).toHaveCount(0);
+    await expect(page.locator('label[for="order-type-delivery"]')).toHaveCount(
+      0
+    );
     await evidenceShot(page, 'REQ-120', 7, 'only-dine-in-offered');
   });
 
@@ -134,9 +131,18 @@ test.describe('[REQ-120] checkout offers only enabled order types', () => {
       deliveryEnabled: true,
     });
     await openOrderDetails(page, context);
-    await expect(page.locator('label[for="pickup"]')).toBeVisible();
-    await expect(page.locator('label[for="delivery"]')).toBeVisible();
-    await expect(page.locator('label[for="dine-in"]')).toHaveCount(0);
+    await expect(page.locator('label[for="order-type-pickup"]')).toBeVisible();
+    await expect(
+      page.locator('label[for="order-type-delivery"]')
+    ).toBeVisible();
+    await expect(page.locator('label[for="order-type-dine-in"]')).toHaveCount(
+      0
+    );
+    // The selection moves to an enabled type.
+    await expect(page.locator('#order-type-pickup')).toHaveAttribute(
+      'data-state',
+      'checked'
+    );
     await evidenceShot(page, 'REQ-120', 7, 'dine-in-hidden');
   });
 });

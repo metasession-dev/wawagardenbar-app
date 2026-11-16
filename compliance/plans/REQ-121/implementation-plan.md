@@ -76,7 +76,7 @@ In scope: replace the stepper in `components/features/checkout/customer-checkout
 
 ## 4. E2E test coverage
 
-New critical spec `e2e/critical/checkout-single-page.spec.ts` (US-A2.1 to US-A2.5, US-A2.11, US-A2.12) with per-AC `tagTest('REQ-121', n)`. Update `e2e/smoke/req-084-checkout-separation.spec.ts` and every spec tagged `REQ-CHECKOUT-001` to the single-page flow. Delegated to `e2e-test-engineer`; evidence-wiring validated by that skill.
+New critical specs `e2e/critical/checkout-single-page.spec.ts` (US-A2.1 to US-A2.5, US-A2.11, tip charge, inline errors) and `e2e/critical/checkout-closed-hours.spec.ts` (US-A2.12), each test with `tagTest('REQ-121', n)` and `[REQ-121][ACn]` in its title. Updated to the single page: `e2e/smoke/req-084-checkout-separation.spec.ts`, `customer-order-journey`, `customer-ordering-options-ui`, `customer-cannot-use-tabs` and `requirements-verification`. Written through `e2e-test-engineer`; evidence wiring validated by that skill; decision recorded in `compliance/evidence/REQ-121/e2e-scope-decision.md`.
 
 ### Test data requirements
 
@@ -132,6 +132,9 @@ Implementation approach changes found while building; none changes an acceptance
 7. **Payment email.** No email is asked; the provider gets the account email, or the guest address `guest@wawagardenbar.com` already used for tab payments.
 8. **Rewards are unchanged.** The plan's task 9 (auto-apply rewards, collapsed) is not an acceptance criterion and is not built here; the existing rewards section in the order summary is untouched. Only "Add a note" is collapsed.
 9. Removed as dead code: the four step components and the status dialog that only the old wizard used.
+10. **A customer tip is recorded as `card`.** The order model requires a tip method whenever the tip is above zero (REQ-035), and a customer no longer chooses one, so the service records the online payment as `card`. Found by the e2e run: unit tests that mock the model had passed.
+11. **`/api/auth/user` returns `hasName`.** The route's `name` falls back to the email prefix, so the checkout could not tell an account with no name from one with a name; the first-name field showed, then disappeared when the profile loaded. The form now waits for the profile and reads `hasName`.
+12. **E2E specs.** The closed-hours story is its own spec (`checkout-closed-hours.spec.ts`) because it rewrites shop-wide business hours and must run alone (`AGGREGATE_SPECS`). Existing specs that drove the old wizard were updated to the single page (listed in the e2e scope decision).
 
 ## 10. Operator tasks (non-code)
 

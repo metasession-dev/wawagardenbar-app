@@ -145,6 +145,8 @@ const userSchema = new Schema<IUser>(
     alertsEnabled: { type: Boolean, default: true },
     onShift: { type: Boolean, default: false },
     alertPinHash: { type: String, select: false },
+    // Test-only plaintext written ONLY under ENABLE_E2E_PIN_INTERCEPT.
+    alertPin: { type: String, select: false },
     alertPinExpiresAt: { type: Date, select: false },
     alertPinAttempts: { type: Number, default: 0, select: false },
     alertPinRequestWindowStart: { type: Date, select: false },

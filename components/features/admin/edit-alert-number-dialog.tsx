@@ -8,7 +8,7 @@
 'use client';
 
 import { useState } from 'react';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { setStaffAlertPhoneAction } from '@/app/actions/staff-notifications/staff-notification-actions';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -41,6 +41,7 @@ export function EditAlertNumberDialog({
   currentPhone,
   onUpdated,
 }: EditAlertNumberDialogProps) {
+  const { toast } = useToast();
   const [phone, setPhone] = useState(currentPhone ?? '');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -54,7 +55,7 @@ export function EditAlertNumberDialog({
         setError(res.message ?? 'Could not save the number.');
         return;
       }
-      toast.success(res.message ?? 'Alert number saved');
+      toast({ title: res.message ?? 'Alert number saved' });
       onOpenChange(false);
       onUpdated?.();
     } finally {

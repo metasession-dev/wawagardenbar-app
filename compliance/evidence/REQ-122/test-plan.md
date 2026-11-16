@@ -15,3 +15,4 @@
 | `e2e/critical/staff-notifications.spec.ts`                 | e2e           | AC1 to AC3, AC5, AC7 |
 | `e2e/critical/staff-alert-number.spec.ts`                  | e2e           | AC4                  |
 | `e2e/critical/whatsapp-staff-number-routing.spec.ts`       | e2e           | AC8                  |
+| `e2e/critical/staff-alert-rules.spec.ts`                   | e2e           | AC6                  |

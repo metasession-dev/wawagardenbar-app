@@ -77,7 +77,7 @@ In scope: `models/staff-notification-model.ts` and `StaffNotificationService`; h
 
 ## 4. E2E test coverage
 
-New critical specs: `e2e/critical/staff-notifications.spec.ts` (US-B5.3, US-B5.4, US-B5.9), `staff-alert-number.spec.ts` (US-B5.5), `whatsapp-staff-number-routing.spec.ts` (US-B5.11); the escalation timing cases (US-B5.6 to US-B5.8, US-B5.10) are unit tests with fake timers in `__tests__/jobs/staff-alert-escalation.test.ts`. Per-AC `tagTest('REQ-122', n)`. Delegated to `e2e-test-engineer`.
+New critical specs: `e2e/critical/staff-notifications.spec.ts` (US-B5.3, US-B5.4, US-B5.9, audience, on-shift), `staff-alert-number.spec.ts` (US-B5.5, including the super-admin dialog), `staff-alert-rules.spec.ts` (US-B5.10, the form saves what the job reads) and `whatsapp-staff-number-routing.spec.ts` (US-B5.11, transport layer). The escalation timing cases (US-B5.6 to US-B5.8) are unit tests with fake timers in `__tests__/jobs/staff-alert-escalation.test.ts`. Each test has `tagTest('REQ-122', n)` and `[REQ-122][ACn]` in its title. Written through `e2e-test-engineer`; decision recorded in `compliance/evidence/REQ-122/e2e-scope-decision.md`.
 
 ### Test data requirements
 
@@ -132,7 +132,10 @@ Implementation approach changes found while building; none changes an acceptance
 5. **A staff account page.** There was no page where a staff member could enter and verify their own number, and kitchen-only staff reach only a few routes. `/dashboard/account` (all staff roles, in the route allowlist and the sidebar) holds the alert number card.
 6. **Alert number rules added.** A number that belongs to a customer account, or is already verified for another staff member, is refused, so a customer can never be treated as staff by the inbound router. `alertsEnabled` has a switch on the account page.
 7. **Opening the item acknowledges it** from the bell, and also when the order or ticket page is opened directly (`AcknowledgeOnOpen`).
-8. **Levels are claimed even when nobody is reachable**, so a run does not retry every minute. Quiet hours hold WhatsApp without claiming a level, so the alert goes out when they end.
+8. **Staff PIN e2e intercept.** Under `ENABLE_E2E_PIN_INTERCEPT` the alert-number code is kept in plain text for tests and the Meta send is skipped, exactly like the customer sign-in (REQ-117); in every other environment only the keyed hash is stored.
+9. **Number validation.** The service refuses a number that does not normalise to an international number (found by e2e: a 12-digit local number was stored as `+080…`).
+10. **Toasts.** The app mounts the shadcn `Toaster`, not `sonner`'s, so the new components use `use-toast`; `sonner` toasts in older admin components have no toaster to render them (a separate, existing issue).
+11. **Levels are claimed even when nobody is reachable**, so a run does not retry every minute. Quiet hours hold WhatsApp without claiming a level, so the alert goes out when they end.
 
 ## 10. Operator tasks (non-code)
 

@@ -88,6 +88,20 @@ describe('AC4: saving the number', () => {
     expect(U.updateOne).not.toHaveBeenCalled();
   });
 
+  it('refuses a number that does not normalise to an international number', async () => {
+    findOneReturns({ _id: 's1' });
+    // 12 digits starting 0803: too long for a Nigerian local number, so it would
+    // otherwise be stored as "+0803...".
+    for (const bad of ['080312345678', '0000000000', '+0 80312345678']) {
+      const r = await StaffAlertNumberService.setAlertPhone('s1', bad);
+      expect(r).toMatchObject({
+        success: false,
+        message: 'Enter a valid phone number.',
+      });
+    }
+    expect(U.updateOne).not.toHaveBeenCalled();
+  });
+
   it('refuses a number that belongs to a customer account', async () => {
     findOneReturns({ _id: 's1' });
     U.exists.mockResolvedValueOnce({ _id: 'customer-1' });
@@ -135,6 +149,25 @@ describe('AC4: verifying with a WhatsApp PIN', () => {
     expect(doc.alertPinHash).not.toContain(pin);
     expect(doc.alertPinExpiresAt.getTime()).toBeGreaterThan(Date.now());
     expect(doc.alertPinRequestCount).toBe(1);
+  });
+
+  it('under the e2e intercept the plain code is kept for tests and nothing is sent to Meta', async () => {
+    vi.stubEnv('ENABLE_E2E_PIN_INTERCEPT', 'true');
+    const doc = staffDoc();
+    findOneReturns(doc);
+    const r = await StaffAlertNumberService.requestVerification('s1');
+    expect(r.success).toBe(true);
+    expect(sendPin).not.toHaveBeenCalled();
+    expect(doc.alertPin).toMatch(/^\d{6}$/);
+    expect(doc.alertPinHash).toBe(hashPin(doc.alertPin));
+  });
+
+  it('outside the intercept the plain code is never stored', async () => {
+    vi.stubEnv('ENABLE_E2E_PIN_INTERCEPT', 'false');
+    const doc = staffDoc({ alertPin: '999999' });
+    findOneReturns(doc);
+    await StaffAlertNumberService.requestVerification('s1');
+    expect(doc.alertPin).toBeUndefined();
   });
 
   it('needs a saved number first', async () => {

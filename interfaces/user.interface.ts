@@ -127,6 +127,8 @@ export interface IUser {
   onShift?: boolean;
   // Keyed hash of the alert-number PIN and its limits (never the PIN itself).
   alertPinHash?: string;
+  /** Test-only plaintext, written ONLY under ENABLE_E2E_PIN_INTERCEPT (like `verificationPin`). */
+  alertPin?: string;
   alertPinExpiresAt?: Date;
   alertPinAttempts?: number;
   alertPinRequestWindowStart?: Date;

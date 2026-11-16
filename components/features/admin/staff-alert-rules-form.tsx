@@ -10,7 +10,7 @@
 'use client';
 
 import { useState } from 'react';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 import { Loader2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -86,6 +86,7 @@ export function StaffAlertRulesForm({
   initialRules,
   staff,
 }: StaffAlertRulesFormProps) {
+  const { toast } = useToast();
   const [rules, setRules] = useState<StaffAlertRules>(initialRules);
   const [saving, setSaving] = useState(false);
 
@@ -99,9 +100,12 @@ export function StaffAlertRulesForm({
       const res = await updateStaffAlertRulesAction(rules);
       if (res.success && res.data) {
         setRules(res.data);
-        toast.success('Staff alert rules saved');
+        toast({ title: 'Staff alert rules saved' });
       } else {
-        toast.error(res.message ?? 'Could not save the rules');
+        toast({
+          title: res.message ?? 'Could not save the rules',
+          variant: 'destructive',
+        });
       }
     } finally {
       setSaving(false);

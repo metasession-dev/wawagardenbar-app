@@ -9,7 +9,8 @@
 
 import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
+import { ToastAction } from '@/components/ui/toast';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import {
@@ -21,6 +22,7 @@ const KEY = ['staff-alert-settings'] as const;
 
 export function OnShiftToggle() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const { data } = useQuery({
     queryKey: KEY,
     queryFn: async () => {
@@ -40,17 +42,23 @@ export function OnShiftToggle() {
         onCheckedChange={async (checked) => {
           const res = await setOnShiftAction(checked);
           if (!res.success) {
-            toast.error(res.message ?? 'Could not change your shift.');
+            toast({
+              title: res.message ?? 'Could not change your shift.',
+              variant: 'destructive',
+            });
           } else if (checked && !data.alertPhoneVerified) {
-            toast.message(
-              'You are on shift, but WhatsApp alerts need a verified number.',
-              {
-                action: {
-                  label: 'Add number',
-                  onClick: () => window.location.assign('/dashboard/account'),
-                },
-              }
-            );
+            toast({
+              title:
+                'You are on shift, but WhatsApp alerts need a verified number.',
+              action: (
+                <ToastAction
+                  altText="Add your alert number"
+                  onClick={() => window.location.assign('/dashboard/account')}
+                >
+                  Add number
+                </ToastAction>
+              ),
+            });
           }
           await queryClient.invalidateQueries({ queryKey: KEY });
         }}

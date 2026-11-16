@@ -48,6 +48,12 @@ export class StaffAlertNumberService {
       return { success: false, message: 'Enter a valid phone number.' };
     }
     const phone = normalizePhone(rawPhone);
+    // A WhatsApp number is international: a plus, a country code that does not
+    // start with 0, and at most 15 digits (E.164). `validatePhone` alone lets a
+    // malformed local number through as "+080...".
+    if (!/^\+[1-9]\d{7,14}$/.test(phone)) {
+      return { success: false, message: 'Enter a valid phone number.' };
+    }
     const variants = phoneLookupVariants(rawPhone);
 
     const staff = await UserModel.findOne({ _id: userId, ...STAFF_FILTER })
@@ -89,6 +95,7 @@ export class StaffAlertNumberService {
         $set: { alertPhone: phone, alertPhoneVerified: false },
         $unset: {
           alertConsentAt: '',
+          alertPin: '',
           alertPinHash: '',
           alertPinExpiresAt: '',
         },
@@ -110,6 +117,7 @@ export class StaffAlertNumberService {
         $unset: {
           alertPhone: '',
           alertConsentAt: '',
+          alertPin: '',
           alertPinHash: '',
           alertPinExpiresAt: '',
         },
@@ -148,12 +156,21 @@ export class StaffAlertNumberService {
     }
 
     const pin = generatePin();
+    // REQ-117 pattern: under ENABLE_E2E_PIN_INTERCEPT the plain PIN is kept
+    // (test-only, read by e2e) and the real WhatsApp send is skipped. In every
+    // other environment only the keyed hash is stored.
+    const intercept = process.env.ENABLE_E2E_PIN_INTERCEPT === 'true';
+    user.alertPin = intercept ? pin : undefined;
     user.alertPinHash = hashPin(pin);
     user.alertPinExpiresAt = getPinExpirationTime();
     user.alertPinAttempts = 0;
     user.alertPinRequestWindowStart = inWindow ? windowStart : now;
     user.alertPinRequestCount = count + 1;
     await user.save();
+
+    if (intercept) {
+      return { success: true, message: 'Code sent on WhatsApp.' };
+    }
 
     const sent = await WhatsAppService.sendVerificationPinWhatsApp(
       user.alertPhone,
@@ -210,6 +227,7 @@ export class StaffAlertNumberService {
     user.alertPhoneVerified = true;
     user.alertConsentAt = now;
     user.alertsEnabled = true;
+    user.alertPin = undefined;
     user.alertPinHash = undefined;
     user.alertPinExpiresAt = undefined;
     user.alertPinAttempts = 0;

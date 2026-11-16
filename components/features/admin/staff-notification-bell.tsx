@@ -12,7 +12,8 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
 import { Bell } from 'lucide-react';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
+import { ToastAction } from '@/components/ui/toast';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
@@ -38,6 +39,7 @@ function ageLabel(minutes: number): string {
 
 export function StaffNotificationBell() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const { data } = useStaffNotifications();
   const [open, setOpen] = useState(false);
   const known = useRef<Set<string> | null>(null);
@@ -60,18 +62,23 @@ export function StaffNotificationBell() {
         } catch {
           // Autoplay can be blocked until the user interacts; the toast still shows.
         }
-        toast(fresh[0].title, {
+        toast({
+          title: fresh[0].title,
           description:
             fresh.length > 1 ? `and ${fresh.length - 1} more` : undefined,
-          action: {
-            label: 'Open',
-            onClick: () => window.location.assign(fresh[0].link),
-          },
+          action: (
+            <ToastAction
+              altText="Open the item"
+              onClick={() => window.location.assign(fresh[0].link)}
+            >
+              Open
+            </ToastAction>
+          ),
         });
       }
     }
     known.current = ids;
-  }, [data]);
+  }, [data, toast]);
 
   // The unread count in the browser tab title.
   useEffect(() => {

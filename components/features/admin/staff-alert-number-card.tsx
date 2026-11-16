@@ -9,7 +9,7 @@
 
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,6 +35,7 @@ const KEY = ['staff-alert-settings'] as const;
 
 export function StaffAlertNumberCard() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const { data, isLoading } = useQuery({
     queryKey: KEY,
     queryFn: async () => {
@@ -52,8 +53,12 @@ export function StaffAlertNumberCard() {
     setBusy(true);
     try {
       const res = await action();
-      if (res.success) toast.success(res.message ?? 'Done');
-      else toast.error(res.message ?? 'Something went wrong');
+      if (res.success) toast({ title: res.message ?? 'Done' });
+      else
+        toast({
+          title: res.message ?? 'Something went wrong',
+          variant: 'destructive',
+        });
       await queryClient.invalidateQueries({ queryKey: KEY });
       return res.success;
     } finally {

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "cli_version": "1.13.0",
+  "cli_version": "1.14.0",
   "files": {
     ".claude/skills/adr-author/SKILL.md": {
       "sha256": "dcf28d8126daa6485fa5d174d9ef09531fa9a05c7adeb69611c92f228dbcceb7",
@@ -51,7 +51,7 @@
       "section": "2e-ii"
     },
     ".claude/skills/e2e-test-engineer/references/e2e-regression-3-tier.yml": {
-      "sha256": "70f3de46eb28bc692b4115b41b5798f145df5b61bbdd58088278393736ce41f2",
+      "sha256": "dfbe65213567ffd1e291d0010846d648097fb3d456a251fd2e60b8e5da17a2dd",
       "section": "2e-ii"
     },
     ".claude/skills/e2e-test-engineer/references/evidence-shot-core.ts": {
@@ -87,7 +87,7 @@
       "section": "2e-ii"
     },
     ".claude/skills/sdlc-implementer/SKILL.md": {
-      "sha256": "745574a50e1dba61ecdb07e59fc64a0a00b5a8c38467df7cee69c90aa04f108b",
+      "sha256": "0137407702788430cd49fc98a5394940e4c9db1e8e46a1370249ce2b33c852ec",
       "section": "2e-ii"
     },
     ".claude/skills/sdlc-implementer/references/call-graph.md": {
@@ -119,15 +119,15 @@
       "section": "2e-ii"
     },
     ".claude/skills/sdlc-implementer/references/uat-briefing.md.template": {
-      "sha256": "439307d8f1bf882bf4468733b1240edb2cfeaffebf8c5150e27eccf0d7700e65",
+      "sha256": "cade443593b07bb226e576374b523a56668eec14f36c4a4f16ccb2f158ae8a86",
       "section": "2e-ii"
     },
     ".claude/skills/sdlc-implementer/references/uat-execution-record.md.template": {
-      "sha256": "39260b9f8758687254f61f896ca0d14c311c1a17b0f0d80073e60a934166d85e",
+      "sha256": "5d916f9285fc93fe6af830f1bbe409b77e567b4911e4433e130b11a4f7bb2cc4",
       "section": "2e-ii"
     },
     ".claude/skills/sdlc-implementer/references/uat-test-procedure.md.template": {
-      "sha256": "325966725df47d24369fadf6fa4ab9a260d14d163e5fe3786e8a774bc157a30b",
+      "sha256": "224a1679d9ed4b459562bbb5b63c0d8506ee718bc3aed1cd3a1f4e7e1f38fbf8",
       "section": "2e-ii"
     },
     ".cursorrules": {
@@ -183,7 +183,7 @@
       "section": "2f"
     },
     ".github/workflows/compliance-evidence.yml": {
-      "sha256": "552a57324eff270891ee55b2603d079a7aeb6066d6c3c04fd573215c41fe1337",
+      "sha256": "465bac9e89f0e03f79d6ec9387553109079921a7c54cef661a679c2c53a5175a",
       "section": "2f"
     },
     ".github/workflows/compliance-validation.yml": {
@@ -191,7 +191,7 @@
       "section": "2f"
     },
     ".github/workflows/e2e-regression.yml": {
-      "sha256": "9ecfe45e49591a146daac52258dd7ae43aaeef7b40b2c323908c4762d368a33d",
+      "sha256": "3662d9af782aebe61ba0c77b3e55ebb7fe54d645a03677796da599ab5f474471",
       "section": "2f"
     },
     ".github/workflows/feature-e2e.yml": {
@@ -211,7 +211,7 @@
       "section": "2f"
     },
     ".github/workflows/post-deploy-prod.yml": {
-      "sha256": "db5d684f6f2d830541d046281ee466f0b77083c47915b7917afc92d80b3182d1",
+      "sha256": "01bbff24e53abdcc39f0373c88c05c2a053d0f08cfd5df18d5c44738064cc342",
       "section": "2f"
     },
     ".github/workflows/quality-gates-provenance.yml": {
@@ -315,7 +315,7 @@
       "section": "2h"
     },
     "SDLC/blueprints/1-plan-requirement.raw.md": {
-      "sha256": "ddc919519221153b29cf694bb1b913c0e0681df4e839380484d8962a92ddcb84",
+      "sha256": "98c43acd7df67f38303020c27728243c35cddb1e1f23d7e118c90d1fa8fb0856",
       "section": "2h"
     },
     "SDLC/blueprints/2-implement-and-test.raw.md": {
@@ -323,11 +323,11 @@
       "section": "2h"
     },
     "SDLC/blueprints/3-compile-evidence.raw.md": {
-      "sha256": "d667b8ae52dfa691b6dbfff663e5f824ae492639dfbae066c5bcc0efcfb75db0",
+      "sha256": "814dc20f9f633810d79ae083eb6c466333de38ca62f8ca6dbae3aa86fbdb5f2c",
       "section": "2h"
     },
     "SDLC/blueprints/4-submit-for-review.raw.md": {
-      "sha256": "d0417df8dd711edea1d7a30c0699237ac69eaf02c5f6465275f160bff4c62d28",
+      "sha256": "e26c39188ad18a32ed76a894cfbcc784f27e7a9035b78c9c7df120612f68e66f",
       "section": "2h"
     },
     "SDLC/blueprints/5-deploy-main.raw.md": {
@@ -335,7 +335,7 @@
       "section": "2h"
     },
     "SDLC/blueprints/implementing-an-sdlc-issue.raw.md": {
-      "sha256": "fd0caff53c6f212102144a7e9b6b566e71ad8a54b84462a789e28a3aaf4c0f53",
+      "sha256": "4615d8ef77060b8fba7cbaf3356cbc9fc6d3ddf4209b4397d24c19e46756e334",
       "section": "2h"
     },
     "SDLC/implementing-an-sdlc-issue.md": {
@@ -375,7 +375,7 @@
       "section": "2d"
     },
     "scripts/check-host-deployment.sh": {
-      "sha256": "a9867c5085805f971b59d45d885034f4c0071ae73bd3383a99e4956350293167",
+      "sha256": "5b0475e4e773bec11c6ba9be04df44ebee11535135a04476d70768336d0a1948",
       "section": "2d"
     },
     "scripts/check-operator-signoffs.sh": {
@@ -538,6 +538,10 @@
       "sha256": "2322a6d98f7d3ab49cda1a639b1fcf04d7aeda2946e01f21ec7955270ea9add2",
       "section": "2d"
     },
+    "scripts/show-sdlc-config.sh": {
+      "sha256": "213e970ad4069a3c33bbce44fd4c15df0fc1d8acca60957532acd3d33a7007d1",
+      "section": "2d"
+    },
     "scripts/standalone-housekeeping-release.sh": {
       "sha256": "9294fc470704eab8b2a8599f95aab4f61de6c1fa1550415f2c3fb2d54f8c0ec6",
       "section": "2d"
@@ -563,7 +567,7 @@
       "section": "2d"
     },
     "scripts/validate-compliance-artifacts.sh": {
-      "sha256": "bfbafae6ab70790e937e71fbb9484700842c9d1c85806ae3aeae60ea4672cc39",
+      "sha256": "4a9babcb18e22131e364a688e0dfed065005e8e653a0174779c15b715d337733",
       "section": "2d"
     },
     "scripts/validate-risk-acceptance-record.sh": {

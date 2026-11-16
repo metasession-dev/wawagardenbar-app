@@ -1,19 +1,4 @@
 {
   "schemaVersion": 1,
-  "exceptions": [
-    {
-      "advisoryId": "GHSA-vfj7-8cjw-p6xm",
-      "package": "braces",
-      "vulnerableRange": "<=3.0.3",
-      "vulnerableVersion": "3.0.3",
-      "dependencyPath": "node_modules/braces",
-      "introducedBy": "direct",
-      "approvedAt": "2026-10-16",
-      "expiresAt": "2026-11-15",
-      "approvedBy": "william@ostendo.io",
-      "reason": "No patched braces release exists on npm yet (latest published is 3.0.3, the installed version); nothing to upgrade to until upstream ships a fix. Transitive dev/build-tooling dependency (chokidar/fast-glob/tailwindcss/eslint chain), not reachable from user input.",
-      "remediationIssue": "https://github.com/metasession-dev/wawagardenbar-app/issues/910",
-      "compensatingControls": "Only trusted organization code and repository-controlled build/lint tooling paths exercise this package. Review issue #910 on every dependency update and remove this acceptance once a patched braces release exists."
-    }
-  ]
+  "exceptions": []
 }

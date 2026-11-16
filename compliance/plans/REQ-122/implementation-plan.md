@@ -121,10 +121,23 @@ Revert the bundle merge. The new collection (`staffnotifications`) and the addit
 
 Unit tests per AC (model and service, role filtering, rule defaults, quiet hours, escalation levels with fake timers, dedup, on-shift fallback, router); the critical e2e specs above; a live UAT round-trip after the UAT copy of `staff_alert` is APPROVED (Level 2 evidence); UAT executed by the agent with a named independent reviewer.
 
+## Plan deviation
+
+Implementation approach changes found while building; none changes an acceptance criterion (implementation deviations, not requirements gaps).
+
+1. **Where the Needs-attention panel shows.** The plan puts it on `app/dashboard/page.tsx`, but csr, manager and admin are redirected from that page to `/dashboard/orders` (REQ-DASH-002), so only super-admin would see it. The panel is one shared component shown on `/dashboard` and at the top of `/dashboard/orders`, where the roles that receive alerts land.
+2. **No `held_template_pending` status.** The programme text describes a held state while a template is pending, but nothing in the code implements one. While `staff_alert` is not approved, the send fails and is logged in `NotificationLog` as `failed` with Meta's error code; the level is still claimed once, so it is not retried every minute; in-app alerts continue. R-63 is mitigated by the in-app alert and the escalation to the next role, not by a hold.
+3. **The socket event carries only an id and a type.** The socket rooms have no authentication, so the live signal tells the client to refetch through an authenticated, role-scoped action. This is a stricter version of the plan's "persisted row is authoritative" and keeps R-66 closed. The list also polls every 30 seconds.
+4. **A paid-order hook in four places.** `markOrderPaid` does not exist. A customer order becomes paid in `OrderService.updatePaymentStatus`, the Monnify and Paystack webhooks and the `verifyPayment` action; each calls `raiseForPaidOrder`. One alert per item for orders, even if a webhook retries after staff acknowledged it.
+5. **A staff account page.** There was no page where a staff member could enter and verify their own number, and kitchen-only staff reach only a few routes. `/dashboard/account` (all staff roles, in the route allowlist and the sidebar) holds the alert number card.
+6. **Alert number rules added.** A number that belongs to a customer account, or is already verified for another staff member, is refused, so a customer can never be treated as staff by the inbound router. `alertsEnabled` has a switch on the account page.
+7. **Opening the item acknowledges it** from the bell, and also when the order or ticket page is opened directly (`AcknowledgeOnOpen`).
+8. **Levels are claimed even when nobody is reachable**, so a run does not retry every minute. Quiet hours hold WhatsApp without claiming a level, so the alert goes out when they end.
+
 ## 10. Operator tasks (non-code)
 
 1. ~~Decide requirements gap G2~~ done: (b) amend.
-2. **Confirm before submitting** `staff_alert` to the UAT account (WGB DEV, +44 7363 078509, URL button base `https://wawagardenbar-uat.ostendo.io`) and the production account (+234 814 825 3342, base `https://app.wawagardenbar.com`); submission is an outward Meta action and is done only on the operator's yes. Track status per environment in the evidence. Until approved, alerts are held (`held_template_pending`) and staff see in-app alerts only.
+2. **Confirm before submitting** `staff_alert` to the UAT account (WGB DEV, +44 7363 078509, URL button base `https://wawagardenbar-uat.ostendo.io`) and the production account (+234 814 825 3342, base `https://app.wawagardenbar.com`); submission is an outward Meta action and is done only on the operator's yes. Track status per environment in the evidence. Until approved, the WhatsApp send fails and is logged as `failed` (Meta's error code), and staff see in-app alerts only.
 3. Staff set and verify their alert numbers and the on-shift toggle after release; sign off the risk entries at plan approval.
 
 ## 11. Sign-off

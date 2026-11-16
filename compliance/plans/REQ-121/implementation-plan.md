@@ -119,6 +119,20 @@ Revert the bundle merge. The change is UI and form validation on top of the unch
 
 Unit tests per AC (schema, order-type field rules, tip maths, query-parameter preselect, typed-error mapping, closed-state disable); the critical e2e spec for US-A2.1 to US-A2.5, US-A2.11, US-A2.12; a 375px viewport check without horizontal scroll (e2e); UAT executed by the agent on the UAT environment with a named independent reviewer.
 
+## Plan deviation
+
+Implementation approach changes found while building; none changes an acceptance criterion (classified as implementation deviations, not requirements gaps).
+
+1. **Dine-in stays payable when the business is closed.** AC6 says the closed state blocks Pay. The server rule (REQ-061, `createCustomerOrder`) treats dine-in as inside hours because the customer is at the bar, so Pay is blocked for pickup and delivery only. The hours banner shows in every order type. The old "Schedule for opening" button on the banner is no longer offered, because the server rejects any out-of-hours pickup anyway.
+2. **New delivery addresses default to Lagos, Lagos, Nigeria.** AC3 says one address line plus a landmark; the service still needs a city and state. They come from `DEFAULT_DELIVERY_REGION` (`lib/checkout/checkout-rules.ts`), and the delivery-radius check protects against a wrong address. A saved address keeps its own city, state and postal code. The country is stored as `Nigeria` (the profile default and what the geocoder reads), not `NG`.
+3. **The charge is the server order total.** The old checkout sent `getTotalPrice() + tip` as the amount, which left out fees and let the client choose the amount. `initializePayment` now charges `order.total` for a customer's own order and refuses another customer's order. Staff flows still send their own amount. This closes the plan's "client value never trusted" threat for the charge as well as the order.
+4. **Tip cap.** The service rejects a tip larger than the server subtotal (threat model, R-60).
+5. **Landmark reaches the order.** The old action dropped it. It is now sent with the delivery instructions as one note ("Landmark: ... . ...").
+6. **Profile saves.** A first name alone is saved (the user model's `name` hook and `getFullName` now cope with a missing last name and a missing email), and a delivery address is saved without duplicating the same street.
+7. **Payment email.** No email is asked; the provider gets the account email, or the guest address `guest@wawagardenbar.com` already used for tab payments.
+8. **Rewards are unchanged.** The plan's task 9 (auto-apply rewards, collapsed) is not an acceptance criterion and is not built here; the existing rewards section in the order summary is untouched. Only "Add a note" is collapsed.
+9. Removed as dead code: the four step components and the status dialog that only the old wizard used.
+
 ## 10. Operator tasks (non-code)
 
 1. ~~Decide requirements gap G1~~ done: (b) amend.

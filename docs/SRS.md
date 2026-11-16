@@ -134,7 +134,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-DASH-002     | Admin redirected from `/dashboard` to `/orders`                                               | Must     | smoke      | `app/dashboard/page.tsx:303`                                                                                                |
 | REQ-DASH-003     | Staff notification model and raise rules (paid customer orders, support)                      | Must     | regression | `models/staff-notification-model.ts`, `services/staff-notification-service.ts`; REQ-122                                     |
 | REQ-DASH-004     | Dashboard bell: live count, sound, toast, tab badge, acknowledge                              | Must     | regression | `app/dashboard/layout.tsx`; REQ-122                                                                                         |
-| REQ-DASH-005     | Needs-attention panel on the dashboard overview                                               | Should   | regression | `app/dashboard/page.tsx`; REQ-122                                                                                           |
+| REQ-DASH-005     | Needs-attention panel on the dashboard overview and the orders landing page                   | Should   | regression | `app/dashboard/page.tsx`, `app/dashboard/orders/page.tsx`; REQ-122                                                          |
 | REQ-DASH-006     | On-shift toggle in the top bar                                                                | Should   | regression | `app/dashboard/layout.tsx`; REQ-122                                                                                         |
 | REQ-ORDMGT-001   | Order queue with filters + real-time                                                          | Must     | smoke      | `app/dashboard/orders/page.tsx`, `order-management-actions.ts:42`                                                           |
 | REQ-ORDMGT-002   | Order detail: timeline, payment, actions                                                      | Should   | regression | `app/dashboard/orders/[orderId]/page.tsx`                                                                                   |
@@ -703,7 +703,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 #### REQ-AUTHA-008 — Staff alert number with WhatsApp PIN verification and consent · **Must** · regression
 
 **Source:** `models/user-model.ts`, `app/actions/auth/send-whatsapp-pin.ts`, `verify-whatsapp-pin.ts`, `app/actions/admin/admin-management-actions.ts`, `components/features/admin/create-admin-dialog.tsx`; cross-ref REQ-122, REQ-AUTHC-004.
-**Behaviour:** Staff users carry `alertPhone`, `alertPhoneVerified`, `alertsEnabled` and `onShift`, separate from a customer `phone`. Admins set the number in the create and edit admin dialogs and staff set it on their own account page. Verification sends a WhatsApp PIN; on success it stores `alertPhoneVerified = true` and a consent timestamp.
+**Behaviour:** Staff users carry `alertPhone`, `alertPhoneVerified`, `alertsEnabled` and `onShift`, separate from a customer `phone`. Admins set the number (unverified) in the create-admin dialog and the admin actions menu, and staff set and verify it on their own account page (`/dashboard/account`, open to every staff role). A number that belongs to a customer account, or is already verified for another staff member, is refused. Verification sends a WhatsApp PIN; on success it stores `alertPhoneVerified = true` and a consent timestamp.
 
 - **Given** a staff member enters an alert number, **When** they verify the WhatsApp PIN, **Then** the number is marked verified and the consent timestamp is stored.
 - **Given** an unverified alert number, **Then** it never receives a `staff_alert` and is not recognised as staff by the inbound router.
@@ -739,15 +739,15 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 #### REQ-DASH-004 — Dashboard bell, sound and acknowledge · **Must** · regression
 
 **Source:** `app/dashboard/layout.tsx`, `lib/socket-emit-helper.ts`; cross-ref REQ-122.
-**Behaviour:** The top bar shows a bell with the user's unread count (any of their roles in `targetRoles`, or their id in `targetUserIds`). A new alert arrives live over the `staff-notification` socket event, plays `/sounds/new-order.mp3`, shows a toast and prefixes the tab title with `(n)`. The dropdown lists title, age and link, with Acknowledge and Acknowledge all; opening the linked item also acknowledges it.
+**Behaviour:** The top bar shows a bell with the user's unread count (any of their roles in `targetRoles`, or their id in `targetUserIds`). A new alert is signalled live over the `staff-notification` socket event (an id and a type only; the content is fetched through an authenticated, role-scoped action, and the list also refreshes every 30 seconds). The bell then plays `/sounds/new-order.mp3` and shows a toast for an alert that is new to that user, and prefixes the tab title with `(n)`. Opening the linked item, from the bell or directly, acknowledges it. The dropdown lists title, age and link, with Acknowledge and Acknowledge all; opening the linked item also acknowledges it.
 
 - **Given** a csr on the dashboard, **When** a customer order is paid, **Then** the bell count increases, a toast shows and the item links to the order.
 - **Given** an unacknowledged item, **When** the user opens its link, **Then** it is acknowledged.
 
 #### REQ-DASH-005 — Needs-attention panel · **Should** · regression
 
-**Source:** `app/dashboard/page.tsx`; cross-ref REQ-122.
-**Behaviour:** The dashboard overview shows unacknowledged items visible to the user, oldest first, with the minutes each has waited.
+**Source:** `app/dashboard/page.tsx`, `app/dashboard/orders/page.tsx`; cross-ref REQ-122.
+**Behaviour:** The dashboard overview (`/dashboard`, for super-admin) and the orders landing page (`/dashboard/orders`, where csr, manager and admin land) show unacknowledged items visible to the user, oldest first, with the minutes each has waited.
 
 - **Given** an unacknowledged booking-type notification visible to the user, **When** they open the dashboard, **Then** it is listed in Needs attention with its waiting time.
 

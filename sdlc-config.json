@@ -53,7 +53,8 @@
     "enabled": true,
     "url": "https://wawagardenbar-app-uat.up.railway.app/",
     "required_risk_classes": ["*"],
-    "mode": "auto"
+    "mode": "auto",
+    "human_pack": "always"
   },
   "approval": {
     "mode": "dual_actor",

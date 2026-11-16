@@ -236,7 +236,8 @@ userSchema.methods.getFullName = function getFullName(): string {
   if (this.firstName && this.lastName) {
     return `${this.firstName} ${this.lastName}`;
   }
-  return this.name || this.email.split('@')[0];
+  // REQ-121: accounts created through WhatsApp sign-in can have no email.
+  return this.name || this.email?.split('@')[0] || '';
 };
 
 userSchema.methods.getDefaultAddress =
@@ -252,6 +253,9 @@ userSchema.pre('save', function preSave(next) {
   // Update computed name field
   if (this.firstName && this.lastName) {
     this.name = `${this.firstName} ${this.lastName}`;
+  } else if (this.firstName && !this.name) {
+    // REQ-121 (REQ-CHECKOUT-015): checkout asks for a first name only.
+    this.name = this.firstName;
   }
 
   next();

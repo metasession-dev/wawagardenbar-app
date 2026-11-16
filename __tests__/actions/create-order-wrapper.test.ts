@@ -16,9 +16,11 @@ vi.mock('@/lib/mongodb', () => ({ connectDB: vi.fn() }));
 vi.mock('@/models/order-model', () => ({ default: {} }));
 vi.mock('@/models/tab-model', () => ({ default: {} }));
 vi.mock('@/services/payment-service', () => ({ PaymentService: {} }));
+const updateProfileFromCheckout = vi.hoisted(() => vi.fn());
+const getUserProfile = vi.hoisted(() => vi.fn());
 vi.mock('@/services', () => ({
   TabService: {},
-  UserService: { updateProfileFromCheckout: vi.fn() },
+  UserService: { updateProfileFromCheckout, getUserProfile },
 }));
 const emitNewOrder = vi.hoisted(() => vi.fn());
 vi.mock('@/lib/socket-server', () => ({ emitNewOrder }));
@@ -31,7 +33,7 @@ const INPUT = {
   orderType: 'dine-in' as const,
   idempotencyKey: 'k1',
   tableNumber: 'T5',
-  customerInfo: { name: 'Ada Obi', email: 'a@b.c', phone: '08000000000' },
+  customerInfo: { name: 'Ada' },
   items: [
     {
       id: 'm1',
@@ -51,6 +53,11 @@ function setSession(f: Record<string, unknown>) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  getUserProfile.mockResolvedValue({
+    name: 'Ada Obi',
+    email: 'ada@example.com',
+    phone: '2348000000000',
+  });
   createCustomerOrder.mockResolvedValue({
     success: true,
     reused: false,
@@ -123,5 +130,68 @@ describe('createOrder (web wrapper)', () => {
     const r = await createOrder(INPUT);
     expect(r).toMatchObject({ success: false, code: 'NOT_ALLOWED' });
     expect(createCustomerOrder).not.toHaveBeenCalled();
+  });
+
+  // REQ-121 (REQ-CHECKOUT-015, REQ-CHECKOUT-016)
+  it('takes phone and email from the verified account, never the form (REQ-121 AC2)', async () => {
+    setSession({ isLoggedIn: true, userId: 'u1', role: 'customer', roles: [] });
+    await createOrder(INPUT);
+    expect(emitNewOrder.mock.calls[0][0].customer).toEqual({
+      name: 'Ada Obi',
+      email: 'ada@example.com',
+      phone: '2348000000000',
+    });
+  });
+
+  it('saves the first name only when the account has none (REQ-121 AC2)', async () => {
+    setSession({ isLoggedIn: true, userId: 'u1', role: 'customer', roles: [] });
+    await createOrder(INPUT);
+    expect(updateProfileFromCheckout).not.toHaveBeenCalled();
+
+    getUserProfile.mockResolvedValue({ name: '', phone: '2348000000000' });
+    await createOrder(INPUT);
+    expect(updateProfileFromCheckout).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'u1',
+        firstName: 'Ada',
+        saveAddress: false,
+      })
+    );
+  });
+
+  it('saves a delivery address automatically and keeps the landmark in the note (REQ-121 AC3)', async () => {
+    setSession({ isLoggedIn: true, userId: 'u1', role: 'customer', roles: [] });
+    await createOrder({
+      ...INPUT,
+      orderType: 'delivery',
+      deliveryInfo: {
+        street: '12 Allen Avenue',
+        city: 'Lagos',
+        state: 'Lagos',
+        postalCode: '',
+        country: 'Nigeria',
+        landmark: 'Near the mall',
+        instructions: 'Call on arrival',
+      },
+    });
+    const [arg] = createCustomerOrder.mock.calls[0];
+    expect(arg.deliveryInstructions).toBe(
+      'Landmark: Near the mall. Call on arrival'
+    );
+    expect(updateProfileFromCheckout).toHaveBeenCalledWith(
+      expect.objectContaining({
+        saveAddress: true,
+        address: expect.objectContaining({
+          streetAddress: '12 Allen Avenue',
+          city: 'Lagos',
+        }),
+      })
+    );
+  });
+
+  it('does not save a dine-in or pickup order address (REQ-121 AC3)', async () => {
+    setSession({ isLoggedIn: true, userId: 'u1', role: 'customer', roles: [] });
+    await createOrder({ ...INPUT, orderType: 'pickup' });
+    expect(updateProfileFromCheckout).not.toHaveBeenCalled();
   });
 });

@@ -325,6 +325,15 @@ export async function createCustomerOrder(
   }
   const subtotal = reconciled.recomputedSubtotal;
 
+  // REQ-121 (R-60): the tip is part of the charge, so it is bounded by the
+  // server-computed subtotal. The client's 15% preset can never reach this.
+  if (tipAmount > subtotal) {
+    return fail(
+      'INVALID_INPUT',
+      'The tip cannot be more than the order subtotal'
+    );
+  }
+
   if (!(await SettingsService.meetsMinimumOrder(subtotal))) {
     return fail(
       'BELOW_MINIMUM',

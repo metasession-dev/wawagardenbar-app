@@ -1,6 +1,6 @@
 ---
 adr_id: 'ADR-011'
-status: 'Proposed'
+status: 'Accepted'
 date: '2026-11-16'
 authored_by: 'adr-author (Claude) for operator'
 related_reqs: ['REQ-122']
@@ -12,7 +12,7 @@ superseded_by: null
 
 ## Status
 
-**Proposed** (DRAFT — operator to flip to _Accepted_ on plan approval)
+**Accepted** (William, 2026-11-16, at plan approval)
 
 ## Context
 

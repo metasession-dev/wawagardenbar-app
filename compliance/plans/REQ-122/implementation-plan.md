@@ -33,7 +33,7 @@ Closes ISO 29119 §3.4 (§1), ISO 27001 A.8.25 (§5), GDPR Art. 25 (§6), EU AI 
 | AC8 | **Given** a message from a verified staff `alertPhone`, **Then** the inbound router does not treat it as a customer (no welcome, no ticket) and replies "Thanks, please open the dashboard to handle alerts."                                                                                                                                                                                                                                                                        | `e2e/critical/whatsapp-staff-number-routing.spec.ts` (US-B5.11)                                 | REQ-WA-015 (new), REQ-WA-005 (updated) |
 | AC9 | **Given** this release, **Then** the `staff_alert` template definition is in `docs/whatsapp-templates.md` and `docs/whatsapp-templates/staff_alert.json`; submitting it to the UAT and production WhatsApp accounts is an operator-confirmed task and its status is tracked per environment.                                                                                                                                                                                         | operator evidence                                                                               | `@srs-deferred` (operator task)        |
 
-### Requirements gap raised at Phase 1 (devaudit-installer#212), for the operator to decide
+### Requirements gap raised at Phase 1 (devaudit-installer#212) — DECIDED: (b) amend, approved 2026-11-16
 
 - **Gap G2 (AC1):** the issue says the raise helper is wired to four sources, but the booking source (WA-13, #975) and the refund-request source (WA-11, #973) do not exist yet. `markOrderPaid` named in the issue also does not exist: the customer-order paid hook is `OrderService.updatePaymentStatus` in `services/order-service.ts` (called with `paymentStatus: 'paid'`), restricted to orders whose `origin` is `customer` (REQ-120). **Proposed handling: (b) amend AC1** as written above: wire the order-paid and support sources now; WA-13 and WA-11 call the helper when they land, with the shared model, rules and tests already covering those types. If the operator prefers (a), accept the gap as is; if (c), file a follow-up. AC2 to AC8 are unaffected.
 
@@ -73,7 +73,7 @@ In scope: `models/staff-notification-model.ts` and `StaffNotificationService`; h
 
 ## 3. Architecture decisions
 
-- **ADR-011 — Staff notification subsystem: persisted notifications, live socket event, minute escalation job, staff-own consent** — Proposed by `adr-author`. Draft at `docs/ADR/ADR-011-staff-notification-subsystem.md`. Signals matched: a new persisted model, a new socket event, a new scheduled job, a new staff delivery path outside the customer consent flow, risk class HIGH. The operator reviews the draft and flips its status to _Accepted_ before plan approval.
+- **ADR-011 — Staff notification subsystem: persisted notifications, live socket event, minute escalation job, staff-own consent** — Proposed by `adr-author`. Draft at `docs/ADR/ADR-011-staff-notification-subsystem.md`. Signals matched: a new persisted model, a new socket event, a new scheduled job, a new staff delivery path outside the customer consent flow, risk class HIGH. Accepted by the operator at plan approval, 2026-11-16.
 
 ## 4. E2E test coverage
 
@@ -123,10 +123,10 @@ Unit tests per AC (model and service, role filtering, rule defaults, quiet hours
 
 ## 10. Operator tasks (non-code)
 
-1. Decide requirements gap G2 at the plan checkpoint.
+1. ~~Decide requirements gap G2~~ done: (b) amend.
 2. **Confirm before submitting** `staff_alert` to the UAT account (WGB DEV, +44 7363 078509, URL button base `https://wawagardenbar-uat.ostendo.io`) and the production account (+234 814 825 3342, base `https://app.wawagardenbar.com`); submission is an outward Meta action and is done only on the operator's yes. Track status per environment in the evidence. Until approved, alerts are held (`held_template_pending`) and staff see in-app alerts only.
 3. Staff set and verify their alert numbers and the on-shift toggle after release; sign off the risk entries at plan approval.
 
 ## 11. Sign-off
 
-- **Plan approved by operator:** pending (HIGH-risk checkpoint, bundle ceremony).
+- **Plan approved by operator:** William (william@ostendo.io, via the shared GitHub login metasession-dev), 2026-11-16, in the Claude Code session (HIGH-risk checkpoint, bundle ceremony). Decisions: gap G2 = (b) amend (AC1 wires paid customer orders and support now; WA-13 and WA-11 call the helper later); ADR-011 accepted.

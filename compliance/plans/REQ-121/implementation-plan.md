@@ -32,7 +32,7 @@ Closes ISO 29119 §3.4 (§1), ISO 27001 A.8.25 (§5), GDPR Art. 25 (§6), EU AI 
 
 SRS-ID column is filled by `requirements-aligner` (see "SRS items proposed/touched" once that skill has run).
 
-### Requirements gap raised at Phase 1 (devaudit-installer#212), for the operator to decide
+### Requirements gap raised at Phase 1 (devaudit-installer#212) — DECIDED: (b) amend, approved 2026-11-16
 
 - **Gap G1 (AC1 and the issue's task 8):** the issue says Pay goes to the Paystack hosted checkout built in WA-07 (#969), which does not exist yet, and today's customer checkout offers Monnify only (REQ-CHECKOUT-010; payment-method step text "processed securely through Monnify"). `PaymentService.initializePayment` routes to the active provider and already accepts a list of payment methods. **Proposed handling: (b) amend.** AC1 is read as "one Pay button that calls the existing `initializePayment` action with all payment methods, so the active provider's hosted page offers the choice"; the payment-method step is removed from the customer flow; switching the active provider to Paystack, the hosted-checkout wiring and the paid-only kitchen gate stay in WA-07. If the operator prefers, option (c): leave the old payment-method step in place until WA-07.
 
@@ -121,10 +121,10 @@ Unit tests per AC (schema, order-type field rules, tip maths, query-parameter pr
 
 ## 10. Operator tasks (non-code)
 
-1. Decide requirements gap G1 at the plan checkpoint.
-2. Approve the plan (HIGH-risk checkpoint, bundle ceremony).
+1. ~~Decide requirements gap G1~~ done: (b) amend.
+2. ~~Approve the plan~~ done 2026-11-16.
 3. Independent UAT review and portal approval after the agent-executed UAT.
 
 ## 11. Sign-off
 
-- **Plan approved by operator:** pending (HIGH-risk checkpoint, bundle ceremony).
+- **Plan approved by operator:** William (william@ostendo.io, via the shared GitHub login metasession-dev), 2026-11-16, in the Claude Code session (HIGH-risk checkpoint, bundle ceremony). Decisions: gap G1 = (b) amend (AC1 is the one Pay button calling the existing `initializePayment` with all methods); Architecture = no ADR (REQ-121) as drafted.

@@ -159,7 +159,7 @@
       "section": "2e"
     },
     ".github/workflows/check-release-approval.yml": {
-      "sha256": "8875ec3fd908cf3d8721a845383908c143394c2e4f8036675819052084940018",
+      "sha256": "e1d52b4a23432356341a5c2d766f14ab0381c1948f1e7743d3383e6bb22fcc98",
       "section": "2f"
     },
     ".github/workflows/ci-status-fallback.yml": {
@@ -167,7 +167,7 @@
       "section": "2f"
     },
     ".github/workflows/ci.yml": {
-      "sha256": "ac1a3b178f35972d113cd6f76944ff001b2c594ed220e9e1630aeb218b307edd",
+      "sha256": "e966ddb8adf02dffa369cf317dbc6c07e09fa57a75d73189cff75765240a8b4b",
       "section": "2f"
     },
     ".github/workflows/close-out-completion.yml": {
@@ -191,7 +191,7 @@
       "section": "2f"
     },
     ".github/workflows/e2e-regression.yml": {
-      "sha256": "3662d9af782aebe61ba0c77b3e55ebb7fe54d645a03677796da599ab5f474471",
+      "sha256": "1505ec9e87b2bde0a472c40538040f2aa1221bb7935a7121d98c276a843bdf7f",
       "section": "2f"
     },
     ".github/workflows/feature-e2e.yml": {

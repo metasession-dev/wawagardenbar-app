@@ -1,0 +1,68 @@
+{
+  "approvalRelease": {
+    "version": "REQ-121"
+  },
+  "coreRelease": {
+    "version": "REQ-121"
+  },
+  "generator": {
+    "generatedAt": "2026-11-16T21:03:17Z",
+    "name": "devaudit-installer",
+    "repository": "metasession-dev/wawagardenbar-app",
+    "version": "0.0.0"
+  },
+  "manifestHash": "sha256:39887ff8e40fa556a21c1156923d81fa7ae8c733c082f171e68062cae15ae511",
+  "members": [
+    {
+      "commitFrom": null,
+      "commitTo": null,
+      "evidenceInheritancePolicy": {
+        "includeCycles": false,
+        "mode": "none",
+        "reason": "Co-tracked bundle members keep fully isolated per-REQ evidence — nothing is inherited between them.",
+        "scopes": []
+      },
+      "originalTitle": "Staff notifications, alert numbers and escalation (WA-12)",
+      "prNumber": null,
+      "prUrl": null,
+      "reason": "Declared co-primary REQ, bundled onto one shared branch/PR/release at Phase 1 planning time.",
+      "relationship": "bundled",
+      "role": "co_tracked",
+      "scopeSummary": "New customer orders and support messages raise a live dashboard alert (bell, sound, toast, Needs-attention panel); unacknowledged items escalate by WhatsApp to on-shift staff and then to an escalation role, with staff alert numbers verified by WhatsApp PIN. Details, acceptance criteria and risks: `compliance/plans/REQ-122/implementation-plan.md`.\n\nThis ticket is a skeleton written at Stage 1; Stage 3 completes it.",
+      "version": "REQ-122"
+    }
+  ],
+  "nonReleaseWorkItems": [
+    {
+      "kind": "housekeeping_commit",
+      "reference": "58f3f84c",
+      "title": "chore: run only smoke and critical in the PR authenticated E2E step"
+    },
+    {
+      "kind": "housekeeping_commit",
+      "reference": "1656c413",
+      "title": "chore: require the UAT pack on every REQ (uat.human_pack always)"
+    },
+    {
+      "kind": "housekeeping_commit",
+      "reference": "fe59e301",
+      "title": "chore: set uat.mode to auto (agent-executed UAT)"
+    },
+    {
+      "kind": "housekeeping_commit",
+      "reference": "a29d71ce",
+      "title": "chore: devaudit configure - full release gate, ephemeral e2e data, seed config"
+    },
+    {
+      "kind": "housekeeping_commit",
+      "reference": "307681d1",
+      "title": "chore(deps): remove expired braces exception (advisory no longer reported)"
+    },
+    {
+      "kind": "housekeeping_commit",
+      "reference": "17d707ec",
+      "title": "chore: sync SDLC templates from DevAudit 1.14.0"
+    }
+  ],
+  "schemaVersion": 2
+}

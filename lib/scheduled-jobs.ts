@@ -5,6 +5,7 @@
  * @requirement REQ-078 — Env-var kill-switch for the inventory reconciliation job
  * @requirement REQ-088 — Daily admin incident summary cron
  * @requirement REQ-117 — Purge of customers created by a PIN request who never verified (AC6)
+ * @requirement REQ-122 — Once-a-minute staff alert escalation (AC7, ADR-011)
  *
  * In-process scheduled jobs for the persistent Railway server. The app runs as
  * a long-lived custom Node server (`server.ts`), not serverless, so a simple
@@ -25,6 +26,7 @@ import { TabService } from '@/services/tab-service';
 import { SystemSettingsService } from '@/services/system-settings-service';
 import { IncidentEventService } from '@/services/incident-event-service';
 import { NotificationService } from '@/services/notification-service';
+import { StaffNotificationService } from '@/services/staff-notification-service';
 import UserModel from '@/models/user-model';
 import OrderModel from '@/models/order-model';
 
@@ -260,6 +262,18 @@ export async function runUnverifiedUserPurgeJob(): Promise<number> {
 }
 
 /**
+ * REQ-122 (AC7, REQ-WA-014) — send each due staff WhatsApp alert level once.
+ * Safe on every instance: a level is claimed with an atomic conditional update
+ * before it is sent (ADR-011), so a duplicate run sends nothing. Never throws.
+ */
+export async function runStaffAlertEscalationJob(): Promise<{
+  checked: number;
+  sent: number;
+}> {
+  return StaffNotificationService.runEscalation(new Date());
+}
+
+/**
  * Start all in-process scheduled jobs. Idempotent: guarded so repeated calls
  * (or dev hot-reloads) don't stack intervals.
  */
@@ -300,8 +314,13 @@ export function startScheduledJobs(): void {
   setTimeout(() => void runUnverifiedUserPurgeJob(), INITIAL_DELAY_MS);
   setInterval(() => void runUnverifiedUserPurgeJob(), HOUR_MS);
 
+  // REQ-122 — staff alert escalation, every minute. It compares elapsed
+  // minutes, so a missed tick delays an alert by one tick rather than skipping it.
+  setTimeout(() => void runStaffAlertEscalationJob(), INITIAL_DELAY_MS);
+  setInterval(() => void runStaffAlertEscalationJob(), MINUTE_MS);
+
   console.warn(
-    `[scheduled-jobs] started (reward-expiry: hourly, unverified-user-purge: hourly, instagram-rewards: hourly, inventory-reconcile: ${
+    `[scheduled-jobs] started (staff-alert-escalation: 1min, reward-expiry: hourly, unverified-user-purge: hourly, instagram-rewards: hourly, inventory-reconcile: ${
       inventoryReconcileDisabled ? 'DISABLED' : '15min'
     }, incident-summary: 24h)`
   );

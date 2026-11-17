@@ -54,6 +54,8 @@ const AGGREGATE_SPECS = [
   'customer-order-validation',
   'customer-order-journey',
   'customer-ordering-options-ui',
+  // REQ-121: rewrites business hours to prove closed hours block Pay.
+  'checkout-closed-hours',
 ];
 const aggregateProjects = AGGREGATE_SPECS.map((name, i) => ({
   name: `critical-aggregate-${name}`,

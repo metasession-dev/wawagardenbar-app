@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 
 import { hasAnyRole } from '@/lib/session';
+import { NeedsAttentionPanel } from '@/components/features/admin/needs-attention-panel';
 /**
  * Loading skeletons
  */
@@ -86,6 +87,9 @@ export default async function OrdersPage() {
           </p>
         </div>
       </div>
+
+      {/* REQ-122 — items waiting for a person (csr, manager and admin land here, not on the overview) */}
+      <NeedsAttentionPanel />
 
       {/* Main Dashboard Views - Large & Prominent */}
       <div className="grid gap-6 md:grid-cols-3">

@@ -9,6 +9,9 @@ vi.mock('@/lib/mongodb', () => ({
   default: vi.fn(),
   connectDB: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock('@/services/staff-notification-service', () => ({
+  StaffNotificationService: { raiseForSupportTicket: vi.fn() },
+}));
 vi.mock('@/lib/email', () => ({ sendSupportTicketEmail: vi.fn() }));
 
 const mockSend = vi.fn();

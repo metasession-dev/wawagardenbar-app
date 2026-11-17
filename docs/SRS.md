@@ -100,6 +100,11 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-CHECKOUT-011 | Anonymous user can add to cart and reach checkout without login redirect                      | Must     | smoke      | `app/menu/page.tsx`, `menu-item-detail-modal.tsx`, `app/checkout/page.tsx`; REQ-084                                         |
 | REQ-CHECKOUT-012 | Single customer order service (validation, typed errors, idempotency, one order number)       | Must     | regression | `services/customer-order-service.ts`                                                                                        |
 | REQ-CHECKOUT-013 | Ordering options exposed read-only                                                            | Should   | regression | `app/actions/ordering/ordering-options-actions.ts`                                                                          |
+| REQ-CHECKOUT-014 | One-page customer checkout, single Pay, no stepper or info/tab/payment-method step            | Must     | regression | `components/features/checkout/customer-checkout-form.tsx`; REQ-121                                                          |
+| REQ-CHECKOUT-015 | Name asked once only if missing; no email at checkout                                         | Must     | regression | `customer-checkout-form.tsx`, `app/actions/profile/profile-actions.ts`; REQ-121                                             |
+| REQ-CHECKOUT-016 | Minimal fields per order type; saved delivery address; pickup ASAP default                    | Must     | regression | `checkout/order-details-step.tsx`, `address-selector.tsx`; REQ-121                                                          |
+| REQ-CHECKOUT-017 | Order type and table preselected from query parameters                                        | Should   | regression | `customer-checkout-form.tsx`; REQ-121                                                                                       |
+| REQ-CHECKOUT-018 | Inline typed errors; closed hours disable Pay                                                 | Must     | regression | `customer-checkout-form.tsx`, `business-hours-banner.tsx`; REQ-121                                                          |
 | REQ-ORDER-001    | Order tracking page shows live status                                                         | Should   | regression | `app/(customer)/orders/[orderId]/page.tsx`, `real-time-order-tracker.tsx`                                                   |
 | REQ-ORDER-002    | Orders & Tabs page lists orders + tabs (auth)                                                 | Must     | smoke      | `app/(customer)/orders/page.tsx`                                                                                            |
 | REQ-ORDER-003    | RETIRED (REQ-120): guest tab access (tabs are staff-only)                                     | Should   | regression | `app/(customer)/orders/page.tsx:55`                                                                                         |
@@ -124,8 +129,13 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-AUTHA-005    | Multiple roles per staff account: union of access, permissions and navigation                 | Must     | regression | `lib/session.ts`, `lib/permissions.ts`, `proxy.ts`, `components/features/admin/dashboard-nav.tsx`; REQ-119                  |
 | REQ-AUTHA-006    | Role management: checkboxes, grant limits, self and last-super-admin guards, audit            | Must     | regression | `services/admin-service.ts`, `app/actions/admin/admin-management-actions.ts`, `create-admin-dialog.tsx`; REQ-119            |
 | REQ-AUTHA-007    | Staff role migration and backward compatibility (fallback, public API, pre-release sessions)  | Must     | regression | `scripts/migrate-staff-roles.ts`, `lib/session.ts`, `app/api/public/admins/route.ts`; REQ-119                               |
+| REQ-AUTHA-008    | Staff alert number with WhatsApp PIN verification and consent                                 | Must     | regression | `models/user-model.ts`, `send-whatsapp-pin.ts`; REQ-122                                                                     |
 | REQ-DASH-001     | Super-admin dashboard overview stats                                                          | Should   | regression | `app/dashboard/page.tsx:53`; REQ-007                                                                                        |
 | REQ-DASH-002     | Admin redirected from `/dashboard` to `/orders`                                               | Must     | smoke      | `app/dashboard/page.tsx:303`                                                                                                |
+| REQ-DASH-003     | Staff notification model and raise rules (paid customer orders, support)                      | Must     | regression | `models/staff-notification-model.ts`, `services/staff-notification-service.ts`; REQ-122                                     |
+| REQ-DASH-004     | Dashboard bell: live count, sound, toast, tab badge, acknowledge                              | Must     | regression | `app/dashboard/layout.tsx`; REQ-122                                                                                         |
+| REQ-DASH-005     | Needs-attention panel on the dashboard overview and the orders landing page                   | Should   | regression | `app/dashboard/page.tsx`, `app/dashboard/orders/page.tsx`; REQ-122                                                          |
+| REQ-DASH-006     | On-shift toggle in the top bar                                                                | Should   | regression | `app/dashboard/layout.tsx`; REQ-122                                                                                         |
 | REQ-ORDMGT-001   | Order queue with filters + real-time                                                          | Must     | smoke      | `app/dashboard/orders/page.tsx`, `order-management-actions.ts:42`                                                           |
 | REQ-ORDMGT-002   | Order detail: timeline, payment, actions                                                      | Should   | regression | `app/dashboard/orders/[orderId]/page.tsx`                                                                                   |
 | REQ-ORDMGT-003   | Edit order items (unpaid only)                                                                | Should   | regression | `app/actions/admin/order-edit-actions.ts:33`                                                                                |
@@ -217,6 +227,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-SETTINGS-003 | API key create/revoke with scopes                                                             | Should   | regression | `settings/api-keys/page.tsx`, `services/api-key-service.ts:54`                                                              |
 | REQ-SETTINGS-004 | Process data-deletion requests                                                                | Could    | extended   | `settings/data-requests/`; REQ-027                                                                                          |
 | REQ-SETTINGS-005 | `incidentsAccess` admin permission                                                            | Should   | regression | `interfaces/admin-permissions.interface.ts`; REQ-066                                                                        |
+| REQ-SETTINGS-006 | Staff alert rules with defaults and quiet hours                                               | Should   | regression | `notification-settings-form.tsx`, `services/system-settings-service.ts`; REQ-122                                            |
 | REQ-AUDIT-001    | Admin actions appear in audit log                                                             | Should   | regression | `app/dashboard/audit-logs/page.tsx`, `AuditLogService`                                                                      |
 | REQ-API-001      | Public API requires valid key (401)                                                           | Must     | smoke      | `lib/api-key-validator.ts:39`; REQ-007                                                                                      |
 | REQ-API-002      | Insufficient scope → 403                                                                      | Must     | smoke      | `api-key-validator.ts`                                                                                                      |
@@ -254,6 +265,8 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-WA-011       | Support conversation threading: one open ticket per customer, 72-hour reopen                  | Should   | regression | `services/support-ticket-service.ts`, `services/whatsapp-inbound-service.ts`; REQ-118                                       |
 | REQ-WA-012       | Window-aware support reply: free-form inside 24 hours, template outside, mode shown           | Should   | regression | `services/support-ticket-service.ts`, `app/dashboard/support/*`; REQ-118                                                    |
 | REQ-WA-013       | Human handoff: urgent ticket, 15-minute SLA, queue ordering and overdue highlight             | Should   | regression | `services/support-ticket-service.ts`, `app/dashboard/support/*`; REQ-118                                                    |
+| REQ-WA-014       | Staff alert escalation by WhatsApp: once per level, on-shift fallback, multi-role dedup       | Must     | regression | `lib/scheduled-jobs.ts`, `services/staff-notification-service.ts`; REQ-122                                                  |
+| REQ-WA-015       | Verified staff alert numbers are not treated as customers by the inbound router               | Must     | regression | `services/whatsapp-inbound-service.ts`; REQ-122                                                                             |
 
 ---
 
@@ -341,17 +354,17 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 
 **Fixtures/env:** Non-empty cart (seed via localStorage as `requirements-verification.spec.ts` does); `Settings` with serviceFeePercentage, delivery tiers, tax, minimum order; for tab tests an open dine-in tab.
 
-#### REQ-CHECKOUT-001 — Multi-step form renders & validates · **Must** · smoke
+#### REQ-CHECKOUT-001 — Checkout form renders & validates (one page, REQ-121) · **Must** · smoke
 
 **Source:** `components/features/checkout/checkout-form.tsx`, `customer-info-step.tsx`
-**Behaviour:** Steps: order type → (dine-in) tab options → customer details → delivery/pickup details → tip → review → payment. Customer name ≥2 chars, valid email, phone ≥10 digits.
+**Behaviour:** Since REQ-121 the customer checkout is one page (REQ-CHECKOUT-014): order type, that type's fields, tip, summary, Pay. The earlier multi-step flow (tab options, customer details with email, payment-method step) is removed from the customer path; the staff checkout is unchanged. Customer name ≥2 chars when asked (REQ-CHECKOUT-015); phone comes from the verified session.
 
-- **Given** a non-empty cart at `/checkout`, **When** the visitor submits customer details with an invalid email, **Then** a validation error blocks progression.
+- **Given** a non-empty cart at `/checkout`, **When** the customer presses Pay with a required field for their order type empty, **Then** a validation error blocks the order.
 
 #### REQ-CHECKOUT-002 — Order-type-specific fields · **Must** · regression
 
 **Source:** `checkout/order-details-step.tsx:79` (Zod refine)
-**Behaviour:** Dine-in requires `tableNumber`; pickup requires `pickupTime`; delivery requires address fields. Table number locks and delivery disables when an existing open tab is detected.
+**Behaviour:** Dine-in requires `tableNumber`; delivery requires an address line and landmark (REQ-CHECKOUT-016); pickup defaults to as soon as possible and requires a time only when scheduled. Customer tabs were retired in REQ-120, so no table lock or delivery disable applies to customers.
 
 - **Given** order type = dine-in, **When** the visitor proceeds without a table number, **Then** a "table number required" error shows.
 
@@ -377,9 +390,9 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 #### REQ-CHECKOUT-006 — Independent tip · **Should** · regression
 
 **Source:** `checkout/tip-input-step.tsx`; cross-ref REQ-035 (tipAmount), REQ-036 (tipPaymentMethod)
-**Behaviour:** Tip amount (≥0) and tip payment method (cash/transfer/card) are captured independently of the order payment method and added to the running total before submit.
+**Behaviour:** Since REQ-121 the customer sees an "Add a tip" checkbox on the summary that expands inline with presets (5%, 10%, 15%) and a custom amount; the tip (≥0) is added to the total and to the charge, and no tip payment method is captured for customers. Staff-recorded tips keep their payment method (REQ-035, REQ-036).
 
-- **Given** a card order, **When** the visitor adds a ₦500 cash tip, **Then** the total includes ₦500 and the tip's payment method is recorded as cash, distinct from the order's card method.
+- **Given** "Add a tip" is checked and 10% chosen, **When** the summary updates, **Then** the total increases by 10% of the subtotal and no tip-method field exists.
 
 #### REQ-CHECKOUT-007 — Create order (happy path) · **Must** · smoke
 
@@ -433,6 +446,46 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 
 - **Given** any visitor, **When** `getOrderingOptionsAction` is called, **Then** it returns enabled order types, today's hours, pickup slots, delivery fee rule, minimum order and radius, and no staff data.
 - **Given** the checkout Order Details step, **When** it loads, **Then** it offers only the order types enabled in Settings, and a type that is not enabled is not shown (found in UAT step 10).
+
+#### REQ-CHECKOUT-014 — One-page customer checkout · **Must** · regression
+
+**Source:** `components/features/checkout/customer-checkout-form.tsx`; cross-ref REQ-121, REQ-120 (ADR-010).
+**Behaviour:** The customer checkout is a single page: an order-type selector, only the fields that type needs, a summary with the total, and one **Pay** button. There is no stepper and no customer-info, tab or payment-method step. Pay starts the payment through the existing `initializePayment` action with all payment methods offered, so the hosted page lets the customer choose. There is no pay-later option.
+
+- **Given** a signed-in customer with a non-empty cart, **When** they open `/checkout`, **Then** one page shows the order-type selector, that type's fields, the summary and a single Pay button, and no stepper or customer-info, tab or payment-method step exists.
+
+#### REQ-CHECKOUT-015 — Name asked once, no email at checkout · **Must** · regression
+
+**Source:** `customer-checkout-form.tsx`, `app/actions/profile/profile-actions.ts`, `hooks/use-auth.ts`; cross-ref REQ-121.
+**Behaviour:** The phone comes from the verified session. If the account has a name, no name, email or phone field is shown. If it has none, exactly one required "First name" field is shown and saved to the profile. Email is never asked.
+
+- **Given** a signed-in customer whose account has a name, **When** they open checkout, **Then** no name, email or phone field is shown.
+- **Given** an account without a name, **When** they open checkout, **Then** exactly one required "First name" field is shown and its value is saved to the profile on submit.
+
+#### REQ-CHECKOUT-016 — Minimal fields per order type, saved address · **Must** · regression
+
+**Source:** `checkout/order-details-step.tsx`, `address-selector.tsx`, `app/actions/profile/profile-actions.ts`; cross-ref REQ-121, REQ-CHECKOUT-013 (`getPickupSlots`).
+**Behaviour:** Dine-in asks only for the table number. Pickup selects "As soon as possible" by default and offers an optional schedule from `getPickupSlots`. Delivery preselects the saved default address, or asks for one address line, a landmark and optional instructions (street2, postal code and country are hidden, country defaults to NG), saves the address to the profile automatically, and shows the delivery fee and any out-of-radius error before Pay. Address fields exist for delivery only.
+
+- **Given** dine-in, **Then** no address fields exist and only the table number is asked.
+- **Given** pickup, **Then** "As soon as possible" is selected and no address fields exist.
+- **Given** delivery with a saved default address, **Then** it is preselected and the delivery fee is shown; **Given** a new address, **Then** one address line plus landmark is asked and the address is saved to the profile.
+
+#### REQ-CHECKOUT-017 — Order type and table preselected from the link · **Should** · regression
+
+**Source:** `customer-checkout-form.tsx`; cross-ref REQ-121 (QR code at the table, WhatsApp link from WA-09).
+**Behaviour:** `?type=` selects the order type and `?table=` prefills the table number (editable). Without them the customer's last-used order type is selected.
+
+- **Given** `/checkout?type=dine-in&table=12`, **When** the page loads, **Then** dine-in is selected and the table field shows 12.
+- **Given** no query parameters and a customer whose last order was pickup, **Then** pickup is selected.
+
+#### REQ-CHECKOUT-018 — Inline typed errors and closed-hours block · **Must** · regression
+
+**Source:** `customer-checkout-form.tsx`, `business-hours-banner.tsx`, `services/customer-order-service.ts`; cross-ref REQ-121, REQ-CHECKOUT-012.
+**Behaviour:** A `createCustomerOrder` typed error is shown inline next to the relevant field. When the business is closed the hours banner shows before the cart and Pay is disabled; the server also rejects the order with a typed error.
+
+- **Given** a typed error for a field, **When** the customer presses Pay, **Then** the message appears next to that field.
+- **Given** the business is closed, **When** checkout loads, **Then** the hours banner is shown and Pay is disabled.
 
 ---
 
@@ -647,6 +700,14 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 - **Given** a session cookie that has only `role: 'csr'`, **When** the member uses the dashboard, **Then** access is the same as before the release.
 - **Given** a request to `POST /api/public/admins` with `role: 'csr'`, **When** it succeeds, **Then** the account has `roles = ['csr']`.
 
+#### REQ-AUTHA-008 — Staff alert number with WhatsApp PIN verification and consent · **Must** · regression
+
+**Source:** `models/user-model.ts`, `app/actions/auth/send-whatsapp-pin.ts`, `verify-whatsapp-pin.ts`, `app/actions/admin/admin-management-actions.ts`, `components/features/admin/create-admin-dialog.tsx`; cross-ref REQ-122, REQ-AUTHC-004.
+**Behaviour:** Staff users carry `alertPhone`, `alertPhoneVerified`, `alertsEnabled` and `onShift`, separate from a customer `phone`. Admins set the number (unverified) in the create-admin dialog and the admin actions menu, and staff set and verify it on their own account page (`/dashboard/account`, open to every staff role). A number that belongs to a customer account, or is already verified for another staff member, is refused. Verification sends a WhatsApp PIN; on success it stores `alertPhoneVerified = true` and a consent timestamp.
+
+- **Given** a staff member enters an alert number, **When** they verify the WhatsApp PIN, **Then** the number is marked verified and the consent timestamp is stored.
+- **Given** an unverified alert number, **Then** it never receives a `staff_alert` and is not recognised as staff by the inbound router.
+
 ---
 
 ## Feature Area 9 — Admin Dashboard Overview (DASH)
@@ -665,6 +726,37 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 **Source:** `app/dashboard/page.tsx:303`
 
 - **Given** an admin (non-super) session, **When** they open `/dashboard`, **Then** they are redirected to `/dashboard/orders`.
+
+#### REQ-DASH-003 — Staff notification model and raise rules · **Must** · regression
+
+**Source:** `models/staff-notification-model.ts`, `services/staff-notification-service.ts`, `services/order-service.ts` (`updatePaymentStatus`), `services/support-ticket-service.ts`; cross-ref REQ-122.
+**Behaviour:** `StaffNotificationService.raise(type, ref, title)` creates a notification (type order, booking, event, support, refund or system; target roles and users; acknowledgement fields; escalation level) according to the rule for that type. It is called when a customer-origin order becomes paid and when a support ticket is created or receives a customer reply. Staff-created orders raise nothing. Booking and refund callers arrive with their own REQs.
+
+- **Given** a customer-origin order becomes paid, **Then** one notification is raised for the order rule's roles.
+- **Given** a staff-created order is paid, **Then** no notification is raised.
+- **Given** a customer reply on a support ticket, **Then** one support notification is raised.
+
+#### REQ-DASH-004 — Dashboard bell, sound and acknowledge · **Must** · regression
+
+**Source:** `app/dashboard/layout.tsx`, `lib/socket-emit-helper.ts`; cross-ref REQ-122.
+**Behaviour:** The top bar shows a bell with the user's unread count (any of their roles in `targetRoles`, or their id in `targetUserIds`). A new alert is signalled live over the `staff-notification` socket event (an id and a type only; the content is fetched through an authenticated, role-scoped action, and the list also refreshes every 30 seconds). The bell then plays `/sounds/new-order.mp3` and shows a toast for an alert that is new to that user, and prefixes the tab title with `(n)`. Opening the linked item, from the bell or directly, acknowledges it. The dropdown lists title, age and link, with Acknowledge and Acknowledge all; opening the linked item also acknowledges it.
+
+- **Given** a csr on the dashboard, **When** a customer order is paid, **Then** the bell count increases, a toast shows and the item links to the order.
+- **Given** an unacknowledged item, **When** the user opens its link, **Then** it is acknowledged.
+
+#### REQ-DASH-005 — Needs-attention panel · **Should** · regression
+
+**Source:** `app/dashboard/page.tsx`, `app/dashboard/orders/page.tsx`; cross-ref REQ-122.
+**Behaviour:** The dashboard overview (`/dashboard`, for super-admin) and the orders landing page (`/dashboard/orders`, where csr, manager and admin land) show unacknowledged items visible to the user, oldest first, with the minutes each has waited.
+
+- **Given** an unacknowledged booking-type notification visible to the user, **When** they open the dashboard, **Then** it is listed in Needs attention with its waiting time.
+
+#### REQ-DASH-006 — On-shift toggle · **Should** · regression
+
+**Source:** `app/dashboard/layout.tsx`; cross-ref REQ-122.
+**Behaviour:** A toggle in the top bar beside the bell sets the staff member's `onShift` flag, which decides who receives WhatsApp alerts (REQ-WA-014).
+
+- **Given** a staff member, **When** they switch On shift on, **Then** `onShift` is true and they are eligible for WhatsApp alerts.
 
 ---
 
@@ -1462,6 +1554,14 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 - **Given** a User document predating REQ-066 (the `incidentsAccess` key is missing), **When** the user logs in, **Then** the soft-default of `true` applies and the nav link still appears (no schema migration was run).
 - **Given** a super-admin who toggles `incidentsAccess: false` for a specific admin via the permissions editor, **When** that admin reloads, **Then** the "Incidents" nav link is hidden and direct access to `/dashboard/incidents` is denied.
 
+#### REQ-SETTINGS-006 — Staff alert rules · **Should** · regression
+
+**Source:** `components/features/admin/notification-settings-form.tsx`, `app/dashboard/settings/*`, `services/system-settings-service.ts`; cross-ref REQ-122.
+**Behaviour:** Settings, Notifications, "Staff alerts" stores per notification type the in-app roles, WhatsApp delay, WhatsApp roles, escalation delay, escalation roles, named users and quiet hours (in-app only during quiet hours), with defaults: order (kitchen and csr in-app, WhatsApp on-shift csr at 5 minutes, escalate to manager at 10), booking and event (csr and admin in-app, on-shift csr at 10, admin at 30), support (csr in-app, on-shift csr at 10, admin at 30), refund (manager in-app, manager at 10, super-admin at 60).
+
+- **Given** no changes, **Then** the defaults above apply.
+- **Given** an admin sets the booking WhatsApp delay to 15 minutes, **Then** the escalation job uses 15.
+
 ---
 
 ## Feature Area 20 — Audit Logs (AUDIT)
@@ -1682,7 +1782,7 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 #### REQ-WA-005 — Inbound WhatsApp message handling · **Should** · regression
 
 **Source:** `services/whatsapp-inbound-service.ts`, `app/api/webhooks/whatsapp/route.ts`, `lib/whatsapp.ts`; cross-ref REQ-056.
-**Behaviour:** Inbound WhatsApp messages are received via the webhook at `/api/webhooks/whatsapp` and routed through `WhatsAppInboundService.handle`. The service classifies the sender's customer state (`new`, `signing_up`, `active`, `dormant`) and the message intent (`opt_out`, `chat_with_staff`, `support_text`). STOP/opt-out messages matching `/^\s*(stop|unsubscribe|opt[-\s]?out)\s*$/i` clear `whatsappMarketing` only; `whatsappTransactional` stays on because order messages are part of the service (REQ-116, REQ-WA-010). Each inbound message is stored in `IncomingMessage` (unique `messageId`) before any classification or side effect; a duplicate-key error stops processing, so Meta retries produce one welcome and one ticket. Every `entry[]` and `changes[]` of a payload is processed. More than 20 inbound messages from one phone in 10 minutes are stored but create no further side effects. A failed outbound reply with a retryable error is retried up to 3 times (1 s, 5 s, 30 s) and then raises an `Incident`. New/signing-up users receive a `welcome_new_user` template with parameters [today's opening time, closing time] (`h:mm a`, from business-hours settings); dormant users receive `welcome_back` with [first name, fallback `there`]. `actionTaken` records `<template>_sent` only when the send succeeded, otherwise `<template>_failed:<errorCode>`. Sender phones are matched using the canonical format (REQ-WA-008); a recovery-detected mismatch is classified `phone_mismatch` (REQ-WA-007). Active users are queued for staff. Support-text intents create a `SupportTicket` with `source: whatsapp`. An `IncomingMessage` audit record is persisted for every inbound message.
+**Behaviour:** (REQ-122: a message from a verified staff alert number is not treated as a customer, see REQ-WA-015.) Inbound WhatsApp messages are received via the webhook at `/api/webhooks/whatsapp` and routed through `WhatsAppInboundService.handle`. The service classifies the sender's customer state (`new`, `signing_up`, `active`, `dormant`) and the message intent (`opt_out`, `chat_with_staff`, `support_text`). STOP/opt-out messages matching `/^\s*(stop|unsubscribe|opt[-\s]?out)\s*$/i` clear `whatsappMarketing` only; `whatsappTransactional` stays on because order messages are part of the service (REQ-116, REQ-WA-010). Each inbound message is stored in `IncomingMessage` (unique `messageId`) before any classification or side effect; a duplicate-key error stops processing, so Meta retries produce one welcome and one ticket. Every `entry[]` and `changes[]` of a payload is processed. More than 20 inbound messages from one phone in 10 minutes are stored but create no further side effects. A failed outbound reply with a retryable error is retried up to 3 times (1 s, 5 s, 30 s) and then raises an `Incident`. New/signing-up users receive a `welcome_new_user` template with parameters [today's opening time, closing time] (`h:mm a`, from business-hours settings); dormant users receive `welcome_back` with [first name, fallback `there`]. `actionTaken` records `<template>_sent` only when the send succeeded, otherwise `<template>_failed:<errorCode>`. Sender phones are matched using the canonical format (REQ-WA-008); a recovery-detected mismatch is classified `phone_mismatch` (REQ-WA-007). Active users are queued for staff. Support-text intents create a `SupportTicket` with `source: whatsapp`. An `IncomingMessage` audit record is persisted for every inbound message.
 
 - **Given** an inbound WhatsApp message from an unknown phone number, **When** `WhatsAppInboundService.handle` processes it, **Then** a new `User` row is auto-created and a `welcome_new_user` template is sent.
 - **Given** an inbound message matching the STOP opt-out pattern, **When** the service processes it, **Then** `whatsappMarketing` is set to false, `whatsappTransactional` is unchanged and a free-form STOP confirmation is sent within the 24h customer-service window (REQ-WA-010).
@@ -1761,6 +1861,23 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 
 - **Given** the customer taps "Chat with staff", **When** the message is processed, **Then** the ticket is urgent with an SLA fifteen minutes ahead and appears first in the queue.
 - **Given** an urgent ticket past its SLA, **When** staff open the queue, **Then** it is highlighted as overdue.
+
+#### REQ-WA-014 — Staff alert escalation by WhatsApp · **Must** · regression
+
+**Source:** `lib/scheduled-jobs.ts`, `services/staff-notification-service.ts`, `lib/whatsapp.ts`; cross-ref REQ-122, ADR-011.
+**Behaviour:** A job runs every minute. For each unacknowledged staff notification past its type's `whatsappAfterMinutes`, it sends the `staff_alert` template once to on-shift users with a verified alert number who hold any of the type's `whatsappRoles`; if nobody is on shift it goes straight to the `escalateRoles`. Past `escalateAfterMinutes` it sends once to the `escalateRoles`. Each level is sent once, a user with several roles gets one message per level, quiet hours keep alerts in-app only, and opening or acknowledging the item stops escalation. Staff alert delivery uses the staff member's own recorded consent (REQ-AUTHA-008), not the customer consent flags of REQ-WA-006.
+
+- **Given** an order unacknowledged for 5 minutes and an on-shift csr with a verified number, **Then** one `staff_alert` is logged to that csr; **Given** 10 minutes, **Then** one to each manager.
+- **Given** nobody on shift, **Then** the first WhatsApp alert goes to the escalation roles.
+- **Given** a user with the csr and manager roles, **Then** they receive one message per level, not two.
+- **Given** the item is opened, **Then** escalation stops and `acknowledgedBy` and `acknowledgedAt` are recorded.
+
+#### REQ-WA-015 — Verified staff numbers are not customers · **Must** · regression
+
+**Source:** `services/whatsapp-inbound-service.ts`; cross-ref REQ-122, REQ-WA-005.
+**Behaviour:** An inbound message from a verified staff `alertPhone` is not classified as a customer: no welcome, no ticket and no account is created. The reply is the fixed text "Thanks, please open the dashboard to handle alerts."
+
+- **Given** a verified staff alert number messages the business, **When** the inbound router processes it, **Then** no ticket, welcome or customer account is created and the fixed reply is sent.
 
 ## Feature Area 28 — Contact / Support (CONTACT)
 

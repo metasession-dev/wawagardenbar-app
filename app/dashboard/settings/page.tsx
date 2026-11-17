@@ -1,5 +1,7 @@
 import { SettingsService } from '@/services';
 import { SystemSettingsService } from '@/services/system-settings-service';
+import { StaffNotificationService } from '@/services/staff-notification-service';
+import { StaffAlertRulesForm } from '@/components/features/admin/staff-alert-rules-form';
 import {
   Card,
   CardContent,
@@ -54,6 +56,12 @@ export default async function SettingsPage() {
     SystemSettingsService.getStaffPotConfig(),
     SystemSettingsService.getBusinessDayCutoff(),
     SystemSettingsService.getUnitsOfMeasurement(),
+  ]);
+
+  // REQ-122 — staff alert rules and the staff list for the named-users picker
+  const [staffAlertRules, staffOptions] = await Promise.all([
+    StaffNotificationService.getRules(),
+    StaffNotificationService.listStaffOptions(),
   ]);
 
   // Serialize for client - use JSON.parse(JSON.stringify()) to remove Mongoose metadata
@@ -219,6 +227,12 @@ export default async function SettingsPage() {
           />
         </CardContent>
       </Card>
+
+      {/* REQ-122 — Staff alerts (Settings, Notifications) */}
+      <StaffAlertRulesForm
+        initialRules={staffAlertRules}
+        staff={staffOptions}
+      />
     </div>
   );
 }

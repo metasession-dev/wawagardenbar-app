@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-122",
+  "ac": 1,
+  "slug": "alert-raised-for-paid-order",
+  "specFile": "e2e/critical/staff-notifications.spec.ts",
+  "capturedAt": "2026-11-16T22:50:28.257Z"
+}

@@ -30,6 +30,7 @@ import SupportTicketModel, {
 } from '@/models/support-ticket-model';
 import { NotificationService } from '@/services/notification-service';
 import { sendSupportTicketEmail } from '@/lib/email';
+import { StaffNotificationService } from '@/services/staff-notification-service';
 
 export interface CreateTicketInput {
   userId?: string | null;
@@ -81,6 +82,8 @@ export class SupportTicketService {
       orderId: input.orderId ?? null,
       priority: input.priority ?? 'normal',
     });
+    // REQ-122 — a new ticket raises a staff alert (never throws).
+    await StaffNotificationService.raiseForSupportTicket(doc);
     return doc;
   }
 
@@ -156,6 +159,11 @@ export class SupportTicketService {
         },
         { new: true }
       ).lean<ISupportTicket>();
+      // REQ-122 — a customer message on an existing ticket raises a staff alert
+      // (one open alert per ticket; never throws).
+      await StaffNotificationService.raiseForSupportTicket(
+        (updated ?? existing) as ISupportTicket
+      );
       return (updated ?? existing) as ISupportTicket;
     }
 
@@ -334,6 +342,11 @@ export class SupportTicketService {
     ).lean<ISupportTicket>();
 
     if (!updated) return null;
+
+    // REQ-122 — a customer reply raises a staff alert (never throws).
+    if (opts.authorRole === 'customer') {
+      await StaffNotificationService.raiseForSupportTicket(updated);
+    }
 
     if (opts.authorRole === 'staff' && updated.userId) {
       // Best-effort outbound. Channel fallback honours consent (REQ-054).

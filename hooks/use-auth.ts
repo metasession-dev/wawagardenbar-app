@@ -8,6 +8,8 @@ import { getPrimaryRole } from '@/lib/session';
 interface User {
   id?: string;
   name?: string;
+  /** REQ-121: true when the account has a real name (not the email-prefix fallback in `name`). */
+  hasName?: boolean;
   email?: string;
   phone?: string;
   emailVerified?: boolean;

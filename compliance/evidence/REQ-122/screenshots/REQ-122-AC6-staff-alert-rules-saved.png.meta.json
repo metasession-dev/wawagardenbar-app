@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-122",
+  "ac": 6,
+  "slug": "staff-alert-rules-saved",
+  "specFile": "e2e/critical/staff-alert-rules.spec.ts",
+  "capturedAt": "2026-11-16T22:49:25.369Z"
+}

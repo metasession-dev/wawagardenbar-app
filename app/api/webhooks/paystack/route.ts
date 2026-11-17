@@ -7,6 +7,7 @@ import { PaystackService } from '@/services/paystack-service';
 import { RewardsService, TabService } from '@/services';
 import { deriveBusinessDate } from '@/lib/business-date';
 import { SystemSettingsService } from '@/services/system-settings-service';
+import { StaffNotificationService } from '@/services/staff-notification-service';
 
 /**
  * Paystack Webhook Handler
@@ -118,6 +119,9 @@ export async function POST(request: NextRequest) {
         });
 
         console.log('Order confirmed via Paystack:', order._id);
+
+        // REQ-122 — a paid customer order raises a staff alert (never throws).
+        await StaffNotificationService.raiseForPaidOrder(order);
 
         // REQ-066 — inventory deduction is OWNED by `OrderService.completeOrder`
         // (kitchen-display completion). Webhook only confirms payment;

@@ -1,0 +1,22 @@
+{
+  "name": "staff_alert",
+  "language": "en",
+  "category": "UTILITY",
+  "builder": "staffAlertParams",
+  "header": null,
+  "body": {
+    "text": "Wawa Garden Bar alert: {{1}} {{2}} has been waiting {{3}} minutes. Please open the dashboard to handle it.",
+    "example": ["New booking request", "BK-0042", "12"]
+  },
+  "footer": null,
+  "buttons": [
+    {
+      "type": "URL",
+      "text": "Open",
+      "url": "https://app.wawagardenbar.com/dashboard/{{1}}",
+      "example": [
+        "https://app.wawagardenbar.com/dashboard/bookings/665a1b2c3d4e5f6a7b8c9d0e"
+      ]
+    }
+  ]
+}

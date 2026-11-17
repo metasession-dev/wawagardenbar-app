@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-122",
+  "ac": 4,
+  "slug": "alert-number-saved-unverified",
+  "specFile": "e2e/critical/staff-alert-number.spec.ts",
+  "capturedAt": "2026-11-16T22:49:04.412Z"
+}

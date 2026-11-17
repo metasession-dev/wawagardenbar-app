@@ -1336,3 +1336,171 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 **Framework cross-references:** ISO 27001 A.8.32; SOC 2 CC8.1.
 
 **Cross-links:** [REQ-120 implementation plan](plans/REQ-120/implementation-plan.md); ADR-010; SRS REQ-ORDMGT-019.
+
+---
+
+### R-60 — Customer checkout rewritten as one page: money path regression (REQ-121)
+
+**Status:** OPEN
+**Opened:** 2026-11-16 (REQ-121, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-16
+
+**The risk:** The customer checkout form is replaced by a single page and the tip becomes part of the charge. A defect could mis-total an order, drop the tip, let an order through while closed, or charge a different amount than the summary showed.
+
+**Mitigations planned in REQ-121:**
+
+1. Totals, delivery fee and tip are recomputed server-side by `createCustomerOrder` (ADR-010); the client value is never trusted (AC4, AC6).
+2. The server rejects a closed-hours order with a typed error, not only the disabled button (AC6).
+3. Unit tests for tip maths and field rules, and critical e2e US-A2.1 to US-A2.12 tagged to REQ-121 gate the merge.
+4. Agent-executed UAT on the UAT environment with a named independent reviewer before release.
+
+**Residual likelihood × impact:** low × high
+
+**Framework cross-references:** ISO 27001 A.8.25, A.8.32; SOC 2 CC8.1, PI1.2.
+
+**Cross-links:** [REQ-121 implementation plan](plans/REQ-121/implementation-plan.md); ADR-010; SRS REQ-CHECKOUT-014, REQ-CHECKOUT-006, REQ-CHECKOUT-018.
+
+---
+
+### R-61 — Saved name and delivery address handled automatically at checkout (REQ-121)
+
+**Status:** OPEN
+**Opened:** 2026-11-16 (REQ-121, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-16
+
+**The risk:** Checkout now saves the first name and the delivery address to the profile without a checkbox and preselects the saved address. A wrong or stale address could be preselected and delivered to, or one customer's data could be read for another.
+
+**Mitigations planned in REQ-121:**
+
+1. The saved address and name are read and written only for the session's own user id (AC2, AC3).
+2. The preselected address is shown before Pay with the delivery fee and out-of-radius error, so the customer sees where the order goes.
+3. Less data is collected than before: no email, no street2, postal code or country (GDPR Art. 25 minimisation).
+4. Unit and e2e tests for the saved-address path and for a user with no saved address.
+
+**Residual likelihood × impact:** low × medium
+
+**Framework cross-references:** ISO 27001 A.5.34, A.8.25; GDPR Art. 5(1)(c), Art. 25; SOC 2 C1.1.
+
+**Cross-links:** [REQ-121 implementation plan](plans/REQ-121/implementation-plan.md); SRS REQ-CHECKOUT-015, REQ-CHECKOUT-016.
+
+---
+
+### R-62 — Payment-method step removed before the WA-07 Paystack work (REQ-121)
+
+**Status:** OPEN
+**Opened:** 2026-11-16 (REQ-121, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-16
+
+**The risk:** The payment-method step is removed and Pay starts the active provider with all methods, but the move to Paystack hosted checkout and the paid-only kitchen gate are WA-07. If the provider does not offer a method the customer chose before, or the initialisation fails, customers cannot pay.
+
+**Mitigations planned in REQ-121:**
+
+1. Pay calls the existing `initializePayment` action with every payment method, so the provider's hosted page offers the choice (G1, option b).
+2. Payment initialisation errors are typed and shown inline (AC6); the order is not created as paid.
+3. Provider mock in the critical e2e; a live payment round-trip on UAT recorded in the UAT evidence.
+4. WA-07 (#969) is the follow-up that owns the provider switch and the kitchen gate.
+
+**Residual likelihood × impact:** low × high
+
+**Framework cross-references:** ISO 27001 A.8.25; SOC 2 CC8.1, A1.2.
+
+**Cross-links:** [REQ-121 implementation plan](plans/REQ-121/implementation-plan.md); SRS REQ-CHECKOUT-014, REQ-CHECKOUT-010 (stale, see requirements gap G1).
+
+---
+
+### R-63 — Missed or late staff alerts (REQ-122)
+
+**Status:** OPEN
+**Opened:** 2026-11-16 (REQ-122, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-16
+
+**The risk:** A paid customer order or support message goes unseen because the escalation job is not running, the `staff_alert` template is not yet approved, nobody is on shift, or no staff number is verified. Customers wait with no one aware.
+
+**Mitigations planned in REQ-122:**
+
+1. Alerts are persisted and shown in the dashboard until acknowledged, independent of the WhatsApp path (AC1, AC2, AC3).
+2. Escalation goes straight to the escalation roles when nobody is on shift, and to a second level when the first is not acknowledged (AC7).
+3. While the template is pending, sends are held (`held_template_pending`) and in-app alerts continue; the UAT round-trip is recorded after approval.
+4. Escalation uses elapsed minutes, so a missed tick delays an alert by one tick rather than dropping it (ADR-011).
+
+**Residual likelihood × impact:** low × high
+
+**Framework cross-references:** ISO 27001 A.5.24, A.8.16; SOC 2 CC7.2, A1.2.
+
+**Cross-links:** [REQ-122 implementation plan](plans/REQ-122/implementation-plan.md); ADR-011; SRS REQ-DASH-003, REQ-DASH-004, REQ-WA-014.
+
+---
+
+### R-64 — Duplicate, runaway or noisy WhatsApp alerts to staff (REQ-122)
+
+**Status:** OPEN
+**Opened:** 2026-11-16 (REQ-122, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-16
+
+**The risk:** A bug or a second app instance could send the same alert repeatedly, one user could receive a message per role, or alerts could arrive during quiet hours, causing alert fatigue, ignored alerts and message cost.
+
+**Mitigations planned in REQ-122:**
+
+1. Each level is sent once: the level change is an atomic conditional update and only the winner sends (AC7, ADR-011).
+2. A user with several roles gets one message per level (AC7).
+3. Quiet hours keep alerts in-app only and delays are configurable (AC6).
+4. Unit tests with fake timers for the levels, the dedup and the on-shift fallback.
+
+**Residual likelihood × impact:** low × medium
+
+**Framework cross-references:** ISO 27001 A.8.16; SOC 2 CC7.2.
+
+**Cross-links:** [REQ-122 implementation plan](plans/REQ-122/implementation-plan.md); ADR-011; SRS REQ-WA-014, REQ-SETTINGS-006.
+
+---
+
+### R-65 — Staff alert numbers: wrong or hijacked number, consent and retention (REQ-122)
+
+**Status:** OPEN
+**Opened:** 2026-11-16 (REQ-122, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-16
+
+**The risk:** Staff phone numbers become new personal data. An unverified or wrong number could receive internal alerts, a number could be treated as staff without verification, or numbers could outlive the account.
+
+**Mitigations planned in REQ-122:**
+
+1. A number counts only after WhatsApp PIN verification, with a stored consent timestamp (AC4); unverified numbers never receive `staff_alert` and are not treated as staff by the router (AC8).
+2. The alert number is separate from the customer `phone`; only a reference and a title go in the message, no order contents (AC8).
+3. The ROPA is updated; the number is removed with the staff account; retention rules follow in WA-14.
+4. Unit and e2e tests for verification, routing and exclusion from the customer pipeline.
+
+**Residual likelihood × impact:** low × medium
+
+**Framework cross-references:** ISO 27001 A.5.34, A.8.25; GDPR Art. 6, Art. 25, Art. 30; SOC 2 C1.1.
+
+**Cross-links:** [REQ-122 implementation plan](plans/REQ-122/implementation-plan.md); ADR-011; SRS REQ-AUTHA-008, REQ-WA-015.
+
+---
+
+### R-66 — Staff alerts shown or sent to the wrong role (REQ-122)
+
+**Status:** OPEN
+**Opened:** 2026-11-16 (REQ-122, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-16
+
+**The risk:** Notification audiences are computed from roles and rules. A wrong rule or role check could show an alert, order link or customer detail to a role that should not see it, or let a user acknowledge items outside their scope.
+
+**Mitigations planned in REQ-122:**
+
+1. Audience is resolved only through the any-of role helpers of ADR-009; no new direct `session.role ===` checks.
+2. Editing alert rules requires an admin permission; acknowledge is limited to items visible to the user (AC2, AC6).
+3. Notification titles carry a reference and a short title, not customer personal data.
+4. Unit tests for audience resolution across single and multiple roles.
+
+**Residual likelihood × impact:** low × medium
+
+**Framework cross-references:** ISO 27001 A.5.15, A.8.2; SOC 2 CC6.1, CC6.3.
+
+**Cross-links:** [REQ-122 implementation plan](plans/REQ-122/implementation-plan.md); ADR-009; ADR-011; SRS REQ-DASH-004, REQ-SETTINGS-006.

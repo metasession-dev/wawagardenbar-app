@@ -3,6 +3,8 @@ import { requireStaff } from '@/lib/auth-middleware';
 import { getRoles } from '@/lib/session';
 import { DashboardNav } from '@/components/features/admin/dashboard-nav';
 import { Breadcrumb } from '@/components/shared/breadcrumb';
+import { StaffNotificationBell } from '@/components/features/admin/staff-notification-bell';
+import { OnShiftToggle } from '@/components/features/admin/on-shift-toggle';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,7 +56,9 @@ export default async function DashboardLayout({
           <div className="flex flex-1 items-center justify-between">
             <h2 className="text-2xl font-bold">Dashboard</h2>
             <div className="flex items-center gap-4">
-              {/* Future: Notifications, Quick Actions */}
+              {/* REQ-122 — on-shift toggle and the staff notification bell */}
+              <OnShiftToggle />
+              <StaffNotificationBell />
             </div>
           </div>
         </header>

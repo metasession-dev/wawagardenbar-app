@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-121",
+  "ac": 6,
+  "slug": "typed-error-inline",
+  "specFile": "e2e/critical/checkout-single-page.spec.ts",
+  "capturedAt": "2026-11-16T22:43:43.574Z"
+}

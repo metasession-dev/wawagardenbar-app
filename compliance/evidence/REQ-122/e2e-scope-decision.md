@@ -25,8 +25,8 @@ spec_path: e2e/critical/staff-notifications.spec.ts
 
 I have reviewed the e2e-scope verdict above and confirm it matches the actual scope of this REQ's diff.
 
-- [ ] The verdict (e2e required) matches the actual scope of this REQ.
-- [ ] The spec paths and ACs covered above are accurate.
+- [x] The verdict (e2e required) matches the actual scope of this REQ.
+- [x] The spec paths and ACs covered above are accurate.
 
-**Reviewer:** <operator-name>
-**Date:** <YYYY-MM-DD>
+**Reviewer:** William
+**Date:** 2026-11-17

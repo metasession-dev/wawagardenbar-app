@@ -1,6 +1,6 @@
 # Release Ticket: REQ-122 — Staff notifications, alert numbers and escalation (WA-12)
 
-**Status:** PLANNED
+**Status:** TESTED - PENDING SIGN-OFF
 **Date:** 2026-11-16
 **Requirement ID:** REQ-122
 **Risk Level:** HIGH
@@ -12,8 +12,13 @@
 
 New customer orders and support messages raise a live dashboard alert (bell, sound, toast, Needs-attention panel); unacknowledged items escalate by WhatsApp to on-shift staff and then to an escalation role, with staff alert numbers verified by WhatsApp PIN. Details, acceptance criteria and risks: `compliance/plans/REQ-122/implementation-plan.md`.
 
-This ticket is a skeleton written at Stage 1; Stage 3 completes it.
+Stage 3 evidence is in `compliance/evidence/REQ-122/`; the UAT pack for the whole bundle is on REQ-121. Local gates (tsc, lint, 2129 unit tests, build, `smoke` + `critical` e2e) pass; CI runs and the full regression tier come with the integration PR.
 
 ## Sign-off (dual-actor)
 
 To be completed at Stage 3.
+
+## Operator tasks
+
+- Confirm, then submit the `staff_alert` template to the UAT (+44 7363 078509) and production (+234 814 825 3342) WhatsApp accounts; record the status per environment here.
+- Sign off risks R-60 to R-66 in `compliance/risk-register.md`.

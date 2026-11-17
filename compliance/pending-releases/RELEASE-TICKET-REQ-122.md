@@ -24,3 +24,10 @@ To be completed at Stage 3.
   - UAT (+44 7363 078509): submitted 2026-11-17 on operator confirmation (William), template id 2324079068440203, status PENDING at last check (2026-11-17).
   - Production (+234 814 825 3342): submitted 2026-11-17 on operator confirmation (William), template id 3855651177908683, status PENDING at last check (2026-11-17).
 - Sign off risks R-60 to R-66 in `compliance/risk-register.md`.
+
+## Known limitations at release (operator decision, William, 2026-11-17)
+
+- UAT steps 15 to 18 (staff alert number verification, wrong code and customer-number refusal, alert rules, staff-number routing) were **not run**: they need a real WhatsApp phone and the approved `staff_alert` template, which was still PENDING at Meta for UAT and production. The release continues to production on the operator's instruction; the release reviewer accepts or rejects this in the portal.
+- Until the production `staff_alert` template is approved and a real staff number is verified, WhatsApp alerts and escalation to staff will not be delivered. The in-app bell, toast and Needs-attention panel work without it (UAT steps 11 to 14 passed).
+- Risks R-62 and R-65 stay OPEN until the WhatsApp path has been verified.
+- Follow-up: re-check both template statuses and, once approved and a real number is verified, run steps 15 to 18 on UAT and record the result.

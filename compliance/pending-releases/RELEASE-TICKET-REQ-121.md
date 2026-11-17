@@ -16,7 +16,11 @@ Stage 3 evidence is in `compliance/evidence/REQ-121/`; the UAT pack for the whol
 
 ## Sign-off (dual-actor)
 
-To be completed at Stage 3.
+- **Approval mode:** `dual_actor` (HIGH risk).
+- **Change author / trigger:** the operator (William Thompson, Metasession Dev) and the AI agent (Claude Sonnet 5.5 via `sdlc-implementer`). Neither approves.
+- **UAT executed by:** the AI agent (`execution_mode: agent_executed`; see `uat-execution-record.md`).
+- **Independent UAT reviewer, named by the operator on 2026-11-17:** Ade Thompson. The reviewer reads the record and evidence, makes the independence declaration, ticks the reviewer decision, signs, and records the outcome and the approval in the portal under their own login. Not yet done.
+- The agent does not sign, tick the reviewer decision, or approve.
 
 ## Bundled Changes
 

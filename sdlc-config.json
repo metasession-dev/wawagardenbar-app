@@ -51,7 +51,7 @@
   ],
   "uat": {
     "enabled": true,
-    "url": "https://wawagardenbar-app-uat.up.railway.app/",
+    "url": "https://wawagardenbar-uat.ostendo.io/",
     "required_risk_classes": ["*"],
     "mode": "auto",
     "human_pack": "always"

@@ -21,4 +21,6 @@ To be completed at Stage 3.
 ## Operator tasks
 
 - Confirm, then submit the `staff_alert` template to the UAT (+44 7363 078509) and production (+234 814 825 3342) WhatsApp accounts; record the status per environment here.
+  - UAT (+44 7363 078509): submitted 2026-11-17 on operator confirmation (William), template id 2324079068440203, status PENDING at last check (2026-11-17).
+  - Production (+234 814 825 3342): submitted 2026-11-17 on operator confirmation (William), template id 3855651177908683, status PENDING at last check (2026-11-17).
 - Sign off risks R-60 to R-66 in `compliance/risk-register.md`.

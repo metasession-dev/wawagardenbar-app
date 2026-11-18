@@ -32,12 +32,12 @@ tested_sha: 9b29a18c6a12c8abd34ee987abd10acd136da58e
 | Build under test (git SHA) | 9b29a18c6a12c8abd34ee987abd10acd136da58e (develop; UAT redeployed by Deploy UAT (k3s) after CI run 44061298330) |
 | Environment / URL          | UAT, https://wawagardenbar-uat.ostendo.io                                                                       |
 | Executed by                | Claude Sonnet 5.5 (claude-sonnet-5-5) via sdlc-implementer, with the operator relaying one WhatsApp PIN         |
-| Reviewed by                | REPLACE (agent-executed runs only; write "n/a" for a manual run)                                                |
+| Reviewed by                | ADE THOMPSON                                                                                                    |
 | Started                    | 2026-11-17 (UTC; the run was spread over several hours)                                                         |
 | Finished                   | 2026-11-17 (UTC)                                                                                                |
 
 **Independence declaration** (required when `approval.mode` is `dual_actor`). For a manual run the tester signs; for an agent-executed run the human reviewer signs:
-I did not write, review or approve the change under test. Name: REPLACE &nbsp; Date: REPLACE
+I did not write, review or approve the change under test. Name: ADE THOMPSON &nbsp; Date: 18/11/2026
 
 ## Operator preparation (initial each before the run starts)
 
@@ -133,16 +133,16 @@ Anything done differently from the procedure, and why. Write "None" if there wer
 | REQ-122 AC8         | 18                 | BLOCKED                          |
 | REQ-122 AC7, AC9    | not human-testable | see the procedure                |
 
-**Recommendation:** [ ] Approve &nbsp; [ ] Approve with noted defects &nbsp; [ ] Reject
+**Recommendation:** [ ] Approve &nbsp; [x] Approve with noted defects &nbsp; [ ] Reject
 
 Agent's view, for the reviewer: 13 of 18 steps passed. Approval needs the reviewer to accept (a) step 6 (D1), (b) steps 15 to 18 blocked, and (c) payment simulated by webhook for steps 11 to 13. The agent has not ticked a box.
 
-**Reviewer decision** (agent-executed runs): [ ] The agent's results are accepted &nbsp; [ ] A manual re-run is required (the release waits; the re-run gets its own record with `execution_mode: manual`)
+**Reviewer decision** (agent-executed runs): [x] The agent's results are accepted &nbsp; [ ] A manual re-run is required (the release waits; the re-run gets its own record with `execution_mode: manual`)
 
 ## Sign-off
 
-| Role                                                        | Name | Date |
-| ----------------------------------------------------------- | ---- | ---- |
-| Tester (manual run) or agent executor                       |      |      |
-| Reviewer (agent-executed run; write "n/a" for a manual run) |      |      |
-| Operator                                                    |      |      |
+| Role                                                        | Name            | Date       |
+| ----------------------------------------------------------- | --------------- | ---------- |
+| Tester (manual run) or agent executor                       | Ade Thompson    | 18/11/2026 |
+| Reviewer (agent-executed run; write "n/a" for a manual run) | Ade Thompson    | 18/11/2026 |
+| Operator                                                    | metasession dev | 18/11/2026 |

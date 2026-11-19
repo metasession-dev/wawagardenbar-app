@@ -43,6 +43,8 @@ const KIND_LABELS: Record<IncidentEventKind, string> = {
   reward_grant_failed: 'Reward grant failed',
   webhook_replay_mismatch: 'Webhook replay mismatch',
   dormant_open_tab: 'Dormant open tab',
+  payment_mismatch: 'Payment amount mismatch',
+  late_payment_on_cancelled_order: 'Payment on a cancelled order',
 };
 
 const KIND_VARIANTS: Record<
@@ -56,6 +58,8 @@ const KIND_VARIANTS: Record<
   reward_grant_failed: 'destructive',
   webhook_replay_mismatch: 'destructive',
   dormant_open_tab: 'secondary',
+  payment_mismatch: 'destructive',
+  late_payment_on_cancelled_order: 'destructive',
 };
 
 function timeSince(when: Date | string): string {

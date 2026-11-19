@@ -87,7 +87,7 @@ Before opening the template UI:
 
 ## 1. `order_confirmation` — UTILITY
 
-**Sent when:** a customer places an order (existing `WhatsAppService.sendOrderConfirmationWhatsApp`).
+**Sent when:** Paystack confirms payment of a customer order (REQ-123: `OrderService.markOrderPaid`, first time only), followed by `receipt`. Submitted 2026-11-19 to the UAT and production accounts (ids in `compliance/evidence/REQ-123/template-submissions.md`).
 
 **Code mapping** (`lib/whatsapp.ts:322-330`):
 
@@ -95,15 +95,15 @@ Before opening the template UI:
 params = [orderNumber, `₦${total.toLocaleString()}`, estimatedTime ? `${N} minutes` : 'Soon']
 ```
 
-| Field    | Value                                                                                                                                    |
-| -------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Name     | `order_confirmation`                                                                                                                     |
-| Category | **UTILITY**                                                                                                                              |
-| Language | `en`                                                                                                                                     |
-| Header   | (none)                                                                                                                                   |
-| Body     | `Order #{{1}} confirmed — thanks for ordering with Wawa Garden Bar! Total: {{2}}. Estimated time: {{3}}. We'll text again with updates.` |
-| Footer   | `Wawa Garden Bar`                                                                                                                        |
-| Buttons  | (none)                                                                                                                                   |
+| Field    | Value                                                                                                                                     |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Name     | `order_confirmation`                                                                                                                      |
+| Category | **UTILITY**                                                                                                                               |
+| Language | `en`                                                                                                                                      |
+| Header   | (none)                                                                                                                                    |
+| Body     | `Order #{{1}} confirmed — thanks for ordering with Wawa Garden Bar! Total: {{2}}. Estimated time: {{3}}. We'll message you with updates.` |
+| Footer   | (none)                                                                                                                                    |
+| Buttons  | (none)                                                                                                                                    |
 
 **Examples** (paste into Meta's "Add sample" fields):
 
@@ -144,32 +144,34 @@ params = [orderNumber, statusText]
 
 ## 3. `receipt` — UTILITY
 
-**Sent when:** order is paid (current code sends an email via `lib/email.ts:sendOrderConfirmationEmail`; WA-2 / WA-6 will rewire this to WhatsApp-first). The template needs to cover P1 #6's itemised receipt requirement.
+**Sent when:** Paystack confirms payment of a customer order (REQ-123: `OrderService.markOrderPaid`, after `order_confirmation`). Submitted 2026-11-19 to the UAT and production accounts (ids in `compliance/evidence/REQ-123/template-submissions.md`).
 
-**Code mapping** (will be set during WA-2's wrapper, expected shape):
+**Code mapping** (`receiptParams` in `lib/whatsapp-template-params.ts`):
 
 ```
-params = [orderNumber, itemsList, total, paymentMethod, pointsEarned]
-// itemsList: pre-formatted "2× Goat Stew, 1× Jollof Rice" string (kept under Meta's 1024-char body limit)
+header = [orderNumber]
+body   = [itemsList, total, paymentMethod, pointsEarned]
+button = [orderNumber]   // the URL button's own {{1}}
+// itemsList: "2× Goat Stew, 1× Jollof Rice" (kept under Meta's 1024-char body limit)
 ```
 
-| Field    | Value                                                                                                                    |
-| -------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Name     | `receipt`                                                                                                                |
-| Category | **UTILITY**                                                                                                              |
-| Language | `en`                                                                                                                     |
-| Header   | TEXT: `Receipt for Order #{{1}}`                                                                                         |
-| Body     | `Items: {{2}}\n\nTotal: {{3}}\nPaid via: {{4}}\nPoints earned: {{5}}\n\nThanks for choosing Wawa Garden Bar!`            |
-| Footer   | `Show this to staff for in-person service`                                                                               |
-| Buttons  | URL: `View Full Receipt` → `https://app.wawagardenbar.com/menus/{{1}}` (set the variable in the URL field per Meta's UI) |
+Meta numbers header and body placeholders separately, so the body starts again at `{{1}}`.
+
+| Field    | Value                                                                                                                                         |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Name     | `receipt`                                                                                                                                     |
+| Category | **UTILITY**                                                                                                                                   |
+| Language | `en`                                                                                                                                          |
+| Header   | TEXT: `Receipt for Order #{{1}}`                                                                                                              |
+| Body     | `Items: {{1}}\n\nTotal: {{2}}\nPaid via: {{3}}\nPoints earned: {{4}}\n\nThanks for choosing Wawa Garden Bar!`                                 |
+| Footer   | (none)                                                                                                                                        |
+| Buttons  | URL: `View receipt` → `<base>/orders/{{1}}` (dynamic; UAT `https://wawagardenbar-uat.ostendo.io`, production `https://app.wawagardenbar.com`) |
 
 **Examples:**
 
-| `{{1}}` | `{{2}}`                        | `{{3}}`  | `{{4}}`      | `{{5}}` |
-| ------- | ------------------------------ | -------- | ------------ | ------- |
-| `1234`  | `2× Goat Stew, 1× Jollof Rice` | `₦5,500` | `POS / Card` | `55`    |
-
-**Note on URL button:** Meta requires the dynamic URL to be added with `{{1}}` as a placeholder. In the UI: Buttons → Add → URL → Type "Dynamic" → URL = `https://app.wawagardenbar.com/menus/` and add `{{1}}` (Meta auto-numbers it).
+| Header `{{1}}` | Body `{{1}}`                   | `{{2}}`  | `{{3}}` | `{{4}}` | Button `{{1}}` |
+| -------------- | ------------------------------ | -------- | ------- | ------- | -------------- |
+| `1234`         | `2× Goat Stew, 1× Jollof Rice` | `₦5,500` | `Card`  | `55`    | `1234`         |
 
 ---
 
@@ -231,30 +233,30 @@ params = [customerFirstName, expiringPoints, daysRemaining, naireEquivalent]
 
 ## 6. `payment_link` — UTILITY
 
-**Sent when:** a tab is held open and the customer is invoiced for the outstanding balance later, or a delivery order needs a payment link (WA-2 wires the send).
+**Sent when:** a customer order is still unpaid 5 minutes after checkout (REQ-123: `runPaymentLinkJob`, once per order, claimed on `paymentLinkSentAt`). Submitted 2026-11-19 to the UAT and production accounts (ids in `compliance/evidence/REQ-123/template-submissions.md`).
 
-**Code mapping** (expected):
+**Code mapping** (`paymentLinkParams` in `lib/whatsapp-template-params.ts`):
 
 ```
-body   = [customerFirstName, amount, expiresInHours]
-button = [paymentUrl]   // the URL button's own {{1}}
+body   = [customerFirstName, amount, minutesUntilExpiry]
+button = [paystackAccessCode]   // the URL button's own {{1}}
 ```
 
-| Field    | Value                                                                                                                           |
-| -------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Name     | `payment_link`                                                                                                                  |
-| Category | **UTILITY**                                                                                                                     |
-| Language | `en`                                                                                                                            |
-| Header   | TEXT: `Payment requested`                                                                                                       |
-| Body     | `Hi {{1}}, please complete your Wawa Garden Bar payment of {{2}}. The link expires in {{3}} hours — tap below to pay securely.` |
-| Footer   | `Wawa Garden Bar`                                                                                                               |
-| Buttons  | URL: `Pay Now` → `{{1}}` (Dynamic URL — the button's own variable, filled with the payment URL)                                 |
+| Field    | Value                                                                                                                             |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Name     | `payment_link`                                                                                                                    |
+| Category | **UTILITY**                                                                                                                       |
+| Language | `en`                                                                                                                              |
+| Header   | (none)                                                                                                                            |
+| Body     | `Hi {{1}}, please complete your Wawa Garden Bar payment of {{2}}. The link expires in {{3}} minutes — tap below to pay securely.` |
+| Footer   | (none)                                                                                                                            |
+| Buttons  | URL: `Pay now` → `https://checkout.paystack.com/{{1}}` (dynamic: the Paystack access code)                                        |
 
 **Examples:**
 
-| `{{1}}`  | `{{2}}`   | `{{3}}` | Button `{{1}}` (URL)                    |
-| -------- | --------- | ------- | --------------------------------------- |
-| `Adaeze` | `₦12,500` | `24`    | `https://paystack.com/pay/wgb-1234abcd` |
+| `{{1}}`  | `{{2}}`   | `{{3}}` | Button `{{1}}` |
+| -------- | --------- | ------- | -------------- |
+| `Adaeze` | `₦12,500` | `25`    | `0peioxfhpn`   |
 
 ---
 

@@ -89,7 +89,9 @@ describe('createOrder (web wrapper)', () => {
         customizations: [{ name: 'Protein', option: 'Chicken' }],
       },
     ]);
-    expect(emitNewOrder).toHaveBeenCalledOnce();
+    // REQ-123: an unpaid customer order never reaches the kitchen; the kitchen
+    // event is emitted by `markOrderPaid` once Paystack confirms payment.
+    expect(emitNewOrder).not.toHaveBeenCalled();
   });
 
   it('passes the typed error code through', async () => {
@@ -133,14 +135,11 @@ describe('createOrder (web wrapper)', () => {
   });
 
   // REQ-121 (REQ-CHECKOUT-015, REQ-CHECKOUT-016)
-  it('takes phone and email from the verified account, never the form (REQ-121 AC2)', async () => {
+  it('creates the order without emitting to the kitchen, whatever the account holds (REQ-123 AC5)', async () => {
     setSession({ isLoggedIn: true, userId: 'u1', role: 'customer', roles: [] });
-    await createOrder(INPUT);
-    expect(emitNewOrder.mock.calls[0][0].customer).toEqual({
-      name: 'Ada Obi',
-      email: 'ada@example.com',
-      phone: '2348000000000',
-    });
+    const r = await createOrder(INPUT);
+    expect(r.success).toBe(true);
+    expect(emitNewOrder).not.toHaveBeenCalled();
   });
 
   it('saves the first name only when the account has none (REQ-121 AC2)', async () => {

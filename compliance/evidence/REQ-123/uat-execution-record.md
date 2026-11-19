@@ -1,0 +1,99 @@
+---
+execution_mode: manual
+executed_by: REPLACE
+tested_sha: REPLACE
+---
+
+<!--
+  UAT execution record for REQ-123. Satisfies ISO/IEC/IEEE 29119-3 test
+  execution log, test incident report, test completion report and sign-off.
+  The agent copies this file with the header filled; whoever executes
+  uat-test-procedure.md completes it; it is committed before the release
+  PR is merged. Uploaded as evidence type test_report.
+
+  The front matter above is read by the portal and by CI. Keep it the first
+  bytes of the file and keep the keys exactly:
+    execution_mode: manual (a tester ran the steps by hand) or agent_executed
+                    (the agent ran them under uat.mode: auto, a human reviewed)
+    executed_by:    the tester's name, or the agent and its version
+    tested_sha:     the git SHA of the build under test
+  Write the mode of the run that actually happened, not the value of
+  uat.mode. Fill in every placeholder when UAT starts.
+-->
+
+# UAT Execution Record — REQ-123: Paystack payment at checkout and the paid-only kitchen gate
+
+## Header
+
+| Item                       | Value                                                            |
+| -------------------------- | ---------------------------------------------------------------- |
+| Release                    | REQ-123                                                          |
+| Execution mode             | REPLACE (manual, or agent-executed with human review)            |
+| Build under test (git SHA) | REPLACE                                                          |
+| Environment / URL          | REPLACE                                                          |
+| Executed by                | REPLACE (the tester, or the agent and its version)               |
+| Reviewed by                | REPLACE (agent-executed runs only; write "n/a" for a manual run) |
+| Started                    | REPLACE                                                          |
+| Finished                   | REPLACE                                                          |
+
+**Independence declaration** (required when `approval.mode` is `dual_actor`). For a manual run the tester signs; for an agent-executed run the human reviewer signs:
+I did not write, review or approve the change under test. Name: REPLACE &nbsp; Date: REPLACE
+
+## Operator preparation (initial each before the run starts)
+
+| Item                                            | Done | Initials |
+| ----------------------------------------------- | ---- | -------- |
+| Migrations applied to the environment           | [ ]  |          |
+| Test accounts created as listed in the briefing | [ ]  |          |
+| Test data loaded                                | [ ]  |          |
+
+## Actions taken by the agent (agent-executed runs only; write "None" or "n/a" otherwise)
+
+Every action the agent performed beyond the procedure's steps (a login, creating a record the step needed, clearing a cookie), with the account used. Settings changes and data loads are operator actions: the agent does not perform them, it lists them as preconditions above.
+
+| When | Action | Account |
+| ---- | ------ | ------- |
+|      |        |         |
+
+## Results
+
+Evidence files are stored under `compliance/evidence/REQ-123/uat/` and named in the procedure (`REQ-123-AC<n>-<slug>.png`). Where a screenshot is not practical, store the page text as a `.txt` file there and name it here.
+
+| Step | Actual result | PASS / FAIL / BLOCKED | Evidence file | Defect |
+| ---- | ------------- | --------------------- | ------------- | ------ |
+| 1    |               |                       |               |        |
+| 2    |               |                       |               |        |
+
+## Deviations
+
+Anything done differently from the procedure, and why. Write "None" if there were none.
+
+## Defect log
+
+| Defect | Step | Severity (blocker / major / minor) | Description | Reference |
+| ------ | ---- | ---------------------------------- | ----------- | --------- |
+|        |      |                                    |             |           |
+
+## Summary
+
+| Passed | Failed | Blocked | Total steps |
+| ------ | ------ | ------- | ----------- |
+|        |        |         |             |
+
+**AC coverage**
+
+| AC  | Steps | Result |
+| --- | ----- | ------ |
+|     |       |        |
+
+**Recommendation:** [ ] Approve &nbsp; [ ] Approve with noted defects &nbsp; [ ] Reject
+
+**Reviewer decision** (agent-executed runs): [ ] The agent's results are accepted &nbsp; [ ] A manual re-run is required (the release waits; the re-run gets its own record with `execution_mode: manual`)
+
+## Sign-off
+
+| Role                                                        | Name | Date |
+| ----------------------------------------------------------- | ---- | ---- |
+| Tester (manual run) or agent executor                       |      |      |
+| Reviewer (agent-executed run; write "n/a" for a manual run) |      |      |
+| Operator                                                    |      |      |

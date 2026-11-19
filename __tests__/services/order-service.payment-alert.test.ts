@@ -4,6 +4,10 @@
  *
  * `OrderService.updatePaymentStatus` raises a staff alert when a customer
  * order becomes paid, and only then. US-B5.3.
+ *
+ * REQ-123 — `updatePaymentStatus('paid')` now delegates to the one idempotent
+ * `markOrderPaid`, so the alert is raised by the winner of the conditional
+ * update; a call on an already-paid order raises nothing.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -11,8 +15,14 @@ vi.mock('@/lib/mongodb', () => ({ default: vi.fn(), connectDB: vi.fn() }));
 
 const ORDER_ID = '65a1b2c3d4e5f6a7b8c9d0e1';
 const findByIdAndUpdate = vi.hoisted(() => vi.fn());
+const findOneAndUpdate = vi.hoisted(() => vi.fn());
+const findById = vi.hoisted(() => vi.fn());
+const updateOne = vi.hoisted(() => vi.fn());
 vi.mock('@/models/order-model', () => ({
-  default: { findByIdAndUpdate },
+  default: { findByIdAndUpdate, findOneAndUpdate, findById, updateOne },
+}));
+vi.mock('@/lib/socket-emit-helper', () => ({
+  emitOrderCreatedEvent: vi.fn(),
 }));
 vi.mock('@/services/system-settings-service', () => ({
   SystemSettingsService: { getBusinessDayCutoff: vi.fn().mockResolvedValue(0) },
@@ -27,8 +37,13 @@ vi.mock('@/services/staff-notification-service', () => ({
 
 import { OrderService } from '@/services/order-service';
 
-const returns = (order: unknown) =>
+// `returns` stubs what both update paths hand back: the non-paid update
+// (`findByIdAndUpdate`) and the paid path's conditional update (`findOneAndUpdate`).
+const returns = (order: unknown) => {
   findByIdAndUpdate.mockReturnValue({ lean: async () => order });
+  findOneAndUpdate.mockReturnValue({ lean: async () => order });
+  findById.mockReturnValue({ lean: async () => null });
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -40,6 +55,7 @@ describe('AC1: a paid customer order raises a staff alert', () => {
       _id: ORDER_ID,
       orderNumber: 'WG2611160001',
       origin: 'customer',
+      status: 'confirmed',
     };
     returns(order);
     const result = await OrderService.updatePaymentStatus(ORDER_ID, {
@@ -69,7 +85,7 @@ describe('AC1: a paid customer order raises a staff alert', () => {
   });
 
   it('the payment update still succeeds if the alert helper does nothing for a staff order', async () => {
-    returns({ _id: ORDER_ID, origin: 'staff' });
+    returns({ _id: ORDER_ID, origin: 'staff', status: 'confirmed' });
     const result = await OrderService.updatePaymentStatus(ORDER_ID, {
       paymentStatus: 'paid',
     });

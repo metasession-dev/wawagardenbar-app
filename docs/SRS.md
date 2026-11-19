@@ -96,7 +96,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-CHECKOUT-007 | Submit creates order (happy path) + clears cart                                               | Must     | smoke      | `app/actions/payment/payment-actions.ts:65`                                                                                 |
 | REQ-CHECKOUT-008 | Idempotency key prevents duplicate orders                                                     | Must     | regression | `payment-actions.ts:82`                                                                                                     |
 | REQ-CHECKOUT-009 | Apply reward code / redeem points at checkout                                                 | Could    | extended   | `checkout/order-summary.tsx`                                                                                                |
-| REQ-CHECKOUT-010 | Customer checkout shows only Monnify gateway options (no manual cash/transfer/card)           | Must     | regression | `components/features/checkout/checkout-form.tsx`; REQ-084                                                                   |
+| REQ-CHECKOUT-010 | Customer checkout pays through Paystack only (no manual cash/transfer/card; REQ-123)          | Must     | regression | `services/payment-service.ts`, `app/actions/payment/payment-actions.ts`; REQ-084, REQ-123                                   |
 | REQ-CHECKOUT-011 | Anonymous user can add to cart and reach checkout without login redirect                      | Must     | smoke      | `app/menu/page.tsx`, `menu-item-detail-modal.tsx`, `app/checkout/page.tsx`; REQ-084                                         |
 | REQ-CHECKOUT-012 | Single customer order service (validation, typed errors, idempotency, one order number)       | Must     | regression | `services/customer-order-service.ts`                                                                                        |
 | REQ-CHECKOUT-013 | Ordering options exposed read-only                                                            | Should   | regression | `app/actions/ordering/ordering-options-actions.ts`                                                                          |
@@ -170,6 +170,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-KITCHEN-006  | Kitchen ingredient CRUD                                                                       | Could    | extended   | REQ-037                                                                                                                     |
 | REQ-KITCHEN-007  | Completed orders do not reappear on kitchen display after tab payment                         | Must     | regression | `services/tab-service.ts`; REQ-085                                                                                          |
 | REQ-KITCHEN-008  | Payment status indicator on kitchen order card                                                | Should   | regression | `components/features/kitchen/kitchen-order-card.tsx`; REQ-085                                                               |
+| REQ-KITCHEN-009  | Kitchen and live queues show staff orders and paid customer orders only (paid-only gate)      | Must     | regression | `services/order-service.ts`, `app/dashboard/kitchen*`, `order-management-actions.ts`; REQ-123                               |
 | REQ-MENUMGT-001  | Menu item list + stats (super-admin)                                                          | Should   | regression | `app/dashboard/menu/page.tsx`                                                                                               |
 | REQ-MENUMGT-002  | Create menu item (+ optional inventory)                                                       | Should   | regression | `app/actions/admin/menu-actions.ts:60`                                                                                      |
 | REQ-MENUMGT-003  | Edit item incl. customization inventory links                                                 | Should   | regression | `menu/[itemId]/edit/page.tsx`; REQ-030                                                                                      |
@@ -243,6 +244,12 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-PAY-002      | Monnify webhook updates order on valid hash                                                   | Should   | regression | `app/api/webhooks/monnify/route.ts:24`                                                                                      |
 | REQ-PAY-003      | Webhook rejects invalid signature                                                             | Must     | regression | `webhooks/{monnify,whatsapp,paystack}/route.ts`                                                                             |
 | REQ-PAY-004      | Partial payments on a tab                                                                     | Should   | regression | `tabs/[tabId]/page.tsx`; REQ-012                                                                                            |
+| REQ-PAY-005      | Customer orders always pay through Paystack; staff and tab routing unchanged                  | Must     | regression | `services/payment-service.ts`; REQ-123                                                                                      |
+| REQ-PAY-006      | Stable Paystack reference and checkout URL per unpaid order                                   | Must     | regression | `app/actions/payment/payment-actions.ts`, `services/paystack-service.ts`; REQ-123                                           |
+| REQ-PAY-007      | Paystack webhook: raw-body signature, lookup before dedup, amount check                       | Must     | regression | `app/api/webhooks/paystack/route.ts`; REQ-123                                                                               |
+| REQ-PAY-008      | One idempotent `markOrderPaid` (kitchen emit once, rewards, confirmation and receipt)         | Must     | regression | `services/order-service.ts`; REQ-123                                                                                        |
+| REQ-PAY-009      | Unpaid customer orders expire after 30 minutes                                                | Must     | regression | `lib/scheduled-jobs.ts`; REQ-123                                                                                            |
+| REQ-PAY-010      | One `payment_link` WhatsApp message for an abandoned payment                                  | Should   | regression | `lib/scheduled-jobs.ts`, `lib/whatsapp-template-params.ts`; REQ-123                                                         |
 | REQ-SEC-001      | Security headers present                                                                      | Must     | smoke      | `next.config.ts:5`                                                                                                          |
 | REQ-SEC-002      | Session cookie httpOnly/secure/sameSite                                                       | Should   | regression | `lib/session.ts:18`                                                                                                         |
 | REQ-SEC-003      | CORS: no wildcard origin with credentials                                                     | Should   | regression | `lib/cors.ts`; REQ-047                                                                                                      |
@@ -417,12 +424,12 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 
 > ⚠ **Known gap (#117 P0#4):** the **dine-in tab** checkout path does not surface eligible rewards — `services/tab-service.ts:256` returns `eligibleRewards: []` as a hardcoded TODO. This requirement is therefore testable only for the standalone-order path today; see [§4](#4-roadmap--cross-reference-to-issue-117).
 
-#### REQ-CHECKOUT-010 — Customer checkout: Monnify-only gateway · **Must** · regression
+#### REQ-CHECKOUT-010 — Customer checkout: Paystack-only gateway · **Must** · regression
 
-**Source:** `components/features/checkout/checkout-form.tsx`; cross-ref REQ-084.
-**Behaviour:** The customer checkout path (`/checkout`) shows only Monnify payment options (Pay with Card, Pay with Transfer, Pay with USSD, Pay with Phone Number). Manual payment methods (cash, transfer, card) are not offered to customers. Admin-only payment recording remains available via the admin tab checkout form and order management actions.
+**Source:** `services/payment-service.ts`, `app/actions/payment/payment-actions.ts`; cross-ref REQ-084, REQ-121, REQ-123.
+**Behaviour:** The customer checkout path (`/checkout`) pays through the Paystack hosted checkout only (REQ-PAY-005); it no longer uses the `activeProvider` setting, and it offers no manual payment methods (cash, transfer, card). Admin-only payment recording remains available via the admin tab checkout form and order management actions. (Was "Monnify-only"; superseded by REQ-123.)
 
-- **Given** a customer at `/checkout`, **When** the payment step renders, **Then** only Monnify gateway options are visible.
+- **Given** a customer at `/checkout`, **When** Pay is pressed, **Then** the Paystack hosted checkout opens whatever `activeProvider` says.
 - **Given** the customer checkout submission, **When** the order is created, **Then** no admin price override or manual payment fields are present in the request.
 
 #### REQ-CHECKOUT-011 — Anonymous browsing: no login gate on add-to-cart · **Must** · smoke
@@ -769,6 +776,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 **Source:** `app/dashboard/orders/page.tsx`, `app/actions/admin/order-management-actions.ts:42` (filters: status, type, date range, search, paymentStatus, reconciled; pagination)
 
 - **Given** seeded orders, **When** an admin opens `/dashboard/orders` and filters by status, **Then** the matching orders and stats cards render and update live on new orders.
+- **Given** an unpaid customer order, **When** an admin opens `/dashboard/orders`, **Then** it is listed only under the "Awaiting payment" filter, not in the live queue (REQ-KITCHEN-009, REQ-123).
 
 #### REQ-ORDMGT-002 — Order detail · **Should** · regression
 
@@ -1056,6 +1064,14 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 **Behaviour:** A small, non-disruptive payment status indicator (icon + text) is shown on the kitchen order card when an order has been paid, so kitchen staff can see payment status without affecting their workflow.
 
 - **Given** kitchen staff view the kitchen display, **When** an order has been paid, **Then** a small payment status indicator (CheckCircle icon + "Paid" text) is visible on the kitchen order card.
+
+#### REQ-KITCHEN-009 — Paid-only kitchen gate · **Must** · regression
+
+**Source:** `services/order-service.ts` (`getActiveOrders`, shared live-queue predicate), `app/dashboard/kitchen/page.tsx`, `app/dashboard/kitchen-display/page.tsx`, `app/actions/admin/order-management-actions.ts`; cross-ref REQ-123, REQ-120.
+**Behaviour:** The kitchen, the kitchen display and the dashboard live queues list orders where `origin='staff'` or `paymentStatus='paid'`. An unpaid customer order appears only under the "Awaiting payment" filter on `/dashboard/orders`. A csr tab order (origin staff) appears in the kitchen at once and the tab is settled later.
+
+- **Given** an unpaid customer order, **When** the kitchen display loads, **Then** the order is absent; **Given** an unpaid staff express order, **Then** it is present.
+- **Given** a csr adds orders to a tab, **When** the kitchen display loads, **Then** each appears immediately.
 
 ---
 
@@ -1677,12 +1693,63 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 **Source:** `app/api/webhooks/{monnify,whatsapp,paystack}/route.ts` (HMAC; WhatsApp `x-hub-signature-256` :8)
 
 - **Given** a webhook with a bad signature, **When** received, **Then** it is rejected and no order changes.
+- (REQ-123: the Paystack signature is verified over the raw request body, see REQ-PAY-007.)
 
 #### REQ-PAY-004 — Tab partial payments · **Should** · regression
 
 **Source:** `tabs/[tabId]/page.tsx`; cross-ref REQ-012
 
 - **Given** an open tab, **When** a partial payment is recorded, **Then** the remaining balance reduces and the payment lists on the tab.
+
+#### REQ-PAY-005 — Customer orders always pay through Paystack · **Must** · regression
+
+**Source:** `services/payment-service.ts`, `services/paystack-service.ts`, `app/actions/payment/payment-actions.ts`; cross-ref REQ-123, REQ-CHECKOUT-010.
+**Behaviour:** An order with `origin='customer'` is initialised with Paystack whatever the `activeProvider` setting says, and the order stores `paymentProvider='paystack'`. Staff, tab and express orders keep the existing provider routing. `verifyPayment` verifies an order with the provider stored on it.
+
+- **Given** `activeProvider` is Monnify, **When** a customer order is initialised, **Then** the Paystack hosted checkout URL is returned and `paymentProvider='paystack'` is stored.
+- **Given** a staff-created order, **When** payment is initialised, **Then** the provider is chosen exactly as before.
+
+#### REQ-PAY-006 — Stable Paystack reference and checkout URL · **Must** · regression
+
+**Source:** `app/actions/payment/payment-actions.ts`, `models/order-model.ts` (`paymentReference`, `checkoutUrl`, `paystackAccessCode`); cross-ref REQ-123.
+**Behaviour:** The Paystack transaction is created once per order; `paymentReference`, `checkoutUrl` and the access code are stored. A repeated `initializePayment` for an unpaid order returns the same URL and does not call Paystack again, unless Paystack reports the transaction expired or abandoned, in which case it is re-initialised. When the account has no email, the placeholder `<phone>@customers.wawagardenbar.com` is sent, because Paystack requires an email.
+
+- **Given** an unpaid customer order, **When** `initializePayment` is called twice, **Then** the same `paymentReference` and `checkoutUrl` are returned and Paystack is called once.
+- **Given** an account with no email, **When** the transaction is created, **Then** Paystack receives `<phone>@customers.wawagardenbar.com`.
+
+#### REQ-PAY-007 — Paystack webhook: raw-body signature, lookup before dedup, amount check · **Must** · regression
+
+**Source:** `app/api/webhooks/paystack/route.ts`, `lib/webhook-idempotency.ts`; cross-ref REQ-049, REQ-PAY-003, REQ-123.
+**Behaviour:** The handler reads the raw body and verifies `x-paystack-signature` as HMAC-SHA512 over that body (constant-time compare) before parsing it. It finds the order (or tab) by reference first; an unknown reference returns 404 and writes no dedup row, so Paystack retries. For an order, the webhook `amount` (kobo) must equal `round(total*100)`; otherwise the order is marked `payment_mismatch`, an Incident is created and the order is not confirmed. Only then is the dedup row written and the payment processed (REQ-PAY-008). A replay changes nothing.
+
+- **Given** a valid `charge.success` for a customer order, **When** it is received, **Then** the order is paid and confirmed once.
+- **Given** a replay of the same event, **When** it is received, **Then** nothing is processed twice.
+- **Given** an amount that differs from the order total, **When** it is received, **Then** the order is `payment_mismatch`, an Incident exists and the order is not confirmed.
+- **Given** an unknown reference, **When** it is received, **Then** the response is 404 and no dedup row exists.
+
+#### REQ-PAY-008 — One idempotent `markOrderPaid` · **Must** · regression
+
+**Source:** `services/order-service.ts` (`markOrderPaid`), `app/actions/payment/payment-actions.ts` (`verifyPayment`), `app/api/webhooks/paystack/route.ts`; cross-ref REQ-122, REQ-WA-002, REQ-123.
+**Behaviour:** `markOrderPaid(orderId, source)` is the only path that marks a customer order paid; the Paystack webhook, `verifyPayment` (redirect return) and `OrderService.updatePaymentStatus('paid')` all use it. It atomically sets `paymentStatus='paid'`, `status='confirmed'`, `paidAt` and `businessDate`, and only the call that wins the update awards rewards, raises the staff alert, emits the kitchen new-order event and sends the customer `order_confirmation` then `receipt` through `NotificationService.send`. Later calls are no-ops.
+
+- **Given** a verified payment, **When** the webhook and the redirect both mark the order paid, **Then** the kitchen event is emitted once and `order_confirmation` and `receipt` are each logged once.
+- **Given** the customer returns from Paystack, **When** `/orders/[orderId]` loads, **Then** one confirmation view shows the live status with no redirect chain.
+
+#### REQ-PAY-009 — Unpaid customer orders expire after 30 minutes · **Must** · regression
+
+**Source:** `lib/scheduled-jobs.ts`; cross-ref REQ-123.
+**Behaviour:** A scheduled job finds customer orders still unpaid 30 minutes after creation. For each it first asks Paystack; if the transaction succeeded it runs `markOrderPaid`, otherwise it sets `status='cancelled'` and `cancelReason='payment_timeout'`. No kitchen event and no customer message is sent. Staff orders and paid orders are never touched. The job can be switched off with `ENABLE_UNPAID_ORDER_EXPIRY=false`.
+
+- **Given** a customer order unpaid after 30 minutes, **When** the job runs, **Then** it is cancelled with `payment_timeout`.
+- **Given** a customer order that Paystack reports as paid, **When** the job runs, **Then** it is marked paid and not cancelled.
+
+#### REQ-PAY-010 — One `payment_link` message for an abandoned payment · **Should** · regression
+
+**Source:** `lib/scheduled-jobs.ts`, `lib/whatsapp-template-params.ts` (`paymentLinkParams`), `docs/whatsapp-templates/payment_link.json`; cross-ref REQ-WA-002, REQ-123.
+**Behaviour:** A customer order still unpaid 5 minutes after creation, and not yet expired, gets exactly one `payment_link` template message carrying the first name, the amount, the minutes left before expiry and the stable Paystack access code for the "Pay now" button. `paymentLinkSentAt` records the send. The message follows the consent gate in REQ-WA-002 and is held as `held_template_pending` until the template is approved on the environment.
+
+- **Given** no payment 5 minutes after checkout, **When** the job runs, **Then** one `payment_link` is logged with the stable URL.
+- **Given** the link was already sent, **When** the job runs again, **Then** nothing more is sent.
 
 ---
 
@@ -1756,7 +1823,7 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 #### REQ-WA-002 — Transactional WhatsApp templates · **Should** · regression
 
 **Source:** `lib/notification-templates.ts` (`order_confirmation`, `order_status_update`, `receipt`, `payment_link`, `payment_confirmation`, `bank_transfer_details` → `transactional`), `services/notification-service.ts`; cross-ref REQ-054/062.
-**Behaviour:** Transactional templates (order confirmation, status update, receipt, payment link, payment confirmation, bank transfer details) are categorized as `transactional` in `TEMPLATE_CATEGORIES`. The orchestrator gates the WhatsApp attempt on `whatsappTransactional === true` (default true, captured at first PIN verification per REQ-053). If the user has not opted in to transactional WhatsApp, the notification falls through to email.
+**Behaviour:** (REQ-123: `order_confirmation`, `receipt` and `payment_link` are sent from `markOrderPaid` and the payment-link job, and their JSON, `TEMPLATE_CATEGORIES` entry and param builder are covered by the template contract test; a template not yet approved on the environment is held as `held_template_pending`.) Transactional templates (order confirmation, status update, receipt, payment link, payment confirmation, bank transfer details) are categorized as `transactional` in `TEMPLATE_CATEGORIES`. The orchestrator gates the WhatsApp attempt on `whatsappTransactional === true` (default true, captured at first PIN verification per REQ-053). If the user has not opted in to transactional WhatsApp, the notification falls through to email.
 
 - **Given** a user with `whatsappTransactional: true`, **When** an order confirmation is sent, **Then** the WhatsApp `order_confirmation` template is attempted.
 - **Given** a user with `whatsappTransactional: false`, **When** an order confirmation is sent, **Then** the WhatsApp attempt is skipped and the notification falls through to email.

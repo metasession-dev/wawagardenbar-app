@@ -68,11 +68,18 @@ function QueueSkeleton() {
  * Orders dashboard page
  * Main order management interface
  */
-export default async function OrdersPage() {
+export default async function OrdersPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ view?: string }>;
+}) {
   const session = await getCurrentSession();
   const isSuperAdmin = hasAnyRole(session, ['super-admin']);
 
-  const result = await getOrdersAction({}, 1, 50);
+  // REQ-123 (AC5) — the live queue lists staff orders and paid customer orders;
+  // unpaid customer orders live under the "Awaiting payment" view.
+  const awaitingPayment = (await searchParams)?.view === 'awaiting-payment';
+  const result = await getOrdersAction({ awaitingPayment }, 1, 50);
 
   return (
     <div className="space-y-8">
@@ -220,6 +227,25 @@ export default async function OrdersPage() {
       </Suspense>
 
       {/* Order Queue */}
+      <div className="flex gap-2" data-testid="orders-view-switch">
+        <Link
+          href="/dashboard/orders"
+          className={`rounded-md border px-3 py-1.5 text-sm ${
+            awaitingPayment ? '' : 'bg-primary text-primary-foreground'
+          }`}
+        >
+          Live orders
+        </Link>
+        <Link
+          href="/dashboard/orders?view=awaiting-payment"
+          data-testid="awaiting-payment-filter"
+          className={`rounded-md border px-3 py-1.5 text-sm ${
+            awaitingPayment ? 'bg-primary text-primary-foreground' : ''
+          }`}
+        >
+          Awaiting payment
+        </Link>
+      </div>
       <Suspense fallback={<QueueSkeleton />}>
         <OrderQueue initialOrders={(result.data as any)?.orders || []} />
       </Suspense>

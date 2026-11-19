@@ -1,6 +1,7 @@
 /**
  * @requirement REQ-121 — AC1, AC4
- * @srs REQ-CHECKOUT-014, REQ-CHECKOUT-006
+ * @requirement REQ-123 — AC1, AC2 (customer email: the account's, else a phone-derived placeholder)
+ * @srs REQ-CHECKOUT-014, REQ-CHECKOUT-006, REQ-PAY-005, REQ-PAY-006
  *
  * A customer pays only their own order and is charged the total the server
  * computed (fees and tip included), never the client's amount. Staff flows
@@ -36,7 +37,6 @@ vi.mock('@/services/customer-order-service', () => ({
 }));
 
 import { initializePayment } from '@/app/actions/payment/payment-actions';
-import { GUEST_PAYMENT_EMAIL } from '@/lib/checkout/checkout-rules';
 
 function setSession(f: Record<string, unknown>) {
   for (const k of Object.keys(session)) delete session[k];
@@ -64,7 +64,11 @@ beforeEach(() => {
     checkoutUrl: 'https://pay.example/c',
     reference: 'tx-1',
   });
-  getUserProfile.mockResolvedValue({ name: 'Ada Obi', email: undefined });
+  getUserProfile.mockResolvedValue({
+    name: 'Ada Obi',
+    email: undefined,
+    phone: '+2348012345678',
+  });
 });
 
 describe('initializePayment for a customer', () => {
@@ -88,17 +92,22 @@ describe('initializePayment for a customer', () => {
     ]);
   });
 
-  it('works without an email: falls back to the account email, then the guest address (AC1)', async () => {
+  it('works without an email: the account email, else the phone-derived placeholder (REQ-123 AC2)', async () => {
     setSession({ isLoggedIn: true, userId: 'u1', role: 'customer', roles: [] });
     findById.mockResolvedValue(order());
     await initializePayment(INPUT);
-    expect(initialize.mock.calls[0][0].customerEmail).toBe(GUEST_PAYMENT_EMAIL);
+    expect(initialize.mock.calls[0][0].customerEmail).toBe(
+      '2348012345678@customers.wawagardenbar.com'
+    );
+    expect(initialize.mock.calls[0][0].provider).toBe('paystack');
     expect(initialize.mock.calls[0][0].customerName).toBe('Ada Obi');
 
     getUserProfile.mockResolvedValue({
       name: 'Ada Obi',
       email: 'ada@example.com',
+      phone: '+2348012345678',
     });
+    findById.mockResolvedValue(order()); // a fresh unpaid order (no stored checkout yet)
     await initializePayment(INPUT);
     expect(initialize.mock.calls[1][0].customerEmail).toBe('ada@example.com');
   });

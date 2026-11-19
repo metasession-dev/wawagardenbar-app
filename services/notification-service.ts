@@ -39,6 +39,8 @@ import { UserModel } from '@/models';
 import { WhatsAppService } from '@/lib/whatsapp';
 import {
   TEMPLATE_CATEGORIES,
+  HELD_UNTIL_APPROVED_TEMPLATES,
+  HELD_TEMPLATE_PENDING,
   type NotificationCategory,
 } from '@/lib/notification-templates';
 import { NotificationLogService } from '@/services/notification-log-service';
@@ -240,7 +242,14 @@ export class NotificationService {
           channel: 'whatsapp',
           success: result.success,
           error: result.success ? undefined : result.message,
-          errorCode: result.success ? undefined : result.errorCode,
+          // REQ-123 (AC8) — a template Meta has not approved on this
+          // environment is "held", not a delivery failure.
+          errorCode: result.success
+            ? undefined
+            : result.errorCode === 'TEMPLATE_NOT_FOUND' &&
+                HELD_UNTIL_APPROVED_TEMPLATES.has(opts.templateKey)
+              ? HELD_TEMPLATE_PENDING
+              : result.errorCode,
           templateParams:
             freeFormText !== undefined
               ? { header: [], body: [freeFormText], buttons: [], mode: 'text' }

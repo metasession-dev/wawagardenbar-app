@@ -1,7 +1,14 @@
 import { NextRequest } from 'next/server';
 import { PaymentService } from '@/services/payment-service';
 import { OrderService } from '@/services/order-service';
-import { withApiAuth, apiSuccess, apiError, parseJsonBody, serialize } from '@/lib/api-response';
+import Order from '@/models/order-model';
+import {
+  withApiAuth,
+  apiSuccess,
+  apiError,
+  parseJsonBody,
+  serialize,
+} from '@/lib/api-response';
 
 interface InitializePaymentBody {
   orderId: string;
@@ -15,7 +22,8 @@ interface InitializePaymentBody {
  * POST /api/public/payments
  *
  * Initialize a payment transaction for an existing order.
- * Routes to the active payment provider (Monnify or Paystack) based on system settings.
+ * Routes to the active payment provider (Monnify or Paystack) based on system settings,
+ * except customer orders, which always use Paystack (REQ-123).
  * Returns a checkout URL the customer should be redirected to for payment completion.
  *
  * @authentication API Key required — scope: `payments:write`
@@ -84,7 +92,10 @@ export async function POST(request: NextRequest): Promise<Response> {
     const { orderId, customerName, customerEmail, redirectUrl } = body;
 
     if (!orderId || !customerName || !customerEmail || !redirectUrl) {
-      return apiError('orderId, customerName, customerEmail, and redirectUrl are required', 400);
+      return apiError(
+        'orderId, customerName, customerEmail, and redirectUrl are required',
+        400
+      );
     }
 
     try {
@@ -96,9 +107,32 @@ export async function POST(request: NextRequest): Promise<Response> {
         return apiError('Order has already been paid', 409);
       }
 
+      // REQ-123 (AC1, AC2) — customer orders always pay through Paystack, and the
+      // transaction is created once per order: a repeat call returns the same
+      // reference and URL until the order is paid.
+      const isCustomerOrder = order.origin === 'customer';
+      if (
+        isCustomerOrder &&
+        order.paymentProvider === 'paystack' &&
+        order.checkoutUrl &&
+        order.paymentReference
+      ) {
+        return apiSuccess(
+          serialize({
+            checkoutUrl: order.checkoutUrl,
+            paymentReference: order.paymentReference,
+            provider: 'paystack',
+            orderNumber: order.orderNumber,
+            amount: order.total,
+          }),
+          201
+        );
+      }
+
       const paymentReference = PaymentService.generatePaymentReference(orderId);
 
       const result = await PaymentService.initializePayment({
+        provider: isCustomerOrder ? 'paystack' : undefined,
         amount: order.total,
         customerName,
         customerEmail,
@@ -113,16 +147,32 @@ export async function POST(request: NextRequest): Promise<Response> {
         paymentStatus: 'pending',
         paymentReference,
       });
+      if (isCustomerOrder) {
+        await Order.updateOne(
+          { _id: orderId },
+          {
+            $set: {
+              paymentProvider: 'paystack',
+              checkoutUrl: result.checkoutUrl,
+              paystackAccessCode: result.accessCode,
+            },
+          }
+        );
+      }
 
-      return apiSuccess(serialize({
-        checkoutUrl: result.checkoutUrl,
-        paymentReference: result.reference,
-        provider: result.provider,
-        orderNumber: order.orderNumber,
-        amount: order.total,
-      }), 201);
+      return apiSuccess(
+        serialize({
+          checkoutUrl: result.checkoutUrl,
+          paymentReference: result.reference,
+          provider: result.provider,
+          orderNumber: order.orderNumber,
+          amount: order.total,
+        }),
+        201
+      );
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Failed to initialize payment';
+      const msg =
+        error instanceof Error ? error.message : 'Failed to initialize payment';
       console.error('[PUBLIC API] POST /api/public/payments', error);
       return apiError(msg, 422);
     }

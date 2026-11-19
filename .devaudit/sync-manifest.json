@@ -159,7 +159,7 @@
       "section": "2e"
     },
     ".github/workflows/check-release-approval.yml": {
-      "sha256": "e1d52b4a23432356341a5c2d766f14ab0381c1948f1e7743d3383e6bb22fcc98",
+      "sha256": "8a2ebed42179aa7bab664a786d36ea0cc487c18cd565af8f0999499d4b15756c",
       "section": "2f"
     },
     ".github/workflows/ci-status-fallback.yml": {
@@ -192,7 +192,9 @@
     },
     ".github/workflows/e2e-regression.yml": {
       "sha256": "1505ec9e87b2bde0a472c40538040f2aa1221bb7935a7121d98c276a843bdf7f",
-      "section": "2f"
+      "section": "2f",
+      "conflict": true,
+      "pending_upstream_sha256": "00d96a62ee761b5224907b5bbfbf99b399b3c71be910d97a1978b600c12f21dc"
     },
     ".github/workflows/feature-e2e.yml": {
       "sha256": "724cb98d35a7f03ac66f7e70be4cef273e0aad856d8c84c6c234d31fcd8c38c9",
@@ -560,7 +562,9 @@
     },
     "scripts/upload-evidence.sh": {
       "sha256": "4839eb4a389815170f6032b333a4d70e84d7d74f46b16850855391217d7de00c",
-      "section": "2d"
+      "section": "2d",
+      "conflict": true,
+      "pending_upstream_sha256": "4839eb4a389815170f6032b333a4d70e84d7d74f46b16850855391217d7de00c"
     },
     "scripts/validate-commits.sh": {
       "sha256": "f01f532e9788a3eb91ee154591c468b153934b75328b1633bfa7c344462a7ec2",

@@ -254,7 +254,7 @@ jobs:
             -X PATCH "${BASE}/api/ci/releases/${RELEASE_ID}" \
             -H "Authorization: Bearer ${DEVAUDIT_API_KEY}" \
             -H "Content-Type: application/json" \
-            -d "{\"prInfo\":{\"url\":\"${PR_URL}\",\"number\":${PR_NUMBER},\"headSha\":\"${PR_HEAD_SHA}\"},\"releaseGateTier\":\"full\"}"
+            -d "{\"prInfo\":{\"url\":\"${PR_URL}\",\"number\":${PR_NUMBER},\"headSha\":\"${PR_HEAD_SHA}\"},\"releaseGateTier\":\"critical\"}"
           echo "Linked PR #${PR_NUMBER} to release ${RELEASE_ID}"
 
       - name: Post release link on PR

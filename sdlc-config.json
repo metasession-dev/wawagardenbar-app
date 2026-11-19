@@ -22,6 +22,7 @@
   "e2e_project": "smoke",
   "e2e_start_command": "npm run dev",
   "e2e_setup_command": "npx tsx scripts/seed-e2e-admins.ts\nnpx tsx scripts/seed-food-menu.ts\nnpx tsx scripts/seed-drinks-menu.ts\nnpx tsx scripts/seed-inventory.ts\nnpx tsx scripts/seed-e2e-fixtures.ts",
+  "e2e_regression_timeout_minutes": 75,
   "e2e_env": {
     "MONGODB_URI": "mongodb://localhost:27017",
     "MONGODB_DB_NAME": "wawagardenbar_test",

@@ -97,7 +97,9 @@ if [ "$SHARDED" != "true" ]; then
 fi
 
 # Sharded full-regression path.
-SHARD_COUNT="${SHARD_COUNT:-4}"
+# 5 (was 4): shard 1 (e2e/critical, incl. REQ-121/122) ran 15m16s and then hit the
+# 15-minute budget on the 2026-11-17/18 PR runs; five shards put each under ~12 min.
+SHARD_COUNT="${SHARD_COUNT:-5}"
 # 15 (was 12, #996): the 2026-10-29 run already used 11.3 of 12 minutes in shard 1.
 SHARD_TIMEOUT_MINUTES="${SHARD_TIMEOUT_MINUTES:-15}"
 

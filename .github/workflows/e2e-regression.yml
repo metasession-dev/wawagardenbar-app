@@ -66,7 +66,7 @@ jobs:
     # Regression Tests" step below) manages its own per-shard budgets, but
     # cannot raise this job-level ceiling at runtime, so a project doing its
     # own sharding/warm-up tuning may need to raise this too.
-    timeout-minutes: 55
+    timeout-minutes: 75
 
     services:
       mongodb:
@@ -277,7 +277,7 @@ jobs:
           # instead of a number that would no longer describe what's
           # actually bounding this run.
           if [ -f e2e/ci-reliability/regression-run.sh ]; then
-            TIMEOUT_MINUTES_VALUE=55
+            TIMEOUT_MINUTES_VALUE=75
           else
             TIMEOUT_MINUTES_VALUE=40
           fi

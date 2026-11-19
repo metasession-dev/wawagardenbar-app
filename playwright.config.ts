@@ -81,7 +81,16 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: [
     ['html', { outputFolder: 'playwright-report' }],
-    ['json', { outputFile: 'compliance/evidence/REQ-007/e2e-results.json' }],
+    // CI keeps writing the tracked REQ-007 evidence file; a local run writes to
+    // untracked test-results/ so it no longer dirties compliance evidence.
+    [
+      'json',
+      {
+        outputFile: process.env.CI
+          ? 'compliance/evidence/REQ-007/e2e-results.json'
+          : 'test-results/e2e-results.json',
+      },
+    ],
     ['list'],
   ],
   use: {

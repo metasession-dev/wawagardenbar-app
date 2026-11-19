@@ -1504,3 +1504,143 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 **Framework cross-references:** ISO 27001 A.5.15, A.8.2; SOC 2 CC6.1, CC6.3.
 
 **Cross-links:** [REQ-122 implementation plan](plans/REQ-122/implementation-plan.md); ADR-009; ADR-011; SRS REQ-DASH-004, REQ-SETTINGS-006.
+
+---
+
+### R-67 — Money path: a customer order confirmed for the wrong amount or by a forged webhook (REQ-123)
+
+**Status:** OPEN
+**Opened:** 2026-11-19 (REQ-123, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-19
+
+**The risk:** A forged `charge.success`, an under-payment, or a signature checked on a re-serialised body could confirm an order that was not paid in full, so the kitchen prepares food that was not paid for.
+
+**Mitigations planned in REQ-123:**
+
+1. Signature is HMAC-SHA512 over the raw body with a constant-time compare, before any parsing (AC3).
+2. The kobo amount must equal `round(total*100)`; a mismatch becomes `payment_mismatch` with an Incident and no confirmation (AC3).
+3. `verifyPayment` (redirect) applies the same amount check; charge amount is the server order total (REQ-121).
+4. Unit and e2e tests for a bad signature, an amount mismatch and a replay (US-A2.14 to US-A2.16).
+
+**Residual likelihood × impact:** low × high
+
+**Framework cross-references:** ISO 27001 A.8.25, A.8.26; SOC 2 CC6.1, CC7.2, PI1.2.
+
+**Cross-links:** [REQ-123 implementation plan](plans/REQ-123/implementation-plan.md); ADR-012; SRS REQ-PAY-007, REQ-PAY-008.
+
+---
+
+### R-68 — Webhook idempotency and lost-webhook recovery: a payment processed twice or never (REQ-123)
+
+**Status:** OPEN
+**Opened:** 2026-11-19 (REQ-123, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-19
+
+**The risk:** Two paths (webhook and redirect) can mark the same order paid at once, and a webhook that never arrives leaves a paid order unconfirmed. A dedup row written before the order lookup also swallows Paystack's retry after a 404.
+
+**Mitigations planned in REQ-123:**
+
+1. `markOrderPaid` is one atomic conditional update; only the winner emits the kitchen event, awards rewards and sends messages (AC4).
+2. Order is looked up before the dedup row is written; an unknown reference returns 404 with no row so Paystack retries (AC3).
+3. The redirect `verifyPayment` and the expiry job both ask Paystack and call the same `markOrderPaid`, so a lost webhook is recovered (AC6).
+4. Concurrency test: webhook and redirect together yield one kitchen event and one message per template.
+
+**Residual likelihood × impact:** low × high
+
+**Framework cross-references:** ISO 27001 A.8.25; SOC 2 CC7.2, PI1.3.
+
+**Cross-links:** [REQ-123 implementation plan](plans/REQ-123/implementation-plan.md); ADR-012; SRS REQ-PAY-007, REQ-PAY-008; REQ-049.
+
+---
+
+### R-69 — Paid-only kitchen gate hides a real order, or lets an unpaid one through (REQ-123)
+
+**Status:** OPEN
+**Opened:** 2026-11-19 (REQ-123, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-19
+
+**The risk:** Every live queue must apply the same predicate (`origin='staff'` or `paymentStatus='paid'`). A query that misses it shows unpaid customer orders; a wrong predicate hides staff or tab orders from the kitchen.
+
+**Mitigations planned in REQ-123:**
+
+1. One shared predicate used by `getActiveOrders`, the kitchen page, the kitchen display and `getOrdersAction` (AC5).
+2. A test per queue for an unpaid customer order, a staff express order and a csr tab order (US-B1.3, US-B1.4).
+3. An "Awaiting payment" filter on `/dashboard/orders` keeps unpaid customer orders visible to staff.
+
+**Residual likelihood × impact:** low × high
+
+**Framework cross-references:** ISO 27001 A.8.25; SOC 2 CC7.2, PI1.1.
+
+**Cross-links:** [REQ-123 implementation plan](plans/REQ-123/implementation-plan.md); ADR-012; SRS REQ-KITCHEN-009.
+
+---
+
+### R-70 — Expiry job cancels an order the customer has paid for (REQ-123)
+
+**Status:** OPEN
+**Opened:** 2026-11-19 (REQ-123, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-19
+
+**The risk:** A scheduled job cancels customer orders unpaid after 30 minutes. If the webhook was lost or late, a paid order could be cancelled and the customer charged for nothing.
+
+**Mitigations planned in REQ-123:**
+
+1. The job asks Paystack before cancelling; a successful transaction runs `markOrderPaid` instead (AC6).
+2. Only `origin='customer'`, unpaid, `pending` orders are touched; staff and paid orders never are.
+3. Kill-switch `ENABLE_UNPAID_ORDER_EXPIRY=false` and a log line per cancellation; Paystack reference kept on the order so staff can recover a late payment (refunds arrive with WA-11).
+
+**Residual likelihood × impact:** low × high
+
+**Framework cross-references:** ISO 27001 A.8.25, A.8.16; SOC 2 CC7.2.
+
+**Cross-links:** [REQ-123 implementation plan](plans/REQ-123/implementation-plan.md); ADR-012; SRS REQ-PAY-009.
+
+---
+
+### R-71 — Payment messages held or wrong when WhatsApp templates are not approved (REQ-123)
+
+**Status:** OPEN
+**Opened:** 2026-11-19 (REQ-123, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-19
+
+**The risk:** `order_confirmation`, `receipt` and `payment_link` need Meta approval on each WhatsApp account. Switching a message on before approval, or with the wrong parameters, fails or confuses the customer; a missed submission delays go-live.
+
+**Mitigations planned in REQ-123:**
+
+1. Templates submitted to the UAT and production accounts at plan approval (AC8) and status recorded per environment.
+2. A message for a template not yet approved on the environment is held as `held_template_pending`, not sent.
+3. The template contract test checks the JSON, `TEMPLATE_CATEGORIES` and the param builders; sends go through the consent gate (REQ-WA-002).
+
+**Residual likelihood × impact:** medium × low
+
+**Framework cross-references:** ISO 27001 A.5.34; SOC 2 CC7.2; GDPR Art. 7 (consent gate).
+
+**Cross-links:** [REQ-123 implementation plan](plans/REQ-123/implementation-plan.md); SRS REQ-WA-002, REQ-PAY-010.
+
+---
+
+### R-72 — Placeholder email derived from the phone number sent to Paystack (REQ-123)
+
+**Status:** OPEN
+**Opened:** 2026-11-19 (REQ-123, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-19
+
+**The risk:** An account with no email sends `<phone>@customers.wawagardenbar.com` to Paystack so a transaction can open. This discloses the phone number to Paystack inside an email-shaped field and could be mistaken for a real mailbox.
+
+**Mitigations planned in REQ-123:**
+
+1. Only the existing processor (Paystack) receives it, and it is used only to open the transaction (GDPR Art. 6(1)(b), Art. 25).
+2. The domain is ours and receives no mail; no receipt email is sent to it.
+3. Recorded in the ROPA update (plan section 6); the value is never logged.
+
+**Residual likelihood × impact:** low × low
+
+**Framework cross-references:** ISO 27001 A.5.34; GDPR Art. 5(1)(c), Art. 25, Art. 30.
+
+**Cross-links:** [REQ-123 implementation plan](plans/REQ-123/implementation-plan.md); SRS REQ-PAY-006.

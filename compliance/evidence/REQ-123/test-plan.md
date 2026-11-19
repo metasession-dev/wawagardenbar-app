@@ -5,7 +5,7 @@
 | `__tests__/services/payment-service.paystack-customer.test.ts`  | unit          | AC1, AC2           |
 | `__tests__/services/paystack-service.test.ts`                   | unit          | AC2, AC3           |
 | `__tests__/actions/initialize-payment-stable-reference.test.ts` | unit          | AC1, AC2           |
-| `__tests__/api/paystack-webhook.test.ts`                        | unit          | AC3, AC4           |
+| `__tests__/api/webhooks/paystack-idempotency.test.ts`           | unit          | AC3, AC4           |
 | `__tests__/services/order-service.mark-order-paid.test.ts`      | unit          | AC4                |
 | `__tests__/services/order-service.live-queue-gate.test.ts`      | unit          | AC5                |
 | `__tests__/jobs/expire-unpaid-orders.test.ts`                   | unit          | AC6, AC7           |

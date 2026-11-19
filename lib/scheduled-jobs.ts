@@ -6,6 +6,7 @@
  * @requirement REQ-088 — Daily admin incident summary cron
  * @requirement REQ-117 — Purge of customers created by a PIN request who never verified (AC6)
  * @requirement REQ-122 — Once-a-minute staff alert escalation (AC7, ADR-011)
+ * @requirement REQ-123 — Unpaid customer order expiry (AC6) and abandoned-payment link (AC7), ADR-012
  *
  * In-process scheduled jobs for the persistent Railway server. The app runs as
  * a long-lived custom Node server (`server.ts`), not serverless, so a simple
@@ -29,6 +30,12 @@ import { NotificationService } from '@/services/notification-service';
 import { StaffNotificationService } from '@/services/staff-notification-service';
 import UserModel from '@/models/user-model';
 import OrderModel from '@/models/order-model';
+import { PaymentService } from '@/services/payment-service';
+import {
+  PAYMENT_LINK_DELAY_MINUTES,
+  UNPAID_ORDER_EXPIRY_MINUTES,
+} from '@/lib/order-queue-gate';
+import { paymentLinkParams } from '@/lib/whatsapp-template-params';
 
 /**
  * REQ-066 — Hours a paid order may sit outside completed/cancelled before
@@ -274,6 +281,204 @@ export async function runStaffAlertEscalationJob(): Promise<{
 }
 
 /**
+ * REQ-123 (AC6, REQ-PAY-009) — cancel customer orders still unpaid 30 minutes
+ * after creation (`status='cancelled'`, `cancelReason='payment_timeout'`). No
+ * kitchen event and no customer message. Before cancelling, ask Paystack: a
+ * payment whose webhook was lost is confirmed through `markOrderPaid` instead
+ * (ADR-012). An order Paystack cannot be reached about is left for the next
+ * tick. Staff orders, paid orders and `payment_mismatch` orders are never
+ * touched. `ENABLE_UNPAID_ORDER_EXPIRY=false` switches the job off. Idempotent;
+ * errors are logged, never thrown.
+ */
+export async function runUnpaidOrderExpiryJob(
+  now: Date = new Date()
+): Promise<{ cancelled: number; recovered: number; skipped: number }> {
+  const result = { cancelled: 0, recovered: 0, skipped: 0 };
+  if (process.env.ENABLE_UNPAID_ORDER_EXPIRY === 'false') return result;
+  try {
+    const cutoff = new Date(
+      now.getTime() - UNPAID_ORDER_EXPIRY_MINUTES * MINUTE_MS
+    );
+    const candidates = await OrderModel.find({
+      origin: 'customer',
+      status: 'pending',
+      paymentStatus: { $in: ['pending', 'failed'] },
+      isDeleted: { $ne: true },
+      createdAt: { $lt: cutoff },
+    })
+      .limit(100)
+      .lean();
+
+    for (const order of candidates) {
+      try {
+        if (order.paymentReference && order.paymentProvider === 'paystack') {
+          let verified: Awaited<
+            ReturnType<typeof PaymentService.verifyPayment>
+          > | null = null;
+          try {
+            verified = await PaymentService.verifyPayment(
+              order.paymentReference,
+              'paystack'
+            );
+          } catch (error) {
+            // Paystack has no record of the transaction: nothing was paid.
+            // Anything else (network, 5xx) means we cannot tell: retry later.
+            if (!/not found/i.test(String((error as Error)?.message))) {
+              result.skipped += 1;
+              continue;
+            }
+          }
+          if (verified && PaymentService.isPaymentSuccessful(verified.status)) {
+            if (
+              Math.round(verified.amount * 100) ===
+              Math.round(order.total * 100)
+            ) {
+              await OrderService.markOrderPaid(
+                String(order._id),
+                'expiry_job',
+                {
+                  transactionReference: verified.transactionReference,
+                  paidAt: verified.paidAt,
+                }
+              );
+              result.recovered += 1;
+            } else {
+              // Paid the wrong amount: leave it for staff (webhook path
+              // records the incident); never cancel money that arrived.
+              result.skipped += 1;
+            }
+            continue;
+          }
+        }
+
+        const updated = await OrderModel.updateOne(
+          {
+            _id: order._id,
+            status: 'pending',
+            paymentStatus: { $in: ['pending', 'failed'] },
+          },
+          {
+            $set: {
+              status: 'cancelled',
+              paymentStatus: 'cancelled',
+              cancelReason: 'payment_timeout',
+            },
+            $push: {
+              statusHistory: {
+                status: 'cancelled',
+                timestamp: now,
+                note: `Cancelled: unpaid after ${UNPAID_ORDER_EXPIRY_MINUTES} minutes`,
+              },
+            },
+          }
+        );
+        if (updated.modifiedCount > 0) result.cancelled += 1;
+      } catch (orderError) {
+        result.skipped += 1;
+        console.error(
+          `[scheduled-jobs] unpaid-order-expiry: order ${String(order._id)} failed:`,
+          orderError
+        );
+      }
+    }
+    if (result.cancelled + result.recovered > 0) {
+      console.warn(
+        `[scheduled-jobs] unpaid-order-expiry: cancelled=${result.cancelled} recovered=${result.recovered} skipped=${result.skipped}`
+      );
+    }
+  } catch (error) {
+    console.error('[scheduled-jobs] unpaid-order-expiry job failed:', error);
+  }
+  return result;
+}
+
+/**
+ * REQ-123 (AC7, REQ-PAY-010) — one `payment_link` WhatsApp message for a
+ * customer who left without paying: unpaid 5 minutes after creation and not yet
+ * expired. The send is claimed with an atomic conditional update on
+ * `paymentLinkSentAt`, so a repeat run (or a second instance) sends nothing.
+ * Goes through the consent-gated `NotificationService`; a template Meta has not
+ * approved yet is logged as `held_template_pending`. Never throws.
+ */
+export async function runPaymentLinkJob(
+  now: Date = new Date()
+): Promise<{ sent: number }> {
+  const result = { sent: 0 };
+  if (process.env.ENABLE_UNPAID_ORDER_EXPIRY === 'false') return result;
+  try {
+    const ready = new Date(
+      now.getTime() - PAYMENT_LINK_DELAY_MINUTES * MINUTE_MS
+    );
+    const expiry = new Date(
+      now.getTime() - UNPAID_ORDER_EXPIRY_MINUTES * MINUTE_MS
+    );
+    const candidates = await OrderModel.find({
+      origin: 'customer',
+      status: 'pending',
+      paymentStatus: 'pending',
+      paymentProvider: 'paystack',
+      paystackAccessCode: { $exists: true, $nin: [null, ''] },
+      paymentLinkSentAt: { $in: [null] },
+      isDeleted: { $ne: true },
+      createdAt: { $lte: ready, $gt: expiry },
+    })
+      .limit(100)
+      .lean();
+
+    for (const order of candidates) {
+      try {
+        if (!order.userId || !order.paystackAccessCode) continue;
+        const claimed = await OrderModel.updateOne(
+          { _id: order._id, paymentLinkSentAt: { $in: [null] } },
+          { $set: { paymentLinkSentAt: now } }
+        );
+        if (claimed.modifiedCount === 0) continue;
+
+        const user = await UserModel.findById(order.userId)
+          .select('firstName name')
+          .lean<{ firstName?: string; name?: string }>();
+        const minutesLeft = Math.max(
+          1,
+          UNPAID_ORDER_EXPIRY_MINUTES -
+            Math.floor(
+              (now.getTime() - new Date(order.createdAt).getTime()) / MINUTE_MS
+            )
+        );
+        const params = paymentLinkParams({
+          firstName: user?.firstName ?? user?.name,
+          amount: `₦${Math.round(order.total).toLocaleString('en-NG')}`,
+          accessCode: order.paystackAccessCode,
+          expiresInMinutes: String(minutesLeft),
+        });
+        await NotificationService.send({
+          userId: String(order.userId),
+          templateKey: 'payment_link',
+          whatsapp: {
+            params: params.bodyParams ?? [],
+            buttonParams: params.buttonParams,
+          },
+        });
+        result.sent += 1;
+      } catch (orderError) {
+        console.error(
+          `[scheduled-jobs] payment-link: order ${String(order._id)} failed:`,
+          orderError
+        );
+      }
+    }
+  } catch (error) {
+    console.error('[scheduled-jobs] payment-link job failed:', error);
+  }
+  return result;
+}
+
+/** One minute tick for the REQ-123 unpaid-order jobs (link first, then expiry). */
+export async function runUnpaidOrderJobs(): Promise<void> {
+  await runPaymentLinkJob();
+  await runUnpaidOrderExpiryJob();
+}
+
+/**
  * Start all in-process scheduled jobs. Idempotent: guarded so repeated calls
  * (or dev hot-reloads) don't stack intervals.
  */
@@ -319,8 +524,13 @@ export function startScheduledJobs(): void {
   setTimeout(() => void runStaffAlertEscalationJob(), INITIAL_DELAY_MS);
   setInterval(() => void runStaffAlertEscalationJob(), MINUTE_MS);
 
+  // REQ-123 — abandoned-payment link (5 min) and unpaid-order expiry (30 min),
+  // checked every minute. Idempotent; ENABLE_UNPAID_ORDER_EXPIRY=false stops both.
+  setTimeout(() => void runUnpaidOrderJobs(), INITIAL_DELAY_MS);
+  setInterval(() => void runUnpaidOrderJobs(), MINUTE_MS);
+
   console.warn(
-    `[scheduled-jobs] started (staff-alert-escalation: 1min, reward-expiry: hourly, unverified-user-purge: hourly, instagram-rewards: hourly, inventory-reconcile: ${
+    `[scheduled-jobs] started (unpaid-order-jobs: 1min, staff-alert-escalation: 1min, reward-expiry: hourly, unverified-user-purge: hourly, instagram-rewards: hourly, inventory-reconcile: ${
       inventoryReconcileDisabled ? 'DISABLED' : '15min'
     }, incident-summary: 24h)`
   );

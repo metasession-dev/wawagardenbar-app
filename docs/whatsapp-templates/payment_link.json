@@ -3,22 +3,18 @@
   "language": "en",
   "category": "UTILITY",
   "builder": "paymentLinkParams",
-  "header": {
-    "format": "TEXT",
-    "text": "Payment requested",
-    "example": []
-  },
+  "header": null,
   "body": {
-    "text": "Hi {{1}}, please complete your Wawa Garden Bar payment of {{2}}. The link expires in {{3}} hours — tap below to pay securely.",
-    "example": ["Adaeze", "₦12,500", "24"]
+    "text": "Hi {{1}}, please complete your Wawa Garden Bar payment of {{2}}. The link expires in {{3}} minutes — tap below to pay securely.",
+    "example": ["Adaeze", "₦12,500", "25"]
   },
-  "footer": "Wawa Garden Bar",
+  "footer": null,
   "buttons": [
     {
       "type": "URL",
-      "text": "Pay Now",
-      "url": "{{1}}",
-      "example": ["https://paystack.com/pay/wgb-1234abcd"]
+      "text": "Pay now",
+      "url": "https://checkout.paystack.com/{{1}}",
+      "example": ["https://checkout.paystack.com/0peioxfhpn"]
     }
   ]
 }

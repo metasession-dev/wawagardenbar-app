@@ -10,13 +10,13 @@
   },
   "body": {
     "text": "Items: {{1}}\n\nTotal: {{2}}\nPaid via: {{3}}\nPoints earned: {{4}}\n\nThanks for choosing Wawa Garden Bar!",
-    "example": ["2× Goat Stew, 1× Jollof Rice", "₦5,500", "POS / Card", "55"]
+    "example": ["2× Goat Stew, 1× Jollof Rice", "₦5,500", "Card", "55"]
   },
-  "footer": "Show this to staff for in-person service",
+  "footer": null,
   "buttons": [
     {
       "type": "URL",
-      "text": "View Full Receipt",
+      "text": "View receipt",
       "url": "https://app.wawagardenbar.com/orders/{{1}}",
       "example": ["https://app.wawagardenbar.com/orders/1234"]
     }

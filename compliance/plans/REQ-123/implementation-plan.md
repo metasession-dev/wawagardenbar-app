@@ -134,7 +134,7 @@ Unit tests per AC (provider routing, stable reference, raw-body signature, looku
 
 ## 10. Operator tasks (non-code)
 
-1. Approve the plan (HIGH checkpoint) and the ADR verdict.
+1. ~~Approve the plan (HIGH checkpoint) and the ADR verdict~~ done 2026-11-19.
 2. Confirm the Paystack **test** secret and webhook URL on the UAT environment, and the live ones on production (the signature is verified with the same secret as initialisation).
 3. After plan approval the agent submits `order_confirmation`, `receipt` and `payment_link` to the UAT and production WhatsApp accounts (WhatsApp MCP); the operator confirms Meta approval before each environment switches the messages on.
 4. Confirm refunds-API and refund-webhook availability in the Paystack dashboard (AC9).
@@ -142,4 +142,4 @@ Unit tests per AC (provider routing, stable reference, raw-body signature, looku
 
 ## 11. Sign-off
 
-- **Plan approved by operator:** pending.
+- **Plan approved by operator:** William (william@ostendo.io, via the shared GitHub login metasession-dev), 2026-11-19, in the Claude Code session (HIGH-risk checkpoint). Decisions: ADR-012 accepted as drafted; risks R-67 to R-72 and the SRS prose accepted as drafted; AC9 stays an operator-confirmed evidence record.

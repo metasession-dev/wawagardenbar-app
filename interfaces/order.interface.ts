@@ -165,7 +165,14 @@ export interface IOrder {
     | 'failed'
     | 'cancelled'
     | 'refunded'
-    | 'written-off';
+    | 'written-off'
+    | 'payment_mismatch';
+  // REQ-123 — customer payment (Paystack hosted checkout), stable per order.
+  paymentProvider?: 'paystack' | 'monnify';
+  checkoutUrl?: string;
+  paystackAccessCode?: string;
+  paymentLinkSentAt?: Date;
+  cancelReason?: string;
   paidAt?: Date;
   businessDate?: Date;
   deliveryDetails?: IDeliveryDetails;

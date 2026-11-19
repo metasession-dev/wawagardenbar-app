@@ -7,6 +7,7 @@ import { PriceHistoryService } from './price-history-service';
 import { deriveBusinessDate } from '@/lib/business-date';
 import { SystemSettingsService } from './system-settings-service';
 import MenuItemModel from '@/models/menu-item-model';
+import { LIVE_QUEUE_GATE } from '@/lib/order-queue-gate';
 import { StaffNotificationService } from '@/services/staff-notification-service';
 
 /**
@@ -397,6 +398,25 @@ export class OrderService {
       return null;
     }
 
+    // REQ-123 — paying an order has one path (ADR-012).
+    if (paymentData.paymentStatus === 'paid') {
+      if (paymentData.paymentReference) {
+        await Order.updateOne(
+          { _id: orderId },
+          { $set: { paymentReference: paymentData.paymentReference } }
+        );
+      }
+      const { order } = await OrderService.markOrderPaid(
+        orderId,
+        'status_update',
+        {
+          transactionReference: paymentData.transactionReference,
+          paidAt: paymentData.paidAt,
+        }
+      );
+      return order;
+    }
+
     const updateData: Record<string, unknown> = {
       paymentStatus: paymentData.paymentStatus,
     };
@@ -410,37 +430,247 @@ export class OrderService {
     if (paymentData.paidAt) {
       updateData.paidAt = paymentData.paidAt;
     }
-    if (paymentData.paymentStatus === 'paid') {
-      if (paymentData.businessDate) {
-        updateData.businessDate = paymentData.businessDate;
-      } else {
-        const cutoff = await SystemSettingsService.getBusinessDayCutoff();
-        updateData.businessDate = deriveBusinessDate(new Date(), cutoff);
-      }
-    }
-
-    // If payment is successful, update order status to confirmed
-    if (paymentData.paymentStatus === 'paid') {
-      updateData.status = 'confirmed';
-      updateData.$push = {
-        statusHistory: {
-          status: 'confirmed',
-          timestamp: new Date(),
-          note: 'Payment confirmed',
-        },
-      };
-    }
-
     const order = await Order.findByIdAndUpdate(orderId, updateData, {
       new: true,
     }).lean();
 
-    // REQ-122 — a paid customer order raises a staff alert (never throws).
-    if (order && paymentData.paymentStatus === 'paid') {
-      await StaffNotificationService.raiseForPaidOrder(order);
+    return order;
+  }
+
+  /**
+   * REQ-123 (AC4, ADR-012) — the one idempotent path that marks a customer
+   * order paid. The Paystack webhook, the redirect `verifyPayment` and
+   * `updatePaymentStatus('paid')` all call it.
+   *
+   * The state change is a single conditional update (`paymentStatus != 'paid'`),
+   * so when the webhook and the redirect race, exactly one caller wins and only
+   * the winner runs the side effects: staff alert, rewards, kitchen event and
+   * the customer's confirmation and receipt. A later call returns
+   * `{ firstTime: false }` and does nothing. Side effects never throw.
+   */
+  static async markOrderPaid(
+    orderId: string,
+    source:
+      | 'paystack_webhook'
+      | 'payment_redirect'
+      | 'status_update'
+      | 'expiry_job',
+    details: {
+      transactionReference?: string;
+      paidAt?: Date;
+      paymentMethod?: string;
+      channel?: string;
+    } = {}
+  ): Promise<{ order: IOrder | null; firstTime: boolean }> {
+    await connectDB();
+
+    if (!Types.ObjectId.isValid(orderId)) {
+      return { order: null, firstTime: false };
     }
 
-    return order;
+    const cutoff = await SystemSettingsService.getBusinessDayCutoff();
+    const paidAt = details.paidAt ?? new Date();
+    const businessDate = deriveBusinessDate(new Date(), cutoff);
+    const method = (
+      ['cash', 'card', 'transfer', 'ussd', 'phone'] as const
+    ).find((m) => m === details.paymentMethod);
+    const note = `Payment confirmed via ${source}${
+      details.channel ? ` (${details.channel})` : ''
+    }`;
+
+    // A pipeline update lets the status move to 'confirmed' only from 'pending'
+    // (a staff order already being prepared, or an order the expiry job
+    // cancelled, keeps its status).
+    const order = (await Order.findOneAndUpdate(
+      {
+        _id: new Types.ObjectId(orderId),
+        paymentStatus: { $ne: 'paid' },
+      },
+      [
+        {
+          $set: {
+            paymentStatus: 'paid',
+            paidAt,
+            businessDate,
+            ...(details.transactionReference
+              ? { transactionReference: details.transactionReference }
+              : {}),
+            ...(method ? { paymentMethod: method } : {}),
+            status: {
+              $cond: [{ $eq: ['$status', 'pending'] }, 'confirmed', '$status'],
+            },
+            statusHistory: {
+              $concatArrays: [
+                { $ifNull: ['$statusHistory', []] },
+                [
+                  {
+                    status: {
+                      $cond: [
+                        { $eq: ['$status', 'pending'] },
+                        'confirmed',
+                        '$status',
+                      ],
+                    },
+                    timestamp: new Date(),
+                    note,
+                  },
+                ],
+              ],
+            },
+          },
+        },
+      ],
+      { new: true }
+    ).lean()) as IOrder | null;
+
+    if (!order) {
+      // Already paid (or unknown id): idempotent no-op.
+      const existing = (await Order.findById(orderId).lean()) as IOrder | null;
+      return { order: existing, firstTime: false };
+    }
+
+    const orderIdStr = String(order._id);
+
+    // An order the expiry job cancelled before this payment arrived: money is
+    // in, the order stays cancelled, staff must refund or recover it (WA-11).
+    if (order.status === 'cancelled') {
+      try {
+        const { IncidentEventService } = await import(
+          '@/services/incident-event-service'
+        );
+        await IncidentEventService.recordIncident({
+          kind: 'late_payment_on_cancelled_order',
+          entityId: orderIdStr,
+          summary: `Payment received for cancelled order ${order.orderNumber}`,
+          errorDetails: { source, cancelReason: order.cancelReason ?? null },
+        });
+      } catch {
+        // an incident write failure must not break payment confirmation
+      }
+      return { order, firstTime: true };
+    }
+
+    // ── first-time side effects (each isolated; none may throw) ──
+    // REQ-122 — a paid customer order raises a staff alert.
+    try {
+      await StaffNotificationService.raiseForPaidOrder(order);
+    } catch (error) {
+      console.error('markOrderPaid: staff alert failed', orderIdStr, error);
+    }
+
+    let pointsEarned = 0;
+    if (order.userId) {
+      try {
+        const { RewardsService } = await import('@/services/rewards-service');
+        const reward = await RewardsService.calculateReward(
+          order.userId.toString(),
+          orderIdStr,
+          order.total
+        );
+        if (reward && reward.rewardType === 'loyalty-points') {
+          pointsEarned = Number(reward.rewardValue) || 0;
+        }
+      } catch (error) {
+        console.error('markOrderPaid: reward failed', orderIdStr, error);
+        try {
+          const { IncidentEventService } = await import(
+            '@/services/incident-event-service'
+          );
+          await IncidentEventService.recordIncident({
+            kind: 'reward_grant_failed',
+            entityId: orderIdStr,
+            summary: `Reward calculation failed for order ${orderIdStr}`,
+            errorDetails: {
+              message: error instanceof Error ? error.message : String(error),
+              userId: String(order.userId ?? ''),
+            },
+          });
+        } catch {
+          // IncidentEvent write failure must not abort payment confirmation
+        }
+      }
+    }
+
+    if (order.origin === 'customer') {
+      // Customer orders only reach the kitchen once paid (REQ-KITCHEN-009).
+      try {
+        const { emitOrderCreatedEvent } = await import(
+          '@/lib/socket-emit-helper'
+        );
+        await emitOrderCreatedEvent(order);
+      } catch (error) {
+        console.error('markOrderPaid: kitchen emit failed', orderIdStr, error);
+      }
+
+      await OrderService.sendPaymentConfirmationMessages(order, {
+        pointsEarned,
+        paymentMethod: details.paymentMethod,
+      });
+    }
+
+    return { order, firstTime: true };
+  }
+
+  /**
+   * REQ-123 — `order_confirmation` then `receipt`, through the consent-gated
+   * NotificationService (writes NotificationLog). Never throws.
+   */
+  private static async sendPaymentConfirmationMessages(
+    order: IOrder,
+    ctx: { pointsEarned: number; paymentMethod?: string }
+  ): Promise<void> {
+    if (!order.userId) return;
+    try {
+      const { NotificationService } = await import(
+        '@/services/notification-service'
+      );
+      const { orderConfirmationParams, receiptParams } = await import(
+        '@/lib/whatsapp-template-params'
+      );
+      const total = `₦${Math.round(order.total).toLocaleString('en-NG')}`;
+      const userId = order.userId.toString();
+
+      const confirmation = orderConfirmationParams({
+        orderNumber: order.orderNumber,
+        total,
+        estimatedTime: `${order.estimatedWaitTime} minutes`,
+      });
+      await NotificationService.send({
+        userId,
+        templateKey: 'order_confirmation',
+        whatsapp: { params: confirmation.bodyParams ?? [] },
+      });
+
+      const itemsList = (order.items ?? [])
+        .map((i) => `${i.quantity}× ${i.name}`)
+        .join(', ')
+        .slice(0, 300);
+      const receipt = receiptParams({
+        orderNumber: order.orderNumber,
+        itemsList,
+        total,
+        paymentMethod: ctx.paymentMethod
+          ? ctx.paymentMethod.charAt(0).toUpperCase() +
+            ctx.paymentMethod.slice(1)
+          : 'Paystack',
+        pointsEarned: String(ctx.pointsEarned),
+      });
+      await NotificationService.send({
+        userId,
+        templateKey: 'receipt',
+        whatsapp: {
+          params: receipt.bodyParams ?? [],
+          headerParams: receipt.headerParams,
+          buttonParams: receipt.buttonParams,
+        },
+      });
+    } catch (error) {
+      console.error(
+        'markOrderPaid: confirmation messages failed',
+        String(order._id),
+        error
+      );
+    }
   }
 
   /**
@@ -722,6 +952,8 @@ export class OrderService {
       status: { $in: ['confirmed', 'preparing', 'ready', 'out-for-delivery'] },
       // REQ-096 — exclude soft-deleted orders (ADR-002).
       isDeleted: { $ne: true },
+      // REQ-123 (AC5) — paid-only gate: staff orders, or paid customer orders.
+      ...LIVE_QUEUE_GATE,
     };
 
     if (orderType) {

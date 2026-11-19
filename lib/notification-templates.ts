@@ -54,3 +54,18 @@ export const TEMPLATE_CATEGORIES: Record<string, NotificationCategory> = {
   reward_earned: 'marketing',
   reward_expiring_soon: 'marketing',
 };
+
+/**
+ * REQ-123 (AC8) — templates that are submitted to Meta per environment and
+ * switched on only once that environment's copy is APPROVED. While a copy is
+ * not approved Meta answers TEMPLATE_NOT_FOUND; `NotificationService.send`
+ * records that as `held_template_pending` (not a delivery failure) so staff can
+ * tell "waiting for Meta" from "broken".
+ */
+export const HELD_UNTIL_APPROVED_TEMPLATES: ReadonlySet<string> = new Set([
+  'order_confirmation',
+  'receipt',
+  'payment_link',
+]);
+
+export const HELD_TEMPLATE_PENDING = 'held_template_pending';

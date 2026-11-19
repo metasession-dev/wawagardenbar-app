@@ -87,8 +87,8 @@ const SAMPLE_CALLS: Record<string, () => WhatsAppTemplateParams> = {
     builders.paymentLinkParams({
       firstName: 'Ada',
       amount: '₦12,500',
-      paymentUrl: 'https://paystack.com/pay/x',
-      expiresInHours: '24',
+      accessCode: '0peioxfhpn',
+      expiresInMinutes: '25',
     }),
   supportReplyParams: () =>
     builders.supportReplyParams({
@@ -197,9 +197,13 @@ describe('REQ-115 WhatsApp template contract', () => {
       it('[AC6] uses only the production host in button URLs', () => {
         for (const button of template.buttons) {
           if (button.url && button.url.startsWith('http')) {
-            expect(
-              button.url.startsWith('https://app.wawagardenbar.com/')
-            ).toBe(true);
+            // REQ-123 — `payment_link` opens the Paystack hosted checkout; every
+            // other button stays on the production host.
+            const allowed =
+              template.name === 'payment_link'
+                ? 'https://checkout.paystack.com/'
+                : 'https://app.wawagardenbar.com/';
+            expect(button.url.startsWith(allowed)).toBe(true);
           }
         }
       });

@@ -52,7 +52,7 @@ export class PaystackService {
    */
   private static async getConfig() {
     const settings = await SystemSettingsService.getPaymentSettings();
-    
+
     // We skip the enabled check here because PaymentService already routes based on activeProvider
     // and sometimes the internal enabled flag might be out of sync or confusing.
     // if (!settings.paystack.enabled) {
@@ -89,7 +89,9 @@ export class PaystackService {
     const data = await response.json();
 
     if (!response.ok || !data.status) {
-      throw new Error(data.message || 'Failed to initialize Paystack transaction');
+      throw new Error(
+        data.message || 'Failed to initialize Paystack transaction'
+      );
     }
 
     return data;
@@ -98,16 +100,21 @@ export class PaystackService {
   /**
    * Verify a transaction
    */
-  static async verifyTransaction(reference: string): Promise<PaystackVerifyResponse> {
+  static async verifyTransaction(
+    reference: string
+  ): Promise<PaystackVerifyResponse> {
     const config = await this.getConfig();
 
-    const response = await fetch(`${this.BASE_URL}/transaction/verify/${encodeURIComponent(reference)}`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${config.secretKey}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    const response = await fetch(
+      `${this.BASE_URL}/transaction/verify/${encodeURIComponent(reference)}`,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${config.secretKey}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
 
     const data = await response.json();
 
@@ -128,19 +135,35 @@ export class PaystackService {
   }
 
   /**
-   * Validate webhook signature
+   * REQ-123 (AC3) — validate the webhook signature over the RAW request body.
+   * Paystack signs the exact bytes it sends; re-serialising a parsed body can
+   * change them. Compared in constant time; a missing or malformed signature
+   * is simply false.
    */
   static async validateWebhookSignature(
-    payload: any,
+    rawBody: string,
     signature: string
   ): Promise<boolean> {
+    if (!signature) return false;
     const config = await this.getConfig();
-    
-    const hash = crypto
+
+    const expected = crypto
       .createHmac('sha512', config.secretKey)
-      .update(JSON.stringify(payload))
+      .update(rawBody)
       .digest('hex');
 
-    return hash === signature;
+    const a = Buffer.from(expected, 'utf8');
+    const b = Buffer.from(signature, 'utf8');
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+  }
+
+  /**
+   * REQ-123 (AC2) — Paystack requires an email. A customer account may have
+   * none (WhatsApp-only sign-in), so derive a deterministic placeholder from
+   * the phone number. The domain receives no mail.
+   */
+  static placeholderEmail(phone: string): string {
+    const digits = (phone || '').replace(/\D/g, '') || 'unknown';
+    return `${digits}@customers.wawagardenbar.com`;
   }
 }

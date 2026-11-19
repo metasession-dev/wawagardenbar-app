@@ -1,6 +1,6 @@
 ---
 adr_id: 'ADR-012'
-status: 'Proposed'
+status: 'Accepted'
 date: '2026-11-19'
 authored_by: 'adr-author (Claude) for operator'
 related_reqs: ['REQ-123']

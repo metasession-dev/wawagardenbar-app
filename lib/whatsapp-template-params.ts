@@ -154,20 +154,23 @@ export function rewardExpiringSoonParams(input: {
   };
 }
 
-/** `payment_link` = body [first name, amount, expires in hours], URL button [payment url]. */
+/**
+ * `payment_link` = body [first name, amount, minutes until the link expires],
+ * URL button [Paystack access code] (`https://checkout.paystack.com/{{1}}`).
+ */
 export function paymentLinkParams(input: {
   firstName?: string | null;
   amount: string;
-  paymentUrl: string;
-  expiresInHours: string;
+  accessCode: string;
+  expiresInMinutes: string;
 }): WhatsAppTemplateParams {
   return {
     bodyParams: [
       firstNameOrFallback(input.firstName),
       input.amount,
-      input.expiresInHours,
+      input.expiresInMinutes,
     ],
-    buttonParams: [{ index: 0, params: [input.paymentUrl] }],
+    buttonParams: [{ index: 0, params: [input.accessCode] }],
   };
 }
 

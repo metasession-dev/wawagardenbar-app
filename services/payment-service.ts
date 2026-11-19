@@ -1,7 +1,4 @@
-import {
-  PaymentMethod,
-  PaymentStatus,
-} from '@/interfaces/payment';
+import { PaymentMethod, PaymentStatus } from '@/interfaces/payment';
 import { SystemSettingsService } from './system-settings-service';
 import { MonnifyService } from './monnify-service';
 import { PaystackService } from './paystack-service';
@@ -27,40 +24,48 @@ function getTestCheckoutUrl(reference: string): string {
 }
 
 export class PaymentService {
-  
   /**
    * Initialize a payment transaction
    */
-  static async initializePayment(
-    params: {
-      amount: number;
-      customerName: string;
-      customerEmail: string;
-      paymentReference: string;
-      paymentDescription: string;
-      currencyCode?: string;
-      contractCode?: string; // Legacy Monnify param
-      redirectUrl: string;
-      paymentMethods?: PaymentMethod[];
-    }
-  ): Promise<PaymentInitializeResponse> {
+  static async initializePayment(params: {
+    amount: number;
+    customerName: string;
+    customerEmail: string;
+    paymentReference: string;
+    paymentDescription: string;
+    currencyCode?: string;
+    contractCode?: string; // Legacy Monnify param
+    redirectUrl: string;
+    paymentMethods?: PaymentMethod[];
+    /**
+     * REQ-123 (AC1) — force a provider. Customer orders always pass
+     * 'paystack'; staff, tab and express flows omit it and keep routing by
+     * the `activeProvider` setting.
+     */
+    provider?: 'monnify' | 'paystack';
+  }): Promise<PaymentInitializeResponse> {
     if (isTestPaymentsEnabled()) {
       return {
         checkoutUrl: getTestCheckoutUrl(params.paymentReference),
         reference: params.paymentReference,
-        provider: 'monnify',
+        provider: params.provider ?? 'monnify',
+        accessCode:
+          params.provider === 'paystack'
+            ? `test_${params.paymentReference}`
+            : undefined,
       };
     }
 
     const settings = await SystemSettingsService.getPaymentSettings();
+    const provider = params.provider ?? settings.activeProvider;
 
-    if (settings.activeProvider === 'paystack') {
+    if (provider === 'paystack') {
       try {
         // Convert amount to kobo for Paystack (NGN * 100)
         // Check if amount is already in kobo? No, typically amount is passed as NGN in app logic?
         // Monnify expects NGN amount (e.g. 100.00). Paystack expects kobo (10000).
         // Let's assume input `amount` is NGN (base currency).
-        
+
         const paystackResponse = await PaystackService.initializeTransaction({
           email: params.customerEmail,
           amount: Math.round(params.amount * 100),
@@ -69,19 +74,19 @@ export class PaymentService {
           metadata: {
             custom_fields: [
               {
-                display_name: "Customer Name",
-                variable_name: "customer_name",
-                value: params.customerName
-              }
-            ]
-          }
+                display_name: 'Customer Name',
+                variable_name: 'customer_name',
+                value: params.customerName,
+              },
+            ],
+          },
         });
 
         return {
           checkoutUrl: paystackResponse.data.authorization_url,
           reference: paystackResponse.data.reference,
           provider: 'paystack',
-          accessCode: paystackResponse.data.access_code
+          accessCode: paystackResponse.data.access_code,
         };
       } catch (error) {
         console.error('Paystack initialization failed:', error);
@@ -98,13 +103,13 @@ export class PaymentService {
           paymentDescription: params.paymentDescription,
           currencyCode: params.currencyCode || 'NGN',
           redirectUrl: params.redirectUrl,
-          paymentMethods: params.paymentMethods || ['CARD', 'ACCOUNT_TRANSFER']
+          paymentMethods: params.paymentMethods || ['CARD', 'ACCOUNT_TRANSFER'],
         });
 
         return {
           checkoutUrl: monnifyResponse.responseBody.checkoutUrl,
           reference: monnifyResponse.responseBody.paymentReference,
-          provider: 'monnify'
+          provider: 'monnify',
         };
       } catch (error) {
         console.error('Monnify initialization failed:', error);
@@ -116,59 +121,70 @@ export class PaymentService {
   /**
    * Verify payment status
    */
-  static async verifyPayment(paymentReference: string): Promise<{
+  static async verifyPayment(
+    paymentReference: string,
+    forceProvider?: 'monnify' | 'paystack'
+  ): Promise<{
     status: PaymentStatus;
     amount: number;
     paidAt?: Date;
     transactionReference?: string;
     provider: 'monnify' | 'paystack';
   }> {
-    // We need to know which provider to verify with. 
+    // REQ-123 — an order stores the provider it was initialised with; verify
+    // with that one, not whatever `activeProvider` says today.
+    // We need to know which provider to verify with.
     // We can try determining from reference format or check active provider.
     // Monnify refs start with 'WAWA-'. Paystack refs also use 'WAWA-' if generated by us.
     // However, we stored the paymentReference in the order.
     // A robust way is to try verifying with the active provider, or fallback.
     // Or encode provider in reference? e.g. WAWA-M-... vs WAWA-P-...
     // For now, let's check active settings. If reference formats are identical, we might need a try-catch approach.
-    
+
     const settings = await SystemSettingsService.getPaymentSettings();
-    
+    const verifyWith = forceProvider ?? settings.activeProvider;
+
     // Strategy: Try the active provider first. If it fails (404), try the other?
     // Monnify verification throws if failed.
-    
-    if (settings.activeProvider === 'paystack') {
-        try {
-            const response = await PaystackService.verifyTransaction(paymentReference);
-            
-            let status: PaymentStatus = 'PENDING';
-            if (response.data.status === 'success') status = 'PAID';
-            else if (response.data.status === 'failed') status = 'FAILED';
-            else if (response.data.status === 'abandoned') status = 'CANCELLED';
-            
-            return {
-                status,
-                amount: response.data.amount / 100, // Convert kobo to NGN
-                paidAt: response.data.paid_at ? new Date(response.data.paid_at) : undefined,
-                transactionReference: response.data.id.toString(),
-                provider: 'paystack'
-            };
-        } catch (error: any) {
-             // If verification fails (e.g. transaction not found), we could fallback to Monnify if needed,
-             // but usually we stick to the one configured.
-             // However, for existing pending transactions initiated with the OLD provider before switch,
-             // we might need to handle that. 
-             // For simplicity now, we rely on active provider.
-             throw error;
-        }
-    } else {
-        const response = await MonnifyService.verifyPayment(paymentReference);
+
+    if (verifyWith === 'paystack') {
+      try {
+        const response =
+          await PaystackService.verifyTransaction(paymentReference);
+
+        let status: PaymentStatus = 'PENDING';
+        if (response.data.status === 'success') status = 'PAID';
+        else if (response.data.status === 'failed') status = 'FAILED';
+        else if (response.data.status === 'abandoned') status = 'CANCELLED';
+
         return {
-            status: response.responseBody.paymentStatus,
-            amount: response.responseBody.amountPaid,
-            paidAt: response.responseBody.paidOn ? new Date(response.responseBody.paidOn) : undefined,
-            transactionReference: response.responseBody.transactionReference,
-            provider: 'monnify'
+          status,
+          amount: response.data.amount / 100, // Convert kobo to NGN
+          paidAt: response.data.paid_at
+            ? new Date(response.data.paid_at)
+            : undefined,
+          transactionReference: response.data.id.toString(),
+          provider: 'paystack',
         };
+      } catch (error: any) {
+        // If verification fails (e.g. transaction not found), we could fallback to Monnify if needed,
+        // but usually we stick to the one configured.
+        // However, for existing pending transactions initiated with the OLD provider before switch,
+        // we might need to handle that.
+        // For simplicity now, we rely on active provider.
+        throw error;
+      }
+    } else {
+      const response = await MonnifyService.verifyPayment(paymentReference);
+      return {
+        status: response.responseBody.paymentStatus,
+        amount: response.responseBody.amountPaid,
+        paidAt: response.responseBody.paidOn
+          ? new Date(response.responseBody.paidOn)
+          : undefined,
+        transactionReference: response.responseBody.transactionReference,
+        provider: 'monnify',
+      };
     }
   }
 

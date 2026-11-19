@@ -27,7 +27,8 @@ import { CartItem } from '@/stores/cart-store';
 import { emitNewOrder } from '@/lib/socket-server';
 import { revalidatePath } from 'next/cache';
 import { paymentEmailFor } from '@/lib/checkout/checkout-rules';
-import { StaffNotificationService } from '@/services/staff-notification-service';
+import { OrderService } from '@/services/order-service';
+import { PaystackService } from '@/services/paystack-service';
 
 export interface CreateOrderInput {
   orderType: 'dine-in' | 'pickup' | 'delivery';
@@ -285,11 +286,6 @@ export async function initializePayment(
         )
       : null;
 
-    // Generate payment reference
-    const paymentReference = PaymentService.generatePaymentReference(
-      input.orderId
-    );
-
     // Determine redirect URL based on user role
     const isStaff = hasAnyRole(session, [
       'csr',
@@ -301,19 +297,94 @@ export async function initializePayment(
       ? `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/orders/${input.orderId}?payment=success`
       : `${process.env.NEXT_PUBLIC_APP_URL}/orders/${input.orderId}?payment=success`;
 
-    // Initialize payment (routes to active provider)
+    if (customerSession) {
+      // REQ-123 (AC1, AC2) — a customer order is paid through Paystack only, and
+      // the transaction is created once per order: pressing Pay again returns the
+      // same reference and URL until the order is paid.
+      if (order.paymentStatus === 'paid') {
+        return {
+          success: true,
+          data: {
+            transactionReference: order.transactionReference ?? '',
+            paymentReference: order.paymentReference ?? '',
+            checkoutUrl: redirectUrl,
+            enabledPaymentMethods: input.paymentMethods,
+          },
+        };
+      }
+
+      if (
+        order.paymentProvider === 'paystack' &&
+        order.paymentReference &&
+        order.checkoutUrl
+      ) {
+        // Re-initialise only when Paystack says the transaction is dead
+        // (failed or reversed). A paid transaction whose webhook has not
+        // arrived yet is confirmed here instead of opening a second checkout.
+        let reusable = true;
+        try {
+          const existing = await PaymentService.verifyPayment(
+            order.paymentReference,
+            'paystack'
+          );
+          if (PaymentService.isPaymentSuccessful(existing.status)) {
+            await confirmCustomerPayment(order, existing);
+            return {
+              success: true,
+              data: {
+                transactionReference: existing.transactionReference ?? '',
+                paymentReference: order.paymentReference,
+                checkoutUrl: redirectUrl,
+                enabledPaymentMethods: input.paymentMethods,
+              },
+            };
+          }
+          reusable = existing.status !== 'FAILED';
+        } catch {
+          // Paystack has no record yet (never opened) or is unreachable: the
+          // stored checkout URL is still the right one to hand back.
+        }
+        if (reusable) {
+          return {
+            success: true,
+            data: {
+              transactionReference: order.paymentReference,
+              paymentReference: order.paymentReference,
+              checkoutUrl: order.checkoutUrl,
+              enabledPaymentMethods: input.paymentMethods,
+            },
+          };
+        }
+      }
+    }
+
+    // Generate payment reference
+    const paymentReference = PaymentService.generatePaymentReference(
+      input.orderId
+    );
+
+    // Initialize payment (customers: always Paystack; staff: active provider)
     const response = await PaymentService.initializePayment({
       amount: chargeAmount,
       customerName: input.customerName || account?.name || 'Customer',
-      customerEmail: paymentEmailFor(input.customerEmail || account?.email),
+      customerEmail: customerSession
+        ? account?.email ||
+          PaystackService.placeholderEmail(account?.phone ?? '')
+        : paymentEmailFor(input.customerEmail || account?.email),
       paymentReference,
       paymentDescription: `Order #${input.orderId.slice(-8)}`,
       paymentMethods: input.paymentMethods,
       redirectUrl,
+      provider: customerSession ? 'paystack' : undefined,
     });
 
     // Update order with payment reference
     order.paymentReference = paymentReference;
+    if (customerSession) {
+      order.paymentProvider = 'paystack';
+      order.checkoutUrl = response.checkoutUrl;
+      order.paystackAccessCode = response.accessCode;
+    }
     await order.save();
 
     return {
@@ -343,43 +414,43 @@ export async function verifyPayment(
   try {
     await connectDB();
 
-    // Verify payment (routes to active provider)
-    const response = await PaymentService.verifyPayment(paymentReference);
-
-    // Try to find order first
+    // Try to find order first (REQ-123: it stores the provider it was
+    // initialised with, which is the one to verify against)
     const order = await Order.findOne({ paymentReference });
+
+    // Verify payment
+    const response = await PaymentService.verifyPayment(
+      paymentReference,
+      order?.paymentProvider
+    );
 
     // If no order found, try to find tab
     const tab = !order ? await TabModel.findOne({ paymentReference }) : null;
 
     if (order) {
-      const statusMap: Record<
-        string,
-        'pending' | 'paid' | 'failed' | 'cancelled' | 'refunded'
-      > = {
-        PAID: 'paid',
-        OVERPAID: 'paid',
-        FAILED: 'failed',
-        CANCELLED: 'cancelled',
-        PENDING: 'pending',
-        PARTIALLY_PAID: 'pending',
-        EXPIRED: 'failed',
-      };
-      order.paymentStatus = statusMap[response.status] || 'pending';
-      order.transactionReference = response.transactionReference;
-      order.paidAt = response.paidAt;
-
       if (PaymentService.isPaymentSuccessful(response.status)) {
-        order.status = 'confirmed';
-      } else if (response.status === 'FAILED') {
-        order.status = 'cancelled';
-      }
-
-      await order.save();
-
-      // REQ-122 — a paid customer order raises a staff alert (never throws).
-      if (order.paymentStatus === 'paid') {
-        await StaffNotificationService.raiseForPaidOrder(order);
+        // REQ-123 (AC4) — one idempotent paid path, amount-checked.
+        await confirmCustomerPayment(order, response);
+      } else if (order.paymentStatus !== 'paid') {
+        const statusMap: Record<
+          string,
+          'pending' | 'paid' | 'failed' | 'cancelled' | 'refunded'
+        > = {
+          FAILED: 'failed',
+          CANCELLED: 'cancelled',
+          PENDING: 'pending',
+          PARTIALLY_PAID: 'pending',
+          EXPIRED: 'failed',
+        };
+        order.paymentStatus = statusMap[response.status] || 'pending';
+        order.transactionReference = response.transactionReference;
+        order.paidAt = response.paidAt;
+        // A customer order is cancelled only by the expiry job or the customer
+        // (WA-11); a failed attempt leaves it open to try again.
+        if (response.status === 'FAILED' && order.origin !== 'customer') {
+          order.status = 'cancelled';
+        }
+        await order.save();
       }
     } else if (tab) {
       // Handle tab payment
@@ -414,6 +485,50 @@ export async function verifyPayment(
       message: 'Failed to verify payment. Please try again.',
     };
   }
+}
+
+/**
+ * REQ-123 (AC3, AC4) — confirm a verified, successful payment on an order:
+ * the paid amount must equal the order total (else `payment_mismatch` and an
+ * Incident, no confirmation), then the one idempotent `markOrderPaid`.
+ */
+async function confirmCustomerPayment(
+  order: InstanceType<typeof Order>,
+  verified: {
+    amount: number;
+    paidAt?: Date;
+    transactionReference?: string;
+  }
+): Promise<void> {
+  if (order.paymentStatus === 'paid') return;
+
+  if (Math.round(verified.amount * 100) !== Math.round(order.total * 100)) {
+    order.paymentStatus = 'payment_mismatch';
+    await order.save();
+    try {
+      const { IncidentEventService } = await import(
+        '@/services/incident-event-service'
+      );
+      await IncidentEventService.recordIncident({
+        kind: 'payment_mismatch',
+        entityId: String(order._id),
+        summary: `Payment amount mismatch for order ${order.orderNumber}`,
+        errorDetails: {
+          paid: verified.amount,
+          expected: order.total,
+          reference: order.paymentReference ?? null,
+        },
+      });
+    } catch {
+      // an incident write failure must not break the response
+    }
+    return;
+  }
+
+  await OrderService.markOrderPaid(String(order._id), 'payment_redirect', {
+    transactionReference: verified.transactionReference,
+    paidAt: verified.paidAt,
+  });
 }
 
 /**

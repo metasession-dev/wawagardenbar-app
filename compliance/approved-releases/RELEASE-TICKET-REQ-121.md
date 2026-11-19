@@ -1,6 +1,6 @@
 # Release Ticket: REQ-121 — One-page customer checkout (WA-06)
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-11-16
 **Requirement ID:** REQ-121
 **Risk Level:** HIGH

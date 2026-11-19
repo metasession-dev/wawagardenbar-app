@@ -22,9 +22,11 @@ generated_at: 2026-11-19T00:00:00Z
 
 I have reviewed the ADR-worthiness verdict above and confirm:
 
-- [ ] The verdict (ADR or no-ADR) matches the actual scope of this REQ.
-- [ ] If ADR: the file at `docs/ADR/ADR-012-paid-only-kitchen-gate-and-single-mark-paid.md` is edited from stub to canonical prose and status is Accepted.
+- [x] The verdict (ADR or no-ADR) matches the actual scope of this REQ.
+- [x] If ADR: the file at `docs/ADR/ADR-012-paid-only-kitchen-gate-and-single-mark-paid.md` is edited from stub to canonical prose and status is Accepted.
 - [~] If no-ADR: not applicable.
 
-**Reviewer:** <operator-name>
-**Date:** <YYYY-MM-DD>
+**Reviewer:** metasession-dev (Metassession Dev)
+**Date:** 2026-11-19
+
+_Approved by metasession-dev (Metassession Dev) in the Claude Code session on 2026-11-19; recorded by the agent from the operator's explicit reply._

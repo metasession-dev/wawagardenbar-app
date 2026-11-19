@@ -325,6 +325,15 @@ export async function createCustomerOrder(
   }
   const subtotal = reconciled.recomputedSubtotal;
 
+  // REQ-121 (R-60): the tip is part of the charge, so it is bounded by the
+  // server-computed subtotal. The client's 15% preset can never reach this.
+  if (tipAmount > subtotal) {
+    return fail(
+      'INVALID_INPUT',
+      'The tip cannot be more than the order subtotal'
+    );
+  }
+
   if (!(await SettingsService.meetsMinimumOrder(subtotal))) {
     return fail(
       'BELOW_MINIMUM',
@@ -387,9 +396,14 @@ export async function createCustomerOrder(
       deliveryFee: totals.deliveryFee,
       discount: 0,
       tipAmount,
+      // REQ-121: a customer's tip is charged online with the order and they no
+      // longer choose a method, but the order model requires one whenever
+      // tipAmount > 0 (REQ-035), so it is recorded as the online payment (card).
       ...(input.tipPaymentMethod
         ? { tipPaymentMethod: input.tipPaymentMethod }
-        : {}),
+        : tipAmount > 0
+          ? { tipPaymentMethod: 'card' as const }
+          : {}),
       total: totals.total + tipAmount,
       specialInstructions: input.specialInstructions,
       ...(input.orderType === 'delivery' && input.deliveryAddress

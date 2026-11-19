@@ -45,6 +45,10 @@ export const TEMPLATE_CATEGORIES: Record<string, NotificationCategory> = {
   welcome_new_user: 'transactional',
   welcome_back: 'transactional',
   account_recovery: 'transactional',
+  // REQ-122 — internal staff alert (ADR-011). Sent only to staff with a verified
+  // alert number, through WhatsAppService directly (staff-own consent, not the
+  // customer consent gate).
+  staff_alert: 'transactional',
 
   // ── Marketing (MARKETING per Meta; whatsappMarketing gate) ──
   reward_earned: 'marketing',

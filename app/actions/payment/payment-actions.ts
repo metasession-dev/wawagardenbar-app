@@ -26,14 +26,19 @@ import {
 import { CartItem } from '@/stores/cart-store';
 import { emitNewOrder } from '@/lib/socket-server';
 import { revalidatePath } from 'next/cache';
+import { paymentEmailFor } from '@/lib/checkout/checkout-rules';
+import { StaffNotificationService } from '@/services/staff-notification-service';
 
 export interface CreateOrderInput {
   orderType: 'dine-in' | 'pickup' | 'delivery';
   items: CartItem[];
-  customerInfo: {
-    name: string;
-    email: string;
-    phone: string;
+  /**
+   * REQ-121 (REQ-CHECKOUT-015): phone and email come from the verified
+   * account, never from the form. Only a first name is sent, and only when
+   * the account has none.
+   */
+  customerInfo?: {
+    name?: string;
   };
   deliveryInfo?: {
     street: string;
@@ -50,18 +55,36 @@ export interface CreateOrderInput {
   specialInstructions?: string;
   tipAmount?: number;
   // REQ-036 — independent tip payment method, persisted on Order.tipPaymentMethod.
+  // The customer checkout no longer sends one (REQ-121, REQ-CHECKOUT-006).
   tipPaymentMethod?: 'cash' | 'transfer' | 'card';
-  savePhone?: boolean;
+  /** REQ-121: a delivery address is saved to the profile unless this is false. */
   saveAddress?: boolean;
   idempotencyKey: string;
 }
 
 export interface InitializePaymentInput {
   orderId: string;
+  /**
+   * Ignored for a customer's own order: the charge is the order total the
+   * server computed (REQ-121, ADR-010). Staff flows still send their amount.
+   */
   amount: number;
-  customerName: string;
-  customerEmail: string;
+  customerName?: string;
+  /** REQ-121: optional; falls back to the account email, then a guest address. */
+  customerEmail?: string;
   paymentMethods: PaymentMethod[];
+}
+
+/** REQ-121: landmark and instructions travel together as the delivery note. */
+function composeDeliveryNote(
+  landmark?: string,
+  instructions?: string
+): string | undefined {
+  const parts = [
+    landmark?.trim() ? `Landmark: ${landmark.trim()}` : '',
+    instructions?.trim() ?? '',
+  ].filter(Boolean);
+  return parts.length ? parts.join('. ') : undefined;
 }
 
 /**
@@ -119,7 +142,10 @@ export async function createOrder(input: CreateOrderInput): Promise<{
               country: input.deliveryInfo.country,
             }
           : undefined,
-        deliveryInstructions: input.deliveryInfo?.instructions,
+        deliveryInstructions: composeDeliveryNote(
+          input.deliveryInfo?.landmark,
+          input.deliveryInfo?.instructions
+        ),
         specialInstructions: input.specialInstructions,
         tipAmount: input.tipAmount,
         tipPaymentMethod: input.tipPaymentMethod,
@@ -135,6 +161,11 @@ export async function createOrder(input: CreateOrderInput): Promise<{
     if (result.reused) {
       return { success: true, data: { orderId } };
     }
+
+    // REQ-121: phone and email come from the verified account, not the form.
+    const account = await UserService.getUserProfile(userId).catch(() => null);
+    const customerName =
+      account?.name?.trim() || input.customerInfo?.name?.trim() || '';
 
     // Emit new order to kitchen via WebSocket
     try {
@@ -154,9 +185,9 @@ export async function createOrder(input: CreateOrderInput): Promise<{
           customizations: item.customizations || [],
         })),
         customer: {
-          name: input.customerInfo.name,
-          email: input.customerInfo.email,
-          phone: input.customerInfo.phone,
+          name: customerName,
+          email: account?.email ?? '',
+          phone: account?.phone ?? '',
         },
         status: order.status,
         createdAt: new Date(order.createdAt).toISOString(),
@@ -168,27 +199,35 @@ export async function createOrder(input: CreateOrderInput): Promise<{
     // Revalidate kitchen display (full-screen order grid for kitchen staff).
     revalidatePath('/dashboard/kitchen-display');
 
-    // Update user profile if the customer asked to save details
-    if (input.savePhone || input.saveAddress) {
+    // REQ-121 (REQ-CHECKOUT-015, REQ-CHECKOUT-016): save a first name once, and
+    // save a delivery address automatically (no checkbox).
+    const firstNameToSave = !account?.name
+      ? input.customerInfo?.name?.trim()
+      : undefined;
+    const addressToSave =
+      input.orderType === 'delivery' &&
+      input.deliveryInfo &&
+      input.saveAddress !== false
+        ? input.deliveryInfo
+        : undefined;
+    if (firstNameToSave || addressToSave) {
       try {
-        const nameParts = input.customerInfo.name.split(' ');
         await UserService.updateProfileFromCheckout({
           userId,
-          firstName: nameParts[0],
-          lastName: nameParts.slice(1).join(' '),
-          email: input.customerInfo.email,
-          phone: input.customerInfo.phone,
-          address: input.deliveryInfo
+          firstName: firstNameToSave,
+          address: addressToSave
             ? {
-                streetAddress: input.deliveryInfo.street,
-                city: input.deliveryInfo.city,
-                state: input.deliveryInfo.state,
-                postalCode: input.deliveryInfo.postalCode,
-                deliveryInstructions: input.deliveryInfo.instructions,
+                streetAddress: addressToSave.street,
+                city: addressToSave.city,
+                state: addressToSave.state,
+                postalCode: addressToSave.postalCode,
+                deliveryInstructions: composeDeliveryNote(
+                  addressToSave.landmark,
+                  addressToSave.instructions
+                ),
               }
             : undefined,
-          savePhone: input.savePhone,
-          saveAddress: input.saveAddress && !!input.deliveryInfo,
+          saveAddress: !!addressToSave,
         });
       } catch (profileError) {
         // Log error but don't fail the order
@@ -231,6 +270,21 @@ export async function initializePayment(
       };
     }
 
+    // REQ-121: a customer pays only their own order, and is charged the total
+    // the server computed (fees and tip included), never the client's amount.
+    const customerSession = Boolean(
+      session.isLoggedIn && session.userId && isCustomerSession(session)
+    );
+    if (customerSession && order.userId?.toString() !== session.userId) {
+      return { success: false, message: 'Order not found' };
+    }
+    const chargeAmount = customerSession ? order.total : input.amount;
+    const account = customerSession
+      ? await UserService.getUserProfile(session.userId as string).catch(
+          () => null
+        )
+      : null;
+
     // Generate payment reference
     const paymentReference = PaymentService.generatePaymentReference(
       input.orderId
@@ -249,9 +303,9 @@ export async function initializePayment(
 
     // Initialize payment (routes to active provider)
     const response = await PaymentService.initializePayment({
-      amount: input.amount,
-      customerName: input.customerName,
-      customerEmail: input.customerEmail,
+      amount: chargeAmount,
+      customerName: input.customerName || account?.name || 'Customer',
+      customerEmail: paymentEmailFor(input.customerEmail || account?.email),
       paymentReference,
       paymentDescription: `Order #${input.orderId.slice(-8)}`,
       paymentMethods: input.paymentMethods,
@@ -322,6 +376,11 @@ export async function verifyPayment(
       }
 
       await order.save();
+
+      // REQ-122 — a paid customer order raises a staff alert (never throws).
+      if (order.paymentStatus === 'paid') {
+        await StaffNotificationService.raiseForPaidOrder(order);
+      }
     } else if (tab) {
       // Handle tab payment
       if (PaymentService.isPaymentSuccessful(response.status)) {

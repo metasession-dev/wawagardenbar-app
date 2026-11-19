@@ -5,7 +5,7 @@ Script: `scripts/migrate-order-origin.ts` (dry run by default; `--apply` sets `o
 | Environment | Dry run                                     | Apply                                  | Re-run (must be 0)                       |
 | ----------- | ------------------------------------------- | -------------------------------------- | ---------------------------------------- |
 | UAT         | Would update: 3 customer, 4569 staff orders | Updated: 3 customer, 4569 staff orders | Would update: 0 customer, 0 staff orders |
-| Production  | not yet run                                 | not yet run                            | not yet run                              |
+| Production  | Would update: 3 customer, 4660 staff orders | Updated: 3 customer, 4660 staff orders | Would update: 0 customer, 0 staff orders |
 
 ## UAT run
 
@@ -26,6 +26,19 @@ kubectl -n apps exec deploy/wawagardenbar-uat-app -- npx tsx scripts/migrate-ord
 
 Note: an earlier attempt from the dev checkout failed to connect (`.env.local` points at a local database that was not running) and wrote nothing.
 
-## Production (operator, after release)
+## Production run
 
-Run the same three commands against the production database (the Railway Mongo URL, never committed), then record the counts here.
+Run on 2026-11-13, after release #1027 was deployed, inside the production app container (`wawagardenbar-app`, Railway production environment), where the production connection string is already set:
+
+```bash
+railway ssh --service wawagardenbar-app -- npx tsx scripts/migrate-order-origin.ts            # dry run
+railway ssh --service wawagardenbar-app -- npx tsx scripts/migrate-order-origin.ts --apply
+railway ssh --service wawagardenbar-app -- npx tsx scripts/migrate-order-origin.ts            # re-run, expect 0 and 0
+```
+
+| Field                    | Value                                                                        |
+| ------------------------ | ---------------------------------------------------------------------------- |
+| Applied on               | 2026-11-13 (production)                                                      |
+| Operator                 | ostendo-io operator (project owner), run by Claude Code at their instruction |
+| Orders written           | 4663 (3 customer, 4660 staff)                                                |
+| Re-run count (must be 0) | 0 customer, 0 staff                                                          |

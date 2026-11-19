@@ -218,6 +218,16 @@ export async function seedVerifiedCustomer(opts?: {
   phone?: string;
   email?: string;
   name?: string;
+  /** REQ-121: an account with no name, so checkout asks for a first name. */
+  noName?: boolean;
+  /** REQ-121: saved delivery addresses (the default one is preselected). */
+  addresses?: Array<{
+    streetAddress: string;
+    city: string;
+    state: string;
+    deliveryInstructions?: string;
+    isDefault?: boolean;
+  }>;
 }): Promise<SeededCustomerForSession> {
   const stamp = Date.now().toString(36).slice(-8);
   const phone =
@@ -230,28 +240,47 @@ export async function seedVerifiedCustomer(opts?: {
   const client = new MongoClient(conn.uri);
   try {
     await client.connect();
-    const result = await client.db(conn.dbName).collection('users').insertOne({
+    const result = await client
+      .db(conn.dbName)
+      .collection('users')
+      .insertOne({
+        phone,
+        email,
+        ...(opts?.noName
+          ? {}
+          : { name, firstName: 'E2E', lastName: 'Customer' }),
+        ...(opts?.addresses
+          ? {
+              addresses: opts.addresses.map((a) => ({
+                label: 'Home',
+                country: 'Nigeria',
+                postalCode: '',
+                isDefault: false,
+                ...a,
+              })),
+            }
+          : {}),
+        role: 'customer',
+        isAdmin: false,
+        isGuest: false,
+        phoneVerified: true,
+        emailVerified: true,
+        isVerified: true,
+        accountStatus: 'active',
+        lastLoginAt: new Date(),
+        totalSpent: 0,
+        totalOrders: 0,
+        rewardsEarned: 0,
+        loyaltyPoints: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+    return {
+      _id: String(result.insertedId),
       phone,
       email,
-      name,
-      firstName: 'E2E',
-      lastName: 'Customer',
-      role: 'customer',
-      isAdmin: false,
-      isGuest: false,
-      phoneVerified: true,
-      emailVerified: true,
-      isVerified: true,
-      accountStatus: 'active',
-      lastLoginAt: new Date(),
-      totalSpent: 0,
-      totalOrders: 0,
-      rewardsEarned: 0,
-      loyaltyPoints: 0,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-    return { _id: String(result.insertedId), phone, email, name };
+      name: opts?.noName ? '' : name,
+    };
   } finally {
     await client.close();
   }

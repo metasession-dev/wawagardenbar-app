@@ -50,14 +50,33 @@ export class UserService {
       updates.phone = data.phone;
     }
 
-    // Update name if provided
-    if (data.firstName && data.lastName) {
-      updates.firstName = data.firstName;
-      updates.lastName = data.lastName;
+    // Update name if provided. REQ-121 (REQ-CHECKOUT-015): checkout asks for
+    // a first name only, so a last name is optional.
+    const firstName = data.firstName?.trim();
+    if (firstName) {
+      const lastName = data.lastName?.trim();
+      updates.firstName = firstName;
+      if (lastName) updates.lastName = lastName;
+      updates.name = lastName ? `${firstName} ${lastName}` : firstName;
     }
 
     // Add delivery address if provided and save requested
     if (data.address && data.saveAddress) {
+      // REQ-121 (REQ-CHECKOUT-016): addresses are saved automatically, so the
+      // same street must not be added again on every order.
+      const normalise = (value?: string) => (value ?? '').trim().toLowerCase();
+      const existing = user.addresses.find(
+        (addr: IAddress) =>
+          normalise(addr.streetAddress) ===
+            normalise(data.address!.streetAddress) &&
+          normalise(addr.city) === normalise(data.address!.city)
+      );
+      if (existing) {
+        existing.lastUsedAt = new Date();
+        if (data.address.deliveryInstructions) {
+          existing.deliveryInstructions = data.address.deliveryInstructions;
+        }
+      }
       const isFirstAddress = user.addresses.length === 0;
 
       const newAddress: IAddress = {
@@ -72,7 +91,7 @@ export class UserService {
         lastUsedAt: new Date(),
       };
 
-      user.addresses.push(newAddress);
+      if (!existing) user.addresses.push(newAddress);
     }
 
     // Apply updates
@@ -94,7 +113,9 @@ export class UserService {
     }
 
     const defaultAddr = user.addresses.find((addr) => addr.isDefault);
-    return defaultAddr || (user.addresses.length > 0 ? user.addresses[0] : null);
+    return (
+      defaultAddr || (user.addresses.length > 0 ? user.addresses[0] : null)
+    );
   }
 
   /**
@@ -162,9 +183,9 @@ export class UserService {
   static async getUserById(userId: string): Promise<IUser | null> {
     await connectDB();
 
-    const user = await UserModel.findById(userId).select(
-      '-verificationPin -pinExpiresAt -sessionToken'
-    ).lean();
+    const user = await UserModel.findById(userId)
+      .select('-verificationPin -pinExpiresAt -sessionToken')
+      .lean();
 
     return user as IUser | null;
   }

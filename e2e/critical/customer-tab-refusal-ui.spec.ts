@@ -7,6 +7,7 @@
  * orders are left exactly as staff had them. (The server actions and the
  * public API are refused in unit tests and in `customer-cannot-use-tabs`.)
  */
+import { giveOwnClientIp } from '../helpers/checkout-page';
 import { test, expect } from '@playwright/test';
 import { ObjectId } from 'mongodb';
 import { tagTest } from '../helpers/test-tags';
@@ -131,10 +132,12 @@ test.describe('[REQ-120] a customer in the browser cannot use tabs', () => {
     }, itemId);
     await page.goto('/menu');
     await page.waitForLoadState('networkidle');
+    await giveOwnClientIp(page.context());
     await page.goto('/checkout');
-    await page.waitForSelector('input[name="customerName"]', {
-      timeout: 20000,
-    });
+    // REQ-121: one page; the order type selector is on it from the start.
+    await expect(page.locator('label[for^="order-type-"]').first()).toBeVisible(
+      { timeout: 25000 }
+    );
 
     // No tab step or tab option anywhere in the flow.
     await expect(page.getByText('Payment Options')).toHaveCount(0);

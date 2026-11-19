@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from '@/lib/zod';
 import { createAdminAction } from '@/app/actions/admin/admin-management-actions';
+import { setStaffAlertPhoneAction } from '@/app/actions/staff-notifications/staff-notification-actions';
 import {
   Dialog,
   DialogContent,
@@ -53,6 +54,8 @@ const createAdminSchema = z
       .or(z.literal('')),
     firstName: z.string().optional(),
     lastName: z.string().optional(),
+    // REQ-122 — optional WhatsApp number for staff alerts; the member verifies it.
+    alertPhone: z.string().optional(),
     roles: z
       .array(z.enum(STAFF_ROLES as [StaffRole, ...StaffRole[]]))
       .min(1, 'Select at least one role'),
@@ -121,6 +124,21 @@ export function CreateAdminDialog({
       }
 
       toast.success('Admin created successfully');
+
+      // REQ-122 — save the alert number (unverified; the member verifies it
+      // on their own account page). A failure here does not undo the account.
+      if (data.alertPhone?.trim() && result.adminId) {
+        const alert = await setStaffAlertPhoneAction(
+          result.adminId,
+          data.alertPhone.trim()
+        );
+        if (!alert.success) {
+          toast.warning(
+            alert.message ??
+              'The alert number could not be saved. Add it later.'
+          );
+        }
+      }
       setOpen(false);
       reset();
 
@@ -151,6 +169,22 @@ export function CreateAdminDialog({
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
+
+          {/* REQ-122 — optional alert number */}
+          <div className="space-y-2">
+            <Label htmlFor="alertPhone">WhatsApp alert number (Optional)</Label>
+            <Input
+              id="alertPhone"
+              type="tel"
+              placeholder="e.g. 0801 234 5678"
+              disabled={isLoading}
+              {...register('alertPhone')}
+            />
+            <p className="text-xs text-muted-foreground">
+              Used for staff alerts only. The member verifies it with a WhatsApp
+              code on their own account page.
+            </p>
+          </div>
 
           {/* Username */}
           <div className="space-y-2">

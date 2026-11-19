@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-117",
+  "ac": 1,
+  "slug": "whatsapp-only-pin-entry",
+  "specFile": "e2e/customer/auth-pin-happy-path.spec.ts",
+  "capturedAt": "2026-11-13T06:53:43.666Z"
+}

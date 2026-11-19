@@ -16,6 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ArrowLeft, AlertTriangle } from 'lucide-react';
+import { AcknowledgeOnOpen } from '@/components/features/admin/acknowledge-on-open';
 
 interface OrderDetailsPageProps {
   params: Promise<{
@@ -63,6 +64,9 @@ export default async function OrderDetailsPage({
 
   return (
     <div className="space-y-6">
+      {/* REQ-122 — opening the order acknowledges its staff alert */}
+      <AcknowledgeOnOpen refId={orderId} />
+
       {/* Back Button */}
       <div>
         <Link href="/dashboard/orders">

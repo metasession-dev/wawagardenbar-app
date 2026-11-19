@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { 
-  emitOrderStatusUpdate, 
-  emitOrderCreated, 
-  emitOrderUpdated, 
+import {
+  emitOrderStatusUpdate,
+  emitOrderCreated,
+  emitOrderUpdated,
   emitOrderCancelled,
-  emitBatchUpdate 
+  emitBatchUpdate,
+  emitStaffNotification,
 } from '@/lib/socket-server';
 
 /**
@@ -16,10 +17,7 @@ export async function POST(request: NextRequest) {
     // Verify this is an internal request
     const authHeader = request.headers.get('x-internal-auth');
     if (authHeader !== process.env.INTERNAL_API_SECRET) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -61,6 +59,11 @@ export async function POST(request: NextRequest) {
           orderIds: data.orderIds,
           action: data.action,
         });
+        break;
+
+      case 'staff-notification':
+        // REQ-122 — content-free signal; clients refetch their own list.
+        emitStaffNotification({ id: data.id, type: data.type });
         break;
 
       default:

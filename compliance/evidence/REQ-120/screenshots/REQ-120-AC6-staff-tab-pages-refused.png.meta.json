@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-120",
+  "ac": 6,
+  "slug": "staff-tab-pages-refused",
+  "specFile": "e2e/critical/customer-tab-refusal-ui.spec.ts",
+  "capturedAt": "2026-11-16T23:01:05.118Z"
+}

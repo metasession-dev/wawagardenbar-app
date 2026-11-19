@@ -327,4 +327,42 @@ describe('createCustomerOrder', () => {
       await createCustomerOrder(input({ orderType: 'delivery' }), ctx)
     ).toMatchObject({ success: false, code: 'INVALID_INPUT' });
   });
+
+  // REQ-121 (AC4, R-60): the tip is part of the charge and is bounded server-side.
+  it('stores a tip within the subtotal and adds it to the total (REQ-121 AC4)', async () => {
+    const result = await createCustomerOrder(input({ tipAmount: 700 }), ctx);
+    expect(result.success).toBe(true);
+    const data = mockCreate.mock.calls[0][0];
+    expect(data.tipAmount).toBe(700);
+    expect(data.total).toBe(7150 + 700);
+    // The customer no longer picks a method; the order model needs one (REQ-035).
+    expect(data.tipPaymentMethod).toBe('card');
+  });
+
+  it('keeps a tip method the caller sends and records none when there is no tip (REQ-121 AC4)', async () => {
+    await createCustomerOrder(
+      input({ tipAmount: 300, tipPaymentMethod: 'cash' }),
+      ctx
+    );
+    expect(mockCreate.mock.calls[0][0].tipPaymentMethod).toBe('cash');
+    mockCreate.mockClear();
+    await createCustomerOrder(input(), ctx);
+    expect(mockCreate.mock.calls[0][0]).not.toHaveProperty('tipPaymentMethod');
+  });
+
+  it('rejects a tip larger than the server subtotal and creates nothing (REQ-121 AC4)', async () => {
+    expect(
+      await createCustomerOrder(input({ tipAmount: 7001 }), ctx)
+    ).toMatchObject({ success: false, code: 'INVALID_INPUT' });
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it('rejects a negative or non-finite tip (REQ-121 AC4)', async () => {
+    expect(
+      await createCustomerOrder(input({ tipAmount: -1 }), ctx)
+    ).toMatchObject({ success: false, code: 'INVALID_INPUT' });
+    expect(
+      await createCustomerOrder(input({ tipAmount: Number.NaN }), ctx)
+    ).toMatchObject({ success: false, code: 'INVALID_INPUT' });
+  });
 });

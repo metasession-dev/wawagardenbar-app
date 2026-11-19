@@ -31,6 +31,7 @@ import { tagTest } from '../helpers/test-tags';
 import { evidenceShot } from '../helpers/evidence';
 import { MongoClient, ObjectId } from 'mongodb';
 import { pollForDoc, deleteOrderById } from '../helpers/db-assertions';
+import { giveOwnClientIp } from '../helpers/checkout-page';
 import {
   seedVerifiedCustomer,
   attachCustomerSessionToContext,
@@ -180,6 +181,11 @@ async function injectCart(page: Page, menuItemId?: string) {
       version: 0,
     };
     window.localStorage.setItem('wawa-cart-storage', JSON.stringify(cartState));
+    // The cookie banner is fixed to the bottom and would cover the Pay button.
+    window.localStorage.setItem(
+      'cookieConsent',
+      JSON.stringify({ acceptedAt: new Date().toISOString(), version: 'v1' })
+    );
   }, id);
 }
 
@@ -310,6 +316,7 @@ test.describe('REQ-084 — Customer checkout (sign-in required, REQ-117)', () =>
     const menuItemId = await seedMenuItem(5000);
     const customer = await seedVerifiedCustomer();
     let createdOrderId: string | undefined;
+    await giveOwnClientIp(page.context());
     await attachCustomerSessionToContext(page.context(), customer, BASE_URL);
     try {
       await injectCart(page, menuItemId);
@@ -322,6 +329,7 @@ test.describe('REQ-084 — Customer checkout (sign-in required, REQ-117)', () =>
       await expect(
         page.getByRole('button', { name: /Shopping cart with/i })
       ).toContainText('1', { timeout: 10000 });
+      await giveOwnClientIp(page.context());
       await page.goto('/checkout');
       await page.waitForLoadState('networkidle');
 
@@ -332,45 +340,20 @@ test.describe('REQ-084 — Customer checkout (sign-in required, REQ-117)', () =>
         );
       }
 
-      // Wait for the auth/session fetch to settle and the skeleton to disappear.
-      await page.waitForSelector('input[name="customerName"]', {
-        timeout: 15000,
+      // REQ-121: one page. The signed-in customer already has a name, and the
+      // phone comes from the session, so only the order type's field is asked.
+      await expect(
+        page.locator('label[for^="order-type-"]').first()
+      ).toBeVisible({ timeout: 25000 });
+      await expect(page.getByText('Sign In', { exact: true })).toHaveCount(0, {
+        timeout: 45000,
       });
+      await expect(page.locator('input[name="customerName"]')).toHaveCount(0);
 
-      // Step 1 — Customer info.
-      await page.locator('input[name="customerName"]').fill('Guest E2E');
-      await page
-        .locator('input[name="customerEmail"]')
-        .fill('guest-e2e@example.com');
-      await page.locator('input[name="customerPhone"]').fill('08011223344');
-      await page.waitForTimeout(500);
-      await page.locator('button', { hasText: 'Next' }).click();
-      await expect(page.locator('form').getByText('Order Details')).toBeVisible(
-        {
-          timeout: 10000,
-        }
-      );
-
-      // Step 2 — Order details (dine-in default).
+      // Dine-in is the default; give the table and pay.
       const tableNumber = `E2E-${Date.now()}`;
       await page.locator('input[name="tableNumber"]').fill(tableNumber);
-      await page.waitForTimeout(500);
-      await page.locator('button', { hasText: 'Next' }).click();
-
-      // Step 3 — Tip (REQ-120: there is no tab step; customers always pay).
-      // The form ignores a second Next within 300ms of the first.
-      await page.waitForTimeout(500);
-      await expect(page.getByText('Tip', { exact: true }).first()).toBeVisible({
-        timeout: 10000,
-      });
-      await page.locator('button', { hasText: 'Next' }).click();
-
-      // Step 4 — Payment method, then submit.
-      await expect(page.getByText('Select Payment Method')).toBeVisible({
-        timeout: 10000,
-      });
-      await page.getByText('Card Payment').click();
-      await page.getByRole('button', { name: /Proceed to Payment/i }).click();
+      await page.getByRole('button', { name: 'Pay', exact: true }).click();
 
       // The order is created for the signed-in customer before the gateway
       // redirect (payment initialisation itself is out of scope here).
@@ -390,13 +373,19 @@ test.describe('REQ-084 — Customer checkout (sign-in required, REQ-117)', () =>
     }
   });
 
-  test('AC3: Only Monnify gateway options on customer checkout', async ({
+  // REQ-121 (REQ-CHECKOUT-014): the payment-method step is gone from the
+  // customer checkout; Pay starts the provider's hosted page, which offers the
+  // card / transfer / USSD choice. What AC3 protects still holds: the customer
+  // is never offered manual or admin payment, and a single Pay button starts
+  // the gateway.
+  test('AC3: Customer checkout offers no manual or admin payment options; Pay starts the gateway', async ({
     page,
   }) => {
     tagTest('REQ-084', 3);
 
     const menuItemId = await seedMenuItem();
     const customer = await seedVerifiedCustomer();
+    await giveOwnClientIp(page.context());
     await attachCustomerSessionToContext(page.context(), customer, BASE_URL);
     try {
       await injectCart(page, menuItemId);
@@ -405,6 +394,7 @@ test.describe('REQ-084 — Customer checkout (sign-in required, REQ-117)', () =>
       await expect(
         page.getByRole('button', { name: /Shopping cart with/i })
       ).toContainText('1', { timeout: 10000 });
+      await giveOwnClientIp(page.context());
       await page.goto('/checkout');
       await page.waitForLoadState('networkidle');
 
@@ -415,68 +405,27 @@ test.describe('REQ-084 — Customer checkout (sign-in required, REQ-117)', () =>
         );
       }
 
-      // Step 1 — Customer info.
-      await page.waitForSelector('input[name="customerName"]', {
-        timeout: 15000,
-      });
-      await page.locator('input[name="customerName"]').fill('Guest E2E');
-      await page
-        .locator('input[name="customerEmail"]')
-        .fill('guest-e2e@example.com');
-      await page.locator('input[name="customerPhone"]').fill('08011223344');
-      await page.waitForTimeout(500);
-      await page.locator('button', { hasText: 'Next' }).click();
-      await expect(page.locator('form').getByText('Order Details')).toBeVisible(
-        {
-          timeout: 10000,
-        }
-      );
-
-      // Step 2 — Order details: switch to pickup.
-      const pickupLabel = page.locator('label[for="pickup"]');
-      await pickupLabel.scrollIntoViewIfNeeded();
-      await pickupLabel.click();
-      await page.waitForTimeout(500);
-
-      // The pickup time may render as a Select dropdown (when slots are
-      // available) or as a datetime-local input (fallback). Handle both.
-      const datetimeInput = page.locator('input[type="datetime-local"]');
-      const selectTrigger = page.locator('[role="combobox"]').first();
-
-      if (await datetimeInput.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await datetimeInput.fill('2026-01-01T12:00');
-      } else {
-        await selectTrigger.click();
-        await page.waitForTimeout(300);
-        // Click the first option in the dropdown.
-        await page.locator('[role="option"]').first().click();
-      }
-      await page.waitForTimeout(500);
-      await page.locator('button', { hasText: 'Next' }).click();
-
-      // Step 3 — Tip.
-      await page.waitForTimeout(500);
-      await page.locator('button', { hasText: 'Next' }).click();
-      await expect(page.getByText('Select Payment Method')).toBeVisible({
-        timeout: 10000,
+      await expect(
+        page.locator('label[for^="order-type-"]').first()
+      ).toBeVisible({ timeout: 25000 });
+      await expect(page.getByText('Sign In', { exact: true })).toHaveCount(0, {
+        timeout: 45000,
       });
 
-      // Step 4 — Payment method: Monnify options should be visible.
+      // No manual / admin payment and no payment-method step for a customer.
       await expect(
         page.getByText(
           /manual payment|admin payment|cash on hand|admin checkout|price override/i
         )
-      ).not.toBeVisible();
-      await expect(page.getByText('Card Payment')).toBeVisible();
-      await expect(page.getByText('Bank Transfer')).toBeVisible();
-      await expect(page.getByText('USSD', { exact: true })).toBeVisible();
+      ).toHaveCount(0);
+      await expect(page.getByText('Select Payment Method')).toHaveCount(0);
+      await expect(page.locator('[name="paymentMethod"]')).toHaveCount(0);
+
+      // One Pay button starts the gateway.
       await expect(
-        page.getByText('Phone Number', { exact: true })
-      ).toBeVisible();
-      await expect(
-        page.getByText(/processed securely through Monnify/i)
-      ).toBeVisible();
-      await evidenceShot(page, 'REQ-084', 3, 'monnify-only-options');
+        page.getByRole('button', { name: 'Pay', exact: true })
+      ).toHaveCount(1);
+      await evidenceShot(page, 'REQ-084', 3, 'no-manual-payment-options');
     } finally {
       await cleanupMenuItem(menuItemId);
       await cleanupSeededCustomer(customer);

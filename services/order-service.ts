@@ -7,6 +7,7 @@ import { PriceHistoryService } from './price-history-service';
 import { deriveBusinessDate } from '@/lib/business-date';
 import { SystemSettingsService } from './system-settings-service';
 import MenuItemModel from '@/models/menu-item-model';
+import { StaffNotificationService } from '@/services/staff-notification-service';
 
 /**
  * Service for order CRUD operations
@@ -433,6 +434,11 @@ export class OrderService {
     const order = await Order.findByIdAndUpdate(orderId, updateData, {
       new: true,
     }).lean();
+
+    // REQ-122 — a paid customer order raises a staff alert (never throws).
+    if (order && paymentData.paymentStatus === 'paid') {
+      await StaffNotificationService.raiseForPaidOrder(order);
+    }
 
     return order;
   }

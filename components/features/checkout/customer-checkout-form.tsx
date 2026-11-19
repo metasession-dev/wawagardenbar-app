@@ -1,145 +1,91 @@
 /**
  * @requirement REQ-084 - Separate customer and admin checkout paths
- * @requirement REQ-CHECKOUT-001 - Multi-step checkout renders & validates per step
+ * @requirement REQ-121 - One-page customer checkout
+ * @requirement REQ-CHECKOUT-001 - Checkout form renders and validates (one page)
+ * @requirement REQ-CHECKOUT-014 - One page, single Pay, no stepper or info/tab/payment-method step
+ * @requirement REQ-CHECKOUT-015 - Name asked once only if missing; no email
+ * @requirement REQ-CHECKOUT-016 - Minimal fields per order type; saved address
+ * @requirement REQ-CHECKOUT-017 - Order type and table preselected from the link
+ * @requirement REQ-CHECKOUT-018 - Inline typed errors; closed hours block Pay
  * @requirement REQ-AUTHC-001 - Checkout requires the WhatsApp PIN sign-in (REQ-117)
  */
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from '@/lib/zod';
-import { requiredError } from '@/lib/validation/zod-errors';
 import { useCartStore } from '@/stores/cart-store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form } from '@/components/ui/form';
-import { useToast } from '@/hooks/use-toast';
-import { CustomerInfoStep } from './customer-info-step';
-import { OrderDetailsStep } from './order-details-step';
-import { PaymentMethodStep } from './payment-method-step';
-import { TipInputStep } from './tip-input-step';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
+import { OrderTypeFields } from './order-type-fields';
+import { InlineTip } from './inline-tip';
 import { OrderSummary } from './order-summary';
-import { OrderStatusDialog } from './order-status-dialog';
+import { BusinessHoursBanner } from './business-hours-banner';
 import {
   createOrder,
   initializePayment,
 } from '@/app/actions/payment/payment-actions';
-import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
+import {
+  getOrderingOptionsAction,
+  type OrderingOptions,
+} from '@/app/actions/ordering/ordering-options-actions';
 import { useAuth } from '@/hooks/use-auth';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Loader2 } from 'lucide-react';
+import type { PaymentMethod } from '@/interfaces/payment';
+import {
+  buildCheckoutSchema,
+  buildDeliveryInfo,
+  isPayBlockedByHours,
+  mapCheckoutError,
+  pickDefaultAddress,
+  resolveInitialOrderType,
+  type CheckoutFormValues,
+  type CheckoutOrderType,
+  type SavedAddressLike,
+} from '@/lib/checkout/checkout-rules';
 
-const checkoutSchema = z
-  .object({
-    customerName: z.string().min(2, 'Name must be at least 2 characters'),
-    customerEmail: z.string().email('Invalid email address'),
-    customerPhone: z
-      .string()
-      .min(10, 'Phone number must be at least 10 digits'),
-    orderType: z.enum(['dine-in', 'pickup', 'delivery']),
-    tableNumber: z.string().optional(),
-    pickupTime: z.string().optional(),
-    deliveryStreet: z.string().optional(),
-    deliveryStreet2: z.string().optional(),
-    deliveryCity: z.string().optional(),
-    deliveryState: z.string().optional(),
-    deliveryPostalCode: z.string().optional(),
-    deliveryCountry: z.string().optional(),
-    deliveryLandmark: z.string().optional(),
-    deliveryInstructions: z.string().optional(),
-    specialInstructions: z.string().optional(),
-    tipAmount: z.number().min(0).optional(),
-    tipPaymentMethod: z.enum(['cash', 'transfer', 'card']).optional(),
-    paymentMethod: z
-      .enum(['CARD', 'ACCOUNT_TRANSFER', 'USSD', 'PHONE_NUMBER'], {
-        error: requiredError('Please select a payment method'),
-      })
-      .optional(),
-    savePhone: z.boolean().optional(),
-    saveAddress: z.boolean().optional(),
-  })
-  .refine(
-    (data) => {
-      if (data.orderType === 'dine-in' && !data.tableNumber) return false;
-      return true;
-    },
-    {
-      message: 'Table number is required for dine-in orders',
-      path: ['tableNumber'],
-    }
-  )
-  .refine(
-    (data) => {
-      if (data.orderType === 'pickup' && !data.pickupTime) return false;
-      return true;
-    },
-    {
-      message: 'Pickup time is required for pickup orders',
-      path: ['pickupTime'],
-    }
-  )
-  .refine(
-    (data) => {
-      if (data.orderType === 'delivery' && !data.deliveryStreet) return false;
-      return true;
-    },
-    {
-      message: 'Street address is required for delivery orders',
-      path: ['deliveryStreet'],
-    }
-  )
-  .refine(
-    (data) => {
-      if (data.orderType === 'delivery' && !data.deliveryCity) return false;
-      return true;
-    },
-    { message: 'City is required for delivery orders', path: ['deliveryCity'] }
-  )
-  .refine(
-    (data) => {
-      if (data.orderType === 'delivery' && !data.deliveryState) return false;
-      return true;
-    },
-    {
-      message: 'State is required for delivery orders',
-      path: ['deliveryState'],
-    }
-  )
-  .refine(
-    (data) => {
-      if (data.orderType === 'delivery' && !data.deliveryCountry) return false;
-      return true;
-    },
-    {
-      message: 'Country is required for delivery orders',
-      path: ['deliveryCountry'],
-    }
-  )
-  .refine(
-    (data) => {
-      if ((data.tipAmount ?? 0) > 0 && !data.tipPaymentMethod) return false;
-      return true;
-    },
-    {
-      message: 'Please select how the tip will be paid',
-      path: ['tipPaymentMethod'],
-    }
-  );
-
-type CheckoutFormData = z.infer<typeof checkoutSchema>;
-
-// REQ-120 — customers always pay at checkout; there is no tab step.
-const steps = [
-  { id: 1, name: 'Customer Info', description: 'Your contact details' },
-  { id: 2, name: 'Order Details', description: 'Delivery or pickup info' },
-  { id: 3, name: 'Tip', description: 'Add a tip (optional)' },
-  { id: 4, name: 'Payment', description: 'Choose payment method' },
+/** Every method is offered; the provider's hosted page lets the customer choose. */
+const ALL_PAYMENT_METHODS: PaymentMethod[] = [
+  'CARD',
+  'ACCOUNT_TRANSFER',
+  'USSD',
+  'PHONE_NUMBER',
 ];
+
+const LAST_ORDER_TYPE_KEY = 'wgb:last-order-type';
+
+function readLastOrderType(): string | null {
+  try {
+    return window.localStorage.getItem(LAST_ORDER_TYPE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeLastOrderType(type: string): void {
+  try {
+    window.localStorage.setItem(LAST_ORDER_TYPE_KEY, type);
+  } catch {
+    // Private mode or blocked storage: the preselect is a convenience only.
+  }
+}
 
 export function CustomerCheckoutForm() {
   const router = useRouter();
-  const { toast } = useToast();
+  const searchParams = useSearchParams();
   const {
     items,
     getTotalPrice,
@@ -148,384 +94,316 @@ export function CustomerCheckoutForm() {
     hydrated: cartHydrated,
   } = useCartStore();
   const { user, isAuthenticated, isLoading: isLoadingUser } = useAuth();
-  const [currentStep, setCurrentStep] = useState(1);
+
+  const [options, setOptions] = useState<OrderingOptions | null>(null);
+  const [optionsLoaded, setOptionsLoaded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
-  const [isPreFilled, setIsPreFilled] = useState(false);
-  const [idempotencyKey, setIdempotencyKey] = useState<string>('');
-  const [isNavigating, setIsNavigating] = useState(false);
-  const [showStatusDialog, setShowStatusDialog] = useState(false);
-  const [orderStatus, setOrderStatus] = useState<{
-    status: 'success' | 'error';
-    title: string;
-    message: string;
-    redirectUrl?: string;
-    redirectLabel?: string;
-  } | null>(null);
+  const [rootError, setRootError] = useState<string | null>(null);
+  const [idempotencyKey, setIdempotencyKey] = useState('');
+  const [showNote, setShowNote] = useState(false);
+  const [useSavedAddress, setUseSavedAddress] = useState(true);
+  const preselected = useRef(false);
 
-  const form = useForm<CheckoutFormData>({
-    resolver: zodResolver(checkoutSchema),
+  // REQ-CHECKOUT-015: the name is asked once, and only when the account has
+  // none. Wait for the profile to load first (it arrives in its own request),
+  // and use `hasName`: `name` falls back to the email prefix.
+  const needsName =
+    isAuthenticated &&
+    !isLoadingUser &&
+    Boolean(user) &&
+    user?.hasName === false;
+  const schema = useMemo(() => buildCheckoutSchema({ needsName }), [needsName]);
+  const savedAddress = useMemo(
+    () =>
+      pickDefaultAddress<SavedAddressLike>(
+        (user?.addresses ?? []) as SavedAddressLike[]
+      ),
+    [user?.addresses]
+  );
+
+  const form = useForm<CheckoutFormValues>({
+    resolver: zodResolver(schema),
     defaultValues: {
-      customerName: '',
-      customerEmail: '',
-      customerPhone: '',
+      firstName: '',
       orderType: 'dine-in',
       tableNumber: '',
+      pickupMode: 'asap',
       pickupTime: '',
       deliveryStreet: '',
-      deliveryStreet2: '',
-      deliveryCity: '',
-      deliveryState: '',
-      deliveryPostalCode: '',
-      deliveryCountry: '',
       deliveryLandmark: '',
       deliveryInstructions: '',
       specialInstructions: '',
       tipAmount: 0,
-      savePhone: true,
-      saveAddress: true,
     },
   });
+  const orderType = form.watch('orderType') as CheckoutOrderType;
+  const tipAmount = form.watch('tipAmount') ?? 0;
 
   useEffect(() => {
-    if (isAuthenticated && user) {
-      const hasData = user.name || user.phone || user.email;
-      if (hasData) {
-        setIsPreFilled(true);
-        if (user.name) form.setValue('customerName', user.name);
-        if (user.email) form.setValue('customerEmail', user.email);
-        if (user.phone) form.setValue('customerPhone', user.phone);
-      }
-    }
-  }, [isAuthenticated, user, form]);
+    let cancelled = false;
+    getOrderingOptionsAction()
+      .then((res) => {
+        if (!cancelled && res.success && res.data) setOptions(res.data);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setOptionsLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
+  // REQ-CHECKOUT-017: preselect the order type and table once the options are known.
   useEffect(() => {
-    if (storeTableNumber) {
-      form.setValue('orderType', 'dine-in');
+    if (!optionsLoaded || preselected.current) return;
+    preselected.current = true;
+    const tableParam = searchParams.get('table')?.trim() || '';
+    const table = tableParam || storeTableNumber || '';
+    const type = resolveInitialOrderType({
+      typeParam: searchParams.get('type'),
+      hasTable: Boolean(table),
+      lastUsed: readLastOrderType(),
+      enabledTypes: options?.orderTypes ?? null,
+    });
+    form.setValue('orderType', type);
+    if (table) form.setValue('tableNumber', table);
+  }, [optionsLoaded, options, searchParams, storeTableNumber, form]);
+
+  // A table scanned after the page loaded still fills the field.
+  useEffect(() => {
+    if (storeTableNumber && !form.getValues('tableNumber')) {
       form.setValue('tableNumber', storeTableNumber);
     }
   }, [storeTableNumber, form]);
 
+  // REQ-CHECKOUT-016: the saved address is preselected for delivery.
   useEffect(() => {
-    if (orderStatus?.status === 'success') return;
+    if (orderType === 'delivery' && savedAddress && useSavedAddress) {
+      form.setValue('deliveryStreet', savedAddress.streetAddress);
+    }
+  }, [orderType, savedAddress, useSavedAddress, form]);
+
+  useEffect(() => {
+    if (isSubmitting || hasSubmitted) return;
     if (cartHydrated && items.length === 0) router.push('/menu');
-  }, [cartHydrated, items.length, router, orderStatus]);
+  }, [cartHydrated, items.length, router, isSubmitting, hasSubmitted]);
 
   useEffect(() => {
-    const key = `checkout-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
-    setIdempotencyKey(key);
+    setIdempotencyKey(
+      `checkout-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`
+    );
   }, []);
 
-  useEffect(() => {
-    return () => {
-      setHasSubmitted(false);
-      setIsSubmitting(false);
-    };
-  }, []);
+  const handleTipChange = useCallback(
+    (amount: number) => form.setValue('tipAmount', amount),
+    [form]
+  );
 
   if (items.length === 0) return null;
 
-  async function onSubmit(data: CheckoutFormData) {
-    if (isNavigating) return;
+  const closedBlocksPay = isPayBlockedByHours(
+    orderType,
+    options ? options.isOpenNow : null
+  );
+  const payDisabled =
+    isSubmitting || hasSubmitted || isLoadingUser || closedBlocksPay;
+
+  async function onSubmit(data: CheckoutFormValues) {
     if (isSubmitting || hasSubmitted) return;
     setIsSubmitting(true);
     setHasSubmitted(true);
+    setRootError(null);
+
+    const fail = (message: string) => {
+      setRootError(message);
+      setIsSubmitting(false);
+      setHasSubmitted(false);
+    };
 
     try {
       const orderResult = await createOrder({
         orderType: data.orderType,
         items,
-        customerInfo: {
-          name: data.customerName,
-          email: data.customerEmail,
-          phone: data.customerPhone,
-        },
+        customerInfo: needsName ? { name: data.firstName?.trim() } : undefined,
         deliveryInfo:
           data.orderType === 'delivery'
-            ? {
-                street: data.deliveryStreet || '',
-                street2: data.deliveryStreet2,
-                city: data.deliveryCity || '',
-                state: data.deliveryState || '',
-                postalCode: data.deliveryPostalCode || '',
-                country: data.deliveryCountry || '',
+            ? buildDeliveryInfo({
+                street: data.deliveryStreet ?? '',
                 landmark: data.deliveryLandmark,
                 instructions: data.deliveryInstructions,
-              }
+                saved: savedAddress,
+              })
             : undefined,
-        pickupTime: data.pickupTime,
-        tableNumber: data.tableNumber,
-        specialInstructions: data.specialInstructions,
+        pickupTime:
+          data.orderType === 'pickup' && data.pickupMode === 'later'
+            ? data.pickupTime
+            : undefined,
+        tableNumber:
+          data.orderType === 'dine-in' ? data.tableNumber?.trim() : undefined,
+        specialInstructions: data.specialInstructions?.trim() || undefined,
         tipAmount: data.tipAmount || 0,
-        tipPaymentMethod: data.tipPaymentMethod,
-        savePhone: data.savePhone,
-        saveAddress: data.saveAddress,
         idempotencyKey,
       });
 
       if (!orderResult.success || !orderResult.data) {
-        setOrderStatus({
-          status: 'error',
-          title: 'Order Failed',
-          message:
-            orderResult.message || 'Failed to create order. Please try again.',
-        });
-        setShowStatusDialog(true);
-        setIsSubmitting(false);
-        setHasSubmitted(false);
-        return;
-      }
-
-      const { orderId } = orderResult.data;
-
-      if (!data.paymentMethod) {
-        setOrderStatus({
-          status: 'error',
-          title: 'Payment Method Required',
-          message: 'Please select a payment method to continue.',
-        });
-        setShowStatusDialog(true);
-        setIsSubmitting(false);
-        setHasSubmitted(false);
+        // REQ-CHECKOUT-018: a typed error shows next to its field, or inline above Pay.
+        const mapped = mapCheckoutError(orderResult.code, orderResult.message);
+        if (mapped.field === 'root') {
+          fail(mapped.message);
+        } else {
+          form.setError(mapped.field, {
+            type: 'server',
+            message: mapped.message,
+          });
+          setIsSubmitting(false);
+          setHasSubmitted(false);
+        }
         return;
       }
 
       const paymentResult = await initializePayment({
-        orderId,
+        orderId: orderResult.data.orderId,
         amount: getTotalPrice() + (data.tipAmount || 0),
-        customerName: data.customerName,
-        customerEmail: data.customerEmail,
-        paymentMethods: [data.paymentMethod],
+        customerName: data.firstName?.trim() || user?.name,
+        paymentMethods: ALL_PAYMENT_METHODS,
       });
 
       if (!paymentResult.success || !paymentResult.data) {
-        setOrderStatus({
-          status: 'error',
-          title: 'Payment Initialization Failed',
-          message:
-            paymentResult.message ||
-            'Failed to initialize payment. Please try again.',
-        });
-        setShowStatusDialog(true);
-        setIsSubmitting(false);
-        setHasSubmitted(false);
+        fail(
+          paymentResult.message ||
+            'Failed to start the payment. Please try again.'
+        );
         return;
       }
 
+      writeLastOrderType(data.orderType);
       const { checkoutUrl } = paymentResult.data;
-
-      if (isAuthenticated && (data.savePhone || data.saveAddress)) {
-        toast({
-          title: 'Profile Updated',
-          description: 'Your information has been saved for future orders.',
-        });
-      }
-
       clearCart();
       setTimeout(() => {
         window.location.href = checkoutUrl;
       }, 500);
     } catch (error) {
       console.error('Checkout error:', error);
-      setOrderStatus({
-        status: 'error',
-        title: 'Unexpected Error',
-        message:
-          'An unexpected error occurred while processing your order. Please try again.',
-      });
-      setShowStatusDialog(true);
-      setIsSubmitting(false);
-      setHasSubmitted(false);
+      fail('Something went wrong while placing your order. Please try again.');
     }
-  }
-
-  async function handleNext() {
-    if (isNavigating) return;
-    setIsNavigating(true);
-
-    let fieldsToValidate: (keyof CheckoutFormData)[] = [];
-
-    if (currentStep === 1) {
-      fieldsToValidate = ['customerName', 'customerEmail', 'customerPhone'];
-    } else if (currentStep === 2) {
-      fieldsToValidate = ['orderType'];
-      const currentOrderType = form.getValues('orderType');
-      if (currentOrderType === 'delivery') {
-        fieldsToValidate.push(
-          'deliveryStreet',
-          'deliveryCity',
-          'deliveryState',
-          'deliveryCountry'
-        );
-      } else if (currentOrderType === 'pickup') {
-        fieldsToValidate.push('pickupTime');
-      } else if (currentOrderType === 'dine-in') {
-        fieldsToValidate.push('tableNumber');
-      }
-    } else if (currentStep === 3) {
-      fieldsToValidate = [];
-    } else if (currentStep === 4) {
-      fieldsToValidate = ['paymentMethod'];
-    }
-
-    const isValid =
-      fieldsToValidate.length === 0 || (await form.trigger(fieldsToValidate));
-
-    if (isValid && currentStep < steps.length) {
-      setCurrentStep(currentStep + 1);
-      setTimeout(() => setIsNavigating(false), 300);
-    } else {
-      setIsNavigating(false);
-    }
-  }
-
-  function handleBack() {
-    if (currentStep > 1) setCurrentStep(currentStep - 1);
   }
 
   return (
-    <div className="mx-auto max-w-6xl">
-      {/* Progress Steps */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between overflow-x-auto pb-2">
-          {steps.map((step, index) => (
-            <div key={step.id} className="flex flex-1 items-center min-w-0">
-              <div className="flex flex-col items-center">
-                <div
-                  className={`flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-full border-2 text-sm md:text-base ${
-                    currentStep >= step.id
-                      ? 'border-primary bg-primary text-primary-foreground'
-                      : 'border-muted-foreground text-muted-foreground'
-                  }`}
-                >
-                  {step.id}
-                </div>
-                <div className="mt-2 text-center">
-                  <p className="text-xs md:text-sm font-medium truncate max-w-[80px] md:max-w-none">
-                    {step.name}
-                  </p>
-                  <p className="text-xs text-muted-foreground hidden md:block">
-                    {step.description}
-                  </p>
-                </div>
-              </div>
-              {index < steps.length - 1 && (
-                <div
-                  className={`mx-2 md:mx-4 h-0.5 flex-1 min-w-[20px] ${
-                    currentStep > step.id ? 'bg-primary' : 'bg-muted'
-                  }`}
-                />
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
+    <div className="mx-auto max-w-6xl pb-28 lg:pb-0">
+      <BusinessHoursBanner />
 
       <Form {...form}>
-        <form
-          onSubmit={form.handleSubmit(onSubmit)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              e.stopPropagation();
-              if (isNavigating) return;
-              if (currentStep < steps.length) {
-                handleNext();
-              } else {
-                if (!isNavigating) form.handleSubmit(onSubmit)();
-              }
-            }
-          }}
-        >
+        <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
           <div className="grid gap-6 lg:grid-cols-3">
-            {/* Main Form */}
             <div className="lg:col-span-2">
               <Card>
                 <CardHeader>
-                  <CardTitle>{steps[currentStep - 1].name}</CardTitle>
+                  <CardTitle>Checkout</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {currentStep === 1 && isLoadingUser ? (
-                    <div className="space-y-4">
-                      <Skeleton className="h-10 w-full" />
-                      <Skeleton className="h-10 w-full" />
-                      <Skeleton className="h-10 w-full" />
-                      <Skeleton className="h-20 w-full" />
-                    </div>
-                  ) : (
-                    currentStep === 1 && (
-                      <CustomerInfoStep form={form} isPreFilled={isPreFilled} />
-                    )
-                  )}
-                  {currentStep === 2 && <OrderDetailsStep form={form} />}
-                  {currentStep === 3 && (
-                    <TipInputStep form={form} subtotal={getTotalPrice()} />
-                  )}
-                  {currentStep === 4 && <PaymentMethodStep form={form} />}
+                  {isLoadingUser && <Skeleton className="h-10 w-full" />}
 
-                  {/* Navigation Buttons */}
-                  <div className="flex justify-between pt-4">
+                  {needsName && (
+                    <FormField
+                      control={form.control}
+                      name="firstName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>First name</FormLabel>
+                          <FormControl>
+                            <Input
+                              autoComplete="given-name"
+                              placeholder="Your first name"
+                              {...field}
+                              value={field.value ?? ''}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  <OrderTypeFields
+                    form={form}
+                    enabledTypes={options?.orderTypes ?? null}
+                    pickupSlots={options?.pickupSlots ?? []}
+                    savedAddress={savedAddress}
+                    useSavedAddress={useSavedAddress}
+                    onUseSavedAddressChange={setUseSavedAddress}
+                  />
+
+                  <InlineTip
+                    subtotal={getTotalPrice()}
+                    onChange={handleTipChange}
+                  />
+
+                  {showNote ? (
+                    <FormField
+                      control={form.control}
+                      name="specialInstructions"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Note for the kitchen</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              rows={2}
+                              placeholder="Allergies, dietary requirements, other requests"
+                              {...field}
+                              value={field.value ?? ''}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ) : (
                     <Button
                       type="button"
-                      variant="outline"
-                      onClick={handleBack}
-                      disabled={currentStep === 1 || isSubmitting}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowNote(true)}
                     >
-                      <ArrowLeft className="mr-2 h-4 w-4" />
-                      Back
+                      Add a note
                     </Button>
-
-                    {currentStep < steps.length ? (
-                      <Button type="button" onClick={handleNext}>
-                        Next
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    ) : (
-                      <Button type="submit" disabled={isSubmitting}>
-                        {isSubmitting && (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        )}
-                        {isSubmitting ? 'Processing...' : 'Proceed to Payment'}
-                      </Button>
-                    )}
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
 
-            {/* Order Summary Sidebar */}
-            <div>
-              <OrderSummary
-                orderType={form.watch('orderType')}
-                tipAmount={form.watch('tipAmount')}
-                tipPaymentMethod={form.watch('tipPaymentMethod')}
-              />
+            <div className="space-y-4">
+              <OrderSummary orderType={orderType} tipAmount={tipAmount} />
+
+              <div className="fixed inset-x-0 bottom-0 z-20 space-y-3 border-t bg-background p-4 lg:static lg:border-0 lg:bg-transparent lg:p-0">
+                {rootError && (
+                  <Alert variant="destructive" data-testid="checkout-error">
+                    <AlertDescription>{rootError}</AlertDescription>
+                  </Alert>
+                )}
+                <Button
+                  type="submit"
+                  className="w-full"
+                  size="lg"
+                  disabled={payDisabled}
+                >
+                  {isSubmitting && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  {isSubmitting ? 'Processing...' : 'Pay'}
+                </Button>
+                {closedBlocksPay && (
+                  <p className="text-center text-xs text-muted-foreground">
+                    We are closed right now, so pickup and delivery orders
+                    cannot be paid.
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </form>
       </Form>
-
-      {/* Order Status Dialog */}
-      {orderStatus && (
-        <OrderStatusDialog
-          open={showStatusDialog}
-          onOpenChange={(open) => {
-            setShowStatusDialog(open);
-            if (!open) {
-              if (orderStatus?.status === 'success') {
-                clearCart();
-                router.push('/menu');
-              }
-              setOrderStatus(null);
-            }
-          }}
-          status={orderStatus.status}
-          title={orderStatus.title}
-          message={orderStatus.message}
-          redirectUrl={orderStatus.redirectUrl}
-          redirectLabel={orderStatus.redirectLabel}
-        />
-      )}
     </div>
   );
 }

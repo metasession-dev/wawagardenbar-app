@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-121",
+  "ac": 1,
+  "slug": "one-page-checkout",
+  "specFile": "e2e/critical/checkout-single-page.spec.ts",
+  "capturedAt": "2026-11-16T22:42:54.183Z"
+}

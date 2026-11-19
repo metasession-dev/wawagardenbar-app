@@ -22,6 +22,7 @@ import {
   deleteOrdersWithKeyPrefix,
 } from '../helpers/customer-order-seed';
 import { withMongo } from '../helpers/db-assertions';
+import { giveOwnClientIp } from '../helpers/checkout-page';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const PREFIX = `req120t-${Date.now().toString(36)}`;
@@ -75,6 +76,7 @@ test.describe('[REQ-120] customers cannot use tabs', () => {
     page,
   }) => {
     tagTest('REQ-120', 6);
+    await giveOwnClientIp(page.context());
     await page.addInitScript((id: string) => {
       window.localStorage.setItem(
         'wawa-cart-storage',
@@ -106,23 +108,25 @@ test.describe('[REQ-120] customers cannot use tabs', () => {
     await page.goto('/menu');
     await page.waitForLoadState('networkidle');
     await page.goto('/checkout');
-    await page.waitForSelector('input[name="customerName"]', {
-      timeout: 20000,
+    // REQ-121: one page; the order type selector is on it from the start.
+    await expect(page.locator('label[for^="order-type-"]').first()).toBeVisible(
+      { timeout: 25000 }
+    );
+    await expect(page.getByText('Sign In', { exact: true })).toHaveCount(0, {
+      timeout: 45000,
     });
 
-    // Four steps and none of them is a tab step.
+    // No tab step or option anywhere on the page.
     await expect(page.getByText('Payment Options')).toHaveCount(0);
     await expect(page.locator('label[for="new-tab"]')).toHaveCount(0);
     await expect(page.locator('label[for="existing-tab"]')).toHaveCount(0);
     await expect(page.getByText(/Open a New Tab|Add to Tab/i)).toHaveCount(0);
 
     // The order type selector has no "Pay Now" (staff Express only).
-    await page.locator('input[name="customerName"]').fill('E2E Customer');
-    await page.locator('input[name="customerEmail"]').fill('e2e@e2e.local');
-    await page.locator('input[name="customerPhone"]').fill('08011223344');
-    await page.locator('button', { hasText: 'Next' }).click();
-    await expect(page.locator('label[for="dine-in"]')).toBeVisible();
-    await expect(page.locator('label[for="pay-now"]')).toHaveCount(0);
+    await expect(page.locator('label[for="order-type-dine-in"]')).toBeVisible();
+    await expect(page.locator('label[for="order-type-pay-now"]')).toHaveCount(
+      0
+    );
     await evidenceShot(page, 'REQ-120', 6, 'checkout-no-tab-options');
   });
 

@@ -52,9 +52,10 @@ Once a customer messages the bar, Meta opens a **24-hour window** in which the b
 - 2 marketing rewards (`reward_earned`, `reward_expiring_soon`).
 - 3 Paystack (`payment_link`, `payment_confirmation`, `bank_transfer_details`).
 - 3 signup / inbound routing (`welcome_new_user`, `welcome_back`, `account_recovery`).
+- 1 internal staff alert (`staff_alert`, WA-12).
 - 1 already approved (`verification_pin`).
 
-**= 12 templates to submit + 1 already approved = 13 active.**
+**= 13 templates to submit + 1 already approved = 14 active.**
 
 ---
 
@@ -442,6 +443,35 @@ params = [originalPhoneLastFour]
 | `{{1}}` |
 | ------- |
 | `4567`  |
+
+---
+
+## 13. `staff_alert` — UTILITY
+
+**Sent when:** a staff notification (a paid customer order, a support message, later a booking or refund request) has waited past its rule's WhatsApp delay unacknowledged (REQ-122, WA-12). Sent to on-shift staff with a verified alert number, then to the escalation roles. It goes to staff only, never to customers.
+
+**Code mapping:**
+
+```
+body   = [label, reference, minutesWaiting]
+button = [dashboardPath]   // the URL button's own {{1}}, e.g. 'bookings/<id>' or 'orders/<id>'
+```
+
+| Field    | Value                                                                                                        |
+| -------- | ------------------------------------------------------------------------------------------------------------ |
+| Name     | `staff_alert`                                                                                                |
+| Category | **UTILITY**                                                                                                  |
+| Language | `en`                                                                                                         |
+| Header   | (none)                                                                                                       |
+| Body     | `Wawa Garden Bar alert: {{1}} {{2}} has been waiting {{3}} minutes. Please open the dashboard to handle it.` |
+| Footer   | (none)                                                                                                       |
+| Buttons  | URL: `Open` → `<environment base URL>/dashboard/{{1}}` (UAT and production each use their own base URL)      |
+
+**Examples:**
+
+| `{{1}}`               | `{{2}}`   | `{{3}}` | Button `{{1}}` (URL path)           |
+| --------------------- | --------- | ------- | ----------------------------------- |
+| `New booking request` | `BK-0042` | `12`    | `bookings/665a1b2c3d4e5f6a7b8c9d0e` |
 
 ---
 

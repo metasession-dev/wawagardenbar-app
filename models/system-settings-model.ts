@@ -11,7 +11,8 @@ export interface ISystemSettings {
     | 'expense-categories'
     | 'menu-categories'
     | 'staff-pot-config'
-    | 'units-of-measurement';
+    | 'units-of-measurement'
+    | 'staff-alert-rules';
   value: any;
   description?: string;
   updatedBy?: Types.ObjectId;
@@ -41,6 +42,7 @@ const systemSettingsSchema = new Schema<ISystemSettings>(
         'menu-categories',
         'staff-pot-config',
         'units-of-measurement',
+        'staff-alert-rules',
       ],
     },
     value: { type: Schema.Types.Mixed, required: true },

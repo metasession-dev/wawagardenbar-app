@@ -119,64 +119,37 @@ export async function signInWithWhatsApp(
   await page.waitForLoadState('networkidle');
 }
 
-async function next(page: Page): Promise<void> {
-  // The form ignores a second Next within 300 ms of the first.
-  await page.waitForTimeout(450);
-  await page.locator('button', { hasText: 'Next' }).click();
-}
-
-/** Four checkout steps; stops with the payment step showing, then submits. */
+/**
+ * REQ-121 — the one-page checkout: pick the order type, fill only what that
+ * type needs, press Pay. A newly signed-in account has no name, so the page
+ * asks for a first name once; pickup is "as soon as possible" by default.
+ */
 export async function completeCheckout(
   page: Page,
   type: JourneyOrderType,
   customer: { name: string; email: string; phone: string },
   tableNumber = 'T-E2E-120'
 ): Promise<void> {
-  await page.waitForSelector('input[name="customerName"]', { timeout: 20000 });
-  if (!(await page.locator('input[name="customerName"]').inputValue()))
-    await page.locator('input[name="customerName"]').fill(customer.name);
-  if (!(await page.locator('input[name="customerEmail"]').inputValue()))
-    await page.locator('input[name="customerEmail"]').fill(customer.email);
-  if (!(await page.locator('input[name="customerPhone"]').inputValue()))
-    await page.locator('input[name="customerPhone"]').fill(customer.phone);
-  await next(page);
-
-  await expect(page.locator('form').getByText('Order Details')).toBeVisible({
-    timeout: 10000,
+  // The session and profile load in their own requests; Pay waits for them.
+  await expect(page.getByText('Sign In', { exact: true })).toHaveCount(0, {
+    timeout: 45000,
   });
-  await page.locator(`label[for="${type}"]`).click();
+  await page.waitForLoadState('networkidle');
+  await expect(page.locator('label[for^="order-type-"]').first()).toBeVisible({
+    timeout: 20000,
+  });
+  await page.locator(`label[for="order-type-${type}"]`).click();
+
+  const firstName = page.locator('input[name="firstName"]');
+  if (await firstName.count()) {
+    await firstName.fill(customer.name.split(' ')[0] || 'E2E');
+  }
   if (type === 'dine-in') {
     await page.locator('input[name="tableNumber"]').fill(tableNumber);
-  } else if (type === 'pickup') {
-    const datetime = page.locator('input[type="datetime-local"]');
-    if (await datetime.isVisible({ timeout: 3000 }).catch(() => false)) {
-      const when = new Date(Date.now() + 2 * 60 * 60 * 1000);
-      await datetime.fill(when.toISOString().slice(0, 16));
-    } else {
-      await page.locator('[role="combobox"]').first().click();
-      await page.locator('[role="option"]').first().click();
-    }
-  } else {
+  } else if (type === 'delivery') {
     await page.locator('input[name="deliveryStreet"]').fill('12 Test Road');
-    await page.locator('input[name="deliveryCity"]').fill('Lagos');
-    await page.locator('input[name="deliveryState"]').fill('Lagos');
-    await page.locator('input[name="deliveryCountry"]').fill('Nigeria');
   }
-  await next(page);
-
-  // Tip, then payment method — there is no tab step.
-  await expect(page.getByText('Tip', { exact: true }).first()).toBeVisible({
-    timeout: 10000,
-  });
-  await next(page);
-  await expect(page.getByText('Select Payment Method')).toBeVisible({
-    timeout: 10000,
-  });
-  await page.getByText('Card Payment').click();
-  // The form silently ignores a submit within 300 ms of the last Next click
-  // (its navigation guard); a fast run raced it and no order was created.
-  await page.waitForTimeout(600);
-  await page.getByRole('button', { name: /Proceed to Payment/i }).click();
+  await page.getByRole('button', { name: 'Pay', exact: true }).click();
 }
 
 export async function findOrderForUser(

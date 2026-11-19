@@ -377,6 +377,46 @@ jobs:
           ENABLE_E2E_PIN_INTERCEPT: true
           WHATSAPP_APP_SECRET: e2e-whatsapp-app-secret
         run: npx playwright test --project=smoke --reporter=json,html
+
+      - name: Seed E2E test data (report-only)
+        if: always()
+        continue-on-error: true
+        env:
+          MONGODB_URI: mongodb://localhost:27017
+          MONGODB_DB_NAME: wawagardenbar_test
+          E2E_ADMIN_USERNAME: e2e-admin
+          E2E_ADMIN_PASSWORD: E2eTest@2026!
+          E2E_SUPER_ADMIN_USERNAME: e2e-superadmin
+          E2E_SUPER_ADMIN_PASSWORD: E2eTest@2026!
+          E2E_CSR_USERNAME: e2e-csr
+          E2E_CSR_PASSWORD: E2eTest@2026!
+          INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
+          MONNIFY_SECRET_KEY: ${{ secrets.MONNIFY_SECRET_KEY }}
+          PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
+          ENABLE_E2E_PIN_INTERCEPT: true
+          WHATSAPP_APP_SECRET: e2e-whatsapp-app-secret
+        run: npx tsx scripts/seed-e2e-admins.ts && npx tsx scripts/seed-food-menu.ts && npx tsx scripts/seed-drinks-menu.ts && npx tsx scripts/seed-inventory.ts && npx tsx scripts/seed-e2e-fixtures.ts
+
+      - name: Authenticated E2E (report-only)
+        if: always()
+        continue-on-error: true
+        env:
+          PLAYWRIGHT_HTML_REPORTER_OPEN: never
+          PLAYWRIGHT_JSON_OUTPUT_NAME: e2e-auth-results.json
+          MONGODB_URI: mongodb://localhost:27017
+          MONGODB_DB_NAME: wawagardenbar_test
+          E2E_ADMIN_USERNAME: e2e-admin
+          E2E_ADMIN_PASSWORD: E2eTest@2026!
+          E2E_SUPER_ADMIN_USERNAME: e2e-superadmin
+          E2E_SUPER_ADMIN_PASSWORD: E2eTest@2026!
+          E2E_CSR_USERNAME: e2e-csr
+          E2E_CSR_PASSWORD: E2eTest@2026!
+          INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
+          MONNIFY_SECRET_KEY: ${{ secrets.MONNIFY_SECRET_KEY }}
+          PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
+          ENABLE_E2E_PIN_INTERCEPT: true
+          WHATSAPP_APP_SECRET: e2e-whatsapp-app-secret
+        run: npx playwright test --project=smoke --project=critical --reporter=json,html
       # ── Gate 5: Build ──
 
       - name: Build Check

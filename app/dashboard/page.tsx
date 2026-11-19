@@ -22,6 +22,7 @@ import {
 } from '@/lib/order-type-labels';
 
 import { hasAnyRole } from '@/lib/session';
+import { NeedsAttentionPanel } from '@/components/features/admin/needs-attention-panel';
 export const dynamic = 'force-dynamic';
 
 /**
@@ -317,6 +318,9 @@ export default async function DashboardPage() {
           Welcome back! Here's what's happening today.
         </p>
       </div>
+
+      {/* REQ-122 — items waiting for a person */}
+      <NeedsAttentionPanel />
 
       {/* Key Metrics */}
       <Suspense fallback={<MetricsSkeleton />}>

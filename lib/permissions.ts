@@ -42,6 +42,9 @@ export const routePermissions: Record<string, UserRole[]> = {
   // The forbidden page is where proxy.ts sends a staff member who lacks a
   // route; it must be reachable by every staff role or the redirect loops.
   '/dashboard/forbidden': ['csr', 'kitchen', 'manager', 'admin', 'super-admin'],
+  // REQ-122 — every staff member verifies their own alert number here,
+  // kitchen included, so it lists all staff roles.
+  '/dashboard/account': ['csr', 'kitchen', 'manager', 'admin', 'super-admin'],
   '/dashboard/menu': ['admin', 'super-admin'],
   '/dashboard/orders': ['csr', 'kitchen', 'manager', 'admin', 'super-admin'],
   // Staff-only order sub-areas that a kitchen-only member must not reach.

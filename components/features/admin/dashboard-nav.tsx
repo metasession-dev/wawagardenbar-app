@@ -22,6 +22,7 @@ import {
   ChefHat,
   Boxes,
   AlertTriangle,
+  UserCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -146,6 +147,13 @@ const navItems: NavItem[] = [
     icon: AlertTriangle,
     roles: ['csr', 'manager', 'admin', 'super-admin'],
     permission: 'incidentsAccess',
+  },
+  {
+    // REQ-122 — own WhatsApp alert number and verification; every staff role.
+    title: 'My account',
+    href: '/dashboard/account',
+    icon: UserCircle,
+    roles: ['csr', 'kitchen', 'manager', 'admin', 'super-admin'],
   },
   {
     title: 'Settings',

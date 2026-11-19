@@ -46,6 +46,7 @@ import { NotificationService } from '@/services/notification-service';
 import { WhatsAppService } from '@/lib/whatsapp';
 import { INBOUND_WELCOME_TEMPLATE } from '@/lib/whatsapp-inbound-templates';
 import { normalizePhone, phoneLookupVariants } from '@/lib/auth-utils';
+import { STAFF_ROLES } from '@/interfaces/user.interface';
 import { SettingsService } from '@/services/settings-service';
 import {
   accountRecoveryParams,
@@ -72,6 +73,9 @@ const OPT_OUT_CONFIRMATION_TEXT =
   "You've been unsubscribed from WhatsApp offers and promotions. " +
   "You'll still receive messages about your orders and bookings. " +
   'Reply START to resubscribe.';
+// REQ-122 — the only reply a verified staff alert number gets.
+export const STAFF_NUMBER_REPLY_TEXT =
+  'Thanks, please open the dashboard to handle alerts.';
 const OPT_IN_CONFIRMATION_TEXT =
   "You're subscribed to WhatsApp offers and promotions. " +
   'Reply STOP at any time to unsubscribe.';
@@ -322,6 +326,21 @@ export class WhatsAppInboundService {
       return 'rate_limited';
     }
 
+    // REQ-122 (REQ-WA-015) — a verified staff alert number is not a customer:
+    // no welcome, no ticket and no account. It gets one fixed reply.
+    try {
+      if (await this.isVerifiedStaffAlertNumber(from)) {
+        await WhatsAppService.sendTextMessage(from, STAFF_NUMBER_REPLY_TEXT);
+        await this.finalise(messageId, 'active', null, 'staff_number_ack');
+        return 'staff_number';
+      }
+    } catch (error) {
+      console.error(
+        '[WhatsAppInbound] staff-number check failed:',
+        error instanceof Error ? error.message : String(error)
+      );
+    }
+
     try {
       const classified = await this.classifyCustomerState(from);
       state = classified.state;
@@ -545,6 +564,18 @@ export class WhatsAppInboundService {
   }
 
   /** Writes the routing outcome onto the row inserted at the start of handle(). */
+  /** REQ-122 — true only for a staff account's *verified* alert number. */
+  static async isVerifiedStaffAlertNumber(from: string): Promise<boolean> {
+    const variants = phoneLookupVariants(from);
+    if (variants.length === 0) return false;
+    const staff = await UserModel.exists({
+      alertPhone: { $in: variants },
+      alertPhoneVerified: true,
+      roles: { $in: [...STAFF_ROLES] },
+    });
+    return Boolean(staff);
+  }
+
   private static async finalise(
     messageId: string,
     state: IncomingCustomerState,

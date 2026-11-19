@@ -21,6 +21,8 @@ import {
 // Helpers
 // ---------------------------------------------------------------------------
 
+import { giveOwnClientIp } from './helpers/checkout-page';
+
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const seededCustomers: SeededCustomerForSession[] = [];
 
@@ -461,13 +463,18 @@ test.describe('Section 9: Checkout & Payment', () => {
     await page.waitForLoadState('networkidle');
   });
 
-  test('checkout with seeded cart shows multi-step form', async ({ page }) => {
+  // REQ-121: the customer checkout is one page, not a stepper.
+  test('checkout with seeded cart shows one page (no stepper)', async ({
+    page,
+  }) => {
     await seedCart(page);
+    await giveOwnClientIp(page.context());
     await page.goto('/checkout');
-    await page.waitForLoadState('networkidle');
-    const body = await page.textContent('body');
-    // Should show step indicators or customer info step
-    expect(body).toMatch(/Customer Info|Step|order|checkout/i);
+    await expect(page.locator('label[for^="order-type-"]').first()).toBeVisible(
+      { timeout: 25000 }
+    );
+    await expect(page.getByText(/Customer Info|Step \d/i)).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /^Next$/ })).toHaveCount(0);
   });
 
   test('checkout displays cart items and totals', async ({ page }) => {
@@ -479,24 +486,29 @@ test.describe('Section 9: Checkout & Payment', () => {
     expect(body).toMatch(/Jollof Rice|Chapman|3,500|1,500|8,500/);
   });
 
-  test('checkout form has customer info fields (name, email, phone)', async ({
+  test('checkout asks for no email or phone (they come from the account)', async ({
     page,
   }) => {
     await seedCart(page);
+    await giveOwnClientIp(page.context());
     await page.goto('/checkout');
-    await page.waitForLoadState('networkidle');
-    const body = await page.textContent('body');
-    // First step should be customer info
-    expect(body).toMatch(/name|email|phone/i);
+    await expect(page.locator('label[for^="order-type-"]').first()).toBeVisible(
+      { timeout: 25000 }
+    );
+    await expect(page.locator('[name="customerEmail"]')).toHaveCount(0);
+    await expect(page.locator('[name="customerPhone"]')).toHaveCount(0);
   });
 
-  test('checkout shows navigation buttons (Back/Next)', async ({ page }) => {
+  test('checkout shows a single Pay button instead of Back/Next', async ({
+    page,
+  }) => {
     await seedCart(page);
+    await giveOwnClientIp(page.context());
     await page.goto('/checkout');
-    await page.waitForLoadState('networkidle');
-    // Should have a Next button for advancing steps
-    const nextBtn = page.locator('button', { hasText: /Next/i });
-    await expect(nextBtn).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Pay', exact: true })
+    ).toBeVisible({ timeout: 25000 });
+    await expect(page.locator('button', { hasText: /^Next$/ })).toHaveCount(0);
   });
 });
 

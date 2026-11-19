@@ -15,10 +15,9 @@ interface OrderSummaryProps {
   orderType: 'dine-in' | 'pickup' | 'delivery' | 'pay-now';
   onRewardApplied?: (rewardId: string, discount: number) => void;
   onPointsApplied?: (points: number, discount: number) => void;
-  // REQ-036 — display the running tip line. Threaded from CheckoutForm
-  // via form.watch('tipAmount' / 'tipPaymentMethod').
+  // REQ-036 — display the running tip line. Threaded from the checkout form.
+  // REQ-121: customers no longer choose a tip payment method.
   tipAmount?: number;
-  tipPaymentMethod?: 'cash' | 'transfer' | 'card';
 }
 
 export function OrderSummary({
@@ -26,7 +25,6 @@ export function OrderSummary({
   onRewardApplied,
   onPointsApplied,
   tipAmount = 0,
-  tipPaymentMethod,
 }: OrderSummaryProps) {
   const { items, getTotalPrice, getTotalItems } = useCartStore();
   const [appliedReward, setAppliedReward] = useState<
@@ -232,24 +230,10 @@ export function OrderSummary({
             </div>
           )}
 
-          {/* REQ-036 — tip line in the running summary, with method
-              suffix when chosen. Hidden when no tip. */}
+          {/* REQ-036 / REQ-121 — tip line in the running summary. Hidden when no tip. */}
           {tipForTotal > 0 && (
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">
-                Tip
-                {tipPaymentMethod && (
-                  <span className="ml-1 text-xs">
-                    (via{' '}
-                    <span className="capitalize">
-                      {tipPaymentMethod === 'card'
-                        ? 'POS / Card'
-                        : tipPaymentMethod}
-                    </span>
-                    )
-                  </span>
-                )}
-              </span>
+              <span className="text-muted-foreground">Tip</span>
               <span>{formatPrice(tipForTotal)}</span>
             </div>
           )}

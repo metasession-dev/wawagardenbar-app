@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-118",
+  "ac": 3,
+  "slug": "urgent-ticket-with-sla",
+  "specFile": "e2e/critical/whatsapp-support-thread.spec.ts",
+  "capturedAt": "2026-11-13T06:52:00.418Z"
+}

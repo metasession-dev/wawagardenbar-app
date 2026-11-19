@@ -746,6 +746,22 @@ for FILE in "${FILES[@]}"; do
     fi
   fi
 
+  # TEMPORARY LOCAL PATCH (DevAudit-Installer#1271) — remove when the
+  # upstream fix is synced (a `devaudit update` overwrites this file).
+  # The portal rejects a 20+ MB multipart body at any size (above or below
+  # the presigned threshold) and issues no presigned URL, so the Playwright
+  # HTML report cannot upload by either route. e2e-results.json and the
+  # per-AC screenshots are the canonical evidence, so skip the HTML report
+  # with a warning instead of failing the pipeline (the E2E Regression path
+  # already treats it this way).
+  if [ "$EVIDENCE_TYPE" = "e2e_report" ] && { [ "$HTTP_CODE" = "400" ] || [ "$HTTP_CODE" = "413" ]; }; then
+    rm -f "$RESP_BODY_FILE" "$RESP_HEADERS_FILE"
+    echo "SKIPPED (HTTP ${HTTP_CODE} at ${FILE_SIZE} bytes, no presigned URL; see DevAudit-Installer#1271)"
+    echo "::warning::${FILENAME} not uploaded: portal rejected ${FILE_SIZE} bytes (HTTP ${HTTP_CODE}) and returned no presigned URL. Non-blocking temporary patch, DevAudit-Installer#1271."
+    SKIPPED=$((SKIPPED + 1))
+    continue
+  fi
+
   if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
     rm -f "$RESP_BODY_FILE" "$RESP_HEADERS_FILE"
     if [ "$ATTEMPT" -gt 1 ]; then

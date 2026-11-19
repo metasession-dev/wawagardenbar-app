@@ -41,6 +41,7 @@ import {
   signInWithWhatsApp,
   type JourneyOrderType,
 } from '../helpers/customer-journey';
+import { giveOwnClientIp } from '../helpers/checkout-page';
 
 const PRICES = [4000, 3000];
 const SETTING_KEYS = [
@@ -94,16 +95,21 @@ test.describe('[REQ-120] customer journey from the home page to a paid order', (
       const { phone, digits } = uniquePhone();
       await dismissCookieBanner(page);
       await blockGatewayNavigation(context);
+      // The auth endpoints allow 5 requests a minute per IP; each stage of the
+      // journey loads several pages, so each gets its own client IP.
+      await giveOwnClientIp(context);
 
       try {
         // Home → menu → cart.
         await browseAndFillCart(page, itemIds, 1);
 
         // Checkout is gated by the WhatsApp sign-in (no guest checkout).
+        await giveOwnClientIp(context);
         await proceedToCheckoutExpectSignIn(page);
         await evidenceShot(page, 'REQ-120', 1, `journey-${type}-signin`, {
           tier: 'feature',
         });
+        await giveOwnClientIp(context);
         await signInWithWhatsApp(page, phone, digits);
 
         // Back on checkout with both items still in the cart.

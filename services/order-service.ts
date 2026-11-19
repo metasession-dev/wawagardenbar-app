@@ -593,14 +593,7 @@ export class OrderService {
 
     if (order.origin === 'customer') {
       // Customer orders only reach the kitchen once paid (REQ-KITCHEN-009).
-      try {
-        const { emitOrderCreatedEvent } = await import(
-          '@/lib/socket-emit-helper'
-        );
-        await emitOrderCreatedEvent(order);
-      } catch (error) {
-        console.error('markOrderPaid: kitchen emit failed', orderIdStr, error);
-      }
+      await OrderService.emitPaidOrderToKitchen(order);
 
       await OrderService.sendPaymentConfirmationMessages(order, {
         pointsEarned,
@@ -609,6 +602,66 @@ export class OrderService {
     }
 
     return { order, firstTime: true };
+  }
+
+  /**
+   * REQ-123 (AC4) — the kitchen event for a customer order, emitted once when
+   * it is paid: `kitchen:new-order` (the kitchen display) and `order:created`
+   * (the orders dashboard). Never throws.
+   */
+  private static async emitPaidOrderToKitchen(order: IOrder): Promise<void> {
+    try {
+      let customer: { name: string; email?: string; phone?: string } = {
+        name: '',
+      };
+      if (order.userId) {
+        try {
+          const { default: UserModel } = await import('@/models/user-model');
+          const user = await UserModel.findById(order.userId)
+            .select('name email phone')
+            .lean<{ name?: string; email?: string; phone?: string }>();
+          customer = {
+            name: user?.name ?? '',
+            email: user?.email ?? '',
+            phone: user?.phone ?? '',
+          };
+        } catch {
+          // the card shows without the customer's name rather than not at all
+        }
+      }
+      const { emitNewOrder } = await import('@/lib/socket-server');
+      emitNewOrder({
+        orderId: String(order._id),
+        orderNumber: order.orderNumber,
+        orderType: order.orderType,
+        itemCount: (order.items ?? []).length,
+        total: order.total,
+        items: (order.items ?? []).map((item) => ({
+          menuItemId: item.menuItemId?.toString(),
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          portionSize: item.portionSize,
+          subtotal: item.subtotal,
+          customizations: item.customizations || [],
+        })),
+        customer,
+        status: order.status,
+        createdAt: new Date(
+          (order.createdAt as unknown as string) ?? Date.now()
+        ).toISOString(),
+      });
+      const { emitOrderCreatedEvent } = await import(
+        '@/lib/socket-emit-helper'
+      );
+      await emitOrderCreatedEvent(order);
+    } catch (error) {
+      console.error(
+        'markOrderPaid: kitchen emit failed',
+        String(order._id),
+        error
+      );
+    }
   }
 
   /**

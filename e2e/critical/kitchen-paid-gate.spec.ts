@@ -88,10 +88,12 @@ test.describe('[REQ-123] paid-only kitchen gate', () => {
   }) => {
     tagTest('REQ-123', 5);
     await page.goto('/dashboard/kitchen-display');
-    await page.waitForLoadState('networkidle');
+    await expect(
+      page.getByRole('heading', { name: 'Kitchen Display' })
+    ).toBeVisible();
 
     const card = (n: string) =>
-      page.locator(`[data-testid="order-card"][data-order-number="${n}"]`);
+      page.getByRole('heading', { name: n, exact: true });
     await expect(card(staffExpress.orderNumber)).toBeVisible();
     await expect(card(paidCustomer.orderNumber)).toBeVisible();
     await expect(card(unpaidCustomer.orderNumber)).toHaveCount(0);
@@ -103,11 +105,11 @@ test.describe('[REQ-123] paid-only kitchen gate', () => {
   }) => {
     tagTest('REQ-123', 5);
     await page.goto('/dashboard/kitchen-display');
-    await page.waitForLoadState('networkidle');
     await expect(
-      page.locator(
-        `[data-testid="order-card"][data-order-number="${tabOrder.orderNumber}"]`
-      )
+      page.getByRole('heading', { name: 'Kitchen Display' })
+    ).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: tabOrder.orderNumber, exact: true })
     ).toBeVisible();
     const row = await withMongo<any>((db) =>
       db.collection('orders').findOne({ _id: tabOrder._id })
@@ -121,7 +123,9 @@ test.describe('[REQ-123] paid-only kitchen gate', () => {
   }) => {
     tagTest('REQ-123', 5);
     await page.goto('/dashboard/orders');
-    await page.waitForLoadState('networkidle');
+    await expect(
+      page.getByRole('heading', { name: 'Orders Dashboard' })
+    ).toBeVisible();
     await expect(
       page.getByText(staffExpress.orderNumber).first()
     ).toBeVisible();
@@ -129,7 +133,6 @@ test.describe('[REQ-123] paid-only kitchen gate', () => {
 
     await page.getByTestId('awaiting-payment-filter').click();
     await page.waitForURL(/view=awaiting-payment/);
-    await page.waitForLoadState('networkidle');
     await expect(
       page.getByText(unpaidCustomer.orderNumber).first()
     ).toBeVisible();

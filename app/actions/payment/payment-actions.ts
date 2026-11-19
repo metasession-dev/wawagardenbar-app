@@ -24,7 +24,6 @@ import {
   PaymentMethod,
 } from '@/interfaces/payment';
 import { CartItem } from '@/stores/cart-store';
-import { emitNewOrder } from '@/lib/socket-server';
 import { revalidatePath } from 'next/cache';
 import { paymentEmailFor } from '@/lib/checkout/checkout-rules';
 import { OrderService } from '@/services/order-service';
@@ -165,37 +164,10 @@ export async function createOrder(input: CreateOrderInput): Promise<{
 
     // REQ-121: phone and email come from the verified account, not the form.
     const account = await UserService.getUserProfile(userId).catch(() => null);
-    const customerName =
-      account?.name?.trim() || input.customerInfo?.name?.trim() || '';
 
-    // Emit new order to kitchen via WebSocket
-    try {
-      emitNewOrder({
-        orderId,
-        orderNumber: order.orderNumber,
-        orderType: order.orderType,
-        itemCount: order.items.length,
-        total: order.total,
-        items: order.items.map((item: any) => ({
-          menuItemId: item.menuItemId?.toString(),
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          portionSize: item.portionSize,
-          subtotal: item.subtotal,
-          customizations: item.customizations || [],
-        })),
-        customer: {
-          name: customerName,
-          email: account?.email ?? '',
-          phone: account?.phone ?? '',
-        },
-        status: order.status,
-        createdAt: new Date(order.createdAt).toISOString(),
-      });
-    } catch (socketError) {
-      console.error('Error emitting new order socket event:', socketError);
-    }
+    // REQ-123 (AC4, AC5): a customer order reaches the kitchen only after
+    // Paystack confirms payment, so nothing is emitted here; `markOrderPaid`
+    // emits the kitchen event once, when the order is paid.
 
     // Revalidate kitchen display (full-screen order grid for kitchen staff).
     revalidatePath('/dashboard/kitchen-display');

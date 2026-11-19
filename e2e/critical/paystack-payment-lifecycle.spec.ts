@@ -135,9 +135,9 @@ test.describe('[REQ-123] Paystack payment lifecycle', () => {
     try {
       const kitchen = await connectClient(baseUrl());
       sockets.push(kitchen);
-      kitchen.emit('join-kitchen');
-      const created: Array<{ order?: { orderNumber?: string } }> = [];
-      kitchen.on('order-created', (p) => created.push(p));
+      kitchen.emit('kitchen:subscribe');
+      const created: Array<{ orderNumber?: string }> = [];
+      kitchen.on('kitchen:new-order', (p) => created.push(p));
       await new Promise((r) => setTimeout(r, 300));
 
       const res = await postPaystackWebhook(
@@ -175,9 +175,7 @@ test.describe('[REQ-123] Paystack payment lifecycle', () => {
       );
 
       await new Promise((r) => setTimeout(r, 1500));
-      const mine = created.filter(
-        (e) => e.order?.orderNumber === order.orderNumber
-      );
+      const mine = created.filter((e) => e.orderNumber === order.orderNumber);
       expect(mine).toHaveLength(1);
     } finally {
       disconnectAll(sockets);

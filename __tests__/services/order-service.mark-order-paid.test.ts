@@ -28,6 +28,17 @@ vi.mock('@/services/staff-notification-service', () => ({
   StaffNotificationService: { raiseForPaidOrder },
 }));
 const emitOrderCreatedEvent = vi.hoisted(() => vi.fn());
+const emitNewOrder = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/socket-server', () => ({ emitNewOrder }));
+vi.mock('@/models/user-model', () => ({
+  default: {
+    findById: () => ({
+      select: () => ({
+        lean: async () => ({ name: 'Ada', email: 'a@b.co', phone: '+234801' }),
+      }),
+    }),
+  },
+}));
 vi.mock('@/lib/socket-emit-helper', () => ({ emitOrderCreatedEvent }));
 const calculateReward = vi.hoisted(() => vi.fn());
 vi.mock('@/services/rewards-service', () => ({
@@ -88,6 +99,12 @@ describe('REQ-123 AC4: markOrderPaid', () => {
 
     expect(result.firstTime).toBe(true);
     expect(raiseForPaidOrder).toHaveBeenCalledOnce();
+    expect(emitNewOrder).toHaveBeenCalledOnce();
+    expect(emitNewOrder.mock.calls[0][0]).toMatchObject({
+      orderId: ORDER_ID,
+      orderNumber: 'WG2611190007',
+      customer: { name: 'Ada' },
+    });
     expect(emitOrderCreatedEvent).toHaveBeenCalledOnce();
     expect(send).toHaveBeenCalledTimes(2);
     expect(send.mock.calls[0][0]).toMatchObject({
@@ -128,6 +145,7 @@ describe('REQ-123 AC4: markOrderPaid', () => {
     expect(result.firstTime).toBe(false);
     expect(raiseForPaidOrder).not.toHaveBeenCalled();
     expect(emitOrderCreatedEvent).not.toHaveBeenCalled();
+    expect(emitNewOrder).not.toHaveBeenCalled();
     expect(send).not.toHaveBeenCalled();
     expect(calculateReward).not.toHaveBeenCalled();
   });
@@ -143,6 +161,7 @@ describe('REQ-123 AC4: markOrderPaid', () => {
 
     expect([a.firstTime, b.firstTime].sort()).toEqual([false, true]);
     expect(emitOrderCreatedEvent).toHaveBeenCalledOnce();
+    expect(emitNewOrder).toHaveBeenCalledOnce();
     expect(send).toHaveBeenCalledTimes(2);
     expect(raiseForPaidOrder).toHaveBeenCalledOnce();
   });
@@ -194,6 +213,9 @@ describe('REQ-123 AC4: markOrderPaid', () => {
   it('a failing side effect never breaks payment confirmation', async () => {
     raiseForPaidOrder.mockRejectedValue(new Error('alert down'));
     emitOrderCreatedEvent.mockRejectedValue(new Error('socket down'));
+    emitNewOrder.mockImplementation(() => {
+      throw new Error('socket down');
+    });
     send.mockRejectedValue(new Error('meta down'));
     calculateReward.mockRejectedValue(new Error('rewards down'));
     wins(customerOrder());

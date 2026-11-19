@@ -38,7 +38,11 @@ on:
   # release branch, post_deploy_full_regression after a successful production
   # deployment, scheduled_full_regression on a schedule; manual dispatch always.
   pull_request:
-    branches: [main]
+    branches: [main] # critical-tier gate before merge (release_gate_tier)
+  deployment_status:
+    types: [created] # full regression only after a successful production deploy
+  schedule:
+    - cron: '0 3 * * *' # nightly full regression on the default branch (early signal only)
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -247,9 +251,9 @@ jobs:
           EVENT="${{ github.event_name }}"
           case "$EVENT" in
             pull_request)
-              echo "project=regression" >> "$GITHUB_OUTPUT"
-              echo "Using the full tier"
-              echo "tier=full" >> "$GITHUB_OUTPUT"
+              echo "project=critical" >> "$GITHUB_OUTPUT"
+              echo "Using the critical tier"
+              echo "tier=critical" >> "$GITHUB_OUTPUT"
               echo "specs=" >> "$GITHUB_OUTPUT"
               ;;
             deployment_status|schedule)
@@ -418,7 +422,7 @@ jobs:
       # revert, or accept-with-recorded-rationale).
       # ─────────────────────────────────────────────────────────────────
       - name: Open hotfix issue on post-merge regression
-        if: failure() && github.event_name == 'deployment_status' && github.event.deployment_status.state == 'success'
+        if: failure() && ((github.event_name == 'deployment_status' && github.event.deployment_status.state == 'success') || github.event_name == 'schedule')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

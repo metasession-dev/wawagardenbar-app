@@ -95,3 +95,26 @@ describe('REQ-115 D17 — code 100 mapping', () => {
     );
   });
 });
+
+describe('REQ-123 AC8 — a template Meta has not approved is reported as TEMPLATE_NOT_FOUND', () => {
+  it('[AC8] code 132001 (template does not exist in the translation) maps to TEMPLATE_NOT_FOUND', async () => {
+    fetchMock.mockResolvedValue({
+      ok: false,
+      json: async () => ({
+        error: {
+          message: '(#132001) Template name does not exist in the translation',
+          type: 'OAuthException',
+          code: 132001,
+          fbtrace_id: 'trace-2',
+        },
+      }),
+    });
+    const result = await WhatsAppService.sendMessage(
+      '+2348012345678',
+      'order_confirmation',
+      { bodyParams: ['1234', '₦5,500', '25 minutes'] }
+    );
+    expect(result.success).toBe(false);
+    expect(result.errorCode).toBe('TEMPLATE_NOT_FOUND');
+  });
+});

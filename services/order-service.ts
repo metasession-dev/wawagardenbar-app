@@ -700,6 +700,7 @@ export class OrderService {
         .slice(0, 300);
       const receipt = receiptParams({
         orderNumber: order.orderNumber,
+        orderId: String(order._id),
         itemsList,
         total,
         paymentMethod: ctx.paymentMethod

@@ -205,7 +205,13 @@ export class WhatsAppService {
           };
         }
 
-        if (errorData.error.code === 131047) {
+        // 132001 — "Template name does not exist in the translation": what Meta
+        // answers for a template that is PENDING or missing on this account
+        // (REQ-123, found on UAT). 131047 is kept for the older mapping.
+        if (
+          errorData.error.code === 132001 ||
+          errorData.error.code === 131047
+        ) {
           return {
             success: false,
             message: 'Message template not found or not approved',

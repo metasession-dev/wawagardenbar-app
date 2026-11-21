@@ -1,6 +1,6 @@
 /**
  * @requirement REQ-124 — Order status notifications and signed tracking links (WA-08, #970)
- * @requirement SRS REQ-ORDER-007, REQ-ORDER-008, REQ-ORDER-001
+ * @requirement SRS REQ-ORDER-007, REQ-ORDER-008, REQ-ORDER-001, REQ-ORDMGT-020
  *
  * AC1: staff move a customer order to a new status and the customer gets an
  *      `order_status_update_v2` message, once per status; staff orders never
@@ -8,11 +8,12 @@
  *      NotificationLog row (template, params, mode), not delivery.
  * AC3: `/orders/[orderId]` and the socket `join-order` event need the
  *      signed-in owner or a valid tracking token; everyone else gets a 404.
+ * AC7: staff move a ready delivery order out-for-delivery, delivered, then
+ *      completed from the dashboard order card; each step messages the
+ *      customer (AC1) and only delivery orders are offered those steps.
  *
- * Statuses a customer is told about that staff cannot set yet
- * (`out-for-delivery`, `delivered`, `confirmed`) are covered by the unit test
- * `__tests__/services/order-status-notifier.test.ts`: the dashboard's
- * transition table does not offer them (see the REQ-124 evidence summary).
+ * `confirmed` is set by payment, not by staff, so its message is covered by
+ * the unit test `__tests__/services/order-status-notifier.test.ts`.
  */
 import { test, expect, type Page } from '@playwright/test';
 import path from 'path';
@@ -59,6 +60,13 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || '';
 const ADMIN_FILE = path.join(__dirname, '../../.auth/admin.json');
 const TEMPLATE = 'order_status_update_v2';
+
+/** The dashboard order card that carries `orderNumber`. */
+function dashboardCard(page: Page, orderNumber: string) {
+  return page.locator(
+    `[data-testid="order-card"][data-order-number="${orderNumber}"]`
+  );
+}
 
 /** The kitchen card that carries `orderNumber`. */
 function kitchenCard(page: Page, orderNumber: string) {
@@ -223,6 +231,95 @@ test.describe('[REQ-124] customer status notifications', () => {
       ).toBe(true);
     } finally {
       await cleanupInboundMessage(messageId);
+    }
+  });
+
+  test('[REQ-124][AC1][AC7] [US-A4.2] a ready delivery order goes out for delivery, then delivered, then completed, and the customer is told at each step', async ({
+    page,
+  }) => {
+    tagTest('REQ-124', [1, 7]);
+    const order = await seedOrder({
+      userId: customer._id,
+      itemId,
+      orderType: 'delivery',
+      status: 'ready',
+      delivery: {
+        street: '12 Bode Thomas Street',
+        city: 'Surulere',
+        state: 'Lagos',
+      },
+    });
+    orders.push(order._id);
+
+    await page.goto('/dashboard/orders');
+    await page.getByRole('tab', { name: /^Active/ }).click();
+    const card = dashboardCard(page, order.orderNumber);
+    await expect(card).toBeVisible();
+
+    await card.getByTestId('order-out-for-delivery').click();
+    expect(await waitForOrderStatus(order._id, 'out-for-delivery')).toBe(true);
+    let rows = await waitForNotificationRows(customer._id, TEMPLATE, 1);
+    expect(rows[0].templateParams.body).toEqual([
+      order.orderNumber,
+      'out for delivery',
+    ]);
+    const [id, query] =
+      rows[0].templateParams.buttons[0].params[0].split('?t=');
+    expect(id).toBe(order._id.toString());
+    expect(verifyTrackingToken(id, query)).toBe(true);
+
+    // The order stays on the Active tab and now offers the next step.
+    await page.reload();
+    await page.getByRole('tab', { name: /^Active/ }).click();
+    await expect(card).toBeVisible();
+    await expect(card.getByTestId('order-out-for-delivery')).toHaveCount(0);
+    await evidenceShot(page, 'REQ-124', 7, 'delivery-out-for-delivery-card');
+
+    await card.getByTestId('order-mark-delivered').click();
+    expect(await waitForOrderStatus(order._id, 'delivered')).toBe(true);
+    rows = await waitForNotificationRows(customer._id, TEMPLATE, 2);
+    expect(rows[1].templateParams.body).toEqual([
+      order.orderNumber,
+      'delivered',
+    ]);
+
+    await page.reload();
+    await page.getByRole('tab', { name: /^Active/ }).click();
+    await expect(card).toBeVisible();
+    await card.getByRole('button', { name: 'Complete' }).click();
+    expect(await waitForOrderStatus(order._id, 'completed')).toBe(true);
+    await page.waitForTimeout(1500);
+    expect(await notificationRows(customer._id, TEMPLATE)).toHaveLength(2);
+  });
+
+  test('[REQ-124][AC7] a ready pickup order and a ready dine-in order are not offered an out-for-delivery step', async ({
+    page,
+  }) => {
+    tagTest('REQ-124', 7);
+    const pickup = await seedOrder({
+      userId: customer._id,
+      itemId,
+      orderType: 'pickup',
+      status: 'ready',
+    });
+    const dineIn = await seedOrder({
+      userId: customer._id,
+      itemId,
+      orderType: 'dine-in',
+      tableNumber: '9',
+      status: 'ready',
+    });
+    orders.push(pickup._id, dineIn._id);
+
+    await page.goto('/dashboard/orders');
+    for (const o of [pickup, dineIn]) {
+      const card = dashboardCard(page, o.orderNumber);
+      await expect(card).toBeVisible();
+      await expect(
+        card.getByRole('button', { name: 'Complete' })
+      ).toBeVisible();
+      await expect(card.getByTestId('order-out-for-delivery')).toHaveCount(0);
+      await expect(card.getByTestId('order-mark-delivered')).toHaveCount(0);
     }
   });
 

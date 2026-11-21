@@ -25,6 +25,7 @@ import { deriveBusinessDate } from '@/lib/business-date';
 import { SystemSettingsService } from '@/services/system-settings-service';
 import { notifyOrderStatus } from '@/services/order-status-notifier';
 import { resolveServingInfo } from '@/lib/serving-info';
+import { canTransition } from '@/lib/order-status-transitions';
 import {
   emitBatchUpdateEvent,
   emitOrderUpdatedEvent,
@@ -351,17 +352,9 @@ export async function updateOrderStatusAction(
       return { success: false, error: 'Order not found' };
     }
 
-    // Validate status transition
-    const validTransitions: Record<string, string[]> = {
-      pending: ['preparing', 'cancelled'],
-      confirmed: ['preparing', 'cancelled'],
-      preparing: ['ready', 'cancelled'],
-      ready: ['completed', 'cancelled'],
-      completed: [],
-      cancelled: [],
-    };
-
-    if (!validTransitions[order.status]?.includes(newStatus)) {
+    // Validate status transition (REQ-124 AC7: delivery orders also move
+    // ready -> out-for-delivery -> delivered -> completed)
+    if (!canTransition(order.status, order.orderType, newStatus)) {
       return {
         success: false,
         error: `Cannot transition from ${order.status} to ${newStatus}`,

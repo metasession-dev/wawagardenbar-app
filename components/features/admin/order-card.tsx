@@ -1,5 +1,6 @@
 'use client';
 
+import { canTransition } from '@/lib/order-status-transitions';
 import { ServingHeader } from '@/components/features/orders/serving-header';
 import { useEffect, useState } from 'react';
 import { format, formatDistanceToNow, differenceInMinutes } from 'date-fns';
@@ -169,17 +170,8 @@ export function OrderCard({
     }
   }
 
-  const canTransitionTo = (currentStatus: string, newStatus: string) => {
-    const transitions: Record<string, string[]> = {
-      pending: ['preparing', 'cancelled'],
-      confirmed: ['preparing', 'cancelled'],
-      preparing: ['ready', 'cancelled'],
-      ready: ['completed', 'cancelled'],
-      completed: [],
-      cancelled: [],
-    };
-    return transitions[currentStatus]?.includes(newStatus);
-  };
+  const canTransitionTo = (currentStatus: string, newStatus: string) =>
+    canTransition(currentStatus, order.orderType, newStatus);
 
   return (
     <Card
@@ -321,6 +313,20 @@ export function OrderCard({
                     Mark as Ready
                   </DropdownMenuItem>
                 )}
+                {canTransitionTo(order.status, 'out-for-delivery') && (
+                  <DropdownMenuItem
+                    onClick={() => handleStatusUpdate('out-for-delivery')}
+                  >
+                    Out for Delivery
+                  </DropdownMenuItem>
+                )}
+                {canTransitionTo(order.status, 'delivered') && (
+                  <DropdownMenuItem
+                    onClick={() => handleStatusUpdate('delivered')}
+                  >
+                    Mark Delivered
+                  </DropdownMenuItem>
+                )}
                 {canTransitionTo(order.status, 'completed') && (
                   <DropdownMenuItem
                     onClick={() => handleStatusUpdate('completed')}
@@ -443,6 +449,36 @@ export function OrderCard({
                     <CheckCircle className="h-4 w-4 mr-2" />
                     Mark Ready
                   </>
+                )}
+              </Button>
+            )}
+            {canTransitionTo(order.status, 'out-for-delivery') && (
+              <Button
+                size="sm"
+                onClick={() => handleStatusUpdate('out-for-delivery')}
+                disabled={isUpdating}
+                className="flex-1"
+                data-testid="order-out-for-delivery"
+              >
+                {isUpdating ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  'Out for Delivery'
+                )}
+              </Button>
+            )}
+            {canTransitionTo(order.status, 'delivered') && (
+              <Button
+                size="sm"
+                onClick={() => handleStatusUpdate('delivered')}
+                disabled={isUpdating}
+                className="flex-1"
+                data-testid="order-mark-delivered"
+              >
+                {isUpdating ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  'Mark Delivered'
                 )}
               </Button>
             )}

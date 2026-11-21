@@ -10,3 +10,4 @@ Risk class: HIGH · Issue #970 · Plan: `compliance/plans/REQ-124/implementation
 | AC4 | `Table N · FirstName` / Pickup / Delivery header on kitchen card, order card, queue; kitchen first name only | REQ-KITCHEN-010 (new)                      | unit + e2e (US-B1.5, US-B1.6)                  |
 | AC5 | Delivery address and instructions on the kitchen card                                                     | REQ-KITCHEN-011 (new)                       | unit + e2e (US-B1.7)                           |
 | AC6 | `order_status_update_v2` template submitted to UAT and production; status recorded                           | REQ-WA-002 (updated)                        | contract test + MCP template status (evidence) |
+| AC7 | Delivery orders advance ready → out-for-delivery → delivered → completed from the dashboard; Active tab keeps them; each step notifies | REQ-ORDMGT-020 (new) | unit + e2e (US-A4.2) |

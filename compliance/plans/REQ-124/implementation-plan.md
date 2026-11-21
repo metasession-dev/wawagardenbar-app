@@ -29,8 +29,9 @@ Closes ISO 29119 §3.4 (§1, §9), ISO 27001 A.8.25 (§5), GDPR Art. 25 (§6), E
 | AC4 | **Given** an order with a table, pickup or delivery type, **When** it appears on the kitchen card, dashboard order card or order-queue row, **Then** a large header reads `Table N · First` / `Pickup · First` / `Delivery · First` (`No name` when unknown); kitchen cards show first name only — no phone, email or full name.                                                                                               | REQ-KITCHEN-010 (new — stub) |
 | AC5 | **Given** a delivery order, **When** the kitchen card is shown, **Then** it shows the delivery address and instructions.                                                                                                                                                                                                                                                                                                      | REQ-KITCHEN-011 (new — stub) |
 | AC6 | **Given** the `order_status_update_v2` template (body `Your Wawa Garden Bar order #{{1}} is {{2}}. Tap below to track it.` + URL button "Track order"), **Then** it is submitted to both WhatsApp accounts (UAT, production) with the same name and body and each copy's status is recorded in evidence.                                                                                                                                                 | REQ-WA-002 (updated) |
+| AC7 | **Given** a delivery order that is ready, **When** staff use the dashboard order card or order page, **Then** they can set it to out-for-delivery, then delivered, then completed (each step offered only to delivery orders, in that order), the Active tab keeps showing it until it is completed, and each step sends its customer message through AC1. *(Added by requirements gap amendment, 2026-11-21: the dashboard had no way to reach these statuses.)* | REQ-ORDMGT-020 (new) |
 
-Stories → tests: US-A4.1–A4.4 → `e2e/critical/whatsapp-order-tracking.spec.ts` (AC1, AC3); US-B1.5–B1.7 → `e2e/critical/kitchen-serving-check.spec.ts` (AC4, AC5).
+Stories → tests: US-A4.1–A4.4 → `e2e/critical/whatsapp-order-tracking.spec.ts` (AC1, AC3, AC7: US-A4.2 now runs end to end); US-B1.5–B1.7 → `e2e/critical/kitchen-serving-check.spec.ts` (AC4, AC5).
 
 ### SRS items proposed/touched
 
@@ -43,6 +44,7 @@ Stories → tests: US-A4.1–A4.4 → `e2e/critical/whatsapp-order-tracking.spec
 | AC4 | REQ-KITCHEN-010 (new)             | stub — operator to edit | serving header, kitchen first-name only                     |
 | AC5 | REQ-KITCHEN-011 (new)             | stub — operator to edit | delivery address on kitchen card                            |
 | AC6 | REQ-WA-002 (existing)             | updated                 | `order_status_update` now sent + button                     |
+| AC7 | REQ-ORDMGT-020 (new)              | written                 | delivery steps out-for-delivery and delivered               |
 
 Table/heading drift check: none found for REQ-ORDER / REQ-KITCHEN / REQ-WA (table and heading maxima agree).
 
@@ -58,7 +60,7 @@ Table/heading drift check: none found for REQ-ORDER / REQ-KITCHEN / REQ-WA (tabl
   - Every producer of a customer `/orders/<id>` link (receipt button in REQ-123, checkout redirects, order history) so legitimate owners and guests are not locked out.
   - `components/features/kitchen/kitchen-order-card.tsx`, `components/features/admin/order-card.tsx`, `components/features/admin/order-queue.tsx`; shared `lib/serving-label.ts` for the header text.
   - `.env.example`, deployment docs: `ORDER_TRACKING_SECRET`.
-- **Out of scope:** customer "status" text intent (WA-09); cancellation messages (WA-11); changing the status state machine; the existing unused `sendOrderStatusNotificationAction` (left in place, not wired).
+- **Out of scope:** customer "status" text intent (WA-09); cancellation messages (WA-11); status changes other than the delivery-order additions in AC7; the existing unused `sendOrderStatusNotificationAction` (left in place, not wired).
 
 ### Surface inventory
 
@@ -156,3 +158,9 @@ N/A — this REQ does not introduce or change AI behaviour. Status phrases are f
 ## Upload path
 
 This file lives at `compliance/plans/REQ-124/implementation-plan.md`; Phase 3 copies it to `compliance/evidence/REQ-124/implementation-plan.md`.
+
+## Requirements gap accepted / amended
+
+**Gap (found by e2e-test-engineer, Phase 2):** the issue assumed staff could already set `out-for-delivery` and `delivered`, but `updateOrderStatusAction`'s transition table and the dashboard buttons stop at `ready → completed`. US-A4.2 could not run end to end.
+**Decision:** option (b) amend, by the operator, 2026-11-21 ("b amend"). New AC7 and SRS item REQ-ORDMGT-020 above; the status state machine gains delivery-only steps. `confirmed` stays a payment-driven status (set by `markOrderPaid`); staff do not set it.
+**Evidence impact:** Phase 3 had not started, so no compiled evidence is invalidated; the e2e run is repeated with US-A4.2 added.

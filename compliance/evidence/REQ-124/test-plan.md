@@ -11,7 +11,9 @@
 | `__tests__/lib/whatsapp-template-params.test.ts`          | unit (update) | AC6      |
 | `__tests__/lib/whatsapp-template-contract.test.ts`        | unit (update) | AC6      |
 | `__tests__/services/order-service.mark-order-paid.test.ts`| unit (update) | AC3      |
-| `e2e/critical/whatsapp-order-tracking.spec.ts`            | e2e           | AC1, AC3 |
+| `__tests__/lib/order-status-transitions.test.ts`          | unit          | AC7      |
+| `__tests__/actions/order-status-transitions-action.test.ts` | unit        | AC7      |
+| `e2e/critical/whatsapp-order-tracking.spec.ts`            | e2e           | AC1, AC3, AC7 |
 | `e2e/critical/kitchen-serving-check.spec.ts`              | e2e           | AC4, AC5 |
 | `e2e/critical/order-status-broadcast.spec.ts`             | e2e (update)  | AC3      |
 

@@ -150,6 +150,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-ORDMGT-010   | Admin Order Management section on orders dashboard (no separate Quick Actions)                | Should   | smoke      | `app/dashboard/orders/page.tsx`; REQ-086, REQ-109                                                                           |
 | REQ-ORDMGT-018   | Order-management action parity for `csr`                                                      | Should   | regression | `order-management-actions.ts`, `express-actions.ts`; REQ-109                                                                |
 | REQ-ORDMGT-019   | Order `origin` and `channel` recorded and migrated                                            | Must     | regression | `models/order-model.ts`, `scripts/migrate-order-origin.ts`                                                                  |
+| REQ-ORDMGT-020   | Delivery orders advance ready → out-for-delivery → delivered → completed                      | Must     | regression | `lib/order-status-transitions.ts`, `order-management-actions.ts`, `order-card.tsx`; REQ-124                                 |
 | REQ-ORDMGT-013   | Delete order (soft-delete; super-admin override for live orders)                              | Could    | extended   | `order-service.ts` `deleteOrder()`; REQ-096                                                                                 |
 | REQ-ORDMGT-014   | Delete order: independent inventory/payment revert choices                                    | Could    | extended   | `order-service.ts` `deleteOrder()`; REQ-096                                                                                 |
 | REQ-ORDMGT-017   | Order completion auto-cash-mark is scoped to non-tab orders only, reliably                    | Must     | regression | `order-management-actions.ts:376-394`; `tab-service.ts` `addOrderToTab`; REQ-108                                            |
@@ -943,6 +944,14 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 
 - **Given** any new order, **Then** `origin` (`customer`|`staff`) and `channel` are stored; **Given** existing orders, **When** the migration runs (repeatedly), **Then** `createdByRole: customer` orders become `customer`, others `staff`, idempotently, with a dry-run mode.
 
+
+#### REQ-ORDMGT-020 — Delivery order status steps · **Must** · regression
+
+**Source:** `lib/order-status-transitions.ts` (`allowedNextStatuses`), `app/actions/admin/order-management-actions.ts` (`updateOrderStatusAction`), `components/features/admin/order-card.tsx`, `components/features/admin/order-actions-sidebar.tsx`, `components/features/admin/order-queue.tsx`; cross-ref REQ-ORDER-007, REQ-124.
+**Behaviour:** For orders of type `delivery`, staff can move `ready → out-for-delivery`, `out-for-delivery → delivered` and `delivered → completed` (and cancel an out-for-delivery order). Other order types never offer those steps and the action refuses them. `ready → completed` stays allowed for every type. `confirmed` is set by payment, not by staff. Each step runs the single customer-notification call (REQ-ORDER-007). The dashboard Active tab keeps `out-for-delivery` and `delivered` orders until they are completed.
+
+- **Given** a ready delivery order, **When** staff choose "Out for delivery" on the dashboard order card, **Then** its status is `out-for-delivery` and an `order_status_update_v2` row reads "out for delivery"; **When** staff then choose "Mark delivered", **Then** the status is `delivered` with a "delivered" row.
+- **Given** a ready pickup or dine-in order, **Then** no out-for-delivery step is offered and the action refuses `out-for-delivery`.
 ---
 
 ## Feature Area 11 — Tab Management (TABMGT)

@@ -93,6 +93,7 @@ jobs:
       PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
       ENABLE_E2E_PIN_INTERCEPT: true
       WHATSAPP_APP_SECRET: e2e-whatsapp-app-secret
+      ORDER_TRACKING_SECRET: e2e-order-tracking-secret-0123456789abcdef0123
 
     steps:
       - uses: actions/checkout@v6
@@ -140,6 +141,7 @@ jobs:
           PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
           ENABLE_E2E_PIN_INTERCEPT: true
           WHATSAPP_APP_SECRET: e2e-whatsapp-app-secret
+          ORDER_TRACKING_SECRET: e2e-order-tracking-secret-0123456789abcdef0123
         run: |
           npx tsx scripts/seed-e2e-admins.ts
           npx tsx scripts/seed-food-menu.ts
@@ -162,6 +164,7 @@ jobs:
           PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
           ENABLE_E2E_PIN_INTERCEPT: true
           WHATSAPP_APP_SECRET: e2e-whatsapp-app-secret
+          ORDER_TRACKING_SECRET: e2e-order-tracking-secret-0123456789abcdef0123
         run: bash scripts/e2e-data-lifecycle.sh before
 
       - name: Kill stale dev server
@@ -362,6 +365,7 @@ jobs:
           PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
           ENABLE_E2E_PIN_INTERCEPT: true
           WHATSAPP_APP_SECRET: e2e-whatsapp-app-secret
+          ORDER_TRACKING_SECRET: e2e-order-tracking-secret-0123456789abcdef0123
         run: bash scripts/e2e-data-lifecycle.sh after --results e2e-regression-results.json --metadata e2e-regression-metadata.json
 
       - name: Stop dev server

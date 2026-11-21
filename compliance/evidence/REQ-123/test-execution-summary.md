@@ -62,3 +62,7 @@ The portal has no records for this release yet (nothing is pushed). Rows are add
 | Tests that expected the old behaviour                     | local unit     | test bug       | webhook idempotency, payment-alert, customer-charge, order-management and create-order-wrapper tests updated to the new behaviour                                                                  | Fix         | this branch |
 
 **Final assessment:** every REQ-123 acceptance criterion is proved by passing tests (AC6 as a unit test, AC8 and AC9 as operator evidence). The `critical` tier is NOT green locally: nine failures are triaged as unrelated flakes or environment but are unproven until CI; the release must not proceed on this summary alone.
+
+## UAT results (2026-11-21)
+
+Agent-executed on UAT with a human paying on Paystack; the record is `uat-execution-record.md` (build `bba621e9`). 8 of 9 steps passed, none failed, none blocked; step 2 could not be run as written (procedure wording, covered by e2e US-A2.13). Two defects were found in UAT and fixed: D1 (Meta 132001 failed a message for a pending template; PR #1061) and D2 (the receipt's View receipt button 404ed because it carried the order number, not the order id; PR #1063, retested on UAT and passing). Steps 8 and 9 have no screenshot, only database records; step 6 has no screenshot for Live orders or Awaiting payment. All three templates are APPROVED on UAT and production (`template-submissions.md`).

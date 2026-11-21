@@ -1,4 +1,9 @@
 import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
+import { getIronSession } from 'iron-session';
+import { sessionOptions, type SessionData } from '@/lib/session';
+import { hasOrderAccess } from '@/lib/order-access';
 import { Suspense } from 'react';
 import { OrderService } from '@/services';
 import { RealTimeOrderTracker } from '@/components/features/orders/real-time-order-tracker';
@@ -17,6 +22,7 @@ interface OrderPageProps {
   }>;
   searchParams: Promise<{
     payment?: string;
+    t?: string;
   }>;
 }
 
@@ -25,11 +31,28 @@ interface OrderPageProps {
  */
 export default async function OrderPage({ params, searchParams }: OrderPageProps) {
   const { orderId } = await params;
-  const { payment } = await searchParams;
+  const { payment, t } = await searchParams;
   
   let orderData = await OrderService.getOrderById(orderId);
 
   if (!orderData) {
+    notFound();
+  }
+
+  // REQ-124 (AC3, ADR-013) — signed-in owner or a valid tracking token, else 404
+  // (404, not 403, so the existence of an order id is not revealed).
+  const session = await getIronSession<SessionData>(
+    await cookies(),
+    sessionOptions
+  );
+  if (
+    !hasOrderAccess({
+      orderId,
+      token: t,
+      sessionUserId: session.isLoggedIn ? session.userId : null,
+      orderUserId: orderData.userId ? String(orderData.userId) : null,
+    })
+  ) {
     notFound();
   }
 
@@ -156,20 +179,17 @@ function OrderTrackerSkeleton() {
 }
 
 /**
- * Generate metadata for the order page
+ * Generate metadata for the order page.
+ *
+ * REQ-124 (ADR-013): the page is reachable only by the owner or a token holder,
+ * so the title no longer looks the order up (it would reveal an order number to
+ * someone who is about to get a 404), and the link's bearer token is kept out of
+ * Referer headers.
  */
-export async function generateMetadata({ params }: OrderPageProps) {
-  const { orderId } = await params;
-  const order = await OrderService.getOrderById(orderId);
-
-  if (!order) {
-    return {
-      title: 'Order Not Found',
-    };
-  }
-
+export function generateMetadata(): Metadata {
   return {
-    title: `Order #${order.orderNumber} - Wawa Garden Bar`,
-    description: `Track your order #${order.orderNumber}`,
+    title: 'Your order - Wawa Garden Bar',
+    description: 'Track your order',
+    referrer: 'no-referrer',
   };
 }

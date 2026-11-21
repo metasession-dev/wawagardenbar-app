@@ -2,7 +2,7 @@
   "name": "order_status_update_v2",
   "language": "en",
   "category": "UTILITY",
-  "builder": "orderStatusUpdateParams",
+  "builder": "orderStatusUpdateV2Params",
   "header": null,
   "body": {
     "text": "Your Wawa Garden Bar order #{{1}} is {{2}}. Tap below to track it.",

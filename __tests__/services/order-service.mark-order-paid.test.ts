@@ -117,7 +117,7 @@ describe('REQ-123 AC4: markOrderPaid', () => {
       whatsapp: {
         params: ['2× Goat Stew, 1× Jollof Rice', '₦5,500', 'Card', '0'],
         headerParams: ['WG2611190007'],
-        buttonParams: [{ index: 0, params: ['WG2611190007'] }],
+        buttonParams: [{ index: 0, params: [ORDER_ID] }],
       },
     });
   });

@@ -1,5 +1,6 @@
 'use client';
 
+import { ServingHeader } from '@/components/features/orders/serving-header';
 import { useEffect, useState } from 'react';
 import { format, formatDistanceToNow, differenceInMinutes } from 'date-fns';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -208,6 +209,7 @@ export function OrderCard({
               >
                 {order.orderNumber}
               </Link>
+              <ServingHeader order={order} />
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span className="capitalize">{order.orderType}</span>
                 {pickupInfo && (

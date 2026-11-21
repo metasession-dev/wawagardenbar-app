@@ -36,6 +36,8 @@ export const TEMPLATE_CATEGORIES: Record<string, NotificationCategory> = {
   // ── Transactional (UTILITY per Meta; whatsappTransactional gate) ──
   order_confirmation: 'transactional',
   order_status_update: 'transactional',
+  // REQ-124 — customer status message with a signed Track order button.
+  order_status_update_v2: 'transactional',
   receipt: 'transactional',
   payment_link: 'transactional',
   payment_confirmation: 'transactional',
@@ -66,6 +68,7 @@ export const HELD_UNTIL_APPROVED_TEMPLATES: ReadonlySet<string> = new Set([
   'order_confirmation',
   'receipt',
   'payment_link',
+  'order_status_update_v2',
 ]);
 
 export const HELD_TEMPLATE_PENDING = 'held_template_pending';

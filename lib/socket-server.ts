@@ -36,9 +36,34 @@ export function initSocketServer(httpServer: HTTPServer): SocketIOServer {
     console.log('Client connected:', socket.id);
 
     // Join order-specific room
-    socket.on('join-order', (orderId: string) => {
-      socket.join(`order-${orderId}`);
-      console.log(`Client ${socket.id} joined order room: ${orderId}`);
+    // REQ-124 (AC3) — only the signed-in owner or a holder of a valid tracking
+    // token may join an order room; anything else is ignored.
+    socket.on('join-order', async (raw: unknown) => {
+      try {
+        const { authorizeOrderRoomJoin } = await import('@/lib/order-access');
+        const { allowed, orderId } = await authorizeOrderRoomJoin(
+          raw,
+          socket.handshake.headers.cookie,
+          async (id) => {
+            const { connectDB } = await import('@/lib/mongodb');
+            const { OrderModel } = await import('@/models');
+            await connectDB();
+            const order = await OrderModel.findById(id)
+              .select('userId')
+              .lean<{ userId?: { toString(): string } } | null>();
+            return order?.userId ? order.userId.toString() : null;
+          }
+        );
+        if (!allowed || !orderId) {
+          socket.emit('join-order-denied');
+          return;
+        }
+        socket.join(`order-${orderId}`);
+        console.log(`Client ${socket.id} joined order room: ${orderId}`);
+      } catch (error) {
+        console.error('join-order failed', error);
+        socket.emit('join-order-denied');
+      }
     });
 
     // Leave order-specific room

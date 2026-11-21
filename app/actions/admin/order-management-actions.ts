@@ -23,6 +23,8 @@ import InventoryService from '@/services/inventory-service';
 // (loaded lazily inside the action) rather than `completeOrderAndDeductStockAction`.
 import { deriveBusinessDate } from '@/lib/business-date';
 import { SystemSettingsService } from '@/services/system-settings-service';
+import { notifyOrderStatus } from '@/services/order-status-notifier';
+import { resolveServingInfo } from '@/lib/serving-info';
 import {
   emitBatchUpdateEvent,
   emitOrderUpdatedEvent,
@@ -156,9 +158,13 @@ export async function getOrdersAction(
       .limit(limit)
       .lean();
 
+    // REQ-124 (AC4) — account / tab names and tables for the serving check
+    const servingInfo = await resolveServingInfo(orders as any[]);
+
     // Serialize for client
     const serialized = orders.map((order: any) => ({
       _id: order._id.toString(),
+      servingName: servingInfo.get(order._id.toString())?.servingName ?? null,
       orderNumber: order.orderNumber,
       orderType: order.orderType,
       status: order.status,
@@ -179,9 +185,12 @@ export async function getOrdersAction(
       })),
       total: order.total,
       paymentStatus: order.paymentStatus,
-      tableNumber: order.dineInDetails?.tableNumber,
+      tableNumber:
+        order.dineInDetails?.tableNumber ??
+        servingInfo.get(order._id.toString())?.tableNumber,
       pickupTime: order.pickupDetails?.preferredPickupTime?.toISOString(),
       deliveryAddress: order.deliveryDetails?.address,
+      deliveryInstructions: order.deliveryDetails?.deliveryInstructions,
       specialInstructions: order.specialInstructions,
       createdAt: order.createdAt?.toISOString() ?? '',
       updatedAt:
@@ -458,6 +467,11 @@ export async function updateOrderStatusAction(
       'status_update',
       session.email || getPrimaryRole(session)
     );
+
+    // REQ-124 (AC1, AC2) — the single place a customer is told about a status
+    // change. Batch updates call this action per order, so they are covered.
+    // Never throws and never fails the status change.
+    await notifyOrderStatus(order._id.toString(), newStatus);
 
     revalidatePath('/dashboard/orders');
     revalidatePath('/dashboard/kitchen-display');

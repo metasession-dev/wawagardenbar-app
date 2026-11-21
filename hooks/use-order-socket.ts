@@ -17,6 +17,12 @@ interface UseOrderSocketOptions {
   onStatusUpdate?: (update: OrderStatusUpdate) => void;
 }
 
+/** REQ-124 — the signed tracking token from the page URL (`?t=`), if any. */
+function trackingToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return new URLSearchParams(window.location.search).get('t');
+}
+
 /**
  * Hook for managing Socket.IO connection for order updates
  */
@@ -45,7 +51,7 @@ export function useOrderSocket({ orderId, onStatusUpdate }: UseOrderSocketOption
 
       // Join order room if orderId is provided
       if (orderId) {
-        socketInstance.emit('join-order', orderId);
+        socketInstance.emit('join-order', { orderId, token: trackingToken() });
       }
     });
 
@@ -80,7 +86,7 @@ export function useOrderSocket({ orderId, onStatusUpdate }: UseOrderSocketOption
 
   const joinOrder = useCallback((newOrderId: string) => {
     if (socket && isConnected) {
-      socket.emit('join-order', newOrderId);
+      socket.emit('join-order', { orderId: newOrderId, token: trackingToken() });
     }
   }, [socket, isConnected]);
 

@@ -14,8 +14,10 @@ Meta numbers header and body placeholders separately, so the `receipt` body uses
 
 Status log (update with `whatsapp_biz_list_templates` before the UAT live round-trip and before production switch-on):
 
-| Date       | UAT               | Production        |
-| ---------- | ----------------- | ----------------- |
-| 2026-11-19 | all three PENDING | all three PENDING |
+| Date       | UAT                | Production                                            |
+| ---------- | ------------------ | ----------------------------------------------------- |
+| 2026-11-19 | all three PENDING  | all three PENDING                                     |
+| 2026-11-20 | all three APPROVED | not checked                                           |
+| 2026-11-21 | all three APPROVED | all three APPROVED (checked through the WhatsApp MCP) |
 
 Also found while listing: `support_reply` (REQ-118) is APPROVED on both accounts, closing the open item in the #953 tracker.

@@ -2,7 +2,13 @@ import { NextRequest } from 'next/server';
 import { PaymentService } from '@/services/payment-service';
 import { OrderService } from '@/services/order-service';
 import Order from '@/models/order-model';
-import { withApiAuth, apiSuccess, apiError, parseJsonBody, serialize } from '@/lib/api-response';
+import {
+  withApiAuth,
+  apiSuccess,
+  apiError,
+  parseJsonBody,
+  serialize,
+} from '@/lib/api-response';
 
 interface VerifyPaymentBody {
   paymentReference: string;
@@ -70,11 +76,25 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     try {
-      const result = await PaymentService.verifyPayment(body.paymentReference);
+      // REQ-123 — verify with the provider the order was initialised with.
+      const order = await Order.findOne({
+        paymentReference: body.paymentReference,
+      });
+      const result = await PaymentService.verifyPayment(
+        body.paymentReference,
+        order?.paymentProvider
+      );
 
       // If payment succeeded, update the order
       if (PaymentService.isPaymentSuccessful(result.status)) {
-        const order = await Order.findOne({ paymentReference: body.paymentReference });
+        // REQ-123 (AC3) — a paid amount that differs from the order total is
+        // never confirmed.
+        const amountMatches =
+          !order ||
+          Math.round(result.amount * 100) === Math.round(order.total * 100);
+        if (order && !amountMatches) {
+          return apiError('Paid amount does not match the order total', 409);
+        }
         if (order) {
           await OrderService.updatePaymentStatus(order._id.toString(), {
             paymentStatus: 'paid',
@@ -85,16 +105,19 @@ export async function POST(request: NextRequest): Promise<Response> {
         }
       }
 
-      return apiSuccess(serialize({
-        paymentReference: body.paymentReference,
-        status: result.status,
-        amount: result.amount,
-        paidAt: result.paidAt,
-        transactionReference: result.transactionReference,
-        provider: result.provider,
-      }));
+      return apiSuccess(
+        serialize({
+          paymentReference: body.paymentReference,
+          status: result.status,
+          amount: result.amount,
+          paidAt: result.paidAt,
+          transactionReference: result.transactionReference,
+          provider: result.provider,
+        })
+      );
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Payment verification failed';
+      const msg =
+        error instanceof Error ? error.message : 'Payment verification failed';
       console.error('[PUBLIC API] POST /api/public/payments/verify', error);
       return apiError(msg, 422);
     }

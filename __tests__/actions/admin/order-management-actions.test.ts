@@ -4,6 +4,7 @@
  * Covers AC1.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { LIVE_QUEUE_GATE } from '@/lib/order-queue-gate';
 
 const mockCookies = vi.fn();
 const mockGetIronSession = vi.fn();
@@ -125,7 +126,11 @@ describe('REQ-090: getOrdersAction serialization hardening', () => {
 
     expect(result.success).toBe(true);
     // REQ-096 — soft-deleted orders excluded by default (ADR-002).
-    expect(mockFind).toHaveBeenCalledWith({ isDeleted: { $ne: true } });
+    // REQ-123 (AC5) — and the paid-only gate: staff orders, or paid customer orders.
+    expect(mockFind).toHaveBeenCalledWith({
+      isDeleted: { $ne: true },
+      $and: [LIVE_QUEUE_GATE],
+    });
     expect(sort).toHaveBeenCalledWith({ createdAt: -1 });
     expect(skip).toHaveBeenCalledWith(0);
     expect(limit).toHaveBeenCalledWith(50);

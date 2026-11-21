@@ -240,9 +240,16 @@ const orderSchema = new Schema<IOrder>(
         'cancelled',
         'refunded',
         'written-off',
+        'payment_mismatch',
       ],
       default: 'pending',
     },
+    // REQ-123 — customer payment (Paystack hosted checkout), stable per order.
+    paymentProvider: { type: String, enum: ['paystack', 'monnify'] },
+    checkoutUrl: { type: String },
+    paystackAccessCode: { type: String },
+    paymentLinkSentAt: { type: Date },
+    cancelReason: { type: String },
     paidAt: { type: Date },
     businessDate: { type: Date },
     deliveryDetails: { type: deliveryDetailsSchema },
@@ -332,6 +339,9 @@ orderSchema.index({ status: 1, orderType: 1 });
 orderSchema.index({ createdAt: -1 });
 orderSchema.index({ businessDate: 1 });
 orderSchema.index({ guestEmail: 1 });
+// REQ-123 — webhook lookup by reference, and the unpaid-order jobs.
+orderSchema.index({ paymentReference: 1 });
+orderSchema.index({ origin: 1, paymentStatus: 1, status: 1, createdAt: 1 });
 
 orderSchema.pre('save', function preSave(next) {
   if (this.isNew) {

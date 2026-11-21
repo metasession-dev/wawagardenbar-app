@@ -1,5 +1,9 @@
 'use server';
 
+import {
+  LIVE_QUEUE_GATE,
+  AWAITING_PAYMENT_QUERY,
+} from '@/lib/order-queue-gate';
 import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
 import { revalidatePath } from 'next/cache';
@@ -47,6 +51,8 @@ export interface OrderFilters {
   search?: string;
   paymentStatus?: string;
   reconciled?: 'all' | 'reconciled' | 'not-reconciled';
+  /** REQ-123 — show unpaid customer orders instead of the paid-only live queue. */
+  awaitingPayment?: boolean;
 }
 
 /**
@@ -83,7 +89,16 @@ export async function getOrdersAction(
     // REQ-096 — exclude soft-deleted orders by default (ADR-002).
     const query: any = { isDeleted: { $ne: true } };
 
-    if (filters.status) {
+    // REQ-123 (AC5) — paid-only gate: staff orders always, customer orders
+    // only once paid. The "Awaiting payment" filter swaps the gate for the
+    // unpaid customer orders.
+    if (filters.awaitingPayment) {
+      Object.assign(query, AWAITING_PAYMENT_QUERY);
+    } else {
+      query.$and = [LIVE_QUEUE_GATE];
+    }
+
+    if (filters.status && !filters.awaitingPayment) {
       // Handle comma-separated statuses
       const statuses = filters.status.split(',').map((s) => s.trim());
       query.status = statuses.length > 1 ? { $in: statuses } : filters.status;
@@ -95,7 +110,7 @@ export async function getOrdersAction(
       query.orderType = types.length > 1 ? { $in: types } : filters.type;
     }
 
-    if (filters.paymentStatus) {
+    if (filters.paymentStatus && !filters.awaitingPayment) {
       // Handle comma-separated payment statuses
       const paymentStatuses = filters.paymentStatus
         .split(',')

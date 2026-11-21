@@ -40,7 +40,10 @@ export type IncidentEventKind =
   | 'notification_delivery_failed'
   | 'reward_grant_failed'
   | 'webhook_replay_mismatch'
-  | 'dormant_open_tab';
+  | 'dormant_open_tab'
+  // REQ-123 — payment confirmation problems (Paystack amount check, late payment).
+  | 'payment_mismatch'
+  | 'late_payment_on_cancelled_order';
 
 export interface IIncidentEvent extends Document {
   kind: IncidentEventKind;
@@ -63,6 +66,8 @@ const incidentEventSchema = new Schema<IIncidentEvent>(
         'reward_grant_failed',
         'webhook_replay_mismatch',
         'dormant_open_tab',
+        'payment_mismatch',
+        'late_payment_on_cancelled_order',
       ],
       required: true,
     },

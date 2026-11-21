@@ -18,6 +18,19 @@ export interface OrderAccessInput {
   orderUserId?: string | null;
 }
 
+/**
+ * An id as a string, whether the field holds an ObjectId, a string or a
+ * populated document (`OrderService.getOrderById` populates `userId`).
+ */
+export function idString(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'object' && '_id' in (value as object)) {
+    const inner = (value as { _id: unknown })._id;
+    return inner === null || inner === undefined ? null : String(inner);
+  }
+  return String(value);
+}
+
 export function hasOrderAccess(input: OrderAccessInput): boolean {
   const { orderId, token, sessionUserId, orderUserId } = input;
   if (token && verifyTrackingToken(orderId, token)) return true;

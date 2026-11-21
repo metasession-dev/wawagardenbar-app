@@ -32,7 +32,10 @@ export async function resolveServingInfo(
   }
 
   const users = new Map<string, string>();
-  const tabs = new Map<string, { customerName?: string; tableNumber?: string }>();
+  const tabs = new Map<
+    string,
+    { customerName?: string; tableNumber?: string }
+  >();
 
   const valid = (ids: Set<string>) =>
     [...ids].filter((id) => Types.ObjectId.isValid(id));
@@ -42,9 +45,15 @@ export async function resolveServingInfo(
       const { default: UserModel } = await import('@/models/user-model');
       const rows = await UserModel.find({ _id: { $in: valid(userIds) } })
         .select('name firstName')
-        .lean<Array<{ _id: { toString(): string }; name?: string; firstName?: string }>>();
+        .lean<
+          Array<{
+            _id: { toString(): string };
+            name?: string;
+            firstName?: string;
+          }>
+        >();
       for (const u of rows) {
-        const name = u.firstName || u.name;
+        const name = u.name || u.firstName;
         if (name) users.set(u._id.toString(), name);
       }
     }
@@ -76,7 +85,8 @@ export async function resolveServingInfo(
     result.set(o._id.toString(), {
       // customer orders: account name; staff orders: tab customer, then order name
       servingName: account || tab?.customerName || o.guestName || null,
-      tableNumber: o.dineInDetails?.tableNumber || tab?.tableNumber || undefined,
+      tableNumber:
+        o.dineInDetails?.tableNumber || tab?.tableNumber || undefined,
     });
   }
   return result;

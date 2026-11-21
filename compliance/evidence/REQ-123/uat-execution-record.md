@@ -15,20 +15,20 @@ tested_sha: bba621e9a7e06d37aa39eb6a652c8dcc07c6d8e1
 | Build under test (git SHA) | `bba621e9` (develop after #1063). Steps 1 to 9 first ran on earlier builds (`688251c8`, then `6d3e8e59`); step 7 was re-run on `bba621e9` after defect D2 was fixed. Steps 1 to 6, 8 and 9 were not re-run on `bba621e9`. |
 | Environment / URL          | UAT, https://wawagardenbar-uat.ostendo.io                                                                                                                                                                                 |
 | Executed by                | Claude Code (claude-sonnet-5-5), driven by `sdlc-implementer`                                                                                                                                                             |
-| Reviewed by                | REPLACE (independent human reviewer; not the author)                                                                                                                                                                      |
+| Reviewed by                | Ade Thompson                                                                                                                                                                                                              |
 | Started                    | 2026-11-19                                                                                                                                                                                                                |
 | Finished                   | 2026-11-21 (step 7 retest 10:24 UTC)                                                                                                                                                                                      |
 
 **Independence declaration** (required when `approval.mode` is `dual_actor`). For an agent-executed run the human reviewer signs:
-I did not write, review or approve the change under test. Name: REPLACE &nbsp; Date: REPLACE
+I did not write, review or approve the change under test. Name: Ade Thompson &nbsp; Date: 21/11/2026
 
 ## Operator preparation (initial each before the run starts)
 
 | Item                                            | Done | Initials |
 | ----------------------------------------------- | ---- | -------- |
-| Migrations applied to the environment           | [ ]  | REPLACE  |
-| Test accounts created as listed in the briefing | [ ]  | REPLACE  |
-| Test data loaded                                | [ ]  | REPLACE  |
+| Migrations applied to the environment           | [X]  | MD       |
+| Test accounts created as listed in the briefing | [X]  | MD       |
+| Test data loaded                                | [X]  | MD       |
 
 ## Actions taken by the agent (agent-executed runs only)
 
@@ -98,12 +98,12 @@ Evidence files are under `compliance/evidence/REQ-123/uat/`.
 
 **Recommendation:** [ ] Approve &nbsp; [x] Approve with noted defects &nbsp; [ ] Reject (agent recommendation; the reviewer decides)
 
-**Reviewer decision** (agent-executed runs): [ ] The agent's results are accepted &nbsp; [ ] A manual re-run is required (the release waits; the re-run gets its own record with `execution_mode: manual`)
+**Reviewer decision** (agent-executed runs): [X] The agent's results are accepted &nbsp; [ ] A manual re-run is required (the release waits; the re-run gets its own record with `execution_mode: manual`)
 
 ## Sign-off
 
-| Role                                                        | Name | Date |
-| ----------------------------------------------------------- | ---- | ---- |
-| Tester (manual run) or agent executor                       |      |      |
-| Reviewer (agent-executed run; write "n/a" for a manual run) |      |      |
-| Operator                                                    |      |      |
+| Role                                                        | Name            | Date       |
+| ----------------------------------------------------------- | --------------- | ---------- |
+| Tester (manual run) or agent executor                       |                 |            |
+| Reviewer (agent-executed run; write "n/a" for a manual run) | Ade Thompson    | 21/11/2026 |
+| Operator                                                    | Metasession Dev | 21/11/2026 |

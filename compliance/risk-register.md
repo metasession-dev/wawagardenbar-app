@@ -1644,3 +1644,95 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 **Framework cross-references:** ISO 27001 A.5.34; GDPR Art. 5(1)(c), Art. 25, Art. 30.
 
 **Cross-links:** [REQ-123 implementation plan](plans/REQ-123/implementation-plan.md); SRS REQ-PAY-006.
+
+---
+
+### R-73 — Order tracking page and socket open to anyone with an order id (REQ-124)
+
+**Status:** OPEN
+**Opened:** 2026-11-21 (REQ-124, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-21
+
+**The risk:** Today `/orders/[orderId]` and the socket `join-order` room need only an order id (a guessable ObjectId). Anyone can read another customer's items, address and live status. Closing this adds a gate that could also lock out legitimate owners and guests if a link producer is missed.
+
+**Mitigations planned in REQ-124:**
+
+1. Owner session or valid signed token required for the page, its sub-routes and `join-order`; 404 otherwise (AC3, REQ-ORDER-008).
+2. Every producer of a customer order link updated to carry the token; e2e covers guest-with-token, owner-signed-in and no-token paths.
+3. `Referrer-Policy: no-referrer` on the page; token never logged.
+
+**Residual likelihood × impact:** low × medium
+
+**Framework cross-references:** ISO 27001 A.5.15, A.8.3; SOC 2 CC6.1; GDPR Art. 32.
+
+**Cross-links:** [REQ-124 implementation plan](plans/REQ-124/implementation-plan.md); ADR-013.
+
+---
+
+### R-74 — Tracking token forged, leaked or secret misconfigured (REQ-124)
+
+**Status:** OPEN
+**Opened:** 2026-11-21 (REQ-124, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-21
+
+**The risk:** The tracking link is a bearer credential. A weak, missing or leaked `ORDER_TRACKING_SECRET`, or a link forwarded or exposed in logs, gives access to that order for up to 30 days.
+
+**Mitigations planned in REQ-124:**
+
+1. HMAC-SHA256 over order id and expiry, constant-time compare, token bound to one order, 30-day expiry in the signed payload.
+2. Fail closed when the secret is unset or short (no tokens created or accepted); secret set per environment by the operator, never committed.
+3. Rotating the secret revokes all links (documented incident response).
+
+**Residual likelihood × impact:** low × medium
+
+**Framework cross-references:** ISO 27001 A.8.24, A.5.17; SOC 2 CC6.1; GDPR Art. 32.
+
+**Cross-links:** [REQ-124 implementation plan](plans/REQ-124/implementation-plan.md); ADR-013.
+
+---
+
+### R-75 — Customer status messages duplicated, mistargeted or held (WA-08) (REQ-124)
+
+**Status:** OPEN
+**Opened:** 2026-11-21 (REQ-124, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-21
+
+**The risk:** `order_status_update` could be sent twice for one status, to a staff-origin order, or outside the consent gate, and the changed template (body and URL button) may not be approved on an environment yet.
+
+**Mitigations planned in REQ-124:**
+
+1. Atomic once-per-status claim on `notifiedStatuses` before send; `origin='customer'` only; consent gate and `NotificationLog` unchanged.
+2. `notifyOrderStatus` runs after the status is saved inside try/catch and never fails the staff action.
+3. Template submitted to UAT and production at plan approval; unapproved copy held as `held_template_pending`.
+
+**Residual likelihood × impact:** medium × low
+
+**Framework cross-references:** ISO 27001 A.5.34; SOC 2 CC7.2; GDPR Art. 6(1)(b), Art. 7 (consent gate).
+
+**Cross-links:** [REQ-124 implementation plan](plans/REQ-124/implementation-plan.md); ADR-013.
+
+---
+
+### R-76 — Kitchen display exposes customer personal data / serving check shows wrong person (REQ-124)
+
+**Status:** OPEN
+**Opened:** 2026-11-21 (REQ-124, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-21
+
+**The risk:** The kitchen card shows a customer's full name, phone and email to anyone near the display. The new serving header could also show the wrong first name or none, leading to a drink handed to the wrong customer.
+
+**Mitigations planned in REQ-124:**
+
+1. Kitchen card shows first name only; phone, email and full name removed there and kept on the role-gated `/dashboard/orders/[orderId]` (AC4).
+2. Single `servingLabel` helper with unit tests for first-name extraction, `No name`, pickup and delivery.
+3. Delivery address shown on the kitchen card only for delivery orders (AC5).
+
+**Residual likelihood × impact:** low × low
+
+**Framework cross-references:** ISO 27001 A.5.34; GDPR Art. 5(1)(c), Art. 25.
+
+**Cross-links:** [REQ-124 implementation plan](plans/REQ-124/implementation-plan.md); ADR-013.

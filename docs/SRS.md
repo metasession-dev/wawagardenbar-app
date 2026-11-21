@@ -111,6 +111,8 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-ORDER-004    | RETIRED (REQ-120): customer pay & close tab (tabs are staff-only)                             | Should   | regression | `app/(customer)/orders/tabs/[tabId]/checkout/`                                                                              |
 | REQ-ORDER-005    | Labeled kitchen/payment status badges on order surfaces                                       | Must     | regression | `order-details-header.tsx`, `order-card.tsx`, `orders/page.tsx`; REQ-085                                                    |
 | REQ-ORDER-006    | Time-window price resolution at order creation (happy-hour > show > default; override wins)   | Must     | regression | `lib/order-line-totals.ts`; `services/settings-service.ts`; REQ-102                                                         |
+| REQ-ORDER-007    | Customer WhatsApp status notifications (once per status, customer orders only)                | Must     | regression | `services/order-status-notifier.ts`, `order-management-actions.ts`; REQ-124                                                 |
+| REQ-ORDER-008    | Order tracking page and socket room require owner or signed token                             | Must     | critical   | `lib/order-tracking-token.ts`, `app/(customer)/orders/[orderId]`, `lib/socket-server.ts`; REQ-124                           |
 | REQ-PROFILE-001  | View/edit personal info                                                                       | Should   | regression | `app/(customer)/profile/page.tsx`, `personal-info-tab.tsx`                                                                  |
 | REQ-PROFILE-002  | Address CRUD + default address                                                                | Could    | extended   | `addresses-tab.tsx`                                                                                                         |
 | REQ-REWARDC-001  | Rewards page shows active rewards, codes, expiry                                              | Should   | regression | `app/(customer)/profile/rewards/page.tsx`                                                                                   |
@@ -171,6 +173,8 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 | REQ-KITCHEN-007  | Completed orders do not reappear on kitchen display after tab payment                         | Must     | regression | `services/tab-service.ts`; REQ-085                                                                                          |
 | REQ-KITCHEN-008  | Payment status indicator on kitchen order card                                                | Should   | regression | `components/features/kitchen/kitchen-order-card.tsx`; REQ-085                                                               |
 | REQ-KITCHEN-009  | Kitchen and live queues show staff orders and paid customer orders only (paid-only gate)      | Must     | regression | `services/order-service.ts`, `app/dashboard/kitchen*`, `order-management-actions.ts`; REQ-123                               |
+| REQ-KITCHEN-010  | Serving check header (Table N · FirstName) on kitchen, order card and queue                   | Must     | regression | `lib/serving-label.ts`, `kitchen-order-card.tsx`, `order-card.tsx`, `order-queue.tsx`; REQ-124                              |
+| REQ-KITCHEN-011  | Delivery address and instructions on the kitchen card                                         | Should   | regression | `components/features/kitchen/kitchen-order-card.tsx`; REQ-124                                                               |
 | REQ-MENUMGT-001  | Menu item list + stats (super-admin)                                                          | Should   | regression | `app/dashboard/menu/page.tsx`                                                                                               |
 | REQ-MENUMGT-002  | Create menu item (+ optional inventory)                                                       | Should   | regression | `app/actions/admin/menu-actions.ts:60`                                                                                      |
 | REQ-MENUMGT-003  | Edit item incl. customization inventory links                                                 | Should   | regression | `menu/[itemId]/edit/page.tsx`; REQ-030                                                                                      |
@@ -506,6 +510,7 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 **Behaviour:** The page shows order number, items, total, estimated wait, a status timeline, and a live-connection indicator; status updates arrive over Socket.IO. Pending-payment and confirmed/paid states show distinct alerts.
 
 - **Given** an order page open, **When** the order status changes server-side, **Then** the timeline advances without a manual reload.
+- **Given** a page opened without owner session or valid token, **Then** 404 (REQ-124, see REQ-ORDER-008).
 
 > ⚠ **Known gap (#117 P1#7):** the page also renders a "Receipt" download button (`orders/[orderId]/page.tsx:68`) that is a **dead stub** (no handler) — do not write a test asserting it works. Tracked in [§4](#4-roadmap--cross-reference-to-issue-117).
 
@@ -542,6 +547,25 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 - **Given** only the show-price window is active, **When** an order is created, **Then** the charged line price is the item's `showPrice`.
 - **Given** neither window is active, **When** an order is created, **Then** the charged line price is the item's `price` (default) — unchanged from pre-REQ-102 behaviour.
 - **Given** a line carries an admin-supplied `priceOverride` on an item with `allowManualPriceOverride: true`, **When** an order is created regardless of window state, **Then** the override price is charged, not the window-resolved price.
+
+#### REQ-ORDER-007 — Customer WhatsApp status notifications · **Must** · regression
+
+**Source:** `services/order-status-notifier.ts` (`notifyOrderStatus`), `app/actions/admin/order-management-actions.ts` (`updateOrderStatusAction`), `lib/whatsapp-template-params.ts` (`orderStatusUpdateParams`), `docs/whatsapp-templates/order_status_update_v2.json`; cross-ref REQ-WA-002, REQ-123, REQ-124.
+**Behaviour:** When staff save a new status on a `origin='customer'` order, the customer gets `order_status_update_v2` (URL button "Track order" carrying the signed token) with a status phrase (confirmed; being prepared; ready for pickup / ready and on its way to your table; out for delivery; delivered). Inside the 24-hour window the message is free-form text, outside it the template. Each status is sent at most once per order. `completed` sends nothing; `cancelled` is WA-11. Staff-origin orders never message the customer. `notifyOrderStatus` is called from exactly one place (`updateOrderStatusAction`; batch update reaches it through that action). A failed send never fails the status change.
+
+- **Given** a paid customer pickup order, **When** staff set it to `ready`, **Then** an `order_status_update_v2` log row with "ready for pickup" exists.
+- **Given** a delivery order, **When** staff set `out-for-delivery`, **Then** the customer is notified "out for delivery".
+- **Given** a staff express order, **When** its status changes, **Then** no customer message is logged.
+- **Given** a status already notified, **When** it is saved again, **Then** no second message is sent.
+
+#### REQ-ORDER-008 — Order access by owner or signed tracking token · **Must** · critical
+
+**Source:** `lib/order-tracking-token.ts` (`createTrackingToken`, `verifyTrackingToken`), `app/(customer)/orders/[orderId]/*`, `lib/socket-server.ts` (`join-order`), `hooks/use-order-socket.ts`; cross-ref REQ-ORDER-001, REQ-124.
+**Behaviour:** `/orders/[orderId]` and its sub-routes, and the socket `join-order` event, are available only to the signed-in owner of the order or to a holder of a valid `?t=` token (HMAC-SHA256 with `ORDER_TRACKING_SECRET`, bound to the order id, 30-day expiry). Anyone else gets 404 (page) or is not joined (socket). Without the secret configured, tokens are neither created nor accepted. Every customer message links with the token.
+
+- **Given** an order id with no token and no login, **When** the tracking page is opened, **Then** 404.
+- **Given** a valid token for that order, **When** the page is opened, **Then** it renders; **Given** a token for another order, or an expired or altered token, **Then** 404.
+- **Given** a socket without owner session or valid token, **When** it emits `join-order`, **Then** it receives no updates for the order.
 
 ---
 
@@ -1072,6 +1096,21 @@ MoSCoW also signals **test execution order**: **Must** → smoke; **Should** →
 
 - **Given** an unpaid customer order, **When** the kitchen display loads, **Then** the order is absent; **Given** an unpaid staff express order, **Then** it is present.
 - **Given** a csr adds orders to a tab, **When** the kitchen display loads, **Then** each appears immediately.
+
+#### REQ-KITCHEN-010 — Serving check header · **Must** · regression
+
+**Source:** `lib/serving-label.ts`, `components/features/kitchen/kitchen-order-card.tsx`, `components/features/admin/order-card.tsx`, `components/features/admin/order-queue.tsx`; cross-ref REQ-124.
+**Behaviour:** Each order surface shows a large header `Table {n} · {firstName}` for dine-in, `Pickup · {firstName}` and `Delivery · {firstName}` otherwise. First name is the first word of the account name (customer orders) or of the tab `customerName` / order name (staff orders); `No name` when missing. Kitchen cards show first name only (no phone, email or full name); full details stay on `/dashboard/orders/[orderId]`.
+
+- **Given** a dine-in order for "Ada Obi" at table 7, **Then** the kitchen card header reads "Table 7 · Ada" and shows no phone or email.
+- **Given** a tab order for tab customer "Tunde" at table 3, **Then** "Table 3 · Tunde"; with no name, "No name".
+
+#### REQ-KITCHEN-011 — Delivery details on the kitchen card · **Should** · regression
+
+**Source:** `components/features/kitchen/kitchen-order-card.tsx`; cross-ref REQ-124.
+**Behaviour:** A delivery order's kitchen card shows the delivery address and delivery instructions.
+
+- **Given** a delivery order, **When** the kitchen card renders, **Then** the address and instructions are visible.
 
 ---
 
@@ -1823,7 +1862,7 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 #### REQ-WA-002 — Transactional WhatsApp templates · **Should** · regression
 
 **Source:** `lib/notification-templates.ts` (`order_confirmation`, `order_status_update`, `receipt`, `payment_link`, `payment_confirmation`, `bank_transfer_details` → `transactional`), `services/notification-service.ts`; cross-ref REQ-054/062.
-**Behaviour:** (REQ-123: `order_confirmation`, `receipt` and `payment_link` are sent from `markOrderPaid` and the payment-link job, and their JSON, `TEMPLATE_CATEGORIES` entry and param builder are covered by the template contract test; a template not yet approved on the environment is held as `held_template_pending`.) Transactional templates (order confirmation, status update, receipt, payment link, payment confirmation, bank transfer details) are categorized as `transactional` in `TEMPLATE_CATEGORIES`. The orchestrator gates the WhatsApp attempt on `whatsappTransactional === true` (default true, captured at first PIN verification per REQ-053). If the user has not opted in to transactional WhatsApp, the notification falls through to email.
+**Behaviour:** (REQ-124: `order_status_update_v2` is sent from `notifyOrderStatus` with a Track order URL button carrying the signed tracking token — see REQ-ORDER-007/008.) (REQ-123: `order_confirmation`, `receipt` and `payment_link` are sent from `markOrderPaid` and the payment-link job, and their JSON, `TEMPLATE_CATEGORIES` entry and param builder are covered by the template contract test; a template not yet approved on the environment is held as `held_template_pending`.) Transactional templates (order confirmation, status update, receipt, payment link, payment confirmation, bank transfer details) are categorized as `transactional` in `TEMPLATE_CATEGORIES`. The orchestrator gates the WhatsApp attempt on `whatsappTransactional === true` (default true, captured at first PIN verification per REQ-053). If the user has not opted in to transactional WhatsApp, the notification falls through to email.
 
 - **Given** a user with `whatsappTransactional: true`, **When** an order confirmation is sent, **Then** the WhatsApp `order_confirmation` template is attempted.
 - **Given** a user with `whatsappTransactional: false`, **When** an order confirmation is sent, **Then** the WhatsApp attempt is skipped and the notification falls through to email.

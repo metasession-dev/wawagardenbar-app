@@ -5,7 +5,7 @@
   "builder": "orderStatusUpdateParams",
   "header": null,
   "body": {
-    "text": "Your Wawa Garden Bar order #{{1}} is {{2}}.",
+    "text": "Your Wawa Garden Bar order #{{1}} is {{2}}. Tap below to track it.",
     "example": ["1234", "ready for pickup"]
   },
   "footer": null,

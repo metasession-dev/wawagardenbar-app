@@ -28,7 +28,7 @@ Closes ISO 29119 §3.4 (§1, §9), ISO 27001 A.8.25 (§5), GDPR Art. 25 (§6), E
 | AC3 | **Given** an order id, **When** `/orders/[orderId]` is opened or a socket sends `join-order`, **Then** it works only for the signed-in owner or a holder of a valid, unexpired `?t=` token (HMAC with `ORDER_TRACKING_SECRET`, 30 days); anyone else gets 404 (page) or is not joined (socket). Every customer message links with the token.                                                                                     | REQ-ORDER-008 (new — stub); REQ-ORDER-001 (updated) |
 | AC4 | **Given** an order with a table, pickup or delivery type, **When** it appears on the kitchen card, dashboard order card or order-queue row, **Then** a large header reads `Table N · First` / `Pickup · First` / `Delivery · First` (`No name` when unknown); kitchen cards show first name only — no phone, email or full name.                                                                                               | REQ-KITCHEN-010 (new — stub) |
 | AC5 | **Given** a delivery order, **When** the kitchen card is shown, **Then** it shows the delivery address and instructions.                                                                                                                                                                                                                                                                                                      | REQ-KITCHEN-011 (new — stub) |
-| AC6 | **Given** the `order_status_update_v2` template (body `Your Wawa Garden Bar order #{{1}} is {{2}}.` + URL button "Track order"), **Then** it is submitted to both WhatsApp accounts (UAT, production) with the same name and body and each copy's status is recorded in evidence.                                                                                                                                                 | REQ-WA-002 (updated) |
+| AC6 | **Given** the `order_status_update_v2` template (body `Your Wawa Garden Bar order #{{1}} is {{2}}. Tap below to track it.` + URL button "Track order"), **Then** it is submitted to both WhatsApp accounts (UAT, production) with the same name and body and each copy's status is recorded in evidence.                                                                                                                                                 | REQ-WA-002 (updated) |
 
 Stories → tests: US-A4.1–A4.4 → `e2e/critical/whatsapp-order-tracking.spec.ts` (AC1, AC3); US-B1.5–B1.7 → `e2e/critical/kitchen-serving-check.spec.ts` (AC4, AC5).
 
@@ -149,7 +149,7 @@ N/A — this REQ does not introduce or change AI behaviour. Status phrases are f
 
 ## Decisions recorded at the Phase 1 checkpoint (2026-11-21)
 
-1. **Template:** submit as `order_status_update_v2` (new name; body `Your Wawa Garden Bar order #{{1}} is {{2}}.`, UTILITY, URL button "Track order"); the existing `order_status_update` is left untouched. Operator decision.
+1. **Template:** submit as `order_status_update_v2` (new name; body `Your Wawa Garden Bar order #{{1}} is {{2}}. Tap below to track it.` — Meta's template API rejects a body that ends in a placeholder, so closing wording was added to the issue's text; operator chose this on 2026-11-21, UTILITY, URL button "Track order"); the existing `order_status_update` is left untouched. Operator decision.
 2. **Sub-routes** `/cancel` and `/review` get the same owner-or-token gate.
 3. **Once-per-status** is claim-before-send: a failed send is logged, not retried automatically.
 

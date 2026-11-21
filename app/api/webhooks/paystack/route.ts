@@ -5,9 +5,7 @@ import Order from '@/models/order-model';
 import TabModel from '@/models/tab-model';
 import { PaystackService } from '@/services/paystack-service';
 import { RewardsService, TabService } from '@/services';
-import { deriveBusinessDate } from '@/lib/business-date';
-import { SystemSettingsService } from '@/services/system-settings-service';
-import { StaffNotificationService } from '@/services/staff-notification-service';
+import { OrderService } from '@/services/order-service';
 
 /**
  * Paystack Webhook Handler
@@ -16,24 +14,24 @@ import { StaffNotificationService } from '@/services/staff-notification-service'
  */
 export async function POST(request: NextRequest) {
   try {
-    // Get raw body for signature verification
+    // REQ-123 (AC3) — the signature covers the RAW body: read it once as text
+    // and verify before anything is parsed.
     const rawBody = await request.text();
     const signature = request.headers.get('x-paystack-signature') || '';
 
-    // Verify webhook signature
-    if (
-      !(await PaystackService.validateWebhookSignature(
-        JSON.parse(rawBody),
-        signature
-      ))
-    ) {
+    if (!(await PaystackService.validateWebhookSignature(rawBody, signature))) {
       console.error('Invalid Paystack webhook signature');
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
-    // Parse webhook payload
-    const webhookData = JSON.parse(rawBody);
-    const { event, data } = webhookData;
+    let webhookData: { event?: string; data?: Record<string, any> };
+    try {
+      webhookData = JSON.parse(rawBody);
+    } catch {
+      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+    }
+    const event = webhookData.event;
+    const data = (webhookData.data ?? {}) as Record<string, any>;
 
     console.log('Paystack webhook received:', {
       event,
@@ -50,32 +48,9 @@ export async function POST(request: NextRequest) {
     // Connect to database
     await connectDB();
 
-    // Idempotency guard (REQ-049 / #117 P0 #1) — runs AFTER signature
-    // verification and the non-`charge.success` filter, BEFORE any side
-    // effect (inventory deduction, reward issuance, tab close). A duplicate
-    // delivery returns 200 with no business-logic execution.
-    const eventId = String(
-      (data as { id?: unknown }).id ?? data.reference ?? ''
-    );
-    if (eventId) {
-      const dedup = await recordWebhookEvent({
-        provider: 'paystack',
-        eventId,
-        paymentReference: String(data.reference ?? ''),
-        eventType: String(event ?? ''),
-      });
-      if (dedup === 'duplicate') {
-        console.warn(
-          `[REQ-049] Paystack replay ignored: event=${eventId} ref=${data.reference}`
-        );
-        return NextResponse.json(
-          { message: 'Event already processed' },
-          { status: 200 }
-        );
-      }
-    }
-
-    // Find order by payment reference
+    // REQ-123 (AC3) — find the order (or tab) BEFORE writing the dedup row. An
+    // unknown reference returns 404 and leaves no row, so Paystack's retry is
+    // processed once the order exists.
     const order = await Order.findOne({
       paymentReference: data.reference,
     });
@@ -98,80 +73,91 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Idempotency guard (REQ-049 / #117 P0 #1) — runs AFTER signature
+    // verification, the non-`charge.success` filter and the lookup, BEFORE any
+    // side effect. A duplicate delivery returns 200 with no business logic.
+    const eventId = String(
+      (data as { id?: unknown }).id ?? data.reference ?? ''
+    );
+    if (eventId) {
+      const dedup = await recordWebhookEvent({
+        provider: 'paystack',
+        eventId,
+        paymentReference: String(data.reference ?? ''),
+        eventType: String(event ?? ''),
+      });
+      if (dedup === 'duplicate') {
+        console.warn(
+          `[REQ-049] Paystack replay ignored: event=${eventId} ref=${data.reference}`
+        );
+        return NextResponse.json(
+          { message: 'Event already processed' },
+          { status: 200 }
+        );
+      }
+    }
+
     // Handle order payment
     if (order) {
       if (data.status === 'success') {
-        // Update order with payment information
-        order.paymentStatus = 'paid';
-        order.transactionReference = data.id.toString();
-        order.paidAt = data.paid_at ? new Date(data.paid_at) : new Date();
-        const cutoff = await SystemSettingsService.getBusinessDayCutoff();
-        order.businessDate = deriveBusinessDate(new Date(), cutoff);
-
-        // Update order status
-        order.status = 'confirmed';
-
-        // Add to status history
-        order.statusHistory.push({
-          status: 'confirmed',
-          timestamp: new Date(),
-          note: `Payment confirmed via Paystack (${data.channel})`,
-        });
-
-        console.log('Order confirmed via Paystack:', order._id);
-
-        // REQ-122 — a paid customer order raises a staff alert (never throws).
-        await StaffNotificationService.raiseForPaidOrder(order);
-
-        // REQ-066 — inventory deduction is OWNED by `OrderService.completeOrder`
-        // (kitchen-display completion). Webhook only confirms payment;
-        // the order still moves through pending → confirmed → preparing →
-        // ready → completed via the kitchen-display, and inventory drops
-        // on the final transition.
-
-        // Issue reward
-        if (order.userId) {
+        // REQ-123 (AC3) — the paid amount (kobo) must equal the order total.
+        const expectedKobo = Math.round(order.total * 100);
+        if (Number(data.amount) !== expectedKobo) {
+          order.paymentStatus = 'payment_mismatch';
+          order.statusHistory.push({
+            status: order.status,
+            timestamp: new Date(),
+            note: `Payment amount mismatch: paid ${data.amount} kobo, expected ${expectedKobo} kobo`,
+          });
+          await order.save();
           try {
-            const reward = await RewardsService.calculateReward(
-              order.userId.toString(),
-              order._id.toString(),
-              order.total
+            const { IncidentEventService } = await import(
+              '@/services/incident-event-service'
             );
-
-            if (reward) {
-              console.log(
-                'Reward issued for order:',
-                order._id,
-                'Reward code:',
-                reward.code
-              );
-            }
-          } catch (error) {
-            console.error(
-              'Error calculating reward for order:',
-              order._id,
-              error
-            );
-            try {
-              const { IncidentEventService } = await import(
-                '@/services/incident-event-service'
-              );
-              await IncidentEventService.recordIncident({
-                kind: 'reward_grant_failed',
-                entityId: String(order._id),
-                summary: `Reward calculation failed for order ${order._id}`,
-                errorDetails: {
-                  message:
-                    error instanceof Error ? error.message : String(error),
-                  userId: String(order.userId ?? ''),
-                },
-              });
-            } catch {
-              // IncidentEvent write failure must not abort the webhook
-            }
+            await IncidentEventService.recordIncident({
+              kind: 'payment_mismatch',
+              entityId: String(order._id),
+              summary: `Paystack amount mismatch for order ${order.orderNumber}`,
+              errorDetails: {
+                paidKobo: Number(data.amount),
+                expectedKobo,
+                reference: String(data.reference ?? ''),
+                transactionId: String(data.id ?? ''),
+              },
+            });
+          } catch {
+            // IncidentEvent write failure must not abort the webhook
           }
+          return NextResponse.json({
+            success: true,
+            message: 'Amount mismatch recorded; order not confirmed',
+          });
         }
-      } else {
+
+        // REQ-123 (AC4) — one idempotent paid path (ADR-012): rewards, staff
+        // alert, kitchen event and the customer's messages happen there.
+        // REQ-066 — inventory deduction stays owned by
+        // `OrderService.completeOrder` (kitchen-display completion).
+        const paymentMethod =
+          data.channel === 'card'
+            ? 'card'
+            : data.channel === 'bank_transfer' || data.channel === 'bank'
+              ? 'transfer'
+              : data.channel === 'ussd'
+                ? 'ussd'
+                : undefined;
+        await OrderService.markOrderPaid(
+          String(order._id),
+          'paystack_webhook',
+          {
+            transactionReference: String(data.id ?? ''),
+            paidAt: data.paid_at ? new Date(data.paid_at) : new Date(),
+            paymentMethod,
+            channel: data.channel,
+          }
+        );
+        console.log('Order confirmed via Paystack:', order._id);
+      } else if (order.paymentStatus !== 'paid') {
         // Payment failed or other status
         order.paymentStatus = 'failed';
         order.statusHistory.push({
@@ -179,9 +165,8 @@ export async function POST(request: NextRequest) {
           timestamp: new Date(),
           note: `Paystack payment status: ${data.status}`,
         });
+        await order.save();
       }
-
-      await order.save();
     }
 
     // Handle tab payment

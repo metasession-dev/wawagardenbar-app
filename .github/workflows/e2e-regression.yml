@@ -38,11 +38,9 @@ on:
   # release branch, post_deploy_full_regression after a successful production
   # deployment, scheduled_full_regression on a schedule; manual dispatch always.
   pull_request:
-    branches: [main] # critical-tier gate before merge (release_gate_tier)
-  deployment_status:
-    types: [created] # full regression only after a successful production deploy
+    branches: [main]
   schedule:
-    - cron: '0 3 * * *' # nightly full regression on the default branch (early signal only)
+    - cron: '0 3 * * *'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -103,7 +101,7 @@ jobs:
           # which specs were added in this PR/push so evidence shots tag
           # them as `origin: 'feature'` vs accumulating `regression`).
           fetch-depth: 0
-          ref: ${{ github.event.deployment.sha || github.sha }}
+          ref: ${{ github.event.deployment.sha || (github.event_name == 'schedule' && 'develop') || github.sha }}
           clean: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'true' || 'false' }}
 
       - name: Clean stale build and test output (self-hosted only)
@@ -251,8 +249,13 @@ jobs:
           EVENT="${{ github.event_name }}"
           case "$EVENT" in
             pull_request)
-              echo "project=critical" >> "$GITHUB_OUTPUT"
-              echo "Using the critical tier"
+              if grep -qE "name:\s*['\"]critical['\"]" playwright.config.ts 2>/dev/null; then
+                echo "project=critical" >> "$GITHUB_OUTPUT"
+                echo "Using critical-tier project (smoke + e2e/critical/)"
+              else
+                echo "project=smoke" >> "$GITHUB_OUTPUT"
+                echo "::warning::No 'critical' Playwright project defined; falling back to smoke."
+              fi
               echo "tier=critical" >> "$GITHUB_OUTPUT"
               echo "specs=" >> "$GITHUB_OUTPUT"
               ;;
@@ -422,7 +425,7 @@ jobs:
       # revert, or accept-with-recorded-rationale).
       # ─────────────────────────────────────────────────────────────────
       - name: Open hotfix issue on post-merge regression
-        if: failure() && ((github.event_name == 'deployment_status' && github.event.deployment_status.state == 'success') || github.event_name == 'schedule')
+        if: failure() && github.event_name == 'deployment_status' && github.event.deployment_status.state == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -469,3 +472,20 @@ jobs:
             --title "[hotfix] Post-merge regression on \`${MERGE_SHA_SHORT}\` — full E2E failed" \
             --body "$BODY" \
             --label "bug,priority:high"
+
+      - name: Open or update an issue on scheduled regression failure
+        if: failure() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          TITLE="[scheduled regression] Full E2E failing on develop"
+          TESTED_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+          BODY="The scheduled full regression failed on commit ${TESTED_SHA}. Run: ${RUN_URL}. It is not release evidence and does not block an approval; fix it or record why it is accepted."
+          EXISTING=$(gh issue list --state open --label bug --search "\"$TITLE\" in:title" --json number,title --jq ".[] | select(.title == \"$TITLE\") | .number" | head -n1 || true)
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body "$BODY"
+          else
+            gh issue create --title "$TITLE" --body "$BODY" --label bug
+          fi

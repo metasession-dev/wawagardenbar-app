@@ -90,3 +90,22 @@ describe('REQ-115 account_recovery params', () => {
     ]);
   });
 });
+
+describe('REQ-123 receipt params (AC4)', () => {
+  it('[REQ-123][AC4] the View receipt button takes the order id, the header takes the order number', async () => {
+    const { receiptParams } = await import('@/lib/whatsapp-template-params');
+    const params = receiptParams({
+      orderNumber: 'WG2611200006',
+      orderId: '665a1b2c3d4e5f6a7b8c9d0e',
+      itemsList: '1× Goat Stew',
+      total: '₦5,500',
+      paymentMethod: 'Paystack',
+      pointsEarned: '55',
+    });
+    expect(params.headerParams).toEqual(['WG2611200006']);
+    // /orders/{{1}} resolves by database id; the order number there is a 404.
+    expect(params.buttonParams).toEqual([
+      { index: 0, params: ['665a1b2c3d4e5f6a7b8c9d0e'] },
+    ]);
+  });
+});

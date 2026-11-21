@@ -64,6 +64,7 @@ const SAMPLE_CALLS: Record<string, () => WhatsAppTemplateParams> = {
   receiptParams: () =>
     builders.receiptParams({
       orderNumber: '1234',
+      orderId: '665a1b2c3d4e5f6a7b8c9d0e',
       itemsList: '2× Goat Stew',
       total: '₦5,500',
       paymentMethod: 'Card',

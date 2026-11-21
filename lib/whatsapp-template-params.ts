@@ -100,9 +100,15 @@ export function orderStatusUpdateParams(input: {
   return { bodyParams: [input.orderNumber, input.statusText] };
 }
 
-/** `receipt` = header [order number], body [items, total, payment method, points], URL button [order number]. */
+/**
+ * `receipt` = header [order number], body [items, total, payment method, points],
+ * URL button [order id]. The button opens `/orders/{{1}}`, which looks the order
+ * up by its database id, so the button takes the id and not the order number
+ * (REQ-123: the number gave a 404 on UAT).
+ */
 export function receiptParams(input: {
   orderNumber: string;
+  orderId: string;
   itemsList: string;
   total: string;
   paymentMethod: string;
@@ -116,7 +122,7 @@ export function receiptParams(input: {
       input.paymentMethod,
       input.pointsEarned,
     ],
-    buttonParams: [{ index: 0, params: [input.orderNumber] }],
+    buttonParams: [{ index: 0, params: [input.orderId] }],
   };
 }
 

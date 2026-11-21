@@ -1,6 +1,6 @@
 # Release Ticket: REQ-123 — Paystack payment at checkout and the paid-only kitchen gate (WA-07)
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-11-19
 **Requirement ID:** REQ-123
 **Risk Level:** HIGH

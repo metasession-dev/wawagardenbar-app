@@ -3,6 +3,7 @@ import { KitchenOrderGrid } from '@/components/features/kitchen/kitchen-order-gr
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { toKitchenOrder } from '@/lib/serving-label';
 
 /**
  * Kitchen Display — full-screen order grid for kitchen staff at a tablet.
@@ -44,7 +45,7 @@ export default async function KitchenDisplayPage() {
         </div>
       </div>
 
-      <KitchenOrderGrid initialOrders={orders as never} />
+      <KitchenOrderGrid initialOrders={(orders as Array<Record<string, unknown>>).map((o) => toKitchenOrder(o)) as never} />
     </div>
   );
 }

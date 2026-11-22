@@ -131,6 +131,8 @@ export interface IOrder {
   origin?: OrderOrigin;
   /** REQ-120 */
   channel?: OrderChannel;
+  /** REQ-124 — statuses already messaged to the customer. */
+  notifiedStatuses?: string[];
   guestEmail?: string;
   guestName?: string;
   guestPhone?: string;

@@ -28,6 +28,12 @@ import { revalidatePath } from 'next/cache';
 import { paymentEmailFor } from '@/lib/checkout/checkout-rules';
 import { OrderService } from '@/services/order-service';
 import { PaystackService } from '@/services/paystack-service';
+import { buildTrackingUrl } from '@/lib/order-tracking-token';
+
+/** REQ-124 — the post-payment return URL keeps the signed tracking token. */
+function withPaymentSuccess(url: string): string {
+  return `${url}${url.includes('?') ? '&' : '?'}payment=success`;
+}
 
 export interface CreateOrderInput {
   orderType: 'dine-in' | 'pickup' | 'delivery';
@@ -267,7 +273,9 @@ export async function initializePayment(
     ]);
     const redirectUrl = isStaff
       ? `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/orders/${input.orderId}?payment=success`
-      : `${process.env.NEXT_PUBLIC_APP_URL}/orders/${input.orderId}?payment=success`;
+      : withPaymentSuccess(
+          buildTrackingUrl(input.orderId, process.env.NEXT_PUBLIC_APP_URL)
+        );
 
     if (customerSession) {
       // REQ-123 (AC1, AC2) — a customer order is paid through Paystack only, and

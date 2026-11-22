@@ -101,6 +101,22 @@ export function orderStatusUpdateParams(input: {
 }
 
 /**
+ * `order_status_update_v2` = body [order number, status text], URL button
+ * [`<order id>?t=<tracking token>`] (REQ-124, ADR-013). The suffix comes from
+ * `buildTrackingButtonSuffix` so the link opens the order for a guest.
+ */
+export function orderStatusUpdateV2Params(input: {
+  orderNumber: string;
+  statusText: string;
+  trackingSuffix: string;
+}): WhatsAppTemplateParams {
+  return {
+    bodyParams: [input.orderNumber, input.statusText],
+    buttonParams: [{ index: 0, params: [input.trackingSuffix] }],
+  };
+}
+
+/**
  * `receipt` = header [order number], body [items, total, payment method, points],
  * URL button [order id]. The button opens `/orders/{{1}}`, which looks the order
  * up by its database id, so the button takes the id and not the order number

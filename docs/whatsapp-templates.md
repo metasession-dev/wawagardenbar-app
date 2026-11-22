@@ -477,6 +477,38 @@ button = [dashboardPath]   // the URL button's own {{1}}, e.g. 'bookings/<id>' o
 
 ---
 
+## 14. `order_status_update_v2` — UTILITY
+
+**Sent when:** staff move a customer-origin order to confirmed, preparing, ready, out-for-delivery or delivered (REQ-124: `notifyOrderStatus`, once per status). Inside the customer's 24-hour window the same sentence goes as free-form text instead. It replaces `order_status_update`, which has no button and whose body Meta would not let us rewrite; the old template and key stay as they are.
+
+**Code mapping** (`orderStatusUpdateV2Params` in `lib/whatsapp-template-params.ts`):
+
+```
+body   = [orderNumber, statusText]
+button = [`<order id>?t=<tracking token>`]   // URL button's own {{1}}; token from lib/order-tracking-token.ts
+// statusText ∈ {'confirmed', 'being prepared', 'ready for pickup', 'ready and on its way to your table', 'out for delivery', 'delivered'}
+```
+
+Meta rejects a body that ends in a placeholder, so the issue's text gained a closing sentence.
+
+| Field    | Value                                                                                                                                              |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Name     | `order_status_update_v2`                                                                                                                           |
+| Category | **UTILITY**                                                                                                                                        |
+| Language | `en`                                                                                                                                               |
+| Header   | (none)                                                                                                                                             |
+| Body     | `Your Wawa Garden Bar order #{{1}} is {{2}}. Tap below to track it.`                                                                               |
+| Footer   | (none)                                                                                                                                             |
+| Buttons  | URL: `Track order` → `<base>/orders/{{1}}` (dynamic; UAT `https://wawagardenbar-uat.ostendo.io`, production `https://app.wawagardenbar.com`)      |
+
+**Examples:**
+
+| Body `{{1}}` | `{{2}}`            | Button `{{1}}`            |
+| ------------ | ------------------ | ------------------------- |
+| `1234`       | `ready for pickup` | `65f0c0ffee?t=example`    |
+
+---
+
 ## After submission — wiring checklist
 
 Once Meta approves each template (you'll see them flip from `IN REVIEW` to `APPROVED` in the WABA template manager):

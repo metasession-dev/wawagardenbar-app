@@ -178,6 +178,8 @@ const orderSchema = new Schema<IOrder>(
       type: String,
       enum: ['web', 'whatsapp_link', 'public_api', 'staff_dashboard'],
     },
+    // REQ-124 — statuses already messaged to the customer (once-per-status claim).
+    notifiedStatuses: { type: [String], default: [] },
     guestEmail: { type: String, lowercase: true, trim: true },
     guestName: { type: String, trim: true },
     guestPhone: { type: String, trim: true },

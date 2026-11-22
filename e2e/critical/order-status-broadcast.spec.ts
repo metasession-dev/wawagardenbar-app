@@ -10,6 +10,10 @@
  * gated by `INTERNAL_API_SECRET`. The endpoint's `order-status-update` case
  * calls `emitOrderStatusUpdate` (lib/socket-server.ts:108) directly.
  *
+ * REQ-124: joining an order room now needs the signed-in owner or a valid
+ * tracking token, so each client joins with a token minted for its order id
+ * (the token is bound to the id string; no Order document is needed).
+ *
  * Synthetic orderId strings are used — no real Order document is required
  * because `emitOrderStatusUpdate` broadcasts based on the supplied id with no
  * DB lookup.
@@ -23,6 +27,7 @@ import {
   disconnectAll,
   triggerInternalEmit,
 } from '../helpers/socket-listener';
+import { createTrackingToken } from '../../lib/order-tracking-token';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || '';
@@ -53,7 +58,7 @@ test.describe('REQ-072 — order-status-update broadcast (REQ-RT-001)', () => {
 
     expect(client.connected).toBe(true);
 
-    await joinOrderRoom(client, orderId);
+    await joinOrderRoom(client, orderId, createTrackingToken(orderId)!);
 
     const eventPromise = waitForEvent<{
       orderId: string;
@@ -92,7 +97,11 @@ test.describe('REQ-072 — order-status-update broadcast (REQ-RT-001)', () => {
     const client = await connectClient(BASE_URL);
     sockets.push(client);
 
-    await joinOrderRoom(client, orderIdListening);
+    await joinOrderRoom(
+      client,
+      orderIdListening,
+      createTrackingToken(orderIdListening)!
+    );
 
     let received = false;
     const handler = () => {
@@ -122,7 +131,7 @@ test.describe('REQ-072 — order-status-update broadcast (REQ-RT-001)', () => {
     const client = await connectClient(BASE_URL);
     sockets.push(client);
 
-    await joinOrderRoom(client, orderId);
+    await joinOrderRoom(client, orderId, createTrackingToken(orderId)!);
 
     const eventPromise = waitForEvent<{
       orderId: string;

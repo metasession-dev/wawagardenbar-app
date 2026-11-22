@@ -1,5 +1,6 @@
 'use client';
 
+import { ACTIVE_STATUSES } from '@/lib/order-status-transitions';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useOrderStore, Order } from '@/stores/order-store';
 import { OrderCard } from './order-card';
@@ -67,11 +68,7 @@ export function OrderQueue({ initialOrders }: OrderQueueProps) {
       // Tab filter
       if (activeTab !== 'all') {
         if (activeTab === 'active') {
-          if (
-            !['pending', 'confirmed', 'preparing', 'ready'].includes(
-              order.status
-            )
-          ) {
+          if (!(ACTIVE_STATUSES as readonly string[]).includes(order.status)) {
             return false;
           }
         } else if (order.status !== activeTab) {
@@ -206,9 +203,7 @@ export function OrderQueue({ initialOrders }: OrderQueueProps) {
               Active (
               {
                 orders.filter((o) =>
-                  ['pending', 'confirmed', 'preparing', 'ready'].includes(
-                    o.status
-                  )
+                  (ACTIVE_STATUSES as readonly string[]).includes(o.status)
                 ).length
               }
               )

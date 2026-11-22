@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { updateOrderStatusAction } from '@/app/actions/admin/order-management-actions';
-import { Clock, User, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
+import { Clock, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { format, formatDistanceToNow, differenceInMinutes } from 'date-fns';
 import { useRouter } from 'next/navigation';
+import { ServingHeader } from '@/components/features/orders/serving-header';
+import { formatDeliveryAddress } from '@/lib/serving-label';
 
 interface KitchenOrderCardProps {
   order: any;
@@ -135,6 +137,7 @@ export function KitchenOrderCard({ order }: KitchenOrderCardProps) {
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div>
+            <ServingHeader order={order} variant="kitchen" />
             <h2 className="text-3xl font-bold text-white mb-1">
               {order.orderNumber}
             </h2>
@@ -153,11 +156,6 @@ export function KitchenOrderCard({ order }: KitchenOrderCardProps) {
                     {pickupInfo.countdownLabel}
                   </span>
                 </div>
-              )}
-              {order.tableNumber && (
-                <span className="text-xl font-semibold">
-                  Table {order.tableNumber}
-                </span>
               )}
             </div>
           </div>
@@ -181,11 +179,26 @@ export function KitchenOrderCard({ order }: KitchenOrderCardProps) {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Customer Info */}
-        <div className="flex items-center gap-2 text-gray-300">
-          <User className="h-5 w-5" />
-          <span className="text-xl">{order.customer.name}</span>
-        </div>
+        {/* REQ-124 (AC4): the serving header above carries the first name; the
+            kitchen shows no full name, phone or email. */}
+
+        {/* REQ-124 (AC5): delivery address and instructions */}
+        {order.orderType === 'delivery' && (
+          <div
+            className="rounded-lg bg-gray-800 p-3 text-gray-200"
+            data-testid="kitchen-delivery-details"
+          >
+            <p className="text-lg font-semibold">
+              {formatDeliveryAddress(order.deliveryAddress) ||
+                'No address on file'}
+            </p>
+            {order.deliveryInstructions && (
+              <p className="mt-1 text-base text-gray-300">
+                {order.deliveryInstructions}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Order Items */}
         <div className="space-y-2">

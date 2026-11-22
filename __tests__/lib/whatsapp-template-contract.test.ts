@@ -61,6 +61,12 @@ const SAMPLE_CALLS: Record<string, () => WhatsAppTemplateParams> = {
       orderNumber: '1234',
       statusText: 'ready for pickup',
     }),
+  orderStatusUpdateV2Params: () =>
+    builders.orderStatusUpdateV2Params({
+      orderNumber: '1234',
+      statusText: 'ready for pickup',
+      trackingSuffix: '665a1b2c3d4e5f6a7b8c9d0e?t=1893456000.sig',
+    }),
   receiptParams: () =>
     builders.receiptParams({
       orderNumber: '1234',
@@ -136,12 +142,12 @@ const templates: TemplateJson[] = files.map((f) =>
 
 describe('REQ-115 WhatsApp template contract', () => {
   it('[US-01.6] there is a JSON definition for every template in the doc', () => {
-    expect(templates.length).toBe(13);
+    expect(templates.length).toBe(14);
     const doc = readFileSync(
       join(process.cwd(), 'docs', 'whatsapp-templates.md'),
       'utf8'
     );
-    const documented = [...doc.matchAll(/^## \d+\. `([a-z_]+)`/gm)].map(
+    const documented = [...doc.matchAll(/^## \d+\. `([a-z0-9_]+)`/gm)].map(
       (m) => m[1]
     );
     expect(templates.map((t) => t.name).sort()).toEqual(documented.sort());

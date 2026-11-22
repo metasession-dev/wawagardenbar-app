@@ -36,7 +36,8 @@
     "MONNIFY_SECRET_KEY": "${{ secrets.MONNIFY_SECRET_KEY }}",
     "PAYSTACK_SECRET_KEY": "${{ secrets.PAYSTACK_SECRET_KEY }}",
     "ENABLE_E2E_PIN_INTERCEPT": "true",
-    "WHATSAPP_APP_SECRET": "e2e-whatsapp-app-secret"
+    "WHATSAPP_APP_SECRET": "e2e-whatsapp-app-secret",
+    "ORDER_TRACKING_SECRET": "e2e-order-tracking-secret-0123456789abcdef0123"
   },
   "paths_ignore": [
     "SDLC/**",

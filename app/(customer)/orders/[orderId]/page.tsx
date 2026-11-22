@@ -1,4 +1,9 @@
 import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
+import { getIronSession } from 'iron-session';
+import { sessionOptions, type SessionData } from '@/lib/session';
+import { hasOrderAccess, idString } from '@/lib/order-access';
 import { Suspense } from 'react';
 import { OrderService } from '@/services';
 import { RealTimeOrderTracker } from '@/components/features/orders/real-time-order-tracker';
@@ -17,27 +22,52 @@ interface OrderPageProps {
   }>;
   searchParams: Promise<{
     payment?: string;
+    t?: string;
   }>;
 }
 
 /**
  * Order confirmation and tracking page
  */
-export default async function OrderPage({ params, searchParams }: OrderPageProps) {
+export default async function OrderPage({
+  params,
+  searchParams,
+}: OrderPageProps) {
   const { orderId } = await params;
-  const { payment } = await searchParams;
-  
+  const { payment, t } = await searchParams;
+
   let orderData = await OrderService.getOrderById(orderId);
 
   if (!orderData) {
     notFound();
   }
 
+  // REQ-124 (AC3, ADR-013) — signed-in owner or a valid tracking token, else 404
+  // (404, not 403, so the existence of an order id is not revealed).
+  const session = await getIronSession<SessionData>(
+    await cookies(),
+    sessionOptions
+  );
+  if (
+    !hasOrderAccess({
+      orderId,
+      token: t,
+      sessionUserId: session.isLoggedIn ? session.userId : null,
+      orderUserId: idString(orderData.userId),
+    })
+  ) {
+    notFound();
+  }
+
   // If redirected from payment and payment is still pending, verify it
-  if (payment === 'success' && orderData.paymentStatus === 'pending' && orderData.paymentReference) {
+  if (
+    payment === 'success' &&
+    orderData.paymentStatus === 'pending' &&
+    orderData.paymentReference
+  ) {
     console.log('Verifying payment for order:', orderId);
     const verificationResult = await verifyPayment(orderData.paymentReference);
-    
+
     if (verificationResult.success) {
       console.log('Payment verified successfully');
       // Refetch order to get updated payment status
@@ -64,7 +94,7 @@ export default async function OrderPage({ params, searchParams }: OrderPageProps
             Back to Menu
           </Button>
         </Link>
-        
+
         <Button variant="outline" size="sm">
           <Download className="mr-2 h-4 w-4" />
           Receipt
@@ -73,14 +103,18 @@ export default async function OrderPage({ params, searchParams }: OrderPageProps
 
       {/* Payment pending alert */}
       {order.paymentStatus === 'pending' && order.paymentReference && (
-        <Alert variant="default" className="mb-6 border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20">
+        <Alert
+          variant="default"
+          className="mb-6 border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20"
+        >
           <AlertCircle className="h-4 w-4 text-yellow-600" />
           <AlertTitle className="text-yellow-700 dark:text-yellow-400">
             Payment Pending
           </AlertTitle>
           <AlertDescription className="text-yellow-600 dark:text-yellow-500">
             <p className="mb-3">
-              Your payment is still being processed. If you&apos;ve completed the payment, click the button below to verify.
+              Your payment is still being processed. If you&apos;ve completed
+              the payment, click the button below to verify.
             </p>
             <VerifyPaymentButton paymentReference={order.paymentReference} />
           </AlertDescription>
@@ -108,7 +142,8 @@ export default async function OrderPage({ params, searchParams }: OrderPageProps
       <div className="mt-8 rounded-lg border bg-muted/50 p-4">
         <h3 className="mb-2 font-semibold">Need Help?</h3>
         <p className="mb-3 text-sm text-muted-foreground">
-          If you have any questions or concerns about your order, please contact us.
+          If you have any questions or concerns about your order, please contact
+          us.
         </p>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" asChild>
@@ -135,9 +170,9 @@ function OrderTrackerSkeleton() {
         <Skeleton className="h-4 w-32" />
         <Skeleton className="h-6 w-20" />
       </div>
-      
+
       <Skeleton className="h-32 w-full rounded-lg" />
-      
+
       <div className="space-y-4">
         {[1, 2, 3, 4].map((i) => (
           <div key={i} className="flex items-start gap-4">
@@ -149,27 +184,24 @@ function OrderTrackerSkeleton() {
           </div>
         ))}
       </div>
-      
+
       <Skeleton className="h-48 w-full rounded-lg" />
     </div>
   );
 }
 
 /**
- * Generate metadata for the order page
+ * Generate metadata for the order page.
+ *
+ * REQ-124 (ADR-013): the page is reachable only by the owner or a token holder,
+ * so the title no longer looks the order up (it would reveal an order number to
+ * someone who is about to get a 404), and the link's bearer token is kept out of
+ * Referer headers.
  */
-export async function generateMetadata({ params }: OrderPageProps) {
-  const { orderId } = await params;
-  const order = await OrderService.getOrderById(orderId);
-
-  if (!order) {
-    return {
-      title: 'Order Not Found',
-    };
-  }
-
+export function generateMetadata(): Metadata {
   return {
-    title: `Order #${order.orderNumber} - Wawa Garden Bar`,
-    description: `Track your order #${order.orderNumber}`,
+    title: 'Your order - Wawa Garden Bar',
+    description: 'Track your order',
+    referrer: 'no-referrer',
   };
 }

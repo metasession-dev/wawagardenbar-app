@@ -191,6 +191,7 @@
 | Secret              | Env Var                  | Impact if Compromised           |
 | ------------------- | ------------------------ | ------------------------------- |
 | Session password    | `SESSION_PASSWORD`       | All user sessions can be forged |
+| Order tracking key  | `ORDER_TRACKING_SECRET`  | Anyone can mint order tracking links (read-only order view) |
 | MongoDB URI         | `MONGODB_URI`            | Full database access            |
 | Monnify API key     | `MONNIFY_API_KEY`        | Payment initiation              |
 | Monnify secret      | `MONNIFY_SECRET_KEY`     | Payment verification            |
@@ -220,6 +221,11 @@
 3. **For SESSION_PASSWORD compromise:**
    - All existing user sessions become invalid (users must re-login)
    - This is expected and desired — it invalidates any forged sessions
+   - No data loss
+
+3b. **For ORDER_TRACKING_SECRET compromise (REQ-124, ADR-013):**
+   - Set a new random value (32+ characters) and redeploy
+   - Every tracking link already sent stops working; owners who are signed in still reach their orders, and the next status message carries a fresh link
    - No data loss
 
 4. **For MONGODB_URI compromise:**

@@ -92,8 +92,8 @@ Evidence files are stored under `compliance/evidence/REQ-124/uat/`. Phone-side r
 
 | Defect | Step | Severity (blocker / major / minor) | Description | Reference |
 | --- | --- | --- | --- | --- |
-| D1 | 6 | minor | The Ready message for a delivery order reads "ready for pickup" (`services/order-status-notifier.ts:42`), while the order page says "Order ready for delivery". The wording is outside REQ-124's ACs. | Follow-up issue to be filed |
-| D2 | 9 | minor | Not a REQ-124 defect. The express Create Order form, Pickup type, rejects the order with "preferredPickupTime is required" although a pickup time is filled in. | Follow-up issue to be filed |
+| D1 | 6 | minor | The Ready message for a delivery order reads "ready for pickup" (`services/order-status-notifier.ts:42`), while the order page says "Order ready for delivery". The wording is outside REQ-124's ACs. | #1071 |
+| D2 | 9 | minor | Not a REQ-124 defect. The express Create Order form, Pickup type, rejects the order with "preferredPickupTime is required" although a pickup time is filled in. | #1072 |
 
 ## Summary
 

@@ -1668,6 +1668,8 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 
 **Cross-links:** [REQ-124 implementation plan](plans/REQ-124/implementation-plan.md); ADR-013.
 
+**Operator sign-off:** residual low × medium accepted by the operator (william@ostendo.io) on 2026-11-23, on the REQ-124 agent-executed UAT evidence: steps 10, 11, 13, 14 (signed link opens, 404 without token, 404 with altered token, owner opens without token); step 12 (second customer) still to be run by a person. Status stays OPEN until the review due date; the release reviewer confirms on the portal.
+
 ---
 
 ### R-74 — Tracking token forged, leaked or secret misconfigured (REQ-124)
@@ -1736,3 +1738,5 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 **Framework cross-references:** ISO 27001 A.5.34; GDPR Art. 5(1)(c), Art. 25.
 
 **Cross-links:** [REQ-124 implementation plan](plans/REQ-124/implementation-plan.md); ADR-013.
+
+**Operator sign-off:** residual low × low accepted by the operator (william@ostendo.io) on 2026-11-23, on the REQ-124 agent-executed UAT evidence: steps 1, 2, 3 (serving header `Delivery · UAT`, `Pickup · UAT`, `Table … · UAT`; kitchen card shows first name and delivery address only, no phone, email or surname). Status stays OPEN until the review due date; the release reviewer confirms on the portal.

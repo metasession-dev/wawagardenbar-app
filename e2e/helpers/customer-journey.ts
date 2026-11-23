@@ -138,7 +138,16 @@ export async function completeCheckout(
   await expect(page.locator('label[for^="order-type-"]').first()).toBeVisible({
     timeout: 20000,
   });
-  await page.locator(`label[for="order-type-${type}"]`).click();
+  // The form preselects an order type once its ordering options load, which
+  // can land after an early click and put the default back. Click, let that
+  // settle, and confirm the choice held; retry if it was overwritten.
+  await expect(async () => {
+    await page.locator(`label[for="order-type-${type}"]`).click();
+    await page.waitForTimeout(600);
+    await expect(page.locator(`input#order-type-${type}`)).toBeChecked({
+      timeout: 2000,
+    });
+  }).toPass({ timeout: 20000 });
 
   const firstName = page.locator('input[name="firstName"]');
   if (await firstName.count()) {

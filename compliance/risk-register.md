@@ -1668,7 +1668,7 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 
 **Cross-links:** [REQ-124 implementation plan](plans/REQ-124/implementation-plan.md); ADR-013.
 
-**Operator sign-off:** residual low × medium accepted by the operator (william@ostendo.io) on 2026-11-23, on the REQ-124 agent-executed UAT evidence: steps 10, 11, 13, 14 (signed link opens, 404 without token, 404 with altered token, owner opens without token); step 12 (second customer) still to be run by a person. Status stays OPEN until the review due date; the release reviewer confirms on the portal.
+**Operator sign-off:** residual low × medium accepted by the operator (william@ostendo.io) on 2026-11-23, on the REQ-124 agent-executed UAT evidence: steps 10 to 14 (signed link opens, 404 without token, 404 for a second customer, owner opens without token, 404 with altered token); step 12 (a second signed-in customer gets 404). Status stays OPEN until the review due date; the release reviewer confirms on the portal.
 
 ---
 
@@ -1692,6 +1692,8 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 **Framework cross-references:** ISO 27001 A.8.24, A.5.17; SOC 2 CC6.1; GDPR Art. 32.
 
 **Cross-links:** [REQ-124 implementation plan](plans/REQ-124/implementation-plan.md); ADR-013.
+
+**Operator sign-off:** residual low × medium accepted by the operator (william@ostendo.io) on 2026-11-23, on the REQ-124 agent-executed UAT evidence: step 14 (altered token returns 404), step 10 (the signed link from the message opens the order) and `ORDER_TRACKING_SECRET` set on UAT and production. Status stays OPEN until the review due date; the release reviewer confirms on the portal.
 
 ---
 

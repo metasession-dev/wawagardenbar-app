@@ -32,7 +32,7 @@ tested_sha: 5bf612634cf641eeb92c43abf59f245c498c6c9c
 | Executed by | Claude Code (sdlc-implementer, claude-sonnet-5-5); operator relayed phone results |
 | Reviewed by | REPLACE (human reviewer, to be completed on the portal) |
 | Started | 2026-11-23, about 08:40 UTC |
-| Finished | 2026-11-23, about 09:35 UTC |
+| Finished | 2026-11-23, about 10:15 UTC |
 
 **Independence declaration** (required when `approval.mode` is `dual_actor`). The human reviewer signs:
 I did not write, review or approve the change under test. Name: REPLACE &nbsp; Date: REPLACE
@@ -75,7 +75,7 @@ Evidence files are stored under `compliance/evidence/REQ-124/uat/`. Phone-side r
 | 9 | Staff express order WG2611230005 set to Preparing then Ready: no message arrived | PASS | REQ-124-AC1-staff-order-silent.png | D2 |
 | 10 | The Track order link opens the order page (HTTP 200) in a window with no session, showing the order number, items and status | PASS | REQ-124-AC3-link-opens-order.png | |
 | 11 | The same address without `?t=` returns 404 "This page could not be found." | PASS | REQ-124-AC3-no-token-404.png | |
-| 12 | No second customer account or phone was available (the second number in the env file is the production sender) | BLOCKED | none | |
+| 12 | Signed in as a second customer (a different UAT customer account, phone changed in `.env.uat.local` on 2026-11-23) in a separate session, the first customer's order page address without `?t=` returns 404; no items or address shown | PASS | REQ-124-AC3-other-customer-404.png | |
 | 13 | Signed in as the owner, the order page opens without a token | PASS | REQ-124-AC3-owner-no-token.png | |
 | 14 | One character of `?t=` changed: 404 | PASS | REQ-124-AC3-altered-token-404.png | |
 
@@ -85,7 +85,7 @@ Evidence files are stored under `compliance/evidence/REQ-124/uat/`. Phone-side r
 - Step 5: the dashboard does not offer a second Preparing action, so the duplicate guard was not exercised through the UI; it is covered by the unit and critical e2e tests.
 - Step 8: the order page was not opened and Cancel was not observed on the card.
 - Step 9: the express form did not retain the customer name or phone (the order shows "Walk-in Customer"), so the check shows that a staff order sends no message, not that a staff order carrying a customer phone sends none.
-- Step 12: not run with a second customer. As a proxy, the signed-in staff account uat-csr, which is not the owner, got 404 on the same address (no evidence file). A person must run step 12 with a real second customer.
+- Step 12 was first blocked (the only second number was the production sender), then run on 2026-11-23 after the operator replaced the second test number. The staff account uat-csr (not the owner) also got 404.
 - Step 3 used two dine-in orders that already existed on UAT.
 
 ## Defect log
@@ -99,21 +99,21 @@ Evidence files are stored under `compliance/evidence/REQ-124/uat/`. Phone-side r
 
 | Passed | Failed | Blocked | Total steps |
 | --- | --- | --- | --- |
-| 13 | 0 | 1 | 14 |
+| 14 | 0 | 0 | 14 |
 
 **AC coverage**
 
 | AC | Steps | Result |
 | --- | --- | --- |
 | AC1 | 4, 5, 6, 7, 9 | Passed |
-| AC3 | 10, 11, 13, 14 passed; 12 blocked | Passed except step 12 (second customer) |
+| AC3 | 10, 11, 12, 13, 14 | Passed |
 | AC4 | 1, 2, 3 | Passed |
 | AC5 | 2 | Passed |
 | AC7 | 6, 7, 8 | Passed |
 | AC2, AC6 | not testable by a human | covered by unit test and template-submissions.md |
 
 **Recommendation:** [ ] Approve &nbsp; [ ] Approve with noted defects &nbsp; [ ] Reject
-(For the human reviewer. The agent recommends: approve with noted defects D1 and D2, and a person to run step 12.)
+(For the human reviewer. The agent recommends: approve with noted defects D1 and D2.)
 
 **Reviewer decision** (agent-executed runs): [ ] The agent's results are accepted &nbsp; [ ] A manual re-run is required (the release waits; the re-run gets its own record with `execution_mode: manual`)
 

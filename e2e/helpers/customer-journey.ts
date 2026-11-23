@@ -144,7 +144,7 @@ export async function completeCheckout(
   await expect(async () => {
     await page.locator(`label[for="order-type-${type}"]`).click();
     await page.waitForTimeout(600);
-    await expect(page.locator(`input#order-type-${type}`)).toBeChecked({
+    await expect(page.locator(`#order-type-${type}`)).toBeChecked({
       timeout: 2000,
     });
   }).toPass({ timeout: 20000 });

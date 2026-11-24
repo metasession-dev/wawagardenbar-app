@@ -1,6 +1,6 @@
 # Release Ticket: REQ-124 — Order status notifications, tracking link and serving check (WA-08)
 
-**Status:** PENDING UAT
+**Status:** RELEASED
 **Date:** 2026-11-22
 **Requirement ID:** REQ-124
 **Risk Level:** HIGH

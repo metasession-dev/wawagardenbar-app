@@ -680,6 +680,9 @@ export class OrderService {
       const { orderConfirmationParams, receiptParams } = await import(
         '@/lib/whatsapp-template-params'
       );
+      const { buildTrackingButtonSuffix } = await import(
+        '@/lib/order-tracking-token'
+      );
       const total = `₦${Math.round(order.total).toLocaleString('en-NG')}`;
       const userId = order.userId.toString();
 
@@ -700,7 +703,7 @@ export class OrderService {
         .slice(0, 300);
       const receipt = receiptParams({
         orderNumber: order.orderNumber,
-        orderId: String(order._id),
+        orderId: buildTrackingButtonSuffix(String(order._id)),
         itemsList,
         total,
         paymentMethod: ctx.paymentMethod

@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-124",
+  "ac": 4,
+  "slug": "kitchen-card-tab-and-no-name",
+  "specFile": "e2e/critical/kitchen-serving-check.spec.ts",
+  "capturedAt": "2026-11-21T22:00:57.260Z"
+}

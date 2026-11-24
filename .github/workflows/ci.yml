@@ -271,6 +271,7 @@ jobs:
           PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
           ENABLE_E2E_PIN_INTERCEPT: true
           WHATSAPP_APP_SECRET: e2e-whatsapp-app-secret
+          ORDER_TRACKING_SECRET: e2e-order-tracking-secret-0123456789abcdef0123
         run: |
           npx tsx scripts/seed-e2e-admins.ts
           npx tsx scripts/seed-food-menu.ts
@@ -321,6 +322,7 @@ jobs:
           PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
           ENABLE_E2E_PIN_INTERCEPT: true
           WHATSAPP_APP_SECRET: e2e-whatsapp-app-secret
+          ORDER_TRACKING_SECRET: e2e-order-tracking-secret-0123456789abcdef0123
         run: npm run dev &
 
       - name: Wait for dev server
@@ -376,6 +378,7 @@ jobs:
           PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
           ENABLE_E2E_PIN_INTERCEPT: true
           WHATSAPP_APP_SECRET: e2e-whatsapp-app-secret
+          ORDER_TRACKING_SECRET: e2e-order-tracking-secret-0123456789abcdef0123
         run: npx playwright test --project=smoke --reporter=json,html
 
       - name: Seed E2E test data (report-only)
@@ -395,6 +398,7 @@ jobs:
           PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
           ENABLE_E2E_PIN_INTERCEPT: true
           WHATSAPP_APP_SECRET: e2e-whatsapp-app-secret
+          ORDER_TRACKING_SECRET: e2e-order-tracking-secret-0123456789abcdef0123
         run: npx tsx scripts/seed-e2e-admins.ts && npx tsx scripts/seed-food-menu.ts && npx tsx scripts/seed-drinks-menu.ts && npx tsx scripts/seed-inventory.ts && npx tsx scripts/seed-e2e-fixtures.ts
 
       - name: Authenticated E2E (report-only)
@@ -416,6 +420,7 @@ jobs:
           PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
           ENABLE_E2E_PIN_INTERCEPT: true
           WHATSAPP_APP_SECRET: e2e-whatsapp-app-secret
+          ORDER_TRACKING_SECRET: e2e-order-tracking-secret-0123456789abcdef0123
         run: npx playwright test --project=smoke --project=critical --reporter=json,html
       # ── Gate 5: Build ──
 

@@ -39,9 +39,14 @@ export function connectClient(url: string, timeoutMs = 5000): Promise<Socket> {
  * `lib/socket-server.ts:39` accepts `join-order` with an orderId payload.
  * Returns once the next-tick fires (server emits no ack).
  */
-export function joinOrderRoom(socket: Socket, orderId: string): Promise<void> {
+export function joinOrderRoom(
+  socket: Socket,
+  orderId: string,
+  token?: string
+): Promise<void> {
   return new Promise((resolve) => {
-    socket.emit('join-order', orderId);
+    // REQ-124: the server requires the signed-in owner or a tracking token.
+    socket.emit('join-order', token ? { orderId, token } : orderId);
     setTimeout(resolve, 100);
   });
 }

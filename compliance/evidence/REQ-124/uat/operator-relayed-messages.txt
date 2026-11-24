@@ -1,0 +1,18 @@
+REQ-124 UAT — WhatsApp messages as reported by the operator from the customer phone
+(+44 7825 285212), 2026-11-23. The agent cannot see the phone; these are the operator's
+transcriptions. Signed token values are redacted.
+
+Order WG2611230001 (delivery), in the order received:
+ 1. "Order #WG2611230001 confirmed — thanks for ordering with Wawa Garden Bar! Total: ₦1,500. Estimated time: 45 minutes." (payment confirmation, previous release)
+ 2. "Your Wawa Garden Bar order #WG2611230001 is being prepared. Tap below to track it."   [Preparing]
+ 3. "Your Wawa Garden Bar order #WG2611230001 is ready for pickup. Tap below to track it." [Ready]
+ 4. "Your Wawa Garden Bar order #WG2611230001 is out for delivery. Tap below to track it." [Out for delivery]
+ 5. "Your Wawa Garden Bar order #WG2611230001 is delivered. Tap below to track it."        [Delivered]
+ After Completed: no message.
+
+Order WG2611230002 (pickup): confirmation, "is being prepared", "is ready for pickup", and the existing receipt message.
+Order WG2611230005 (staff express order, Preparing then Ready): no message.
+
+Track order links pasted by the operator (token redacted):
+ https://wawagardenbar-uat.ostendo.io/orders/6b03fc9f9efbcd0111df15a1?t=<redacted>   (WG2611230001, several, one per status)
+ https://wawagardenbar-uat.ostendo.io/orders/6b03fd8f9efbcd0111df1761?t=<redacted>   (WG2611230002)

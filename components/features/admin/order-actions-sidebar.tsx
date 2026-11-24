@@ -1,5 +1,6 @@
 'use client';
 
+import { canTransition } from '@/lib/order-status-transitions';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -65,17 +66,8 @@ export function OrderActionsSidebar({
     setOrder(initialOrder);
   }, [initialOrder]);
 
-  const canTransitionTo = (currentStatus: string, newStatus: string) => {
-    const transitions: Record<string, string[]> = {
-      pending: ['preparing', 'cancelled'],
-      confirmed: ['preparing', 'cancelled'],
-      preparing: ['ready', 'cancelled'],
-      ready: ['completed', 'cancelled'],
-      completed: [],
-      cancelled: [],
-    };
-    return transitions[currentStatus]?.includes(newStatus);
-  };
+  const canTransitionTo = (currentStatus: string, newStatus: string) =>
+    canTransition(currentStatus, order.orderType, newStatus);
 
   // Check if order is part of a settling tab
   const isPartOfSettlingTab = order.tabId && order.tab?.status === 'settling';
@@ -242,6 +234,36 @@ export function OrderActionsSidebar({
                 <CheckCircle className="mr-2 h-4 w-4" />
               )}
               Mark as Ready
+            </Button>
+          )}
+
+          {canTransitionTo(order.status, 'out-for-delivery') && (
+            <Button
+              className="w-full"
+              onClick={() => handleStatusUpdate('out-for-delivery')}
+              disabled={isUpdating}
+            >
+              {isUpdating ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle className="mr-2 h-4 w-4" />
+              )}
+              Out for Delivery
+            </Button>
+          )}
+
+          {canTransitionTo(order.status, 'delivered') && (
+            <Button
+              className="w-full"
+              onClick={() => handleStatusUpdate('delivered')}
+              disabled={isUpdating}
+            >
+              {isUpdating ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle className="mr-2 h-4 w-4" />
+              )}
+              Mark Delivered
             </Button>
           )}
 

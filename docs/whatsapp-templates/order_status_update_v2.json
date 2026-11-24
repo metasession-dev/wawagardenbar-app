@@ -1,0 +1,20 @@
+{
+  "name": "order_status_update_v2",
+  "language": "en",
+  "category": "UTILITY",
+  "builder": "orderStatusUpdateV2Params",
+  "header": null,
+  "body": {
+    "text": "Your Wawa Garden Bar order #{{1}} is {{2}}. Tap below to track it.",
+    "example": ["1234", "ready for pickup"]
+  },
+  "footer": null,
+  "buttons": [
+    {
+      "type": "URL",
+      "text": "Track order",
+      "url": "https://app.wawagardenbar.com/orders/{{1}}",
+      "example": ["https://app.wawagardenbar.com/orders/65f0c0ffee?t=example"]
+    }
+  ]
+}

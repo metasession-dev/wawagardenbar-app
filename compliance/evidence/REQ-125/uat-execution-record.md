@@ -20,7 +20,7 @@ tested_sha: 8b4a1053cd9f1c751b95e96496ac97a4d61550ed
 | Finished                   | 2026-11-25 16:25 UTC                                                                                                                              |
 
 **Independence declaration** (required when `approval.mode` is `dual_actor`). For a manual run the tester signs; for an agent-executed run the human reviewer signs:
-I did not write, review or approve the change under test. Name: PENDING (reviewer) &nbsp; Date: PENDING
+I did not write, review or approve the change under test. Name: Ade Thompson &nbsp; Date: 2026-11-25
 
 ## Operator preparation (initial each before the run starts)
 
@@ -109,12 +109,12 @@ Evidence files are stored under `compliance/evidence/REQ-125/uat/`.
 
 **Recommendation:** [ ] Approve &nbsp; [x] Approve with noted defects &nbsp; [ ] Reject
 
-**Reviewer decision** (agent-executed runs): [ ] The agent's results are accepted &nbsp; [ ] A manual re-run is required (the release waits; the re-run gets its own record with `execution_mode: manual`)
+**Reviewer decision** (agent-executed runs): [x] The agent's results are accepted &nbsp; [ ] A manual re-run is required (the release waits; the re-run gets its own record with `execution_mode: manual`)
 
 ## Sign-off
 
 | Role                                                        | Name                            | Date       |
 | ----------------------------------------------------------- | ------------------------------- | ---------- |
 | Tester (manual run) or agent executor                       | Claude Code (claude-sonnet-5-5) | 2026-11-25 |
-| Reviewer (agent-executed run; write "n/a" for a manual run) | PENDING                         | PENDING    |
-| Operator                                                    | PENDING                         | PENDING    |
+| Reviewer (agent-executed run; write "n/a" for a manual run) | Ade Thompson                    | 2026-11-25 |
+| Operator                                                    | Metasession Dev                 | 2026-11-25 |

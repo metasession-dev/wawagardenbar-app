@@ -1,0 +1,7 @@
+Step 10 (REQ-126 AC1). Sent from the UAT test customer's WhatsApp: "order".
+Reply received (relayed by the operator, 2026-11-25):
+
+Order from our menu here: https://wawagardenbar-uat.ostendo.io/menu
+Pay securely online and we will start preparing your order.
+
+The operator reported that the link opened the menu. No support ticket was created for this message (the Support queue showed no ticket for it).

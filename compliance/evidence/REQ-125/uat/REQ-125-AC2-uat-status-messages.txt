@@ -1,0 +1,8 @@
+Steps 5 and 6 (REQ-125 AC2, AC3). WhatsApp messages the operator received on the UAT test customer's phone (relayed by the operator, 2026-11-25).
+
+Step 5 (order status updates switched OFF; order WG2611250006 moved to Preparing then Ready by the csr login):
+The operator listed the order confirmation and the receipt as received, and reported no order status message.
+
+Step 6 (order status updates switched back ON; order WG2611250007 moved to Preparing, then Ready):
+- "Your Wawa Garden Bar order #WG2611250007 is being prepared. Tap below to track it."
+- "Your Wawa Garden Bar order #WG2611250007 is ready and on its way to your table. Tap below to track it."

@@ -4,7 +4,7 @@
 **Implementation branch:** `feat/bundle-wa15-wa16-checkout-fix` (declared bundle, REQ-125 core; REQ-126 and REQ-127 co-tracked)
 **Risk class:** MEDIUM
 
-CI as of: not yet available. The branch has not been pushed when this was written, so there is no CI run to cite. The Feature In-Scope E2E and Quality Gates rows are added after the integration PR runs.
+CI as of: 45666982374/1 @ 32847df1 (release PR #1090: Quality Gates passed by reuse, Compliance Validation failed on the triage references, E2E Regression Suite failed on two REQ-127 specs that needed a working payment gateway; all three addressed in the follow-up fix, the rows are in the triage table below).
 
 ## Test design
 
@@ -34,11 +34,22 @@ CI as of: not yet available. The branch has not been pushed when this was writte
 
 ## UI regression sweep
 
-Strings and surfaces changed by the bundle (the checkout form and its retry flow, the settings page "WhatsApp messages" section, support-ticket subjects and alert titles, the inbound intents) were searched over all of `e2e/`. 22 existing spec files that exercise those surfaces were run with the new specs on the isolated stack: all WhatsApp inbound, opt-out, support-thread, welcome, webhook-security, order-tracking and payment-link specs, the checkout, sign-in, tab-refusal and ordering-options specs, the staff-alert and staff-notification specs, the settings specs and `smoke/rbac`. 96 of 98 passed, 1 skipped, 2 failed (`whatsapp-support-thread` and `support-ticket-whatsapp-inbound`, both from the same over-broad "order" matcher in this bundle, fixed in `65e7895c`); the re-run of those two files and the new specs passed (19 of 19). The full `smoke` + `critical` tiers and the full `regression` tier are not run locally: CI runs `smoke` and `critical` on the PR, and the full regression runs on its nightly schedule.
+Strings and surfaces changed by the bundle (the checkout form and its retry flow, the settings page "WhatsApp messages" section, support-ticket subjects and alert titles, the inbound intents) were searched over all of `e2e/`. 22 existing spec files that exercise those surfaces were run with the new specs on the isolated stack: all WhatsApp inbound, opt-out, support-thread, welcome, webhook-security, order-tracking and payment-link specs, the checkout, sign-in, tab-refusal and ordering-options specs, the staff-alert and staff-notification specs, the settings specs and `smoke/rbac`. 96 of 98 passed, 1 skipped, 2 failed (`whatsapp-support-thread` and `support-ticket-whatsapp-inbound`, both from the same over-broad "order" matcher in this bundle, fixed in #1086); the re-run of those two files and the new specs passed (19 of 19). The full `smoke` + `critical` tiers and the full `regression` tier are not run locally: CI runs `smoke` and `critical` on the PR, and the full regression runs on its nightly schedule.
 
 ## Test executions
 
-The portal's execution read model has no records for this release yet (nothing has been pushed). First-class rows are added after the integration PR runs; they are not inferred from artefacts.
+<!-- generated-by: render-test-executions.sh journey-at 2026-11-25T18:16:55Z -->
+
+| Source Release | SDLC Stage       | Execution | Suite         | Outcome | Workflow / Run                                                                                                               | Related Evidence | Incident / Remediation                         | Date                |
+| -------------- | ---------------- | --------- | ------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------- | ---------------- | ---------------------------------------------- | ------------------- |
+| REQ-125        | 2 implement_test | #1        | quality_gate  | passed  | [Quality Gates](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/45622816174) (run 45622816174, attempt 1)  | None             | None                                           | 2026-11-25 13:29:36 |
+| REQ-125        | 2 implement_test | #2        | e2e           | failed  | [E2E Regression](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/45666982374) (run 45666982374, attempt 1) | None             | authoritative workflow_run conclusion: failure | 2026-11-25 18:04:34 |
+| REQ-125        | 2 implement_test | #3        | e2e           | failed  | [E2E Regression](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/45666982374) (run 45666982374, attempt 1) | None             | authoritative workflow_run conclusion: failure | 2026-11-25 18:04:34 |
+| REQ-125        | 2 implement_test | #4        | e2e           | failed  | [E2E Regression](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/45666982374) (run 45666982374, attempt 1) | None             | authoritative workflow_run conclusion: failure | 2026-11-25 18:04:34 |
+| REQ-125        | 2 implement_test | #5        | quality_gate  | passed  | [Quality Gates](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/45658854082) (run 45658854082, attempt 1)  | None             | None                                           | 2026-11-25 18:06:40 |
+| REQ-125        | 4 uat_review     | #1        | uat_execution | passed  | Agent-executed UAT                                                                                                           | None             | None                                           | 2026-11-25 18:09:52 |
+
+**Final assessment:** Stage-scoped execution numbering is authoritative from first-class portal test execution records.
 
 ### Local executions (Stage 2, isolated stack: `mongo:7`, project `server.ts` dev server)
 
@@ -51,12 +62,14 @@ The portal's execution read model has no records for this release yet (nothing h
 
 ## E2E failures & triage
 
-| Spec / check                                                         | Source              | Classification | Evidence                                                                                                                                                                    | Disposition | Reference  |
-| -------------------------------------------------------------------- | ------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ---------- |
-| Settings page returned HTTP 500                                      | local e2e           | app defect     | `diffSwitches` was exported from a `'use server'` file, which may export only async functions; moved to `lib/whatsapp-switch-diff.ts`                                       | Fix         | `1c815381` |
-| "WhatsApp message settings saved" never shown                        | local e2e           | app defect     | The component used `sonner` toasts but the app mounts the shadcn toaster (the same unmounted-toaster defect REQ-122 found); now uses `use-toast`                            | Fix         | `1c815381` |
-| Suppressed send not logged when WhatsApp is off                      | local e2e design    | app defect     | The gate ran after the service-enabled check, so a suppressed send was recorded as SERVICE_DISABLED in environments with WhatsApp off; the gate now runs first              | Fix         | `1c815381` |
-| `whatsapp-support-thread` AC1, `support-ticket-whatsapp-inbound` AC1 | UI regression sweep | app defect     | "Order number is 4821" and "Also the drink was warm" were classified as order requests and never reached the ticket; an order request is now only an order word plus filler | Fix         | `65e7895c` |
+| Spec / check                                                         | Source              | Classification | Evidence                                                                                                                                                                    | Disposition | Reference |
+| -------------------------------------------------------------------- | ------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | --------- |
+| Settings page returned HTTP 500                                      | local e2e           | app defect     | `diffSwitches` was exported from a `'use server'` file, which may export only async functions; moved to `lib/whatsapp-switch-diff.ts`                                       | Fix         | #1086     |
+| "WhatsApp message settings saved" never shown                        | local e2e           | app defect     | The component used `sonner` toasts but the app mounts the shadcn toaster (the same unmounted-toaster defect REQ-122 found); now uses `use-toast`                            | Fix         | #1086     |
+| Suppressed send not logged when WhatsApp is off                      | local e2e design    | app defect     | The gate ran after the service-enabled check, so a suppressed send was recorded as SERVICE_DISABLED in environments with WhatsApp off; the gate now runs first              | Fix         | #1086     |
+| `whatsapp-support-thread` AC1, `support-ticket-whatsapp-inbound` AC1 | UI regression sweep | app defect     | "Order number is 4821" and "Also the drink was warm" were classified as order requests and never reached the ticket; an order request is now only an order word plus filler | Fix         | #1086     |
+
+| REQ-127 critical e2e on the release PR (`checkout-payment-init-failure`, 2 tests) | CI release PR run | test bug | The two specs asserted that a payment start succeeds (a payment reference on the order, then a cleared cart); CI runs without test payments and has no working gateway, so the start cannot succeed there. Reproduced locally with `ENABLE_TEST_PAYMENTS=false`; the specs now assert only the order bookkeeping (one Pending order, same order reused, superseded order cancelled) and pass in that configuration | Fix | #1031 |
 
 **Final assessment:** every acceptance criterion of REQ-126 is proved by passing tests (exemptions above). The two pre-existing failures the sweep found were caused by this bundle and are fixed. The new specs and the 22 related existing files pass locally; CI runs the full `smoke` and `critical` tiers on the PR.
 

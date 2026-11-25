@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "cli_version": "1.14.0",
+  "cli_version": "1.15.0",
   "files": {
     ".claude/skills/adr-author/SKILL.md": {
       "sha256": "dcf28d8126daa6485fa5d174d9ef09531fa9a05c7adeb69611c92f228dbcceb7",
@@ -87,7 +87,7 @@
       "section": "2e-ii"
     },
     ".claude/skills/sdlc-implementer/SKILL.md": {
-      "sha256": "0137407702788430cd49fc98a5394940e4c9db1e8e46a1370249ce2b33c852ec",
+      "sha256": "bb1176c57ba799a068fd8fa6258bd177254065bb9c941b4b4de3d950b99d4e87",
       "section": "2e-ii"
     },
     ".claude/skills/sdlc-implementer/references/call-graph.md": {
@@ -167,7 +167,7 @@
       "section": "2f"
     },
     ".github/workflows/ci.yml": {
-      "sha256": "1db23156f53e39688eb6f9f37db00bafef02f58b65165ea1aa39a7cd76e82ed3",
+      "sha256": "393cd48d3a321db88302e55136ffe941d2ad7a570165c8cbede99bf92cf51b34",
       "section": "2f"
     },
     ".github/workflows/close-out-completion.yml": {
@@ -191,13 +191,11 @@
       "section": "2f"
     },
     ".github/workflows/e2e-regression.yml": {
-      "sha256": "1505ec9e87b2bde0a472c40538040f2aa1221bb7935a7121d98c276a843bdf7f",
-      "section": "2f",
-      "conflict": true,
-      "pending_upstream_sha256": "530ce84b9e9d2d8106d11180c225db5344e949d25747f14d10e61a65b5480e12"
+      "sha256": "530ce84b9e9d2d8106d11180c225db5344e949d25747f14d10e61a65b5480e12",
+      "section": "2f"
     },
     ".github/workflows/feature-e2e.yml": {
-      "sha256": "291d54f5aca93da8d278d28896f41d5781ee3bbbe6a156e0a75389e4521c688f",
+      "sha256": "2a2360c8e68c95b637a86654c7652711855f13bbaca48ba35b58730544d8a154",
       "section": "2f"
     },
     ".github/workflows/incident-export.yml": {
@@ -385,7 +383,7 @@
       "section": "2d"
     },
     "scripts/check-release-pr-scope.sh": {
-      "sha256": "438b97f0ed113a399dab70da36241796aa3c0eb64f9c961b2a0200ce631326b3",
+      "sha256": "35f60d48671a0eb1bd3b4e21b020bf7b95d3cc2843a186816ab9430de8cab8fc",
       "section": "2d"
     },
     "scripts/check-req-title-tags.sh": {
@@ -416,6 +414,10 @@
       "sha256": "6403e1d23dfcf391f714405da09837f64c433f396d542970b1d94d3ff2380e58",
       "section": "2d"
     },
+    "scripts/delivery-gh.sh": {
+      "sha256": "566015be4cde1bb4cca6c3011852af674af414e219f2bb3955d7f21ae24d8714",
+      "section": "2d"
+    },
     "scripts/derive-release-version.sh": {
       "sha256": "be2bc6012795a549f0a3126a59d0f5a1f25fda31b42a8d54dfdbc73bae03b675",
       "section": "2d"
@@ -441,11 +443,15 @@
       "section": "2d"
     },
     "scripts/extract-release-metadata.sh": {
-      "sha256": "3876e7ab289fd865f3ff1f4c025e38ea27667833354931d013b0ea8011f18d55",
+      "sha256": "2c11ac79d62bde33de34d03e84101dedb2ac83e8340cba9559d94bbeacb0f114",
+      "section": "2d"
+    },
+    "scripts/find-tested-run.sh": {
+      "sha256": "afc7ec5af5dc98aab687c10e7fa40735f89b4502794bafeb219ec3d19290b776",
       "section": "2d"
     },
     "scripts/generate-bundled-changes.sh": {
-      "sha256": "514cdec8417573ccb99f9ce467bc9a0a2a334cc764afb4323ab1cb07a68241b5",
+      "sha256": "fc9c2b764af39c87e6b0ee3960491928073512784517e430b5b85709f3504f11",
       "section": "2d"
     },
     "scripts/generate-housekeeping-release-ticket.sh": {
@@ -481,15 +487,15 @@
       "section": "2d"
     },
     "scripts/playwright-report-evidence.sh": {
-      "sha256": "0985ed73b6cf5103a3e34fdacb6b2e177f406938738a19d60e05eb6a60996f2d",
+      "sha256": "8475dbe8ab0d667cd946f4f705d7bfd0612a62fa8dea63d6d31631d585f65a11",
       "section": "2d"
     },
     "scripts/prepare-release-pr.sh": {
-      "sha256": "c455d94b473d7b74e0ec9dd28a15934a8da6d6a0f14b4d3036bb217e20e86934",
+      "sha256": "aa6a50c3a29e167d2dcd4f1f6f4ecd9274df1062cedb369db7f9a2104c9393a5",
       "section": "2d"
     },
     "scripts/provenance-gated-commit.sh": {
-      "sha256": "61e5c59823d79d5e855f6fc0ace907081046f2cc9e97c5100896c5d2db058602",
+      "sha256": "ce8403a7996e6ef146a5a65dccaf569f4d942d3e4c47c05268783e2ee33b5079",
       "section": "2d"
     },
     "scripts/reconcile-deployment.sh": {
@@ -564,14 +570,14 @@
       "sha256": "4839eb4a389815170f6032b333a4d70e84d7d74f46b16850855391217d7de00c",
       "section": "2d",
       "conflict": true,
-      "pending_upstream_sha256": "4839eb4a389815170f6032b333a4d70e84d7d74f46b16850855391217d7de00c"
+      "pending_upstream_sha256": "04e5e1b38b2f92580e71ec634431d83572aa1731995e6a05e8a3c09f04819070"
     },
     "scripts/validate-commits.sh": {
       "sha256": "f01f532e9788a3eb91ee154591c468b153934b75328b1633bfa7c344462a7ec2",
       "section": "2d"
     },
     "scripts/validate-compliance-artifacts.sh": {
-      "sha256": "4a9babcb18e22131e364a688e0dfed065005e8e653a0174779c15b715d337733",
+      "sha256": "c4bbf7bb223c080b7f4358abe53c20751d38e0576cea24a3e50b025a5da044d4",
       "section": "2d"
     },
     "scripts/validate-risk-acceptance-record.sh": {

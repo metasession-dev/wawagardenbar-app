@@ -45,8 +45,8 @@ jobs:
   # ──────────────────────────────────────────────
   quality-gates:
     name: Quality Gates
-    needs: [register-release]
-    if: ${{ always() && (github.event_name != 'pull_request' || !startsWith(github.head_ref, 'chore/close-out-')) && (github.event_name == 'pull_request' || needs.register-release.result == 'success') }}
+    needs: [register-release, find-tested-run]
+    if: ${{ always() && (github.event_name != 'pull_request' || !startsWith(github.head_ref, 'chore/close-out-')) && (github.event_name == 'pull_request' || needs.register-release.result == 'success') && needs.find-tested-run.outputs.reuse != 'true' }}
     runs-on: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'ubuntu-latest' || (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') }}
 
     # `working-directory` lets monorepo / subdir Node projects (e.g. a consumer
@@ -457,6 +457,23 @@ jobs:
           EOF
           cat gate-outcomes.json
 
+      # A merge of this pull request reuses this run's result when the merged tree equals the tree tested here
+      # (find-tested-run.sh, DevAudit-Installer#1298).
+      - name: Record the tested tree
+        if: always() && github.event_name == 'pull_request'
+        continue-on-error: true
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/reuse-record"
+          git rev-parse 'HEAD^{tree}' > "$GITHUB_WORKSPACE/reuse-record/tested-tree.txt"
+          cp gate-outcomes.json "$GITHUB_WORKSPACE/reuse-record/gate-outcomes.json"
+      - uses: actions/upload-artifact@v7
+        if: always() && github.event_name == 'pull_request'
+        continue-on-error: true
+        with:
+          name: tested-tree
+          path: reuse-record/
+          retention-days: 90
+
       # ── Upload artifacts ──
 
       # actions/upload-artifact@v7 doesn't honour the job's `working-directory`;
@@ -480,6 +497,61 @@ jobs:
             compliance/evidence/*/screenshots/*.png
             compliance/evidence/*/screenshots/*.png.meta.json
           retention-days: 90
+
+  # ──────────────────────────────────────────────
+  # Reuse the pull request run's result when the merged tree is the tree it tested (DevAudit-Installer#1298).
+  # Any doubt means reuse=false and every job below runs as before.
+  # ──────────────────────────────────────────────
+  find-tested-run:
+    name: Find tested run
+    runs-on: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'ubuntu-latest' || (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') }}
+    if: ${{ github.event_name == 'push' && github.ref_name == 'develop' }}
+    permissions:
+      contents: read
+      pull-requests: read
+      actions: read
+    outputs:
+      reuse: ${{ steps.find.outputs.reuse }}
+      reason: ${{ steps.find.outputs.reason }}
+      source_run_id: ${{ steps.find.outputs.source_run_id }}
+      source_pr: ${{ steps.find.outputs.source_pr }}
+      tested_tree: ${{ steps.find.outputs.tested_tree }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: scripts
+      - name: Find a pull request run to reuse
+        id: find
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          INTEGRATION_BRANCH: develop
+          CURRENT_RUN_ID: ${{ github.run_id }}
+        run: bash scripts/find-tested-run.sh
+
+  # The check the release provenance needs on a reused merge: a real `ci.yml` success. It has its own name, not
+  # `Quality Gates`, so a pull request run never carries a second (skipped) check with the required name; the
+  # provenance check accepts this name too (QG_REUSED_NAME). The heavy job is skipped in this case.
+  quality-gates-reused:
+    name: Reused Quality Gates
+    needs: [register-release, find-tested-run]
+    if: ${{ always() && needs.find-tested-run.outputs.reuse == 'true' && needs.register-release.result == 'success' }}
+    runs-on: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'ubuntu-latest' || (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') }}
+    steps:
+      - name: Reuse the pull request run's result
+        env:
+          SOURCE_RUN: ${{ needs.find-tested-run.outputs.source_run_id }}
+          SOURCE_PR: ${{ needs.find-tested-run.outputs.source_pr }}
+          TESTED_TREE: ${{ needs.find-tested-run.outputs.tested_tree }}
+        run: |
+          {
+            echo "### Quality Gates reused"
+            echo
+            echo "The merged tree ${TESTED_TREE} is the tree that pull request #${SOURCE_PR} tested in run ${SOURCE_RUN}, which passed."
+            echo "The gates were not run again; the evidence of that run is uploaded for this commit."
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # ──────────────────────────────────────────────
   # Register release early (parallel with gates) so UAT gate can find it
@@ -755,7 +827,8 @@ jobs:
   upload-evidence:
     name: Upload Evidence
     runs-on: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'ubuntu-latest' || (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') }}
-    needs: [quality-gates, register-release]
+    needs:
+      [quality-gates, register-release, quality-gates-reused, find-tested-run]
     # `!cancelled()` preserves failed-gate evidence on eligible integration
     # pushes, while a pull request remains an intentionally inapplicable,
     # cleanly skipped job. `always()` caused GitHub to mark this job cancelled
@@ -765,6 +838,9 @@ jobs:
     # nothing may be uploaded against one (it would create a release named
     # "skip" via --create-release-if-missing).
     if: ${{ !cancelled() && github.event_name != 'pull_request' && github.ref_name == 'develop' && needs.register-release.result == 'success' && needs.register-release.outputs.version != 'skip' }}
+    permissions:
+      contents: read
+      actions: read
     env:
       DEVAUDIT_BASE_URL_VAR: ${{ vars.DEVAUDIT_BASE_URL }}
       DEVAUDIT_API_KEY: ${{ secrets.DEVAUDIT_API_KEY }}
@@ -793,8 +869,31 @@ jobs:
           fi
           echo "DEVAUDIT_BASE_URL=${BASE%/}" >> "$GITHUB_ENV"
 
+      - name: Download the CI gate artifacts of the pull request run (reused)
+        if: needs.find-tested-run.outputs.reuse == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          name: ci-results
+          path: ci-evidence/
+          run-id: ${{ needs.find-tested-run.outputs.source_run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Note the reuse in the gate outcomes
+        if: needs.find-tested-run.outputs.reuse == 'true'
+        env:
+          SOURCE_RUN: ${{ needs.find-tested-run.outputs.source_run_id }}
+          SOURCE_PR: ${{ needs.find-tested-run.outputs.source_pr }}
+          TESTED_TREE: ${{ needs.find-tested-run.outputs.tested_tree }}
+        run: |
+          F="ci-evidence/gate-outcomes.json"
+          jq --arg run "$SOURCE_RUN" --arg pr "$SOURCE_PR" --arg tree "$TESTED_TREE" \
+            '. + {reused_from_run: $run, reused_from_pr: $pr, reused_tested_tree: $tree}' "$F" > "$F.tmp"
+          mv "$F.tmp" "$F"
+          cat "$F"
+
       - name: Download CI gate artifacts
         uses: actions/download-artifact@v8
+        if: needs.find-tested-run.outputs.reuse != 'true'
         continue-on-error: true
         with:
           name: ci-results
@@ -1367,7 +1466,7 @@ jobs:
       - name: Complete primary quality-gate execution
         if: always() && env.DEVAUDIT_BASE_URL != ''
         run: |
-          case "${{ needs.quality-gates.result }}" in
+          case "${{ needs.quality-gates-reused.result == 'success' && 'success' || needs.quality-gates.result }}" in
             success)   OUTCOME=passed ;;
             cancelled) OUTCOME=cancelled ;;
             *)         OUTCOME=failed ;;
@@ -1401,7 +1500,7 @@ jobs:
             --external-run-id "${{ github.run_id }}" \
             --external-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             --commit-sha "${{ github.sha }}" --branch "${{ github.ref_name }}" \
-            --details-json '{"executionSource":"needs.quality-gates.result","evidenceUploadJob":"${{ job.status }}"}'
+            --details-json '{"executionSource":"needs.quality-gates.result","evidenceUploadJob":"${{ job.status }}","reusedFromRun":"${{ needs.find-tested-run.outputs.source_run_id }}","reusedFromPr":"${{ needs.find-tested-run.outputs.source_pr }}"}'
 
       - name: Summary
         run: echo "Evidence uploaded for ${{ needs.register-release.outputs.version }} (UAT)"

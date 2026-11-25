@@ -167,7 +167,7 @@
       "section": "2f"
     },
     ".github/workflows/ci.yml": {
-      "sha256": "393cd48d3a321db88302e55136ffe941d2ad7a570165c8cbede99bf92cf51b34",
+      "sha256": "e0b4d41e624e76f138ed640b12affd7ba94a87c9f1b35a0dc3592edf0f3e05ed",
       "section": "2f"
     },
     ".github/workflows/close-out-completion.yml": {
@@ -215,7 +215,7 @@
       "section": "2f"
     },
     ".github/workflows/quality-gates-provenance.yml": {
-      "sha256": "9bbc2747f4b8d01faeb330ef6383629f4d2cbfa1d1281d56e61bb90387f4635f",
+      "sha256": "88a3eb4ab0e21208fddacc973abaf9d2ba3990b11a2297777db72d133dfffd1a",
       "section": "2f"
     },
     ".github/workflows/reconcile-deployment.yml": {
@@ -567,10 +567,8 @@
       "section": "2d"
     },
     "scripts/upload-evidence.sh": {
-      "sha256": "4839eb4a389815170f6032b333a4d70e84d7d74f46b16850855391217d7de00c",
-      "section": "2d",
-      "conflict": true,
-      "pending_upstream_sha256": "04e5e1b38b2f92580e71ec634431d83572aa1731995e6a05e8a3c09f04819070"
+      "sha256": "04e5e1b38b2f92580e71ec634431d83572aa1731995e6a05e8a3c09f04819070",
+      "section": "2d"
     },
     "scripts/validate-commits.sh": {
       "sha256": "f01f532e9788a3eb91ee154591c468b153934b75328b1633bfa7c344462a7ec2",

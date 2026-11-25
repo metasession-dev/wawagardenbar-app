@@ -283,7 +283,7 @@ describe('REQ-122 AC1: support tickets raise a staff alert', () => {
       message: 'msg',
     });
     expect(raiseForSupportTicket).toHaveBeenCalledOnce();
-    expect(raiseForSupportTicket).toHaveBeenCalledWith(ticket);
+    expect(raiseForSupportTicket).toHaveBeenCalledWith(ticket, {});
   });
 
   it('a customer reply raises an alert and a staff reply does not', async () => {

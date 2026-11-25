@@ -219,7 +219,7 @@ describe('REQ-056 classifyMessageIntent', () => {
     );
     const intent = WhatsAppInboundService.classifyMessageIntent({
       type: 'text',
-      text: { body: 'hi can I get a menu' },
+      text: { body: 'hi can I get a refund' },
     });
     expect(intent).toBe('support_text');
   });

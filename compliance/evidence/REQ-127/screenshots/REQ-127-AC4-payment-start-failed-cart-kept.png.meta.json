@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-127",
+  "ac": 4,
+  "slug": "payment-start-failed-cart-kept",
+  "specFile": "e2e/critical/checkout-payment-init-failure.spec.ts",
+  "capturedAt": "2026-11-25T06:06:36.786Z"
+}

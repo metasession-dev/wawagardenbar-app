@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-127",
+  "ac": 1,
+  "slug": "same-order-reused-on-return",
+  "specFile": "e2e/critical/checkout-payment-init-failure.spec.ts",
+  "capturedAt": "2026-11-25T06:06:46.990Z"
+}

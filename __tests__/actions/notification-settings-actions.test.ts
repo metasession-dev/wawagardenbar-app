@@ -25,8 +25,8 @@ vi.mock('@/services/audit-log-service', () => ({
   AuditLogService: { createLog: (...a: unknown[]) => mockAudit(...a) },
 }));
 
+import { diffSwitches } from '@/lib/whatsapp-switch-diff';
 import {
-  diffSwitches,
   getWhatsAppNotificationSwitchesAction,
   updateWhatsAppNotificationSwitchesAction,
 } from '@/app/actions/admin/whatsapp-notification-switch-actions';

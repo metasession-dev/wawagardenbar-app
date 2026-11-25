@@ -12,7 +12,6 @@
  */
 import { useState, useTransition } from 'react';
 import { Lock } from 'lucide-react';
-import { toast } from 'sonner';
 
 import {
   AlertDialog,
@@ -32,6 +31,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
+import { useToast } from '@/hooks/use-toast';
 import { updateWhatsAppNotificationSwitchesAction } from '@/app/actions/admin/whatsapp-notification-switch-actions';
 import {
   LOCKED_WHATSAPP_TEMPLATES,
@@ -57,6 +57,7 @@ export function WhatsAppNotificationSwitches({ initialSettings }: Props) {
   const [settings, setSettings] = useState(initialSettings);
   const [pending, setPending] = useState<Pending | null>(null);
   const [isSaving, startTransition] = useTransition();
+  const { toast } = useToast();
 
   const isOn = (e: WhatsAppNotificationEntry) =>
     settings.switches[e.key] !== false;
@@ -70,10 +71,14 @@ export function WhatsAppNotificationSwitches({ initialSettings }: Props) {
       const result = await updateWhatsAppNotificationSwitchesAction(next);
       if (result.success && result.data) {
         setSettings(result.data);
-        toast.success('WhatsApp message settings saved');
+        toast({ title: 'WhatsApp message settings saved' });
       } else {
         setSettings(previous);
-        toast.error(result.message || 'Could not save the settings');
+        toast({
+          title: 'Could not save the settings',
+          description: result.message,
+          variant: 'destructive',
+        });
       }
     });
   }

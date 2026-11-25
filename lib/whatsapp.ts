@@ -149,22 +149,24 @@ export class WhatsAppService {
     templateName: string,
     parameters: string[] | WhatsAppTemplateParams
   ): Promise<WhatsAppResult> {
+    // REQ-125 (ADR-014) — the one gate for the admin notification switches.
+    // The sign-in PIN is locked on and never reaches the settings read. It
+    // runs before the service-enabled check so a suppressed send is recorded
+    // as suppressed (not as a disabled service) in every environment.
+    if (await isTemplateSuppressed(templateName)) {
+      return {
+        success: false,
+        message: `WhatsApp template '${templateName}' is switched off by an admin`,
+        errorCode: SUPPRESSED_ADMIN_DISABLED,
+      };
+    }
+
     if (!this.isEnabled) {
       console.warn('WhatsApp service is disabled');
       return {
         success: false,
         message: 'WhatsApp service is currently disabled',
         errorCode: 'SERVICE_DISABLED',
-      };
-    }
-
-    // REQ-125 (ADR-014) — the one gate for the admin notification switches.
-    // The sign-in PIN is locked on and never reaches the settings read.
-    if (await isTemplateSuppressed(templateName)) {
-      return {
-        success: false,
-        message: `WhatsApp template '${templateName}' is switched off by an admin`,
-        errorCode: SUPPRESSED_ADMIN_DISABLED,
       };
     }
 

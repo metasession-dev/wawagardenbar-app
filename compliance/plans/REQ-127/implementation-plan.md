@@ -107,3 +107,10 @@ Plan approved by: operator, at the Phase 1 checkpoint (decision A or B above).
 ## Decisions recorded at the Phase 1 checkpoint (2026-11-25)
 
 Operator approved the bundle plan with: **option B for #1031** (keep the cart, reuse the order via a cart-fingerprint-bound key, cancel the superseded unpaid order); **opted-out customers who text "order" or "status" still get the reply** (STOP clears marketing only); **replies to a customer's own message are not switchable** (template sends and support replies are; the sign-in PIN is locked on).
+
+## Plan deviation (Phase 2, 2026-11-25)
+
+Two implementation deviations, both found by reading the code before building. Neither changes an AC or the approved option B.
+
+1. **The tip is part of the cart fingerprint.** The plan excluded it. The server adds `tipAmount` to the order total when it creates the order, so a reused order with a stale tip would be charged the old tip. Including the tip makes a changed tip a changed cart. (The charge itself is already safe: for a customer session `initializePayment` charges the server's `order.total`, never the client amount, and returns the same Paystack reference for a still-unpaid order, REQ-123.)
+2. **A new narrow `cancelSupersededOrderAction` replaces the plan's use of `cancelOrderAction`.** The existing customer cancel checks only `status` (`pending` or `confirmed`), so it could cancel a paid, confirmed order, and it ignores a payment already started at Paystack. The new action does one atomic update scoped to the caller's own customer-origin order that is `pending`, unpaid and has no payment reference; anything else is left to the 30-minute expiry job, which asks Paystack before cancelling. The planned component test is replaced by `__tests__/actions/cancel-superseded-order.test.ts` (the fingerprint and attempt logic is covered in `__tests__/lib/checkout-attempt.test.ts`).

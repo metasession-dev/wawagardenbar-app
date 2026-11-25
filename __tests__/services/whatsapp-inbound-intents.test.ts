@@ -81,6 +81,9 @@ describe('classifyMessageIntent — order and status (REQ-126)', () => {
     'I want to cancel my order',
     'wrong order delivered to me',
     'hi can I get a menu with the prices of every single drink you sell',
+    'Also the drink was warm',
+    'Order number is 4821',
+    'the food was cold',
   ])(
     '"%s" mentions an order but is support text, not an order request',
     (body) => {

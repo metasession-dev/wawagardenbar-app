@@ -73,19 +73,60 @@ const ORDER_NUMBER_REGEX = /\bWG\d{10}\b/;
 // a status enquiry raises an urgent ticket and never returns order data.
 const ORDER_STATUS_REGEX =
   /\b(status|where(?:'s|\s+is)?\s+(?:my\s+)?order|track(?:ing)?\s+(?:my\s+)?order)\b/i;
-const ORDER_START_REGEX = /\b(order|menu|food|drink)s?\b/i;
-// A short message with an order word is a request to order; a longer one, or
-// one that describes a problem ("my order is late", "cancel my order"), is
-// ordinary support text and still opens a ticket.
-const ORDER_START_MAX_WORDS = 5;
-const ORDER_PROBLEM_REGEX =
-  /\b(late|wrong|cancel(?:led|led)?|refund|missing|cold|never|not|problem|issue|complain\w*|delay\w*|damaged|spilled|charged|paid|payment)\b/i;
+// An order request is a message that is nothing but an order word and polite
+// filler ("order", "menu please", "I want to order", "can I get the menu").
+// Anything else that mentions an order or a drink ("my order is late", "Also
+// the drink was warm", "Order number is 4821") is ordinary support text and
+// still opens a ticket.
+const ORDER_WORDS = new Set([
+  'order',
+  'orders',
+  'menu',
+  'food',
+  'drink',
+  'drinks',
+]);
+const ORDER_FILLER = new Set([
+  'hi',
+  'hello',
+  'hey',
+  'please',
+  'pls',
+  'plz',
+  'i',
+  'we',
+  'want',
+  'would',
+  'like',
+  'to',
+  'can',
+  'could',
+  'get',
+  'see',
+  'have',
+  'the',
+  'a',
+  'your',
+  'now',
+  'link',
+  'here',
+  'online',
+  'send',
+  'me',
+  'show',
+  'need',
+  'wanna',
+  'some',
+]);
 
 export function isOrderRequest(body: string): boolean {
-  if (!ORDER_START_REGEX.test(body)) return false;
-  if (ORDER_PROBLEM_REGEX.test(body)) return false;
-  const words = body.trim().split(/\s+/).filter(Boolean);
-  return words.length <= ORDER_START_MAX_WORDS;
+  const tokens = body
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+  const rest = tokens.filter((w) => !ORDER_FILLER.has(w));
+  return rest.length > 0 && rest.every((w) => ORDER_WORDS.has(w));
 }
 const ORDER_QUICK_REPLY_LABELS = new Set(['Order', '🍽️ Order']);
 

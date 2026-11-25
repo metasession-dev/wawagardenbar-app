@@ -1,0 +1,66 @@
+{
+  "approvalRelease": {
+    "version": "REQ-125"
+  },
+  "coreRelease": {
+    "version": "REQ-125"
+  },
+  "generator": {
+    "generatedAt": "2026-11-25T05:17:47Z",
+    "name": "devaudit-installer",
+    "repository": "metasession-dev/wawagardenbar-app",
+    "version": "0.0.0"
+  },
+  "manifestHash": "sha256:5b56d343ab944e25849875e152a945cbef8ededfe182ec902ca6426eeec03a05",
+  "members": [
+    {
+      "commitFrom": null,
+      "commitTo": null,
+      "evidenceInheritancePolicy": {
+        "includeCycles": false,
+        "mode": "none",
+        "reason": "Co-tracked bundle members keep fully isolated per-REQ evidence — nothing is inherited between them.",
+        "scopes": []
+      },
+      "originalTitle": "WhatsApp \"order\" gets the menu link; status enquiries raise an urgent ticket (WA-16)",
+      "prNumber": null,
+      "prUrl": null,
+      "reason": "Declared co-primary REQ, bundled onto one shared branch/PR/release at Phase 1 planning time.",
+      "relationship": "bundled",
+      "role": "co_tracked",
+      "scopeSummary": "Details, acceptance criteria and risks: `compliance/plans/REQ-126/implementation-plan.md`.\n\nThis ticket is a skeleton written at Stage 1; Stage 3 completes it.",
+      "version": "REQ-126"
+    },
+    {
+      "commitFrom": null,
+      "commitTo": null,
+      "evidenceInheritancePolicy": {
+        "includeCycles": false,
+        "mode": "none",
+        "reason": "Co-tracked bundle members keep fully isolated per-REQ evidence — nothing is inherited between them.",
+        "scopes": []
+      },
+      "originalTitle": "Checkout: failed payment start keeps one Pending order (#1031)",
+      "prNumber": null,
+      "prUrl": null,
+      "reason": "Declared co-primary REQ, bundled onto one shared branch/PR/release at Phase 1 planning time.",
+      "relationship": "bundled",
+      "role": "co_tracked",
+      "scopeSummary": "Details, acceptance criteria and risks: `compliance/plans/REQ-127/implementation-plan.md`.\n\nThis ticket is a skeleton written at Stage 1; Stage 3 completes it.",
+      "version": "REQ-127"
+    }
+  ],
+  "nonReleaseWorkItems": [
+    {
+      "kind": "housekeeping_commit",
+      "reference": "8ff64c51",
+      "title": "chore: enable reuse_pull_request_gates (DevAudit-Installer#1298)"
+    },
+    {
+      "kind": "housekeeping_commit",
+      "reference": "dbaeeff6",
+      "title": "chore: sync SDLC templates from DevAudit 1.14.0 -> 1.15.0"
+    }
+  ],
+  "schemaVersion": 2
+}

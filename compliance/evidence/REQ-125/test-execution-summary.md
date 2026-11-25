@@ -39,7 +39,18 @@ Covered once for the whole bundle in `compliance/evidence/REQ-126/test-execution
 
 ## Test executions
 
-The portal's execution read model has no records for this release yet (nothing has been pushed). First-class rows are added after the integration PR runs; they are not inferred from artefacts.
+<!-- generated-by: render-test-executions.sh journey-at 2026-11-25T18:16:54Z -->
+
+| Source Release | SDLC Stage       | Execution | Suite         | Outcome | Workflow / Run                                                                                                               | Related Evidence | Incident / Remediation                         | Date                |
+| -------------- | ---------------- | --------- | ------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------- | ---------------- | ---------------------------------------------- | ------------------- |
+| REQ-125        | 2 implement_test | #1        | quality_gate  | passed  | [Quality Gates](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/45622816174) (run 45622816174, attempt 1)  | None             | None                                           | 2026-11-25 13:29:36 |
+| REQ-125        | 2 implement_test | #2        | e2e           | failed  | [E2E Regression](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/45666982374) (run 45666982374, attempt 1) | None             | authoritative workflow_run conclusion: failure | 2026-11-25 18:04:34 |
+| REQ-125        | 2 implement_test | #3        | e2e           | failed  | [E2E Regression](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/45666982374) (run 45666982374, attempt 1) | None             | authoritative workflow_run conclusion: failure | 2026-11-25 18:04:34 |
+| REQ-125        | 2 implement_test | #4        | e2e           | failed  | [E2E Regression](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/45666982374) (run 45666982374, attempt 1) | None             | authoritative workflow_run conclusion: failure | 2026-11-25 18:04:34 |
+| REQ-125        | 2 implement_test | #5        | quality_gate  | passed  | [Quality Gates](https://github.com/metasession-dev/wawagardenbar-app/actions/runs/45658854082) (run 45658854082, attempt 1)  | None             | None                                           | 2026-11-25 18:06:40 |
+| REQ-125        | 4 uat_review     | #1        | uat_execution | passed  | Agent-executed UAT                                                                                                           | None             | None                                           | 2026-11-25 18:09:52 |
+
+**Final assessment:** Stage-scoped execution numbering is authoritative from first-class portal test execution records.
 
 ### Local executions (Stage 2, isolated stack: `mongo:7`, project `server.ts` dev server)
 

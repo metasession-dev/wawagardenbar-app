@@ -1,0 +1,71 @@
+{
+  "approvalRelease": {
+    "version": "REQ-125"
+  },
+  "coreRelease": {
+    "version": "REQ-125"
+  },
+  "generator": {
+    "generatedAt": "2026-11-25T16:54:09Z",
+    "name": "devaudit-installer",
+    "repository": "metasession-dev/wawagardenbar-app",
+    "version": "0.0.0"
+  },
+  "manifestHash": "sha256:7ddacc36b9ad008d7db321d7c3a0a9c261feb104af470695b44067e0cf71f61f",
+  "members": [
+    {
+      "commitFrom": "5fb0477",
+      "commitTo": "d38f904",
+      "evidenceInheritancePolicy": {
+        "includeCycles": false,
+        "mode": "none",
+        "reason": "Co-tracked bundle members keep fully isolated per-REQ evidence — nothing is inherited between them.",
+        "scopes": []
+      },
+      "originalTitle": "WhatsApp \"order\" gets the menu link; status enquiries raise an urgent ticket (WA-16)",
+      "prNumber": null,
+      "prUrl": null,
+      "reason": "Declared co-primary REQ, bundled onto one shared branch/PR/release at Phase 1 planning time.",
+      "relationship": "bundled",
+      "role": "co_tracked",
+      "scopeSummary": "Details, acceptance criteria and risks: `compliance/plans/REQ-126/implementation-plan.md`.\n\nStage 3 evidence is in `compliance/evidence/REQ-126/`; the UAT pack for the whole bundle is on REQ-125. Local gates (tsc, lint, 2348 unit tests) and the new e2e specs plus 22 related existing spec files pass; CI runs the full `smoke` and `critical` tiers on the PR.",
+      "version": "REQ-126"
+    },
+    {
+      "commitFrom": "b584ae7",
+      "commitTo": "b584ae7",
+      "evidenceInheritancePolicy": {
+        "includeCycles": false,
+        "mode": "none",
+        "reason": "Co-tracked bundle members keep fully isolated per-REQ evidence — nothing is inherited between them.",
+        "scopes": []
+      },
+      "originalTitle": "Checkout: failed payment start keeps one Pending order (#1031)",
+      "prNumber": null,
+      "prUrl": null,
+      "reason": "Declared co-primary REQ, bundled onto one shared branch/PR/release at Phase 1 planning time.",
+      "relationship": "bundled",
+      "role": "co_tracked",
+      "scopeSummary": "Details, acceptance criteria and risks: `compliance/plans/REQ-127/implementation-plan.md`.\n\nStage 3 evidence is in `compliance/evidence/REQ-127/`; the UAT pack for the whole bundle is on REQ-125. Local gates (tsc, lint, 2348 unit tests) and the new e2e specs plus 22 related existing spec files pass; CI runs the full `smoke` and `critical` tiers on the PR.",
+      "version": "REQ-127"
+    }
+  ],
+  "nonReleaseWorkItems": [
+    {
+      "kind": "housekeeping_commit",
+      "reference": "bc4a8b17",
+      "title": "chore: seed UAT test logins after the prod-to-UAT sync"
+    },
+    {
+      "kind": "housekeeping_commit",
+      "reference": "8ff64c51",
+      "title": "chore: enable reuse_pull_request_gates (DevAudit-Installer#1298)"
+    },
+    {
+      "kind": "housekeeping_commit",
+      "reference": "dbaeeff6",
+      "title": "chore: sync SDLC templates from DevAudit 1.14.0 -> 1.15.0"
+    }
+  ],
+  "schemaVersion": 2
+}

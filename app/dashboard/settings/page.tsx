@@ -2,6 +2,7 @@ import { SettingsService } from '@/services';
 import { SystemSettingsService } from '@/services/system-settings-service';
 import { StaffNotificationService } from '@/services/staff-notification-service';
 import { StaffAlertRulesForm } from '@/components/features/admin/staff-alert-rules-form';
+import { WhatsAppNotificationSwitches } from '@/components/features/admin/whatsapp-notification-switches';
 import {
   Card,
   CardContent,
@@ -59,9 +60,11 @@ export default async function SettingsPage() {
   ]);
 
   // REQ-122 — staff alert rules and the staff list for the named-users picker
-  const [staffAlertRules, staffOptions] = await Promise.all([
+  const [staffAlertRules, staffOptions, whatsAppSwitches] = await Promise.all([
     StaffNotificationService.getRules(),
     StaffNotificationService.listStaffOptions(),
+    // REQ-125 — admin switches for WhatsApp notifications
+    SystemSettingsService.getWhatsAppNotificationSwitches(),
   ]);
 
   // Serialize for client - use JSON.parse(JSON.stringify()) to remove Mongoose metadata
@@ -227,6 +230,9 @@ export default async function SettingsPage() {
           />
         </CardContent>
       </Card>
+
+      {/* REQ-125 — WhatsApp message switches (Settings, Notifications) */}
+      <WhatsAppNotificationSwitches initialSettings={whatsAppSwitches} />
 
       {/* REQ-122 — Staff alerts (Settings, Notifications) */}
       <StaffAlertRulesForm

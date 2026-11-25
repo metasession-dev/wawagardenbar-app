@@ -1,0 +1,4 @@
+Step 12 (REQ-126 AC2, AC4), csr bell text read from the UAT dashboard after the operator sent "status":
+
+Before the alert had been acknowledged: "Support message TKT-1795622278266091 Waiting 9 min" (one open alert per ticket, raised by the step 11 message).
+After the csr acknowledged it and the operator sent "status" again: "Order status enquiry TKT-1795622278266091 Waiting just now".

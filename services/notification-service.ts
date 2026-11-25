@@ -34,6 +34,11 @@
  * `notification.attempt` event. Persistent log (`NotificationLog`
  * model + delivery-status webhook) defers to WA-5 / a future REQ.
  */
+import {
+  SUPPRESSED_ADMIN_DISABLED,
+  SUPPRESSED_LOG_CODE,
+  isTemplateSuppressed,
+} from '@/lib/whatsapp-send-gate';
 import { connectDB } from '@/lib/mongodb';
 import { UserModel } from '@/models';
 import { WhatsAppService } from '@/lib/whatsapp';
@@ -230,7 +235,15 @@ export class NotificationService {
         const hasExtra = Boolean(headerParams?.length || buttonParams?.length);
         const result =
           freeFormText !== undefined
-            ? await WhatsAppService.sendTextMessage(phone, freeFormText)
+            ? // REQ-125 — a free-form support reply is gated by its templateKey
+              // (the template path is gated inside WhatsAppService.sendMessage).
+              (await isTemplateSuppressed(opts.templateKey))
+              ? {
+                  success: false,
+                  message: `WhatsApp '${opts.templateKey}' is switched off by an admin`,
+                  errorCode: SUPPRESSED_ADMIN_DISABLED,
+                }
+              : await WhatsAppService.sendTextMessage(phone, freeFormText)
             : await WhatsAppService.sendMessage(
                 phone,
                 opts.templateKey,
@@ -246,10 +259,12 @@ export class NotificationService {
           // environment is "held", not a delivery failure.
           errorCode: result.success
             ? undefined
-            : result.errorCode === 'TEMPLATE_NOT_FOUND' &&
-                HELD_UNTIL_APPROVED_TEMPLATES.has(opts.templateKey)
-              ? HELD_TEMPLATE_PENDING
-              : result.errorCode,
+            : result.errorCode === SUPPRESSED_ADMIN_DISABLED
+              ? SUPPRESSED_LOG_CODE
+              : result.errorCode === 'TEMPLATE_NOT_FOUND' &&
+                  HELD_UNTIL_APPROVED_TEMPLATES.has(opts.templateKey)
+                ? HELD_TEMPLATE_PENDING
+                : result.errorCode,
           templateParams:
             freeFormText !== undefined
               ? { header: [], body: [freeFormText], buttons: [], mode: 'text' }

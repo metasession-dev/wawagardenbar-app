@@ -40,6 +40,27 @@ export interface RecordAttemptInput {
 
 export class NotificationLogService {
   /**
+   * REQ-125 (AC7) — rows recorded with a given errorCode, newest first. Used
+   * to list `suppressed_admin_disabled` sends (a switched-off notification) so
+   * they can be told apart from failures; WA-14's messaging health page counts
+   * the same code. There is no notification-log screen yet, so this is the
+   * filter such a screen (or an incident query) calls.
+   */
+  static async listByErrorCode(
+    errorCode: string,
+    options: { since?: Date; limit?: number } = {}
+  ): Promise<INotificationLog[]> {
+    await connectDB();
+    const query: Record<string, unknown> = { errorCode };
+    if (options.since) query.createdAt = { $gte: options.since };
+    const limit = Math.min(Math.max(options.limit ?? 100, 1), 500);
+    return NotificationLogModel.find(query)
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean<INotificationLog[]>();
+  }
+
+  /**
    * Persist a single send-attempt row. Returns the new doc's id on
    * success, `null` on persistence failure. Persistence failures are
    * logged via console.error and NEVER re-thrown — the caller (the

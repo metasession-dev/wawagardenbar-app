@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-125",
+  "ac": 4,
+  "slug": "sign-in-pin-locked-on",
+  "specFile": "e2e/critical/whatsapp-notification-settings.spec.ts",
+  "capturedAt": "2026-11-25T06:05:40.090Z"
+}

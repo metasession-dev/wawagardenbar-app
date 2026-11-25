@@ -1742,3 +1742,102 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 **Cross-links:** [REQ-124 implementation plan](plans/REQ-124/implementation-plan.md); ADR-013.
 
 **Operator sign-off:** residual low × low accepted by the operator (william@ostendo.io) on 2026-11-23, on the REQ-124 agent-executed UAT evidence: steps 1, 2, 3 (serving header `Delivery · UAT`, `Pickup · UAT`, `Table … · UAT`; kitchen card shows first name and delivery address only, no phone, email or surname). Status stays OPEN until the review due date; the release reviewer confirms on the portal.
+
+---
+
+### R-77 — Admin notification switches suppress the sign-in PIN or silently drop messages (REQ-125)
+
+**Status:** OPEN
+**Opened:** 2026-11-25 (REQ-125, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-25
+
+**The risk:** The new gate in `WhatsAppService.sendMessage` decides whether each WhatsApp template is sent. A defect, a wrong catalogue entry or a settings read failure could suppress the sign-in PIN (sign-in is WhatsApp-only, so every customer would be locked out) or drop customer messages with no visible cause.
+
+**Mitigations planned in REQ-125:**
+
+1. The PIN is on a code-level always-on list; the gate returns before reading settings for it, and a unit test sends it with the master switch off (AC4).
+2. A settings read failure sends the message (fail open) (AC3).
+3. A catalogue completeness test fails if a template is neither catalogued nor on the always-on list (AC1).
+4. Suppressed sends are logged as `suppressed_admin_disabled`, distinct from failures, and filterable (AC3, AC7).
+5. Default is every switch ON when no setting exists (AC2), so deploying changes no behaviour.
+
+**Residual likelihood × impact:** low × medium
+
+**Framework cross-references:** ISO 27001 A.8.25, A.5.15; SOC 2 CC6.1, CC7.2.
+
+**Cross-links:** [REQ-125 implementation plan](plans/REQ-125/implementation-plan.md); ADR-014; REQ-WA-016.
+
+---
+
+### R-78 — Switching off staff alerts or payment reminders removes an operational safety net (REQ-125)
+
+**Status:** OPEN
+**Opened:** 2026-11-25 (REQ-125, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-25
+
+**The risk:** An admin can switch off WhatsApp staff alerts (the escalation chain for unattended orders, bookings, support and refunds) or payment reminders (abandoned-order recovery), by mistake or without understanding the effect, and the loss is not noticed until orders are missed.
+
+**Mitigations planned in REQ-125:**
+
+1. Every switch shows purpose, why it matters and the consequence of switching it off (AC5).
+2. Switching off staff alerts, payment reminders or status updates needs a confirmation dialog that repeats the consequence (AC6).
+3. Every change is audit-logged with who, key, before and after (AC7).
+4. Admin and super-admin only, with negative tests for csr, kitchen and customer sessions (AC8).
+5. The in-app bell for staff alerts is unaffected by the WhatsApp switch.
+
+**Residual likelihood × impact:** low × medium
+
+**Framework cross-references:** ISO 27001 A.5.15, A.8.15; SOC 2 CC6.3, CC7.2.
+
+**Cross-links:** [REQ-125 implementation plan](plans/REQ-125/implementation-plan.md); ADR-014; REQ-SETTINGS-007; REQ-122 (staff alerts).
+
+---
+
+### R-79 — Order-status enquiry by WhatsApp discloses another customer's order or floods the support queue (REQ-126)
+
+**Status:** OPEN
+**Opened:** 2026-11-25 (REQ-126, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-25
+
+**The risk:** A customer could try to learn another customer's order by texting an order number, or repeated status messages could create many urgent tickets and bury real ones.
+
+**Mitigations planned in REQ-126:**
+
+1. The reply is a fixed acknowledgement and never contains order status or order data; an order number belonging to another phone reveals nothing (AC2, AC6).
+2. An open ticket is escalated and appended, never duplicated (AC3).
+3. The existing per-sender rate limit from WA-02 applies.
+4. The ticket is for role-gated staff only.
+
+**Residual likelihood × impact:** low × low
+
+**Framework cross-references:** ISO 27001 A.5.34, A.8.12; GDPR Art. 5(1)(f), Art. 25.
+
+**Cross-links:** [REQ-126 implementation plan](plans/REQ-126/implementation-plan.md); REQ-WA-018; REQ-WA-013.
+
+---
+
+### R-80 — Checkout retry charges the wrong amount or pays for a stale or duplicate order (REQ-127)
+
+**Status:** OPEN
+**Opened:** 2026-11-25 (REQ-127, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-25
+
+**The risk:** Reusing the order after a failed payment start could pay for an order whose items no longer match the cart, or a returning customer could create a second Pending order for the same items. The change is on the money path.
+
+**Mitigations planned in REQ-127:**
+
+1. The stored attempt is tied to a cart fingerprint; a changed cart gets a new key and a new order (AC2).
+2. The amount sent to payment is read from the order the server returns, not recomputed from the cart (AC2).
+3. The superseded unpaid order is cancelled with the customer's own owner-scoped cancel action; if that fails, unpaid orders expire after 30 minutes (WA-07).
+4. e2e with the gateway forced to fail asserts one order after two attempts (AC4).
+5. The stored attempt holds only an opaque key, an order id and a hash, and is cleared on success (AC3).
+
+**Residual likelihood × impact:** low × medium
+
+**Framework cross-references:** ISO 27001 A.8.25, A.8.28; SOC 2 CC7.1, PI1.2.
+
+**Cross-links:** [REQ-127 implementation plan](plans/REQ-127/implementation-plan.md); REQ-CHECKOUT-019; REQ-CHECKOUT-008; ADR-010.

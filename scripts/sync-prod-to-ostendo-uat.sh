@@ -30,7 +30,9 @@
 #      hand-copied into a file) and rewrites its cluster-internal host to
 #      the local port-forward
 #   5. Restores the dump into that database
-#   6. Tears down the port-forward
+#   6. Re-seeds the UAT-only test logins (seed-uat-test-users.sh) so UAT does
+#      not depend on production passwords; credentials are kept in .env.uat.local
+#   7. Tears down the port-forward
 #
 # Safety:
 #   - Prompts for confirmation before overwriting UAT
@@ -243,6 +245,17 @@ mongosh "$UAT_URI" --quiet --eval "
     print('  ' + c + ': ' + db.getCollection(c).countDocuments() + ' documents');
   });
 " 2>/dev/null || warn "Could not verify — check UAT manually"
+
+# ── Step 7: Put the UAT-only test logins back ────────────────────
+# The restore above replaced every UAT account with production's. Re-seed the
+# uat-test-* logins (credentials live in .env.uat.local) so UAT testing never
+# needs a production password. A failure here is a warning, not a failed sync.
+log "Seeding UAT test logins (scripts/seed-uat-test-users.ts)..."
+if UAT_URI="$UAT_URI" UAT_DB="$UAT_DB" bash "$(dirname "$0")/seed-uat-test-users.sh"; then
+  log "UAT test logins seeded (see UAT_TEST_* in .env.uat.local)"
+else
+  warn "Seeding UAT test logins failed — run ./scripts/seed-uat-test-users.sh to retry"
+fi
 
 echo ""
 log "Sync complete!"

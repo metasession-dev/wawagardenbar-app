@@ -1,0 +1,6 @@
+Step 14 (REQ-126 AC6). Sent from the UAT test customer's WhatsApp: "WG2611259999" (an order number that is not this customer's).
+Reply received (relayed by the operator, 2026-11-25):
+
+Thanks, we're checking on your order. A member of our team will message you shortly.
+
+The reply names no order, status or contents.

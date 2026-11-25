@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-125",
+  "ac": 5,
+  "slug": "master-off-banner-switches-disabled",
+  "specFile": "e2e/critical/whatsapp-notification-settings.spec.ts",
+  "capturedAt": "2026-11-25T06:05:57.099Z"
+}

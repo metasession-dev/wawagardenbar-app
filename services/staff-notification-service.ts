@@ -215,15 +215,24 @@ export class StaffNotificationService {
   }
 
   /** REQ-DASH-003 — a support ticket was created or got a customer reply. */
-  static async raiseForSupportTicket(ticket: {
-    _id: unknown;
-    ticketNumber?: string;
-  }): Promise<void> {
-    await this.raise('support', {
-      refModel: 'SupportTicket',
-      refId: String(ticket._id),
-      reference: ticket.ticketNumber ?? String(ticket._id).slice(-6),
-    });
+  static async raiseForSupportTicket(
+    ticket: {
+      _id: unknown;
+      ticketNumber?: string;
+    },
+    options: { title?: string } = {}
+  ): Promise<void> {
+    const reference = ticket.ticketNumber ?? String(ticket._id).slice(-6);
+    await this.raise(
+      'support',
+      {
+        refModel: 'SupportTicket',
+        refId: String(ticket._id),
+        reference,
+      },
+      // REQ-126 — an order-status enquiry says so in the alert title.
+      options.title ? `${options.title} ${reference}`.trim() : undefined
+    );
   }
 
   // ---- reads and acknowledgement (REQ-DASH-004, REQ-DASH-005) ----

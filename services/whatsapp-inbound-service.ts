@@ -69,6 +69,86 @@ const CHAT_WITH_STAFF_ID = 'chat_with_staff';
 const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
 const ORDER_NUMBER_REGEX = /\bWG\d{10}\b/;
 
+// REQ-126 — all orders are made in the app. "order" returns the menu link;
+// a status enquiry raises an urgent ticket and never returns order data.
+const ORDER_STATUS_REGEX =
+  /\b(status|where(?:'s|\s+is)?\s+(?:my\s+)?order|track(?:ing)?\s+(?:my\s+)?order)\b/i;
+// An order request is a message that is nothing but an order word and polite
+// filler ("order", "menu please", "I want to order", "can I get the menu").
+// Anything else that mentions an order or a drink ("my order is late", "Also
+// the drink was warm", "Order number is 4821") is ordinary support text and
+// still opens a ticket.
+const ORDER_WORDS = new Set([
+  'order',
+  'orders',
+  'menu',
+  'food',
+  'drink',
+  'drinks',
+]);
+const ORDER_FILLER = new Set([
+  'hi',
+  'hello',
+  'hey',
+  'please',
+  'pls',
+  'plz',
+  'i',
+  'we',
+  'want',
+  'would',
+  'like',
+  'to',
+  'can',
+  'could',
+  'get',
+  'see',
+  'have',
+  'the',
+  'a',
+  'your',
+  'now',
+  'link',
+  'here',
+  'online',
+  'send',
+  'me',
+  'show',
+  'need',
+  'wanna',
+  'some',
+]);
+
+export function isOrderRequest(body: string): boolean {
+  const tokens = body
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+  const rest = tokens.filter((w) => !ORDER_FILLER.has(w));
+  return rest.length > 0 && rest.every((w) => ORDER_WORDS.has(w));
+}
+const ORDER_QUICK_REPLY_LABELS = new Set(['Order', '🍽️ Order']);
+
+/** The environment's menu URL, built like the other message links. */
+export function buildMenuUrl(baseUrl?: string): string {
+  const base = (baseUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? '').replace(
+    /\/+$/,
+    ''
+  );
+  return `${base}/menu`;
+}
+
+export function orderLinkReplyText(baseUrl?: string): string {
+  return (
+    `Order from our menu here: ${buildMenuUrl(baseUrl)}\n` +
+    'Pay securely online and we will start preparing your order.'
+  );
+}
+
+export const ORDER_STATUS_ACK_TEXT =
+  "Thanks, we're checking on your order. A member of our team will message you shortly.";
+
 const OPT_OUT_CONFIRMATION_TEXT =
   "You've been unsubscribed from WhatsApp offers and promotions. " +
   "You'll still receive messages about your orders and bookings. " +
@@ -270,6 +350,20 @@ export class WhatsAppInboundService {
     }
     if (body === CHAT_WITH_STAFF_LABEL) return 'chat_with_staff';
 
+    // REQ-126 — a status enquiry beats an order request ("where is my order"
+    // is a status enquiry); both beat ordinary support text.
+    if (
+      body &&
+      (ORDER_STATUS_REGEX.test(body) || ORDER_NUMBER_REGEX.test(body))
+    ) {
+      return 'order_status';
+    }
+    if (message.type === 'interactive') {
+      const title = message.interactive?.button_reply?.title;
+      if (title && ORDER_QUICK_REPLY_LABELS.has(title)) return 'order_start';
+    }
+    if (body && isOrderRequest(body)) return 'order_start';
+
     return 'support_text';
   }
 
@@ -465,6 +559,46 @@ export class WhatsAppInboundService {
         } else {
           actionTaken = 'noop';
         }
+      } else if (intent === 'order_status') {
+        // REQ-126 (REQ-WA-018) — no order data by text: an urgent ticket for
+        // staff (REQ-WA-013 SLA) plus a short acknowledgement. Answered in
+        // every customer state; a service reply to a message just received.
+        const ticketed = await this.openSupportTicket(
+          from,
+          body,
+          userId,
+          true,
+          'order_status'
+        );
+        try {
+          await sendWithRetry(from, () =>
+            WhatsAppService.sendTextMessage(from, ORDER_STATUS_ACK_TEXT)
+          );
+        } catch (error) {
+          console.error(
+            '[WhatsAppInbound] order-status acknowledgement failed:',
+            error instanceof Error ? error.message : String(error)
+          );
+        }
+        actionTaken = ticketed ? 'order_status_ticketed' : 'queued_for_staff';
+      } else if (intent === 'order_start') {
+        // REQ-126 (REQ-WA-017) — all orders are made in the app: send the
+        // menu link. No ticket, no ordering in WhatsApp.
+        try {
+          const result = await sendWithRetry(from, () =>
+            WhatsAppService.sendTextMessage(from, orderLinkReplyText())
+          );
+          actionTaken = outcomeTag('order_link', result);
+        } catch (error) {
+          console.error(
+            '[WhatsAppInbound] order link send failed:',
+            error instanceof Error ? error.message : String(error)
+          );
+          actionTaken = outcomeTag('order_link', {
+            success: false,
+            errorCode: 'EXCEPTION',
+          });
+        }
       } else {
         // Non-opt-out, non-phone_mismatch: route by state.
         const templateKey = INBOUND_WELCOME_TEMPLATE[state];
@@ -541,7 +675,8 @@ export class WhatsAppInboundService {
     from: string,
     body: string | null,
     userId: string | null,
-    urgent: boolean
+    urgent: boolean,
+    kind?: 'order_status'
   ): Promise<boolean> {
     try {
       const { SupportTicketService } = await import(
@@ -552,6 +687,7 @@ export class WhatsAppInboundService {
         body: body ?? '',
         userId,
         urgent,
+        kind,
       });
       return true;
     } catch (error) {

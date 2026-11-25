@@ -4,6 +4,9 @@ import { cookies } from 'next/headers';
 import { getIronSession } from 'iron-session';
 import { revalidatePath } from 'next/cache';
 import { OrderService } from '@/services';
+import { connectDB } from '@/lib/mongodb';
+import { OrderModel } from '@/models';
+import { isCustomerSession } from '@/lib/roles';
 import { OrderStatus, OrderType, IOrder } from '@/interfaces';
 import { sessionOptions, SessionData } from '@/lib/session';
 import { emitOrderStatusUpdate, emitOrderChange } from '@/lib/socket-server';
@@ -409,5 +412,63 @@ export async function getActiveOrdersAction(
           ? error.message
           : 'Failed to fetch active orders',
     };
+  }
+}
+
+/**
+ * @requirement REQ-127 — checkout retry
+ * @srs REQ-CHECKOUT-019
+ *
+ * Cancel the signed-in customer's own earlier unpaid order when a changed cart
+ * replaces it. Deliberately narrower than `cancelOrderAction`: it only touches
+ * a customer-origin order that belongs to the caller, is still `pending`, has
+ * not been paid, and has no Paystack reference (so no payment was started).
+ * One atomic update, so an order paid in another tab in the meantime is never
+ * cancelled. An order with a payment reference is left to the 30-minute expiry
+ * job, which asks Paystack before cancelling. Never throws; a refusal is not an
+ * error for the caller (the expiry job is the backstop).
+ */
+export async function cancelSupersededOrderAction(
+  orderId: string
+): Promise<ActionResult<{ cancelled: boolean }>> {
+  try {
+    const cookieStore = await cookies();
+    const session = await getIronSession<SessionData>(
+      cookieStore,
+      sessionOptions
+    );
+    if (!session.isLoggedIn || !session.userId || !isCustomerSession(session)) {
+      return { success: false, error: 'Not allowed' };
+    }
+    await connectDB();
+    const updated = await OrderModel.updateOne(
+      {
+        _id: orderId,
+        userId: session.userId,
+        origin: 'customer',
+        status: 'pending',
+        paymentStatus: { $in: ['pending', 'failed'] },
+        paymentReference: { $in: [null, ''] },
+        isDeleted: { $ne: true },
+      },
+      {
+        $set: {
+          status: 'cancelled',
+          paymentStatus: 'cancelled',
+          cancelReason: 'superseded_by_new_checkout',
+        },
+        $push: {
+          statusHistory: {
+            status: 'cancelled',
+            timestamp: new Date(),
+            note: 'Cancelled: replaced by a new checkout of a changed cart',
+          },
+        },
+      }
+    );
+    return { success: true, data: { cancelled: updated.modifiedCount > 0 } };
+  } catch (error) {
+    console.error('cancelSupersededOrderAction error:', error);
+    return { success: false, error: 'Could not cancel the earlier order' };
   }
 }

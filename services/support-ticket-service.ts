@@ -42,6 +42,8 @@ export interface CreateTicketInput {
   message: string;
   orderId?: string | null;
   priority?: SupportTicketPriority;
+  /** REQ-126 — overrides the staff alert title (e.g. an order-status enquiry). */
+  alertTitle?: string;
 }
 
 export interface ListTicketsFilter {
@@ -63,6 +65,9 @@ function generateTicketNumber(): string {
   return `TKT-${ts}${suffix}`;
 }
 
+/** REQ-126 — label on the ticket subject and staff alert for a status enquiry. */
+export const ORDER_STATUS_ALERT_TITLE = 'Order status enquiry';
+
 export class SupportTicketService {
   /**
    * Create a ticket from any source. Returns the persisted doc (lean object).
@@ -83,7 +88,10 @@ export class SupportTicketService {
       priority: input.priority ?? 'normal',
     });
     // REQ-122 — a new ticket raises a staff alert (never throws).
-    await StaffNotificationService.raiseForSupportTicket(doc);
+    await StaffNotificationService.raiseForSupportTicket(
+      doc,
+      input.alertTitle ? { title: input.alertTitle } : {}
+    );
     return doc;
   }
 
@@ -103,9 +111,13 @@ export class SupportTicketService {
     body: string;
     userId: string | null;
     urgent?: boolean;
+    /** REQ-126 — `order_status`: tag the subject and the staff alert title. */
+    kind?: 'order_status';
   }): Promise<ISupportTicket> {
     await connectDB();
     const trimmed = opts.body.trim();
+    const alertTitle =
+      opts.kind === 'order_status' ? ORDER_STATUS_ALERT_TITLE : undefined;
     const now = new Date();
     const identity: Record<string, unknown>[] = [
       { customerPhone: { $in: phoneLookupVariants(opts.from) } },
@@ -162,7 +174,8 @@ export class SupportTicketService {
       // REQ-122 — a customer message on an existing ticket raises a staff alert
       // (one open alert per ticket; never throws).
       await StaffNotificationService.raiseForSupportTicket(
-        (updated ?? existing) as ISupportTicket
+        (updated ?? existing) as ISupportTicket,
+        alertTitle ? { title: alertTitle } : {}
       );
       return (updated ?? existing) as ISupportTicket;
     }
@@ -174,9 +187,13 @@ export class SupportTicketService {
       customerPhone: opts.from,
       source: 'whatsapp',
       category: 'whatsapp-inbound',
-      subject: preview || 'WhatsApp message',
+      subject:
+        opts.kind === 'order_status'
+          ? `${ORDER_STATUS_ALERT_TITLE}: ${preview || 'where is my order'}`
+          : preview || 'WhatsApp message',
       message: trimmed,
       priority: opts.urgent ? 'urgent' : undefined,
+      alertTitle,
     });
     const followUp: Record<string, unknown> = { lastCustomerMessageAt: now };
     if (opts.urgent) {

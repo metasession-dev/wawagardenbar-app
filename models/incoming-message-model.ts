@@ -22,6 +22,9 @@ export type IncomingMessageIntent =
   | 'opt_out'
   | 'opt_in'
   | 'chat_with_staff'
+  // REQ-126 — "order" gets the menu link; status enquiries raise an urgent ticket.
+  | 'order_start'
+  | 'order_status'
   | 'support_text';
 
 export interface IIncomingMessage extends Document {
@@ -52,7 +55,14 @@ const incomingMessageSchema = new Schema<IIncomingMessage>(
     classifiedIntent: {
       type: String,
       required: true,
-      enum: ['opt_out', 'opt_in', 'chat_with_staff', 'support_text'],
+      enum: [
+        'opt_out',
+        'opt_in',
+        'chat_with_staff',
+        'order_start',
+        'order_status',
+        'support_text',
+      ],
     },
     actionTaken: { type: String, required: true },
     userId: { type: String, default: null },

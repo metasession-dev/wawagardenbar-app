@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-125",
+  "ac": 3,
+  "slug": "status-change-saved-message-suppressed",
+  "specFile": "e2e/critical/whatsapp-notification-settings.spec.ts",
+  "capturedAt": "2026-11-25T06:05:47.113Z"
+}

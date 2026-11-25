@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-127",
+  "ac": 2,
+  "slug": "changed-cart-replaces-order",
+  "specFile": "e2e/critical/checkout-payment-init-failure.spec.ts",
+  "capturedAt": "2026-11-25T06:06:53.043Z"
+}

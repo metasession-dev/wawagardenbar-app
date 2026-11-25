@@ -42,6 +42,13 @@ import {
   getOrderingOptionsAction,
   type OrderingOptions,
 } from '@/app/actions/ordering/ordering-options-actions';
+import { cancelSupersededOrderAction } from '@/app/actions/order/order-actions';
+import {
+  cartFingerprint,
+  clearCheckoutAttempt,
+  resolveCheckoutAttempt,
+  writeCheckoutAttempt,
+} from '@/lib/checkout-attempt';
 import { useAuth } from '@/hooks/use-auth';
 import { Loader2 } from 'lucide-react';
 import type { PaymentMethod } from '@/interfaces/payment';
@@ -100,7 +107,6 @@ export function CustomerCheckoutForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [rootError, setRootError] = useState<string | null>(null);
-  const [idempotencyKey, setIdempotencyKey] = useState('');
   const [showNote, setShowNote] = useState(false);
   const [useSavedAddress, setUseSavedAddress] = useState(true);
   const preselected = useRef(false);
@@ -190,12 +196,6 @@ export function CustomerCheckoutForm() {
     if (cartHydrated && items.length === 0) router.push('/menu');
   }, [cartHydrated, items.length, router, isSubmitting, hasSubmitted]);
 
-  useEffect(() => {
-    setIdempotencyKey(
-      `checkout-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`
-    );
-  }, []);
-
   const handleTipChange = useCallback(
     (amount: number) => form.setValue('tipAmount', amount),
     [form]
@@ -223,19 +223,52 @@ export function CustomerCheckoutForm() {
     };
 
     try {
+      // REQ-127 — the idempotency key follows the cart. The same cart (after a
+      // failed payment start, a reload, or a return from the menu) reuses the
+      // key, so the server returns the same Pending order; a changed cart gets a
+      // new key and its earlier unpaid order is cancelled.
+      const deliveryInfo =
+        data.orderType === 'delivery'
+          ? buildDeliveryInfo({
+              street: data.deliveryStreet ?? '',
+              landmark: data.deliveryLandmark,
+              instructions: data.deliveryInstructions,
+              saved: savedAddress,
+            })
+          : undefined;
+      const fingerprint = cartFingerprint({
+        orderType: data.orderType,
+        items,
+        tableNumber:
+          data.orderType === 'dine-in' ? data.tableNumber?.trim() : undefined,
+        pickupTime:
+          data.orderType === 'pickup' && data.pickupMode === 'later'
+            ? data.pickupTime
+            : undefined,
+        delivery: deliveryInfo ? JSON.stringify(deliveryInfo) : undefined,
+        specialInstructions: data.specialInstructions,
+        tipAmount: data.tipAmount || 0,
+      });
+      const attempt = resolveCheckoutAttempt(fingerprint);
+      if (attempt.supersededOrderId) {
+        // Best effort: the 30-minute unpaid-order expiry is the backstop.
+        await cancelSupersededOrderAction(attempt.supersededOrderId).catch(
+          () => undefined
+        );
+      }
+      const idempotencyKey = attempt.key;
+      writeCheckoutAttempt({
+        key: idempotencyKey,
+        fingerprint,
+        orderId: null,
+        createdAt: Date.now(),
+      });
+
       const orderResult = await createOrder({
         orderType: data.orderType,
         items,
         customerInfo: needsName ? { name: data.firstName?.trim() } : undefined,
-        deliveryInfo:
-          data.orderType === 'delivery'
-            ? buildDeliveryInfo({
-                street: data.deliveryStreet ?? '',
-                landmark: data.deliveryLandmark,
-                instructions: data.deliveryInstructions,
-                saved: savedAddress,
-              })
-            : undefined,
+        deliveryInfo,
         pickupTime:
           data.orderType === 'pickup' && data.pickupMode === 'later'
             ? data.pickupTime
@@ -263,6 +296,13 @@ export function CustomerCheckoutForm() {
         return;
       }
 
+      writeCheckoutAttempt({
+        key: idempotencyKey,
+        fingerprint,
+        orderId: orderResult.data.orderId,
+        createdAt: Date.now(),
+      });
+
       const paymentResult = await initializePayment({
         orderId: orderResult.data.orderId,
         amount: getTotalPrice() + (data.tipAmount || 0),
@@ -280,6 +320,7 @@ export function CustomerCheckoutForm() {
 
       writeLastOrderType(data.orderType);
       const { checkoutUrl } = paymentResult.data;
+      clearCheckoutAttempt();
       clearCart();
       setTimeout(() => {
         window.location.href = checkoutUrl;

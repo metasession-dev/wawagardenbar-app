@@ -51,6 +51,7 @@ export type AuditAction =
   | 'inventory.stock_added_to_location'
   | 'inventory.stock_deducted_from_location'
   | 'settings.inventory_locations_updated'
+  | 'settings.whatsapp_notification_switches_updated'
   // REQ-066 AC10 — operator-initiated retry of a stuck deduction via
   // the /dashboard/incidents page. Both success + failure paths log.
   | 'incidents.retry_deduction_succeeded'

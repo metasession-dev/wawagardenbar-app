@@ -106,5 +106,6 @@
     "iso-27001",
     "gdpr",
     "eu-ai-act"
-  ]
+  ],
+  "reuse_pull_request_gates": true
 }

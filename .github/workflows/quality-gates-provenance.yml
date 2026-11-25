@@ -153,6 +153,7 @@ jobs:
           RELEASE_BRANCH: main
           QG_NAME: Quality Gates
           CI_WORKFLOW_PATH: .github/workflows/ci.yml
+          QG_REUSED_NAME: Reused Quality Gates
           # Same patterns ci.yml's push `paths-ignore` uses (#971).
           PATHS_IGNORE: |
             - 'SDLC/**'

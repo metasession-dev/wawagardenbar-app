@@ -1,8 +1,36 @@
+import {
+  DEFAULT_WHATSAPP_SWITCHES,
+  invalidateWhatsAppSwitchCache,
+  type WhatsAppSwitchSettings,
+} from '@/lib/whatsapp-send-gate';
+import { catalogueKeys } from '@/lib/whatsapp-notification-catalogue';
+
 import { Types } from 'mongoose';
 import SystemSettingsModel, {
   ISystemSettings,
 } from '@/models/system-settings-model';
 import { connectDB } from '@/lib/mongodb';
+
+const WHATSAPP_SWITCHES_KEY = 'whatsapp-notification-switches';
+
+/** Keep only known catalogue keys with boolean values; default everything ON. */
+export function normaliseWhatsAppSwitches(
+  value: unknown
+): WhatsAppSwitchSettings {
+  const raw = (value ?? {}) as Partial<WhatsAppSwitchSettings>;
+  const known = new Set(catalogueKeys());
+  const switches: Record<string, boolean> = {};
+  for (const [key, on] of Object.entries(raw.switches ?? {})) {
+    if (known.has(key) && typeof on === 'boolean') switches[key] = on;
+  }
+  return {
+    masterEnabled:
+      typeof raw.masterEnabled === 'boolean'
+        ? raw.masterEnabled
+        : DEFAULT_WHATSAPP_SWITCHES.masterEnabled,
+    switches,
+  };
+}
 
 /**
  * Service for managing system settings
@@ -224,6 +252,56 @@ export class SystemSettingsService {
     );
 
     return true;
+  }
+
+  /**
+   * REQ-125 — admin switches for WhatsApp notifications. Missing document
+   * means every switch is ON (no behaviour change on deploy).
+   */
+  static async getWhatsAppNotificationSwitches(): Promise<WhatsAppSwitchSettings> {
+    await connectDB();
+    const setting = await SystemSettingsModel.findOne({
+      key: WHATSAPP_SWITCHES_KEY,
+    }).lean<{ value?: Partial<WhatsAppSwitchSettings> } | null>();
+    return normaliseWhatsAppSwitches(setting?.value);
+  }
+
+  /**
+   * REQ-125 — save the switches. Unknown keys are dropped; the locked
+   * templates have no key, so they cannot be switched off here. Returns the
+   * before and after states for the audit entry.
+   */
+  static async updateWhatsAppNotificationSwitches(
+    next: unknown,
+    adminUserId: string
+  ): Promise<{
+    before: WhatsAppSwitchSettings;
+    after: WhatsAppSwitchSettings;
+  }> {
+    await connectDB();
+    const before = await this.getWhatsAppNotificationSwitches();
+    const after = normaliseWhatsAppSwitches(next);
+    await SystemSettingsModel.findOneAndUpdate(
+      { key: WHATSAPP_SWITCHES_KEY },
+      {
+        $set: {
+          value: after,
+          updatedBy: new Types.ObjectId(adminUserId),
+          updatedAt: new Date(),
+        },
+        $push: {
+          changeHistory: {
+            value: after,
+            changedBy: new Types.ObjectId(adminUserId),
+            changedAt: new Date(),
+            reason: 'WhatsApp notification switches updated',
+          },
+        },
+      },
+      { upsert: true, new: true }
+    );
+    invalidateWhatsAppSwitchCache();
+    return { before, after };
   }
 
   /**

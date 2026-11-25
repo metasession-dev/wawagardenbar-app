@@ -107,3 +107,7 @@ Revert the bundle PR. The two new intent values are additive; existing rows are 
 ## 10. Sign-off
 
 Plan approved by: operator, at the Phase 1 checkpoint.
+
+## Decisions recorded at the Phase 1 checkpoint (2026-11-25)
+
+Operator approved the bundle plan with: **option B for #1031** (keep the cart, reuse the order via a cart-fingerprint-bound key, cancel the superseded unpaid order); **opted-out customers who text "order" or "status" still get the reply** (STOP clears marketing only); **replies to a customer's own message are not switchable** (template sends and support replies are; the sign-in PIN is locked on).

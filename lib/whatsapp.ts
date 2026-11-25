@@ -1,3 +1,7 @@
+import {
+  SUPPRESSED_ADMIN_DISABLED,
+  isTemplateSuppressed,
+} from '@/lib/whatsapp-send-gate';
 export interface WhatsAppResult {
   success: boolean;
   message?: string;
@@ -151,6 +155,16 @@ export class WhatsAppService {
         success: false,
         message: 'WhatsApp service is currently disabled',
         errorCode: 'SERVICE_DISABLED',
+      };
+    }
+
+    // REQ-125 (ADR-014) — the one gate for the admin notification switches.
+    // The sign-in PIN is locked on and never reaches the settings read.
+    if (await isTemplateSuppressed(templateName)) {
+      return {
+        success: false,
+        message: `WhatsApp template '${templateName}' is switched off by an admin`,
+        errorCode: SUPPRESSED_ADMIN_DISABLED,
       };
     }
 

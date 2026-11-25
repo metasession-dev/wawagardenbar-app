@@ -59,6 +59,7 @@ const auditLogSchema = new Schema<IAuditLog>(
         'inventory.stock_added_to_location',
         'inventory.stock_deducted_from_location',
         'settings.inventory_locations_updated',
+        'settings.whatsapp_notification_switches_updated',
         'order.price_override',
       ],
     },

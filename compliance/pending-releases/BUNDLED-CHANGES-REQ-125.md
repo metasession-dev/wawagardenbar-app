@@ -2,7 +2,7 @@
 
 - **Core tracked release:** `REQ-125`
 - **Bundle manifest:** `BUNDLED-CHANGES-REQ-125.json`
-- **Manifest hash:** `sha256:5b56d343ab944e25849875e152a945cbef8ededfe182ec902ca6426eeec03a05`
+- **Manifest hash:** `sha256:7ddacc36b9ad008d7db321d7c3a0a9c261feb104af470695b44067e0cf71f61f`
 - **Absorbed predecessor releases:** None
 - **Co-tracked bundle members:** REQ-126 REQ-127
 - **Absorbed non-release work:** housekeeping commits since `origin/main`
@@ -18,6 +18,7 @@
 
 ### Absorbed Non-Release Work
 
+- `bc4a8b17` chore: seed UAT test logins after the prod-to-UAT sync
 - `8ff64c51` chore: enable reuse_pull_request_gates (DevAudit-Installer#1298)
 - `dbaeeff6` chore: sync SDLC templates from DevAudit 1.14.0 -> 1.15.0
 

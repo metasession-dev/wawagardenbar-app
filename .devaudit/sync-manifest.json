@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "cli_version": "1.15.0",
+  "cli_version": "1.16.0",
   "files": {
     ".claude/skills/adr-author/SKILL.md": {
       "sha256": "dcf28d8126daa6485fa5d174d9ef09531fa9a05c7adeb69611c92f228dbcceb7",
@@ -87,7 +87,7 @@
       "section": "2e-ii"
     },
     ".claude/skills/sdlc-implementer/SKILL.md": {
-      "sha256": "bb1176c57ba799a068fd8fa6258bd177254065bb9c941b4b4de3d950b99d4e87",
+      "sha256": "b45840e5b405f69ba60a2e07e13be212eacf8dfbf62f067d2800a322b0a7b77a",
       "section": "2e-ii"
     },
     ".claude/skills/sdlc-implementer/references/call-graph.md": {
@@ -195,7 +195,7 @@
       "section": "2f"
     },
     ".github/workflows/feature-e2e.yml": {
-      "sha256": "2a2360c8e68c95b637a86654c7652711855f13bbaca48ba35b58730544d8a154",
+      "sha256": "fb4199b349dde80adedaaaacd7cdb79b0e66f4fd20d4de54e6fd0570759f19ae",
       "section": "2f"
     },
     ".github/workflows/incident-export.yml": {

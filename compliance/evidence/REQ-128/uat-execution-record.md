@@ -92,7 +92,7 @@ Anything done differently from the procedure, and why. Write "None" if there wer
 4. Orders were ₦2,500 (₦4,000 for the first), not the totals the procedure implied; every amount used stayed within them.
 5. Phone messages are evidenced as text relayed by the operator (`.txt` files), not screenshots, because the agent cannot see the phone.
 6. Step 4: the WhatsApp templates `order_cancelled` and `refund_processed` were PENDING at Meta on UAT during the run. The phone log the operator relayed starts at 11:20, after the first order was cancelled (about 11:01), so the "has been cancelled" message for #WG2611260001 could not be confirmed.
-7. Step 10: no customer message for the ₦2,000 partial approval appears in the relayed log; the procedure does not require one.
+7. Step 10: no customer message for the ₦2,000 partial approval appears in the relayed log; the procedure does not require one. At 11:45 the ₦2,000, ₦1,000 (step 12) and ₦2,500 (step 6) refunds all reached "processed" and each sent the customer a "refund … has been processed" message (REQ-128-AC1-all-refunds-processed.txt).
 
 ## Defect log
 

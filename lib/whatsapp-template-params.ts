@@ -116,6 +116,22 @@ export function orderStatusUpdateV2Params(input: {
   };
 }
 
+/** REQ-128 — `order_cancelled` = body [order number, refund sentence]. */
+export function orderCancelledParams(input: {
+  orderNumber: string;
+  refundSentence: string;
+}): WhatsAppTemplateParams {
+  return { bodyParams: [input.orderNumber, input.refundSentence] };
+}
+
+/** REQ-128 — `refund_processed` = body [amount, order number]. */
+export function refundProcessedParams(input: {
+  amountText: string;
+  orderNumber: string;
+}): WhatsAppTemplateParams {
+  return { bodyParams: [input.amountText, input.orderNumber] };
+}
+
 /**
  * `receipt` = header [order number], body [items, total, payment method, points],
  * URL button [order id]. The button opens `/orders/{{1}}`, which looks the order

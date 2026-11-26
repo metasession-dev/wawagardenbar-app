@@ -25,6 +25,8 @@ export type IncomingMessageIntent =
   // REQ-126 — "order" gets the menu link; status enquiries raise an urgent ticket.
   | 'order_start'
   | 'order_status'
+  // REQ-128 (REQ-WA-019) — a short "cancel" message from the order's own phone.
+  | 'order_cancel'
   | 'support_text';
 
 export interface IIncomingMessage extends Document {
@@ -61,6 +63,7 @@ const incomingMessageSchema = new Schema<IIncomingMessage>(
         'chat_with_staff',
         'order_start',
         'order_status',
+        'order_cancel',
         'support_text',
       ],
     },

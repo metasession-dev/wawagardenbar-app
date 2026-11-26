@@ -15,6 +15,7 @@ import { verifyPayment } from '@/app/actions/payment/payment-actions';
 import { VerifyPaymentButton } from '@/components/features/orders/verify-payment-button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { OrderCancellationForm } from '@/components/features/communication/order-cancellation-form';
 
 interface OrderPageProps {
   params: Promise<{
@@ -84,6 +85,13 @@ export default async function OrderPage({
   // Serialize order for client components
   const order = JSON.parse(JSON.stringify(orderData));
 
+  // REQ-128 — only the signed-in owner of a customer order sees Cancel (a
+  // tracking-token visitor does not); the server action checks ownership again.
+  const canCancelAsOwner =
+    Boolean(session.isLoggedIn && session.userId) &&
+    idString(orderData.userId) === session.userId &&
+    order.origin === 'customer';
+
   return (
     <div className="container mx-auto max-w-3xl px-4 py-8">
       {/* Header */}
@@ -149,10 +157,14 @@ export default async function OrderPage({
           <Button variant="outline" size="sm" asChild>
             <Link href="/contact">Contact Support</Link>
           </Button>
-          {order.status === 'confirmed' && (
-            <Button variant="outline" size="sm" asChild>
-              <Link href={`/orders/${orderId}/cancel`}>Cancel Order</Link>
-            </Button>
+          {/* REQ-128 — the signed-in owner can cancel; paid orders refund. */}
+          {canCancelAsOwner && (
+            <OrderCancellationForm
+              orderId={orderId}
+              orderNumber={order.orderNumber}
+              orderStatus={order.status}
+              orderTotal={order.total}
+            />
           )}
         </div>
       </div>

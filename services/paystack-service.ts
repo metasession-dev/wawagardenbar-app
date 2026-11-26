@@ -125,6 +125,75 @@ export class PaystackService {
     return data;
   }
 
+  /** REQ-128 — the simulated refund id used with an `sk_test_e2e_` secret. */
+  static e2eRefundId(reference: string): string {
+    let h = 0;
+    for (let i = 0; i < reference.length; i++) {
+      h = (h * 31 + reference.charCodeAt(i)) >>> 0;
+    }
+    return String(9_000_000_000 + h);
+  }
+
+  /**
+   * REQ-128 (AC1) — ask Paystack to refund a transaction.
+   *
+   * `amountKobo` omitted = full refund of the transaction. Paystack answers
+   * with a `pending` refund; the final outcome arrives as a `refund.processed`
+   * or `refund.failed` webhook. Never log the secret key.
+   */
+  static async createRefund(params: {
+    reference: string;
+    amountKobo?: number;
+    reason: string;
+  }): Promise<{ refundId: string; status: string }> {
+    const config = await this.getConfig();
+
+    // REQ-128 — e2e seam. The e2e stack installs a Paystack secret that starts
+    // with `sk_test_e2e_` (never a real key) and no refund call leaves the
+    // process: the response Paystack would give is simulated. The refund id is
+    // derived from the reference so a spec can send the matching webhook.
+    if (config.secretKey.startsWith('sk_test_e2e_')) {
+      return {
+        refundId: PaystackService.e2eRefundId(params.reference),
+        status: 'pending',
+      };
+    }
+
+    const body: Record<string, unknown> = {
+      transaction: params.reference,
+      currency: 'NGN',
+      customer_note: params.reason.slice(0, 200),
+      merchant_note: params.reason.slice(0, 200),
+    };
+    if (params.amountKobo !== undefined) {
+      body.amount = params.amountKobo;
+    }
+
+    const response = await fetch(`${this.BASE_URL}/refund`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${config.secretKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || !data?.status) {
+      throw new Error(data?.message || 'Failed to create Paystack refund');
+    }
+
+    const refund = (data.data ?? {}) as {
+      id?: number | string;
+      status?: string;
+    };
+    return {
+      refundId: refund.id !== undefined ? String(refund.id) : '',
+      status: String(refund.status ?? 'pending'),
+    };
+  }
+
   /**
    * Generate unique transaction reference
    */

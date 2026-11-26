@@ -32,7 +32,8 @@ export type SupportTicketCategory =
   | 'account-issue'
   | 'feedback'
   | 'other'
-  | 'whatsapp-inbound';
+  | 'whatsapp-inbound'
+  | 'refund';
 
 export type SupportReplyAuthorRole = 'staff' | 'customer';
 
@@ -63,6 +64,14 @@ export interface ISupportTicket extends Document {
   /** REQ-118 (AC1) — when the ticket was last resolved; the 72h reopen window counts from here. */
   resolvedAt: Date | null;
   replies: ISupportReply[];
+  /** REQ-128 — decision state of a refund request (category 'refund'). */
+  refundRequest?: {
+    status: 'pending' | 'approved' | 'rejected';
+    decidedBy?: string | null;
+    decidedAt?: Date | null;
+    refundId?: string | null;
+    rejectionReason?: string | null;
+  } | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -102,6 +111,7 @@ const supportTicketSchema = new Schema<ISupportTicket>(
         'feedback',
         'other',
         'whatsapp-inbound',
+        'refund',
       ],
       required: true,
     },
@@ -123,6 +133,23 @@ const supportTicketSchema = new Schema<ISupportTicket>(
     slaDueAt: { type: Date, default: null },
     resolvedAt: { type: Date, default: null },
     replies: { type: [replySchema], default: [] },
+    refundRequest: {
+      type: new Schema(
+        {
+          status: {
+            type: String,
+            enum: ['pending', 'approved', 'rejected'],
+            default: 'pending',
+          },
+          decidedBy: { type: String, default: null },
+          decidedAt: { type: Date, default: null },
+          refundId: { type: String, default: null },
+          rejectionReason: { type: String, default: null },
+        },
+        { _id: false }
+      ),
+      default: null,
+    },
   },
   { timestamps: true }
 );

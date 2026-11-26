@@ -1841,3 +1841,100 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 **Framework cross-references:** ISO 27001 A.8.25, A.8.28; SOC 2 CC7.1, PI1.2.
 
 **Cross-links:** [REQ-127 implementation plan](plans/REQ-127/implementation-plan.md); REQ-CHECKOUT-019; REQ-CHECKOUT-008; ADR-010.
+
+---
+
+### R-81 — A refund is issued twice or for more than was paid (REQ-128)
+
+**Status:** OPEN
+**Opened:** 2026-11-26 (REQ-128, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-26
+
+**The risk:** A double tap, a retried request, a replayed webhook or two staff acting together could create more than one refund for an order, or a partial refund larger than the unrefunded balance. This is a direct financial loss.
+
+**Mitigations planned in REQ-128:**
+
+1. Every refund is a `Refund` ledger row written before the Paystack call; one active full refund per order is enforced by a unique partial index (AC1, AC2).
+2. Amount is capped at paid minus processed and pending refunds, checked atomically (AC1).
+3. The cancel and the refund request are one conditional update, so a second request is a no-op (AC2).
+4. Webhook events use the existing raw-body signature check and de-duplication row (AC1).
+5. Unit tests for double submit, over-cap and replay.
+
+**Residual likelihood × impact:** low × medium
+
+**Framework cross-references:** ISO 27001 A.8.25, A.8.28; SOC 2 CC7.1, PI1.2, CC6.1.
+
+**Cross-links:** [REQ-128 implementation plan](plans/REQ-128/implementation-plan.md); ADR-015; REQ-PAY-011 to REQ-PAY-014.
+
+---
+
+### R-82 — Someone cancels another customer's paid order by WhatsApp (REQ-128)
+
+**Status:** OPEN
+**Opened:** 2026-11-26 (REQ-128, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-26
+
+**The risk:** Cancel by chat acts on a message, not a signed-in session. A forged or mistaken sender, or a supplied order number, could cancel or refund an order that is not the sender's.
+
+**Mitigations planned in REQ-128:**
+
+1. Orders are looked up from the sender's own number only; a supplied order number is matched against that list and never used to find another customer's order (AC2, AC5).
+2. The sender number must equal the order's customer phone (decision D1); the refund can only go back to the original payment.
+3. Replies reveal nothing about orders that are not the sender's (negative test).
+4. Inbound webhook signature check is unchanged (REQ-WA-009).
+
+**Residual likelihood × impact:** low × medium
+
+**Framework cross-references:** ISO 27001 A.5.15, A.8.25; SOC 2 CC6.1, CC6.3; GDPR Art. 32.
+
+**Cross-links:** [REQ-128 implementation plan](plans/REQ-128/implementation-plan.md); ADR-015; REQ-PAY-011 to REQ-PAY-014.
+
+---
+
+### R-83 — Paystack refunds are unavailable or fail, so a cancelled customer is not repaid (REQ-128)
+
+**Status:** OPEN
+**Opened:** 2026-11-26 (REQ-128, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-26
+
+**The risk:** Refunds may not be enabled on the Paystack account, may be rejected, or may stay pending. The customer has cancelled and expects their money back.
+
+**Mitigations planned in REQ-128:**
+
+1. The `Refund` row stays `pending` or `failed` and the order stays `paid` (not `refunded`) until Paystack confirms (ADR-015) (AC1).
+2. A failed or rejected refund raises a staff notification and shows on the refunds report (AC1, AC6).
+3. Operator confirms refunds are enabled on the UAT and production Paystack accounts before UAT (decision D3).
+4. The customer message says the refund is being processed and never "refunded" until `refund.processed` (AC5).
+
+**Residual likelihood × impact:** medium × medium
+
+**Framework cross-references:** ISO 27001 A.5.30, A.8.25; SOC 2 A1.2, PI1.2.
+
+**Cross-links:** [REQ-128 implementation plan](plans/REQ-128/implementation-plan.md); ADR-015; REQ-PAY-011 to REQ-PAY-014.
+
+---
+
+### R-84 — Unapproved or staff-misused refunds, or refund actions with no trail (REQ-128)
+
+**Status:** OPEN
+**Opened:** 2026-11-26 (REQ-128, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-26
+
+**The risk:** A staff user without manager authority could refund, or a manager could refund without a reason or record. The customer path could be abused to reach staff-only partial refunds.
+
+**Mitigations planned in REQ-128:**
+
+1. Server-side role checks (`manager`, `admin`, `super-admin`) on every refund and approval action; customers can only trigger the automatic full refund of their own order (AC4).
+2. A reason is required and every request, approval, rejection, processing and failure is audit-logged with the actor (AC6).
+3. The refunds report shows totals by approver (AC6).
+4. Negative tests for `csr`, kitchen and customer sessions (AC4).
+
+**Residual likelihood × impact:** low × medium
+
+**Framework cross-references:** ISO 27001 A.5.3, A.8.15; SOC 2 CC6.1, CC8.1.
+
+**Cross-links:** [REQ-128 implementation plan](plans/REQ-128/implementation-plan.md); ADR-015; REQ-PAY-011 to REQ-PAY-014.

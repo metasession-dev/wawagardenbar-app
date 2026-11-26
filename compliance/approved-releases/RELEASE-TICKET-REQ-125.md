@@ -1,6 +1,6 @@
 # Release Ticket: REQ-125 — Admin switches for WhatsApp notifications (WA-15)
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-11-25
 **Requirement ID:** REQ-125
 **Risk Level:** MEDIUM

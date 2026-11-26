@@ -1,6 +1,6 @@
 # Release Ticket: REQ-126 — WhatsApp "order" gets the menu link; status enquiries raise an urgent ticket (WA-16)
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-11-25
 **Requirement ID:** REQ-126
 **Risk Level:** MEDIUM
@@ -31,3 +31,5 @@ To be completed at Stage 3.
 - **Reviewer impact:** approval covers all three REQs.
 - **Security / risk impact:** see `compliance/evidence/REQ-126/security-summary.md` and R-77 to R-80.
 - **Reference:** commit range `origin/main..HEAD`
+**Release PR:** #1090
+**Released with bundle:** REQ-125 (closed out 2026-11-25)

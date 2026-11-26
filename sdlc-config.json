@@ -80,7 +80,7 @@
   },
   "integration_branch": "develop",
   "release_branch": "main",
-  "devaudit_synced_version": "1.15.0",
+  "devaudit_synced_version": "1.16.0",
   "e2e_regression_enabled": true,
   "e2e_screenshot_exempt_reqs": ["REQ-111"],
   "test_tier_full": "yes",
@@ -107,5 +107,6 @@
     "gdpr",
     "eu-ai-act"
   ],
-  "reuse_pull_request_gates": true
+  "reuse_pull_request_gates": true,
+  "paths_ignore_pull_request": true
 }

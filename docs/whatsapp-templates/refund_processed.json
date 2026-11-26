@@ -1,0 +1,13 @@
+{
+  "name": "refund_processed",
+  "language": "en",
+  "category": "UTILITY",
+  "builder": "refundProcessedParams",
+  "header": null,
+  "body": {
+    "text": "Your refund of {{1}} for order #{{2}} has been processed. It can take 3–10 working days to reach your account.",
+    "example": ["₦5,000", "WG2611260001"]
+  },
+  "footer": null,
+  "buttons": []
+}

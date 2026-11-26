@@ -163,11 +163,11 @@
       "section": "2f"
     },
     ".github/workflows/ci-status-fallback.yml": {
-      "sha256": "d98302323631d999c65cf33208b8c45fc5120cd9ceb980062c79b0d8c111eea2",
+      "sha256": "5a5a8905f84d4cbe0d69c52b6e92070d8d963a06e20f36fde133be8372b2efc0",
       "section": "2f"
     },
     ".github/workflows/ci.yml": {
-      "sha256": "e0b4d41e624e76f138ed640b12affd7ba94a87c9f1b35a0dc3592edf0f3e05ed",
+      "sha256": "4eedeb4767e28e7d3cfd85fc96a30bcbc6ebcd4a08b2aa346ce9ff0e2f9247bc",
       "section": "2f"
     },
     ".github/workflows/close-out-completion.yml": {

@@ -21,6 +21,17 @@ on:
         required: false
   pull_request:
     branches: [develop]
+    paths-ignore:
+      - 'SDLC/**'
+      - 'compliance/**'
+      - '*.md'
+      - '.cursorrules'
+      - '.windsurfrules'
+      - 'sdlc-config.json'
+      - 'scripts/upload-evidence.sh'
+      - 'scripts/validate-compliance-artifacts.sh'
+      - 'scripts/validate-commits.sh'
+      - 'scripts/check-requirement-jsdoc.sh'
   push:
     branches: [develop]
     paths-ignore:

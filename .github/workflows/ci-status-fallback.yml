@@ -37,6 +37,19 @@ on:
       - 'scripts/validate-compliance-artifacts.sh'
       - 'scripts/validate-commits.sh'
       - 'scripts/check-requirement-jsdoc.sh'
+  pull_request:
+    branches: [develop]
+    paths:
+      - 'SDLC/**'
+      - 'compliance/**'
+      - '*.md'
+      - '.cursorrules'
+      - '.windsurfrules'
+      - 'sdlc-config.json'
+      - 'scripts/upload-evidence.sh'
+      - 'scripts/validate-compliance-artifacts.sh'
+      - 'scripts/validate-commits.sh'
+      - 'scripts/check-requirement-jsdoc.sh'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -45,10 +58,61 @@ concurrency:
 permissions:
   contents: read
   statuses: write
+  pull-requests: read
 
 jobs:
+  classify:
+    name: Classify the change
+    runs-on: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'ubuntu-latest' || (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') }}
+    outputs:
+      gate_name: ${{ steps.classify.outputs.gate_name }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: scripts
+      - name: Is this change docs and compliance only?
+        id: classify
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          # Same patterns as the triggers above and ci.yml's paths-ignore.
+          PATHS_IGNORE: |
+            - 'SDLC/**'
+            - 'compliance/**'
+            - '*.md'
+            - '.cursorrules'
+            - '.windsurfrules'
+            - 'sdlc-config.json'
+            - 'scripts/upload-evidence.sh'
+            - 'scripts/validate-compliance-artifacts.sh'
+            - 'scripts/validate-commits.sh'
+            - 'scripts/check-requirement-jsdoc.sh'
+        run: |
+          set -euo pipefail
+          GATE_NAME="Quality Gates"
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            # An unreadable file list fails this job, so no status is reported: the pull request waits.
+            FILES=$(gh api --paginate "repos/${REPOSITORY}/pulls/${PR_NUMBER}/files" --jq '.[].filename')
+            KIND=$(printf '%s\n' "$FILES" | bash scripts/provenance-gated-commit.sh pr-docs-only)
+            COUNT=$(printf '%s\n' "$FILES" | grep -c . || true)
+            echo "Changed files: ${KIND} (${COUNT})"
+            if [ "$KIND" != "docs-only" ]; then
+              GATE_NAME="Quality Gates not reported here (this change has code: CI Pipeline reports it)"
+              # GitHub path filters look at the first 300 changed files only. When those are all ignored
+              # paths, ci.yml is not started for a pull request that also has code, and nothing reports
+              # Quality Gates (DevAudit-Installer#1297).
+              if [ "$COUNT" -gt 300 ]; then
+                echo "::warning::This pull request changes ${COUNT} files and has code, but GitHub path filters look at the first 300 only. If no Quality Gates status appears, run the CI Pipeline workflow on this branch by hand (Actions, CI Pipeline, Run workflow): it reports the status for the head commit."
+              fi
+            fi
+          fi
+          echo "gate_name=${GATE_NAME}" >> "$GITHUB_OUTPUT"
+
   quality-gates:
-    name: Quality Gates
+    name: ${{ needs.classify.outputs.gate_name }}
+    needs: classify
     runs-on: ${{ (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') == 'github-ci' && 'ubuntu-latest' || (inputs.runner_label || vars.CI_RUNNER_LABEL || 'github-ci') }}
     steps:
       - name: Acknowledge docs/compliance-only commit

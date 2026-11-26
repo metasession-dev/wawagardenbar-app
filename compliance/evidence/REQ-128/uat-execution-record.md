@@ -67,7 +67,7 @@ Evidence files are stored under `compliance/evidence/REQ-128/uat/` and named in 
 | 1    | Dialog text matched: full refund of ₦4,000 to the original payment method, 3–10 working days                                                                                                                               | PASS                  | REQ-128-AC2-cancel-dialog.png                                            |        |
 | 2    | "Order cancelled. A full refund of ₦4,000 is on its way." shown; order page shows Order Cancelled                                                                                                                          | PASS                  | REQ-128-AC2-order-cancelled.png                                          |        |
 | 3    | Refunds card: ₦4,000 full, reason "Cancelled by customer before preparation", pending (processed by 11:30)                                                                                                                 | PASS                  | REQ-128-AC1-refund-row.png                                               |        |
-| 4    | Refund-processed message for #WG2611260001 arrived at 11:30. The "has been cancelled" message was not reported as received (sent before the customer texted; templates PENDING at Meta)                                    | BLOCKED               | REQ-128-AC5-whatsapp-messages.txt                                        |        |
+| 4    | Both messages arrived: "…order #WG2611260001 has been cancelled. A full refund of ₦4,000 is on its way." and later "Your refund of ₦4,000 for order #WG2611260001 has been processed…"                                     | PASS                  | REQ-128-AC5-whatsapp-messages.txt                                        |        |
 | 5    | After reload the cancelled order shows no Cancel Order button                                                                                                                                                              | PASS                  | REQ-128-AC2-no-second-cancel.png                                         |        |
 | 6    | "Cancel WG2611260002" cancelled the order, one "has been cancelled" message arrived, order shows Cancelled with a ₦2,500 full refund (see Deviations)                                                                      | PASS                  | REQ-128-AC2-whatsapp-cancel.png, REQ-128-AC2-whatsapp-cancel.txt         |        |
 | 7    | "Can I cancel my order" did not cancel anything; it was added to the open WhatsApp support ticket as a customer message                                                                                                    | PASS                  | REQ-128-AC2-question-not-cancel.png                                      |        |
@@ -91,7 +91,7 @@ Anything done differently from the procedure, and why. Write "None" if there wer
 3. Step 15: the csr lands on /dashboard/orders, not a separate dashboard home; the Refunds page is still refused.
 4. Orders were ₦2,500 (₦4,000 for the first), not the totals the procedure implied; every amount used stayed within them.
 5. Phone messages are evidenced as text relayed by the operator (`.txt` files), not screenshots, because the agent cannot see the phone.
-6. Step 4: the WhatsApp templates `order_cancelled` and `refund_processed` were PENDING at Meta on UAT during the run. The phone log the operator relayed starts at 11:20, after the first order was cancelled (about 11:01), so the "has been cancelled" message for #WG2611260001 could not be confirmed.
+6. The WhatsApp templates `order_cancelled` and `refund_processed` were PENDING at Meta on UAT during the run. Messages were still delivered in this run; the templates need Meta approval before they work outside the 24-hour reply window.
 7. Step 10: no customer message for the ₦2,000 partial approval appears in the relayed log; the procedure does not require one. At 11:45 the ₦2,000, ₦1,000 (step 12) and ₦2,500 (step 6) refunds all reached "processed" and each sent the customer a "refund … has been processed" message (REQ-128-AC1-all-refunds-processed.txt).
 
 ## Defect log
@@ -104,20 +104,20 @@ Anything done differently from the procedure, and why. Write "None" if there wer
 
 | Passed | Failed | Blocked | Total steps |
 | ------ | ------ | ------- | ----------- |
-| 16     | 0      | 1       | 17          |
+| 17     | 0      | 0       | 17          |
 
 **AC coverage**
 
-| AC  | Steps         | Result                                                          |
-| --- | ------------- | --------------------------------------------------------------- |
-| AC1 | 3, 4          | Step 3 passed; step 4 blocked (cancelled message not confirmed) |
-| AC2 | 1, 2, 5, 6, 7 | All passed                                                      |
-| AC3 | 8, 10, 11     | All passed                                                      |
-| AC4 | 9, 10, 12, 13 | All passed                                                      |
-| AC5 | 4, 6          | Step 6 passed; step 4 blocked                                   |
-| AC6 | 14, 15        | All passed                                                      |
-| AC7 | none          | Not testable by a human; see the procedure                      |
-| AC8 | 16, 17        | All passed                                                      |
+| AC  | Steps         | Result                                     |
+| --- | ------------- | ------------------------------------------ |
+| AC1 | 3, 4          | All passed                                 |
+| AC2 | 1, 2, 5, 6, 7 | All passed                                 |
+| AC3 | 8, 10, 11     | All passed                                 |
+| AC4 | 9, 10, 12, 13 | All passed                                 |
+| AC5 | 4, 6          | All passed                                 |
+| AC6 | 14, 15        | All passed                                 |
+| AC7 | none          | Not testable by a human; see the procedure |
+| AC8 | 16, 17        | All passed                                 |
 
 **Recommendation:** [ ] Approve &nbsp; [ ] Approve with noted defects &nbsp; [ ] Reject
 

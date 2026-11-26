@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-128",
+  "ac": 2,
+  "slug": "customer-cancel-dialog",
+  "specFile": "e2e/critical/refund-flow.spec.ts",
+  "capturedAt": "2026-11-26T07:14:22.979Z"
+}

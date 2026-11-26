@@ -1,0 +1,8 @@
+{
+  "origin": "regression",
+  "reqId": "REQ-128",
+  "ac": 4,
+  "slug": "manager-refund-dialog",
+  "specFile": "e2e/critical/refund-flow.spec.ts",
+  "capturedAt": "2026-11-26T07:14:19.139Z"
+}

@@ -42,7 +42,8 @@ const USER = 'user-1';
 const order = (o: Record<string, unknown> = {}) => ({
   _id: 'o1',
   orderNumber: 'WG2611260001',
-  userId: { toString: () => USER },
+  // getOrderById populates the owner: a document, not an id (found by the e2e run)
+  userId: { _id: { toString: () => USER }, toString: () => '[object Object]' },
   status: 'confirmed',
   paymentStatus: 'paid',
   total: 5000,

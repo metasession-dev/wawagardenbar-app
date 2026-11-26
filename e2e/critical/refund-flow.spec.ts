@@ -88,8 +88,8 @@ test.describe('[REQ-128] refunds', () => {
     itemId = await seedPricedMenuItem(5000);
     waCustomer = await seedActiveCustomer();
     webCustomer = await seedVerifiedCustomer();
-    manager = await createStaff('refund-mgr', ['manager']);
-    csr = await createStaff('refund-csr', ['csr']);
+    manager = await createStaff('rf-mgr', ['manager']);
+    csr = await createStaff('rf-csr', ['csr']);
   });
 
   test.afterAll(async () => {
@@ -143,7 +143,7 @@ test.describe('[REQ-128] refunds', () => {
       source: 'whatsapp_cancel',
       transactionReference: cancelled.reference,
     });
-    expect(cancelledRefund.paystackRefundId).toMatch(/^\d{10}$/);
+    expect(cancelledRefund.paystackRefundId).toMatch(/^\d{10,11}$/);
 
     const logs = await waitForNotificationRows(
       waCustomer.userId,
@@ -151,8 +151,11 @@ test.describe('[REQ-128] refunds', () => {
       1
     );
     expect(logs).toHaveLength(1);
-    expect(logs[0].templateParams.body[0]).toBe(cancelled.orderNumber);
-    expect(logs[0].templateParams.body[1]).toContain('full refund of ₦5,000');
+    // The customer has just written, so this goes inside the 24-hour window as
+    // free-form text (window-aware, REQ-WA-012): the text carries both facts.
+    expect(logs[0].templateParams.mode).toBe('text');
+    expect(logs[0].templateParams.body[0]).toContain(cancelled.orderNumber);
+    expect(logs[0].templateParams.body[0]).toContain('full refund of ₦5,000');
 
     // texting it again does not refund twice
     const again = await sendInbound(request, waCustomer.phone, 'cancel');
@@ -176,10 +179,10 @@ test.describe('[REQ-128] refunds', () => {
       1
     );
     expect(logs).toHaveLength(1);
-    expect(logs[0].templateParams.body).toEqual([
-      '₦5,000',
-      cancelled.orderNumber,
-    ]);
+    // inside the customer's 24-hour window: free-form text with both facts
+    expect(logs[0].templateParams.mode).toBe('text');
+    expect(logs[0].templateParams.body[0]).toContain('refund of ₦5,000');
+    expect(logs[0].templateParams.body[0]).toContain(cancelled.orderNumber);
 
     const replay = await sendRefundWebhook('refund.processed', cancelledRefund);
     expect(replay.status).toBe(200);
@@ -348,6 +351,8 @@ test.describe('[REQ-128] refunds', () => {
     browser,
   }) => {
     tagTest('REQ-128', [2, 5]);
+    // the first visit compiles the order page and the cancel action on a cold dev server
+    test.setTimeout(120_000);
     webOrder = await newOrder(webCustomer._id);
     const context = await browser.newContext({
       storageState: { cookies: [], origins: [] },
@@ -356,6 +361,11 @@ test.describe('[REQ-128] refunds', () => {
       await attachCustomerSessionToContext(context, webCustomer, baseUrl());
       const page = await context.newPage();
       await page.goto(`/orders/${webOrder._id}`);
+      // the cookie banner can sit over the button (see #1044)
+      await page
+        .getByRole('button', { name: 'Got it' })
+        .click({ timeout: 3000 })
+        .catch(() => undefined);
       await page.getByRole('button', { name: 'Cancel Order' }).click();
       const dialog = page.getByRole('dialog');
       await expect(dialog.getByText('full refund')).toBeVisible();
@@ -377,6 +387,9 @@ test.describe('[REQ-128] refunds', () => {
         1
       );
       expect(logs.length).toBeGreaterThanOrEqual(1);
+      // no recent message from this customer, so the template is used
+      expect(logs[0].templateParams.body[0]).toBe(webOrder.orderNumber);
+      expect(logs[0].templateParams.body[1]).toContain('full refund of ₦5,000');
     } finally {
       await context.close();
     }

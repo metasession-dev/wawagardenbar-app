@@ -29,9 +29,9 @@ test.describe('[REQ-128] refunds report', () => {
   const day = (d: number) => new Date(Date.UTC(2020, 0, d, 12));
 
   test.beforeAll(async () => {
-    admin = await createStaff('refund-report-admin', ['admin']);
-    csr = await createStaff('refund-report-csr', ['csr']);
-    approverA = await createStaff('refund-report-mgr', ['manager']);
+    admin = await createStaff('rf-rep-admin', ['admin']);
+    csr = await createStaff('rf-rep-csr', ['csr']);
+    approverA = await createStaff('rf-rep-mgr', ['manager']);
     const orderId = new ObjectId();
     const row = (
       d: number,

@@ -139,3 +139,15 @@ Revert the PR. `Refund` rows and the `partially_refunded` value are additive and
 ## 10. Sign-off
 
 Plan approved by: operator, 2026-11-26, at the Phase 1 checkpoint (HIGH risk); decisions D1–D6 approved as written.
+
+## Plan deviation (Phase 2, 2026-11-26)
+
+Implementation deviations found while building. None changes an AC or a decision D1–D6.
+
+1. **Refunds report path.** The report is at `/dashboard/refunds`, not `/dashboard/finance/refunds`. The finance layout is gated by the expenses permission, which managers do not hold, so a finance path would lock out the people who approve refunds.
+2. **WhatsApp "cancel" is a short imperative only.** "cancel", "cancel my order" and "cancel WG…" cancel; a question such as "can I cancel?" is ordinary support text, because a cancel refunds money and cannot be undone. A supplied order number is matched only against the sender's own active paid orders; anything else gets the same neutral reply (D1).
+3. **The two templates are on the always-on list**, not switchable (the WA-15 catalogue said refund and cancellation messages join the locked list). `order_cancelled` has a closing sentence ("Reply to this message if you need help.") because Meta rejects a body that ends in a placeholder.
+4. **Approving a refund request refunds the money only.** It does not change the order's status (the order is already being prepared); staff update the order separately.
+5. **Production template submission is manual.** The production WhatsApp account is a small-business account not on Cloud API coexistence (`SMB_ACCOUNT_NOT_ON_COEX`), so the API cannot create templates on it; the UAT copies were submitted by API.
+6. **e2e seam for Paystack.** With a Paystack secret that starts `sk_test_e2e_` (installed by the e2e specs, never a real key) `createRefund` returns a simulated response, so the e2e stack needs no network and no CI configuration change.
+7. **Defect found by the e2e run, fixed in this REQ:** the customer cancel action compared `order.userId.toString()` with the session user, but `getOrderById` populates the owner, so a real customer was refused. It now uses `idString` like the order page; a unit test pins the populated shape.

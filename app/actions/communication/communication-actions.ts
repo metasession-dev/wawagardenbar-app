@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { OrderService, SystemSettingsService } from '@/services';
 import { UserModel } from '@/models';
 import { sessionOptions, SessionData } from '@/lib/session';
+import { idString } from '@/lib/order-access';
 import {
   sendOrderConfirmationEmail,
   sendOrderStatusUpdateEmail,
@@ -329,7 +330,7 @@ export async function cancelOrderWithRefundAction(input: {
       !session.isLoggedIn ||
       !session.userId ||
       !order.userId ||
-      order.userId.toString() !== session.userId
+      idString(order.userId) !== session.userId
     ) {
       return { success: false, error: 'Unauthorized' };
     }

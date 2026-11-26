@@ -68,6 +68,11 @@ const CHAT_WITH_STAFF_ID = 'chat_with_staff';
 // 'WG' + 6-digit dateKey + 4-digit sequence = 'WG' + 10 digits.
 const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
 const ORDER_NUMBER_REGEX = /\bWG\d{10}\b/;
+// REQ-128 (REQ-WA-019) — only a short imperative counts ("cancel", "cancel my
+// order", "cancel WG2611260001"). A question such as "can I cancel?" is
+// ordinary support text, because a cancel here refunds money and cannot be undone.
+const CANCEL_REGEX =
+  /^\s*(?:please\s+)?cancel(?:\s+(?:my\s+)?order)?(?:\s+#?(WG\d{10}))?\s*[.!]*\s*$/i;
 
 // REQ-126 — all orders are made in the app. "order" returns the menu link;
 // a status enquiry raises an urgent ticket and never returns order data.
@@ -145,6 +150,13 @@ export function orderLinkReplyText(baseUrl?: string): string {
     'Pay securely online and we will start preparing your order.'
   );
 }
+
+export const CANCEL_NO_ORDER_TEXT =
+  "We couldn't find an order of yours that can be cancelled. If you need help, reply here and our team will get back to you.";
+export const CANCEL_REQUEST_TEXT =
+  "Your order is already being prepared, so we've passed your request to our manager.";
+export const CANCEL_FAILED_TEXT =
+  "We couldn't cancel that order. Our team will help you shortly.";
 
 export const ORDER_STATUS_ACK_TEXT =
   "Thanks, we're checking on your order. A member of our team will message you shortly.";
@@ -331,6 +343,82 @@ export class WhatsAppInboundService {
   }
 
   /**
+   * REQ-128 (REQ-WA-019) — cancel by WhatsApp. Returns the action tag.
+   * Replies are service replies to a message just received (free-form).
+   */
+  private static async handleCancel(
+    from: string,
+    body: string | null,
+    userId: string | null | undefined
+  ): Promise<string> {
+    const reply = async (text: string, tag: string): Promise<string> => {
+      try {
+        await sendWithRetry(from, () =>
+          WhatsAppService.sendTextMessage(from, text)
+        );
+      } catch (error) {
+        console.error(
+          '[WhatsAppInbound] cancel reply failed:',
+          error instanceof Error ? error.message : String(error)
+        );
+      }
+      return tag;
+    };
+
+    if (!userId) return reply(CANCEL_NO_ORDER_TEXT, 'cancel_no_order');
+
+    const candidates = await OrderModel.find({
+      userId,
+      origin: 'customer',
+      paymentStatus: 'paid',
+      status: {
+        $in: ['pending', 'confirmed', 'preparing', 'ready', 'out-for-delivery'],
+      },
+    })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .select('_id orderNumber')
+      .lean<Array<{ _id: { toString(): string }; orderNumber: string }>>();
+
+    if (candidates.length === 0) {
+      return reply(CANCEL_NO_ORDER_TEXT, 'cancel_no_order');
+    }
+
+    const wanted = body?.match(CANCEL_REGEX)?.[1]?.toUpperCase();
+    let chosen = candidates[0];
+    if (wanted) {
+      const found = candidates.find((c) => c.orderNumber === wanted);
+      // Same wording as "no order": nothing is revealed about other orders.
+      if (!found) return reply(CANCEL_NO_ORDER_TEXT, 'cancel_no_order');
+      chosen = found;
+    } else if (candidates.length > 1) {
+      return reply(
+        `You have more than one active order (${candidates
+          .map((c) => c.orderNumber)
+          .join(
+            ', '
+          )}). Reply "cancel" followed by the order number you want to cancel.`,
+        'cancel_choose_order'
+      );
+    }
+
+    const { RefundService } = await import('@/services/refund-service');
+    const result = await RefundService.cancelPaidOrderForCustomer({
+      orderId: chosen._id.toString(),
+      customerUserId: userId,
+      channel: 'whatsapp',
+    });
+    if (!result.ok) {
+      return reply(CANCEL_FAILED_TEXT, `cancel_${result.code}`);
+    }
+    if (result.outcome === 'refund_request_created') {
+      return reply(CANCEL_REQUEST_TEXT, 'cancel_request_created');
+    }
+    // Cancelled orders are confirmed by `order_cancelled` (RefundService → notifier).
+    return 'cancelled_refund_started';
+  }
+
+  /**
    * Classify the intent of an inbound message. Pure function on the
    * Meta payload; no DB. Order matters: opt_out is checked before
    * chat_with_staff so a quick-reply labelled "STOP" (shouldn't happen
@@ -349,6 +437,10 @@ export class WhatsAppInboundService {
       if (reply?.title === CHAT_WITH_STAFF_LABEL) return 'chat_with_staff';
     }
     if (body === CHAT_WITH_STAFF_LABEL) return 'chat_with_staff';
+
+    // REQ-128 — a short "cancel" beats the status and order checks below
+    // (an order number in "cancel WG…" must not read as a status enquiry).
+    if (body && CANCEL_REGEX.test(body)) return 'order_cancel';
 
     // REQ-126 — a status enquiry beats an order request ("where is my order"
     // is a status enquiry); both beat ordinary support text.
@@ -559,6 +651,12 @@ export class WhatsAppInboundService {
         } else {
           actionTaken = 'noop';
         }
+      } else if (intent === 'order_cancel') {
+        // REQ-128 (REQ-WA-019, decision D1) — `user` was found from the sender's
+        // own number (a phone mismatch is handled above), and the order list
+        // comes from that user only, so a supplied order number can never reach
+        // another customer's order.
+        actionTaken = await this.handleCancel(from, body, userId);
       } else if (intent === 'order_status') {
         // REQ-126 (REQ-WA-018) — no order data by text: an urgent ticket for
         // staff (REQ-WA-013 SLA) plus a short acknowledgement. Answered in

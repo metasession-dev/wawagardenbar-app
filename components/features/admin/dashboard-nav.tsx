@@ -104,6 +104,13 @@ const navItems: NavItem[] = [
     permission: 'expensesManagement',
   },
   {
+    // REQ-128 — refunds report for the people who may refund.
+    title: 'Refunds',
+    href: '/dashboard/refunds',
+    icon: DollarSign,
+    roles: ['manager', 'admin', 'super-admin'],
+  },
+  {
     title: 'Reports',
     href: '/dashboard/reports',
     icon: BarChart3,

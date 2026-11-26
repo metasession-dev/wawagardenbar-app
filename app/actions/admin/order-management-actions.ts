@@ -631,7 +631,8 @@ export async function cancelOrderAction(
     if (order.paymentStatus === 'paid') {
       return {
         success: false,
-        error: 'Cannot cancel paid orders. Please process a refund instead.',
+        error:
+          'Paid orders cannot be cancelled here. Use the Refund action on the order page (customer orders paid through Paystack, manager, admin or super-admin).',
       };
     }
 

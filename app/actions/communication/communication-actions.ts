@@ -6,10 +6,10 @@ import { revalidatePath } from 'next/cache';
 import { OrderService, SystemSettingsService } from '@/services';
 import { UserModel } from '@/models';
 import { sessionOptions, SessionData } from '@/lib/session';
+import { idString } from '@/lib/order-access';
 import {
   sendOrderConfirmationEmail,
   sendOrderStatusUpdateEmail,
-  sendOrderCancellationEmail,
   sendSupportTicketEmail,
 } from '@/lib/email';
 import { SMSService } from '@/lib/sms';
@@ -303,7 +303,13 @@ export async function requestOrderModificationAction(input: {
 }
 
 /**
- * Cancel order with refund logic
+ * Customer cancels their own order (REQ-128, AC2, AC3; REQ-PAY-012, REQ-PAY-013).
+ *
+ * - paid, pending or confirmed: cancelled with an automatic full Paystack refund;
+ * - paid, preparation started: a refund request for a manager (no money moves);
+ * - not paid yet: the order is cancelled, nothing to refund.
+ * The old path that marked an order `refunded` without moving money, and its
+ * 50 % rule, are gone (D6).
  */
 export async function cancelOrderWithRefundAction(input: {
   orderId: string;
@@ -317,19 +323,17 @@ export async function cancelOrderWithRefundAction(input: {
     );
 
     const order = await OrderService.getOrderById(input.orderId);
-
     if (!order) {
       return { success: false, error: 'Order not found' };
     }
-
-    // Verify ownership
-    if (order.userId && session.userId) {
-      if (order.userId.toString() !== session.userId) {
-        return { success: false, error: 'Unauthorized' };
-      }
+    if (
+      !session.isLoggedIn ||
+      !session.userId ||
+      !order.userId ||
+      idString(order.userId) !== session.userId
+    ) {
+      return { success: false, error: 'Unauthorized' };
     }
-
-    // Check if order can be cancelled
     if (['delivered', 'completed', 'cancelled'].includes(order.status)) {
       return {
         success: false,
@@ -337,80 +341,67 @@ export async function cancelOrderWithRefundAction(input: {
       };
     }
 
-    // Calculate refund amount based on order status
-    let refundAmount = 0;
-    if (order.paymentStatus === 'paid') {
-      if (order.status === 'pending' || order.status === 'confirmed') {
-        refundAmount = order.total; // Full refund
-      } else if (order.status === 'preparing') {
-        refundAmount = Math.floor(order.total * 0.5); // 50% refund
+    const paid = ['paid', 'partially_refunded'].includes(
+      order.paymentStatus ?? ''
+    );
+
+    if (paid) {
+      const { RefundService } = await import('@/services/refund-service');
+      const result = await RefundService.cancelPaidOrderForCustomer({
+        orderId: input.orderId,
+        customerUserId: session.userId,
+        channel: 'web',
+      });
+      revalidatePath('/orders');
+      revalidatePath(`/orders/${input.orderId}`);
+      if (!result.ok) return { success: false, error: result.error };
+      if (result.outcome === 'refund_request_created') {
+        return {
+          success: true,
+          message:
+            "Your order is already being prepared, so we've passed your request to our manager.",
+          data: { refundAmount: 0 },
+        };
       }
-      // No refund if ready or out for delivery
+      const amount = result.refund.amountKobo / 100;
+      return {
+        success: true,
+        message:
+          result.outcome === 'cancelled_refund_started'
+            ? `Order cancelled. A full refund of ₦${amount.toLocaleString()} is on its way.`
+            : `Order cancelled. We are processing your refund of ₦${amount.toLocaleString()}.`,
+        data: { refundAmount: amount },
+      };
     }
 
-    // Cancel the order
+    // Not paid: just cancel (pending or confirmed only).
     const cancelResult = await OrderService.cancelOrder(
       input.orderId,
       input.reason
     );
-
     if (!cancelResult) {
       return { success: false, error: 'Failed to cancel order' };
     }
-
-    // Process refund if applicable
-    if (refundAmount > 0 && order.paymentReference) {
-      try {
-        // TODO: Implement PaymentService.initiateRefund when Monnify refund API is available
-        // For now, just update payment status to refunded
-
-        // Update payment status
-        await OrderService.updatePaymentStatus(input.orderId, {
-          paymentStatus: 'refunded',
-        });
-      } catch (refundError) {
-        console.error('Refund processing error:', refundError);
-        // Continue even if refund fails - will be handled manually
-      }
-    }
-
-    // Send notifications
-    const email = order.userId
-      ? order.guestEmail || ''
-      : order.guestEmail || '';
-
-    if (email) {
-      await sendOrderCancellationEmail(
-        email,
-        order.orderNumber,
-        refundAmount,
-        input.reason
-      );
-    }
-
-    // Emit to kitchen
     emitOrderChange({
       orderId: input.orderId,
       status: 'cancelled',
       action: 'cancelled',
     });
-
     revalidatePath('/orders');
     revalidatePath(`/orders/${input.orderId}`);
-
     return {
       success: true,
-      message:
-        refundAmount > 0
-          ? `Order cancelled. Refund of ₦${refundAmount.toLocaleString()} will be processed within 5-7 business days.`
-          : 'Order cancelled successfully.',
-      data: { refundAmount },
+      message: 'Order cancelled successfully.',
+      data: { refundAmount: 0 },
     };
   } catch (error) {
     console.error('Error cancelling order:', error);
     return {
       success: false,
-      error: 'Failed to cancel order',
+      error:
+        error instanceof Error && error.message.includes('cannot be cancelled')
+          ? error.message
+          : 'Failed to cancel order',
     };
   }
 }

@@ -33,8 +33,7 @@ export interface WhatsAppNotificationEntry {
  * Messages that are always sent and have no switch. The gate returns before it
  * reads settings for these, so a settings mistake or a master switch cannot
  * stop them. Sign-in is WhatsApp-only, so the PIN is the one that must never
- * be gated. Refund and cancellation messages join this list when WA-11 adds
- * their templates.
+ * be gated. Refund and cancellation messages (REQ-128) are on this list too.
  */
 export const LOCKED_WHATSAPP_TEMPLATES: Readonly<
   Record<string, { label: string; reason: string }>
@@ -43,6 +42,17 @@ export const LOCKED_WHATSAPP_TEMPLATES: Readonly<
     label: 'Sign-in PIN',
     reason:
       'Customers sign in only with a PIN sent on WhatsApp. Switching it off would lock every customer out.',
+  },
+  // REQ-128 — money and cancellation messages are always sent (ADR-015).
+  order_cancelled: {
+    label: 'Order cancelled',
+    reason:
+      'Tells a customer their order was cancelled and whether money is coming back. Switching it off would leave a paid customer without confirmation.',
+  },
+  refund_processed: {
+    label: 'Refund processed',
+    reason:
+      'Tells a customer Paystack has processed their refund. Switching it off would leave them wondering where their money is.',
   },
 };
 

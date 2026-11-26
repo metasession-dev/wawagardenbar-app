@@ -44,7 +44,7 @@ interface OrderCancellationFormProps {
 
 /**
  * Order cancellation form with refund logic
- * Calculates refund amount based on order status
+ * Automatic full refund before preparation; a refund request after it (REQ-128)
  */
 export function OrderCancellationForm({
   orderId,
@@ -64,26 +64,16 @@ export function OrderCancellationForm({
     },
   });
 
-  // Calculate expected refund amount
-  function getExpectedRefund(): number {
-    if (orderStatus === 'pending' || orderStatus === 'confirmed') {
-      return orderTotal; // Full refund
-    }
-    if (orderStatus === 'preparing') {
-      return Math.floor(orderTotal * 0.5); // 50% refund
-    }
-    return 0; // No refund if ready or later
-  }
+  // REQ-128 — before preparation the refund is automatic and full; after it,
+  // the request goes to a manager. There is no partial rule for customers.
+  const beforePreparation =
+    orderStatus === 'pending' || orderStatus === 'confirmed';
 
   function getRefundMessage(): string {
-    const refund = getExpectedRefund();
-    if (refund === orderTotal) {
-      return 'You will receive a full refund.';
+    if (beforePreparation) {
+      return `Your order will be cancelled and you will get a full refund of ₦${orderTotal.toLocaleString()} to your original payment method.`;
     }
-    if (refund > 0) {
-      return `You will receive a 50% refund (₦${refund.toLocaleString()}) as your order is being prepared.`;
-    }
-    return 'No refund available as your order is ready or being delivered.';
+    return 'Your order is already being prepared. We will pass your request to our manager, who decides whether to refund it. No money moves until they approve.';
   }
 
   async function onSubmit(data: CancellationFormData) {
@@ -153,9 +143,9 @@ export function OrderCancellationForm({
         <div className="rounded-lg bg-muted p-4 my-4">
           <p className="text-sm font-medium mb-2">Refund Information:</p>
           <p className="text-sm text-muted-foreground">{getRefundMessage()}</p>
-          {getExpectedRefund() > 0 && (
+          {beforePreparation && (
             <p className="text-xs text-muted-foreground mt-2">
-              Refunds are processed within 5-7 business days.
+              Refunds can take 3–10 working days to reach your account.
             </p>
           )}
         </div>

@@ -6,6 +6,7 @@ import TabModel from '@/models/tab-model';
 import { PaystackService } from '@/services/paystack-service';
 import { RewardsService, TabService } from '@/services';
 import { OrderService } from '@/services/order-service';
+import { RefundService } from '@/services/refund-service';
 
 /**
  * Paystack Webhook Handler
@@ -39,6 +40,44 @@ export async function POST(request: NextRequest) {
       status: data.status,
       amount: data.amount,
     });
+
+    // REQ-128 (AC1, ADR-015) — refund outcomes. Same signature check (above) and
+    // the same de-duplication row as payments, keyed by event + refund id.
+    if (
+      event === 'refund.processed' ||
+      event === 'refund.failed' ||
+      event === 'refund.pending'
+    ) {
+      await connectDB();
+      const refundEventId = `refund:${event}:${String(data.id ?? data.transaction_reference ?? '')}`;
+      const known = await RefundService.locateForWebhook(data);
+      if (!known) {
+        // Unknown refund: no dedup row, so Paystack's retry is processed once it exists.
+        return NextResponse.json(
+          { error: 'Refund not found' },
+          { status: 404 }
+        );
+      }
+      const dedup = await recordWebhookEvent({
+        provider: 'paystack',
+        eventId: refundEventId,
+        paymentReference: String(
+          data.transaction_reference ?? data.reference ?? ''
+        ),
+        eventType: String(event),
+      });
+      if (dedup === 'duplicate') {
+        return NextResponse.json(
+          { message: 'Event already processed' },
+          { status: 200 }
+        );
+      }
+      await RefundService.applyWebhookEvent(event, data);
+      return NextResponse.json({
+        success: true,
+        message: 'Refund event processed',
+      });
+    }
 
     // We only care about successful charge events
     if (event !== 'charge.success') {

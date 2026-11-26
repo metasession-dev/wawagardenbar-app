@@ -16,6 +16,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ArrowLeft, AlertTriangle } from 'lucide-react';
+import { refundEligibility } from '@/services/refund-service';
+import { REFUND_ROLES } from '@/lib/refund-roles';
+import { OrderRefundsCard } from '@/components/features/admin/order-refunds-card';
 import { AcknowledgeOnOpen } from '@/components/features/admin/acknowledge-on-open';
 
 interface OrderDetailsPageProps {
@@ -47,6 +50,21 @@ export default async function OrderDetailsPage({
     sessionOptions
   );
   const isSuperAdmin = hasAnyRole(session, ['super-admin']);
+
+  // REQ-128 — Refund action only for manager/admin/super-admin, and only on a
+  // customer order paid through Paystack that still has money left to refund.
+  const canRefundRole = hasAnyRole(session, [...REFUND_ROLES]);
+  const totalKobo = Math.round(((orderData as any).total ?? 0) * 100);
+  const reservedKobo = Number((orderData as any).refundReservedKobo ?? 0);
+  const refund =
+    canRefundRole &&
+    !refundEligibility(orderData as any) &&
+    totalKobo > reservedKobo
+      ? {
+          refundableNaira: (totalKobo - reservedKobo) / 100,
+          fullAvailable: reservedKobo === 0,
+        }
+      : null;
 
   // Serialize order for client components with proper customer data
   const populatedUser = orderData.userId as any;
@@ -132,7 +150,16 @@ export default async function OrderDetailsPage({
         <div className="space-y-6">
           {/* Actions Sidebar */}
           <Suspense fallback={<Skeleton className="h-64 w-full" />}>
-            <OrderActionsSidebar order={order} isSuperAdmin={isSuperAdmin} />
+            <OrderActionsSidebar
+              order={order}
+              isSuperAdmin={isSuperAdmin}
+              refund={refund}
+            />
+          </Suspense>
+
+          {/* Refunds — REQ-128 */}
+          <Suspense fallback={<Skeleton className="h-24 w-full" />}>
+            <OrderRefundsCard orderId={orderId} />
           </Suspense>
 
           {/* Payment Information */}

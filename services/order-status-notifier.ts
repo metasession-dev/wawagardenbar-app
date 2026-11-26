@@ -18,7 +18,10 @@ import { OrderModel, UserModel } from '@/models';
 import IncomingMessageModel from '@/models/incoming-message-model';
 import { phoneLookupVariants } from '@/lib/auth-utils';
 import { getReplyMode } from '@/lib/support-reply-mode';
-import { buildTrackingUrl, buildTrackingButtonSuffix } from '@/lib/order-tracking-token';
+import {
+  buildTrackingUrl,
+  buildTrackingButtonSuffix,
+} from '@/lib/order-tracking-token';
 import { orderStatusUpdateV2Params } from '@/lib/whatsapp-template-params';
 import { NotificationService } from '@/services/notification-service';
 
@@ -38,9 +41,10 @@ export function orderStatusPhrase(
     case 'preparing':
       return 'being prepared';
     case 'ready':
-      return orderType === 'dine-in'
-        ? 'ready and on its way to your table'
-        : 'ready for pickup';
+      // #1071 (REQ-128 AC8) — a delivery order is never "ready for pickup".
+      if (orderType === 'dine-in') return 'ready and on its way to your table';
+      if (orderType === 'delivery') return 'ready and waiting for a rider';
+      return 'ready for pickup';
     case 'out-for-delivery':
       return 'out for delivery';
     case 'delivered':
@@ -71,7 +75,9 @@ interface OrderLite {
   userId?: { toString(): string };
 }
 
-async function resolveMode(userId: string): Promise<'free_form' | 'template'> {
+export async function resolveMode(
+  userId: string
+): Promise<'free_form' | 'template'> {
   const user = await UserModel.findById(userId)
     .select('phone')
     .lean<{ phone?: string } | null>();

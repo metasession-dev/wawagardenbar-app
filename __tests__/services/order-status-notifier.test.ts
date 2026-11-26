@@ -20,7 +20,9 @@ vi.mock('@/models', () => ({
 vi.mock('@/models/incoming-message-model', () => ({
   default: { findOne: (...a: unknown[]) => inboundFindOne(...a) },
 }));
-vi.mock('@/lib/auth-utils', () => ({ phoneLookupVariants: (p: string) => [p] }));
+vi.mock('@/lib/auth-utils', () => ({
+  phoneLookupVariants: (p: string) => [p],
+}));
 vi.mock('@/services/notification-service', () => ({
   NotificationService: { send },
 }));
@@ -31,7 +33,7 @@ import {
 } from '@/services/order-status-notifier';
 
 const ID = '65a1b2c3d4e5f6a7b8c9d0e1';
-const chain = <T,>(value: T) => ({
+const chain = <T>(value: T) => ({
   select: () => ({ lean: async () => value, then: undefined }),
 });
 const order = (o: Record<string, unknown> = {}) => ({
@@ -59,11 +61,17 @@ describe('orderStatusPhrase', () => {
     expect(orderStatusPhrase('confirmed', 'pickup')).toBe('confirmed');
     expect(orderStatusPhrase('preparing', 'pickup')).toBe('being prepared');
     expect(orderStatusPhrase('ready', 'pickup')).toBe('ready for pickup');
-    expect(orderStatusPhrase('ready', 'delivery')).toBe('ready for pickup');
+    // #1071 (REQ-128 AC8) — delivery never says pickup
+    expect(orderStatusPhrase('ready', 'delivery')).toBe(
+      'ready and waiting for a rider'
+    );
+    expect(orderStatusPhrase('ready', 'delivery')).not.toMatch(/pickup/i);
     expect(orderStatusPhrase('ready', 'dine-in')).toBe(
       'ready and on its way to your table'
     );
-    expect(orderStatusPhrase('out-for-delivery', 'delivery')).toBe('out for delivery');
+    expect(orderStatusPhrase('out-for-delivery', 'delivery')).toBe(
+      'out for delivery'
+    );
     expect(orderStatusPhrase('delivered', 'delivery')).toBe('delivered');
     for (const s of ['completed', 'cancelled', 'pending', 'nope']) {
       expect(orderStatusPhrase(s, 'pickup')).toBeNull();
@@ -80,13 +88,18 @@ describe('notifyOrderStatus', () => {
     expect(arg.templateKey).toBe('order_status_update_v2');
     expect(arg.whatsapp.params).toEqual(['WG1', 'ready for pickup']);
     expect(arg.whatsapp.freeFormText).toBeUndefined();
-    expect(arg.whatsapp.buttonParams[0].params[0]).toMatch(new RegExp(`^${ID}\\?t=\\d+\\.`));
+    expect(arg.whatsapp.buttonParams[0].params[0]).toMatch(
+      new RegExp(`^${ID}\\?t=\\d+\\.`)
+    );
   });
 
   it('[US-A4.2] a delivery order set out-for-delivery says "out for delivery"', async () => {
     orderFindById.mockReturnValue(chain(order({ orderType: 'delivery' })));
     await notifyOrderStatus(ID, 'out-for-delivery');
-    expect(send.mock.calls[0][0].whatsapp.params).toEqual(['WG1', 'out for delivery']);
+    expect(send.mock.calls[0][0].whatsapp.params).toEqual([
+      'WG1',
+      'out for delivery',
+    ]);
   });
 
   it('uses free-form text with the tracking link inside the 24-hour window', async () => {
@@ -102,7 +115,8 @@ describe('notifyOrderStatus', () => {
 
   it('uses the template when the last inbound message is older than 24 hours', async () => {
     inboundFindOne.mockReturnValue({
-      sort: () => chain({ receivedAt: new Date(Date.now() - 25 * 60 * 60 * 1000) }),
+      sort: () =>
+        chain({ receivedAt: new Date(Date.now() - 25 * 60 * 60 * 1000) }),
     });
     expect((await notifyOrderStatus(ID, 'preparing')).mode).toBe('template');
   });
@@ -118,10 +132,16 @@ describe('notifyOrderStatus', () => {
   });
 
   it('sends nothing for completed, cancelled or an unknown order', async () => {
-    expect((await notifyOrderStatus(ID, 'completed')).reason).toBe('no_message_for_status');
-    expect((await notifyOrderStatus(ID, 'cancelled')).reason).toBe('no_message_for_status');
+    expect((await notifyOrderStatus(ID, 'completed')).reason).toBe(
+      'no_message_for_status'
+    );
+    expect((await notifyOrderStatus(ID, 'cancelled')).reason).toBe(
+      'no_message_for_status'
+    );
     orderFindById.mockReturnValue(chain(null));
-    expect((await notifyOrderStatus(ID, 'ready')).reason).toBe('order_not_found');
+    expect((await notifyOrderStatus(ID, 'ready')).reason).toBe(
+      'order_not_found'
+    );
     expect(send).not.toHaveBeenCalled();
   });
 

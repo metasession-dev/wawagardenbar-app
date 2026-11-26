@@ -167,8 +167,11 @@ export interface IOrder {
     | 'failed'
     | 'cancelled'
     | 'refunded'
+    | 'partially_refunded'
     | 'written-off'
     | 'payment_mismatch';
+  /** REQ-128 — kobo reserved by pending or processed refunds (cap guard). */
+  refundReservedKobo?: number;
   // REQ-123 — customer payment (Paystack hosted checkout), stable per order.
   paymentProvider?: 'paystack' | 'monnify';
   checkoutUrl?: string;

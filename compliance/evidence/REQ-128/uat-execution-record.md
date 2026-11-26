@@ -74,7 +74,7 @@ Evidence files are stored under `compliance/evidence/REQ-128/uat/` and named in 
 | 8    | Customer saw "Your order is already being prepared, so we've passed your request to our manager."; a "Refund request for order #WG2611260004" ticket exists; no refund exists                                              | PASS                  | REQ-128-AC3-request-created.png, REQ-128-AC3-request-ticket.png          | D1     |
 | 9    | csr sees "This refund request is waiting for a manager, admin or super-admin." with no Approve buttons; the order page has no Refund button                                                                                | PASS                  | REQ-128-AC4-csr-cannot-decide.png, REQ-128-AC4-csr-order-no-refund.png   |        |
 | 10   | "Refund approved and requested."; Refunds card shows ₦2,000 partial; ticket shows "Refund request approved". The customer's WhatsApp was not checked for this step                                                         | PASS                  | REQ-128-AC3-partial-approved.png, REQ-128-AC3-partial-approved-order.png |        |
-| 11   | Ticket shows "Refund request rejected: Already served" and records a staff message to the customer. The customer's receipt of the message was not reported                                                                 | BLOCKED               | REQ-128-AC3-request-rejected.png                                         |        |
+| 11   | Ticket shows "Refund request rejected: Already served"; the customer received the message with that reason at 11:24                                                                                                        | PASS                  | REQ-128-AC3-request-rejected.png, REQ-128-AC3-request-rejected.txt       |        |
 | 12   | "Refund requested."; Refunds card shows ₦1,000 partial, reason "Missing item reported by phone" (still pending)                                                                                                            | PASS                  | REQ-128-AC4-manager-refund.png                                           |        |
 | 13   | Over-refund refused with no new refund row. ₦5,000 (more than the whole order) gave "Enter a valid refund amount."; ₦2,000 (more than the ₦1,500 left) gave the expected "larger than the amount still refundable" message | PASS                  | REQ-128-AC4-over-refund.png, REQ-128-AC4-over-refund-balance.png         |        |
 | 14   | Report shows Refunded (processed) ₦4,000 (1), Pending ₦5,500 (3), Failed ₦0; By type and By approver add up to the processed total                                                                                         | PASS                  | REQ-128-AC6-refunds-report.png                                           |        |
@@ -91,7 +91,8 @@ Anything done differently from the procedure, and why. Write "None" if there wer
 3. Step 15: the csr lands on /dashboard/orders, not a separate dashboard home; the Refunds page is still refused.
 4. Orders were ₦2,500 (₦4,000 for the first), not the totals the procedure implied; every amount used stayed within them.
 5. Phone messages are evidenced as text relayed by the operator (`.txt` files), not screenshots, because the agent cannot see the phone.
-6. Steps 4 and 11: the WhatsApp templates `order_cancelled` and `refund_processed` were PENDING at Meta on UAT during the run; the customer-side messages named there were not confirmed.
+6. Step 4: the WhatsApp templates `order_cancelled` and `refund_processed` were PENDING at Meta on UAT during the run. The phone log the operator relayed starts at 11:20, after the first order was cancelled (about 11:01), so the "has been cancelled" message for #WG2611260001 could not be confirmed.
+7. Step 10: no customer message for the ₦2,000 partial approval appears in the relayed log; the procedure does not require one.
 
 ## Defect log
 
@@ -103,7 +104,7 @@ Anything done differently from the procedure, and why. Write "None" if there wer
 
 | Passed | Failed | Blocked | Total steps |
 | ------ | ------ | ------- | ----------- |
-| 15     | 0      | 2       | 17          |
+| 16     | 0      | 1       | 17          |
 
 **AC coverage**
 
@@ -111,7 +112,7 @@ Anything done differently from the procedure, and why. Write "None" if there wer
 | --- | ------------- | --------------------------------------------------------------- |
 | AC1 | 3, 4          | Step 3 passed; step 4 blocked (cancelled message not confirmed) |
 | AC2 | 1, 2, 5, 6, 7 | All passed                                                      |
-| AC3 | 8, 10, 11     | 8 and 10 passed; 11 blocked (customer receipt not confirmed)    |
+| AC3 | 8, 10, 11     | All passed                                                      |
 | AC4 | 9, 10, 12, 13 | All passed                                                      |
 | AC5 | 4, 6          | Step 6 passed; step 4 blocked                                   |
 | AC6 | 14, 15        | All passed                                                      |

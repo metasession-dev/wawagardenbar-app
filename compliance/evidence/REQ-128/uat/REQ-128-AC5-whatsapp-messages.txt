@@ -1,0 +1,4 @@
+UAT customer phone (relayed by the operator, 2026-11-26). Order #WG2611260001 messages.
+WGB UAT: Your Wawa Garden Bar order #WG2611260001 has been cancelled. A full refund of ₦4,000 is on its way.
+[11:30] WGB UAT: Your refund of ₦4,000 for order #WG2611260001 has been processed. It can take 3–10 working days to reach your account.
+(The cancelled message's time stamp was not included in what the operator relayed; it follows the cancellation at about 11:01.)

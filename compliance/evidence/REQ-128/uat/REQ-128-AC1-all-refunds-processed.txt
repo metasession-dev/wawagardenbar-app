@@ -1,0 +1,5 @@
+UAT customer phone (relayed by the operator, 2026-11-26). All four refunds reached "processed" at 11:45.
+[11:45] WGB UAT: Your refund of ₦2,000 for order #WG2611260004 has been processed. It can take 3–10 working days to reach your account.
+[11:45] WGB UAT: Your refund of ₦1,000 for order #WG2611260003 has been processed. It can take 3–10 working days to reach your account.
+[11:45] WGB UAT: Your refund of ₦2,500 for order #WG2611260002 has been processed. It can take 3–10 working days to reach your account.
+(The ₦4,000 refund for #WG2611260001 was processed at 11:30; see REQ-128-AC5-whatsapp-messages.txt.)

@@ -1,0 +1,2 @@
+UAT customer phone (relayed by the operator, 2026-11-26). Delivery order #WG2611260005 set to Ready by the csr.
+[11:39] WGB UAT: Your Wawa Garden Bar order #WG2611260005 is ready and waiting for a rider. Track it: https://wawagardenbar-uat.ostendo.io/orders/6b08131802f2f6d6b08bd8fd?t=<token removed>

@@ -1,0 +1,4 @@
+UAT customer phone (relayed by the operator, 2026-11-26). Rejected refund request for order #WG2611260005.
+[11:24] WGB UAT: Hi UAT, here's an update from the Wawa Garden Bar team on "Refund request for order #WG2611260005":
+We could not refund this order: Already served
+Reply to this message and we'll get back to you.

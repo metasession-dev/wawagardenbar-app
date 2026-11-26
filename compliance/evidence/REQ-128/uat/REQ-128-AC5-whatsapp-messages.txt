@@ -1,0 +1,3 @@
+UAT customer phone (relayed by the operator, 2026-11-26). Order #WG2611260001 refund messages.
+[11:30] WGB UAT: Your refund of ₦4,000 for order #WG2611260001 has been processed. It can take 3–10 working days to reach your account.
+Not reported by the operator: the "has been cancelled. A full refund of ₦4,000 is on its way" message for #WG2611260001 (sent before the customer texted the bar; templates PENDING at Meta). Step 4 is therefore BLOCKED.

@@ -1,0 +1,4 @@
+UAT customer phone (relayed by the operator, 2026-11-26).
+[11:37] Customer: Cancel WG2611260002
+[11:37] WGB UAT: Your Wawa Garden Bar order #WG2611260002 has been cancelled. A full refund of ₦2,500 is on its way.
+The admin order page for #WG2611260002 shows Kitchen: Cancelled and Refunds ₦2,500 full (REQ-128-AC2-whatsapp-cancel.png).

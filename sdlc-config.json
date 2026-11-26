@@ -107,5 +107,6 @@
     "gdpr",
     "eu-ai-act"
   ],
-  "reuse_pull_request_gates": true
+  "reuse_pull_request_gates": true,
+  "paths_ignore_pull_request": true
 }

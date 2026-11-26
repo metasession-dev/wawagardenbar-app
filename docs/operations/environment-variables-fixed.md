@@ -180,6 +180,11 @@ Wallet_Account_Number=your_wallet_account_number
 # Paystack Payment
 PAYSTACK_SECRET_KEY=sk_live_your_paystack_secret_key
 PAYSTACK_PUBLIC_KEY=pk_live_your_paystack_public_key
+# NOTE: the running app does NOT read these two variables. Paystack keys
+# (secret, public, webhook secret) are read from the database setting
+# `payment-gateway-config`, edited in the admin dashboard under Settings.
+# Refunds (REQ-128) and webhook signature checks use the same setting, and
+# refunds must also be enabled on the Paystack account itself.
 
 # Email (SMTP)
 SMTP_HOST=smtp.gmail.com

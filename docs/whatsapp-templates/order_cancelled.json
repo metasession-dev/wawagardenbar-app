@@ -5,7 +5,7 @@
   "builder": "orderCancelledParams",
   "header": null,
   "body": {
-    "text": "Your Wawa Garden Bar order #{{1}} has been cancelled. {{2}}",
+    "text": "Your Wawa Garden Bar order #{{1}} has been cancelled. {{2}} Reply to this message if you need help.",
     "example": ["WG2611260001", "A full refund of ₦5,000 is on its way."]
   },
   "footer": null,

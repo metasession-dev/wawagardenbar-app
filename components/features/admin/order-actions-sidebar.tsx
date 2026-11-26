@@ -14,6 +14,7 @@ import { CancelOrderDialog } from './cancel-order-dialog';
 import { AdminPayOrderDialog } from './orders/admin-pay-order-dialog';
 import { EditOrderDialog } from './edit-order-dialog';
 import { DeleteOrderDialog } from './delete-order-dialog';
+import { RefundOrderDialog } from './refund-order-dialog';
 import {
   Settings,
   Loader2,
@@ -39,6 +40,8 @@ interface OrderActionsSidebarProps {
   order: any;
   /** REQ-096 — gates the delete-order override flow. */
   isSuperAdmin?: boolean;
+  /** REQ-128 — set only for manager/admin/super-admin on a refundable order. */
+  refund?: { refundableNaira: number; fullAvailable: boolean } | null;
 }
 
 /**
@@ -48,6 +51,7 @@ interface OrderActionsSidebarProps {
 export function OrderActionsSidebar({
   order: initialOrder,
   isSuperAdmin = false,
+  refund = null,
 }: OrderActionsSidebarProps) {
   const [order, setOrder] = useState(initialOrder);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -320,6 +324,18 @@ export function OrderActionsSidebar({
                 )}
               </div>
             )}
+
+          {/* Refund — REQ-128 (manager, admin, super-admin; Paystack orders) */}
+          {refund && (
+            <div className="space-y-2">
+              <RefundOrderDialog
+                orderId={order._id}
+                orderNumber={order.orderNumber}
+                refundableNaira={refund.refundableNaira}
+                fullAvailable={refund.fullAvailable}
+              />
+            </div>
+          )}
 
           {/* Utility Actions */}
           <div className="pt-3 border-t space-y-2">

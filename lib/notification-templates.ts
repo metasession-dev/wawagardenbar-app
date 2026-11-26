@@ -39,6 +39,9 @@ export const TEMPLATE_CATEGORIES: Record<string, NotificationCategory> = {
   // REQ-124 — customer status message with a signed Track order button.
   order_status_update_v2: 'transactional',
   receipt: 'transactional',
+  // REQ-128 — cancellation and refund messages (ADR-015).
+  order_cancelled: 'transactional',
+  refund_processed: 'transactional',
   payment_link: 'transactional',
   payment_confirmation: 'transactional',
   bank_transfer_details: 'transactional',
@@ -69,6 +72,8 @@ export const HELD_UNTIL_APPROVED_TEMPLATES: ReadonlySet<string> = new Set([
   'receipt',
   'payment_link',
   'order_status_update_v2',
+  'order_cancelled',
+  'refund_processed',
 ]);
 
 export const HELD_TEMPLATE_PENDING = 'held_template_pending';

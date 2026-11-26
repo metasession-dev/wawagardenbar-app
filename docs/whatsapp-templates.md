@@ -491,21 +491,80 @@ button = [`<order id>?t=<tracking token>`]   // URL button's own {{1}}; token fr
 
 Meta rejects a body that ends in a placeholder, so the issue's text gained a closing sentence.
 
-| Field    | Value                                                                                                                                              |
-| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Name     | `order_status_update_v2`                                                                                                                           |
-| Category | **UTILITY**                                                                                                                                        |
-| Language | `en`                                                                                                                                               |
-| Header   | (none)                                                                                                                                             |
-| Body     | `Your Wawa Garden Bar order #{{1}} is {{2}}. Tap below to track it.`                                                                               |
-| Footer   | (none)                                                                                                                                             |
-| Buttons  | URL: `Track order` → `<base>/orders/{{1}}` (dynamic; UAT `https://wawagardenbar-uat.ostendo.io`, production `https://app.wawagardenbar.com`)      |
+| Field    | Value                                                                                                                                        |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Name     | `order_status_update_v2`                                                                                                                     |
+| Category | **UTILITY**                                                                                                                                  |
+| Language | `en`                                                                                                                                         |
+| Header   | (none)                                                                                                                                       |
+| Body     | `Your Wawa Garden Bar order #{{1}} is {{2}}. Tap below to track it.`                                                                         |
+| Footer   | (none)                                                                                                                                       |
+| Buttons  | URL: `Track order` → `<base>/orders/{{1}}` (dynamic; UAT `https://wawagardenbar-uat.ostendo.io`, production `https://app.wawagardenbar.com`) |
 
 **Examples:**
 
-| Body `{{1}}` | `{{2}}`            | Button `{{1}}`            |
-| ------------ | ------------------ | ------------------------- |
-| `1234`       | `ready for pickup` | `65f0c0ffee?t=example`    |
+| Body `{{1}}` | `{{2}}`            | Button `{{1}}`         |
+| ------------ | ------------------ | ---------------------- |
+| `1234`       | `ready for pickup` | `65f0c0ffee?t=example` |
+
+---
+
+## 15. `order_cancelled` — UTILITY
+
+**Sent when:** a customer cancels a paid order before preparation, on the order page or by WhatsApp "cancel" (REQ-128: `notifyOrderCancelled`). Inside the customer's 24-hour window the same sentence goes as free-form text. Always sent: it is on the locked list, with no admin switch.
+
+**Code mapping** (`orderCancelledParams` in `lib/whatsapp-template-params.ts`):
+
+```
+body = [orderNumber, refundSentence]
+// refundSentence ∈ 'A full refund of ₦5,000 is on its way.' | 'We are processing your refund of ₦5,000 and will confirm it shortly.' | 'No payment was taken.'
+```
+
+Meta rejects a body that ends in a placeholder, so the issue's text gained a closing sentence.
+
+| Field    | Value                                                                                                 |
+| -------- | ----------------------------------------------------------------------------------------------------- |
+| Name     | `order_cancelled`                                                                                     |
+| Category | **UTILITY**                                                                                           |
+| Language | `en`                                                                                                  |
+| Header   | (none)                                                                                                |
+| Body     | `Your Wawa Garden Bar order #{{1}} has been cancelled. {{2}} Reply to this message if you need help.` |
+| Footer   | (none)                                                                                                |
+| Buttons  | (none)                                                                                                |
+
+**Examples:**
+
+| `{{1}}`        | `{{2}}`                                  |
+| -------------- | ---------------------------------------- |
+| `WG2611260001` | `A full refund of ₦5,000 is on its way.` |
+
+---
+
+## 16. `refund_processed` — UTILITY
+
+**Sent when:** Paystack confirms a refund with a `refund.processed` webhook (REQ-128: `notifyRefundProcessed`, once per refund). Inside the 24-hour window it goes as free-form text. Always sent (locked list).
+
+**Code mapping** (`refundProcessedParams` in `lib/whatsapp-template-params.ts`):
+
+```
+body = [amountText, orderNumber]   // amountText e.g. '₦5,000'
+```
+
+| Field    | Value                                                                                                            |
+| -------- | ---------------------------------------------------------------------------------------------------------------- |
+| Name     | `refund_processed`                                                                                               |
+| Category | **UTILITY**                                                                                                      |
+| Language | `en`                                                                                                             |
+| Header   | (none)                                                                                                           |
+| Body     | `Your refund of {{1}} for order #{{2}} has been processed. It can take 3–10 working days to reach your account.` |
+| Footer   | (none)                                                                                                           |
+| Buttons  | (none)                                                                                                           |
+
+**Examples:**
+
+| `{{1}}`  | `{{2}}`        |
+| -------- | -------------- |
+| `₦5,000` | `WG2611260001` |
 
 ---
 

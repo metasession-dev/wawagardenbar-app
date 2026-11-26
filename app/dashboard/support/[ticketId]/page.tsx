@@ -6,6 +6,12 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { SupportTicketService } from '@/services/support-ticket-service';
 import { ReplyThread } from '@/components/features/dashboard/support/reply-thread';
+import { cookies } from 'next/headers';
+import { getIronSession } from 'iron-session';
+import { sessionOptions, type SessionData, hasAnyRole } from '@/lib/session';
+import { REFUND_ROLES } from '@/lib/refund-roles';
+import { RefundRequestPanel } from '@/components/features/dashboard/support/refund-request-panel';
+import { OrderModel } from '@/models';
 import { AcknowledgeOnOpen } from '@/components/features/admin/acknowledge-on-open';
 
 export const dynamic = 'force-dynamic';
@@ -29,6 +35,22 @@ export default async function SupportTicketDetailPage({
     await SupportTicketService.customerFirstNames([ticket])
   ).get(String(ticket.userId));
 
+  // REQ-128 — a refund request: manager, admin and super-admin decide it.
+  const session = await getIronSession<SessionData>(
+    await cookies(),
+    sessionOptions
+  );
+  const canDecideRefund = hasAnyRole(session, [...REFUND_ROLES]);
+  const refundRequest =
+    ticket.category === 'refund' ? (ticket.refundRequest ?? null) : null;
+  let refundOrderTotal = 0;
+  if (refundRequest?.status === 'pending' && ticket.orderId) {
+    const order = await OrderModel.findById(ticket.orderId)
+      .select('total')
+      .lean<{ total: number } | null>();
+    refundOrderTotal = order?.total ?? 0;
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 space-y-6 max-w-3xl">
       {/* REQ-122 — opening the ticket acknowledges its staff alert */}
@@ -44,6 +66,27 @@ export default async function SupportTicketDetailPage({
           {ticket.ticketNumber}
         </div>
       </div>
+
+      {refundRequest?.status === 'pending' && canDecideRefund && (
+        <RefundRequestPanel
+          ticketId={ticketId}
+          orderTotalNaira={refundOrderTotal}
+        />
+      )}
+      {refundRequest?.status === 'pending' && !canDecideRefund && (
+        <div className="rounded-md border p-3 text-sm text-muted-foreground">
+          This refund request is waiting for a manager, admin or super-admin.
+        </div>
+      )}
+      {refundRequest && refundRequest.status !== 'pending' && (
+        <div className="rounded-md border p-3 text-sm">
+          Refund request {refundRequest.status}
+          {refundRequest.rejectionReason
+            ? `: ${refundRequest.rejectionReason}`
+            : ''}
+          .
+        </div>
+      )}
 
       <Card>
         <CardHeader>

@@ -241,11 +241,14 @@ const orderSchema = new Schema<IOrder>(
         'failed',
         'cancelled',
         'refunded',
+        'partially_refunded',
         'written-off',
         'payment_mismatch',
       ],
       default: 'pending',
     },
+    // REQ-128 — kobo already reserved by pending or processed refunds (cap guard, ADR-015).
+    refundReservedKobo: { type: Number, default: 0, min: 0 },
     // REQ-123 — customer payment (Paystack hosted checkout), stable per order.
     paymentProvider: { type: String, enum: ['paystack', 'monnify'] },
     checkoutUrl: { type: String },

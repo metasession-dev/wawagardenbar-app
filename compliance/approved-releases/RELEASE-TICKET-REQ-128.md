@@ -1,6 +1,6 @@
 # Release Ticket: REQ-128 — Customer cancellation and Paystack refunds (WA-11)
 
-**Status:** TESTED - PENDING SIGN-OFF
+**Status:** RELEASED
 **Date:** 2026-11-26
 **Requirement ID:** REQ-128
 **Risk Level:** HIGH

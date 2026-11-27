@@ -47,6 +47,14 @@ describe('[AC3] booking intent', () => {
     ).toBe('support_text');
   });
 
+  it.each([
+    'A different question about my booking',
+    'I want to change my reservation',
+    'problem with our booking',
+  ])('"%s" is about an existing booking: support text for staff', (body) => {
+    expect(intent(body)).toBe('support_text');
+  });
+
   it('keeps cancel, status, order and opt-out ahead of booking', () => {
     expect(intent('cancel my order')).toBe('order_cancel');
     expect(intent('where is my order')).toBe('order_status');

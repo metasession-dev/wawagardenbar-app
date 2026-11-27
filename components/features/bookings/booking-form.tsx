@@ -92,9 +92,21 @@ function FieldError({ id, message }: { id: string; message?: string }) {
   );
 }
 
-export function BookingForm() {
+interface BookingFormProps {
+  /** Read on the server for a signed-in customer, so the form is prefilled on first paint. */
+  initialName?: string;
+  initialPhone?: string;
+}
+
+export function BookingForm({
+  initialName = '',
+  initialPhone = '',
+}: BookingFormProps) {
   const { user, isLoading: authLoading, refreshSession } = useAuth();
-  const [state, setState] = useState<FormState>(EMPTY);
+  const [state, setState] = useState<FormState>({
+    ...EMPTY,
+    name: initialName,
+  });
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -180,7 +192,7 @@ export function BookingForm() {
   }
 
   const isEvent = state.type === 'event';
-  const phoneShown = user?.phone ?? '';
+  const phoneShown = user?.phone || initialPhone;
 
   return (
     <>

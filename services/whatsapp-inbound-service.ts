@@ -159,12 +159,18 @@ const BOOKING_REGEX =
   /\b(book|booking|reserve|reservation|table|event|party|birthday)\b/i;
 const BOOKING_MAX_WORDS = 10;
 
+// A message about an existing booking ("a question about my booking", "I want
+// to change my reservation") is for staff, not a request to make one.
+const EXISTING_BOOKING_REGEX =
+  /\b(?:my|our)\s+(?:booking|bookings|reservation|reservations|event|party|table)\b|\b(?:question|problem|issue|complaint|change|amend|update|cancel)\b/i;
+
 export function isBookingRequest(body: string): boolean {
   const words = body.trim().split(/\s+/).filter(Boolean);
   return (
     words.length > 0 &&
     words.length <= BOOKING_MAX_WORDS &&
-    BOOKING_REGEX.test(body)
+    BOOKING_REGEX.test(body) &&
+    !EXISTING_BOOKING_REGEX.test(body)
   );
 }
 

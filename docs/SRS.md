@@ -2126,9 +2126,11 @@ Replicates the Daily Report's revenue / costs / gross-profit / items shape but s
 #### REQ-WA-020 — Booking intent and booking templates · **Must** · critical
 
 **Source:** `services/whatsapp-inbound-service.ts`, `lib/notification-templates.ts`, `lib/whatsapp-template-params.ts`, `docs/whatsapp-templates/booking_received.json`, `docs/whatsapp-templates/booking_update.json`; cross-ref REQ-WA-017, REQ-BOOK-002.
-**Behaviour:** A message containing a booking word (book, booking, reserve, reservation, table, event, party, birthday) gets a free-form reply with the environment's `/book` link. Order, cancel, status and opt-out intents keep priority. `booking_received` and `booking_update` are UTILITY templates submitted to each WhatsApp account; until an environment's copy is APPROVED the message is logged `held_template_pending`. The welcome templates' "Book an Event" button points at `/book` and is submitted once `/book` is live.
+**Behaviour:** A short message (up to 10 words) containing a booking word (book, booking, reserve, reservation, table, event, party, birthday) gets a free-form reply with the environment's `/book` link; a longer message that merely mentions one, or a message about an existing booking ("my booking", "my reservation", a question, a change), stays support text. Order, cancel, status and opt-out intents keep priority. `booking_received` and `booking_update` are UTILITY templates submitted to each WhatsApp account; until an environment's copy is APPROVED the message is logged `held_template_pending`. The welcome templates' "Book an Event" button points at `/book` and is submitted once `/book` is live.
 
 - **Given** a customer texts "I want to book a table", **Then** the reply contains the `/book` link and no order is started.
+- **Given** a customer sends a long complaint that mentions a table, **Then** it is support text and opens a ticket, not a booking reply.
+- **Given** a customer texts "a question about my booking", **Then** it is support text and opens a ticket, not a booking reply.
 - **Given** a customer texts "cancel" or an order number, **Then** the cancel or status intent applies, not the booking reply.
 - **Given** the environment's `booking_received` copy is not approved, **When** a booking is saved, **Then** the booking is kept and the message is logged `held_template_pending`.
 

@@ -134,3 +134,14 @@ Revert the PR. The `Booking` collection and counter are additive and ignored by 
 ## 10. Sign-off
 
 Plan authored 2026-11-27. Approval: operator confirmed the bundle and the scope at the Phase 0 decision (MEDIUM risk, no plan checkpoint). Decisions D1–D8 stand as written unless the operator replies with a change.
+
+## Plan deviation (Phase 2, 2026-11-27)
+
+Implementation deviations found while building. None changes an AC or a decision D1–D8.
+
+1. **The booking intent is a short message only.** A message of up to 10 words that contains a booking word gets the `/book` link; a longer message that merely mentions a table or an event ("the table we were given was wobbly ...") stays support text and opens a ticket, so a complaint is never answered with a link. A message about an existing booking ("my booking", "my reservation", a question, a change or a cancel) is also support text; the REQ-118 regression spec ("A different question about my booking") caught this. Order, cancel, status and opt-out keep priority. SRS REQ-WA-020 says so.
+2. **`/book` is prefilled on the server.** The page reads the signed-in customer's name and verified phone on the server and passes them to the form, so the form is prefilled on first paint and does not depend on a client fetch (the client fetch was slow on a cold start and left the phone blank). The server action still ignores any phone in the form.
+3. **The home page has no site header**, so the visitor's "Book" link is on every page that has the header (menu, contact, profile) and in the footer; the e2e spec clicks it from `/menu`.
+4. **"My bookings" is reachable from the account menu** in the header (and from the confirmation screen), as well as by address.
+5. **Explicit proxy route entries** `/dashboard/support` and `/dashboard/bookings` were added to `lib/permissions.ts` with the shared role lists (the proxy already fell back to the same four roles through `/dashboard`; this makes the rule visible and tested).
+6. **UAT templates submitted 2026-11-27 after the operator confirmed the content** (the WhatsApp tool requires explicit confirmation): `booking_received` (id 1487426770006619) and `booking_update` (id 1760884265003760) are PENDING at Meta on the UAT account. Record: `compliance/evidence/REQ-129/template-submissions.md`.

@@ -10,5 +10,5 @@ Extracted from `compliance/plans/REQ-130/implementation-plan.md` §1. File paths
 
 | Test file                                     | Type | ACs                |
 | --------------------------------------------- | ---- | ------------------ |
-| `__tests__/components/dashboard-nav.test.tsx` | unit | AC1, AC2, AC3      |
+| `__tests__/components/dashboard-nav.test.ts`  | unit | AC1, AC2, AC3      |
 | `e2e/critical/dashboard-support-link.spec.ts` | e2e  | AC1, AC2, AC3, AC4 |

@@ -19,9 +19,11 @@ generated_at: 2026-11-27T13:07:17Z
 
 I have reviewed the ADR-worthiness verdict above and confirm:
 
-- [ ] The verdict (ADR or no-ADR) matches the actual scope of this REQ.
-- [ ] If ADR: the file at `docs/ADR/ADR-NNN-<slug>.md` is edited from stub to canonical prose and status is Accepted.
-- [ ] If no-ADR: the rationale is specific enough that an auditor reading this in 12 months would agree.
+- [x] The verdict (ADR or no-ADR) matches the actual scope of this REQ.
+- [~] If ADR: the file at `docs/ADR/ADR-NNN-<slug>.md` is edited from stub to canonical prose and status is Accepted.
+- [x] If no-ADR: the rationale is specific enough that an auditor reading this in 12 months would agree.
 
-**Reviewer:** <operator-name>
-**Date:** <YYYY-MM-DD>
+**Reviewer:** metasession-dev (Metassession Dev)
+**Date:** 2026-11-27
+
+_Approved by metasession-dev (Metassession Dev) in the Claude Code session on 2026-11-27; recorded by the agent from the operator's explicit reply._

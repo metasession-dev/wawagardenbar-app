@@ -24,9 +24,11 @@ None (no register entries).
 
 I have reviewed the risk register entries above and confirm:
 
-- [ ] Each entry's residual rating is defensible given the controls landing in this REQ.
-- [ ] No risk was downgraded without evidence (control demonstrated effective via tests).
-- [ ] OPEN entries have follow-up tracking (issue / deadline / next-review-due).
+- [x] Each entry's residual rating is defensible given the controls landing in this REQ.
+- [x] No risk was downgraded without evidence (control demonstrated effective via tests).
+- [x] OPEN entries have follow-up tracking (issue / deadline / next-review-due).
 
-**Reviewer:** <operator-name>
-**Date:** <YYYY-MM-DD>
+**Reviewer:** metasession-dev (Metassession Dev)
+**Date:** 2026-11-27
+
+_Approved by metasession-dev (Metassession Dev) in the Claude Code session on 2026-11-27; recorded by the agent from the operator's explicit reply._

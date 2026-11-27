@@ -42,6 +42,9 @@ export const TEMPLATE_CATEGORIES: Record<string, NotificationCategory> = {
   // REQ-128 — cancellation and refund messages (ADR-015).
   order_cancelled: 'transactional',
   refund_processed: 'transactional',
+  // REQ-129 — table and event booking messages.
+  booking_received: 'transactional',
+  booking_update: 'transactional',
   payment_link: 'transactional',
   payment_confirmation: 'transactional',
   bank_transfer_details: 'transactional',
@@ -74,6 +77,8 @@ export const HELD_UNTIL_APPROVED_TEMPLATES: ReadonlySet<string> = new Set([
   'order_status_update_v2',
   'order_cancelled',
   'refund_processed',
+  'booking_received',
+  'booking_update',
 ]);
 
 export const HELD_TEMPLATE_PENDING = 'held_template_pending';

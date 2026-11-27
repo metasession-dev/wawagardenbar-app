@@ -40,6 +40,8 @@ const footerLinks: {
     { label: 'Menu', href: '/menu' },
     { label: 'Orders', href: '/orders' },
     { label: 'Rewards', href: '/rewards' },
+    // REQ-129 — table and event booking.
+    { label: 'Book', href: '/book' },
   ],
 };
 

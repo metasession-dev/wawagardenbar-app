@@ -23,12 +23,15 @@ import {
   Boxes,
   AlertTriangle,
   UserCircle,
+  CalendarDays,
+  LifeBuoy,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { UserRole } from '@/interfaces/user.interface';
 import { IAdminPermissions } from '@/interfaces';
+import { BOOKING_ROLES, SUPPORT_ROLES } from '@/lib/dashboard-section-roles';
 import { RoleBadge } from './role-badge';
 import { logoutAction } from '@/app/actions/auth/logout';
 
@@ -41,7 +44,7 @@ interface NavItem {
   badge?: string;
 }
 
-const navItems: NavItem[] = [
+export const navItems: NavItem[] = [
   {
     title: 'Overview',
     href: '/dashboard',
@@ -74,6 +77,21 @@ const navItems: NavItem[] = [
     href: '/dashboard/customers',
     icon: Users,
     roles: ['csr', 'manager', 'super-admin'],
+  },
+  {
+    // REQ-129 — table and event booking requests.
+    title: 'Bookings',
+    href: '/dashboard/bookings',
+    icon: CalendarDays,
+    roles: [...BOOKING_ROLES],
+  },
+  {
+    // REQ-130 — the Support queue had no menu entry. Same roles as the
+    // Support layout, so a role that cannot open the page never sees the link.
+    title: 'Support',
+    href: '/dashboard/support',
+    icon: LifeBuoy,
+    roles: [...SUPPORT_ROLES],
   },
   {
     title: 'Inventory',
@@ -171,6 +189,42 @@ const navItems: NavItem[] = [
   },
 ];
 
+/**
+ * Navigation items the user may see: any of their roles grants the item, and
+ * (except for super-admin) the item's permission, when it has one.
+ */
+export function filterNavItems(
+  userRoles: UserRole[],
+  permissions?: IAdminPermissions
+): NavItem[] {
+  return navItems.filter((item) => {
+    if (userRoles.length === 0) return false;
+
+    // Check role access (any of the user's roles)
+    if (!item.roles.some((role) => userRoles.includes(role))) return false;
+
+    // Super-admin has access to everything
+    if (userRoles.includes('super-admin')) return true;
+
+    // For csr/admin role, check permissions if specified
+    if (item.permission) {
+      if (!permissions) return false;
+      return permissions[item.permission] === true;
+    }
+
+    // If no permission specified, allow access (for items like Overview)
+    return true;
+  });
+}
+
+/** An item is active on its own path and on every page below it (ticket pages, booking pages). */
+export function isNavItemActive(
+  pathname: string | null | undefined,
+  href: string
+): boolean {
+  return pathname === href || (pathname?.startsWith(`${href}/`) ?? false);
+}
+
 interface DashboardNavProps {
   userEmail?: string;
   /** REQ-119 — every role the user holds; an item shows when any role grants it. */
@@ -190,25 +244,7 @@ export function DashboardNav({
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // Filter navigation items based on user role and permissions
-  const filteredNavItems = navItems.filter((item) => {
-    if (userRoles.length === 0) return false;
-
-    // Check role access (any of the user's roles)
-    if (!item.roles.some((role) => userRoles.includes(role))) return false;
-
-    // Super-admin has access to everything
-    if (userRoles.includes('super-admin')) return true;
-
-    // For csr/admin role, check permissions if specified
-    if (item.permission) {
-      if (!permissions) return false;
-      return permissions[item.permission] === true;
-    }
-
-    // If no permission specified, allow access (for items like Overview)
-    return true;
-  });
+  const filteredNavItems = filterNavItems(userRoles, permissions);
 
   return (
     <div
@@ -269,9 +305,7 @@ export function DashboardNav({
         <nav className="space-y-1">
           {filteredNavItems.map((item) => {
             const Icon = item.icon;
-            const isActive =
-              pathname === item.href ||
-              (pathname?.startsWith(`${item.href}/`) ?? false);
+            const isActive = isNavItemActive(pathname, item.href);
 
             return (
               <Link

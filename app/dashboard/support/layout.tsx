@@ -1,4 +1,5 @@
 import { requireRole } from '@/lib/auth-middleware';
+import { SUPPORT_ROLES } from '@/lib/dashboard-section-roles';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,6 +14,6 @@ export default async function SupportLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireRole(['csr', 'manager', 'admin', 'super-admin']);
+  await requireRole([...SUPPORT_ROLES]);
   return <>{children}</>;
 }

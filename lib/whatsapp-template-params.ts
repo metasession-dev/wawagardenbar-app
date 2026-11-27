@@ -132,6 +132,57 @@ export function refundProcessedParams(input: {
   return { bodyParams: [input.amountText, input.orderNumber] };
 }
 
+/** Meta rejects newlines/tabs and 4+ consecutive spaces inside a variable. */
+function cleanVariable(text: string, max = REPLY_MAX_CHARS): string {
+  const clean = text
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/ {4,}/g, '   ')
+    .trim();
+  return clean.length > max ? `${clean.slice(0, max - 1)}…` : clean;
+}
+
+/**
+ * REQ-129 — `booking_received` = body [first name, "table" or "event",
+ * party/guests text, date and time text, booking number].
+ */
+export function bookingReceivedParams(input: {
+  customerName?: string | null;
+  typeLabel: string;
+  guestsText: string;
+  whenText: string;
+  bookingNumber: string;
+}): WhatsAppTemplateParams {
+  return {
+    bodyParams: [
+      firstNameOrFallback(input.customerName),
+      input.typeLabel,
+      input.guestsText,
+      input.whenText,
+      input.bookingNumber,
+    ],
+  };
+}
+
+/**
+ * REQ-129 — `booking_update` = body [first name, booking number, update text],
+ * URL button [booking id] (opens `/profile/bookings/{{1}}`).
+ */
+export function bookingUpdateParams(input: {
+  customerName?: string | null;
+  bookingNumber: string;
+  bookingId: string;
+  updateText: string;
+}): WhatsAppTemplateParams {
+  return {
+    bodyParams: [
+      firstNameOrFallback(input.customerName),
+      input.bookingNumber,
+      cleanVariable(input.updateText),
+    ],
+    buttonParams: [{ index: 0, params: [input.bookingId] }],
+  };
+}
+
 /**
  * `receipt` = header [order number], body [items, total, payment method, points],
  * URL button [order id]. The button opens `/orders/{{1}}`, which looks the order

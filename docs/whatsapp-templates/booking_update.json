@@ -1,0 +1,24 @@
+{
+  "name": "booking_update",
+  "language": "en",
+  "category": "UTILITY",
+  "builder": "bookingUpdateParams",
+  "header": null,
+  "body": {
+    "text": "Hi {{1}}, an update on your booking {{2}}: {{3}} Tap below to view your booking.",
+    "example": [
+      "Adaeze",
+      "BK-0001",
+      "Good news: your booking is confirmed. We look forward to seeing you."
+    ]
+  },
+  "footer": null,
+  "buttons": [
+    {
+      "type": "URL",
+      "text": "View booking",
+      "url": "https://app.wawagardenbar.com/profile/bookings/{{1}}",
+      "example": ["https://app.wawagardenbar.com/profile/bookings/65f0c0ffee"]
+    }
+  ]
+}

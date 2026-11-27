@@ -27,6 +27,8 @@ export type IncomingMessageIntent =
   | 'order_status'
   // REQ-128 (REQ-WA-019) — a short "cancel" message from the order's own phone.
   | 'order_cancel'
+  // REQ-129 (REQ-WA-020) — a short booking message gets the /book link.
+  | 'booking'
   | 'support_text';
 
 export interface IIncomingMessage extends Document {
@@ -64,6 +66,7 @@ const incomingMessageSchema = new Schema<IIncomingMessage>(
         'order_start',
         'order_status',
         'order_cancel',
+        'booking',
         'support_text',
       ],
     },

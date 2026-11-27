@@ -151,6 +151,39 @@ export function orderLinkReplyText(baseUrl?: string): string {
   );
 }
 
+// REQ-129 (REQ-WA-020) — a short message with a booking word gets the /book
+// link. A long message that merely mentions a table or an event ("the table
+// next to us was loud, we booked for a birthday ...") is ordinary support text
+// and still opens a ticket, so a complaint is never answered with a link.
+const BOOKING_REGEX =
+  /\b(book|booking|reserve|reservation|table|event|party|birthday)\b/i;
+const BOOKING_MAX_WORDS = 10;
+
+export function isBookingRequest(body: string): boolean {
+  const words = body.trim().split(/\s+/).filter(Boolean);
+  return (
+    words.length > 0 &&
+    words.length <= BOOKING_MAX_WORDS &&
+    BOOKING_REGEX.test(body)
+  );
+}
+
+/** The environment's booking page URL, built like the other message links. */
+export function buildBookingUrl(baseUrl?: string): string {
+  const base = (baseUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? '').replace(
+    /\/+$/,
+    ''
+  );
+  return `${base}/book`;
+}
+
+export function bookingLinkReplyText(baseUrl?: string): string {
+  return (
+    `You can book a table or tell us about your event here: ${buildBookingUrl(baseUrl)}\n` +
+    "Send us your details and we'll get back to you shortly."
+  );
+}
+
 export const CANCEL_NO_ORDER_TEXT =
   "We couldn't find an order of yours that can be cancelled. If you need help, reply here and our team will get back to you.";
 export const CANCEL_REQUEST_TEXT =
@@ -456,6 +489,10 @@ export class WhatsAppInboundService {
     }
     if (body && isOrderRequest(body)) return 'order_start';
 
+    // REQ-129 (REQ-WA-020) — a short booking message gets the /book link.
+    // Opt-out, cancel, status and order intents above keep priority.
+    if (body && isBookingRequest(body)) return 'booking';
+
     return 'support_text';
   }
 
@@ -679,6 +716,24 @@ export class WhatsAppInboundService {
           );
         }
         actionTaken = ticketed ? 'order_status_ticketed' : 'queued_for_staff';
+      } else if (intent === 'booking') {
+        // REQ-129 (REQ-WA-020) — send the /book link. No ticket, no booking
+        // is created from a text message.
+        try {
+          const result = await sendWithRetry(from, () =>
+            WhatsAppService.sendTextMessage(from, bookingLinkReplyText())
+          );
+          actionTaken = outcomeTag('booking_link', result);
+        } catch (error) {
+          console.error(
+            '[WhatsAppInbound] booking link send failed:',
+            error instanceof Error ? error.message : String(error)
+          );
+          actionTaken = outcomeTag('booking_link', {
+            success: false,
+            errorCode: 'EXCEPTION',
+          });
+        }
       } else if (intent === 'order_start') {
         // REQ-126 (REQ-WA-017) — all orders are made in the app: send the
         // menu link. No ticket, no ordering in WhatsApp.

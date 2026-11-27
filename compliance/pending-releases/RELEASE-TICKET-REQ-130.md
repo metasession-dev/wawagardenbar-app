@@ -1,6 +1,6 @@
 # Release Ticket: REQ-130 — Dashboard: Support link in the main menu (#1087)
 
-**Status:** IN PROGRESS
+**Status:** TESTED - PENDING SIGN-OFF
 **Date:** 2026-11-27
 **Requirement ID:** REQ-130
 **Risk Level:** LOW

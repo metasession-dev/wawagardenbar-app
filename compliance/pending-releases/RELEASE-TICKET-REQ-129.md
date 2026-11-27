@@ -1,6 +1,6 @@
 # Release Ticket: REQ-129 — Table and event booking (WA-13)
 
-**Status:** IN PROGRESS
+**Status:** TESTED - PENDING SIGN-OFF
 **Date:** 2026-11-27
 **Requirement ID:** REQ-129
 **Risk Level:** MEDIUM

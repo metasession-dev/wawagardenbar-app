@@ -125,6 +125,17 @@ export const WHATSAPP_NOTIFICATION_CATALOGUE: readonly WhatsAppNotificationEntry
         'Replies are saved on the ticket but not delivered on WhatsApp. Customers must check the site or contact you again.',
     },
     {
+      key: 'bookings',
+      label: 'Booking messages',
+      group: 'Bookings',
+      templates: ['booking_received', 'booking_update'],
+      purpose:
+        'Tells the customer we received their table or event request, and sends staff updates and replies about it with a View booking button.',
+      why: 'The customer knows the request was received and does not have to chase it.',
+      ifOff:
+        'Bookings are still saved and shown to staff, but customers get no WhatsApp confirmation or update and may ask again.',
+    },
+    {
       key: 'welcome',
       label: 'Welcome messages',
       group: 'Welcome and recovery',

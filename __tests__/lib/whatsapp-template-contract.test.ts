@@ -127,6 +127,21 @@ const SAMPLE_CALLS: Record<string, () => WhatsAppTemplateParams> = {
       amountText: '₦5,000',
       orderNumber: 'WG2611260001',
     }),
+  bookingReceivedParams: () =>
+    builders.bookingReceivedParams({
+      customerName: 'Adaeze',
+      typeLabel: 'table',
+      guestsText: '4 guests',
+      whenText: 'Sat 6 Dec at 7:00 PM',
+      bookingNumber: 'BK-0001',
+    }),
+  bookingUpdateParams: () =>
+    builders.bookingUpdateParams({
+      customerName: 'Adaeze',
+      bookingNumber: 'BK-0001',
+      bookingId: '65f0c0ffee',
+      updateText: 'Good news: your booking is confirmed.',
+    }),
   welcomeNewUserParams: () => builders.welcomeNewUserParams(WEEK),
   welcomeBackParams: () => builders.welcomeBackParams({ firstName: 'Ada' }),
   accountRecoveryParams: () => builders.accountRecoveryParams('+2348099994567'),
@@ -152,7 +167,7 @@ const templates: TemplateJson[] = files.map((f) =>
 
 describe('REQ-115 WhatsApp template contract', () => {
   it('[US-01.6] there is a JSON definition for every template in the doc', () => {
-    expect(templates.length).toBe(16);
+    expect(templates.length).toBe(18);
     const doc = readFileSync(
       join(process.cwd(), 'docs', 'whatsapp-templates.md'),
       'utf8'

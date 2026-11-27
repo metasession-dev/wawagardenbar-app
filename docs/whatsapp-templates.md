@@ -568,6 +568,63 @@ body = [amountText, orderNumber]   // amountText e.g. '₦5,000'
 
 ---
 
+## 17. `booking_received` — UTILITY
+
+**Sent when:** a customer's table or event request is saved (REQ-129: `notifyBookingReceived`, once per booking). Inside the 24-hour window it goes as free-form text. Held per environment until that environment's copy is APPROVED (`held_template_pending`).
+
+**Code mapping** (`bookingReceivedParams` in `lib/whatsapp-template-params.ts`):
+
+```
+body = [firstName, typeLabel, guestsText, whenText, bookingNumber]   // e.g. ['Adaeze', 'table', '4 guests', 'Sat 6 Dec at 7:00 PM', 'BK-0001']
+```
+
+| Field    | Value                                                                                                                          |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Name     | `booking_received`                                                                                                             |
+| Category | **UTILITY**                                                                                                                    |
+| Language | `en`                                                                                                                           |
+| Header   | (none)                                                                                                                         |
+| Body     | `Hi {{1}}, thanks for your {{2}} request for {{3}} on {{4}} (ref {{5}}). We'll get back to you shortly to discuss your needs.` |
+| Footer   | (none)                                                                                                                         |
+| Buttons  | (none)                                                                                                                         |
+
+**Examples:**
+
+| `{{1}}`  | `{{2}}` | `{{3}}`    | `{{4}}`                | `{{5}}`   |
+| -------- | ------- | ---------- | ---------------------- | --------- |
+| `Adaeze` | `table` | `4 guests` | `Sat 6 Dec at 7:00 PM` | `BK-0001` |
+
+---
+
+## 18. `booking_update` — UTILITY
+
+**Sent when:** staff confirm or decline a booking, or reply to it outside the customer's 24-hour window (REQ-129: `notifyBookingUpdate`). Inside the window a reply goes as free-form text. Held per environment until that environment's copy is APPROVED. The body ends with a sentence because Meta rejects a body that ends in a placeholder.
+
+**Code mapping** (`bookingUpdateParams` in `lib/whatsapp-template-params.ts`):
+
+```
+body   = [firstName, bookingNumber, updateText]
+button = [bookingId]                                 // URL button opens /profile/bookings/{{1}}
+```
+
+| Field    | Value                                                                                      |
+| -------- | ------------------------------------------------------------------------------------------ |
+| Name     | `booking_update`                                                                           |
+| Category | **UTILITY**                                                                                |
+| Language | `en`                                                                                       |
+| Header   | (none)                                                                                     |
+| Body     | `Hi {{1}}, an update on your booking {{2}}: {{3}} Tap below to view your booking.`         |
+| Footer   | (none)                                                                                     |
+| Buttons  | URL "View booking" → `<env base>/profile/bookings/{{1}}` (dynamic suffix = the booking id) |
+
+**Examples:**
+
+| `{{1}}`  | `{{2}}`   | `{{3}}`                                                                | Button `{{1}}` |
+| -------- | --------- | ---------------------------------------------------------------------- | -------------- |
+| `Adaeze` | `BK-0001` | `Good news: your booking is confirmed. We look forward to seeing you.` | `65f0c0ffee`   |
+
+---
+
 ## After submission — wiring checklist
 
 Once Meta approves each template (you'll see them flip from `IN REVIEW` to `APPROVED` in the WABA template manager):

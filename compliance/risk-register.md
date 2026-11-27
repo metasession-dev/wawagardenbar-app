@@ -1938,3 +1938,80 @@ Accepted residual risks, each with date accepted, rationale, compensating contro
 **Framework cross-references:** ISO 27001 A.5.3, A.8.15; SOC 2 CC6.1, CC8.1.
 
 **Cross-links:** [REQ-128 implementation plan](plans/REQ-128/implementation-plan.md); ADR-015; REQ-PAY-011 to REQ-PAY-014.
+
+---
+
+### R-85 — Spam or abuse of the public booking form floods staff and WhatsApp (REQ-129)
+
+**Status:** OPEN
+**Opened:** 2026-11-27 (REQ-129, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-27
+
+**The risk:** `/book` is a public entry point that creates records, raises staff alerts and sends a WhatsApp message for each booking. A script or one customer repeating submissions could bury real enquiries and cost message fees.
+
+**Mitigations planned in REQ-129:**
+
+1. The submit action needs a verified customer session, so every booking comes from a WhatsApp-verified phone (AC1).
+2. At most 5 bookings per phone per business day, counted in the database so it survives restarts and several instances (AC1).
+3. Length caps on every free-text field and guests limited to 1–500 (AC1).
+4. Staff alerts are de-duplicated per booking (AC5).
+5. Unit tests for the sixth booking and for oversize input; an e2e test of the refusal (AC1).
+
+**Residual likelihood × impact:** low × medium
+
+**Framework cross-references:** ISO 27001 A.8.25, A.8.6; SOC 2 CC6.1, A1.1.
+
+**Cross-links:** [REQ-129 implementation plan](plans/REQ-129/implementation-plan.md); REQ-BOOK-001, REQ-BOOK-003.
+
+---
+
+### R-86 — One customer reads another customer's booking or personal data (REQ-129)
+
+**Status:** OPEN
+**Opened:** 2026-11-27 (REQ-129, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-27
+
+**The risk:** A booking holds a name, phone, event details and staff replies. A guessable id on `/profile/bookings/{id}` or a missing role check on the dashboard could expose it to a customer or to staff who should not see it.
+
+**Mitigations planned in REQ-129:**
+
+1. Customer reads are queries scoped to the signed-in owner; any other id returns not found with no detail (AC6).
+2. The phone on a booking comes from the verified session, never from the form (AC1).
+3. `/dashboard/bookings` layout and every staff action check `csr`, `manager`, `admin` or `super-admin` on the server (AC4).
+4. Negative tests: another customer's id, a kitchen-only session and a customer session on the dashboard (AC4, AC6).
+5. Every status change, assignment and reply is audit-logged with the actor (AC4).
+
+**Residual likelihood × impact:** low × medium
+
+**Framework cross-references:** ISO 27001 A.5.15, A.8.3, A.8.15; SOC 2 CC6.1, CC6.3; GDPR Art. 25, Art. 32.
+
+**Cross-links:** [REQ-129 implementation plan](plans/REQ-129/implementation-plan.md); REQ-BOOK-001, REQ-BOOK-003, REQ-BOOK-004.
+
+---
+
+### R-87 — A booking is saved but staff never see it, or the customer is never answered (REQ-129)
+
+**Status:** OPEN
+**Opened:** 2026-11-27 (REQ-129, plan Stage 1)
+**Owner:** WGB maintainer
+**Review due:** 2026-12-27
+
+**The risk:** Booking is an enquiry that promises "we'll get back to you shortly". If the staff alert fails, or the confirmation template is not yet approved by Meta, the customer waits for a reply nobody knows is due.
+
+**Mitigations planned in REQ-129:**
+
+1. The Bookings list is the source of truth; the staff alert is best-effort and never fails the submission, and the list is sorted by date with status New highlighted (AC4, AC5).
+2. A message whose template is not approved is logged `held_template_pending` so staff can tell "waiting for Meta" from "broken" (AC2).
+3. The customer sees the booking's status under My bookings, and the confirmation screen shows the booking number (AC2, AC6).
+4. Alert escalation by WhatsApp for unacknowledged booking alerts already exists (REQ-122) (AC5).
+5. Operator checks both templates are APPROVED per environment before release (D6).
+
+**Residual likelihood × impact:** medium × low
+
+**Framework cross-references:** ISO 27001 A.5.30, A.8.16; SOC 2 A1.2, CC7.2.
+
+**Cross-links:** [REQ-129 implementation plan](plans/REQ-129/implementation-plan.md); REQ-BOOK-002, REQ-BOOK-003, REQ-WA-020.
+
+---

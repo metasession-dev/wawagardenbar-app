@@ -1,4 +1,5 @@
 import { UserRole, StaffRole } from '@/interfaces/user.interface';
+import { BOOKING_ROLES, SUPPORT_ROLES } from './dashboard-section-roles';
 import {
   IAdminPermissions,
   CSR_DEFAULT_PERMISSIONS,
@@ -74,6 +75,9 @@ export const routePermissions: Record<string, UserRole[]> = {
    * Admins → Permissions.
    */
   '/dashboard/incidents': ['csr', 'manager', 'admin', 'super-admin'],
+  // REQ-130 / REQ-129 — the same lists as the section layouts and the menu.
+  '/dashboard/support': [...SUPPORT_ROLES],
+  '/dashboard/bookings': [...BOOKING_ROLES],
   '/dashboard/settings': ['admin', 'super-admin'],
   '/dashboard/kitchen': ['admin', 'super-admin'],
   '/dashboard/kitchen/recipes': ['admin', 'super-admin'],

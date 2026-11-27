@@ -1,0 +1,19 @@
+{
+  "name": "booking_received",
+  "language": "en",
+  "category": "UTILITY",
+  "builder": "bookingReceivedParams",
+  "header": null,
+  "body": {
+    "text": "Hi {{1}}, thanks for your {{2}} request for {{3}} on {{4}} (ref {{5}}). We'll get back to you shortly to discuss your needs.",
+    "example": [
+      "Adaeze",
+      "table",
+      "4 guests",
+      "Sat 6 Dec at 7:00 PM",
+      "BK-0001"
+    ]
+  },
+  "footer": null,
+  "buttons": []
+}

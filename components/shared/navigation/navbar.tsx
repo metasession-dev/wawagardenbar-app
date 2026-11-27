@@ -5,7 +5,14 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Menu, X, User, LogOut, ShoppingCart } from 'lucide-react';
+import {
+  Menu,
+  X,
+  User,
+  LogOut,
+  ShoppingCart,
+  CalendarDays,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -34,6 +41,8 @@ const baseNavLinks: NavLink[] = [
   { href: '/menu', label: 'Menu' },
   { href: '/orders', label: 'Orders' },
   { href: '/rewards', label: 'Rewards' },
+  // REQ-129 — table and event booking.
+  { href: '/book', label: 'Book' },
 ];
 
 export function Navbar() {
@@ -148,6 +157,12 @@ export function Navbar() {
                         <Link href="/orders">
                           <ShoppingCart className="mr-2 h-4 w-4" />
                           My Orders
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/profile/bookings">
+                          <CalendarDays className="mr-2 h-4 w-4" />
+                          My Bookings
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />

@@ -1,0 +1,43 @@
+{
+  "approvalRelease": {
+    "version": "REQ-129"
+  },
+  "coreRelease": {
+    "version": "REQ-129"
+  },
+  "generator": {
+    "generatedAt": "2026-11-27T11:35:40Z",
+    "name": "devaudit-installer",
+    "repository": "metasession-dev/wawagardenbar-app",
+    "version": "0.0.0"
+  },
+  "manifestHash": "sha256:795686c792a36c3f67315eb10811090060dca203c54c6739188e60c3bd997823",
+  "members": [
+    {
+      "commitFrom": null,
+      "commitTo": null,
+      "evidenceInheritancePolicy": {
+        "includeCycles": false,
+        "mode": "none",
+        "reason": "Co-tracked bundle members keep fully isolated per-REQ evidence — nothing is inherited between them.",
+        "scopes": []
+      },
+      "originalTitle": "Dashboard: Support link in the main menu (#1087)",
+      "prNumber": null,
+      "prUrl": null,
+      "reason": "Declared co-primary REQ, bundled onto one shared branch/PR/release at Phase 1 planning time.",
+      "relationship": "bundled",
+      "role": "co_tracked",
+      "scopeSummary": "Details, acceptance criteria and risks: `compliance/plans/REQ-130/implementation-plan.md`.\n\nStage 3 evidence is in `compliance/evidence/REQ-130/`; the UAT pack for the whole bundle is on REQ-129.",
+      "version": "REQ-130"
+    }
+  ],
+  "nonReleaseWorkItems": [
+    {
+      "kind": "housekeeping_commit",
+      "reference": "f41a6213",
+      "title": "docs: note that Paystack keys are database settings, not env vars"
+    }
+  ],
+  "schemaVersion": 2
+}

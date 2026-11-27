@@ -1,0 +1,1 @@
+BLOCKED (steps 14 and 15, message part). The UAT template booking_update is PENDING at Meta. BK-0001 was confirmed and BK-0002 declined at about 19:06-19:07; the 19:14 phone screenshot shows no update message from the bar after them. The status changes themselves are in REQ-129-AC4-confirmed.png and REQ-129-AC4-declined.png.

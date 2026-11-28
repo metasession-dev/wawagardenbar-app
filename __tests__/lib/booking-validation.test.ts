@@ -6,6 +6,7 @@ import {
   BOOKING_DAILY_LIMIT,
   isOutsideBusinessHours,
   parseBookingInput,
+  validateBookingInput,
   validateBookingTiming,
 } from '@/lib/booking-validation';
 
@@ -195,4 +196,47 @@ describe('[AC1] isOutsideBusinessHours (flag, never a refusal)', () => {
 
 it('[AC1] the daily limit is five', () => {
   expect(BOOKING_DAILY_LIMIT).toBe(5);
+});
+
+describe('[AC1] validateBookingInput (UAT D1: all messages at once)', () => {
+  it('accepts a valid table and event', () => {
+    expect(validateBookingInput(table(), NOW).ok).toBe(true);
+    expect(validateBookingInput(event(), NOW).ok).toBe(true);
+  });
+
+  it('reports a past date together with a bad guest count', () => {
+    const r = validateBookingInput(
+      table({ date: '2020-01-01', guests: 0 }),
+      NOW
+    );
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.errors.guests).toBe('At least 1 guest.');
+      expect(r.errors.date).toMatch(/not passed/i);
+    }
+  });
+
+  it('reports a past date alone', () => {
+    const r = validateBookingInput(table({ date: '2020-01-01' }), NOW);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(Object.keys(r.errors)).toEqual(['date']);
+  });
+
+  it("keeps a field's own message over a timing message and skips timing for a bad date", () => {
+    const r = validateBookingInput(table({ date: 'soon' }), NOW);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.errors.date).toBe('Choose a date.');
+  });
+
+  it('reports an end before the start next to a missing purpose', () => {
+    const r = validateBookingInput(
+      event({ endTime: '10:00', purpose: '' }),
+      NOW
+    );
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.errors.endTime).toMatch(/after the start/i);
+      expect(r.errors.purpose).toBeDefined();
+    }
+  });
 });

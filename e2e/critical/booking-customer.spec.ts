@@ -127,6 +127,25 @@ test.describe('[REQ-129] booking form and My bookings', () => {
     await evidenceShot(page, 'REQ-129', 1, 'event-form-fields');
   });
 
+  test('[REQ-129][AC1] [US-A5.2] a visitor who is not signed in sees every field message before any sign-in prompt', async ({
+    page,
+  }) => {
+    tagTest('REQ-129', 1);
+    await dismissCookieBanner(page);
+    await gotoBookPage(page);
+    await page.getByTestId('booking-name').fill('Adaeze Obi');
+    await fillTable(page, { date: '2020-01-01', guests: '0' });
+    await page.getByTestId('booking-submit').click();
+    await expect(page.getByTestId('booking-date-error')).toContainText(
+      /not passed/i
+    );
+    await expect(page.getByTestId('booking-guests-error')).toContainText(
+      /at least 1/i
+    );
+    await expect(page.getByTestId('booking-signin-dialog')).toHaveCount(0);
+    await evidenceShot(page, 'REQ-129', 1, 'signed-out-validation-refused');
+  });
+
   test('[REQ-129][AC1] [US-A5.4] a signed-in customer has name and phone prefilled and the phone locked', async ({
     browser,
   }) => {

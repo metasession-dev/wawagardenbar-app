@@ -33,6 +33,7 @@ import {
 import {
   BOOKING_MAX_GUESTS,
   BOOKING_MIN_GUESTS,
+  validateBookingInput,
 } from '@/lib/booking-validation';
 import type { BookingType } from '@/interfaces/booking.interface';
 
@@ -134,6 +135,13 @@ export function BookingForm({
   };
 
   async function submit(current: FormState) {
+    // Check the fields before asking a visitor to sign in; the server checks again.
+    const checked = validateBookingInput(toPayload(current));
+    if (!checked.ok) {
+      setErrors(checked.errors);
+      setFormError('Please correct the highlighted fields.');
+      return;
+    }
     setSubmitting(true);
     setFormError(null);
     try {

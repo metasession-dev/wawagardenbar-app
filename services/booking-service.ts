@@ -24,8 +24,7 @@ import {
   BOOKING_STATUS_UPDATE_TEXT,
   bookingInstant,
   isOutsideBusinessHours,
-  parseBookingInput,
-  validateBookingTiming,
+  validateBookingInput,
   type BookingFieldErrors,
   type BookingInput,
 } from '@/lib/booking-validation';
@@ -127,7 +126,7 @@ export class BookingService {
     now?: Date;
   }): Promise<CreateBookingResult> {
     const now = opts.now ?? new Date();
-    const parsed = parseBookingInput(opts.input);
+    const parsed = validateBookingInput(opts.input, now);
     if (!parsed.ok) {
       return {
         ok: false,
@@ -137,23 +136,6 @@ export class BookingService {
       };
     }
     const data: BookingInput = parsed.data;
-    const timing = validateBookingTiming(
-      {
-        type: data.type,
-        date: data.date,
-        startTime: data.startTime,
-        endTime: data.type === 'event' ? data.endTime : null,
-      },
-      now
-    );
-    if (Object.keys(timing).length > 0) {
-      return {
-        ok: false,
-        code: 'invalid',
-        message: 'Please correct the highlighted fields.',
-        fieldErrors: timing,
-      };
-    }
 
     await connectDB();
 

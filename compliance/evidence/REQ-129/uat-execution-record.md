@@ -89,6 +89,16 @@ Evidence files are stored under `compliance/evidence/REQ-129/uat/` and named in 
 
 Anything done differently from the procedure, and why. Write "None" if there were none.
 
+1. The operator, not the agent, sent the two WhatsApp messages of steps 9 and 10 and supplied phone screenshots and the PIN; phone messages are evidenced from the screenshots the agent read, not seen on the device.
+2. Step 3: the procedure expects a signed-out visitor to see the field messages. The form checked nothing before sign-in, so the sign-in dialog opened first. The agent also ran step 3 signed in (extra action above): the page then showed the guests message but not the past-date message, because the date rule ran only after the other fields were valid. Both are recorded as D1 and fixed in PR #1107.
+3. Step 12: the Type filter was applied by opening `/dashboard/bookings?type=event`, not by the filter control; the calendar was opened with its button.
+4. Steps 14 and 15: BK-0001 was confirmed and BK-0002 declined while the customer's 24-hour reply window was open, yet no update message reached the phone by 19:14. The message part stays BLOCKED as the operator instructed (the templates are pending at Meta).
+5. Step 8: the event detail was checked after the event had been declined in step 15.
+6. Step 13: the assignee was the second entry in the list ("System"); the list also held deleted accounts (D2).
+7. The operator opened /book on a phone and typed a table request for "Tunde" but did not submit it; only BK-0001 and BK-0002 exist.
+8. Steps 16 and 18 were first BLOCKED (no kitchen account) and were run on 2026-11-28 after the logins were created (see Actions). The manager login was also checked: it sees Bookings and Support and opens both pages (REQ-129-AC4-manager-bookings.png, REQ-130-AC1-manager-support.png).
+9. Steps 3 and 4 are to be re-run on UAT at the build that contains PR #1107; this record shows the first run until then.
+
 ## Defect log
 
 | Defect | Step | Severity (blocker / major / minor) | Description                                                                                                                                                                                                                                                                                                     | Reference                                                                           |

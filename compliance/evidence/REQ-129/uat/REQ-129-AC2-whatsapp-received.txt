@@ -1,0 +1,1 @@
+BLOCKED. The UAT template booking_received is PENDING at Meta. The phone screenshot taken at 19:14 (REQ-129-AC3-whatsapp-booking-link.jpeg) shows no booking message between the PIN at 19:03 and 19:09, although BK-0001 was created at about 19:04.

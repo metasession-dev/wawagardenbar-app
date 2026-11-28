@@ -1,0 +1,3 @@
+Relayed by the operator as a phone screenshot (REQ-129-AC3-whatsapp-booking-link.jpeg), UAT customer phone +447825285212, 2026-11-27.
+19:09 customer -> bar: "I want to book a table"
+19:09 bar -> customer: "You can book a table or tell us about your event here: https://wawagardenbar-uat.ostendo.io/book Send us your details and we'll get back to you shortly."

@@ -36,6 +36,7 @@ export default async function BookingDetailPage({
 
   await connectDB();
   const staffUsers = await UserModel.find({
+    accountStatus: 'active',
     $or: [
       { role: { $in: [...BOOKING_ROLES] } },
       { roles: { $in: [...BOOKING_ROLES] } },

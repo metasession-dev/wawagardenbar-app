@@ -83,6 +83,48 @@ export function parseBookingInput(
   return { ok: false, errors };
 }
 
+function isDateString(v: unknown): v is string {
+  return typeof v === 'string' && DATE_RE.test(v);
+}
+
+function isTimeString(v: unknown): v is string {
+  return typeof v === 'string' && TIME_RE.test(v);
+}
+
+/**
+ * Field rules and the date and time rules together, so a form with a bad
+ * guest count and a past date shows both messages at once. A field's own
+ * message wins over a timing message for the same field. The form runs this
+ * before it asks a visitor to sign in; the server runs it again.
+ */
+export function validateBookingInput(
+  raw: unknown,
+  now: Date = new Date()
+):
+  | { ok: true; data: BookingInput }
+  | { ok: false; errors: BookingFieldErrors } {
+  const parsed = parseBookingInput(raw);
+  const errors: BookingFieldErrors = parsed.ok ? {} : { ...parsed.errors };
+  const r = (raw ?? {}) as Record<string, unknown>;
+  if (isDateString(r.date) && isTimeString(r.startTime)) {
+    const timing = validateBookingTiming(
+      {
+        type: r.type === 'event' ? 'event' : 'table',
+        date: r.date,
+        startTime: r.startTime,
+        endTime:
+          r.type === 'event' && isTimeString(r.endTime) ? r.endTime : null,
+      },
+      now
+    );
+    for (const [key, message] of Object.entries(timing)) {
+      if (message && !errors[key]) errors[key] = message;
+    }
+  }
+  if (Object.keys(errors).length > 0) return { ok: false, errors };
+  return parsed as { ok: true; data: BookingInput };
+}
+
 function parseDate(date: string): [number, number, number] {
   const [y, m, d] = date.split('-').map(Number);
   return [y, m, d];

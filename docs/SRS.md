@@ -2166,8 +2166,8 @@ Table and event booking requests (WA-13, REQ-129). A booking is an enquiry: no p
 
 - **Given** any visitor, **When** they click Book, **Then** `/book` offers Table and Event, and each shows only its own fields.
 - **Given** a signed-in customer, **Then** name and phone are prefilled and the phone cannot be edited.
-- **Given** no session, **When** the visitor submits, **Then** the PIN form opens and the booking is saved after verification with the entered details kept.
-- **Given** a date in the past, an event end before its start, or guests outside 1–500, **Then** the booking is refused with an inline message.
+- **Given** no session and valid details, **When** the visitor submits, **Then** the PIN form opens and the booking is saved after verification with the entered details kept.
+- **Given** a date in the past, an event end before its start, or guests outside 1–500, **Then** the booking is refused with an inline message under each wrong field, all shown together, and a visitor with no session sees them before the PIN form opens.
 - **Given** a phone that already made 5 bookings today, **When** it submits a sixth, **Then** it is refused and nothing is saved.
 
 #### REQ-BOOK-002 — Confirmation and customer message · **Must** · critical

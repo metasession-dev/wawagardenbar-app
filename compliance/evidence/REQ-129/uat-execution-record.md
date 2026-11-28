@@ -81,9 +81,9 @@ Evidence files are stored under `compliance/evidence/REQ-129/uat/` and named in 
 | 13   | After opening BK-0001 its alert was gone from the bell (BK-0002 remained); the note "Call after 5pm", assignee System and the staff reply "We have a table at 7pm." show on the page                                                                                           | PASS                  | REQ-129-AC4-note-reply.png                                                     |        |
 | 14   | Status shows Confirmed. The customer message is BLOCKED: booking_update is PENDING at Meta and the phone shows no update                                                                                                                                                       | BLOCKED               | REQ-129-AC4-confirmed.png, REQ-129-AC4-confirmed-declined-whatsapp.txt         |        |
 | 15   | Status shows Declined. The customer message is BLOCKED for the same reason                                                                                                                                                                                                     | BLOCKED               | REQ-129-AC4-declined.png, REQ-129-AC4-confirmed-declined-whatsapp.txt          |        |
-| 16   | No kitchen-only account exists on UAT                                                                                                                                                                                                                                          | BLOCKED               |                                                                                |        |
+| 16   | Signed in as uat-test-kitchen: the menu shows only Orders, Kitchen display and My account; /dashboard/bookings opened "Access Forbidden" (/dashboard/forbidden)                                                                                                                | PASS                  | REQ-129-AC4-kitchen-menu.png, REQ-129-AC4-kitchen-refused.png                  |        |
 | 17   | The Support item opened the queue and is highlighted there and on the ticket page (/dashboard/support/...)                                                                                                                                                                     | PASS                  | REQ-130-AC1-support-link.png, REQ-130-AC3-support-ticket-active.png            |        |
-| 18   | No kitchen-only account exists on UAT                                                                                                                                                                                                                                          | BLOCKED               |                                                                                |        |
+| 18   | Same kitchen account: Support is not in the menu and /dashboard/support opened "Access Forbidden"                                                                                                                                                                              | PASS                  | REQ-130-AC2-kitchen-no-support.png                                             |        |
 
 ## Deviations
 
@@ -93,13 +93,14 @@ Anything done differently from the procedure, and why. Write "None" if there wer
 
 | Defect | Step | Severity (blocker / major / minor) | Description                                                                                                                                                                                                                                                                                                     | Reference                                                                           |
 | ------ | ---- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| D2     | 13   | minor                              | The assignee list on the booking page included deleted accounts (an entry like `del_…@deleted`)                                                                                                                                                                                                                 | Fixed in PR #1107 (active staff only)                                               |
 | D1     | 3    | minor                              | A signed-out visitor sees no field messages before the sign-in prompt, and a past date is not reported together with another field error (shown only once the other fields are valid). The request is refused either way and nothing is saved. The procedure expected messages under the date and guests fields | Not filed: reviewer decides whether to accept, amend the procedure or file an issue |
 
 ## Summary
 
 | Passed | Failed | Blocked | Total steps |
 | ------ | ------ | ------- | ----------- |
-| 11     | 1      | 6       | 18          |
+| 14     | 1      | 3       | 18          |
 
 **AC coverage**
 
